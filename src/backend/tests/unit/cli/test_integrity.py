@@ -24,6 +24,7 @@ from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.auth.authz import AuthzRole, AuthzRoleAssignment, CasbinRule
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.memory_base.model import MemoryBase, MessageIngestionRecord
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.variable.model import Variable
@@ -118,6 +119,7 @@ class TestCleanInstance:
             "schema",
             "credentials",
             "files",
+            "knowledge base storage",
             "knowledge bases",
             "vector counts",
             "memory bases",
@@ -396,6 +398,54 @@ class TestKnowledgeBases:
         assert not SQLiteStorageContext(kb_root, active_user.id, record.id).database_path.parent.exists()
 
 
+class TestKnowledgeBaseStorage:
+    async def test_rows_whose_upgrade_has_not_finished_are_listed_and_left_out_of_the_other_checks(
+        self,
+        active_user,
+        storage_dir,  # noqa: ARG002
+        kb_root,  # noqa: ARG002
+    ):
+        # A local Chroma row the startup upgrade has not reached, a SQLite row left mid-upgrade,
+        # and a Chroma Cloud row the upgrade cannot move, with the error it recorded.
+        cloud = KnowledgeBaseRecord(
+            name="kb-cloud",
+            user_id=active_user.id,
+            backend_type="chroma",
+            backend_config={"mode": "cloud"},
+            storage_state="needs_attention",
+            chunks=3,
+        )
+        run = KnowledgeBaseStorageMigration(
+            kb_id=cloud.id, source_generation=1, target_generation=2, error_code="remote_source_requires_migration"
+        )
+        cloud.active_migration_id = run.id
+        await _add(
+            KnowledgeBaseRecord(name="kb-local", user_id=active_user.id, backend_type="chroma", chunks=3),
+            KnowledgeBaseRecord(
+                name="kb-moving", user_id=active_user.id, backend_type="sqlite", storage_state="migrating", chunks=3
+            ),
+            cloud,
+            run,
+        )
+
+        report = await check_instance()
+
+        storage = _check(report, "knowledge base storage")
+        assert storage.status == "fail"
+        assert storage.summary.startswith("3 of 3 knowledge bases"), storage.summary
+        assert "require_storage_ready=true" in storage.summary
+        user = active_user.username
+        assert sorted(storage.problems) == [
+            f"{user}/kb-cloud (chroma): storage state needs_attention, upgrade error remote_source_requires_migration",
+            f"{user}/kb-local (chroma): storage state ready",
+            f"{user}/kb-moving (sqlite): storage state migrating",
+        ]
+        for name in ("knowledge bases", "vector counts"):
+            check = _check(report, name)
+            assert check.status == "ok", (name, check.problems)
+            assert check.summary.startswith("0 "), (name, check.summary)
+
+
 class TestMemoryBases:
     async def _memory_with_one_ingested_message(self, user, kb_name: str) -> None:
         memory = MemoryBase(name="memory", flow_id=uuid.uuid4(), user_id=user.id, kb_name=kb_name)
@@ -598,8 +648,11 @@ class TestReadOnly:
 
         report = await check_instance()
 
-        assert _check(report, "knowledge bases").status == "fail"
-        assert "requires migration" in " ".join(_check(report, "knowledge bases").problems)
+        # The row waits on the storage upgrade, so it is listed there, not as an unreachable backend.
+        storage = _check(report, "knowledge base storage")
+        assert storage.status == "fail"
+        assert storage.problems == [f"{active_user.username}/kb-retired (chroma): storage state ready"]
+        assert _check(report, "knowledge bases").status == "ok"
         assert _contents(kb_path) == before
 
     async def test_a_store_that_cannot_be_read_is_reported_and_not_counted_as_empty(
