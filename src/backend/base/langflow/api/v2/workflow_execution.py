@@ -258,6 +258,8 @@ async def _stream_event_frames(
     emit_output_capture: bool = False,
     expose_error_details: bool = False,
     execution_timeout: float | None | _CeilingFromSettings = _CEILING_FROM_SETTINGS,
+    use_warm_registry: bool = False,
+    fresh_run_id: bool = False,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -283,6 +285,14 @@ async def _stream_event_frames(
     Resolving the ceiling here for them too nested two budgets, and the inner one
     always wins, which made the documented ``background_job_timeout=None``
     ("no timeout") silently cap at the sync ceiling instead.
+
+    ``use_warm_registry`` lets the build loop serve ``provider_policy_flow``'s
+    revision from the warm registry, as the sync path does, instead of reading
+    and parsing the flow row again. The live v2 stream sets it.
+
+    ``fresh_run_id`` says ``run_id`` was minted for this request, so the build loop
+    creates its job row IN_PROGRESS without looking for an existing one. The live
+    v2 stream sets it; durable and resumed runs must not.
     """
     # EventManager uses put_nowait(), so a plain bounded asyncio.Queue would
     # silently drop frames via QueueFull. This adapter keeps memory bounded and
@@ -340,6 +350,13 @@ async def _stream_event_frames(
                         raise
                     runtime_data = restore_redacted_flow_values(runtime_data, trusted_data)
             flow_data = FlowDataRequest(**runtime_data) if runtime_data else None
+            # A flow without a change marker has no registry revision to pin.
+            policy_flow_updated_at = getattr(provider_policy_flow, "updated_at", None)
+            warm_flow_version = (
+                flow_version(policy_flow_updated_at)
+                if use_warm_registry and policy_flow_updated_at is not None
+                else None
+            )
             # Bound here rather than in the enclosing generator: drive() runs as its own task, so
             # the set/reset pair cannot straddle a generator suspension point and leak into the
             # consumer task that resumes it.
@@ -395,6 +412,8 @@ async def _stream_event_frames(
                         # Carry the end-user identity onto the graph so per-user state
                         # (chat memory) scopes to the end user.
                         end_user_id=parsed.end_user_id,
+                        warm_flow_version=warm_flow_version,
+                        fresh_run_id=fresh_run_id,
                     ),
                     timeout=execution_timeout,
                 )
@@ -590,8 +609,10 @@ def _execute_streaming_workflow(
 
     The graph is built inside ``generate_flow_events`` (the v1 build-vertex
     loop) so the same per-vertex events the canvas already knows flow through
-    the adapter. A failure during the run becomes a terminal protocol event
-    routed through the adapter rather than an HTTP error.
+    the adapter. Like the sync path, the stored graph is served from the warm
+    registry when it is enabled and holds ``flow``'s revision. A failure during
+    the run becomes a terminal protocol event routed through the adapter rather
+    than an HTTP error.
     """
 
     async def _frames_only() -> AsyncIterator[bytes]:
@@ -610,6 +631,9 @@ def _execute_streaming_workflow(
             protocol="v2",
             execution_family=FAMILY_WORKFLOW_V2,
             expose_error_details=caller_owns_flow(flow, current_user),
+            use_warm_registry=True,
+            # ``build_stream_response`` mints ``run_id`` with uuid4 for this request.
+            fresh_run_id=True,
         ):
             yield frame
 

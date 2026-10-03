@@ -4,8 +4,9 @@ When ``LANGFLOW_WARM_REGISTRY_ENABLED=true`` flows are pre-built once and
 kept warm in the process-local registry. The v1 ``simple_run_flow`` and v2 sync paths
 resolve a **deepcopy of the pre-built template** and apply this run's identity to the
 copy — skipping per-request ``Graph.from_payload`` work and, on metadata-validated v2
-hits, avoiding a repeat read of the large ``Flow.data`` column. Stream/background and
-public execution retain their established graph-build paths.
+hits, avoiding a repeat read of the large ``Flow.data`` column. The v2 live stream uses
+the same copy inside the v1 build-vertex loop. Background and public execution retain
+their established graph-build paths.
 
 Core model: warm deepcopy + set-values. A run falls back to the normal cold rebuild
 whenever the per-request work can't be layered onto a shared template — see the
@@ -128,10 +129,15 @@ async def warm_deepcopy(
     expected_version: str,
     user_id: Any,
     session_id: str | None,
-    stream: bool = False,
+    stream: bool | None = False,
     execution_principal: ExecutionPrincipal | None = None,
 ) -> Graph | None:
     """Return a run-ready deepcopy of the warm template, or ``None`` to rebuild cold.
+
+    ``stream`` mirrors the cold path's implicit ``process_tweaks(..., stream=...)``
+    override. ``None`` applies no override and keeps each component's persisted
+    ``stream`` value, matching the v1 build-vertex loop, which builds the stored
+    graph without that tweak.
 
     Built-in fall-backs: warming disabled, cache miss (and not lazily warmable), or a
     transient store-availability failure. The returned graph carries the flow's structure
@@ -190,11 +196,14 @@ async def warm_deepcopy(
     if callable(copy_for_run):
         graph = copy_for_run(
             user_id=run_user_id,
-            before_instantiate=lambda run_graph: _apply_implicit_stream_tweak(run_graph, stream=stream),
+            before_instantiate=(
+                None if stream is None else lambda run_graph: _apply_implicit_stream_tweak(run_graph, stream=stream)
+            ),
         )
     else:
         graph = deepcopy(hit[0])
-        _apply_implicit_stream_tweak(graph, stream=stream)
+        if stream is not None:
+            _apply_implicit_stream_tweak(graph, stream=stream)
     # Thread this run's identity onto the copy (the template is user-agnostic). This is
     # what lets explicit load_from_db fields resolve for the calling user, exactly like a
     # cold from_payload(user_id=...).
