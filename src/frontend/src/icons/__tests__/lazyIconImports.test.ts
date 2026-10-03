@@ -1,6 +1,7 @@
 const mockVllmIcon = jest.fn();
 const mockOpenRAGIcon = jest.fn();
 const mockFigraniumIcon = jest.fn();
+const mockGetYouTubeTranscriptIcon = jest.fn();
 
 jest.mock("@/icons/vLLM", () => ({
   VllmIcon: mockVllmIcon,
@@ -12,6 +13,10 @@ jest.mock("@/icons/OpenRAG", () => ({
 
 jest.mock("@/icons/Figranium", () => ({
   FigraniumIcon: mockFigraniumIcon,
+}));
+
+jest.mock("@/icons/GetYouTubeTranscript", () => ({
+  GetYouTubeTranscriptIcon: mockGetYouTubeTranscriptIcon,
 }));
 
 import { lazyIconsMapping } from "../lazyIconImports";
@@ -33,5 +38,11 @@ describe("lazyIconsMapping", () => {
     const { default: icon } = await lazyIconsMapping.Figranium();
 
     expect(icon).toBe(mockFigraniumIcon);
+  });
+
+  it("loads the GetYouTubeTranscript bundle icon", async () => {
+    const { default: icon } = await lazyIconsMapping.GetYouTubeTranscript();
+
+    expect(icon).toBe(mockGetYouTubeTranscriptIcon);
   });
 });

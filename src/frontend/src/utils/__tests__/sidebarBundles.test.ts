@@ -25,6 +25,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies GetYouTubeTranscript as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "GetYouTubeTranscript",
+          icon: "GetYouTubeTranscript",
+          name: "getyoutubetranscript",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Serping API as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([

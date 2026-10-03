@@ -553,6 +553,7 @@ module.exports = {
             "Components/bundles-figranium",
             "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
+            "Components/bundles-getyoutubetranscript",
             "Components/bundles-glean",
             "Components/bundles-google",
             "Components/bundles-groq",
