@@ -7,9 +7,10 @@
  * node definition is swapped to the current one (Table) while the edge still stores the old
  * DataFrame handle. cleanEdges must migrate + keep the edge, not drop it.
  *
- * Also covers the inverse guarantee: once the target migration rewrites the retained edge's id,
- * later removal paths (invalid source handle, hidden target field) must still find the edge —
- * filtering by the original id would silently keep a broken edge in the graph.
+ * Also covers the inverse guarantee: once the target migration rewrites the retained edge's
+ * handles, later removal paths (invalid source handle, hidden target field) must still find the
+ * edge. The migration never changes the edge's id: the id is the edge's identity in the flow's
+ * history, not a spelling of its handles.
  */
 
 import type { AllNodeType, EdgeType } from "../../types/flow";
@@ -124,12 +125,14 @@ describe("LE-1929 update-path edge migration (DataFrame -> Table)", () => {
     expect(result.edges.length).toBe(1);
     // The kept edge must have its source handle rewritten to the migrated Table type.
     expect(result.edges[0].sourceHandle).toContain("Table");
+    // ...and keep its id, so the flow's history sees the same edge.
+    expect(result.edges[0].id).toBe(buildLegacyEdge().id);
   });
 
-  it("removes an edge whose source is invalid even after the target migration rewrote its id", () => {
+  it("removes an edge whose source is invalid even after the target migration rewrote its handles", () => {
     // Source handle stores a type that no longer matches the output and has no
     // migration path — the edge is broken and must NOT survive cleanup just
-    // because the target block rewrote the retained edge's id first.
+    // because the target block rewrote the retained edge's handles first.
     const result = cleanEdges(
       [buildMemoryNode(), buildTypeConverterNode()],
       [buildLegacyEdge({ sourceOutputTypes: ["Vector"] })],
@@ -139,7 +142,7 @@ describe("LE-1929 update-path edge migration (DataFrame -> Table)", () => {
     expect(result.edges.length).toBe(0);
   });
 
-  it("removes an edge into a hidden field even after the target migration rewrote its id", () => {
+  it("removes an edge into a hidden field even after the target migration rewrote its handles", () => {
     const result = cleanEdges(
       [buildMemoryNode(), buildTypeConverterNode({ show: false })],
       [buildLegacyEdge()],
