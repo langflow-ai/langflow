@@ -1,0 +1,585 @@
+{
+  "description": "Shared diff cases. diff_flow_data(base, target) must return exactly `operations` (optional fields left unset are omitted), and applying them to `base` must give `target` under canonical equality. Units, keyed lists and view state follow node_schema.json.",
+  "cases": [
+    {
+      "name": "no change",
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b"}]
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b"}]
+      },
+      "operations": []
+    },
+    {
+      "name": "view state is never diffed",
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b"}]
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {
+            "id": "b",
+            "data": {
+              "node": {
+                "template": {"f": {"type": "str", "value": "", "display_name": "F", "info": "help", "options": ["a"]}, "_frontend_node_flow_id": {"value": "x"}},
+                "last_updated": "now",
+                "lf_version": "1.14"
+              }
+            },
+            "selected": true,
+            "measured": {"width": 1},
+            "width": 3,
+            "height": 4
+          }
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b", "selected": true, "animated": true}],
+        "viewport": {"zoom": 2}
+      },
+      "operations": []
+    },
+    {
+      "name": "two spellings of one handle are the same edge",
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [
+          {"id": "e", "source": "a", "target": "b", "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ}"}
+        ]
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [
+          {"id": "e", "source": "a", "target": "b", "sourceHandle": "{œidœ: œaœ, œnameœ: œoutœ}", "targetHandle": "{œtypeœ:œstrœ,œidœ:œbœ,œfieldNameœ:œfœ}"}
+        ]
+      },
+      "operations": []
+    },
+    {
+      "name": "a value edit writes the whole value unit",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a", "load_from_db": false}}}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "b", "load_from_db": false}}}}}], "edges": []},
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "n",
+              "path": ["data", "node", "template", "f", "load_from_db"],
+              "op": "set_field",
+              "value": false,
+              "template_field": {"type": "str", "load_from_db": false}
+            },
+            {
+              "id": "n",
+              "path": ["data", "node", "template", "f", "value"],
+              "op": "set_field",
+              "value": "b",
+              "template_field": {"type": "str", "load_from_db": false}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a value unit key that disappears is deleted with the unit",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a", "load_from_db": true}}}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "b"}}}}}], "edges": []},
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {"id": "n", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": "b", "template_field": {"type": "str"}},
+            {"id": "n", "path": ["data", "node", "template", "f", "load_from_db"], "op": "delete_field"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a value is never split, whatever its JSON type",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": {"a": 1, "b": 2}}}}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": {"a": 1, "b": 3}}}}}}], "edges": []},
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {"id": "n", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": {"a": 1, "b": 3}, "template_field": {"type": "str"}}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a value type change declares from_type",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a"}}}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": 5}}}}}], "edges": []},
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "n",
+              "path": ["data", "node", "template", "f", "value"],
+              "op": "set_field",
+              "value": 5,
+              "from_type": "string",
+              "template_field": {"type": "str"}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a definition change writes the whole definition unit",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "input_types": ["A"], "value": "a"}}}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "input_types": ["A", "B"], "value": "a"}}}}}], "edges": []},
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {"id": "n", "path": ["data", "node", "template", "f", "input_types"], "op": "set_field", "value": ["A", "B"], "template_field": {"type": "str"}},
+            {"id": "n", "path": ["data", "node", "template", "f", "type"], "op": "set_field", "value": "str", "template_field": {"type": "str"}}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a removed definition key is deleted with the unit",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "input_types": ["A"], "value": "a"}}}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a"}}}}}], "edges": []},
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {"id": "n", "path": ["data", "node", "template", "f", "type"], "op": "set_field", "value": "str", "template_field": {"type": "str"}},
+            {"id": "n", "path": ["data", "node", "template", "f", "input_types"], "op": "delete_field"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a toggle is its own value",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a", "advanced": false}}}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a", "advanced": true}}}}}], "edges": []},
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "n", "path": ["data", "node", "template", "f", "advanced"], "op": "set_field", "value": true, "template_field": {"type": "str"}}]
+        }
+      ]
+    },
+    {
+      "name": "a new field is one write of the whole field",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a"}}}}}], "edges": []},
+      "target": {
+        "nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a"}, "g2": {"type": "str", "display_name": "G", "value": "b"}}}}}],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "n", "path": ["data", "node", "template", "g2"], "op": "set_field", "value": {"type": "str", "display_name": "G", "value": "b"}}]
+        }
+      ]
+    },
+    {
+      "name": "a removed field is one delete",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a"}}}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}}}}], "edges": []},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "template", "f"], "op": "delete_field"}]}]
+    },
+    {
+      "name": "a non-field template key is a value",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"_type": "Component"}}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"_type": "Custom"}}}}], "edges": []},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "template", "_type"], "op": "set_field", "value": "Custom"}]}]
+    },
+    {
+      "name": "keys outside the template are written whole",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}}}, "position": {"x": 0, "y": 0}}], "edges": []},
+      "target": {
+        "nodes": [
+          {"id": "n", "data": {"node": {"template": {}, "metadata": {"hash": "b"}, "field_order": ["f"]}, "selected_output": "o"}, "position": {"x": 5, "y": 0}}
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {"id": "n", "path": ["data", "node", "field_order"], "op": "set_field", "value": ["f"]},
+            {"id": "n", "path": ["data", "node", "metadata"], "op": "set_field", "value": {"hash": "b"}},
+            {"id": "n", "path": ["data", "selected_output"], "op": "set_field", "value": "o"},
+            {"id": "n", "path": ["position"], "op": "set_field", "value": {"x": 5, "y": 0}}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "an output toggle is a write inside that output",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a"}, {"name": "b"}]}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a"}, {"name": "b", "hidden": true}]}}}], "edges": []},
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "outputs", {"key": "b"}, "hidden"], "op": "set_field", "value": true}]}
+      ]
+    },
+    {
+      "name": "added and removed outputs are writes at their keys",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a"}, {"name": "b"}]}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "b"}, {"name": "c"}]}}}], "edges": []},
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {"id": "n", "path": ["data", "node", "outputs", {"key": "c"}], "op": "set_field", "value": {"name": "c"}},
+            {"id": "n", "path": ["data", "node", "outputs", {"key": "a"}], "op": "delete_field"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reordered outputs are written whole",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a"}, {"name": "b"}]}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "b"}, {"name": "a"}]}}}], "edges": []},
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "outputs"], "op": "set_field", "value": [{"name": "b"}, {"name": "a"}]}]}
+      ]
+    },
+    {
+      "name": "a tool action is written by its first tag",
+      "base": {
+        "nodes": [
+          {
+            "id": "n",
+            "data": {"node": {"template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "on": true}, {"tags": ["fetch"], "on": true}]}}}}
+          }
+        ],
+        "edges": []
+      },
+      "target": {
+        "nodes": [
+          {
+            "id": "n",
+            "data": {
+              "node": {
+                "template": {
+                  "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "on": true}, {"tags": ["fetch"], "on": false, "name": "fetch_page"}]}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "n",
+              "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "name"],
+              "op": "set_field",
+              "value": "fetch_page",
+              "template_field": {"type": "tools"}
+            },
+            {
+              "id": "n",
+              "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "on"],
+              "op": "set_field",
+              "value": false,
+              "template_field": {"type": "tools"}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reordered tool actions are written whole",
+      "base": {
+        "nodes": [
+          {
+            "id": "n",
+            "data": {"node": {"template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "on": true}, {"tags": ["fetch"], "on": true}]}}}}
+          }
+        ],
+        "edges": []
+      },
+      "target": {
+        "nodes": [
+          {
+            "id": "n",
+            "data": {"node": {"template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["fetch"], "on": true}, {"tags": ["search"], "on": true}]}}}}
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "n",
+              "path": ["data", "node", "template", "tools_metadata", "value"],
+              "op": "set_field",
+              "value": [{"tags": ["fetch"], "on": true}, {"tags": ["search"], "on": true}],
+              "template_field": {"type": "tools"}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a table cell edit is one write",
+      "base": {
+        "nodes": [
+          {
+            "id": "n",
+            "data": {"node": {"template": {"t": {"type": "table", "value": [{"_id": "r1", "_pos": "a0", "v": "x"}, {"_id": "r2", "_pos": "a1", "v": "y"}]}}}}
+          }
+        ],
+        "edges": []
+      },
+      "target": {
+        "nodes": [
+          {
+            "id": "n",
+            "data": {"node": {"template": {"t": {"type": "table", "value": [{"_id": "r1", "_pos": "a0", "v": "x"}, {"_id": "r2", "_pos": "a1", "v": "z"}]}}}}
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "n",
+              "path": ["data", "node", "template", "t", "value", {"id": "r2"}, "v"],
+              "op": "set_field",
+              "value": "z",
+              "template_field": {"type": "table"}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "new, removed and moved rows are writes at their ids",
+      "base": {
+        "nodes": [
+          {
+            "id": "n",
+            "data": {
+              "node": {
+                "template": {
+                  "t": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": "a0", "v": "x"}, {"_id": "r2", "_pos": "a1", "v": "y"}, {"_id": "r3", "_pos": "a2", "v": "z"}]
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "target": {
+        "nodes": [
+          {
+            "id": "n",
+            "data": {
+              "node": {
+                "template": {
+                  "t": {
+                    "type": "table",
+                    "value": [{"_id": "r2", "_pos": "a1", "v": "y"}, {"_id": "r1", "_pos": "a2", "v": "x"}, {"_id": "r4", "_pos": "a3", "v": "w"}]
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "n",
+              "path": ["data", "node", "template", "t", "value", {"id": "r1"}, "_pos"],
+              "op": "set_field",
+              "value": "a2",
+              "template_field": {"type": "table"}
+            },
+            {
+              "id": "n",
+              "path": ["data", "node", "template", "t", "value", {"id": "r4"}],
+              "op": "set_field",
+              "value": {"_id": "r4", "_pos": "a3", "v": "w"},
+              "template_field": {"type": "table"}
+            },
+            {"id": "n", "path": ["data", "node", "template", "t", "value", {"id": "r3"}], "op": "delete_field"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "the first edit of a legacy table writes it whole with ids",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"t": {"type": "table", "value": [{"v": "x"}]}}}}}], "edges": []},
+      "target": {
+        "nodes": [{"id": "n", "data": {"node": {"template": {"t": {"type": "table", "value": [{"_id": "r1", "_pos": "a0", "v": "z"}]}}}}}],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "n",
+              "path": ["data", "node", "template", "t", "value"],
+              "op": "set_field",
+              "value": [{"_id": "r1", "_pos": "a0", "v": "z"}],
+              "template_field": {"type": "table"}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "an edge's data changes in place",
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b", "data": {"targetHandle": {"fieldName": "f", "id": "b", "type": "str"}}}]
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [
+          {"id": "e", "source": "a", "target": "b", "data": {"targetHandle": {"fieldName": "f", "id": "b", "type": "str", "inputTypes": ["Data"]}}, "type": "x"}
+        ]
+      },
+      "operations": [
+        {
+          "type": "update_edges",
+          "updates": [
+            {"id": "e", "path": ["data"], "op": "set_field", "value": {"targetHandle": {"fieldName": "f", "id": "b", "type": "str", "inputTypes": ["Data"]}}},
+            {"id": "e", "path": ["type"], "op": "set_field", "value": "x"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "an edge key that disappears is deleted",
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b", "data": {}}]
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b"}]
+      },
+      "operations": [{"type": "update_edges", "updates": [{"id": "e", "path": ["data"], "op": "delete_field"}]}]
+    },
+    {
+      "name": "an edge reconnected to another node is deleted and added",
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b"}]
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}},
+          {"id": "c", "data": {"node": {"template": {"f": {"type": "str"}}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "c"}]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e"]},
+        {"type": "add_nodes", "nodes": [{"id": "c", "data": {"node": {"template": {"f": {"type": "str"}}}}}]},
+        {"type": "add_edges", "edges": [{"id": "e", "source": "a", "target": "c"}]}
+      ]
+    },
+    {
+      "name": "added nodes and edges drop their view state",
+      "base": {"nodes": [{"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}], "edges": []},
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}}}}, "selected": true, "width": 5}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b", "selected": true}]
+      },
+      "operations": [
+        {"type": "add_nodes", "nodes": [{"id": "b", "data": {"node": {"template": {"f": {"type": "str"}}}}}]},
+        {"type": "add_edges", "edges": [{"id": "e", "source": "a", "target": "b"}]}
+      ]
+    },
+    {
+      "name": "a deleted node deletes its edges first",
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b"}]
+      },
+      "target": {"nodes": [{"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}], "edges": []},
+      "operations": [{"type": "delete_edges", "ids": ["e"]}, {"type": "delete_nodes", "ids": ["b"]}]
+    },
+    {
+      "name": "flow metadata changes are one update_metadata",
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b"}],
+        "name": "a",
+        "viewport": {}
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b"}],
+        "name": "b",
+        "description": "d"
+      },
+      "operations": [{"type": "update_metadata", "fields": {"description": "d", "name": "b"}}]
+    }
+  ]
+}

@@ -269,3 +269,37 @@ class Uploader:
 
     def test_invalid_source_has_no_names(self):
         assert ParameterHandler._file_input_names_from_code("def broken(:\n") == frozenset()
+
+
+class TestParameterHandlerTableRowIdentity:
+    """Row ids and positions belong to the flow's history; components never see them."""
+
+    def setup_method(self):
+        self.mock_vertex = MagicMock()
+        self.mock_vertex.data = {"node": {"template": {"table_field": {"type": "table", "table_schema": []}}}}
+        self.handler = ParameterHandler(self.mock_vertex, storage_service=None)
+
+    def test_handle_table_field_strips_row_ids_and_positions(self):
+        rows = [
+            {"_id": "r1", "_pos": "a0", "key": "Accept", "value": "json"},
+            {"_id": "r2", "_pos": "a1", "key": "Auth", "value": "token"},
+        ]
+
+        params = self.handler._handle_table_field("table_field", rows, {})
+
+        assert params["table_field"] == [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
+        assert rows[0]["_id"] == "r1"
+
+    def test_table_branch_of_other_direct_types_strips_row_ids_and_positions(self):
+        rows = [{"_id": "r1", "_pos": "a0", "name": "x"}]
+
+        params = self.handler._handle_other_direct_types("table_field", {"type": "table"}, rows, {})
+
+        assert list(params["table_field"].columns) == ["name"]
+
+    def test_tools_rows_are_passed_through(self):
+        rows = [{"name": "search", "tags": ["search"], "_id": "kept"}]
+
+        params = self.handler._handle_other_direct_types("tools", {"type": "tools"}, rows, {})
+
+        assert "_id" in params["tools"].columns
