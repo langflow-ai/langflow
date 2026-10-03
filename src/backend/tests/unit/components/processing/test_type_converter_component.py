@@ -45,6 +45,21 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
         assert list(result.columns) == ["text"]
         assert result.iloc[0]["text"] == "Hello"
 
+    @pytest.mark.parametrize("auto_parse", [False, True])
+    @pytest.mark.parametrize(
+        "payload",
+        [{}, {"text": "Hello", "items": [1, {"name": "Ada"}]}, {"data": {"id": 42}, "text_key": "source"}],
+    )
+    def test_dict_to_data(self, component_class, payload, auto_parse):
+        """Dictionary input is payload, including keys that match model fields."""
+        expected = json.loads(json.dumps(payload))
+        component = component_class(input_data=payload, output_type="JSON", auto_parse=auto_parse)
+        result = component.convert_to_data()
+        assert isinstance(result, Data)
+        assert result.data == expected
+        assert payload == expected
+        assert component.status == result
+
     # Data to other types
     def test_data_to_message(self, component_class):
         """Test converting Data to Message."""
