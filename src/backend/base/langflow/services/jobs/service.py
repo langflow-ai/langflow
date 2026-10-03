@@ -559,6 +559,20 @@ class JobService(Service):
         age = (datetime.now(timezone.utc) - hb).total_seconds()
         return age > lease_ttl_s
 
+    @staticmethod
+    def no_heartbeat_grace_s(lease_ttl_s: float) -> float:
+        """Age after which an IN_PROGRESS row that never heartbeated counts as orphaned.
+
+        Only the background runner heartbeats. Sync, stream, v1 and playground runs
+        (and ingestion jobs) run IN_PROGRESS without one, so their row cannot tell a
+        live run from a dead one. Client-attached workflow runs are bounded by
+        ``workflow_execution_timeout`` and write their own terminal status when it
+        fires, so a row older than that plus one lease TTL of slack has no live owner.
+        """
+        from langflow.services.deps import get_settings_service
+
+        return get_settings_service().settings.workflow_execution_timeout + lease_ttl_s
+
     async def increment_attempt_if(self, job_id: UUID, *, expected: int, new: int) -> bool:
         """Atomically bump ``job_metadata.attempt`` from ``expected`` to ``new``.
 
@@ -956,14 +970,21 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
-    async def sweep_orphans(self, *, lease_ttl_s: float = 30.0) -> list[UUID]:
+    async def sweep_orphans(
+        self, *, lease_ttl_s: float = 30.0, no_heartbeat_grace_s: float | None = None
+    ) -> list[UUID]:
         """Reconcile GENUINELY orphaned IN_PROGRESS jobs (stale/absent heartbeat).
 
         Liveness-aware: only an IN_PROGRESS row whose heartbeat is older than
-        ``lease_ttl_s`` (or never recorded) is treated as orphaned. A row with a
-        FRESH heartbeat means a live owner is mid-run, so the sweep must NOT
-        touch it — this is what stops a booting worker B from flipping worker A's
-        actively-running job FAILED(worker_lost) under ``gunicorn -w N``.
+        ``lease_ttl_s`` is treated as orphaned. A row with a FRESH heartbeat means
+        a live owner is mid-run, so the sweep must NOT touch it — this is what
+        stops a booting worker B from flipping worker A's actively-running job
+        FAILED(worker_lost) under ``gunicorn -w N``.
+
+        A row that never recorded a heartbeat (sync, stream, v1, playground and
+        ingestion runs) is orphaned only once it is older than
+        ``no_heartbeat_grace_s`` (default ``no_heartbeat_grace_s(lease_ttl_s)``).
+        Until then it may be a live run on this or any other replica.
 
         For a real orphan, mark it FAILED with a worker_lost error, stamp
         finished_timestamp, and append a terminal ``run_failed`` event so a
@@ -974,6 +995,8 @@ class JobService(Service):
         """
         from sqlmodel import update
 
+        if no_heartbeat_grace_s is None:
+            no_heartbeat_grace_s = self.no_heartbeat_grace_s(lease_ttl_s)
         error_payload = {"type": "worker_lost"}
         reconciled: list[UUID] = []
         async with session_scope() as session:
@@ -987,6 +1010,13 @@ class JobService(Service):
                     # Live owner still heartbeating — leave the run alone.
                     continue
                 prior_heartbeat = (job.job_metadata or {}).get("heartbeat_at")
+                if not prior_heartbeat:
+                    created = job.created_timestamp
+                    if created.tzinfo is None:
+                        created = created.replace(tzinfo=timezone.utc)
+                    if (now - created).total_seconds() <= no_heartbeat_grace_s:
+                        # Never heartbeats and still young enough to be a live run.
+                        continue
                 heartbeat_unchanged = hb_expr.is_(None) if prior_heartbeat is None else hb_expr == prior_heartbeat
                 claim = (
                     update(Job)

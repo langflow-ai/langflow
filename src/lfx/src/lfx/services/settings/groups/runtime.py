@@ -121,7 +121,8 @@ class RuntimeSettings(BaseModel):
     """Liveness lease window for a running background job. The running owner
     refreshes a heartbeat on the job row; a reconciler (startup sweep / scaled
     watchdog) only fails or requeues an IN_PROGRESS job whose heartbeat is older
-    than this TTL (or never recorded). Must comfortably exceed
+    than this TTL. A job that never recorded one (sync, stream) is failed only once
+    it is older than ``workflow_execution_timeout`` plus this TTL. Must comfortably exceed
     ``background_heartbeat_interval_s`` so a healthy owner never looks stale."""
     background_heartbeat_interval_s: float = Field(default=15.0, gt=0)
     """How often a running background job refreshes its liveness heartbeat. Kept

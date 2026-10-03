@@ -135,7 +135,8 @@ async def test_sweep_orphans_fails_in_progress(real_services_job_service):
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
     await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
 
-    failed = await job_service.sweep_orphans()
+    # The row never heartbeated (sync/stream), so it is only an orphan past the grace.
+    failed = await job_service.sweep_orphans(no_heartbeat_grace_s=0.0)
     assert job_id in failed
     job = await job_service.get_job_by_job_id(job_id)
     assert job.status == JobStatus.FAILED

@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
 from langflow.services.background_execution.service import BackgroundExecutionService
-from langflow.services.database.models.jobs.model import JobStatus
-from langflow.services.deps import get_job_service, get_settings_service
+from langflow.services.database.models.jobs.model import Job, JobStatus
+from langflow.services.deps import get_job_service, get_settings_service, session_scope
+from langflow.services.jobs.service import JobService
+from sqlmodel import update
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -26,12 +29,20 @@ async def _scripted(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
     yield _frame("end", {})
 
 
+async def _backdate(job_id, seconds: float) -> None:
+    created = datetime.now(timezone.utc) - timedelta(seconds=seconds)
+    async with session_scope() as session:
+        await session.exec(update(Job).where(Job.job_id == job_id).values(created_timestamp=created))
+
+
 async def test_orphaned_in_progress_marked_failed(active_user):
     job_service = get_job_service()
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=active_user.id)
-    # Simulate a crash mid-flight: status stuck at IN_PROGRESS, no live task.
+    # Simulate a crash mid-flight: status stuck at IN_PROGRESS, no live task, and
+    # older than any live heartbeatless (sync/stream) run could be.
     await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+    await _backdate(job_id, JobService.no_heartbeat_grace_s(get_settings_service().settings.background_lease_ttl_s) + 5)
 
     svc = BackgroundExecutionService(
         settings_service=get_settings_service(),
@@ -69,6 +80,35 @@ async def test_startup_sweep_spares_fresh_heartbeat_job(active_user):
         assert job.status == JobStatus.IN_PROGRESS
         assert job.error is None
         assert all(e.event_type != "run_failed" for e in await job_service.read_events(job_id))
+    finally:
+        await svc.stop()
+
+
+async def test_startup_sweep_reaps_young_heartbeatless_rows_once_past_the_grace(active_user, monkeypatch):
+    """A young sync row may be a sibling's live run; a crashed one is reaped after the grace."""
+    monkeypatch.setattr(JobService, "no_heartbeat_grace_s", staticmethod(lambda _lease_ttl_s: 0.5))
+    job_service = get_job_service()
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=active_user.id)
+    await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+
+    svc = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=lambda **_kw: _scripted,
+    )
+    await svc.start()
+    try:
+        await svc.sweep_orphans_on_startup()
+        assert (await job_service.get_job_by_job_id(job_id)).status == JobStatus.IN_PROGRESS
+
+        job = None
+        for _ in range(50):
+            job = await job_service.get_job_by_job_id(job_id)
+            if job.status == JobStatus.FAILED:
+                break
+            await asyncio.sleep(0.05)
+        assert job.status == JobStatus.FAILED
+        assert job.error == {"type": "worker_lost"}
     finally:
         await svc.stop()
 
