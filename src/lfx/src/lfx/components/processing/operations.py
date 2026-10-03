@@ -110,6 +110,9 @@ CASE_CONVERTERS: dict[str, Any] = {
     "swapcase": str.swapcase,
 }
 
+# A markdown table's delimiter row (``|---|:--:|``) separates the header from the body.
+MARKDOWN_DELIMITER_CELL = re.compile(r":?-+:?")
+
 
 class OperationsComponent(Component):
     display_name = "Data Operations"
@@ -1290,9 +1293,12 @@ class OperationsComponent(Component):
 
     def _parse_table_rows(self, lines: list[str], separator: str) -> list[list[str]]:
         rows = []
-        for line in lines:
+        for index, line in enumerate(lines):
             cleaned_line = line.strip(separator)
             cells = [cell.strip() for cell in cleaned_line.split(separator)]
+            # Skip the markdown delimiter row under the header instead of reading it as data.
+            if index == 1 and all(MARKDOWN_DELIMITER_CELL.fullmatch(cell) for cell in cells):
+                continue
             rows.append(cells)
         return rows
 

@@ -366,6 +366,18 @@ class TestTextOperations:
         assert list(result.columns) == ["name", "age"]
         assert len(result) == 2
 
+    def test_text_to_dataframe_skips_markdown_delimiter_row(self):
+        component = OperationsComponent(
+            text_input="| name | age |\n|:-----|----:|\n| Alice | 30 |\n| Bob | 25 |",
+            operation=[{"name": "Text to DataFrame"}],
+            table_separator="|",
+            has_header=True,
+        )
+        result = component.as_dataframe()
+        assert list(result.columns) == ["name", "age"]
+        assert result["name"].tolist() == ["Alice", "Bob"]
+        assert result["age"].tolist() == [30, 25]
+
     def test_text_clean(self):
         component = OperationsComponent(
             text_input="hello    world",

@@ -19,6 +19,9 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 
+# A markdown table's delimiter row (``|---|:--:|``) separates the header from the body.
+MARKDOWN_DELIMITER_CELL = re.compile(r":?-+:?")
+
 
 class TextOperations(Component):
     display_name = "Text Operations"
@@ -359,9 +362,12 @@ class TextOperations(Component):
     def _parse_table_rows(self, lines: list[str], separator: str) -> list[list[str]]:
         """Parse table lines into rows of cells."""
         rows = []
-        for line in lines:
+        for index, line in enumerate(lines):
             cleaned_line = line.strip(separator)
             cells = [cell.strip() for cell in cleaned_line.split(separator)]
+            # Skip the markdown delimiter row under the header instead of reading it as data.
+            if index == 1 and all(MARKDOWN_DELIMITER_CELL.fullmatch(cell) for cell in cells):
+                continue
             rows.append(cells)
         return rows
 
