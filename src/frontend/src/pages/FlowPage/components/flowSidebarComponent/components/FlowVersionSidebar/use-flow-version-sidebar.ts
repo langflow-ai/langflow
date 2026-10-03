@@ -175,7 +175,10 @@ export function useFlowVersionSidebar(
   }, [versions]);
 
   const selectedRevision = revisionOfSelection(selectedId);
-  useEffect(() => {
+  // Before paint, like the canvas swap below: what the previewed point
+  // changed is drawn from this, so it must never outlast the preview onto
+  // the live canvas, even for a frame.
+  useLayoutEffect(() => {
     setPlaybackRevision(selectedRevision);
   }, [selectedRevision, setPlaybackRevision]);
   // The slider can stop inside an entry; the entry stays selected throughout.
@@ -385,6 +388,7 @@ export function useFlowVersionSidebar(
       }
 
       try {
+        useRevisionPlaybackStore.getState().setRevision(null);
         clearPreview();
       } catch (err) {
         console.error("Version sidebar cleanup: failed to clear preview", err);
