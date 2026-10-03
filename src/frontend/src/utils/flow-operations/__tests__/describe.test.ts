@@ -1,6 +1,10 @@
 import i18n from "@/i18n";
 import type { RecordedOperation } from "@/types/flow/revision";
-import { describeOperation, summarizeOperations } from "../describe";
+import {
+  describeOperation,
+  fieldLabelsFrom,
+  summarizeOperations,
+} from "../describe";
 
 const t = (key: string, opts?: object) => i18n.t(key, opts) as string;
 
@@ -84,7 +88,7 @@ describe("describeOperation", () => {
         ),
         t,
       ),
-    ).toEqual(["Edited temperature, model on OpenAI", "Moved Prompt"]);
+    ).toEqual(["Edited Temperature, Model on OpenAI", "Moved Prompt"]);
     expect(
       describeOperation(
         recorded(
@@ -93,7 +97,43 @@ describe("describeOperation", () => {
         ),
         t,
       ),
-    ).toEqual(["Changed seed on OpenAI from number to string"]);
+    ).toEqual(["Changed Seed on OpenAI from number to string"]);
+  });
+
+  it("uses a field's label from the flow when it has one", () => {
+    const fieldLabel = fieldLabelsFrom({
+      nodes: [
+        {
+          id: "a",
+          data: {
+            node: { template: { api_key: { display_name: "API Key" } } },
+          },
+        },
+      ],
+    });
+    const edit = (id: string, name: string) =>
+      recorded(
+        {
+          type: "update_nodes",
+          updates: [
+            {
+              id,
+              op: "set_field",
+              path: ["data", "node", "template", name, "value"],
+              value: "x",
+            },
+          ],
+        },
+        labels,
+      );
+
+    expect(describeOperation(edit("a", "api_key"), t, { fieldLabel })).toEqual([
+      "Edited API Key on OpenAI",
+    ]);
+    // A node the flow no longer has falls back to the humanized key.
+    expect(
+      describeOperation(edit("b", "sender_name"), t, { fieldLabel }),
+    ).toEqual(["Edited Sender name on Prompt"]);
   });
 
   it("falls back to the node id when no name was recorded", () => {

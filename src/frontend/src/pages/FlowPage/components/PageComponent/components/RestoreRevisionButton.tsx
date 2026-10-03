@@ -11,6 +11,8 @@ interface RestoreRevisionButtonProps {
   flowId: string;
   revision: number;
   label: string;
+  /** False inside an entry, where the slider shows steps no one saved. */
+  restorable: boolean;
 }
 
 /**
@@ -24,6 +26,7 @@ export default function RestoreRevisionButton({
   flowId,
   revision,
   label,
+  restorable,
 }: RestoreRevisionButtonProps) {
   const { t } = useTranslation();
   const { restore, isRestoring } = useRestoreRevision(flowId);
@@ -43,11 +46,15 @@ export default function RestoreRevisionButton({
       <CanvasBanner
         icon="RotateCcw"
         title={t("flowHistory.restore.title")}
-        description={t("flowHistory.restore.description", { label })}
+        description={
+          restorable
+            ? t("flowHistory.restore.description", { label })
+            : t("flowHistory.restore.onlyAtEntryEnd")
+        }
         actionSlot={
           <CanvasBannerButton
             onClick={() => setShowConfirm(true)}
-            disabled={isRestoring}
+            disabled={isRestoring || !restorable}
           >
             {isRestoring
               ? t("flowHistory.restore.restoring")
