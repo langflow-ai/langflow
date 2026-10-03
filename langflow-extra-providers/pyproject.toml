@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "langflow-extra-providers"
+version = "0.1.0"
+description = "Register extra OpenAI-compatible model providers (DeepSeek, GLM/Z.ai, ...) in Langflow without patching core source."
+readme = "README.md"
+requires-python = ">=3.10"
+# Intentionally no runtime dependencies: this package is installed *into* an
+# existing Langflow environment and reuses its already-present lfx /
+# langchain-openai. It must never pull a second copy of Langflow.
+dependencies = []
+
+[project.scripts]
+langflow-extra-providers = "langflow_extra_providers.__main__:main"
+
+[tool.setuptools]
+packages = ["langflow_extra_providers"]
