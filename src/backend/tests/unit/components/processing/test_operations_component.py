@@ -250,6 +250,21 @@ class TestTableOperations:
         assert len(result) == 2
         assert all(result["department"] == "IT")
 
+    @pytest.mark.parametrize(
+        ("operator", "expected_names"),
+        [("equals", ["Bob", "Carol"]), ("not equals", ["Ann"])],
+    )
+    def test_filter_numeric_column_by_text_value(self, operator, expected_names):
+        component = OperationsComponent(
+            df=DataFrame(pd.DataFrame({"name": ["Ann", "Bob", "Carol"], "score": [2.5, 7.0, 7.0]})),
+            operation=[{"name": "Filter"}],
+            column_name="score",
+            filter_operator=operator,
+            filter_value="7",
+        )
+        result = component.as_dataframe()
+        assert result["name"].tolist() == expected_names
+
     def test_filter_contains(self, sample_dataframe):
         component = OperationsComponent(
             df=sample_dataframe,
