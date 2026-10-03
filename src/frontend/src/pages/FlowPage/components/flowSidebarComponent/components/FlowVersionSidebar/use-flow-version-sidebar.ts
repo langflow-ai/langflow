@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
+  useGetFlowHistoryTimeline,
   useGetFlowRevision,
   useGetFlowRevisions,
 } from "@/controllers/API/queries/flow-revisions";
@@ -24,13 +25,27 @@ import useFlowStore from "@/stores/flowStore";
 import useRevisionPlaybackStore from "@/stores/revisionPlaybackStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import type { FlowVersionEntry } from "@/types/flow/version";
-import { summarizeOperations } from "@/utils/flow-operations/describe";
 import {
+  describeOperation,
+  fieldLabelsFrom,
+  summarizeOperations,
+} from "@/utils/flow-operations/describe";
+import {
+  entryContaining,
+  graphAt,
+  operationAt,
+} from "@/utils/flow-operations/history";
+import {
+  cleanEdges,
   downloadFlow,
   processFlows,
   removeApiKeys,
 } from "@/utils/reactflowUtils";
-import { CURRENT_DRAFT_ID, revisionOfSelection } from "./constants";
+import {
+  CURRENT_DRAFT_ID,
+  revisionOfSelection,
+  revisionSelectionId,
+} from "./constants";
 import { formatTimestamp } from "./utils";
 
 export function useFlowVersionSidebar(flowId: string) {
@@ -95,6 +110,36 @@ export function useFlowVersionSidebar(flowId: string) {
     [revisionPages],
   );
   const earliestRevision = revisionPages?.pages[0]?.earliest_revision ?? null;
+  const latestRevision = revisionPages?.pages[0]?.latest_revision ?? null;
+  // Every retained revision, replayed, so the history slider and any
+  // selection can be drawn without asking the server again.
+  const { data: historyTimeline } = useGetFlowHistoryTimeline(
+    flowId,
+    latestRevision,
+  );
+  const setPlaybackTimeline = useRevisionPlaybackStore((s) => s.setTimeline);
+  const setPlaybackRevision = useRevisionPlaybackStore((s) => s.setRevision);
+  const setSelectRevision = useRevisionPlaybackStore(
+    (s) => s.setSelectRevision,
+  );
+  useEffect(() => {
+    setPlaybackTimeline(historyTimeline ?? null);
+  }, [historyTimeline, setPlaybackTimeline]);
+  useEffect(() => {
+    setSelectRevision((revision) =>
+      setSelectedId(revisionSelectionId(revision)),
+    );
+    return () => {
+      setSelectRevision(null);
+      setPlaybackTimeline(null);
+      setPlaybackRevision(null);
+    };
+  }, [setSelectRevision, setPlaybackTimeline, setPlaybackRevision]);
+  // Field labels for the timeline text, from the flow as it is now.
+  const fieldLabel = useMemo(
+    () => fieldLabelsFrom(currentFlow?.data),
+    [currentFlow?.data],
+  );
   // Saved versions the timeline cannot place: saved before the flow had
   // history, or older than the history still retained.
   const olderVersions = useMemo(
@@ -120,9 +165,22 @@ export function useFlowVersionSidebar(flowId: string) {
   }, [versions]);
 
   const selectedRevision = revisionOfSelection(selectedId);
-  const selectedTimelineEntry = timelineEntries.find(
-    (entry) => entry.end_revision === selectedRevision,
-  );
+  useEffect(() => {
+    setPlaybackRevision(selectedRevision);
+  }, [selectedRevision, setPlaybackRevision]);
+  // The slider can stop inside an entry; the entry stays selected throughout.
+  const selectedTimelineEntry =
+    selectedRevision === null
+      ? undefined
+      : entryContaining(timelineEntries, selectedRevision);
+  const localGraph =
+    historyTimeline && selectedRevision !== null
+      ? graphAt(historyTimeline, selectedRevision)
+      : null;
+  const operationHere =
+    historyTimeline && selectedRevision !== null
+      ? operationAt(historyTimeline, selectedRevision)
+      : null;
   const selectedVersionId =
     selectedId !== CURRENT_DRAFT_ID && selectedRevision === null
       ? selectedId
@@ -140,7 +198,8 @@ export function useFlowVersionSidebar(flowId: string) {
     isLoading: isLoadingRevision,
     isError: isRevisionError,
   } = useGetFlowRevision(
-    { flowId, revision: selectedRevision },
+    // Asked of the server only until the replayed history is ready.
+    { flowId, revision: localGraph ? null : selectedRevision },
     { gcTime: 0, staleTime: 0 },
   );
   const isLoadingEntry =
@@ -149,44 +208,31 @@ export function useFlowVersionSidebar(flowId: string) {
   const isEntryError = isVersionError || isRevisionError;
   // A timeline entry previews like a version: the flow at its last revision,
   // labelled by when it was recorded and summarized by what changed.
+  const revisionData = localGraph ?? selectedRevisionGraph?.data;
+  const atEntryEnd = selectedTimelineEntry?.end_revision === selectedRevision;
   const selectedEntryFull =
     selectedRevision !== null
-      ? selectedRevisionGraph && {
-          data: selectedRevisionGraph.data,
+      ? revisionData && {
+          data: revisionData,
           version_tag: selectedTimelineEntry?.created_at
             ? formatTimestamp(selectedTimelineEntry.created_at)
             : t("flowHistory.previewLabel"),
-          description: selectedTimelineEntry?.operations
-            ? summarizeOperations(selectedTimelineEntry.operations, t)
-            : null,
+          // At an entry's end, everything the entry changed; inside it, the
+          // one change that produced this point.
+          description:
+            !atEntryEnd && operationHere
+              ? `${operationHere.actor.username ?? t("flowHistory.unknownAuthor")}: ${describeOperation(operationHere, t, { fieldLabel }).join("; ")}`
+              : selectedTimelineEntry?.operations
+                ? summarizeOperations(selectedTimelineEntry.operations, t, {
+                    fieldLabel,
+                  })
+                : null,
         }
       : selectedVersionFull;
 
   useEffect(() => {
     setPreviewLoading(isLoadingEntry);
   }, [isLoadingEntry, setPreviewLoading]);
-
-  const setPlaybackEntry = useRevisionPlaybackStore((state) => state.setEntry);
-  // Keyed on the entry's id, not the object: the timeline refetches every few
-  // seconds, and recorded history never changes, so a refetch must not
-  // restart playback.
-  const selectedTimelineEntryRef = useRef(selectedTimelineEntry);
-  selectedTimelineEntryRef.current = selectedTimelineEntry;
-  const selectedTimelineEntryId = selectedTimelineEntry?.id ?? null;
-  useEffect(() => {
-    const entry = selectedTimelineEntryRef.current;
-    setPlaybackEntry(
-      entry?.operations
-        ? {
-            flowId,
-            fromRevision: entry.start_revision - 1,
-            toRevision: entry.end_revision,
-            operations: entry.operations,
-          }
-        : null,
-    );
-  }, [flowId, selectedTimelineEntryId, setPlaybackEntry]);
-  useEffect(() => () => setPlaybackEntry(null), [setPlaybackEntry]);
 
   const processedPreview = useMemo<{
     // biome-ignore lint/suspicious/noExplicitAny: legacy
@@ -204,7 +250,10 @@ export function useFlowVersionSidebar(flowId: string) {
       // biome-ignore lint/suspicious/noExplicitAny: legacy
       const flow = { data: clonedData, is_component: false } as any;
       processFlows([flow]);
-      return { nodes: flow.data.nodes, edges: flow.data.edges };
+      // As when a flow is opened: rebuild the edges' handle ids from the
+      // nodes, or edges stored in another spelling attach to nothing.
+      const { edges } = cleanEdges(flow.data.nodes, flow.data.edges);
+      return { nodes: flow.data.nodes, edges };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error("Failed to process version flow data for preview:", err);
@@ -236,10 +285,8 @@ export function useFlowVersionSidebar(flowId: string) {
         edges: cloneDeep(originalDraftEdgesRef.current),
       });
     }
-    // Fit the canvas to the new nodes after ReactFlow processes the state update.
-    requestAnimationFrame(() => {
-      useFlowStore.getState().reactFlowInstance?.fitView();
-    });
+    // The viewport is left alone: moving through history keeps the same part
+    // of the canvas in view, so changes can be compared in place.
   }, [processedPreview, selectedId]);
 
   useEffect(() => {
@@ -450,6 +497,8 @@ export function useFlowVersionSidebar(flowId: string) {
     versions,
     maxEntries,
     timelineEntries,
+    selectedTimelineEntryId: selectedTimelineEntry?.id ?? null,
+    fieldLabel,
     olderVersions,
     hasOlderEntries,
     isLoadingOlderEntries,

@@ -4,18 +4,21 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 const PAGE_SIZE = 50;
+/** The largest page the server returns. */
+export const MAX_PAGE_SIZE = 200;
 // Revisions start at 1, so 0 stands for "from the newest entry".
 const NEWEST = 0;
 
 export const getFlowRevisions = async (
   flowId: string,
   before: number = NEWEST,
+  limit: number = PAGE_SIZE,
 ): Promise<RevisionPage> => {
   const response = await api.get<RevisionPage>(
     `${getURL("FLOWS")}/${flowId}/revisions`,
     {
       params: {
-        limit: PAGE_SIZE,
+        limit,
         include: "operations",
         ...(before > NEWEST ? { before } : {}),
       },
