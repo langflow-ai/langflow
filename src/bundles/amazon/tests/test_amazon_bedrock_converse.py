@@ -101,3 +101,12 @@ def test_additional_model_fields_still_reach_unsupported_providers():
     ).build_model()
 
     assert model.additional_model_request_fields == {"max_gen_len": 512}
+
+
+def test_model_id_accepts_a_typed_id_missing_from_the_dropdown():
+    """Inference-profile-only models such as us.openai.gpt-6-sol are not in AWS_MODEL_IDs."""
+    component = _component(model_id="us.openai.gpt-6-sol")
+    template = component.to_frontend_node()["data"]["node"]["template"]
+
+    assert template["model_id"]["combobox"] is True
+    assert component.build_model().model_id == "us.openai.gpt-6-sol"
