@@ -8,6 +8,7 @@ and is opt-in via ``LANGFLOW_RUN_PGVECTOR_INTEGRATION_TESTS=1`` and
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import os
 import uuid
@@ -29,7 +30,7 @@ from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
-from langflow.services.knowledge_base_storage.runtime import backend_for_record
+from langflow.services.knowledge_base_storage.runtime import backend_for_record, operation, unfenced_backend
 from lfx.base.knowledge_bases.backends import IngestedDocument, SQLiteBackend, create_backend
 from pydantic import SecretStr
 
@@ -462,6 +463,44 @@ class TestRelocationToPostgresLive:
         assert "changed during the move" in result.reason
         row = await knowledge_base_service.get_by_id(record.id)
         assert (row.backend_type, row.storage_generation) == ("sqlite", 2)
+
+    async def test_write_under_way_when_the_copy_ends_is_counted_before_the_repoint(
+        self, active_user, tmp_path, during_copy
+    ):
+        kb_name = f"kb_inflight_{uuid.uuid4().hex[:6]}"
+        locked = asyncio.Event()
+        moves: list[asyncio.Task] = []
+        writes: list[asyncio.Task] = []
+
+        async def write_under_way():
+            # What a guarded write does: take the storage lock, check the routing, then
+            # write to the store it resolved. This one passes the check before the copy
+            # ends and writes after the move would have repointed without the lock.
+            record = await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name)
+            async with operation(record):
+                locked.set()
+                await asyncio.wait(moves, timeout=2)
+                source = unfenced_backend(record)
+                try:
+                    await source.add_embedded_documents(
+                        [IngestedDocument(id="a-late", content="late", metadata={}, embedding=[0.5] * DIM)]
+                    )
+                finally:
+                    await source.teardown()
+
+        async def start_write():
+            writes.append(asyncio.create_task(write_under_way()))
+            await locked.wait()
+
+        during_copy(start_write)
+        moves.append(asyncio.create_task(self._move(active_user, tmp_path, kb_name)))
+        record, result = await moves[0]
+        await writes[0]
+
+        assert result.status == "failed", (result.source_count, result.copied, result.target_count)
+        assert "source changed during the copy (12 -> 13 chunks)" in result.reason
+        row = await knowledge_base_service.get_by_id(record.id)
+        assert row.backend_type == "sqlite"
 
 
 @pytest.mark.api_key_required
