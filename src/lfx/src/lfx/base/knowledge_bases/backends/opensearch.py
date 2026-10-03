@@ -72,6 +72,7 @@ from __future__ import annotations
 import asyncio
 import queue as sync_queue
 import threading
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
@@ -87,7 +88,7 @@ from lfx.log.logger import logger
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Iterator
     from uuid import UUID
 
     from langchain_core.documents import Document
@@ -186,6 +187,33 @@ def _coerce_bool(value: Any, *, default: bool) -> bool:
     if isinstance(value, (int, float)):
         return bool(value)
     return default
+
+
+@contextmanager
+def _refused_documents_left_out() -> Iterator[None]:
+    """Report a bulk write OpenSearch refused without the documents it refused.
+
+    opensearch-py's ``BulkIndexError`` carries each refused document next to the
+    reason, and its message prints all of it: chunk text, metadata and vector. What
+    is raised instead says how many were refused and, for each kind of error, what
+    OpenSearch said about the first one.
+    """
+    from opensearchpy.helpers import BulkIndexError
+
+    try:
+        yield
+    except BulkIndexError as exc:
+        said: dict[str, str] = {}
+        for refused in exc.errors:
+            error = next(iter(refused.values())).get("error")
+            if not isinstance(error, dict):
+                continue
+            cause = error.get("caused_by") or {}
+            because = f" ({cause.get('type')}: {cause.get('reason')})" if cause else ""
+            said.setdefault(str(error.get("type")), f"{error.get('reason')}{because}")
+        detail = "; ".join(f"{kind}: {reason}" for kind, reason in said.items())
+        # ``from None``: the original would print the documents again in a traceback.
+        raise RuntimeError(f"{exc.args[0]} {detail}".rstrip()) from None
 
 
 class OpenSearchBackend(BaseVectorStoreBackend):
@@ -388,7 +416,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             return
         await self.ensure_ready()
         store = self.vector_store
-        await store.aadd_documents(docs, space_type=self._os_space_type)
+        with _refused_documents_left_out():
+            await store.aadd_documents(docs, space_type=self._os_space_type)
 
     async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
         # Like ingestion, no per-call field override: LangChain writes vectors to
@@ -402,13 +431,14 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         bulk_size = self.vector_store.bulk_size  # type: ignore[attr-defined]
         for start in range(0, len(docs), bulk_size):
             chunk = docs[start : start + bulk_size]
-            await _drained_worker(
-                self.vector_store.add_embeddings,  # type: ignore[attr-defined]
-                [(doc.content, doc.embedding) for doc in chunk],
-                metadatas=[doc.metadata for doc in chunk],
-                ids=ids[start : start + bulk_size],
-                space_type=self._os_space_type,
-            )
+            with _refused_documents_left_out():
+                await _drained_worker(
+                    self.vector_store.add_embeddings,  # type: ignore[attr-defined]
+                    [(doc.content, doc.embedding) for doc in chunk],
+                    metadatas=[doc.metadata for doc in chunk],
+                    ids=ids[start : start + bulk_size],
+                    space_type=self._os_space_type,
+                )
 
     async def similarity_search(
         self,
