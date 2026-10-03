@@ -10,8 +10,10 @@ copy is confirmed complete, so a failure at any step leaves its row pointing at
 data that is still there.
 
 Nothing may ingest into a knowledge base or capture memories while it moves. A
-change seen during the copy stops the repoint, but a job that resolved the old
-backend before the repoint can still write there afterwards.
+change seen during the copy stops the repoint. The last count and the repoint
+hold the knowledge base's storage lock, so a write through the storage runtime
+cannot land on the old store after the repoint. A process that writes to the
+store directly, around that runtime, still can.
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ from sqlmodel import select, update
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
-from langflow.services.knowledge_base_storage.runtime import unfenced_backend
+from langflow.services.knowledge_base_storage.runtime import operation, unfenced_backend
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -200,17 +202,21 @@ async def _relocate_one(
             )
             return result
 
-        # A read can page past chunks written after it started, so the copy and
-        # the target can agree while the source has moved on.
-        source_now = await source.count()
-        if source_now != result.source_count:
-            result.reason = (
-                f"source changed during the copy ({result.source_count} -> {source_now} chunks); "
-                "stop ingestion and memory capture, then re-run"
-            )
-            return result
+        # Every write through the storage runtime holds this lock, so a write under
+        # way finishes before the last count, and one that starts after the repoint
+        # sees the new routing and is refused.
+        async with operation(record.id):
+            # A read can page past chunks written after it started, so the copy and
+            # the target can agree while the source has moved on.
+            source_now = await source.count()
+            if source_now != result.source_count:
+                result.reason = (
+                    f"source changed during the copy ({result.source_count} -> {source_now} chunks); "
+                    "stop ingestion and memory capture, then re-run"
+                )
+                return result
 
-        repoint = await _repoint(record, target_backend_type, target_backend_config, result.source_count)
+            repoint = await _repoint(record, target_backend_type, target_backend_config, result.source_count)
         if repoint == "deleted":
             result.reason = "knowledge base was deleted during the move"
             return result
