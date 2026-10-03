@@ -1,24 +1,31 @@
 import { create } from "zustand";
-import type { RecordedOperation } from "@/types/flow/revision";
+import type { HistoryTimeline } from "@/utils/flow-operations/history";
 
-/** The timeline entry being previewed, for stepping through its operations on the canvas. */
-export type PlaybackEntry = {
-  flowId: string;
-  /** The revision before the entry's first operation: where playback starts. */
-  fromRevision: number;
-  /** The entry's last revision: what the preview shows and a restore returns to. */
-  toRevision: number;
-  operations: RecordedOperation[];
-};
-
+/**
+ * Shared by the version sidebar, which owns the selection and draws the
+ * previewed flow, and the history slider on the canvas, which moves it.
+ */
 interface RevisionPlaybackState {
-  entry: PlaybackEntry | null;
-  setEntry: (entry: PlaybackEntry | null) => void;
+  /** The flow's retained history, replayed; null until loaded. */
+  timeline: HistoryTimeline | null;
+  /** The revision being previewed; null when not previewing history. */
+  revision: number | null;
+  /** Previews `revision`. Registered by the version sidebar while it is open. */
+  selectRevision: ((revision: number) => void) | null;
+  setTimeline: (timeline: HistoryTimeline | null) => void;
+  setRevision: (revision: number | null) => void;
+  setSelectRevision: (
+    selectRevision: ((revision: number) => void) | null,
+  ) => void;
 }
 
 const useRevisionPlaybackStore = create<RevisionPlaybackState>((set) => ({
-  entry: null,
-  setEntry: (entry) => set({ entry }),
+  timeline: null,
+  revision: null,
+  selectRevision: null,
+  setTimeline: (timeline) => set({ timeline }),
+  setRevision: (revision) => set({ revision }),
+  setSelectRevision: (selectRevision) => set({ selectRevision }),
 }));
 
 export default useRevisionPlaybackStore;

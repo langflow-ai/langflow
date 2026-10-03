@@ -10,7 +10,7 @@ import type { RevisionEntry } from "@/types/flow/revision";
 import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
 import TimelineEntryItem from "./components/TimelineEntryItem";
 import VersionListItem from "./components/VersionListItem";
-import { CURRENT_DRAFT_ID, revisionSelectionId } from "./constants";
+import { CURRENT_DRAFT_ID } from "./constants";
 import type { FlowVersionSidebarContentProps } from "./types";
 import { useFlowVersionSidebar } from "./use-flow-version-sidebar";
 import { dayLabel } from "./utils";
@@ -41,6 +41,8 @@ export default function FlowVersionSidebarContent({
     versions,
     maxEntries,
     timelineEntries,
+    selectedTimelineEntryId,
+    fieldLabel,
     olderVersions,
     hasOlderEntries,
     isLoadingOlderEntries,
@@ -134,17 +136,16 @@ export default function FlowVersionSidebarContent({
             {groupByDay(timelineEntries, (dateStr) => dayLabel(dateStr, t)).map(
               (group) => (
                 <div key={group.day} role="group" aria-label={group.day}>
-                  <div className="px-3 pb-1 pt-3 text-xs font-medium text-muted-foreground">
+                  <div className="sticky top-0 z-10 bg-background/95 px-3 pb-1.5 pt-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur">
                     {group.day}
                   </div>
                   {group.entries.map((entry) => (
                     <TimelineEntryItem
                       key={entry.id}
                       entry={entry}
-                      isSelected={
-                        selectedId === revisionSelectionId(entry.end_revision)
-                      }
+                      isSelected={entry.id === selectedTimelineEntryId}
                       onSelect={handleSelectEntry}
+                      fieldLabel={fieldLabel}
                     />
                   ))}
                 </div>
@@ -163,7 +164,7 @@ export default function FlowVersionSidebarContent({
             )}
 
             {olderVersions.length > 0 && timelineEntries.length > 0 && (
-              <div className="px-3 pb-1 pt-3 text-xs font-medium text-muted-foreground">
+              <div className="px-3 pb-1.5 pt-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {t("flowHistory.olderHistory")}
               </div>
             )}

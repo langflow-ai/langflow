@@ -45,6 +45,16 @@ export type ApplyResult = {
   forwardOperations: FlowOperation[];
 };
 
+export type ApplyOptions = {
+  /**
+   * Skip the `from_type` checks. Operations read from the history API have
+   * literal secrets replaced with null, so in a redacted graph a value's JSON
+   * type no longer says anything; replaying them for display must not fail on
+   * it. Never set this when applying operations that will be stored.
+   */
+  redacted?: boolean;
+};
+
 const GRAPH_COLLECTION_KEYS = new Set(["nodes", "edges"]);
 const NODE_OBJECT_PATHS: PathSegment[][] = [
   ["data"],
@@ -111,7 +121,10 @@ class GraphState {
   readonly baseNodeIds = new Set<string>();
   private readonly copiedNodeIds = new Set<string>();
 
-  constructor(base: unknown) {
+  constructor(
+    base: unknown,
+    readonly options: ApplyOptions = {},
+  ) {
     validateBase(base);
     const graph = base as FlowGraph;
     this.flowData = { ...graph };
@@ -315,7 +328,8 @@ function applyUpdateNodes(
     if (FORBIDDEN_WHOLE_NODE_PATHS.has(JSON.stringify(update.path)))
       throw invalidOperation("cannot update entire node data objects");
     const node = state.writableNode(update.id);
-    if (update.op === "set_field") setField(node, update);
+    if (update.op === "set_field")
+      setField(node, update, state.options.redacted ?? false);
     else deleteField(node, update.path);
   }
   return [
@@ -358,7 +372,11 @@ function containerAt(
   return value;
 }
 
-function setField(node: JsonObject, update: NodeUpdate): void {
+function setField(
+  node: JsonObject,
+  update: NodeUpdate,
+  redacted: boolean,
+): void {
   const container = containerAt(node, update.path);
   const last = update.path[update.path.length - 1];
   const exists = Array.isArray(container)
@@ -368,13 +386,14 @@ function setField(node: JsonObject, update: NodeUpdate): void {
     ? (container as Record<PathSegment, unknown>)[last]
     : undefined;
 
-  if (update.from_type == null) {
+  // Types in a redacted graph are not reliable; see ApplyOptions.
+  if (!redacted && update.from_type == null) {
     if (exists && jsonType(current) !== jsonType(update.value))
       throw invalidOperation(
         "set_field changes a value's JSON type without declaring from_type",
         "FIELD_TYPE_CHANGE_UNDECLARED",
       );
-  } else if (!exists || jsonType(current) !== update.from_type) {
+  } else if (!redacted && (!exists || jsonType(current) !== update.from_type)) {
     throw invalidOperation(
       "set_field from_type does not match the value it replaces",
       "FIELD_TYPE_PRECONDITION_FAILED",
@@ -532,8 +551,9 @@ const HANDLERS: Record<
 export function applyFlowOperations(
   base: unknown,
   operations: FlowOperation[],
+  options: ApplyOptions = {},
 ): ApplyResult {
-  const state = new GraphState(base);
+  const state = new GraphState(base, options);
   const forwardOperations: FlowOperation[] = [];
   for (const operation of operations) {
     const handler = isObject(operation)
