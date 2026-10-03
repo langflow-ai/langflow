@@ -51,7 +51,7 @@ For more information, see [Install and run the Langflow OSS Python package](http
 
 #### Run
 
-To start Langflow, run:
+To start Langflow, run: (For Windows: open terminal with Admin Privileges and run.)
 ```shell
 uv run langflow run
 ```
