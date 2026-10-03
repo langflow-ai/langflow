@@ -144,8 +144,8 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
     // check if the source and target handle still exists
     const sourceHandle = edge.sourceHandle; //right
     const targetHandle = edge.targetHandle; //left
-    // Hold by reference: the target block rewrites edge.id on migration, so a second find-by-id in
-    // the source block would miss it and skip the source-handle migration (DataFrame stays). LE-1929.
+    // Hold by reference: both handle migrations below edit this same clone, so the source
+    // migration sees what the target migration wrote (LE-1929).
     const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
@@ -259,14 +259,8 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             edgeInNewEdges.data.targetHandle =
               scapeJSONParse(expectedTargetHandle);
           }
-          // Update edge ID to reflect new handles
-          edgeInNewEdges.id =
-            "reactflow__edge-" +
-            edgeInNewEdges.source +
-            (edgeInNewEdges.sourceHandle ?? "") +
-            "-" +
-            edgeInNewEdges.target +
-            expectedTargetHandle;
+          // The edge keeps its id: an id is the edge's identity, not a
+          // spelling of its handles, so the flow's history sees the same edge.
         }
       }
     }
@@ -350,14 +344,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
                 edgeInNewEdges.data.sourceHandle =
                   scapeJSONParse(expectedSourceHandle);
               }
-              // Update edge ID to reflect new handles
-              edgeInNewEdges.id =
-                "reactflow__edge-" +
-                edgeInNewEdges.source +
-                expectedSourceHandle +
-                "-" +
-                edgeInNewEdges.target +
-                (edgeInNewEdges.targetHandle ?? "");
+              // The edge keeps its id (see the target handle above).
             }
           }
         } else {
