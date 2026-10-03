@@ -1,0 +1,943 @@
+{
+  "description": "Shared merge cases. Every case starts from the document's `base`. Apply each transaction in `transactions` in `order` to the graph the earlier ones left. A transaction is atomic: it is either applied whole or rejected whole with the named `error` and `code` (outcomes), leaving the graph as it was. The final graph must equal `expected`.",
+  "base": {
+    "nodes": [
+      {
+        "id": "Model-1",
+        "data": {
+          "node": {
+            "template": {
+              "provider": {"type": "str", "value": "OpenAI"},
+              "model_name": {"type": "str", "value": "gpt-4o"},
+              "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+              "temperature": {"type": "float", "value": 0.1},
+              "input_value": {"type": "str", "value": ""},
+              "headers": {
+                "type": "table",
+                "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+              },
+              "legacy": {"type": "table", "value": [{"v": "1"}]}
+            },
+            "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+          }
+        }
+      },
+      {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+      {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+    ],
+    "edges": [
+      {
+        "id": "e-chat-model",
+        "source": "ChatInput-1",
+        "target": "Model-1",
+        "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "edits to different cells of one table both land",
+      "transactions": {
+        "A": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "xml"}]
+          }
+        ],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r2"}, "v"], "value": "X-Auth"}]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": "applied"},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": "a0", "v": "xml"}, {"_id": "r2", "_pos": "a1", "v": "X-Auth"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "two edits to one cell: the later one wins (B last)",
+      "transactions": {
+        "A": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "from A"}]
+          }
+        ],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "from B"}]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": "applied"},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": "a0", "v": "from B"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "two edits to one cell: the later one wins (A last)",
+      "transactions": {
+        "A": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "from A"}]
+          }
+        ],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "from B"}]
+          }
+        ]
+      },
+      "order": ["B", "A"],
+      "outcomes": {"B": "applied", "A": "applied"},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": "a0", "v": "from A"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "an edit to a row someone deleted fails",
+      "transactions": {
+        "A": [
+          {"type": "update_nodes", "updates": [{"id": "Model-1", "op": "delete_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}]}]}
+        ],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "late edit"}]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": {"error": "FlowOperationValidationError", "code": "FLOW_OPERATION_INVALID"}},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {"type": "table", "value": [{"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]},
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "deleting a row after someone edited it removes the row",
+      "transactions": {
+        "A": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "edit"}]
+          }
+        ],
+        "B": [
+          {"type": "update_nodes", "updates": [{"id": "Model-1", "op": "delete_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}]}]}
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": "applied"},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {"type": "table", "value": [{"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]},
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "moves of different rows both apply",
+      "transactions": {
+        "A": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "_pos"], "value": "a3"}]
+          }
+        ],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r3"}, "_pos"], "value": "Zz"}]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": "applied"},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r3", "_pos": "Zz", "v": "en"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r1", "_pos": "a3", "v": "json"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "two moves of one row: the later one wins",
+      "transactions": {
+        "A": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "_pos"], "value": "a3"}]
+          }
+        ],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "_pos"], "value": "a1V"}]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": "applied"},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r1", "_pos": "a1V", "v": "json"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "two inserts at one place both survive, ordered by id",
+      "transactions": {
+        "A": [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "Model-1",
+                "op": "set_field",
+                "path": ["data", "node", "template", "headers", "value", {"id": "rB"}],
+                "value": {"_id": "rB", "_pos": "a0V", "v": "b"}
+              }
+            ]
+          }
+        ],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "Model-1",
+                "op": "set_field",
+                "path": ["data", "node", "template", "headers", "value", {"id": "rA"}],
+                "value": {"_id": "rA", "_pos": "a0V", "v": "a"}
+              }
+            ]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": "applied"},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [
+                      {"_id": "r1", "_pos": "a0", "v": "json"},
+                      {"_id": "rA", "_pos": "a0V", "v": "a"},
+                      {"_id": "rB", "_pos": "a0V", "v": "b"},
+                      {"_id": "r2", "_pos": "a1", "v": "token"},
+                      {"_id": "r3", "_pos": "a2", "v": "en"}
+                    ]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "a refresh computed from a value someone changed fails its expectation",
+      "transactions": {
+        "A": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "provider", "value"], "value": "Anthropic"}]
+          }
+        ],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "provider", "value"], "value": "OpenAI", "expect": {"value": "OpenAI"}},
+              {
+                "id": "Model-1",
+                "op": "set_field",
+                "path": ["data", "node", "template", "model_name", "value"],
+                "value": "gpt-4.1",
+                "expect": {"value": "gpt-4o"}
+              }
+            ]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": {"error": "FlowOperationPreconditionError", "code": "EXPECTATION_FAILED"}},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "Anthropic"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "a write whose expectation still holds lands after an unrelated edit",
+      "transactions": {
+        "A": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "temperature", "value"], "value": 0.7}]
+          }
+        ],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "Model-1",
+                "op": "set_field",
+                "path": ["data", "node", "template", "model_name", "value"],
+                "value": "gpt-4.1",
+                "expect": {"value": "gpt-4o"}
+              }
+            ]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": "applied"},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4.1"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.7},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "value units never mix: the later unit is stored whole",
+      "transactions": {
+        "A": [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "api_key", "load_from_db"], "value": true},
+              {"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "api_key", "value"], "value": "ANTHROPIC_API_KEY"}
+            ]
+          }
+        ],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "api_key", "load_from_db"], "value": false},
+              {"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "api_key", "value"], "value": "sk-literal"}
+            ]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": "applied"},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "sk-literal", "load_from_db": false},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "edits to different fields of one node both land",
+      "transactions": {
+        "A": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "temperature", "value"], "value": 0.9}]
+          }
+        ],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "provider", "value"], "value": "Groq"}]
+          }
+        ]
+      },
+      "order": ["B", "A"],
+      "outcomes": {"B": "applied", "A": "applied"},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "Groq"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.9},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "two first edits of a legacy table: the second fails its expectation",
+      "transactions": {
+        "A": [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "Model-1",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"_id": "a1", "_pos": "a0", "v": "from A"}],
+                "expect": {"value": [{"v": "1"}]}
+              }
+            ]
+          }
+        ],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "Model-1",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"_id": "b1", "_pos": "a0", "v": "from B"}],
+                "expect": {"value": [{"v": "1"}]}
+              }
+            ]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": {"error": "FlowOperationPreconditionError", "code": "EXPECTATION_FAILED"}},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"_id": "a1", "_pos": "a0", "v": "from A"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "two connections to one single-input field: the second fails",
+      "transactions": {
+        "A": [
+          {"type": "delete_edges", "ids": ["e-chat-model"]},
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-a",
+                "source": "Prompt-1",
+                "target": "Model-1",
+                "data": {"sourceHandle": {"name": "prompt"}, "targetHandle": {"fieldName": "input_value"}}
+              }
+            ]
+          }
+        ],
+        "B": [
+          {"type": "delete_edges", "ids": ["e-chat-model"]},
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-b",
+                "source": "ChatInput-1",
+                "target": "Model-1",
+                "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+              }
+            ]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": {"error": "FlowOperationValidationError", "code": "EDGE_TARGET_OCCUPIED"}},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {"id": "e-a", "source": "Prompt-1", "target": "Model-1", "data": {"sourceHandle": {"name": "prompt"}, "targetHandle": {"fieldName": "input_value"}}}
+        ]
+      }
+    },
+    {
+      "name": "hiding an output someone removed fails",
+      "transactions": {
+        "A": [{"type": "update_nodes", "updates": [{"id": "Model-1", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "model_output"}]}]}],
+        "B": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "outputs", {"key": "model_output"}, "hidden"], "value": true}]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": {"error": "FlowOperationValidationError", "code": "FLOW_OPERATION_INVALID"}},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "input_value": {"type": "str", "value": ""},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-chat-model",
+            "source": "ChatInput-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "updating an edge whose field someone removed fails",
+      "transactions": {
+        "A": [{"type": "update_nodes", "updates": [{"id": "Model-1", "op": "delete_field", "path": ["data", "node", "template", "input_value"]}]}],
+        "B": [
+          {
+            "type": "update_edges",
+            "updates": [{"id": "e-chat-model", "op": "set_field", "path": ["data", "targetHandle", "inputTypes"], "value": ["Message", "Data"]}]
+          }
+        ]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": {"error": "FlowOperationValidationError", "code": "FLOW_OPERATION_INVALID"}},
+      "expected": {
+        "nodes": [
+          {
+            "id": "Model-1",
+            "data": {
+              "node": {
+                "template": {
+                  "provider": {"type": "str", "value": "OpenAI"},
+                  "model_name": {"type": "str", "value": "gpt-4o"},
+                  "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
+                  "temperature": {"type": "float", "value": 0.1},
+                  "headers": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                  },
+                  "legacy": {"type": "table", "value": [{"v": "1"}]}
+                },
+                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+              }
+            }
+          },
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "editing a node someone deleted fails",
+      "transactions": {
+        "A": [{"type": "delete_nodes", "ids": ["Model-1"]}],
+        "B": [{"type": "update_nodes", "updates": [{"id": "Model-1", "op": "set_field", "path": ["position"], "value": {"x": 10, "y": 10}}]}]
+      },
+      "order": ["A", "B"],
+      "outcomes": {"A": "applied", "B": {"error": "FlowOperationValidationError", "code": "FLOW_OPERATION_INVALID"}},
+      "expected": {
+        "nodes": [
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+        ],
+        "edges": []
+      }
+    }
+  ]
+}

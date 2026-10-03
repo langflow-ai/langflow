@@ -2,7 +2,9 @@
 
 Starter projects are the most realistic graphs in the repository, so they are
 the fixtures that keep the diff honest on real node shapes: large templates,
-nested outputs, notes, and handle-encoded edges.
+nested outputs, notes, and handle-encoded edges. Bundle starter projects are
+included, and every one must pass the engine's edge rules unchanged: building
+it from an empty flow adds every edge through those rules.
 """
 
 from __future__ import annotations
@@ -23,7 +25,12 @@ from lfx.services.flow_operations import (
     repair_flow_data,
 )
 
-STARTER_PROJECTS = sorted((Path(langflow.initial_setup.__file__).parent / "starter_projects").glob("*.json"))
+_INITIAL_SETUP = Path(langflow.initial_setup.__file__).parent
+# In a source checkout, bundles live next to the backend under src/bundles.
+_BUNDLES = _INITIAL_SETUP.parents[3] / "bundles"
+STARTER_PROJECTS = sorted((_INITIAL_SETUP / "starter_projects").glob("*.json")) + sorted(
+    _BUNDLES.glob("**/starter_projects/*.json")
+)
 
 
 def _flow_data(path: Path) -> dict:
@@ -42,6 +49,9 @@ def test_starter_projects_exist():
 def test_starter_project_follows_every_rule(starter):
     assert find_graph_violations(starter) == []
     assert repair_flow_data(starter).fixes == []
+    # Starter tables are legacy (no row ids); a write that leaves them unchanged is accepted.
+    assert find_graph_violations(starter, base=starter) == []
+    assert repair_flow_data(starter, base=starter).fixes == []
 
 
 def _replay_one_at_a_time(base: dict, target: dict) -> dict:

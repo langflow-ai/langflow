@@ -20,6 +20,11 @@ SchemaPath = tuple[str, ...]
 KeyPath = tuple[str | int, ...]
 
 
+def utf16_sort_key(value: str) -> bytes:
+    """Order strings by UTF-16 code units, the order JavaScript's default sort uses."""
+    return value.encode("utf-16-be", "surrogatepass")
+
+
 @dataclass(frozen=True)
 class KeyedList:
     """A list whose items are addressed by a key instead of an index.
