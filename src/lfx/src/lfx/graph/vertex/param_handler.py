@@ -13,6 +13,7 @@ import pandas as pd
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.services.deps import get_storage_service
+from lfx.services.flow_operations.table_rows import strip_row_keys
 from lfx.utils.constants import DIRECT_TYPES
 from lfx.utils.file_path_security import (
     LocalFileAccessError,
@@ -535,7 +536,8 @@ class ParameterHandler:
         # Store the table data as-is for now
         # The actual column processing will happen in the loading phase
         if isinstance(val, list) and all(isinstance(item, dict) for item in val):
-            params[field_name] = val
+            # Row ids and positions belong to the flow's history, not to the component.
+            params[field_name] = strip_row_keys(val)
         else:
             msg = f"Invalid value type {type(val)} for table field {field_name}"
             raise ValueError(msg)
@@ -643,7 +645,8 @@ class ParameterHandler:
                         params[field_name] = bool(val)
             case "table" | "tools":
                 if isinstance(val, list) and all(isinstance(item, dict) for item in val):
-                    params[field_name] = pd.DataFrame(val)
+                    rows = strip_row_keys(val) if field.get("type") == "table" else val
+                    params[field_name] = pd.DataFrame(rows)
                 else:
                     msg = f"Invalid value type {type(val)} for field {field_name}"
                     raise ValueError(msg)

@@ -14,6 +14,8 @@ from lfx.services.flow_operations import (
     DeleteEdgesOp,
     DeleteNodesOp,
     FlowDataValidationError,
+    KeySelector,
+    UpdateEdgesOp,
     UpdateMetadataOp,
     UpdateNodesOp,
     apply_flow_operations,
@@ -123,9 +125,9 @@ def test_a_type_change_declares_the_replaced_type():
 
 def test_a_boolean_replacing_a_number_is_a_type_change():
     base = _graph()
-    base["nodes"][0]["position"]["x"] = 1
+    _template(base, "a")["text"]["value"] = 1
     target = copy.deepcopy(base)
-    target["nodes"][0]["position"]["x"] = True
+    _template(target, "a")["text"]["value"] = True
 
     (operation,) = _replays(base, target)
 
@@ -147,40 +149,69 @@ def test_template_field_metadata_is_recorded_only_inside_a_field():
         "password": True,
     }
     assert by_path[("data", "node", "template", "new_field")].template_field is None
-    assert by_path[("position", "x")].template_field is None
+    assert by_path[("position",)].template_field is None
 
 
-def test_removed_keys_become_delete_field():
+def test_a_removed_definition_key_rewrites_the_definition_unit():
     target = _graph()
     del _template(target, "a")["text"]["type"]
 
     (operation,) = _replays(_graph(), target)
 
-    assert operation.updates[0].op == "delete_field"
-    assert operation.updates[0].path == ("data", "node", "template", "text", "type")
+    assert [(update.op, update.path) for update in operation.updates] == [
+        ("set_field", ("data", "node", "template", "text", "name")),
+        ("delete_field", ("data", "node", "template", "text", "type")),
+    ]
 
 
-def test_arrays_are_replaced_whole():
+def test_arrays_outside_keyed_lists_are_replaced_whole():
     base = _graph()
-    base["nodes"][0]["data"]["node"]["outputs"] = [{"name": "a"}, {"name": "b"}]
+    base["nodes"][0]["data"]["node"]["base_classes"] = ["Message", "Data"]
     target = copy.deepcopy(base)
-    target["nodes"][0]["data"]["node"]["outputs"][1]["name"] = "c"
+    target["nodes"][0]["data"]["node"]["base_classes"][1] = "Text"
 
     (operation,) = _replays(base, target)
 
-    assert [tuple(update.path) for update in operation.updates] == [("data", "node", "outputs")]
+    assert [tuple(update.path) for update in operation.updates] == [("data", "node", "base_classes")]
 
 
-def test_a_changed_edge_is_deleted_and_added():
+def test_outputs_are_written_per_item():
+    base = _graph()
+    base["nodes"][0]["data"]["node"]["outputs"] = [{"name": "a"}, {"name": "b"}]
+    target = copy.deepcopy(base)
+    target["nodes"][0]["data"]["node"]["outputs"][1] = {"name": "c"}
+
+    (operation,) = _replays(base, target)
+
+    assert [(update.op, update.path) for update in operation.updates] == [
+        ("set_field", ("data", "node", "outputs", KeySelector(key="c"))),
+        ("delete_field", ("data", "node", "outputs", KeySelector(key="b"))),
+    ]
+
+
+def test_a_changed_edge_between_the_same_nodes_is_updated_in_place():
     target = _graph()
     target["edges"][0]["targetHandle"] = "other"
 
     operations = _replays(_graph(), target)
 
     assert operations == [
-        DeleteEdgesOp(type="delete_edges", ids=["e-ab"]),
-        AddEdgesOp(type="add_edges", edges=[target["edges"][0]]),
+        UpdateEdgesOp(
+            type="update_edges",
+            updates=[{"id": "e-ab", "op": "set_field", "path": ["targetHandle"], "value": "other"}],
+        )
     ]
+
+
+def test_an_edge_reconnected_to_another_node_is_deleted_and_added():
+    target = _graph()
+    target["nodes"].append(_node("c"))
+    target["edges"][0]["target"] = "c"
+
+    operations = _replays(_graph(), target)
+
+    assert operations[0] == DeleteEdgesOp(type="delete_edges", ids=["e-ab"])
+    assert operations[-1] == AddEdgesOp(type="add_edges", edges=[target["edges"][0]])
 
 
 def test_deleting_a_node_deletes_its_edges_explicitly_first():

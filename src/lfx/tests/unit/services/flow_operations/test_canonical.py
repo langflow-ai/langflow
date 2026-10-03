@@ -131,11 +131,14 @@ def test_boolean_and_number_are_different():
     assert graph_hash(_graph()) != graph_hash(as_bool)
 
 
-def test_deliberate_size_and_position_are_state():
+def test_size_is_view_state_but_position_is_state():
     resized = _graph()
-    resized["nodes"][0]["width"] = 300
+    resized["nodes"][0].update(width=300, height=120)
+    moved = _graph()
+    moved["nodes"][0]["position"] = {"x": 5, "y": 0}
 
-    assert not graphs_equal(_graph(), resized)
+    assert graphs_equal(_graph(), resized)
+    assert not graphs_equal(_graph(), moved)
 
 
 def test_canonical_graph_orders_nodes_by_id():

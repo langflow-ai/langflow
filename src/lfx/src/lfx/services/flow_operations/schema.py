@@ -13,13 +13,16 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
-from lfx.services.flow_operations.canonical import utf16_sort_key
-
 NODE_SCHEMA_PATH = Path(__file__).with_name("node_schema.json")
 WILDCARD = "*"
 
 SchemaPath = tuple[str, ...]
 KeyPath = tuple[str | int, ...]
+
+
+def utf16_sort_key(value: str) -> bytes:
+    """Order strings by UTF-16 code units, the order JavaScript's default sort uses."""
+    return value.encode("utf-16-be", "surrogatepass")
 
 
 @dataclass(frozen=True)

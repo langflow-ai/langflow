@@ -16,9 +16,12 @@ from lfx.services.flow_operations.apply import (
     finalize_graph,
 )
 from lfx.services.flow_operations.canonical import (
+    canonical_edge,
     canonical_graph,
     canonical_graph_json,
+    canonical_handle,
     canonical_json,
+    canonical_node,
     graph_hash,
     graphs_equal,
     json_type,
@@ -31,6 +34,12 @@ from lfx.services.flow_operations.exceptions import (
     FlowOperationPreconditionError,
     FlowOperationReplayError,
     FlowOperationValidationError,
+)
+from lfx.services.flow_operations.fractional_index import (
+    FractionalIndexError,
+    generate_key_between,
+    generate_n_keys_between,
+    is_order_key,
 )
 from lfx.services.flow_operations.ops import (
     AddEdgesOp,
@@ -61,15 +70,19 @@ from lfx.services.flow_operations.python import PythonFlowOperationService
 from lfx.services.flow_operations.repair import REPAIRS, GraphFix, RepairResult, repair_flow_data
 from lfx.services.flow_operations.schema import KeyedList, NodeSchema, load_node_schema
 from lfx.services.flow_operations.service import BaseFlowOperationService
+from lfx.services.flow_operations.table_rows import ROW_ID_KEY, ROW_POSITION_KEY, strip_row_keys
 from lfx.services.flow_operations.validation import (
     GraphViolation,
     GraphViolationCode,
     find_graph_violations,
+    find_table_violations,
     validate_flow_data,
 )
 
 __all__ = [
     "REPAIRS",
+    "ROW_ID_KEY",
+    "ROW_POSITION_KEY",
     "AddEdgesOp",
     "AddNodesOp",
     "BaseFlowOperationService",
@@ -87,6 +100,7 @@ __all__ = [
     "FlowOperationReplayError",
     "FlowOperationValidationError",
     "FlowOperationsApplyResult",
+    "FractionalIndexError",
     "GraphFix",
     "GraphState",
     "GraphViolation",
@@ -106,23 +120,31 @@ __all__ = [
     "UpdateNodesOp",
     "apply_flow_operations",
     "build_graph_state",
+    "canonical_edge",
     "canonical_graph",
     "canonical_graph_json",
+    "canonical_handle",
     "canonical_json",
+    "canonical_node",
     "deduplicate_delete_ids",
     "derive_flow_operations",
     "diff_flow_data",
     "dump_flow_operation",
     "finalize_graph",
     "find_graph_violations",
+    "find_table_violations",
+    "generate_key_between",
+    "generate_n_keys_between",
     "graph_hash",
     "graphs_equal",
+    "is_order_key",
     "json_type",
     "load_node_schema",
     "normalize_requested_ops",
     "parse_flow_operation",
     "parse_flow_operations",
     "repair_flow_data",
+    "strip_row_keys",
     "validate_flow_data",
     "values_equal",
 ]

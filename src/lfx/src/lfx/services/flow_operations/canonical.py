@@ -10,9 +10,14 @@ state removed and its nodes and edges ordered by ID:
   that comes back from the editor as ``0`` must not count as an edit.
 - ``nodes`` and ``edges`` are collections keyed by ID. Their array order is not
   state, so a save that only reorders them changes nothing.
-- View state describes one person's view of the canvas rather than the flow:
-  pan and zoom, selection, drag and resize flags, and sizes React Flow measures
-  in one browser. It is never recorded and never compared.
+- View state is everything ``node_schema.json`` declares display-only: one
+  person's view of the canvas (pan and zoom, selection, drag and resize flags,
+  sizes), stamps the editor refreshes on its own (``last_updated``,
+  ``lf_version``), and the display-only keys of template fields (labels,
+  options, help text). It is stored but never recorded and never compared.
+- An edge's ``sourceHandle`` and ``targetHandle`` strings are JSON with
+  ``œ`` standing for ``"``. They are compared by what they encode, so two
+  spellings of one handle are the same value. Edge ids are left as they are.
 """
 
 from __future__ import annotations
@@ -24,10 +29,14 @@ from decimal import Decimal
 from typing import Any
 
 from lfx.services.flow_operations.exceptions import FlowDataValidationError
+from lfx.services.flow_operations.schema import load_node_schema
 
-FLOW_VIEW_STATE_KEYS = frozenset({"viewport"})
-NODE_VIEW_STATE_KEYS = frozenset({"selected", "dragging", "resizing", "measured"})
-EDGE_VIEW_STATE_KEYS = frozenset({"selected", "animated", "className"})
+_SCHEMA = load_node_schema()
+FLOW_VIEW_STATE_KEYS = _SCHEMA.flow_view_state
+NODE_VIEW_STATE_KEYS = _SCHEMA.node_view_state
+EDGE_VIEW_STATE_KEYS = _SCHEMA.edge_view_state
+EDGE_HANDLE_KEYS = ("sourceHandle", "targetHandle")
+_HANDLE_QUOTE = "œ"
 
 # Largest integer a JavaScript number holds exactly. Larger integers are
 # printed as the double the editor would round them to.
@@ -144,27 +153,82 @@ def _without(mapping: dict[str, Any], keys: frozenset[str]) -> dict[str, Any]:
     return {key: item for key, item in mapping.items() if key not in keys}
 
 
-def _by_id(entries: list[Any], view_state_keys: frozenset[str]) -> list[Any]:
-    cleaned = [_without(entry, view_state_keys) if isinstance(entry, dict) else entry for entry in entries]
+def _by_id(entries: list[Any]) -> list[Any]:
     return sorted(
-        cleaned,
+        entries,
         key=lambda entry: utf16_sort_key(entry["id"])
         if isinstance(entry, dict) and isinstance(entry.get("id"), str)
         else b"",
     )
 
 
+def canonical_handle(handle: Any) -> Any:
+    """Return a handle string re-serialized canonically, or the value unchanged if it is not one.
+
+    ``{œaœ: 1}`` and ``{œaœ:1}`` encode the same handle and give the same result.
+    """
+    if not isinstance(handle, str):
+        return handle
+    try:
+        parsed = json.loads(handle.replace(_HANDLE_QUOTE, '"'))
+        if not isinstance(parsed, (dict, list)):
+            return handle
+        return canonical_json(parsed).replace('"', _HANDLE_QUOTE)
+    except (ValueError, FlowDataValidationError):
+        return handle
+
+
+def canonical_template_field(field: Any) -> Any:
+    """Return a template field without its display-only keys."""
+    if not isinstance(field, dict):
+        return field
+    return _without(field, _SCHEMA.field_view_state)
+
+
+def canonical_node(node: Any) -> Any:
+    """Return a node without view state. Shares unchanged values with ``node``."""
+    if not isinstance(node, dict):
+        return node
+    node = _without(node, NODE_VIEW_STATE_KEYS)
+    data = node.get("data")
+    if not isinstance(data, dict) or not isinstance(data.get("node"), dict):
+        return node
+    node_data = data["node"]
+    hidden = {path[-1] for path in _SCHEMA.node_view_state_paths if path[:-1] == ("data", "node")}
+    node_data = _without(node_data, frozenset(hidden))
+    template = node_data.get("template")
+    if isinstance(template, dict):
+        node_data["template"] = {
+            key: canonical_template_field(field)
+            for key, field in template.items()
+            if key not in _SCHEMA.template_view_state
+        }
+    node["data"] = {**data, "node": node_data}
+    return node
+
+
+def canonical_edge(edge: Any) -> Any:
+    """Return an edge without view state and with its handle strings spelled canonically."""
+    if not isinstance(edge, dict):
+        return edge
+    edge = _without(edge, EDGE_VIEW_STATE_KEYS)
+    for key in EDGE_HANDLE_KEYS:
+        if key in edge:
+            edge[key] = canonical_handle(edge[key])
+    return edge
+
+
 def canonical_graph(flow_data: dict[str, Any]) -> dict[str, Any]:
-    """Return flow data without view state and with nodes and edges ordered by ID.
+    """Return flow data without view state, with canonical handles, and nodes and edges ordered by ID.
 
     The result shares nested values with ``flow_data``; it is meant to be
     serialized or compared, not mutated.
     """
     graph = _without(flow_data, FLOW_VIEW_STATE_KEYS)
     if isinstance(graph.get("nodes"), list):
-        graph["nodes"] = _by_id(graph["nodes"], NODE_VIEW_STATE_KEYS)
+        graph["nodes"] = _by_id([canonical_node(node) for node in graph["nodes"]])
     if isinstance(graph.get("edges"), list):
-        graph["edges"] = _by_id(graph["edges"], EDGE_VIEW_STATE_KEYS)
+        graph["edges"] = _by_id([canonical_edge(edge) for edge in graph["edges"]])
     return graph
 
 
