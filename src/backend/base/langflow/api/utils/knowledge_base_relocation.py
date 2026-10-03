@@ -205,7 +205,7 @@ async def _relocate_one(
         # Every write through the storage runtime holds this lock, so a write under
         # way finishes before the last count, and one that starts after the repoint
         # sees the new routing and is refused.
-        async with operation(record.id):
+        async with operation(record):
             # A read can page past chunks written after it started, so the copy and
             # the target can agree while the source has moved on.
             source_now = await source.count()
@@ -222,8 +222,8 @@ async def _relocate_one(
             return result
         if repoint == "changed":
             result.reason = (
-                "knowledge base's storage changed during the move (its backend, storage generation or storage "
-                "state is no longer what was copied), so it still points at its old store; re-run"
+                "knowledge base's storage changed during the move (its backend, configuration, storage generation "
+                "or storage state is no longer what was copied). Its current routing was preserved. Re-run."
             )
             return result
         result.status = "relocated"
@@ -295,17 +295,27 @@ async def _repoint(
     The storage runtime can move a row to a new generation or start deleting it
     while its chunks are copied, so the copy is only what the row names if these
     columns are unchanged. One conditional UPDATE checks and writes at once.
+    Advancing the generation also invalidates handles from an earlier move to
+    the same backend, even if a later move restores the original configuration.
     """
     async with session_scope() as session:
         moved = await session.exec(
             update(KnowledgeBaseRecord)
             .where(
                 KnowledgeBaseRecord.id == record.id,
+                KnowledgeBaseRecord.user_id == record.user_id,
+                KnowledgeBaseRecord.name == record.name,
                 KnowledgeBaseRecord.backend_type == record.backend_type,
+                KnowledgeBaseRecord.backend_config == record.backend_config,
                 KnowledgeBaseRecord.storage_generation == record.storage_generation,
                 KnowledgeBaseRecord.storage_state == record.storage_state,
             )
-            .values(backend_type=backend_type, backend_config=backend_config, chunks=chunks)
+            .values(
+                backend_type=backend_type,
+                backend_config=backend_config,
+                chunks=chunks,
+                storage_generation=record.storage_generation + 1,
+            )
         )
         if moved.rowcount == 1:
             await session.commit()

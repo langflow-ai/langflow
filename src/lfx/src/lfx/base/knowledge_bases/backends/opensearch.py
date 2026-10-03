@@ -72,6 +72,7 @@ from __future__ import annotations
 import asyncio
 import queue as sync_queue
 import threading
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
@@ -109,6 +110,14 @@ async def _drained_worker(function, *args, **kwargs):
         task.exception()
         raise asyncio.CancelledError
     return task.result()
+
+
+def _is_missing_index(exc: Exception) -> bool:
+    """Only an absent index means an empty store, not another endpoint's 404."""
+    return (
+        getattr(exc, "status_code", None) == HTTPStatus.NOT_FOUND
+        and getattr(exc, "error", None) == "index_not_found_exception"
+    )
 
 
 DEFAULT_URL_VARIABLE = "OPENSEARCH_URL"
@@ -432,13 +441,14 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             client = self._os_client
         try:
             result = await asyncio.to_thread(client.count, index=self._os_index)
-            return int(result.get("count") or 0)
-        except Exception as exc:  # noqa: BLE001
-            # ``warning`` (not ``debug``) so an unreachable cluster /
-            # missing index surfaces in default-level server logs and
-            # the user can correlate a 0-chunk count with the real cause.
-            logger.warning("OpenSearch count() failed for %s: %s", self.kb_name, exc)
-            return 0
+        except Exception as exc:
+            if _is_missing_index(exc):
+                return 0
+            raise
+        if result.get("_shards", {}).get("failed"):
+            msg = "OpenSearch count did not complete on all shards."
+            raise RuntimeError(msg)
+        return int(result["count"])
 
     async def test_connection(self) -> TestConnectionResult:
         """Validate auth + reachability via ``client.info()``.
@@ -649,6 +659,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
 
         def _stream_batches() -> None:
             scanner = None
+            saw_hit = False
             try:
                 scanner = os_helpers.scan(
                     client,
@@ -661,6 +672,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 for hit in scanner:
                     if cancel_event.is_set():
                         break
+                    saw_hit = True
                     source = hit.get("_source") if isinstance(hit, dict) else {}
                     if not isinstance(source, dict):
                         source = {}
@@ -692,7 +704,9 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 if buf and not cancel_event.is_set():
                     _put_cancelable(buf)
             except Exception as exc:  # noqa: BLE001
-                if not cancel_event.is_set():
+                # A never-created index is empty. If it disappears during a
+                # scan, the partial read must fail rather than look complete.
+                if not cancel_event.is_set() and (saw_hit or not _is_missing_index(exc)):
                     _put_cancelable(exc)
             finally:
                 # ``helpers.scan`` owns the scroll context and closes it
@@ -714,16 +728,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     sentinel_seen = True
                     break
                 if isinstance(item, Exception):
-                    # Bumped from ``debug`` to ``warning`` so cluster
-                    # auth / connection errors surface during ingestion
-                    # metric refresh instead of silently truncating the
-                    # iterator. Callers that need the exception to
-                    # propagate should rely on ``count`` / ``add_documents``
-                    # which let it bubble.
-                    logger.warning("OpenSearch iter_documents worker failed for %s: %s", self.kb_name, item)
-                    await asyncio.to_thread(batch_queue.get)
-                    sentinel_seen = True
-                    break
+                    raise item
                 yield item
         finally:
             cancel_event.set()

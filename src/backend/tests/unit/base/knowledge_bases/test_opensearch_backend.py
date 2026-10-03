@@ -55,6 +55,87 @@ def _make_backend(
     return backend
 
 
+class _OpenSearchReadError(Exception):
+    """The transport error fields exposed by opensearch-py."""
+
+    def __init__(self, status_code: int, error: str) -> None:
+        super().__init__(error)
+        self.status_code = status_code
+        self.error = error
+
+
+@pytest.mark.parametrize("operation", ["count", "iter_documents"])
+@pytest.mark.parametrize(
+    "error",
+    [
+        OSError("remote unavailable"),
+        _OpenSearchReadError(401, "security_exception"),
+        _OpenSearchReadError(403, "security_exception"),
+        _OpenSearchReadError(404, "Not Found"),
+        _OpenSearchReadError(404, "search_context_missing_exception"),
+    ],
+)
+async def test_remote_read_propagates_failure(tmp_path, operation, error):
+    backend = _make_backend(tmp_path)
+    backend._os_client = MagicMock()
+    backend._os_client.count.side_effect = error
+    backend._os_index = "test_index"
+    backend._os_vector_field = DEFAULT_VECTOR_FIELD
+    backend._os_text_field = DEFAULT_TEXT_FIELD
+    if operation == "count":
+        with pytest.raises(type(error), match=str(error)):
+            await backend.count()
+    else:
+        with patch("opensearchpy.helpers.scan", side_effect=error), pytest.raises(type(error), match=str(error)):
+            _ = [batch async for batch in backend.iter_documents()]
+
+
+async def test_missing_index_is_an_empty_store(tmp_path):
+    backend = _make_backend(tmp_path)
+    error = _OpenSearchReadError(404, "index_not_found_exception")
+    backend._os_client = MagicMock()
+    backend._os_client.count.side_effect = error
+    backend._os_index = "test_index"
+    backend._os_vector_field = DEFAULT_VECTOR_FIELD
+    backend._os_text_field = DEFAULT_TEXT_FIELD
+    assert await backend.count() == 0
+    with patch("opensearchpy.helpers.scan", side_effect=error):
+        assert [batch async for batch in backend.iter_documents()] == []
+
+
+@pytest.mark.parametrize("batch_size", [1, 2])
+async def test_scan_failure_after_a_hit_is_not_successful_completion(tmp_path, batch_size):
+    backend = _make_backend(tmp_path)
+    backend._os_client = MagicMock()
+    backend._os_index = "test_index"
+    backend._os_vector_field = DEFAULT_VECTOR_FIELD
+    backend._os_text_field = DEFAULT_TEXT_FIELD
+    closed = threading.Event()
+
+    def interrupted_scan(*_args, **_kwargs):
+        try:
+            yield {"_id": "first", "_source": {"text": "first chunk"}}
+            raise _OpenSearchReadError(404, "index_not_found_exception")
+        finally:
+            closed.set()
+
+    with (
+        patch("opensearchpy.helpers.scan", side_effect=interrupted_scan),
+        pytest.raises(_OpenSearchReadError, match="index_not_found_exception"),
+    ):
+        _ = [batch async for batch in backend.iter_documents(batch_size=batch_size)]
+    assert closed.is_set()
+
+
+async def test_count_rejects_partial_shard_failure(tmp_path):
+    backend = _make_backend(tmp_path)
+    backend._os_client = MagicMock()
+    backend._os_client.count.return_value = {"count": 0, "_shards": {"total": 2, "successful": 1, "failed": 1}}
+    backend._os_index = "test_index"
+    with pytest.raises(RuntimeError, match="did not complete"):
+        await backend.count()
+
+
 @pytest.mark.no_blockbuster
 @pytest.mark.parametrize("operation", ["delete_by", "delete_collection", "embedded_write"])
 async def test_cancelled_remote_mutation_drains_native_worker(tmp_path, operation):

@@ -214,9 +214,16 @@ class TestRelocationWithoutATarget:
 
         row = await knowledge_base_service.get_by_id(record.id)
         assert (row.backend_type, row.chunks) == ("postgres", 2)
+        assert row.storage_generation == record.storage_generation + 1
 
     @pytest.mark.parametrize(
-        "change", [{"storage_generation": 2}, {"storage_state": "deleting"}, {"backend_type": "opensearch"}]
+        "change",
+        [
+            {"storage_generation": 2},
+            {"storage_state": "deleting"},
+            {"backend_type": "opensearch"},
+            {"backend_config": {"url_variable": "NEW_CLUSTER"}},
+        ],
     )
     async def test_repoint_leaves_a_row_that_changed_after_it_was_read(self, active_user, change):
         # ``record`` is the row as relocate-kb read it; the change is what a storage
@@ -228,6 +235,22 @@ class TestRelocationWithoutATarget:
 
         row = await knowledge_base_service.get_by_id(record.id)
         assert row.backend_type == change.get("backend_type", "sqlite")
+        assert row.backend_config == change.get("backend_config", {})
+
+    async def test_same_backend_relocation_invalidates_the_previous_routing(self, active_user):
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="kb_remote_routing",
+            backend_type="opensearch",
+            backend_config={"url_variable": "OLD_CLUSTER"},
+        )
+
+        assert await _repoint(record, "opensearch", {"url_variable": "FIRST_CLUSTER"}, 0) == "repointed"
+        assert await _repoint(record, "opensearch", {"url_variable": "SECOND_CLUSTER"}, 0) == "changed"
+
+        row = await knowledge_base_service.get_by_id(record.id)
+        assert row.backend_config == {"url_variable": "FIRST_CLUSTER"}
+        assert row.storage_generation == record.storage_generation + 1
 
     async def test_repoint_tells_a_deleted_row_from_a_changed_one(self, active_user):
         record, _ = await _seed_sqlite_kb(active_user.id, "kb_deleted_first", 2)
@@ -352,6 +375,7 @@ class TestRelocationToPostgresLive:
                 moved.update({d.id: d for d in batch})
             for doc in seeded:
                 assert moved[doc.id].content == doc.content
+                assert moved[doc.id].metadata == doc.metadata
                 assert moved[doc.id].embedding == pytest.approx(doc.embedding)
 
             # The row now names the target, so a second run leaves it alone.
@@ -460,7 +484,7 @@ class TestRelocationToPostgresLive:
         record, result = await self._move(active_user, tmp_path, kb_name, on_record=records.append)
 
         assert result.status == "failed", (result.source_count, result.copied, result.target_count)
-        assert "changed during the move" in result.reason
+        assert "storage changed" in result.reason
         row = await knowledge_base_service.get_by_id(record.id)
         assert (row.backend_type, row.storage_generation) == ("sqlite", 2)
 
