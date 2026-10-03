@@ -12,14 +12,18 @@ from tests.constants import SUPPORTED_VERSIONS
 from tests.integration.utils import build_component_instance_for_tests
 
 
-class VersionComponentMapping(TypedDict):
-    version: str
-    module: str
-    file_name: str
+class _Sentinel:
+    pass
 
 
 # Sentinel value to mark undefined test cases
-DID_NOT_EXIST = object()
+DID_NOT_EXIST: _Sentinel = _Sentinel()
+
+
+class VersionComponentMapping(TypedDict):
+    version: str
+    module: str | None
+    file_name: str | None | _Sentinel
 
 
 class ComponentTestBase:
