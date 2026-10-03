@@ -223,6 +223,12 @@ body:has([data-radix-popper-content-wrapper]) .react-flow__pane {
   stroke-width: 2px !important;
 }
 
+/* An edge added at the previewed point in history, in its author's color. */
+.react-flow__edge .react-flow__edge-path.history-changed {
+  stroke: var(--history-author) !important;
+  stroke-width: 3px !important;
+}
+
 .ag-react-container {
   width: 100%;
   height: 100%;
