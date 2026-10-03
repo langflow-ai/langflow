@@ -20,12 +20,29 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 
+# Env vars named like the header they become. ``lfx-mcp`` is a stdio server, so a
+# client config can only reach it through ``env`` -- there is no ``headers`` field for
+# a subprocess -- and this is the only channel for per-request global variables.
+GLOBAL_VAR_ENV_PREFIX = "X-LANGFLOW-GLOBAL-VAR-"
+
+
+def _global_var_headers() -> dict[str, str]:
+    """Read ``X-LANGFLOW-GLOBAL-VAR-*`` entries out of the process environment."""
+    return {
+        name: value for name, value in os.environ.items() if name.upper().startswith(GLOBAL_VAR_ENV_PREFIX) and value
+    }
+
+
 class LangflowClient:
     """Async HTTP client for Langflow's REST API.
 
     Auth sends both headers on every request:
     - Authorization: Bearer <access_token or api_key>
     - x-api-key: <api_key> (when available)
+
+    Any ``X-LANGFLOW-GLOBAL-VAR-*`` environment variable is forwarded as the header of
+    the same name, so a flow run through ``lfx-mcp`` resolves per-request global
+    variables exactly as a direct ``POST /api/v1/run`` carrying those headers would.
 
     Uses a persistent httpx.AsyncClient for connection pooling.
     """
@@ -39,6 +56,9 @@ class LangflowClient:
         self.server_url = (server_url or os.environ.get("LANGFLOW_SERVER_URL", "http://localhost:7860")).rstrip("/")
         self.api_key = api_key or os.environ.get("LANGFLOW_API_KEY")
         self.access_token = access_token
+        # Snapshotted at construction: a stdio server's environment is fixed for the
+        # life of the process, so re-reading per request would only add syscalls.
+        self.global_var_headers = _global_var_headers()
         self._http: httpx.AsyncClient | None = None
         self._lock = asyncio.Lock()
 
@@ -60,6 +80,9 @@ class LangflowClient:
             headers["Authorization"] = f"Bearer {self.access_token}"
         if self.api_key:
             headers["x-api-key"] = self.api_key
+        # The prefix is the whole allowlist, so this cannot collide with the auth
+        # headers above or leak anything else out of the environment.
+        headers.update(self.global_var_headers)
         return headers
 
     def _url(self, path: str) -> str:
