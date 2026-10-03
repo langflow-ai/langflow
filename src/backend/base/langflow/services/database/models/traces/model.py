@@ -360,6 +360,7 @@ class SpanTable(SpanBase, table=True):  # type: ignore[call-arg]
     parent_span_id: UUID | None = Field(
         default=None,
         foreign_key="span.id",
+        ondelete="CASCADE",
         index=True,
         description="Parent span ID for nested spans",
     )
