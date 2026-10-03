@@ -293,9 +293,15 @@ async def _relocate_one(
             return result
         result.status = "relocated"
     except Exception as exc:  # noqa: BLE001 - reported per knowledge base
-        result.code = result.code or "kb_failed"
-        result.reason = _describe(exc)
-        await logger.awarning("Relocating knowledge base %s for %s failed: %s", record.name, owner, result.reason)
+        if not result.code and await _deleted(record.id):
+            # Deleting a knowledge base retires its store before its row, so a copy
+            # still reading it fails before the repoint could find the row gone.
+            result.code = "kb_deleted"
+            result.reason = "knowledge base was deleted during the move"
+        else:
+            result.code = result.code or "kb_failed"
+            result.reason = _describe(exc)
+            await logger.awarning("Relocating knowledge base %s for %s failed: %s", record.name, owner, result.reason)
     finally:
         for backend in (source, target):
             if backend is not None:
@@ -434,6 +440,16 @@ async def _settled_count(backend: BaseVectorStoreBackend, expected: int) -> int:
         await asyncio.sleep(_COUNT_SETTLE_SECONDS)
         count = await backend.count()
     return count
+
+
+async def _deleted(record_id: UUID) -> bool:
+    """Whether the row is gone or on its way out, and False when the database cannot say."""
+    try:
+        async with session_scope() as session:
+            row = await session.get(KnowledgeBaseRecord, record_id)
+    except SQLAlchemyError:
+        return False
+    return row is None or row.storage_state in ("deleting", "deleted")
 
 
 async def _repoint(
