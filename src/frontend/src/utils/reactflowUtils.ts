@@ -686,6 +686,7 @@ export function updateIds(
   const concatedEdges = [...edges, ...((selection?.edges as EdgeType[]) ?? [])];
   if (concatedEdges)
     concatedEdges.forEach((edge: EdgeType) => {
+      const { source: oldSource, target: oldTarget } = edge;
       edge.source = idsMap[edge.source];
       edge.target = idsMap[edge.target];
 
@@ -709,13 +710,11 @@ export function updateIds(
       if (edge.data?.targetHandle?.id) {
         edge.data.targetHandle.id = edge.target;
       }
-      edge.id =
-        "reactflow__edge-" +
-        edge.source +
-        edge.sourceHandle +
-        "-" +
-        edge.target +
-        edge.targetHandle;
+      // An edge between renamed nodes is a new edge; one whose ends kept
+      // their ids is the same edge and keeps its id.
+      if (edge.source !== oldSource || edge.target !== oldTarget) {
+        edge.id = newEdgeId();
+      }
     });
   return idsMap;
 }
@@ -1494,15 +1493,13 @@ export function getNodeId(nodeType: string) {
   return nodeType + "-" + uid.randomUUID(5);
 }
 
-export function getHandleId(
-  source: string,
-  sourceHandle: string,
-  target: string,
-  targetHandle: string,
-) {
-  return (
-    "reactflow__edge-" + source + sourceHandle + "-" + target + targetHandle
-  );
+/**
+ * An id for a new edge. Edge ids are opaque: nothing derives one from the
+ * edge's handles, so respelling or migrating a handle never changes which
+ * edge it is, and an existing edge keeps its id for good.
+ */
+export function newEdgeId(): string {
+  return `e-${uid.randomUUID(21)}`;
 }
 
 export function generateFlow(

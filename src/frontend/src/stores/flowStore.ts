@@ -48,8 +48,8 @@ import {
   buildPositionDictionary,
   cleanEdges,
   getConnectedSubgraph,
-  getHandleId,
   getNodeId,
+  newEdgeId,
   scapedJSONStringfy,
   scapeJSONParse,
   unselectAllNodesEdges,
@@ -755,14 +755,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         targetHandle: targetHandleObject,
       };
 
-      const id = getHandleId(source, sourceHandle, target, targetHandle);
       newEdges = addEdge(
         {
           source,
           target,
           sourceHandle,
           targetHandle,
-          id,
+          id: newEdgeId(),
           data: cloneDeep(edge.data),
           selected: false,
         },
@@ -830,6 +829,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       newEdges = addEdge(
         {
           ...connection,
+          id: newEdgeId(),
           data: {
             targetHandle: scapeJSONParse(connection.targetHandle!),
             sourceHandle: scapeJSONParse(connection.sourceHandle!),
