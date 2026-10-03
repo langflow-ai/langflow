@@ -73,6 +73,7 @@ class Vertex:
         self._is_loop = None
         self.has_session_id = None
         self.custom_component = None
+        self._output_cache_disabled = False
         # Runtime-only metadata used to mask downstream display results without changing edge values.
         self._upstream_secret_values: set[str] = set()
         self.has_external_input = False
@@ -393,6 +394,21 @@ class Vertex:
                 vertex=self,
                 event_manager=event_manager,
             )
+            self._apply_deferred_output_flags()
+
+    def disable_output_cache(self) -> None:
+        """Turn off output caching (cycles, Listen/Notify) now, or when the component is instantiated.
+
+        Graph construction decides this before components exist when instantiation is deferred
+        (warm templates and their per-run copies), so the decision is kept on the vertex.
+        """
+        self._output_cache_disabled = True
+        self.apply_on_outputs(lambda output_object: setattr(output_object, "cache", False))
+
+    def _apply_deferred_output_flags(self) -> None:
+        # Vertices restored from older pickles have no attribute.
+        if getattr(self, "_output_cache_disabled", False):
+            self.apply_on_outputs(lambda output_object: setattr(output_object, "cache", False))
 
     def _bind_restored_component_user(self, user_id=None) -> None:
         """Restore the runtime user dropped from checkpointed component state."""
@@ -448,6 +464,9 @@ class Vertex:
             custom_component, custom_params = initialize.loading.instantiate_class(
                 user_id=user_id, vertex=self, event_manager=event_manager
             )
+            if getattr(self, "_output_cache_disabled", False):
+                for output in custom_component.get_outputs_map().values():
+                    output.cache = False
         else:
             custom_component = self.custom_component
             # A checkpoint-restored component (HITL resume) loses _user_id, which

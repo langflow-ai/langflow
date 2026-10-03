@@ -727,3 +727,62 @@ async def test_serialize_graph():
     # assert serialized is not None
     # assert isinstance(serialized, str)
     # assert len(serialized) > 0
+
+
+def test_warm_copy_keeps_cycle_outputs_uncached():
+    """Warm copies create components after graph construction; loop outputs must still be uncached.
+
+    Graph construction decides which outputs sit in a cycle before the components exist on the warm
+    path (``instantiate_components=False`` templates and ``copy_for_run``). A cached loop-body output
+    returns its first value on every iteration, so the warm run must match the cold one here.
+    """
+    import json
+
+    payload = json.loads(pytest.LOOP_TEST.read_text(encoding="utf-8"))
+    payload = payload.get("data", payload)
+
+    cold = Graph.from_payload(json.loads(json.dumps(payload)), flow_id="flow-id")
+    template = Graph.from_payload(
+        json.loads(json.dumps(payload)), flow_id="flow-id", instantiate_components=False, emit_extension_events=False
+    )
+    run_graph = template.copy_for_run(user_id="caller-id")
+    assert cold.cycle_vertices
+
+    for graph in (cold, run_graph):
+        for vertex_id in cold.cycle_vertices:
+            vertex = graph.get_vertex(vertex_id)
+            vertex.instantiate_component(graph.user_id)  # no-op when already created
+            outputs = vertex.custom_component.get_outputs_map().values()
+            assert outputs
+            assert all(output.cache is False for output in outputs), vertex_id
+
+
+async def test_warm_copy_runs_a_flow_that_iterates_through_a_cycle():
+    """A warm copy of a flow whose component re-runs its loop body through a graph cycle gives the cold result.
+
+    ``CycleLoopTest.json`` has a custom loop component that sends one line per pass through a cycle to a Parser.
+    With the loop-body output cached, every pass gets the first line back and the run never finishes.
+    """
+    import asyncio
+
+    payload = json.loads(pytest.CYCLE_LOOP_TEST.read_text(encoding="utf-8"))
+    payload = payload.get("data", payload)
+
+    async def chat_output_text(graph):
+        run_outputs = await graph.arun(inputs=[{}], inputs_components=[], types=[], outputs=[], session_id="session")
+        return [
+            result.results["message"].text
+            for run_output in run_outputs
+            for result in run_output.outputs
+            if result and "message" in result.results
+        ]
+
+    cold = Graph.from_payload(copy.deepcopy(payload), flow_id="flow-id")
+    template = Graph.from_payload(
+        copy.deepcopy(payload), flow_id="flow-id", instantiate_components=False, emit_extension_events=False
+    )
+    warm = template.copy_for_run(user_id="caller-id")
+
+    expected = ["item: alpha | item: beta | item: gamma | item: delta"]
+    assert await asyncio.wait_for(chat_output_text(cold), timeout=30) == expected
+    assert await asyncio.wait_for(chat_output_text(warm), timeout=30) == expected
