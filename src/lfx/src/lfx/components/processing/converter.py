@@ -33,7 +33,7 @@ def convert_to_data(v: Table | Data | Message | dict, *, auto_parse: bool) -> JS
         JSON: Converted JSON object
     """
     if isinstance(v, dict):
-        return Data(v)
+        return Data(data=v)
     if isinstance(v, Message):
         data = Data(data={"text": v.data["text"]})
         return parse_structured_data(data) if auto_parse else data
