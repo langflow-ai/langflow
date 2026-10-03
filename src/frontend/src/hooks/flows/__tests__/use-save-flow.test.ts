@@ -1,6 +1,7 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: store mocks intentionally accept multiple selector shapes
 import { renderHook } from "@testing-library/react";
 import useFlowHistoryRepairStore from "@/stores/flowHistoryRepairStore";
+import useFlowSaveCauseStore from "@/stores/flowSaveCauseStore";
 import useSaveFlow from "../use-save-flow";
 
 const mockSetFlows = jest.fn();
@@ -687,6 +688,44 @@ describe("useSaveFlow", () => {
       expect(mockSetErrorData).toHaveBeenCalledWith(
         expect.objectContaining({ list: ["nope"] }),
       );
+    });
+  });
+
+  describe("cause", () => {
+    afterEach(() => useFlowSaveCauseStore.setState({ pending: null }));
+
+    it("sends a pending cause with the next save, and only that one", async () => {
+      useFlowSaveCauseStore
+        .getState()
+        .setPendingCause("flow-1", "upgrade_component");
+      const { result } = renderHook(() => useSaveFlow());
+
+      await result.current();
+      await result.current();
+
+      expect(mockMutate.mock.calls[0][0].cause).toBe("upgrade_component");
+      expect(mockMutate.mock.calls[1][0]).not.toHaveProperty("cause");
+    });
+
+    it("sends no cause left over from another flow", async () => {
+      useFlowSaveCauseStore.getState().setPendingCause("flow-2", "edit_code");
+      const { result } = renderHook(() => useSaveFlow());
+
+      await result.current();
+
+      expect(mockMutate.mock.calls[0][0]).not.toHaveProperty("cause");
+      expect(useFlowSaveCauseStore.getState().pending).toBeNull();
+    });
+
+    it("keeps the cause when a save has nothing to send", async () => {
+      useFlowSaveCauseStore.getState().setPendingCause("flow-1", "edit_code");
+      flowStoreState.currentFlow = flowsManagerState.currentFlow;
+      const { result } = renderHook(() => useSaveFlow());
+
+      await result.current();
+
+      expect(mockMutate).not.toHaveBeenCalled();
+      expect(useFlowSaveCauseStore.getState().pending?.cause).toBe("edit_code");
     });
   });
 });
