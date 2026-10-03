@@ -395,6 +395,36 @@ class TestMCPSessionManager:
             assert session1 == mock_session
             # Should only create once since the second call should use the cached session
             mock_create.assert_called_once()
+            server_key = session_manager._get_server_key(connection_params, transport_type)
+            session_id = next(iter(session_manager.sessions_by_server[server_key]["sessions"]))
+            assert session_manager._session_refcount[(server_key, session_id)] == 1
+
+    async def test_context_switch_releases_each_previous_session(self, session_manager):
+        """A context switching A -> B -> A must not strand references to either server."""
+        context_id = "switching_context"
+        params_a = MagicMock(command="server-a", args=[], env={})
+        params_b = MagicMock(command="server-b", args=[], env={})
+
+        async def create_session(*_args):
+            session = AsyncMock()
+            task = asyncio.create_task(asyncio.Event().wait())
+            return session, task
+
+        with patch.object(session_manager, "_create_stdio_session", side_effect=create_session) as create:
+            await session_manager.get_session(context_id, params_a, "stdio")
+            await session_manager.get_session(context_id, params_b, "stdio")
+            await session_manager.get_session(context_id, params_a, "stdio")
+            await session_manager._cleanup_session(context_id)
+
+        for _ in range(20):
+            if not any(session_manager._sessions_for(key) for key in session_manager.sessions_by_server):
+                break
+            await asyncio.sleep(0)
+
+        assert create.await_count >= 2
+        assert context_id not in session_manager._context_to_session
+        assert session_manager._session_refcount == {}
+        assert not any(session_manager._sessions_for(key) for key in session_manager.sessions_by_server)
 
     async def test_session_cleanup(self, session_manager):
         """Test session cleanup functionality."""
