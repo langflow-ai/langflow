@@ -97,7 +97,7 @@ We welcome contributions from developers of all levels. If you'd like to contrib
 
 ---
 
-[![Star History Chart](https://api.star-history.com/svg?repos=langflow-ai/langflow&type=Timeline)](https://star-history.com/#langflow-ai/langflow&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=langflow-ai/langflow&type=Timeline)](https://star-history.dera.page/#langflow-ai/langflow&Date)
 
 ## ❤️ Contributors
 
