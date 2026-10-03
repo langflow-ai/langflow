@@ -24,7 +24,16 @@ const DialogPortal = ({
   ...props
 }: DialogPrimitive.DialogPortalProps) => (
   <DialogPrimitive.Portal {...props}>
-    <div className="nopan nodelete nodrag noflow fixed inset-0 z-50 flex items-center justify-center">
+    {/* biome-ignore lint/a11y/noStaticElementInteractions: isolates modal presses from React Flow */}
+    <div
+      className="nopan nodelete nodrag noflow fixed inset-0 z-50 flex items-center justify-center"
+      onPointerDown={(event) => event.stopPropagation()}
+      onMouseDown={(event) => {
+        if (event.button === 0) {
+          event.stopPropagation();
+        }
+      }}
+    >
       {children}
     </div>
   </DialogPrimitive.Portal>
