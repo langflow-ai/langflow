@@ -58,6 +58,10 @@ import {
   validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
+import {
+  withNodesTableRowIds,
+  withNodeTableRowIds,
+} from "../utils/table-row-ids";
 import useAlertStore from "./alertStore";
 import useAuthStore from "./authStore";
 import { useDarkStore } from "./darkStore";
@@ -445,8 +449,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   setNodes: (change, options) => {
-    const newChange =
-      typeof change === "function" ? change(get().nodes) : change;
+    // A table row that appears (a new component's default rows, a pasted
+    // table, a refreshed value) gets its row id here; untouched tables keep
+    // whatever they have.
+    const newChange = withNodesTableRowIds(
+      typeof change === "function" ? change(get().nodes) : change,
+      get().nodes,
+    );
     const { edges: newEdges } = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
     get().updateComponentsToUpdate(newChange);
@@ -475,9 +484,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       get().autoSaveFlow!();
     }
   },
-  setNodesAndEdges: (nodes, edges, options) => {
+  setNodesAndEdges: (incomingNodes, edges, options) => {
     // Atomic single-render replace mirroring resetFlow (the F5 load path); a
     // split setNodes+setEdges draws loop/dynamic-handle edges only after refresh.
+    const nodes = withNodesTableRowIds(incomingNodes, get().nodes);
     const { edges: newEdges } = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
@@ -505,10 +515,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       throw new Error("Node not found");
     }
 
-    const newChange =
-      typeof change === "function"
-        ? change(get().nodes.find((node) => node.id === id)!)
-        : change;
+    const oldNode = get().nodes.find((node) => node.id === id)!;
+    const newChange = withNodeTableRowIds(
+      typeof change === "function" ? change(oldNode) : change,
+      oldNode,
+    );
 
     const newNodes = get().nodes.map((node) => {
       if (node.id === id) {

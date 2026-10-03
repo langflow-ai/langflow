@@ -2766,5 +2766,9 @@
   "flowHistory.violation.EDGE_ID_DUPLICATE": "Deux connexions partagent un ID",
   "flowHistory.violation.EDGE_ENDPOINT_INVALID": "Une connexion pointe vers un composant qui n'existe pas",
   "flowHistory.violation.NODE_DATA_NOT_OBJECT": "Il manque ses paramètres à un composant",
-  "flowHistory.violation.NON_FINITE_NUMBER": "Une valeur n'est pas un nombre valide"
+  "flowHistory.violation.NON_FINITE_NUMBER": "Une valeur n'est pas un nombre valide",
+  "flowHistory.violation.TABLE_ROW_ID_MISSING": "Une ligne de tableau n'a pas d'ID",
+  "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "Deux lignes d'un tableau partagent un ID",
+  "flowHistory.violation.TABLE_ROW_POS_INVALID": "Une ligne de tableau a une position non valide",
+  "flowHistory.violation.TABLE_ROWS_UNSORTED": "Les lignes d'un tableau ne sont pas dans l'ordre"
 }

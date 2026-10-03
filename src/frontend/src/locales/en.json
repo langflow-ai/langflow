@@ -2765,5 +2765,9 @@
   "flowHistory.violation.EDGE_ID_DUPLICATE": "Two connections share an ID",
   "flowHistory.violation.EDGE_ENDPOINT_INVALID": "A connection points to a component that doesn't exist",
   "flowHistory.violation.NODE_DATA_NOT_OBJECT": "A component is missing its settings",
-  "flowHistory.violation.NON_FINITE_NUMBER": "A value is not a valid number"
+  "flowHistory.violation.NON_FINITE_NUMBER": "A value is not a valid number",
+  "flowHistory.violation.TABLE_ROW_ID_MISSING": "A table row has no ID",
+  "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "Two rows of a table share an ID",
+  "flowHistory.violation.TABLE_ROW_POS_INVALID": "A table row has an invalid position",
+  "flowHistory.violation.TABLE_ROWS_UNSORTED": "A table's rows are out of order"
 }

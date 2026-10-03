@@ -7,6 +7,7 @@ import type {
   APITemplateType,
   ResponseErrorDetailAPI,
 } from "@/types/api";
+import { withTemplateTableRowIds } from "@/utils/table-row-ids";
 import i18n from "../../i18n";
 import { updateHiddenOutputs } from "./update-hidden-outputs";
 
@@ -169,10 +170,12 @@ export const mutateTemplate = async (
               is_refresh: isRefresh ?? false,
             });
             if (newTemplate && !isStaleForNode(nodeId, node)) {
-              newNode.template = keepUserEdits(
-                nodeId,
+              // Rows a refresh returns (API Request parsing a curl command
+              // into headers) are new rows: give them ids before the value
+              // is remembered and stored.
+              newNode.template = withTemplateTableRowIds(
+                keepUserEdits(nodeId, node.template, newTemplate.template),
                 node.template,
-                newTemplate.template,
               );
               rememberAppliedValues(nodeId, newNode.template);
               newNode.outputs = updateHiddenOutputs(

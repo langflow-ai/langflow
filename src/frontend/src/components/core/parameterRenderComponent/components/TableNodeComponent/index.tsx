@@ -3,12 +3,18 @@ import type {
   SelectionChangedEvent,
 } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
-import { cloneDeep } from "lodash";
+import { cloneDeep, isEqual } from "lodash";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableModal from "@/modals/tableModal";
 import { isMarkdownTable } from "@/utils/markdownUtils";
+import {
+  appendTableRows,
+  stripTableRowIds,
+  TABLE_ROW_ID_KEY,
+  withTableRowIds,
+} from "@/utils/table-row-ids";
 import { FormatColumns, generateBackendColumnsFromValue } from "@/utils/utils";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
@@ -77,18 +83,24 @@ export default function TableNodeComponent({
   }, []);
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
+  // The rows being edited, each with an `_id` and `_pos` (see table-row-ids).
+  // A legacy table gets them here, and keeps them only if it is saved.
   // biome-ignore lint/suspicious/noExplicitAny: legacy
-  const [tempValue, setTempValue] = useState<any[]>(cloneDeep(value));
+  const [tempValue, setTempValue] = useState<any[]>(() => editableRows(value));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const agGrid = useRef<AgGridReact>(null);
   // Add useEffect to sync with incoming value changes
   useEffect(() => {
-    setTempValue(cloneDeep(value));
+    setTempValue(editableRows(value));
   }, [value]);
 
+  // Only real columns show: never the row keys.
   const componentColumns = columns
     ? columns
-    : generateBackendColumnsFromValue(tempValue ?? [], table_options);
+    : generateBackendColumnsFromValue(
+        stripTableRowIds(tempValue ?? []) as object[],
+        table_options,
+      );
   let AgColumns = FormatColumns(componentColumns);
   // add info to each column
   AgColumns = AgColumns.map((col) => {
@@ -130,7 +142,8 @@ export default function TableNodeComponent({
     if (agGrid.current && selectedNodes.length > 0) {
       const toDuplicate = selectedNodes.map((node) => cloneDeep(node.data));
       setSelectedNodes([]);
-      setTempValue([...tempValue, ...toDuplicate]);
+      // Copies are new rows: new ids, placed after the last row.
+      setTempValue(appendTableRows(tempValue, toDuplicate));
     }
   }
   function addRow() {
@@ -138,7 +151,7 @@ export default function TableNodeComponent({
     componentColumns.forEach((column) => {
       newRow[column.name] = column.default ?? null; // Use the default value if available
     });
-    setTempValue([...tempValue, newRow]);
+    setTempValue(appendTableRows(tempValue, [newRow]));
   }
 
   function updateComponent() {
@@ -146,12 +159,20 @@ export default function TableNodeComponent({
   }
 
   function handleSave() {
-    handleOnNewValue({ value: tempValue });
+    // Saving an unedited table writes nothing, so a legacy table only gets
+    // row ids from an actual edit (which then writes it whole, with ids).
+    const unchanged = isEqual(
+      Array.isArray(value) && value.some(hasRowId)
+        ? tempValue
+        : stripTableRowIds(tempValue),
+      value ?? [],
+    );
+    if (!unchanged) handleOnNewValue({ value: tempValue });
     setIsModalOpen(false);
   }
 
   function handleCancel() {
-    setTempValue(cloneDeep(value));
+    setTempValue(editableRows(value));
     setIsModalOpen(false);
   }
 
@@ -257,7 +278,7 @@ export default function TableNodeComponent({
           const clipboard = e.clipboardData.getData("text");
           const rows = parseTSVorMarkdownTable(clipboard, componentColumns);
           if (rows.length > 0) {
-            setTempValue((prev) => [...prev, ...rows]);
+            setTempValue((prev) => appendTableRows(prev, rows));
             e.preventDefault();
             // Consider adding a toast notification here:
             // toast.success(`Imported ${rows.length} rows successfully`);
@@ -301,6 +322,7 @@ export default function TableNodeComponent({
           className="h-full w-full"
           columnDefs={AgColumns}
           rowData={tempValue}
+          getRowId={(params) => params.data[TABLE_ROW_ID_KEY]}
           context={{ field_parsers: table_options?.field_parsers }}
           onSave={handleSave}
           onCancel={handleCancel}
@@ -325,4 +347,13 @@ export default function TableNodeComponent({
       </div>
     </div>
   );
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: legacy row values
+function editableRows(value: any): any[] {
+  return withTableRowIds(Array.isArray(value) ? cloneDeep(value) : []);
+}
+
+function hasRowId(row: unknown): boolean {
+  return !!row && typeof row === "object" && TABLE_ROW_ID_KEY in row;
 }

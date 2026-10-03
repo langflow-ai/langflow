@@ -2766,5 +2766,9 @@
   "flowHistory.violation.EDGE_ID_DUPLICATE": "Zwei Verbindungen haben dieselbe ID",
   "flowHistory.violation.EDGE_ENDPOINT_INVALID": "Eine Verbindung zeigt auf eine Komponente, die nicht existiert",
   "flowHistory.violation.NODE_DATA_NOT_OBJECT": "Einer Komponente fehlen ihre Einstellungen",
-  "flowHistory.violation.NON_FINITE_NUMBER": "Ein Wert ist keine gültige Zahl"
+  "flowHistory.violation.NON_FINITE_NUMBER": "Ein Wert ist keine gültige Zahl",
+  "flowHistory.violation.TABLE_ROW_ID_MISSING": "Eine Tabellenzeile hat keine ID",
+  "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "Zwei Zeilen einer Tabelle haben dieselbe ID",
+  "flowHistory.violation.TABLE_ROW_POS_INVALID": "Eine Tabellenzeile hat eine ungültige Position",
+  "flowHistory.violation.TABLE_ROWS_UNSORTED": "Die Zeilen einer Tabelle sind nicht sortiert"
 }

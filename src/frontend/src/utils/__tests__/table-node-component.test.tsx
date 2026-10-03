@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+// biome-ignore-all lint/suspicious/noExplicitAny: test mocks accept loose props
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { cloneDeep } from "lodash";
 import React from "react";
 import TableNodeComponent from "../../components/core/parameterRenderComponent/components/TableNodeComponent";
 
@@ -206,7 +206,7 @@ describe("TableNodeComponent", () => {
       expect(screen.getByTestId("modal-row-count")).toHaveTextContent("2 rows");
     });
 
-    it("should call handleOnNewValue when save is clicked", async () => {
+    it("writes nothing when an unedited table is saved", async () => {
       const user = userEvent.setup();
       const handleOnNewValue = jest.fn();
       const props = { ...defaultProps, handleOnNewValue };
@@ -216,9 +216,9 @@ describe("TableNodeComponent", () => {
       await user.click(screen.getByTestId("table-trigger-button"));
       await user.click(screen.getByTestId("modal-save"));
 
-      expect(handleOnNewValue).toHaveBeenCalledWith({
-        value: defaultProps.value,
-      });
+      // A legacy table gets row ids only from an actual edit.
+      expect(handleOnNewValue).not.toHaveBeenCalled();
+      expect(screen.queryByTestId("table-modal")).not.toBeInTheDocument();
     });
 
     it("should reset tempValue when cancel is clicked", async () => {

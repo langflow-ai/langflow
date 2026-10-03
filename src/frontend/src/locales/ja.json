@@ -2766,5 +2766,9 @@
   "flowHistory.violation.EDGE_ID_DUPLICATE": "同じ ID を持つ接続があります",
   "flowHistory.violation.EDGE_ENDPOINT_INVALID": "存在しないコンポーネントを指す接続があります",
   "flowHistory.violation.NODE_DATA_NOT_OBJECT": "設定のないコンポーネントがあります",
-  "flowHistory.violation.NON_FINITE_NUMBER": "有効な数値ではない値があります"
+  "flowHistory.violation.NON_FINITE_NUMBER": "有効な数値ではない値があります",
+  "flowHistory.violation.TABLE_ROW_ID_MISSING": "ID のないテーブル行があります",
+  "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "同じ ID を持つテーブル行があります",
+  "flowHistory.violation.TABLE_ROW_POS_INVALID": "テーブル行の位置が無効です",
+  "flowHistory.violation.TABLE_ROWS_UNSORTED": "テーブルの行の順序が正しくありません"
 }

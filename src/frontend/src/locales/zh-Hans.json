@@ -2765,5 +2765,9 @@
   "flowHistory.violation.EDGE_ID_DUPLICATE": "有两个连接使用相同的 ID",
   "flowHistory.violation.EDGE_ENDPOINT_INVALID": "有连接指向不存在的组件",
   "flowHistory.violation.NODE_DATA_NOT_OBJECT": "有组件缺少设置",
-  "flowHistory.violation.NON_FINITE_NUMBER": "有值不是有效数字"
+  "flowHistory.violation.NON_FINITE_NUMBER": "有值不是有效数字",
+  "flowHistory.violation.TABLE_ROW_ID_MISSING": "有表格行没有 ID",
+  "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "表格中有两行使用相同的 ID",
+  "flowHistory.violation.TABLE_ROW_POS_INVALID": "有表格行的位置无效",
+  "flowHistory.violation.TABLE_ROWS_UNSORTED": "表格的行顺序不正确"
 }
