@@ -12,7 +12,12 @@ import json
 from pathlib import Path
 
 import pytest
-from lfx.services.flow_operations import FlowOperationError, apply_flow_operations, parse_flow_operations
+from lfx.services.flow_operations import (
+    FlowOperationError,
+    apply_flow_operations,
+    dump_flow_operation,
+    parse_flow_operations,
+)
 
 CASES = json.loads((Path(__file__).parent / "fixtures" / "apply_cases.json").read_text())["cases"]
 
@@ -25,11 +30,14 @@ def test_apply_case(case):
         with pytest.raises(FlowOperationError) as exc_info:
             apply_flow_operations(base, parse_flow_operations(copy.deepcopy(case["operations"])))
         assert type(exc_info.value).__name__ == case["error"]
+        assert exc_info.value.code == case["code"]
         assert base == case["base"]
         return
 
     result = apply_flow_operations(base, parse_flow_operations(copy.deepcopy(case["operations"])))
 
     assert result.flow_data == case["expected"]
-    assert [op.model_dump(mode="json") for op in result.forward_ops] == case["forward_operations"]
+    # Cases whose normalized operations equal what they submit leave forward_operations out.
+    expected_forward = case.get("forward_operations", case["operations"])
+    assert [dump_flow_operation(op) for op in result.forward_ops] == expected_forward
     assert base == case["base"]
