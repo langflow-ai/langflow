@@ -242,6 +242,7 @@ class TestRelocationWithoutATarget:
         result = next(r for r in results if r.kb_id == record.id)
         assert result.status == "failed"
         assert expected in result.reason
+        assert result.code == "kb_upgrade_pending"
         assert (result.copied, result.target_count) == (0, 0)
         row = await knowledge_base_service.get_by_id(record.id)
         assert (row.backend_type, row.storage_state) == (backend_type, storage_state)
@@ -1002,6 +1003,7 @@ class TestRelocationToPostgresLive:
 
         assert result.status == "failed", (result.source_count, result.copied, result.target_count)
         assert "changed during the move" in result.reason
+        assert result.code == "kb_routing_changed"
         row = await knowledge_base_service.get_by_id(record.id)
         assert (row.backend_type, row.storage_generation) == ("sqlite", 2)
 
