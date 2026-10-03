@@ -205,8 +205,14 @@ class OpenSearchBackend(BaseVectorStoreBackend):
     @property
     def distance_metric(self) -> str:
         """The configured ``space_type``, named the way the other backends name metrics."""
-        space_type = self.backend_config.get("space_type") or DEFAULT_SPACE_TYPE
+        space_type = self._os_space_type
         return {"cosinesimil": "cosine", "innerproduct": "inner_product"}.get(space_type, space_type)
+
+    @property
+    def _os_space_type(self) -> str:
+        # Read from the config on each write, not kept from building the vector
+        # store: a write must not depend on which code path built the store first.
+        return self.backend_config.get("space_type") or DEFAULT_SPACE_TYPE
 
     def _resolve_index_name(self) -> str:
         """Resolve the effective index for this KB.
@@ -360,7 +366,6 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         self._os_index = index_name
         self._os_vector_field = vector_field
         self._os_text_field = text_field
-        self._os_space_type = space_type
 
         return OpenSearchVectorSearch(
             opensearch_url=url,
