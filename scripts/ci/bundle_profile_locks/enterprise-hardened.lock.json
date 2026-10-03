@@ -18,9 +18,9 @@
       "providers": [
         "lfx-amazon"
       ],
-      "requested": ">=0.2.0,<1.0.0",
-      "requirement": "lfx-amazon==0.2.0",
-      "resolved_version": "0.2.0"
+      "requested": ">=0.2.1,<1.0.0",
+      "requirement": "lfx-amazon==0.2.1",
+      "resolved_version": "0.2.1"
     },
     {
       "distribution": "lfx-anthropic",
@@ -180,7 +180,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:503dab93a081eebe",
+  "profile_digest": "sha256:f7681ab65b4fbef8",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
