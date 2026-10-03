@@ -69,6 +69,7 @@ import {
   type MCPServerValue,
 } from "./helpers/clean-mcp-config";
 import { getFallbackGridPositions, getLayoutedNodes } from "./layoutUtils";
+import { stripTableRowIdsFromGraph } from "./table-row-ids";
 import { createRandomKey, toTitleCase } from "./utils";
 
 const uid = new ShortUniqueId();
@@ -2158,7 +2159,10 @@ export function createFlowComponent(
 }
 
 export async function downloadNode(NodeFLow: FlowType) {
-  await customDownloadNodeJson(NodeFLow);
+  // Exported components leave out table row ids, like exported flows.
+  const exported = cloneDeep(NodeFLow);
+  stripTableRowIdsFromGraph(exported.data);
+  await customDownloadNodeJson(exported);
 }
 
 export function updateComponentNameAndType(
@@ -2444,6 +2448,9 @@ export async function downloadFlow(
     const clonedFlow = cloneDeep(flow);
 
     removeFileNameFromComponents(clonedFlow);
+    // Row ids and positions are the editor's bookkeeping: exported files stay
+    // as older Langflow versions expect them.
+    stripTableRowIdsFromGraph(clonedFlow.data);
 
     const flowData = {
       ...clonedFlow,

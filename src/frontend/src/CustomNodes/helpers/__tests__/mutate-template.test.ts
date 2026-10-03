@@ -486,4 +486,45 @@ describe("mutateTemplate", () => {
       }),
     );
   });
+
+  it("gives the rows a refresh returns ids, and leaves an untouched legacy table alone", async () => {
+    const legacyRows = [{ key: "Accept", value: "json" }];
+    const node = {
+      template: {
+        code: { value: "source" },
+        curl_input: { value: "" },
+        headers: { type: "table", value: [] },
+        query_params: { type: "table", value: legacyRows },
+      },
+      outputs: [],
+    } as unknown as APIClassType;
+    const setNodeClass = jest.fn();
+    const mutateAsync = jest.fn().mockResolvedValue({
+      template: {
+        code: { value: "source" },
+        curl_input: { value: "curl -H 'X: 1' https://x" },
+        headers: { type: "table", value: [{ key: "X", value: "1" }] },
+        query_params: { type: "table", value: legacyRows },
+      },
+      outputs: [],
+    } as unknown as APIClassType);
+    setStoreNodeTemplate("api-node", node.template);
+
+    await mutateTemplate(
+      "curl -H 'X: 1' https://x",
+      "api-node",
+      node,
+      setNodeClass,
+      { mutateAsync } as never,
+      jest.fn(),
+      "curl_input",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    const template = setNodeClass.mock.calls[0][0].template;
+    expect(template.headers.value).toEqual([
+      { _id: expect.any(String), _pos: "a0", key: "X", value: "1" },
+    ]);
+    expect(template.query_params.value).toEqual(legacyRows);
+  });
 });
