@@ -5,6 +5,7 @@ import importlib
 import importlib.util
 import sys
 import warnings
+from functools import lru_cache
 from types import FunctionType, ModuleType
 from typing import Optional, Union
 
@@ -753,8 +754,13 @@ def extract_function_name(code):
     raise ValueError(msg)
 
 
+@lru_cache(maxsize=512)
 def extract_class_name(code: str) -> str:
     """Extract the name of the first Component subclass found in the code.
+
+    The result depends only on the exact source text, so it is cached per
+    source; every request otherwise re-parses each component's code. Errors
+    are not cached, so invalid source raises on every call.
 
     Args:
         code (str): The source code to parse
