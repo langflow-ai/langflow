@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ObservabilitySettings(BaseModel):
@@ -21,3 +21,5 @@ class ObservabilitySettings(BaseModel):
     If retroactively lowered below the current count for a flow,
     the oldest entries are deleted only when the next entry is created.
     """
+    traces_db_timeout: float = Field(default=5.0, gt=0)
+    """Timeout in seconds for trace list and detail database queries in the monitor API."""
