@@ -170,6 +170,7 @@ async def _relocate_one(
         result.reason = "already on the target backend"
         return result
     if not_ready := _storage_not_ready(record):
+        result.code = "kb_upgrade_pending"
         result.reason = not_ready
         return result
     if record.status == KnowledgeBaseStatus.INGESTING.value:
@@ -284,6 +285,7 @@ async def _relocate_one(
             result.reason = "knowledge base was deleted during the move"
             return result
         if repoint == "changed":
+            result.code = "kb_routing_changed"
             result.reason = (
                 "knowledge base's storage changed during the move (its backend, configuration, storage generation "
                 "or storage state is no longer what was copied). Its current routing was preserved. Re-run."
