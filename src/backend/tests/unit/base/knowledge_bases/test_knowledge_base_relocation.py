@@ -10,18 +10,24 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import math
 import os
+import sys
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
 import pytest
 import sqlalchemy as sa
 import typer
+from langchain_core.documents import Document
+from langchain_core.embeddings import DeterministicFakeEmbedding
 from langflow.__main__ import _relocate_kb
 from langflow.api.utils import knowledge_base_service
 from langflow.api.utils.knowledge_base_relocation import (
     KBRelocationResult,
+    _metric_change,
     _repoint,
     relocate_knowledge_bases,
     validate_relocation_target_config,
@@ -31,7 +37,7 @@ from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.knowledge_base_storage.runtime import backend_for_record, operation, unfenced_backend
-from lfx.base.knowledge_bases.backends import IngestedDocument, SQLiteBackend, create_backend
+from lfx.base.knowledge_bases.backends import BackendType, IngestedDocument, PostgresBackend, create_backend
 from pydantic import SecretStr
 
 if TYPE_CHECKING:
@@ -51,36 +57,53 @@ def kb_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def during_copy(monkeypatch: pytest.MonkeyPatch):
-    """Run ``action`` once, right after the relocation reads its first batch from SQLite.
+    """Run ``action`` once, right after relocation writes its first batch to Postgres.
 
-    Wraps the real reader, so the copy itself is untouched; this only stands in
-    for something else touching the knowledge base while it moves.
+    Leave the metric preflight scan untouched so each action still runs while
+    chunks are being copied, after that read-only validation has finished.
     """
-    original = SQLiteBackend.iter_documents
+    original = PostgresBackend.add_embedded_documents
 
     def install(action):
-        async def iter_documents(self, **kwargs):
-            first = True
-            async for batch in original(self, **kwargs):
-                yield batch
-                if first:
-                    first = False
-                    await action()
+        first = True
 
-        monkeypatch.setattr(SQLiteBackend, "iter_documents", iter_documents)
+        async def add_embedded_documents(self, docs):
+            nonlocal first
+            result = await original(self, docs)
+            if first:
+                first = False
+                await action()
+            return result
+
+        monkeypatch.setattr(PostgresBackend, "add_embedded_documents", add_embedded_documents)
 
     return install
 
 
+def _vector(i: int, *, unit: bool) -> list[float]:
+    raw = [1.0] + [i / 100] * (DIM - 1)
+    if not unit:
+        return raw
+    norm = math.sqrt(sum(x * x for x in raw))
+    return [x / norm for x in raw]
+
+
 async def _seed_sqlite_kb(
-    user_id, kb_name: str, n: int, *, chunks: int | None = None, model_selection: dict | None = MODEL
+    user_id,
+    kb_name: str,
+    n: int,
+    *,
+    chunks: int | None = None,
+    model_selection: dict | None = MODEL,
+    unit: bool = True,
 ) -> tuple[KnowledgeBaseRecord, list[IngestedDocument]]:
     """Create a SQLite knowledge base the way the app does, then write ``n`` chunks to it.
 
-    ``chunks`` is what the row records, ``n`` unless given.
+    ``chunks`` is what the row records, ``n`` unless given. Unit-length vectors by
+    default, like most hosted embedding models.
     """
     docs = [
-        IngestedDocument(id=f"chunk-{i}", content=f"doc {i}", metadata={"i": i}, embedding=[i / 100] * DIM)
+        IngestedDocument(id=f"chunk-{i}", content=f"doc {i}", metadata={"i": i}, embedding=_vector(i, unit=unit))
         for i in range(n)
     ]
     record = await knowledge_base_service.create_record(
@@ -258,6 +281,38 @@ class TestRelocationWithoutATarget:
 
         assert await _repoint(record, "postgres", {}, 2) == "deleted"
 
+    @pytest.mark.parametrize(
+        ("target", "config", "how"),
+        [
+            ("postgres", {}, "--allow-metric-change"),
+            ("opensearch", {"url_variable": "OPENSEARCH_URL", "space_type": "cosinesimil"}, '{"space_type": "l2"}'),
+        ],
+    )
+    async def test_metric_refusal_says_how_to_proceed(self, active_user, monkeypatch, request, target, config, how):
+        # pgvector's metric is fixed, so the only way through is to accept the change.
+        if target == "opensearch":
+            # Exercise the base installation without the optional SDK even when
+            # it happens to be installed in the local test environment.
+            monkeypatch.setitem(sys.modules, "opensearchpy", None)
+            request.getfixturevalue("fake_opensearchpy")
+            import langchain_community.vectorstores
+            import opensearchpy
+            from opensearchpy.exceptions import NotFoundError
+
+            client = MagicMock()
+            client.indices.get_mapping.side_effect = NotFoundError(404, "index_not_found_exception", {})
+            monkeypatch.setenv("OPENSEARCH_URL", "http://localhost:9200")
+            monkeypatch.setattr(opensearchpy, "OpenSearch", MagicMock(return_value=client))
+            monkeypatch.setattr(langchain_community.vectorstores, "OpenSearchVectorSearch", MagicMock())
+        kb_name = f"kb_metric_{target}"
+        record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 6, unit=False)
+
+        results = await relocate_knowledge_bases(target_backend_type=target, target_backend_config=config, dry_run=True)
+
+        result = next(r for r in results if r.kb_id == record.id)
+        assert result.status == "failed"
+        assert how in result.reason
+
 
 async def _database_state() -> tuple[str, list[uuid.UUID], uuid.UUID]:
     async with session_scope() as session:
@@ -344,6 +399,142 @@ async def test_relocation_refuses_a_local_target(backend_type):
         await relocate_knowledge_bases(target_backend_type=backend_type, target_backend_config={})
 
 
+class _MetricBackend:
+    """A bounded document stream for exercising the backend-independent metric guard."""
+
+    backend_type = BackendType.POSTGRES
+
+    def __init__(self, metric: str, vectors: list[list[float] | None] | None = None):
+        self.metric = metric
+        self.vectors = vectors or []
+        self.closed = False
+
+    async def get_distance_metric(self) -> str:
+        return self.metric
+
+    async def iter_documents(self, *, batch_size: int, include_embeddings: bool):
+        assert include_embeddings
+        try:
+            for start in range(0, len(self.vectors), batch_size):
+                yield [
+                    IngestedDocument(content="chunk", embedding=vector)
+                    for vector in self.vectors[start : start + batch_size]
+                ]
+        finally:
+            self.closed = True
+
+
+@pytest.fixture
+def metric_result() -> KBRelocationResult:
+    return KBRelocationResult(
+        kb_id=uuid.uuid4(),
+        kb_name="metric_guard",
+        owner="owner",
+        source_backend="sqlite",
+        target_backend="postgres",
+        status="failed",
+        source_count=101,
+    )
+
+
+async def test_metric_guard_checks_vectors_after_the_first_batch(metric_result):
+    source = _MetricBackend("l2", [[1.0, 0.0]] * 100 + [[2.0, 0.0]])
+    target = _MetricBackend("cosine")
+
+    reason = await _metric_change(source, target, metric_result, allow=False)
+
+    assert "not unit length" in reason
+    assert "--allow-metric-change" in reason
+    assert metric_result.warnings == []
+    assert source.closed
+
+
+@pytest.mark.parametrize("allow", [False, True])
+@pytest.mark.parametrize("last_vector", [None, "truncated"])
+async def test_metric_guard_refuses_incomplete_vectors_even_when_change_is_allowed(metric_result, allow, last_vector):
+    vectors = [[1.0, 0.0]] * 100 + ([None] if last_vector is None else [])
+    source = _MetricBackend("l2", vectors)
+    target = _MetricBackend("cosine")
+
+    reason = await _metric_change(source, target, metric_result, allow=allow)
+
+    expected = "without vectors" if last_vector is None else "read 100 of 101 chunks"
+    assert expected in reason
+    assert metric_result.warnings == []
+    assert source.closed
+
+
+@pytest.mark.parametrize(("before", "after"), [("l2", "l1"), ("linf", "cosine"), ("l1", "linf")])
+@pytest.mark.parametrize("allow", [False, True])
+async def test_unit_vectors_do_not_make_other_metrics_equivalent(metric_result, before, after, allow):
+    source = _MetricBackend(before, [[1.0, 0.0]] * metric_result.source_count)
+    target = _MetricBackend(after)
+
+    reason = await _metric_change(source, target, metric_result, allow=allow)
+
+    if allow:
+        assert reason is None
+        assert any("may rank unit vectors differently" in warning for warning in metric_result.warnings)
+    else:
+        assert "may rank unit vectors differently" in reason
+        assert "--allow-metric-change" in reason
+        assert metric_result.warnings == []
+
+
+@pytest.mark.parametrize(("before", "after"), [("l2", "cosine"), ("cosine", "inner_product"), ("inner_product", "l2")])
+async def test_unit_vectors_remain_equivalent_across_supported_metrics(metric_result, before, after):
+    source = _MetricBackend(before, [[1.0, 0.0]] * metric_result.source_count)
+    target = _MetricBackend(after)
+
+    assert await _metric_change(source, target, metric_result, allow=False) is None
+    assert any("scores change scale" in warning for warning in metric_result.warnings)
+    assert source.closed
+
+
+@pytest.mark.parametrize(
+    ("backend_type", "config", "metric"),
+    [
+        ("postgres", {}, "cosine"),
+        ("opensearch", {"url_variable": "OPENSEARCH_URL"}, "l2"),
+        ("opensearch", {"url_variable": "OPENSEARCH_URL", "space_type": "cosinesimil"}, "cosine"),
+        ("opensearch", {"url_variable": "OPENSEARCH_URL", "space_type": "innerproduct"}, "inner_product"),
+    ],
+)
+def test_backends_report_the_metric_they_rank_by(tmp_path: Path, backend_type, config, metric):
+    backend = create_backend(backend_type, kb_name="kb", kb_path=tmp_path, backend_config=config, user_id=uuid.uuid4())
+    assert backend.distance_metric == metric
+
+
+@pytest.mark.api_key_required
+@pytest.mark.parametrize("space_type", ["cosinesimil", "innerproduct"])
+@pytest.mark.parametrize("write", ["ingest", "copy"])
+async def test_opensearch_creates_its_index_with_the_configured_space_type(tmp_path: Path, space_type, write):
+    # distance_metric reports the configured space_type, so the index has to rank by it.
+    if os.getenv("LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS") != "1" or not os.getenv("OPENSEARCH_URL"):
+        pytest.skip("Set LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS=1 and OPENSEARCH_URL")
+    pytest.importorskip("opensearchpy")
+    backend = create_backend(
+        "opensearch",
+        kb_name=f"kb_space_{uuid.uuid4().hex[:6]}",
+        kb_path=tmp_path,
+        backend_config={"url_variable": "OPENSEARCH_URL", "space_type": space_type},
+        embedding_function=DeterministicFakeEmbedding(size=DIM),
+        user_id=uuid.uuid4(),
+    )
+    try:
+        if write == "ingest":
+            await backend.add_documents([Document(page_content="doc")])
+        else:
+            await backend.add_embedded_documents([IngestedDocument(id="c0", content="doc", embedding=[0.5] * DIM)])
+
+        mapping = backend._os_client.indices.get_mapping(index=backend._os_index)
+        method = mapping[backend._os_index]["mappings"]["properties"]["vector_field"]["method"]
+        assert method["space_type"] == space_type
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
+
+
 @pytest.mark.api_key_required
 @pytest.mark.usefixtures("kb_root")
 class TestRelocationToPostgresLive:
@@ -381,6 +572,89 @@ class TestRelocationToPostgresLive:
             # The row now names the target, so a second run leaves it alone.
             rerun = await relocate_knowledge_bases(target_backend_type="postgres", target_backend_config={})
             assert next(r for r in rerun if r.kb_id == record.id).status == "skipped"
+        finally:
+            with contextlib.suppress(Exception):
+                await target.delete_collection()
+            await target.teardown()
+
+    async def test_vectors_that_are_not_unit_length_are_not_moved_to_another_metric(self, active_user):
+        # SQLite ranks by l2 unless configured otherwise, and pgvector by cosine. For
+        # vectors that are not unit length the two disagree on neighbours, and every
+        # count would still match.
+        kb_name = f"kb_metric_{uuid.uuid4().hex[:6]}"
+        record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 6, unit=False)
+
+        for dry_run in (True, False):
+            results = await relocate_knowledge_bases(
+                target_backend_type="postgres", target_backend_config={}, dry_run=dry_run
+            )
+            result = next(r for r in results if r.kb_id == record.id)
+            assert result.status == "failed"
+            assert "ranks by l2 distance and the target by cosine" in result.reason
+            assert "not unit length" in result.reason
+            assert result.copied == 0
+
+        assert (await knowledge_base_service.get_by_id(record.id)).backend_type == "sqlite"
+
+    async def test_allow_metric_change_moves_them_anyway_with_a_warning(self, active_user, tmp_path: Path):
+        kb_name = f"kb_allow_{uuid.uuid4().hex[:6]}"
+        record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 6, unit=False)
+        target = create_backend(
+            "postgres", kb_name=kb_name, kb_path=tmp_path, backend_config={}, user_id=active_user.id
+        )
+        try:
+            results = await relocate_knowledge_bases(
+                target_backend_type="postgres", target_backend_config={}, allow_metric_change=True
+            )
+            result = next(r for r in results if r.kb_id == record.id)
+            assert result.status == "relocated", result.reason
+            assert any(
+                "ranks by l2 distance and the target by cosine" in w and "may change" in w for w in result.warnings
+            ), result.warnings
+        finally:
+            with contextlib.suppress(Exception):
+                await target.delete_collection()
+            await target.teardown()
+
+    async def test_nonunit_vector_beyond_first_batch_prevents_copy(self, active_user, tmp_path: Path):
+        kb_name = f"kb_late_metric_{uuid.uuid4().hex[:6]}"
+        record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 100)
+        source = await backend_for_record(record)
+        target = create_backend(
+            "postgres", kb_name=kb_name, kb_path=tmp_path, backend_config={}, user_id=active_user.id
+        )
+        try:
+            await source.add_embedded_documents(
+                [IngestedDocument(id="z-nonunit", content="last", embedding=[2.0] * DIM)]
+            )
+            await _set_row(record.id, chunks=101)
+            for dry_run in (True, False):
+                results = await relocate_knowledge_bases(
+                    target_backend_type="postgres", target_backend_config={}, dry_run=dry_run
+                )
+                result = next(r for r in results if r.kb_id == record.id)
+                assert result.status == "failed", result.reason
+                assert "not unit length" in result.reason
+                assert result.copied == 0
+                assert (await knowledge_base_service.get_by_id(record.id)).backend_type == "sqlite"
+            assert await target.count() == 0
+        finally:
+            await source.teardown()
+            with contextlib.suppress(Exception):
+                await target.delete_collection()
+            await target.teardown()
+
+    async def test_unit_length_vectors_move_with_a_warning_about_scores(self, active_user, tmp_path: Path):
+        kb_name = f"kb_unit_{uuid.uuid4().hex[:6]}"
+        record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 6)
+        target = create_backend(
+            "postgres", kb_name=kb_name, kb_path=tmp_path, backend_config={}, user_id=active_user.id
+        )
+        try:
+            results = await relocate_knowledge_bases(target_backend_type="postgres", target_backend_config={})
+            result = next(r for r in results if r.kb_id == record.id)
+            assert result.status == "relocated", result.reason
+            assert any("scores change scale" in warning for warning in result.warnings), result.warnings
         finally:
             with contextlib.suppress(Exception):
                 await target.delete_collection()

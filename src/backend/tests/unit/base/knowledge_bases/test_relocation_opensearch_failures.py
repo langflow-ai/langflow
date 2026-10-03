@@ -17,6 +17,11 @@ async def test_empty_sqlite_kb_is_not_repointed_to_an_unreachable_opensearch(act
     target = OpenSearchBackend(kb_name=record.name, user_id=record.user_id)
     target._secrets_resolved = True
     target._os_client = MagicMock()
+    target._os_client.indices.get_mapping.return_value = {
+        "test_index": {
+            "mappings": {"properties": {"vector_field": {"type": "knn_vector", "method": {"space_type": "l2"}}}}
+        }
+    }
     target._os_client.count.side_effect = OSError("remote unavailable")
     target._os_index = "test_index"
     monkeypatch.setattr(knowledge_base_relocation, "_build_backend", lambda *_args: target)

@@ -19,10 +19,11 @@ store directly, around that runtime, still can.
 from __future__ import annotations
 
 import asyncio
+import math
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
-from lfx.base.knowledge_bases.backends import create_backend
+from lfx.base.knowledge_bases.backends import BackendType, create_backend
 from lfx.log.logger import logger
 from sqlmodel import select, update
 
@@ -37,6 +38,12 @@ if TYPE_CHECKING:
     from lfx.base.knowledge_bases.backends import BaseVectorStoreBackend
 
 RelocationStatus = Literal["relocated", "would_relocate", "skipped", "failed"]
+
+# Inspect every source vector in bounded batches before allowing a metric change.
+_METRIC_BATCH_SIZE = 100
+_UNIT_NORM_TOLERANCE = 1e-3
+_UNIT_EQUIVALENT_METRICS = {"cosine", "l2", "inner_product"}
+_OPENSEARCH_SPACE_TYPES = {"cosine": "cosinesimil", "l2": "l2", "inner_product": "innerproduct"}
 
 # Some stores (OpenSearch) count newly written chunks only after a refresh, so
 # the post-copy count is polled briefly before a shortfall is treated as real.
@@ -82,6 +89,7 @@ async def relocate_knowledge_bases(
     username: str | None = None,
     dry_run: bool = False,
     batch_size: int = 500,
+    allow_metric_change: bool = False,
 ) -> list[KBRelocationResult]:
     """Relocate every knowledge base, or one user's, to the target backend.
 
@@ -104,6 +112,7 @@ async def relocate_knowledge_bases(
             target_backend_config=target_backend_config,
             dry_run=dry_run,
             batch_size=batch_size,
+            allow_metric_change=allow_metric_change,
         )
         results.append(result)
     return results
@@ -117,6 +126,7 @@ async def _relocate_one(
     target_backend_config: dict[str, Any],
     dry_run: bool,
     batch_size: int,
+    allow_metric_change: bool,
 ) -> KBRelocationResult:
     source_config = record.backend_config or {}
     result = KBRelocationResult(
@@ -172,6 +182,10 @@ async def _relocate_one(
             result.warnings.append(
                 f"row caches {record.chunks} chunks but the source holds {result.source_count}; using the source"
             )
+        metric_problem = await _metric_change(source, target, result, allow=allow_metric_change)
+        if metric_problem:
+            result.reason = metric_problem
+            return result
         if dry_run:
             connection = await target.test_connection()
             if not connection.ok:
@@ -275,6 +289,61 @@ def _build_backend(
         backend_config=backend_config,
         user_id=record.user_id,
     )
+
+
+async def _metric_change(
+    source: BaseVectorStoreBackend, target: BaseVectorStoreBackend, result: KBRelocationResult, *, allow: bool
+) -> str | None:
+    """Why the move would change what nearest-neighbour search returns, or None.
+
+    Vectors keep their values across backends but not the metric they are ranked by.
+    For unit-length vectors cosine, l2 and inner product rank neighbours the same way,
+    so only the scores change scale, which is a warning. For any other vectors the
+    ranking may change, and nothing else about the copy would show it, so it is refused
+    unless ``allow`` accepts it, which leaves a warning instead.
+    """
+    before, after = await source.get_distance_metric(), await target.get_distance_metric()
+    if before is None or after is None or before == after:
+        return None
+    checked = 0
+    unit_length = True
+    documents = source.iter_documents(batch_size=_METRIC_BATCH_SIZE, include_embeddings=True)
+    try:
+        async for batch in documents:
+            for doc in batch:
+                if doc.embedding is None:
+                    return "source returned chunks without vectors, so they can only be re-ingested"
+                checked += 1
+                unit_length = unit_length and abs(math.hypot(*doc.embedding) - 1) <= _UNIT_NORM_TOLERANCE
+    finally:
+        if close := getattr(documents, "aclose", None):
+            await close()
+    if checked != result.source_count:
+        return f"read {checked} of {result.source_count} chunks while checking metrics; not relocating"
+    if not checked:
+        return None
+    change = f"the source ranks by {before} distance and the target by {after}"
+    if unit_length and {before, after} <= _UNIT_EQUIVALENT_METRICS:
+        result.warnings.append(
+            f"{change}; these vectors are unit length, so the same neighbours come back but scores change scale"
+        )
+        return None
+    uncertainty = (
+        "these vectors are not unit length" if not unit_length else "these metrics may rank unit vectors differently"
+    )
+    if allow:
+        result.warnings.append(f"{change}, and {uncertainty}, so rankings may change")
+        return None
+    if target.backend_type == BackendType.OPENSEARCH:
+        space_type = _OPENSEARCH_SPACE_TYPES.get(before, before)
+        how = (
+            f'For a new target index, set the source\'s metric (--target-config \'{{"space_type": "{space_type}"}}\'). '
+            "An existing index's metric cannot be changed by configuration; re-run with --allow-metric-change "
+            "to accept the change"
+        )
+    else:
+        how = "The target's metric is fixed; re-run with --allow-metric-change to accept the change"
+    return f"{change}, and {uncertainty}, so nearest-neighbour results may change. {how}"
 
 
 async def _settled_count(backend: BaseVectorStoreBackend, expected: int) -> int:

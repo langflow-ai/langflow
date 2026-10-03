@@ -76,6 +76,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
+    BackendConfigurationError,
     BackendType,
     BaseVectorStoreBackend,
     IngestedDocument,
@@ -91,6 +92,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from uuid import UUID
 
+    from langchain_core.documents import Document
     from langchain_core.vectorstores import VectorStore
 
 
@@ -209,6 +211,55 @@ class OpenSearchBackend(BaseVectorStoreBackend):
     def store_location(self) -> tuple[Any, ...]:
         """The resolved cluster URL and index."""
         return (self._resolved_url, self._resolve_index_name())
+
+    @property
+    def distance_metric(self) -> str:
+        """The metric for a new index; existing indexes require ``get_distance_metric``."""
+        space_type = self._os_space_type
+        return {"cosinesimil": "cosine", "innerproduct": "inner_product"}.get(space_type, space_type)
+
+    async def get_distance_metric(self) -> str:
+        """Read the actual search field's immutable metric before relocating vectors."""
+        await self.ensure_ready()
+        client = getattr(self, "_os_client", None)
+        if client is None:
+            _ = self.vector_store
+            client = self._os_client
+        try:
+            mappings = await asyncio.to_thread(client.indices.get_mapping, index=self._os_index)
+        except Exception as exc:
+            if _is_missing_index(exc):
+                return self.distance_metric
+            raise
+
+        # Old writes ignored the configured space_type. The persisted mapping,
+        # including that of a partially copied target, is the only reliable value.
+        # Similarity search uses LangChain's default field even when config names
+        # a different field for iter_documents, so inspect the field it queries.
+        try:
+            if not isinstance(mappings, dict) or len(mappings) != 1:
+                raise ValueError
+            mapping = next(iter(mappings.values()))
+            field = mapping["mappings"]["properties"][LANGCHAIN_DEFAULT_VECTOR_FIELD]
+            if field.get("type") != "knn_vector":
+                raise ValueError
+            method_space = field.get("method", {}).get("space_type")
+            field_space = field.get("space_type")
+            if method_space and field_space and method_space != field_space:
+                raise ValueError
+            space_type = method_space or field_space
+            if not isinstance(space_type, str) or not space_type:
+                raise ValueError
+        except (AttributeError, KeyError, TypeError, ValueError) as exc:
+            msg = f"Cannot determine the search distance metric for OpenSearch index {self._os_index!r}"
+            raise BackendConfigurationError(msg) from exc
+        return {"cosinesimil": "cosine", "innerproduct": "inner_product"}.get(space_type, space_type)
+
+    @property
+    def _os_space_type(self) -> str:
+        # Read from the config on each write, not kept from building the vector
+        # store: a write must not depend on which code path built the store first.
+        return self.backend_config.get("space_type") or DEFAULT_SPACE_TYPE
 
     def _resolve_index_name(self) -> str:
         """Resolve the effective index for this KB.
@@ -376,11 +427,22 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             space_type=space_type,
         )
 
+    async def add_documents(self, docs: list[Document]) -> None:
+        # LangChain builds a new index's mapping from per-call kwargs and ignores the
+        # ``space_type`` handed to its constructor, so every write passes it. Without
+        # it the index ranks by l2 whatever the config (and ``distance_metric``) says.
+        if not docs:
+            return
+        await self.ensure_ready()
+        store = self.vector_store
+        await store.aadd_documents(docs, space_type=self._os_space_type)
+
     async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
         # Like ingestion, no per-call field override: LangChain writes vectors to
         # ``LANGCHAIN_DEFAULT_VECTOR_FIELD``, which is where ``iter_documents``
         # and similarity search already look. ``add_embeddings`` creates the index
-        # with the right dimension when it does not exist yet.
+        # with the right dimension when it does not exist yet, and with
+        # ``space_type`` only when it is passed here (see ``add_documents``).
         # ``add_embeddings`` refuses more than the store's ``bulk_size`` (500 by
         # default) per call, so split larger batches rather than fail the write.
         """Write supplied vectors with stable document identities without invoking an embedder."""
@@ -392,6 +454,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 [(doc.content, doc.embedding) for doc in chunk],
                 metadatas=[doc.metadata for doc in chunk],
                 ids=ids[start : start + bulk_size],
+                space_type=self._os_space_type,
             )
 
     async def similarity_search(
