@@ -28,6 +28,8 @@ class ServerSettings(BaseModel):
     when strict port enforcement is implemented (errors will be raised if port unavailable)."""
     workers: int = 1
     """The number of workers to run."""
+    required_plugins: list[str] = Field(default_factory=list)
+    """Names from the ``langflow.plugins`` entry-point group that must register successfully."""
     log_level: str = "critical"
     """The log level for Langflow."""
     log_file: str | None = "logs/langflow.log"
@@ -68,6 +70,12 @@ class ServerSettings(BaseModel):
             msg = f"deployment_profile must be one of 'dev' or 'prod', got {value!r}"
             raise ValueError(msg)
         return normalized
+
+    @field_validator("required_plugins")
+    @classmethod
+    def normalize_required_plugins(cls, value: list[str]) -> list[str]:
+        """Trim names, discard empty values, and preserve declaration order."""
+        return list(dict.fromkeys(name.strip() for name in value if name.strip()))
 
     @field_validator("root_path", mode="before")
     @classmethod

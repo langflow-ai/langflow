@@ -63,6 +63,10 @@ class RouteConflictError(ValueError):
     """
 
 
+class RequiredPluginError(RuntimeError):
+    """A configured required plugin was missing or failed to register."""
+
+
 class _PluginAppWrapper:
     """Wrapper around the real FastAPI app that only allows adding routes.
 
@@ -170,7 +174,7 @@ def _rollback_registration(
     return max(0, removed)
 
 
-def load_plugin_routes(app: FastAPI) -> None:
+def load_plugin_routes(app: FastAPI, *, required_plugins: Iterable[str] = ()) -> None:
     """Discover and register additional routers from authorization plugins.
 
     Plugins register themselves via the ``langflow.plugins`` entry-point group.
@@ -179,6 +183,7 @@ def load_plugin_routes(app: FastAPI) -> None:
         def register(app: FastAPI) -> None: ...
 
     """
+    required = frozenset(required_plugins)
     reserved = _get_route_keys(app)
     wrapper = _PluginAppWrapper(app, reserved)
 
@@ -189,6 +194,12 @@ def load_plugin_routes(app: FastAPI) -> None:
     # manifest. Non-component entry-points (route registrars like the ones
     # this loader expects) on the same distribution still load normally.
     kept_eps, skipped_eps = filter_component_entry_points(raw_eps)
+    available = {ep.name for ep in kept_eps}
+    missing = required - available
+    if missing:
+        names = ", ".join(sorted(missing))
+        msg = f"Required Langflow plugin(s) not found: {names}"
+        raise RequiredPluginError(msg)
     for skipped in skipped_eps:
         logger.info(
             "Skipping component entry-point '%s' (manifest-first precedence; loaded via extension instead)",
@@ -197,12 +208,15 @@ def load_plugin_routes(app: FastAPI) -> None:
     for ep in sorted(kept_eps, key=lambda e: e.name):
         try:
             plugin_register = ep.load()
-        except Exception:  # noqa: BLE001
+        except Exception as exc:
             logger.error(
                 "Failed to load plugin entry point '%s' (broken import or missing dependency)",
                 ep.name,
                 exc_info=True,
             )
+            if ep.name in required:
+                msg = f"Required Langflow plugin failed to load: {ep.name}"
+                raise RequiredPluginError(msg) from exc
             continue
 
         # Registration is all-or-nothing, so both messages below can state
@@ -220,7 +234,10 @@ def load_plugin_routes(app: FastAPI) -> None:
                 e,
                 exc_info=True,
             )
-        except Exception:  # noqa: BLE001
+            if ep.name in required:
+                msg = f"Required Langflow plugin has a route conflict: {ep.name}"
+                raise RequiredPluginError(msg) from e
+        except Exception as exc:
             # Anything else -- a bad plugin config, a failed import inside
             # register() -- is a registration failure, not a route conflict.
             # Reporting every ValueError as a conflict sent operators looking
@@ -232,3 +249,6 @@ def load_plugin_routes(app: FastAPI) -> None:
                 rolled_back,
                 exc_info=True,
             )
+            if ep.name in required:
+                msg = f"Required Langflow plugin failed during registration: {ep.name}"
+                raise RequiredPluginError(msg) from exc

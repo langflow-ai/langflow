@@ -10,6 +10,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.routing import APIRouter
 from langflow.plugin_routes import (
+    RequiredPluginError,
     _get_route_keys,
     _PluginAppWrapper,
     load_plugin_routes,
@@ -177,6 +178,59 @@ class TestLoadPluginRoutes:
         keys = _get_route_keys(app)
         assert ("/health", "GET") in keys
 
+    def test_missing_required_plugin_aborts_startup(self):
+        app = FastAPI()
+
+        with (
+            patch("langflow.plugin_routes.entry_points", return_value=[]),
+            pytest.raises(RequiredPluginError, match="not found: enterprise"),
+        ):
+            load_plugin_routes(app, required_plugins=["enterprise"])
+
+    def test_required_plugin_load_failure_aborts_startup(self):
+        app = FastAPI()
+        ep = MagicMock()
+        ep.name = "enterprise"
+        ep.load.side_effect = ImportError("missing dependency")
+
+        with (
+            patch("langflow.plugin_routes.entry_points", return_value=[ep]),
+            pytest.raises(RequiredPluginError, match="failed to load: enterprise"),
+        ):
+            load_plugin_routes(app, required_plugins=["enterprise"])
+
+    def test_required_plugin_registration_failure_aborts_startup(self):
+        app = FastAPI()
+        ep = MagicMock()
+        ep.name = "enterprise"
+        ep.load.return_value = MagicMock(side_effect=RuntimeError("incomplete registration"))
+
+        with (
+            patch("langflow.plugin_routes.entry_points", return_value=[ep]),
+            pytest.raises(RequiredPluginError, match="failed during registration: enterprise"),
+        ):
+            load_plugin_routes(app, required_plugins=["enterprise"])
+
+    def test_required_plugin_route_conflict_aborts_startup(self):
+        app = FastAPI()
+
+        @app.get("/existing")
+        def existing():
+            return "core"
+
+        def conflicting_register(app_like):
+            app_like.get("/existing")(lambda: "plugin")
+
+        ep = MagicMock()
+        ep.name = "enterprise"
+        ep.load.return_value = conflicting_register
+
+        with (
+            patch("langflow.plugin_routes.entry_points", return_value=[ep]),
+            pytest.raises(RequiredPluginError, match="route conflict: enterprise"),
+        ):
+            load_plugin_routes(app, required_plugins=["enterprise"])
+
     def test_plugin_that_registers_route_is_loaded(self):
         """A plugin that registers a non-conflicting route is loaded successfully."""
         app = FastAPI()
@@ -195,7 +249,7 @@ class TestLoadPluginRoutes:
         ep.load.return_value = register
 
         with patch("langflow.plugin_routes.entry_points", return_value=[ep]):
-            load_plugin_routes(app)
+            load_plugin_routes(app, required_plugins=["enterprise"])
 
         keys = _get_route_keys(app)
         assert ("/api/v1/sso/login", "GET") in keys
