@@ -74,6 +74,7 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
+  newEdgeId,
   scapeJSONParse,
   updateIds,
   validateSelection,
@@ -831,7 +832,14 @@ export default function Page({
           targetHandle: scapeJSONParse(newConnection.targetHandle!),
           sourceHandle: scapeJSONParse(newConnection.sourceHandle!),
         };
-        setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
+        // A reconnected edge is a different connection, so it is a new edge
+        // with a new opaque id, never one derived from its handles.
+        setEdges((els) =>
+          reconnectEdge(oldEdge, newConnection, els, {
+            shouldReplaceId: true,
+            getEdgeId: newEdgeId,
+          }),
+        );
       }
     },
     [setEdges],
