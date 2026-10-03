@@ -75,3 +75,40 @@ describe("applyFlowOperations copies on write", () => {
     expect(base.nodes[0].data.node.template.text.value).toBe("a");
   });
 });
+
+describe("applyFlowOperations in redacted mode", () => {
+  const typeChange = {
+    type: "update_nodes",
+    updates: [
+      {
+        id: "a",
+        op: "set_field",
+        path: ["data", "node", "template", "api_key", "value"],
+        value: null,
+      },
+    ],
+  };
+  const base = () => ({
+    nodes: [
+      { id: "a", data: { node: { template: { api_key: { value: "" } } } } },
+    ],
+    edges: [],
+  });
+
+  it("rejects an undeclared type change by default", () => {
+    expect(() => applyFlowOperations(base(), [typeChange])).toThrow(
+      FlowOperationError,
+    );
+  });
+
+  it("allows it when replaying operations read with secrets removed", () => {
+    const { flowData } = applyFlowOperations(base(), [typeChange], {
+      redacted: true,
+    });
+
+    expect(flowData.nodes[0]).toEqual({
+      id: "a",
+      data: { node: { template: { api_key: { value: null } } } },
+    });
+  });
+});

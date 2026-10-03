@@ -6,6 +6,48 @@ const TEMPLATE_PATH = ["data", "node", "template"];
 
 type Labels = RecordedOperation["labels"];
 
+export type DescribeOptions = {
+  /** A template field's label, such as "API Key" for `api_key`, if known. */
+  fieldLabel?: (nodeId: string, field: string) => string | undefined;
+};
+
+/** `sender_name` → "Sender name", for fields whose label is unknown. */
+export function humanizeField(field: string): string {
+  const words = field.replace(/[_-]+/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/**
+ * Field labels from a graph's templates. A node deleted since has no entry,
+ * so its fields fall back to `humanizeField`.
+ */
+export function fieldLabelsFrom(
+  graph: { nodes?: unknown } | null | undefined,
+): NonNullable<DescribeOptions["fieldLabel"]> {
+  const templates = new Map<string, Record<string, unknown>>();
+  const nodes = (Array.isArray(graph?.nodes) ? graph.nodes : []) as {
+    id?: unknown;
+    data?: { node?: { template?: unknown } };
+  }[];
+  for (const node of nodes) {
+    const template = node?.data?.node?.template;
+    if (
+      typeof node?.id === "string" &&
+      template &&
+      typeof template === "object"
+    )
+      templates.set(node.id, template as Record<string, unknown>);
+  }
+  return (nodeId, field) => {
+    const entry = templates.get(nodeId)?.[field] as
+      | { display_name?: unknown }
+      | undefined;
+    return typeof entry?.display_name === "string" && entry.display_name
+      ? entry.display_name
+      : undefined;
+  };
+}
+
 function nodeName(labels: Labels, id: string): string {
   return labels.nodes?.[id] ?? id;
 }
@@ -26,6 +68,7 @@ function fieldOf(path: (string | number)[]): string | null {
 export function describeOperation(
   recorded: RecordedOperation,
   t: TFunction,
+  options: DescribeOptions = {},
 ): string[] {
   const { operation, labels } = recorded;
   switch (operation.type) {
@@ -70,6 +113,7 @@ export function describeOperation(
         }[],
         labels,
         t,
+        options,
       );
     case "update_metadata":
       return [t("flowHistory.op.updatedFlowSettings")];
@@ -88,7 +132,10 @@ function describeUpdates(
   }[],
   labels: Labels,
   t: TFunction,
+  options: DescribeOptions,
 ): string[] {
+  const label = (id: string, field: string) =>
+    options.fieldLabel?.(id, field) ?? humanizeField(field);
   const byNode = new Map<string, typeof updates>();
   for (const update of updates) {
     byNode.set(update.id, [...(byNode.get(update.id) ?? []), update]);
@@ -100,14 +147,15 @@ function describeUpdates(
       ...new Set(
         nodeUpdates
           .map((update) => fieldOf(update.path))
-          .filter((field): field is string => field !== null),
+          .filter((field): field is string => field !== null)
+          .map((field) => label(id, field)),
       ),
     ];
     const typeChange = nodeUpdates.find((update) => update.from_type);
     if (typeChange && fieldOf(typeChange.path)) {
       sentences.push(
         t("flowHistory.op.changedFieldType", {
-          field: fieldOf(typeChange.path),
+          field: label(id, fieldOf(typeChange.path) as string),
           name,
           from: typeChange.from_type,
           to: jsonTypeName(typeChange.value),
@@ -136,9 +184,10 @@ function jsonTypeName(value: unknown): string {
 export function summarizeOperations(
   operations: RecordedOperation[],
   t: TFunction,
+  options: DescribeOptions = {},
 ): string {
   const sentences = operations.flatMap((operation) =>
-    describeOperation(operation, t),
+    describeOperation(operation, t, options),
   );
   if (sentences.length === 0) return t("flowHistory.op.noChanges");
   const shown = sentences.slice(0, 2).join("; ");
