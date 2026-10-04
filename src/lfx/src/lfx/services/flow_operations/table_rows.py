@@ -61,6 +61,24 @@ def assign_row_ids(rows: list[Any], previous: Any = None) -> list[Any]:
     """
     if not all(isinstance(row, dict) for row in rows):
         return rows
+    match_row_ids(rows, previous)
+    positions = [row.get(ROW_POSITION_KEY) for row in rows]
+    if not all(_is_key(position) for position in positions) or positions_keeping_order(positions) is None:
+        filled = positions_keeping_order(positions) or generate_n_keys_between(None, None, len(rows))
+        for row, position in zip(rows, filled, strict=True):
+            row[ROW_POSITION_KEY] = position
+    load_node_schema().table.sort(rows)
+    return rows
+
+
+def match_row_ids(rows: list[dict[str, Any]], previous: Any = None) -> None:
+    """Give every row without a unique ``_id`` one, in place, keeping stored ids.
+
+    A row that equals a not yet matched row of ``previous`` (the stored value,
+    apart from ids and positions) takes that row's id, and its position when it
+    has none; the others get a new random id. So a table rewritten with the rows
+    it already held keeps them, and a new row changes nothing about the others.
+    """
     used: set[str] = set()
     need_id: list[dict[str, Any]] = []
     for row in rows:
@@ -94,13 +112,6 @@ def assign_row_ids(rows: list[Any], previous: Any = None) -> list[Any]:
                 new_id = new_table_row_id()
         used.add(new_id)
         row[ROW_ID_KEY] = new_id
-    positions = [row.get(ROW_POSITION_KEY) for row in rows]
-    if not all(_is_key(position) for position in positions) or positions_keeping_order(positions) is None:
-        filled = positions_keeping_order(positions) or generate_n_keys_between(None, None, len(rows))
-        for row, position in zip(rows, filled, strict=True):
-            row[ROW_POSITION_KEY] = position
-    load_node_schema().table.sort(rows)
-    return rows
 
 
 def assign_table_row_ids(node: Any) -> Any:
