@@ -1,4 +1,6 @@
+import fixture from "../../../../lfx/tests/unit/services/flow_operations/fixtures/fractional_index_cases.json";
 import {
+  BASE_62_DIGITS,
   generateKeyBetween,
   generateNKeysBetween,
   isValidOrderKey,
@@ -95,6 +97,57 @@ describe("isValidOrderKey", () => {
     "rejects %s",
     (key) => {
       expect(isValidOrderKey(key)).toBe(false);
+    },
+  );
+});
+
+// The cases the backend's port runs, so both produce the same keys.
+describe("the shared fractional index fixture", () => {
+  type Between = {
+    a: string | null;
+    b: string | null;
+    expected?: string;
+    error?: string;
+  };
+  type NBetween = {
+    a: string | null;
+    b: string | null;
+    n: number;
+    expected: string[];
+  };
+  const name = (c: { a: string | null; b: string | null; n?: number }) =>
+    `${c.a}..${c.b}${c.n === undefined ? "" : `x${c.n}`}`;
+
+  it("uses the same digits", () => {
+    expect(fixture.digits).toBe(BASE_62_DIGITS);
+  });
+
+  it.each((fixture.between as Between[]).map((c) => [name(c), c]))(
+    "between %s",
+    (_name, testCase) => {
+      const { a, b, expected, error } = testCase;
+      if (error !== undefined) {
+        let message: string | undefined;
+        try {
+          generateKeyBetween(a, b);
+        } catch (thrown) {
+          message = (thrown as Error).message;
+        }
+        expect(message).toBe(error);
+        return;
+      }
+      const key = generateKeyBetween(a, b);
+      expect(key).toBe(expected);
+      expect(isValidOrderKey(key)).toBe(true);
+    },
+  );
+
+  it.each((fixture.n_between as NBetween[]).map((c) => [name(c), c]))(
+    "%s",
+    (_name, testCase) => {
+      expect(generateNKeysBetween(testCase.a, testCase.b, testCase.n)).toEqual(
+        testCase.expected,
+      );
     },
   );
 });
