@@ -542,6 +542,7 @@ module.exports = {
             "Components/bundles-confluent",
             "Components/bundles-couchbase",
             "Components/bundles-cuga",
+            "Components/bundles-darkmoon-findings",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
             "Components/bundles-docling",
