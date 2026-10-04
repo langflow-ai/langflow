@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { useFlowNames } from "@/hooks/use-history-changes";
 import AuthorAvatar from "@/pages/FlowPage/components/flowSidebarComponent/components/FlowVersionSidebar/components/AuthorAvatar";
 import { formatTimestamp } from "@/pages/FlowPage/components/flowSidebarComponent/components/FlowVersionSidebar/utils";
 import useRevisionPlaybackStore from "@/stores/revisionPlaybackStore";
@@ -34,6 +35,7 @@ export default function NodeHistoryChange({
     onMouseLeave: () => setOpen(false),
   };
   const entries = useRevisionPlaybackStore((s) => s.timeline?.entries);
+  const names = useFlowNames();
   const nameOf = (username: string | null) =>
     username ?? t("flowHistory.unknownAuthor");
   const fieldLabel = (_nodeId: string, field: string) =>
@@ -52,7 +54,7 @@ export default function NodeHistoryChange({
         const sentences = [
           ...new Set(
             group.operations.flatMap((operation) =>
-              describeOperation(operation, t, { fieldLabel }),
+              describeOperation(operation, t, { fieldLabel, names }),
             ),
           ),
         ];

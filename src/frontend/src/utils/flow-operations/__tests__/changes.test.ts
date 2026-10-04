@@ -14,10 +14,9 @@ let nextRevision = 1;
 function recorded(
   actor: RevisionActor,
   operation: RecordedOperation["operation"],
-  labels: RecordedOperation["labels"] = {},
 ): RecordedOperation {
   const revision = nextRevision++;
-  return { revision, actor, request_id: `r${revision}`, operation, labels };
+  return { revision, actor, request_id: `r${revision}`, operation };
 }
 
 const setField = (id: string, field: string, value: unknown = "x") => ({
@@ -136,55 +135,37 @@ describe("changesFrom", () => {
     expect(Object.fromEntries(changes.edges)).toEqual({ e1: alice, e2: bob });
   });
 
-  it("lists deleted nodes and connections by name instead of highlighting them", () => {
-    const changes = changesFrom([
-      recorded(
-        alice,
-        {
+  it("lists deleted nodes and connections instead of highlighting them", () => {
+    const ends = { e1: { source: "a", target: "b" } };
+    const changes = changesFrom(
+      [
+        recorded(alice, {
           type: "update_nodes",
           updates: [setField("p", "template")],
-        },
-        { nodes: { p: "Prompt" } },
-      ),
-      recorded(
-        bob,
-        { type: "delete_nodes", ids: ["p"] },
-        { nodes: { p: "Prompt" } },
-      ),
-      recorded(
-        bob,
-        { type: "delete_edges", ids: ["e1"] },
-        {
-          nodes: { a: "Chat Input", b: "Agent" },
-          edges: { e1: { source: "a", target: "b" } },
-        },
-      ),
-      recorded(alice, { type: "delete_edges", ids: ["e2"] }),
-    ]);
+        }),
+        recorded(bob, { type: "delete_nodes", ids: ["p"] }),
+        recorded(bob, { type: "delete_edges", ids: ["e1"] }),
+        recorded(alice, { type: "delete_edges", ids: ["e2"] }),
+      ],
+      (id) => ends[id as keyof typeof ends],
+    );
 
     expect(changes.nodes.has("p")).toBe(false);
-    expect(changes.removedNodes).toEqual([
-      { id: "p", name: "Prompt", actor: bob },
-    ]);
+    expect(changes.removedNodes).toEqual([{ id: "p", actor: bob }]);
     expect(changes.removedEdges).toEqual([
-      { id: "e1", source: "Chat Input", target: "Agent", actor: bob },
+      { id: "e1", source: "a", target: "b", actor: bob },
       { id: "e2", source: null, target: null, actor: alice },
     ]);
   });
 
   it("leaves out connections removed along with a deleted node", () => {
-    const changes = changesFrom([
-      recorded(
-        bob,
-        { type: "delete_nodes", ids: ["p"] },
-        { nodes: { p: "Prompt" } },
-      ),
-      recorded(
-        bob,
-        { type: "delete_edges", ids: ["e1"] },
-        { edges: { e1: { source: "p", target: "b" } } },
-      ),
-    ]);
+    const changes = changesFrom(
+      [
+        recorded(bob, { type: "delete_nodes", ids: ["p"] }),
+        recorded(bob, { type: "delete_edges", ids: ["e1"] }),
+      ],
+      () => ({ source: "p", target: "b" }),
+    );
 
     expect(changes.removedNodes.map((node) => node.id)).toEqual(["p"]);
     expect(changes.removedEdges).toEqual([]);
@@ -205,6 +186,57 @@ describe("changesFrom", () => {
     expect(changes.removedNodes).toEqual([]);
     expect(changes.edges.get("e1")).toEqual(bob);
     expect(changes.nodes.get("a")).toMatchObject({ actor: bob, added: true });
+  });
+
+  it("credits a connection's own changes and a table's cells to whoever made them", () => {
+    const changes = changesFrom([
+      recorded(alice, {
+        type: "add_edges",
+        edges: [{ id: "e1", source: "a", target: "b" }],
+      }),
+      recorded(bob, {
+        type: "update_edges",
+        updates: [
+          {
+            id: "e1",
+            op: "set_field",
+            path: ["data", "targetHandle", "inputTypes"],
+            value: ["Data"],
+          },
+        ],
+      }),
+      recorded(bob, {
+        type: "update_nodes",
+        updates: [
+          {
+            id: "a",
+            op: "set_field",
+            path: [
+              "data",
+              "node",
+              "template",
+              "headers",
+              "value",
+              { id: "r1" },
+              "v",
+            ],
+            value: "x",
+          },
+          {
+            id: "a",
+            op: "set_field",
+            path: ["data", "node", "outputs", { key: "text" }, "hidden"],
+            value: true,
+          },
+        ],
+      }),
+    ]);
+
+    expect(changes.edges.get("e1")).toEqual(bob);
+    expect(Object.fromEntries(changes.nodes.get("a")!.fields)).toEqual({
+      headers: bob,
+    });
+    expect(changes.nodes.get("a")!.operations).toHaveLength(1);
   });
 
   it("ignores flow settings and empty input", () => {
