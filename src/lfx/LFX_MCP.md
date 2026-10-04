@@ -79,6 +79,16 @@ streaming flow runs. A flow referencing `ENVIRONMENT` receives `staging` instead
 of its stored value. Prefix matching is case-insensitive, and empty values are
 ignored. Other environment entries are not forwarded as headers.
 
+Names must include a variable name and use valid HTTP header characters. Values
+must be ASCII, contain no control characters except internal tabs, and have no
+leading or trailing whitespace. Invalid entries are rejected without including
+their values in the error message.
+
+When overrides are configured, redirects must stay on the same scheme, host, and
+port as `LANGFLOW_SERVER_URL`. Configure the final server URL if a proxy redirects
+to another origin, including an HTTP-to-HTTPS redirect, to keep override values
+from being forwarded to a different server.
+
 These overrides are captured when the HTTP client is created and apply to all
 requests from that client. Restart the MCP server after changing its environment
 configuration. They do not modify the stored global variables.
