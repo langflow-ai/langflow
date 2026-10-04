@@ -134,6 +134,7 @@ def _run_step(
     versions: dict[str, str],
     releases: dict[str, list[str]],
     pypi_down_from_call: int = 0,
+    release_tag: str = "v1.12.2",
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, str]]:
     workspace = tmp_path / "repo"
     for package, version in versions.items():
@@ -162,6 +163,7 @@ def _run_step(
         "GITHUB_OUTPUT": str(github_output),
         "PYPI_FIXTURES": str(fixtures),
         "PYPI_DOWN_FROM_CALL": str(pypi_down_from_call),
+        "RELEASE_TAG": release_tag,
     }
     script = _render(_step_script(job, step), expressions)
     # GitHub runs a step without an explicit `shell:` as `bash -e {0}`.
@@ -218,6 +220,67 @@ def _sdk_version(
 
 def test_first_rc_of_a_patch_release_starts_at_rc0(tmp_path: Path) -> None:
     assert _shared_rc_number(tmp_path, VERSIONS_1_12_2, PYPI_AFTER_1_12_1) == "0"
+
+
+@pytest.mark.parametrize(("published_rc", "expected_rc"), [(None, "1"), ("1.12.2rc3", "4")])
+def test_retry_tag_sets_a_floor_without_reusing_a_published_rc(
+    tmp_path: Path, published_rc: str | None, expected_rc: str
+) -> None:
+    releases = {**PYPI_AFTER_1_12_1}
+    if published_rc:
+        releases["langflow"] = [*releases["langflow"], published_rc]
+    result, outputs = _run_step(
+        tmp_path,
+        job="determine-rc-number",
+        step="Determine shared pre-release RC number",
+        expressions=FULL_PRERELEASE_INPUTS,
+        versions=VERSIONS_1_12_2,
+        releases=releases,
+        release_tag="v1.12.2rc1",
+    )
+    assert result.returncode == 0, result.stderr
+    assert outputs["rc_number"] == expected_rc
+
+
+def test_retry_tag_must_match_the_source_version(tmp_path: Path) -> None:
+    result, outputs = _run_step(
+        tmp_path,
+        job="determine-rc-number",
+        step="Determine shared pre-release RC number",
+        expressions=FULL_PRERELEASE_INPUTS,
+        versions=VERSIONS_1_12_2,
+        releases=PYPI_AFTER_1_12_1,
+        release_tag="v1.12.3rc1",
+    )
+    assert result.returncode != 0
+    assert "does not match source version" in result.stderr
+    assert outputs == {}
+
+
+@pytest.mark.parametrize(
+    ("tag", "pre_release", "valid"),
+    [
+        ("v1.12.2", "false", True),
+        ("v1.12.2", "true", True),
+        ("v1.12.2rc0", "true", True),
+        ("v1.12.2rc12", "true", True),
+        ("v1.12.2rc1", "false", False),
+        ("v1.12.2rc01", "true", False),
+        ("1.12.2rc1", "true", False),
+        ("v1.12.2dev1", "true", False),
+        ("release-1.12.2", "true", False),
+    ],
+)
+def test_release_tag_validation(tag: str, pre_release: str, *, valid: bool) -> None:
+    script = _step_script("validate-tag-format", "Validate Tag Has v Prefix")
+    result = subprocess.run(  # noqa: S603
+        ["bash", "-e", "-c", script],  # noqa: S607
+        env={**os.environ, "RELEASE_TAG": tag, "PRE_RELEASE": pre_release},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert (result.returncode == 0) == valid, result.stdout + result.stderr
 
 
 def test_langflow_rc_history_for_the_same_version_raises_the_shared_number(tmp_path: Path) -> None:
