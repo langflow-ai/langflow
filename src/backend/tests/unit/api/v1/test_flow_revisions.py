@@ -93,7 +93,7 @@ async def test_operations_are_included_on_request_without_secrets(client: AsyncC
     (entry,) = response.json()["entries"]
     (operation,) = entry["operations"]
     assert operation["revision"] == 1
-    assert operation["labels"] == {"nodes": {"a": "Prompt a"}}
+    assert "labels" not in operation
     values = {tuple(update["path"]): update["value"] for update in operation["operation"]["updates"]}
     assert values[("data", "node", "template", "text", "value")] == "changed"
     assert values[("data", "node", "template", "api_key")]["value"] is None

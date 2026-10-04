@@ -38,7 +38,6 @@ class TimelineOperation:
     actor_user_id: UUID
     request_id: UUID
     operation: dict[str, Any]
-    labels: dict[str, Any]
 
 
 @dataclass
@@ -110,7 +109,6 @@ def _timeline_operation(recorded: RecordedOperation, known_variable_names: Colle
         actor_user_id=recorded.actor_user_id,
         request_id=recorded.request_id,
         operation=strip_operation_secrets(dump_flow_operation(recorded.operation), known_variable_names),
-        labels=recorded.labels,
     )
 
 
