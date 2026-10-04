@@ -14,16 +14,29 @@ import pytest
 from lfx.base.mcp.util import MCPSessionManager
 
 
+async def _keep_alive(stopping: asyncio.Event, stop_gate: asyncio.Event | None) -> None:
+    try:
+        await asyncio.Event().wait()
+    except asyncio.CancelledError:
+        stopping.set()
+        # A real transport takes a while to shut down (process exit, HTTP DELETE).
+        if stop_gate is not None:
+            await stop_gate.wait()
+        raise
+
+
 class _FakeTransport:
     """Stands in for the stdio transport: a live task per session, no subprocess."""
 
     def __init__(self) -> None:
         self.created: list[tuple[object, asyncio.Task[Any]]] = []
+        self.stopping = asyncio.Event()
+        self.stop_gate: asyncio.Event | None = None
 
     async def create(self, session_id: str, connection_params: object) -> tuple[object, asyncio.Task[Any]]:
         del session_id, connection_params
         session = object()
-        task = asyncio.create_task(asyncio.Event().wait())
+        task = asyncio.create_task(_keep_alive(self.stopping, self.stop_gate))
         self.created.append((session, task))
         return session, task
 
@@ -167,3 +180,36 @@ async def test_should_keep_new_server_when_it_is_bound_during_a_disconnect(manag
     assert manager._context_to_session == {"ctx": {server_b: session_b}}
     assert manager._session_refcount == {(server_b, session_b): 1}
     assert _live_sessions(manager) == 1
+
+
+async def test_should_keep_replacement_when_another_run_discards_the_dead_session(manager, transport):
+    dead = await manager.get_session("ctx-1", _params("server-a"), "stdio")
+    await manager.get_session("ctx-2", _params("server-a"), "stdio")
+    server_key, _ = _pair(manager, "ctx-1", "server-a")
+
+    # Both runs saw the session die; the first replaces it before the second reacts.
+    await manager.discard_session(server_key, dead)
+    replacement = await manager.get_session("ctx-1", _params("server-a"), "stdio")
+    await manager.discard_session(server_key, dead)
+
+    _, replacement_task = transport.created[1]
+    assert await manager.get_session("ctx-2", _params("server-a"), "stdio") is replacement
+    assert not replacement_task.done()
+    assert manager._session_refcount == {_pair(manager, "ctx-1", "server-a"): 2}
+
+
+async def test_should_pool_session_started_while_the_server_is_invalidated(manager, transport):
+    transport.stop_gate = asyncio.Event()
+    await manager.get_session("ctx-1", _params("server-a"), "stdio")
+    server_key, _ = _pair(manager, "ctx-1", "server-a")
+
+    invalidation = asyncio.create_task(manager.invalidate_server_key(server_key))
+    await transport.stopping.wait()
+    starting = asyncio.create_task(manager.get_session("ctx-2", _params("server-a"), "stdio"))
+    await asyncio.sleep(0.05)
+    transport.stop_gate.set()
+    await invalidation
+    session = await starting
+
+    # Out of the pool, its transport would run on with nothing left to stop it.
+    assert [info["session"] for info in manager._sessions_for(server_key).values()] == [session]

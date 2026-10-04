@@ -163,3 +163,25 @@ async def test_should_recover_tool_call_when_the_dead_process_was_shared(manager
 
     assert result.content[0].text == "after-crash"
     assert await _server_pid(second) != dead_pid
+
+
+async def test_should_finish_call_on_new_process_when_another_run_discards_the_dead_one(manager, server_command):
+    first = _client(manager)
+    first.set_session_context("chat-1_server")
+    await first._connect_to_server(server_command)
+    second = _client(manager)
+    second.set_session_context("chat-2_server")
+    await second._connect_to_server(server_command)
+    dead_pid = await _server_pid(first)
+    await _kill(dead_pid)
+    # The second run fetched the pooled session before the first one replaced it.
+    stale = await second._get_or_create_session()
+    assert await _server_pid(first) != dead_pid
+    in_flight = asyncio.create_task(first.run_tool("slow_echo", {"value": "kept"}))
+    await asyncio.sleep(0.3)
+
+    # Its call on that session fails now, and it discards the session.
+    await second._discard_dead_session(stale)
+
+    result = await asyncio.wait_for(in_flight, timeout=10)
+    assert result.content[0].text == "kept"

@@ -1431,21 +1431,42 @@ class MCPSessionManager:
         return f"{transport_type}_{hash(str(connection_params))}"
 
     async def invalidate_server_key(self, server_key: str) -> None:
-        """Tear down all sessions for this server and reset transport preference (e.g. remote MCP restart)."""
-        self._transport_preference.pop(server_key, None)
-        if server_key in self.sessions_by_server:
-            server_data = self.sessions_by_server[server_key]
-            sessions = server_data.get("sessions", {}) if isinstance(server_data, dict) else server_data
-            for sid in list(sessions.keys()):
-                await self._cleanup_session_by_id(server_key, sid)
-            self.sessions_by_server.pop(server_key, None)
-        for k in list(self._session_refcount):
-            if k[0] == server_key:
-                self._session_refcount.pop(k, None)
-        for ctx, owned in list(self._context_to_session.items()):
-            owned.pop(server_key, None)
-            if not owned:
-                self._context_to_session.pop(ctx, None)
+        """Tear down all sessions for this server and reset transport preference (e.g. remote MCP restart).
+
+        Holds the server lock: a session `get_session()` started while a
+        teardown was awaited would otherwise be dropped from the pool with its
+        transport still running, out of reach of the idle sweep and `disconnect()`.
+        """
+        async with self._server_lock(server_key):
+            self._transport_preference.pop(server_key, None)
+            if server_key in self.sessions_by_server:
+                server_data = self.sessions_by_server[server_key]
+                sessions = server_data.get("sessions", {}) if isinstance(server_data, dict) else server_data
+                for sid in list(sessions.keys()):
+                    await self._cleanup_session_by_id(server_key, sid)
+                self.sessions_by_server.pop(server_key, None)
+            for k in list(self._session_refcount):
+                if k[0] == server_key:
+                    self._session_refcount.pop(k, None)
+            for ctx, owned in list(self._context_to_session.items()):
+                owned.pop(server_key, None)
+                if not owned:
+                    self._context_to_session.pop(ctx, None)
+
+    async def discard_session(self, server_key: str, session: Any) -> None:
+        """Tear down *session* for every context that holds it, if it is still pooled.
+
+        For a session whose transport is gone: its keep-alive task never ends,
+        so the pool would keep handing it out. Matching by identity matters when
+        several runs saw it die: the first one replaces it, and a later one must
+        not tear down that replacement while calls are in flight on it.
+        """
+        async with self._server_lock(server_key):
+            for session_id, session_info in list(self._sessions_for(server_key).items()):
+                if session_info["session"] is session:
+                    self._transport_preference.pop(server_key, None)
+                    await self._cleanup_session_by_id(server_key, session_id)
+                    return
 
     async def _validate_session_connectivity(self, session) -> bool:
         """Validate that the session is actually usable by testing a simple operation."""
@@ -2014,18 +2035,28 @@ class _PooledSessionClient:
     def _get_session_manager(self) -> "MCPSessionManager":
         raise NotImplementedError
 
-    async def _discard_server_sessions(self) -> None:
-        """Tear down this server's pooled sessions, whoever else holds them.
+    def _server_key(self, session_manager: "MCPSessionManager") -> str:
+        return session_manager._get_server_key(self._connection_params, self._TRANSPORT)
 
-        Only for a session whose transport is gone: the pool keeps handing it
-        out (its keep-alive task never ends), so every later caller would fail
-        the same way.
-        """
+    async def _discard_server_sessions(self) -> None:
+        """Tear down this server's pooled sessions, whoever else holds them."""
         if not self._connection_params:
             return
         session_manager = self._get_session_manager()
-        server_key = session_manager._get_server_key(self._connection_params, self._TRANSPORT)
-        await session_manager.invalidate_server_key(server_key)
+        await session_manager.invalidate_server_key(self._server_key(session_manager))
+
+    async def _discard_dead_session(self, session: ClientSession | None) -> None:
+        """Tear down a pooled session whose transport is gone, whoever else holds it.
+
+        The pool keeps handing such a session out (its keep-alive task never
+        ends), so every later caller would fail the same way. Only that session
+        goes: another run that saw it die may already have started a
+        replacement, with calls in flight on it.
+        """
+        if session is None or not self._connection_params:
+            return
+        session_manager = self._get_session_manager()
+        await session_manager.discard_session(self._server_key(session_manager), session)
 
     async def _list_tools(self) -> list:
         """List the server's tools, starting a new session once if the pooled one is dead."""
@@ -2036,7 +2067,7 @@ class _PooledSessionClient:
             if not _is_mcp_session_bust_error(e):
                 raise
             await logger.awarning(f"MCP session for {self._TRANSPORT} server is closed; starting a new one: {e!r}")
-            await self._discard_server_sessions()
+            await self._discard_dead_session(session)
         session = await self._get_or_create_session()
         return (await session.list_tools()).tools
 
@@ -2250,6 +2281,7 @@ class MCPStdioClient(_PooledSessionClient):
         last_error: Exception | None = None
 
         for attempt in range(max_retries):
+            session: ClientSession | None = None
             try:
                 await logger.adebug(f"Attempting to run tool '{tool_name}' (attempt {attempt + 1}/{max_retries})")
                 # Get or create persistent session
@@ -2298,7 +2330,7 @@ class MCPStdioClient(_PooledSessionClient):
                     )
                     # Releasing only this context's reference would leave the dead
                     # session pooled for every other context that holds it.
-                    await self._discard_server_sessions()
+                    await self._discard_dead_session(session)
                     # Add a small delay before retry
                     await asyncio.sleep(0.5)
                     continue
@@ -2574,6 +2606,7 @@ class MCPStreamableHttpClient(_PooledSessionClient):
         last_error: Exception | None = None
 
         for attempt in range(max_retries):
+            session: ClientSession | None = None
             try:
                 await logger.adebug(f"Attempting to run tool '{tool_name}' (attempt {attempt + 1}/{max_retries})")
                 # Get or create persistent session
@@ -2611,9 +2644,9 @@ class MCPStreamableHttpClient(_PooledSessionClient):
 
                 if bust_session and attempt < max_retries - 1:
                     await logger.awarning(
-                        f"MCP session issue for tool '{tool_name}', invalidating server sessions and retrying..."
+                        f"MCP session issue for tool '{tool_name}', discarding the session and retrying..."
                     )
-                    await self._discard_server_sessions()
+                    await self._discard_dead_session(session)
                     await asyncio.sleep(0.5)
                     continue
 
