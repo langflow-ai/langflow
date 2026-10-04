@@ -44,7 +44,7 @@ from langflow.initial_setup.constants import (
     STARTER_FOLDER_NAME,
 )
 from langflow.services.database.models.flow.guards import lock_flow_for_update
-from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowGraphWriteOptions
 from langflow.services.database.models.folder.constants import (
     DEFAULT_FOLDER_DESCRIPTION,
     DEFAULT_FOLDER_NAME,
@@ -57,6 +57,7 @@ from langflow.services.deps import (
     get_variable_service,
     session_scope,
 )
+from langflow.services.flow_history.envelope import FILE_SYNC_CAUSE
 from langflow.services.flow_history.errors import FlowHistoryError
 from langflow.services.flow_history.recorder import write_flow_graph
 
@@ -1161,14 +1162,16 @@ async def _write_flow_data_from_file(session: AsyncSession, flow: Flow, data: An
 
     File writers change a flow like any save, so they go through the same
     guarded path: the caller holds the flow's row lock, and the change is
-    recorded as ``actor_id``'s, normally the flow's owner. A graph that breaks
-    the flow graph rules is refused, as it would be from the API.
+    recorded as ``actor_id``'s, normally the flow's owner, with the cause
+    ``file_sync``. A graph that breaks the flow graph rules is refused, as it
+    would be from the API.
     """
     if flow.user_id is None or actor_id is None:
         # Ownerless flows keep no history (see write_flow_graph).
         flow.data = data
         return
-    await write_flow_graph(session, flow, data, actor_id=actor_id)
+    options = FlowGraphWriteOptions(cause=FILE_SYNC_CAUSE)
+    await write_flow_graph(session, flow, data, actor_id=actor_id, options=options)
 
 
 _FLOW_UPDATABLE_COLUMNS = frozenset(
