@@ -5,6 +5,7 @@ import { TEXTS } from "../../utils/constants/texts";
 import {
   getSidebarProjectButton,
   getSidebarProjectOptionsButton,
+  getSidebarProjectRowById,
 } from "../../utils/project-sidebar";
 import { renameFlow } from "../../utils/rename-flow";
 
@@ -32,30 +33,35 @@ test(
     } else {
       await expect(page.getByText("MCP Server").first()).toBeVisible();
     }
+    const createdProjectResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname === "/api/v1/projects/",
+    );
     await page.getByTestId("add-project-button").click();
-    await page
-      .locator("[data-testid='project-sidebar']")
-      .getByText(TEXTS.labelNewProject)
-      .last()
-      .isVisible();
+    const createdResponse = await createdProjectResponse;
+    expect(createdResponse.status()).toBe(201);
+    const createdProject = await createdResponse.json();
+    const projectRow = getSidebarProjectRowById(page, createdProject.id);
+    await expect(projectRow).toBeVisible();
 
-    await page
-      .locator("[data-testid='project-sidebar']")
-      .getByText(TEXTS.labelNewProject)
-      .last()
-      .dblclick();
+    await projectRow.getByTestId(/^sidebar-nav-/).dblclick();
 
-    const element = await page.getByTestId("input-project");
+    const element = page.getByTestId("input-project");
     await element.fill("new project test name");
-
-    await page.getByText("Starter Project").last().click({
-      force: true,
-    });
-
-    await page.getByText("new project test name").last().waitFor({
-      state: "visible",
-      timeout: 30000,
-    });
+    const renamedProjectResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        new URL(response.url()).pathname ===
+          `/api/v1/projects/${createdProject.id}`,
+    );
+    await element.press("Enter");
+    const renamedResponse = await renamedProjectResponse;
+    expect(renamedResponse.status()).toBe(200);
+    expect((await renamedResponse.json()).name).toBe("new project test name");
+    await expect(
+      getSidebarProjectButton(page, "new project test name"),
+    ).toBeVisible({ timeout: 30000 });
 
     await getSidebarProjectButton(page, "new project test name").last().hover();
 

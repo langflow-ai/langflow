@@ -1542,11 +1542,7 @@ def test_public_flow_blocks_reported_code_execution_agents(component_type):
 
 def test_public_flow_blocks_structured_data_analysis_starter_template():
     """The bundled data-analysis starter contains OpenDsStarAgent and must be rejected publicly."""
-    repo_root = Path(__file__).resolve().parents[5]
-    starter_path = (
-        repo_root
-        / "src/bundles/lfx-bundles/src/lfx_bundles/codeagents/starter_projects/Structured Data Analysis Agent.json"
-    )
+    starter_path = Path(__file__).with_name("fixtures") / "structured_data_analysis_agent.json"
     starter_flow = json.loads(starter_path.read_text())
 
     with pytest.raises(PublicFlowValidationError) as exc_info:
