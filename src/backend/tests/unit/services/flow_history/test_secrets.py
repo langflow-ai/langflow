@@ -26,6 +26,15 @@ def _graph(*nodes) -> dict:
     return {"nodes": list(nodes), "edges": []}
 
 
+def _value_entry(update: dict) -> dict:
+    """Return the write of a field's ``value``; the diff writes the field's whole value unit."""
+    return next(entry for entry in update["updates"] if entry["path"][-1] == "value")
+
+
+def _value_index(update: dict) -> int:
+    return update["updates"].index(_value_entry(update))
+
+
 def test_added_nodes_lose_literal_secrets_and_keep_variable_names():
     target = _graph(
         _node("a", api_key=_secret_field("sk-literal-secret")),
@@ -46,11 +55,11 @@ def test_a_set_field_on_a_secret_value_is_stripped_using_its_recorded_metadata()
     target = copy.deepcopy(base)
     target["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] = "sk-new-secret"
     (update,) = _operations(base, target)
-    assert update["updates"][0]["template_field"]["password"] is True
+    assert _value_entry(update)["template_field"]["password"] is True
 
     stripped = strip_operation_secrets(update, KNOWN_VARIABLES)
 
-    assert stripped["updates"][0]["value"] is None
+    assert stripped["updates"][_value_index(update)]["value"] is None
 
 
 def test_a_set_field_naming_a_known_variable_keeps_the_name():
@@ -59,9 +68,10 @@ def test_a_set_field_naming_a_known_variable_keeps_the_name():
     target["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] = "OPENAI_API_KEY"
     (update,) = _operations(base, target)
 
-    assert strip_operation_secrets(update, KNOWN_VARIABLES)["updates"][0]["value"] == "OPENAI_API_KEY"
+    index = _value_index(update)
+    assert strip_operation_secrets(update, KNOWN_VARIABLES)["updates"][index]["value"] == "OPENAI_API_KEY"
     # A name that is not one of the owner's variables could be a literal secret.
-    assert strip_operation_secrets(update, frozenset())["updates"][0]["value"] is None
+    assert strip_operation_secrets(update, frozenset())["updates"][index]["value"] is None
 
 
 def test_a_whole_secret_field_set_at_once_is_stripped():
@@ -75,14 +85,76 @@ def test_a_whole_secret_field_set_at_once_is_stripped():
     assert stripped["updates"][0]["value"]["password"] is True
 
 
-def test_a_write_inside_a_secret_value_is_removed():
+def test_a_structured_secret_value_is_written_and_stripped_whole():
     base = _graph(_node("a", api_key=_secret_field({"header": "Bearer old"})))
     target = copy.deepcopy(base)
     target["nodes"][0]["data"]["node"]["template"]["api_key"]["value"]["header"] = "Bearer sk-new"
     (update,) = _operations(base, target)
-    assert update["updates"][0]["path"] == ["data", "node", "template", "api_key", "value", "header"]
+    assert _value_entry(update)["path"] == ["data", "node", "template", "api_key", "value"]
+
+    assert strip_operation_secrets(update, KNOWN_VARIABLES)["updates"][_value_index(update)]["value"] is None
+
+
+def test_a_write_inside_a_secret_value_is_removed():
+    update = {
+        "type": "update_nodes",
+        "updates": [
+            {
+                "id": "a",
+                "op": "set_field",
+                "path": ["data", "node", "template", "api_key", "value", "header"],
+                "value": "Bearer sk-new",
+                "template_field": {"name": "api_key", "type": "str", "password": True},
+            }
+        ],
+    }
 
     assert strip_operation_secrets(update, KNOWN_VARIABLES)["updates"][0]["value"] is None
+
+
+def test_table_cells_addressed_by_row_id_are_stripped():
+    base = _graph(
+        _node(
+            "a",
+            headers={
+                "name": "headers",
+                "type": "table",
+                "table_schema": [{"name": "key"}, {"name": "value"}],
+                "value": [{"_id": "r1", "_pos": "a0", "key": "Authorization", "value": "Bearer old"}],
+            },
+        )
+    )
+    target = copy.deepcopy(base)
+    row = target["nodes"][0]["data"]["node"]["template"]["headers"]["value"][0]
+    row["value"] = "Bearer sk-new"
+    row["key"] = "X-Authorization"
+    (update,) = _operations(base, target)
+    assert [entry["path"][-2:] for entry in update["updates"]] == [[{"id": "r1"}, "key"], [{"id": "r1"}, "value"]]
+
+    stripped = strip_operation_secrets(update, KNOWN_VARIABLES)
+
+    # The key cell passes; the value cell is withheld because its row's key decides whether it is a secret.
+    assert [entry["value"] for entry in stripped["updates"]] == ["X-Authorization", None]
+    assert stripped["updates"][1]["path"] == update["updates"][1]["path"]
+
+
+def test_a_whole_table_row_is_stripped_like_a_stored_row():
+    update = {
+        "type": "update_nodes",
+        "updates": [
+            {
+                "id": "a",
+                "op": "set_field",
+                "path": ["data", "node", "template", "headers", "value", {"id": "r2"}],
+                "value": {"_id": "r2", "_pos": "a1", "key": "Authorization", "value": "Bearer sk-new"},
+                "template_field": {"name": "headers", "type": "table"},
+            }
+        ],
+    }
+
+    stripped = strip_operation_secrets(update, KNOWN_VARIABLES)["updates"][0]["value"]
+
+    assert stripped == {"_id": "r2", "_pos": "a1", "key": "Authorization", "value": None}
 
 
 def test_ordinary_values_pass_through():
