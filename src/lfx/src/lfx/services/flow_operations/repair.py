@@ -20,14 +20,15 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import itertools
 import math
 from dataclasses import dataclass
 from typing import Any
 
 from lfx.services.flow_operations.canonical import canonical_json
-from lfx.services.flow_operations.fractional_index import generate_n_keys_between, is_order_key
+from lfx.services.flow_operations.fractional_index import generate_n_keys_between
+from lfx.services.flow_operations.ids import new_edge_id
 from lfx.services.flow_operations.schema import load_node_schema
+from lfx.services.flow_operations.table_rows import positions_keeping_order
 from lfx.services.flow_operations.validation import (
     NODE_OBJECT_PATHS,
     GraphPath,
@@ -83,8 +84,9 @@ class RepairResult:
 def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
     """Return a copy of ``flow_data`` that follows every rule, and the fixes applied.
 
-    Generated IDs are derived from the entry's content and position, so
-    repairing the same graph twice gives the same result. With ``base``, the
+    Generated node and row IDs are derived from the entry's content and
+    position, so repairing the same graph twice gives the same nodes and rows.
+    Generated edge IDs are opaque and random, like the editor's. With ``base``, the
     table rows the write adds or changes are repaired too.
     """
     fixes: list[GraphFix] = []
@@ -180,7 +182,7 @@ def _repair_edges(edges: list[Any], node_ids: set[str], fix) -> list[dict[str, A
             continue
         code = GraphViolationCode.EDGE_ID_DUPLICATE if _is_id(edge_id) else GraphViolationCode.EDGE_ID_MISSING
         fix(code, ("edges", index, "id"))
-        new_id = _generate_edge_id(edge, used_ids)
+        new_id = _generate_edge_id(used_ids)
         used_ids.add(new_id)
         seen_ids.add(new_id)
         edge["id"] = new_id
@@ -215,7 +217,7 @@ def _repair_table(rows: list[Any], path: GraphPath, fix) -> None:
     if missing:
         for index in missing:
             fix(GraphViolationCode.TABLE_ROW_POS_INVALID, (*path, index, position_key))
-        positions = _positions_keeping_order([row.get(position_key) for row in rows])
+        positions = positions_keeping_order([row.get(position_key) for row in rows])
         if positions is None:
             positions = generate_n_keys_between(None, None, len(rows))
         for row, position in zip(rows, positions, strict=True):
@@ -224,29 +226,6 @@ def _repair_table(rows: list[Any], path: GraphPath, fix) -> None:
     if not is_sorted_table(rows):
         fix(GraphViolationCode.TABLE_ROWS_UNSORTED, path)
         table.sort(rows)
-
-
-def _positions_keeping_order(positions: list[Any]) -> list[str] | None:
-    """Fill missing positions between their neighbours, or return None when the others are out of order."""
-    present = [position for position in positions if _is_id(position)]
-    if not all(is_order_key(position) for position in present):
-        return None
-    if any(left >= right for left, right in itertools.pairwise(present)):
-        return None
-    filled = list(positions)
-    index = 0
-    while index < len(filled):
-        if _is_id(filled[index]):
-            index += 1
-            continue
-        end = index
-        while end < len(filled) and not _is_id(filled[end]):
-            end += 1
-        before = filled[index - 1] if index > 0 else None
-        after = filled[end] if end < len(filled) else None
-        filled[index:end] = generate_n_keys_between(before, after, end - index)
-        index = end
-    return filled
 
 
 def _generate_row_id(path: GraphPath, index: int, row: dict[str, Any], used_ids: set[str]) -> str:
@@ -290,16 +269,11 @@ def _generate_node_id(node: dict[str, Any], index: int, used_ids: set[str]) -> s
         attempt += 1
 
 
-def _generate_edge_id(edge: dict[str, Any], used_ids: set[str]) -> str:
-    # Same shape as the editor's updateIds/getHandleId.
-    source_handle = edge.get("sourceHandle") if isinstance(edge.get("sourceHandle"), str) else ""
-    target_handle = edge.get("targetHandle") if isinstance(edge.get("targetHandle"), str) else ""
-    base = f"reactflow__edge-{edge['source']}{source_handle}-{edge['target']}{target_handle}"
-    candidate = base
-    suffix = 1
+def _generate_edge_id(used_ids: set[str]) -> str:
+    # An opaque id like the editor's newEdgeId(), never derived from the handles.
+    candidate = new_edge_id()
     while candidate in used_ids:
-        suffix += 1
-        candidate = f"{base}-{suffix}"
+        candidate = new_edge_id()
     return candidate
 
 
