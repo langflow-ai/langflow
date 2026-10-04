@@ -7,11 +7,14 @@ row's id but the flow name is the same. Before the fix the loader hit the
 
 from __future__ import annotations
 
+import copy
 from contextlib import contextmanager
+from pathlib import Path
 from uuid import uuid4
 
 import orjson
 import pytest
+from langflow.api.utils.core import normalize_flow_for_export
 from langflow.initial_setup.setup import (
     find_existing_flow,
     get_or_create_default_folder,
@@ -21,9 +24,12 @@ from langflow.initial_setup.setup import (
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_operation import FlowOperation
 from langflow.services.database.models.user.model import User
+from langflow.services.flow_history.envelope import decode_row
 from langflow.services.flow_history.recorder import projection_matches
 from lfx.services.deps import get_settings_service
 from sqlmodel import select
+
+import lfx
 
 
 @contextmanager
@@ -697,8 +703,8 @@ async def test_upsert_flow_from_file_records_the_change_in_history() -> None:
 
 
 @pytest.mark.usefixtures("client")
-async def test_upsert_flow_from_file_skips_a_file_whose_graph_breaks_the_rules() -> None:
-    """A refused graph leaves the flow exactly as it was, other columns included."""
+async def test_upsert_flow_from_file_repairs_a_file_whose_graph_breaks_the_rules() -> None:
+    """Files hold exported flows, so a graph that breaks the rules is repaired and recorded, not refused."""
     user_id = uuid4()
     graph = {"nodes": [_text_node("a", "hi")], "edges": []}
     original = await _create_flow(name="Broken", user_id=user_id, data=graph)
@@ -713,9 +719,92 @@ async def test_upsert_flow_from_file_skips_a_file_whose_graph_breaks_the_rules()
 
     async with session_scope() as session:
         await upsert_flow_from_file(file_content, "Broken", session, user_id)
+        await session.commit()
 
     async with session_scope() as session:
         flow = await session.get(Flow, original.id)
-        assert flow.data == graph
-        assert flow.description == "initial"
-        assert flow.latest_revision == 0
+        assert flow.data["nodes"][0]["id"] == "a"
+        assert len({node["id"] for node in flow.data["nodes"]}) == 2
+        assert flow.description == "from file"
+        assert flow.latest_revision >= 1
+        assert await projection_matches(session, flow)
+
+
+def _api_request_node(node_id: str) -> dict:
+    """An API Request node as the editor stores it: its default header row carries a row id and position."""
+    index = orjson.loads(Path(lfx.__file__).with_name("_assets").joinpath("component_index.json").read_bytes())
+    template = next(
+        components["APIRequest"]
+        for _category, components in index["entries"]
+        if isinstance(components, dict) and "APIRequest" in components
+    )
+    node = {
+        "id": node_id,
+        "type": "genericNode",
+        "position": {"x": 0, "y": 0},
+        "data": {"id": node_id, "type": "APIRequest", "node": copy.deepcopy(template)},
+    }
+    headers = node["data"]["node"]["template"]["headers"]
+    assert headers["value"], "the API Request component has default header rows"
+    headers["value"] = [{**row, "_id": f"editor{i}", "_pos": f"a{i}"} for i, row in enumerate(headers["value"])]
+    return node
+
+
+def _headers(flow_data: dict) -> list[dict]:
+    return flow_data["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
+
+
+async def _operations(flow_id) -> list:
+    async with session_scope() as session:
+        rows = (await session.exec(select(FlowOperation).where(FlowOperation.flow_id == flow_id))).all()
+        return [operation for row in rows for operation in decode_row(row)]
+
+
+@pytest.mark.usefixtures("client")
+async def test_syncing_an_exported_flow_assigns_table_row_ids_and_records_a_file_sync() -> None:
+    """Export strips table row ids; writing the file back repairs them instead of refusing the graph."""
+    user_id = uuid4()
+    stored_data = {"nodes": [_api_request_node("APIRequest-1")], "edges": []}
+    original = await _create_flow(name="ApiFlow", user_id=user_id, data=stored_data)
+
+    exported = normalize_flow_for_export({"id": str(original.id), "name": "ApiFlow", "data": stored_data})
+    assert all("_id" not in row and "_pos" not in row for row in _headers(exported["data"]))
+    exported["data"]["nodes"][0]["data"]["node"]["template"]["url_input"]["value"] = "https://example.com"
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(orjson.dumps(exported), "ApiFlow", session, user_id)
+        await session.commit()
+
+    async with session_scope() as session:
+        updated = await session.get(Flow, original.id)
+        assert updated.data["nodes"][0]["data"]["node"]["template"]["url_input"]["value"] == "https://example.com"
+        rows = _headers(updated.data)
+        assert all(row["_id"] and row["_pos"] for row in rows)
+        assert [{k: v for k, v in row.items() if k not in {"_id", "_pos"}} for row in rows] == _headers(
+            exported["data"]
+        )
+        assert await projection_matches(session, updated)
+    operations = await _operations(original.id)
+    assert operations
+    assert {operation.cause for operation in operations} == {"file_sync"}
+
+
+@pytest.mark.usefixtures("client")
+async def test_syncing_the_same_exported_file_again_records_nothing() -> None:
+    """Repair derives row ids from the rows, so the same file gets the same ids."""
+    user_id = uuid4()
+    stored_data = {"nodes": [_api_request_node("APIRequest-1")], "edges": []}
+    original = await _create_flow(name="ApiFlowTwice", user_id=user_id, data=stored_data)
+    exported = normalize_flow_for_export({"id": str(original.id), "name": "ApiFlowTwice", "data": stored_data})
+
+    async def sync() -> None:
+        async with session_scope() as session:
+            await upsert_flow_from_file(orjson.dumps(exported), "ApiFlowTwice", session, user_id)
+            await session.commit()
+
+    await sync()
+    after_first = await _operations(original.id)
+    await sync()
+
+    assert after_first
+    assert len(await _operations(original.id)) == len(after_first)

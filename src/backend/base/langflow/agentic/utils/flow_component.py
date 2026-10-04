@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
+from lfx.services.flow_operations import assign_changed_table_row_ids
 
 from langflow.api.utils.flow_history import history_http_error
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
@@ -289,6 +290,8 @@ async def update_component_field_value(
             ensure_flow_unlocked(db_flow)
 
             # Update the flow data, recording the edit in the flow's history.
+            # A table value the assistant writes needs ids on its rows.
+            assign_changed_table_row_ids(db_flow.data, flow_data)
             try:
                 await write_flow_graph(
                     session,

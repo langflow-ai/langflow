@@ -18,6 +18,7 @@ from uuid import UUID, uuid4
 from fastapi import HTTPException
 from lfx.log.logger import logger
 from lfx.mcp.flow_builder_tools import get_working_flow
+from lfx.services.flow_operations import assign_changed_table_row_ids
 
 from langflow.agentic.api.deps import enforce_agentic_component_admin
 from langflow.agentic.api.router import _resolve_assistant_context
@@ -281,6 +282,9 @@ async def run_assistant_and_persist(
         # each to the working flow here or the text edit is dropped (Bug #13641).
         for edit in field_edits:
             _apply_field_edit(flow_data, edit)
+        # The assistant adds components with their default table rows, and the
+        # flow's history needs every table a write adds or changes to name its rows.
+        assign_changed_table_row_ids(flow.data, flow_data)
         try:
             _validate_catalog_policy_for_write(
                 flow_data,
