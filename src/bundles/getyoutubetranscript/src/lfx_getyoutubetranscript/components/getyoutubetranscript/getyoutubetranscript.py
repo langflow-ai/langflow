@@ -9,12 +9,14 @@ TRANSCRIPT_ENDPOINT = "https://getyoutubetranscript.com/api/v1/transcript"
 REQUEST_TIMEOUT_SECONDS = 60
 SECONDS_PER_MINUTE = 60
 SECONDS_PER_HOUR = 3600
+ERROR_BODY_EXCERPT_CHARS = 200
 
 
 def _http_error_message(error: httpx.HTTPStatusError) -> str:
     """Describe a non-2xx API response, keeping the API's own message.
 
-    Errors carry ``{"success": false, "code": ..., "message": ...}``.
+    Errors carry ``{"success": false, "code": ..., "message": ...}``. A non-JSON body
+    (for example from a proxy) is kept as a short excerpt so the cause is not lost.
     """
     response = error.response
     detail = None
@@ -24,7 +26,8 @@ def _http_error_message(error: httpx.HTTPStatusError) -> str:
             detail = payload.get("message") or payload.get("code")
     except ValueError:
         detail = None
-    reason = detail or response.reason_phrase or "request failed"
+    body_excerpt = " ".join(response.text.split())[:ERROR_BODY_EXCERPT_CHARS]
+    reason = detail or body_excerpt or response.reason_phrase or "request failed"
     return f"GetYouTubeTranscript API error {response.status_code}: {reason}"
 
 
@@ -117,14 +120,37 @@ class GetYouTubeTranscriptComponent(Component):
             raise ValueError(msg)  # noqa: TRY004
         return data
 
+    def _pre_run_setup(self) -> None:
+        # Langflow calls this before each build; start every build with a fresh request.
+        self._fetch_cache = None
+
+    def _request_key(self) -> tuple:
+        return (
+            (self.video or "").strip(),
+            (self.language or "").strip(),
+            bool(self.include_timestamps),
+            str(self.getyoutubetranscript_api_key or ""),
+        )
+
     def _fetch_or_error(self) -> tuple[dict | None, str | None]:
-        """Return ``(data, None)`` on success or ``(None, message)`` so outputs never raise."""
+        """Return ``(data, None)`` on success or ``(None, message)`` so outputs never raise.
+
+        Both outputs share one request for the same inputs, so using both does not spend
+        two credits. The result is keyed by the inputs, so tool calls (which copy the
+        component) and changed inputs always fetch fresh.
+        """
+        key = self._request_key()
+        cached = getattr(self, "_fetch_cache", None)
+        if cached is not None and cached[0] == key:
+            return cached[1]
         try:
-            return self._fetch(), None
+            result: tuple[dict | None, str | None] = (self._fetch(), None)
         except httpx.HTTPStatusError as e:
-            return None, _http_error_message(e)
+            result = (None, _http_error_message(e))
         except (httpx.HTTPError, ValueError) as e:
-            return None, str(e)
+            result = (None, str(e))
+        self._fetch_cache = (key, result)
+        return result
 
     def _transcript_text(self, data: dict) -> str:
         segments = data.get("segments")

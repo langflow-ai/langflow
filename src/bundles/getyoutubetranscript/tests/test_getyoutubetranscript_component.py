@@ -166,11 +166,66 @@ def test_surfaces_api_error_message(component):
 
 
 def test_http_error_without_json_body(component):
-    """A non-JSON error body falls back to the HTTP reason phrase."""
-    mock_get = MagicMock(return_value=_response(502, text="upstream down"))
+    """A non-JSON error body is kept as a whitespace-normalized excerpt."""
+    mock_get = MagicMock(return_value=_response(502, text="upstream\n   down"))
+    with patch(GET_PATCH_TARGET, mock_get):
+        message = component.get_youtube_transcript()
+    assert message.text == "GetYouTubeTranscript API error 502: upstream down"
+
+
+def test_http_error_body_excerpt_is_capped(component):
+    """A long non-JSON body is cut to 200 characters."""
+    mock_get = MagicMock(return_value=_response(502, text="x" * 500))
+    with patch(GET_PATCH_TARGET, mock_get):
+        message = component.get_youtube_transcript()
+    assert message.text == "GetYouTubeTranscript API error 502: " + "x" * 200
+
+
+def test_http_error_with_empty_body_uses_reason_phrase(component):
+    """An empty error body falls back to the HTTP reason phrase."""
+    mock_get = MagicMock(return_value=_response(502, text=""))
     with patch(GET_PATCH_TARGET, mock_get):
         message = component.get_youtube_transcript()
     assert message.text == "GetYouTubeTranscript API error 502: Bad Gateway"
+
+
+def test_both_outputs_share_one_request_per_build(component):
+    """Building both outputs makes a single API call, so only one credit is spent."""
+    component._pre_run_setup()
+    mock_get = _mock_get(PLAIN_DATA)
+    with patch(GET_PATCH_TARGET, mock_get):
+        message = component.get_youtube_transcript()
+        data = component.get_transcript_data()
+    assert mock_get.call_count == 1
+    assert message.text == data.text == "hello world this is a test"
+
+
+def test_changed_inputs_fetch_again_without_a_new_build(component):
+    """The shared result is keyed by the inputs, so a different video is never served stale.
+
+    Tool calls copy the component and set new inputs without a new build, so this must hold
+    even when ``_pre_run_setup`` is not called in between.
+    """
+    mock_get = _mock_get(PLAIN_DATA)
+    with patch(GET_PATCH_TARGET, mock_get):
+        component.get_youtube_transcript()
+        component.video = "otherVideo1"
+        component.get_youtube_transcript()
+        component.include_timestamps = True
+        component.get_youtube_transcript()
+    assert mock_get.call_count == 3
+    assert mock_get.call_args.kwargs["params"]["v"] == "otherVideo1"
+
+
+def test_next_build_fetches_again(component):
+    """Each build starts fresh, so a rerun with the same inputs makes a new request."""
+    mock_get = _mock_get(PLAIN_DATA)
+    with patch(GET_PATCH_TARGET, mock_get):
+        component._pre_run_setup()
+        component.get_youtube_transcript()
+        component._pre_run_setup()
+        component.get_youtube_transcript()
+    assert mock_get.call_count == 2
 
 
 def test_transport_error_becomes_error_output(component):
