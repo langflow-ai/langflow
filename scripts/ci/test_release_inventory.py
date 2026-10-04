@@ -19,6 +19,7 @@ GATE_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release-inventory-ga
 OPT_IN_STANDALONE_EXTENSIONS = {
     "lfx-arxiv",
     "lfx-confluent",
+    "lfx-darkmoon-findings",
     "lfx-duckduckgo",
     "lfx-empiriolabs",
     "lfx-exa",
