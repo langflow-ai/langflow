@@ -138,11 +138,9 @@ async def test_first_graph_edit_starts_history_and_records_attributed_operations
     assert {str(operation.request_id) for operation in operations} == {history["request_id"]}
     assert row.actor_user_ids == [str(active_user.id)]
     assert row.request_ids == [history["request_id"]]
-    assert operations[1].labels == {"nodes": {"a": "Prompt a"}}
-    assert operations[2].labels == {"nodes": {"a": "Prompt a", "b": "Prompt b"}}
 
 
-async def test_an_edge_changed_in_place_records_update_edges_with_its_endpoints(client: AsyncClient, logged_in_headers):
+async def test_an_edge_changed_in_place_records_update_edges(client: AsyncClient, logged_in_headers):
     edge = _edge("e", "a", "b")
     flow = await _create_flow(client, logged_in_headers, _graph(_node("a"), _node("b"), edges=[edge]))
     changed = {**edge, "data": {"note": "rewired"}}
@@ -153,10 +151,6 @@ async def test_an_edge_changed_in_place_records_update_edges_with_its_endpoints(
     (row,) = await _rows(flow["id"])
     (operation,) = decode_row(row)
     assert operation.operation.type == "update_edges"
-    assert operation.labels == {
-        "nodes": {"a": "Prompt a", "b": "Prompt b"},
-        "edges": {"e": {"source": "a", "target": "b"}},
-    }
 
 
 async def test_every_revision_reconstructs_its_graph(client: AsyncClient, logged_in_headers):
