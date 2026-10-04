@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import uuid
 from collections.abc import Mapping
 from contextlib import contextmanager
@@ -67,7 +66,7 @@ from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
-from lfx.utils.async_helpers import async_delegate_target, delegates_to
+from lfx.utils.async_helpers import async_call_method, delegates_to
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 
@@ -500,12 +499,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
 
-        selection_method = async_delegate_target(self, "_resolve_selected_model")
-        selected_model = (
-            await selection_method()
-            if selection_method is not None
-            else await asyncio.to_thread(self._resolve_selected_model)
-        )
+        selected_model = await async_call_method(self, "_resolve_selected_model")
         try:
             from langchain_core.language_models import BaseLanguageModel
 
@@ -518,8 +512,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         # Ensure _get_llm() uses the resolved model (e.g. from legacy agent_llm/model_name)
         self.model = selected_model
-        model_method = async_delegate_target(self, "_get_llm")
-        llm_model = await model_method() if model_method is not None else await asyncio.to_thread(self._get_llm)
+        llm_model = await async_call_method(self, "_get_llm")
         if llm_model is None:
             msg = "No language model selected. Please choose a model to proceed."
             raise ValueError(msg)
@@ -873,9 +866,8 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         return self._model_remediation_context(selected)
 
     async def _aselected_model_remediation_context(self) -> tuple[str | None, str | None, Any | None]:
-        method = async_delegate_target(self, "_resolve_selected_model")
         try:
-            selected = await method() if method is not None else await asyncio.to_thread(self._resolve_selected_model)
+            selected = await async_call_method(self, "_resolve_selected_model")
         except (AttributeError, TypeError, ValueError, KeyError, ImportError):
             return None, None, None
         return self._model_remediation_context(selected)
@@ -955,12 +947,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
         await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
-        context_method = async_delegate_target(self, "_selected_model_remediation_context")
-        provider, model_name, connected_model = (
-            await context_method()
-            if context_method is not None
-            else await asyncio.to_thread(self._selected_model_remediation_context)
-        )
+        provider, model_name, connected_model = await async_call_method(self, "_selected_model_remediation_context")
         applied: set[str] = set()
         while True:
             try:

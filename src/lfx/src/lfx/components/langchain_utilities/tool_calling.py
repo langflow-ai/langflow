@@ -1,4 +1,3 @@
-import asyncio
 import contextlib
 from datetime import datetime, timezone
 
@@ -30,7 +29,7 @@ from lfx.inputs.inputs import (
     StrInput,
 )
 from lfx.schema.data import Data
-from lfx.utils.async_helpers import async_delegate_target, delegates_to
+from lfx.utils.async_helpers import async_call_method, delegates_to
 
 
 class ToolCallingAgentComponent(LCToolsAgentComponent):
@@ -128,11 +127,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
         await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
-        async_builder = async_delegate_target(self, "_get_llm")
-        if async_builder is not None:
-            llm = await async_builder()
-        else:
-            llm = await asyncio.to_thread(self._get_llm)
+        llm = await async_call_method(self, "_get_llm")
         return self._runnable_from_model(llm)
 
     def _runnable_from_model(self, llm):

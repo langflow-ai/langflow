@@ -11,7 +11,13 @@ from unittest.mock import MagicMock
 import pytest
 from lfx.custom.custom_component.component import Component
 from lfx.template.field.base import Output
-from lfx.utils.async_helpers import acquire_thread_lock, async_delegate_target, delegates_to, run_until_complete
+from lfx.utils.async_helpers import (
+    acquire_thread_lock,
+    async_call_method,
+    async_delegate_target,
+    delegates_to,
+    run_until_complete,
+)
 
 
 class _Loader:
@@ -48,6 +54,19 @@ class TestAsyncDelegateTarget:
 
         assert target is not None
         assert await target() == "async override"
+
+    async def test_decorated_async_delegate_preserves_the_callers_running_loop(self):
+        caller_loop = asyncio.get_running_loop()
+
+        class InstrumentedLoader(_Loader):
+            @wraps(_Loader.aload)
+            def aload(self):
+                # Synchronous instrumentation around a coroutine must still
+                # run on the caller loop when reached through a native delegate.
+                assert asyncio.get_running_loop() is caller_loop
+                return super().aload()
+
+        assert await async_call_method(InstrumentedLoader(), "load") == "async"
 
     def test_sync_override_on_subclass_is_not_a_wrapper(self):
         assert async_delegate_target(_SyncOverride(), "load") is None

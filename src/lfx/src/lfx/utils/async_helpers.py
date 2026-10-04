@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import threading
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -101,6 +102,17 @@ def async_delegate_target(obj: object, method_name: str) -> Callable[..., Awaita
     if getattr(function, _ASYNC_DELEGATE_OWNER_ATTR, None) is not function:
         return None
     return getattr(obj, async_name)
+
+
+async def async_call_method(obj: object, method_name: str, *args, **kwargs) -> Any:
+    """Await a native method, or run its synchronous override with caller context."""
+    method = async_delegate_target(obj, method_name)
+    if method is not None:
+        return await method(*args, **kwargs)
+    method = getattr(obj, method_name)
+    if inspect.iscoroutinefunction(method):
+        return await method(*args, **kwargs)
+    return await asyncio.to_thread(method, *args, **kwargs)
 
 
 async def acquire_thread_lock(lock: threading.Lock) -> None:

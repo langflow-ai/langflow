@@ -183,115 +183,51 @@ def provider_variable_from_env(var_key: str) -> str | None:
     return None
 
 
+def _provider_variables_with_env_fallback(provider_vars, values: dict[str, str]) -> dict[str, str]:
+    """Fill missing values only when the request permits environment fallback."""
+    if not is_env_fallback_disabled():
+        for variable in provider_vars:
+            key = variable.get("variable_key")
+            if key and not values.get(key) and (value := provider_variable_from_env(key)):
+                values[key] = value
+    return values
+
+
 def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
     """Resolve connection variables synchronously for existing provider callers."""
     provider_vars = get_provider_all_variables(provider)
     if not provider_vars:
         return {}
-    if user_id is None or (isinstance(user_id, str) and user_id == "None"):
-        if is_env_fallback_disabled():
-            return {}
-        values = {}
-        for variable in provider_vars:
-            key = variable.get("variable_key")
-            if key and (value := provider_variable_from_env(key)):
-                values[key] = value
-        return values
-    values = run_until_complete(aget_all_variables_for_provider(user_id, provider))
-    # Retain the synchronous caller's post-DB-miss fallback contract.
-    for variable in provider_vars:
-        key = variable.get("variable_key")
-        if (
-            key
-            and not values.get(key)
-            and not is_env_fallback_disabled()
-            and (value := provider_variable_from_env(key))
-        ):
-            values[key] = value
-    return values
+    values = {}
+    if user_id is not None and user_id != "None":
+        values = run_until_complete(aget_all_variables_for_provider(user_id, provider))
+    return _provider_variables_with_env_fallback(provider_vars, values)
 
 
 async def aget_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
-    """Get all configured variables for a provider from database or environment."""
-    result: dict[str, str] = {}
-
-    # Get all variable definitions for this provider
+    """Await owner-scoped connection variables, then apply allowed environment fallbacks."""
     provider_vars = get_provider_all_variables(provider)
     if not provider_vars:
-        return result
-
-    # If no user_id, only check environment variables. Honor the request's no-env-fallback
-    # contract: a served flow under no_env_fallback stays isolated from process-wide
-    # credentials, so return nothing rather than leaking os.environ into provider_vars
-    # (which would defeat the _env_if_allowed guards in instantiation.py).
-    if user_id is None or (isinstance(user_id, str) and user_id == "None"):
-        if is_env_fallback_disabled():
-            return result
-        for var_info in provider_vars:
-            var_key = var_info.get("variable_key")
-            if var_key:
-                env_value = provider_variable_from_env(var_key)
-                if env_value:
-                    result[var_key] = env_value
-        return result
-
-    # Try to get from global variables (database)
-    async def _get_all_variables():
+        return {}
+    values = {}
+    if user_id is not None and user_id != "None":
         async with session_scope() as session:
             variable_service = get_variable_service()
-            if variable_service is None:
-                return {}
-
-            values = {}
-            user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
-
-            for var_info in provider_vars:
-                var_key = var_info.get("variable_key")
-                if not var_key:
-                    continue
-
-                try:
-                    value = await variable_service.get_variable(
-                        user_id=user_id_uuid,
-                        name=var_key,
-                        field="",
-                        session=session,
-                    )
+            if variable_service is not None:
+                owner = UUID(user_id) if isinstance(user_id, str) else user_id
+                for variable in provider_vars:
+                    key = variable.get("variable_key")
+                    if not key:
+                        continue
+                    try:
+                        value = await variable_service.get_variable(user_id=owner, name=key, field="", session=session)
+                    except VariableNotFoundError:
+                        continue
                     value = secret_value_to_str(value, strip=True)
                     if value:
-                        values[var_key] = value
-                except VariableNotFoundError:
-                    # Variable not found - check environment, unless the request disables
-                    # env fallback (keeps served flows isolated from process-wide credentials).
-                    if is_env_fallback_disabled():
-                        continue
-                    env_value = provider_variable_from_env(var_key)
-                    if env_value:
-                        values[var_key] = env_value
-
-            return values
-
-    db_values = await _get_all_variables()
-
-    # decrypt_api_key swallows Fernet InvalidToken silently and returns "",
-    # so a SECRET_KEY rotation leaves required keys missing from db_values
-    # even when the env var is set. Mirror get_api_key_for_provider's
-    # post-async env fallback so the assistant doesn't reject the request
-    # with "Missing required configuration" while the env var is present.
-    for var_info in provider_vars:
-        var_key = var_info.get("variable_key")
-        if not var_key or db_values.get(var_key):
-            continue
-        # Honor the request's no-env-fallback contract: a served flow under
-        # no_env_fallback must stay isolated from process-wide credentials even on
-        # this post-DB-miss rotation fallback.
-        if is_env_fallback_disabled():
-            continue
-        env_value = provider_variable_from_env(var_key)
-        if env_value:
-            db_values[var_key] = env_value
-
-    return db_values
+                        values[key] = value
+    # Empty/decryption-missing values can fall back; database errors propagate.
+    return _provider_variables_with_env_fallback(provider_vars, values)
 
 
 def _validate_and_get_enabled_providers(
