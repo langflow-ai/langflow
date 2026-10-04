@@ -7,6 +7,7 @@ from typing import Any, Protocol
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessageChunk
 
+from lfx.observability_phase import Phase, measure_phase
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
@@ -585,7 +586,8 @@ async def process_agent_events(
             if usage is not None:
                 agent_message.properties.usage = usage
         # Final DB update with the complete message (skip_db_update=False by default)
-        agent_message = await send_message_callback(message=agent_message)
+        with measure_phase(Phase.FINAL_SEND):
+            agent_message = await send_message_callback(message=agent_message)
     except AgentPausedError:
         raise
     except Exception as e:
