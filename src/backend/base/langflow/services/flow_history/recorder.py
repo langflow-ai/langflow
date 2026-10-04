@@ -190,9 +190,7 @@ async def write_flow_graph(
     if not started:
         session.add(_checkpoint(flow, base, revision=0))
 
-    recorded = _sequence(
-        derived.operations, base=base, target=target, flow=flow, actor_id=actor_id, request_id=request_id
-    )
+    recorded = _sequence(derived.operations, flow=flow, actor_id=actor_id, request_id=request_id)
     for row_operations in _pack_rows(recorded):
         session.add(
             FlowOperationRow(
@@ -304,17 +302,12 @@ _ENVELOPE_OVERHEAD = _json_size(encode_envelope([]))
 def _sequence(
     operations: list[FlowOperation],
     *,
-    base: dict[str, Any],
-    target: dict[str, Any],
     flow: Flow,
     actor_id: UUID,
     request_id: UUID,
 ) -> list[RecordedOperation]:
     """Split operations to fit the row size limit and number them from the flow's head."""
     bytes_limit = get_settings_service().settings.flow_op_log_row_bytes_limit
-    base_nodes = {node["id"]: node for node in base["nodes"]}
-    target_nodes = {node["id"]: node for node in target["nodes"]}
-    base_edges = {edge["id"]: edge for edge in base["edges"]}
 
     recorded: list[RecordedOperation] = []
     revision = flow.latest_revision
@@ -327,7 +320,6 @@ def _sequence(
                     actor_user_id=actor_id,
                     request_id=request_id,
                     operation=part,
-                    labels=_labels(part, base_nodes, target_nodes, base_edges),
                 )
             )
     return recorded
@@ -409,51 +401,3 @@ def _items(operation: FlowOperation):
 
 def _dump_item(item: Any) -> Any:
     return item.model_dump(mode="json", exclude_defaults=True) if hasattr(item, "model_dump") else item
-
-
-def _labels(
-    operation: FlowOperation,
-    base_nodes: dict[str, dict[str, Any]],
-    target_nodes: dict[str, dict[str, Any]],
-    base_edges: dict[str, dict[str, Any]],
-) -> dict[str, Any]:
-    """Record the display names of the nodes an operation touches, as of now."""
-    node_ids: list[str] = []
-    edges: dict[str, dict[str, str]] = {}
-    if isinstance(operation, AddNodesOp):
-        node_ids = [node["id"] for node in operation.nodes]
-    elif isinstance(operation, UpdateNodesOp):
-        node_ids = [update.id for update in operation.updates]
-    elif isinstance(operation, DeleteNodesOp):
-        node_ids = list(operation.ids)
-    elif isinstance(operation, AddEdgesOp):
-        node_ids = [endpoint for edge in operation.edges for endpoint in (edge["source"], edge["target"])]
-    elif isinstance(operation, (DeleteEdgesOp, UpdateEdgesOp)):
-        edge_ids = (
-            operation.ids if isinstance(operation, DeleteEdgesOp) else [update.id for update in operation.updates]
-        )
-        for edge_id in dict.fromkeys(edge_ids):
-            edge = base_edges.get(edge_id)
-            if edge is not None:
-                edges[edge_id] = {"source": edge["source"], "target": edge["target"]}
-                node_ids += [edge["source"], edge["target"]]
-
-    names = {}
-    for node_id in dict.fromkeys(node_ids):
-        node = target_nodes.get(node_id) or base_nodes.get(node_id)
-        if node is not None:
-            names[node_id] = _display_name(node)
-    labels: dict[str, Any] = {}
-    if names:
-        labels["nodes"] = names
-    if edges:
-        labels["edges"] = edges
-    return labels
-
-
-def _display_name(node: dict[str, Any]) -> str:
-    data = node["data"]
-    for candidate in (data["node"].get("display_name"), data.get("type"), node["id"]):
-        if isinstance(candidate, str) and candidate:
-            return candidate
-    return node["id"]
