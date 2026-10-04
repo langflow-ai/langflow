@@ -779,7 +779,8 @@ async def test_syncing_an_exported_flow_assigns_table_row_ids_and_records_a_file
         updated = await session.get(Flow, original.id)
         assert updated.data["nodes"][0]["data"]["node"]["template"]["url_input"]["value"] == "https://example.com"
         rows = _headers(updated.data)
-        assert all(row["_id"] and row["_pos"] for row in rows)
+        # The rows the file sent back are the stored rows, so they keep their ids.
+        assert [row["_id"] for row in rows] == [row["_id"] for row in _headers(stored_data)]
         assert [{k: v for k, v in row.items() if k not in {"_id", "_pos"}} for row in rows] == _headers(
             exported["data"]
         )
@@ -791,7 +792,7 @@ async def test_syncing_an_exported_flow_assigns_table_row_ids_and_records_a_file
 
 @pytest.mark.usefixtures("client")
 async def test_syncing_the_same_exported_file_again_records_nothing() -> None:
-    """Repair derives row ids from the rows, so the same file gets the same ids."""
+    """A synced table keeps the stored rows' ids, so the same file changes nothing the second time."""
     user_id = uuid4()
     stored_data = {"nodes": [_api_request_node("APIRequest-1")], "edges": []}
     original = await _create_flow(name="ApiFlowTwice", user_id=user_id, data=stored_data)
@@ -808,3 +809,33 @@ async def test_syncing_the_same_exported_file_again_records_nothing() -> None:
 
     assert after_first
     assert len(await _operations(original.id)) == len(after_first)
+
+
+@pytest.mark.usefixtures("client")
+async def test_syncing_a_file_that_adds_a_row_records_only_that_row() -> None:
+    """The rows the stored table already held keep their ids; only the new row is recorded."""
+    user_id = uuid4()
+    stored_data = {"nodes": [_api_request_node("APIRequest-1")], "edges": []}
+    original = await _create_flow(name="ApiFlowNewRow", user_id=user_id, data=stored_data)
+    exported = normalize_flow_for_export({"id": str(original.id), "name": "ApiFlowNewRow", "data": stored_data})
+    _headers(exported["data"]).insert(0, {"key": "X-Trace", "value": "on"})
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(orjson.dumps(exported), "ApiFlowNewRow", session, user_id)
+        await session.commit()
+
+    async with session_scope() as session:
+        updated = await session.get(Flow, original.id)
+        rows = _headers(updated.data)
+        assert rows[0]["key"] == "X-Trace"
+        assert [row["_id"] for row in rows[1:]] == [row["_id"] for row in _headers(stored_data)]
+    writes = [
+        update
+        for operation in await _operations(original.id)
+        if operation.operation.type == "update_nodes"
+        for update in operation.operation.updates
+        if "headers" in update.path
+    ]
+    assert len(writes) == 1
+    assert writes[0].op == "set_field"
+    assert writes[0].value["key"] == "X-Trace"
