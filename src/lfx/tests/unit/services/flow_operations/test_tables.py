@@ -125,6 +125,19 @@ def test_only_table_fields_are_checked():
     assert find_graph_violations(graph, base=EMPTY) == []
 
 
+def test_tool_actions_are_a_keyed_list_not_a_table():
+    # A component in tool mode holds its tool actions under a table-typed field;
+    # they are keyed by tag, so they never need row ids.
+    graph = _graph(copy.deepcopy(KEYED))
+    graph["nodes"][0]["data"]["node"]["template"]["tools_metadata"] = {
+        "type": "table",
+        "_input_type": "ToolsInput",
+        "value": [{"name": "fetch", "tags": ["fetch"]}],
+    }
+
+    assert find_graph_violations(graph, base=EMPTY) == []
+
+
 def test_validate_raises_with_the_table_violations():
     with pytest.raises(FlowDataValidationError) as exc_info:
         validate_flow_data(_graph(LEGACY), base=EMPTY)
