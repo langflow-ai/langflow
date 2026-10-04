@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
+from lfx.services.flow_operations import strip_flow_table_row_keys
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -190,6 +191,8 @@ def normalize_flow_for_export(flow: dict) -> dict:
       ``selected``) — these change on every canvas interaction.
     * Converts ``template.<field>.value`` strings to ``list[str]`` for
       ``type == "code"`` fields, enabling line-level git diffs.
+    * Strips the ``_id`` and ``_pos`` of table rows: they belong to the flow's
+      history, and an imported flow's rows get new ones.
 
     Key sorting is handled at serialisation time via
     ``orjson_dumps(sort_keys=True)``.
@@ -209,6 +212,8 @@ def normalize_flow_for_export(flow: dict) -> dict:
 
     # Code → line arrays
     _split_code_to_lines(flow)
+
+    strip_flow_table_row_keys(flow.get("data"))
 
     return flow
 
