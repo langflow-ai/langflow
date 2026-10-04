@@ -15,9 +15,10 @@ the revision head safe to extend across workers.
 2. The stored graph must be the graph its revision replays to. Otherwise the
    write is refused, or with ``repair_revision_mismatch`` the stored graph is
    reset to the latest recorded revision first.
-3. Both graphs must follow the flow graph rules. Otherwise the write is
-   refused, or with ``repair_invalid_graph`` they are repaired, keeping the
-   stored original as a view-only version.
+3. Both graphs must follow the flow graph rules, and every table value the
+   write adds or changes must give its rows ids and positions. Otherwise the
+   write is refused, or with ``repair_invalid_graph`` they are repaired,
+   keeping the stored original as a view-only version.
 4. The change is derived as operations, verified by exact replay, numbered
    from the flow's latest revision, and stored in rows that respect the
    configured size limits.
@@ -167,11 +168,13 @@ async def write_flow_graph(
             result.graph_repairs.extend(_fix_entry("stored", fix) for fix in repaired.fixes)
 
     target = normalize_absent_graph(target)
-    violations = find_graph_violations(target)
+    # Against the stored graph, so the table rules apply to the tables this
+    # write adds or changes, while a table it leaves alone is accepted as stored.
+    violations = find_graph_violations(target, base=base)
     if violations:
         if not repair_invalid:
             raise FlowGraphInvalidError(violations, graph="submitted")
-        repaired = repair_flow_data(target)
+        repaired = repair_flow_data(target, base=base)
         target = repaired.flow_data
         result.graph_repairs.extend(_fix_entry("submitted", fix) for fix in repaired.fixes)
 

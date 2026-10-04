@@ -790,6 +790,21 @@ class TestExportFlow:
         assert "nodes" in result["data"]
         assert len(result["data"]["nodes"]) == 1
 
+    async def test_added_table_rows_get_ids_that_the_export_leaves_out(self):
+        """Default table rows get ids when added, so the write passes the table rules; export strips them."""
+        created = await mcp_server_module.create_flow("TableRows")
+        comp = await mcp_server_module.add_component(created["id"], "APIRequest")
+
+        def headers(flow: dict) -> list[dict]:
+            (node,) = [node for node in flow["data"]["nodes"] if node["id"] == comp["id"]]
+            return node["data"]["node"]["template"]["headers"]["value"]
+
+        stored = headers(await mcp_server_module._get_flow(created["id"]))
+        exported = headers(await mcp_server_module.export_flow(created["id"]))
+        assert stored
+        assert all(row.get("_id") and row.get("_pos") for row in stored)
+        assert exported == [{key: value for key, value in row.items() if key not in {"_id", "_pos"}} for row in stored]
+
     async def test_export_flow_redacts_secrets(self):
         """API keys in exported flow data should be redacted."""
         created = await mcp_server_module.create_flow("SecretTest")
