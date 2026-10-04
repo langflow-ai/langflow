@@ -9,6 +9,7 @@
           "revision": 42,
           "actor_user_id": "<uuid>",
           "request_id": "<uuid>",
+          "cause": "upgrade_component",
           "operation": {...}
         }
       ]
@@ -16,7 +17,10 @@
 
 The array order is canonical: element ``i`` of a row starting at revision ``s``
 carries revision ``s + i``. Every element names the authenticated actor and the
-request that produced it, so a row never implies a single author.
+request that produced it, so a row never implies a single author. ``cause``
+is optional: what made the write (an upgrade, a code edit, a restore, a file
+sync, the assistant), a display hint the history uses to group a write's
+operations. Nothing checks it.
 
 Decoding validates all of it; a row that does not match is corruption.
 """
@@ -36,6 +40,11 @@ if TYPE_CHECKING:
 
 ENVELOPE_VERSION = 1
 
+# Causes the server sets on its own writes. The editor sends its own
+# (``upgrade_component``, ``edit_code``) with the write options.
+FILE_SYNC_CAUSE = "file_sync"
+ASSISTANT_CAUSE = "assistant"
+
 # Kinds of damage a stored row can show.
 UNSUPPORTED_ENVELOPE = "unsupported operation envelope"
 COUNT_MISMATCH = "operation count does not match the row's revision range"
@@ -52,14 +61,17 @@ class RecordedOperation:
     actor_user_id: UUID
     request_id: UUID
     operation: FlowOperation
+    cause: str | None = None
 
     def to_json(self) -> dict[str, Any]:
         element: dict[str, Any] = {
             "revision": self.revision,
             "actor_user_id": str(self.actor_user_id),
             "request_id": str(self.request_id),
-            "operation": dump_flow_operation(self.operation),
         }
+        if self.cause is not None:
+            element["cause"] = self.cause
+        element["operation"] = dump_flow_operation(self.operation)
         return element
 
 
@@ -107,6 +119,9 @@ def decode_row(row: FlowOperationRow) -> list[RecordedOperation]:
             operation = parse_flow_operation(element["operation"])
         except (KeyError, ValueError, FlowOperationError) as exc:
             raise corrupt(MALFORMED_OPERATION, expected_revision) from exc
+        cause = element.get("cause")
+        if cause is not None and not isinstance(cause, str):
+            raise corrupt(MALFORMED_OPERATION, expected_revision)
 
         # A request's operations are contiguous: once another request starts,
         # an earlier one cannot resume.
@@ -121,6 +136,7 @@ def decode_row(row: FlowOperationRow) -> list[RecordedOperation]:
                 actor_user_id=actor_user_id,
                 request_id=request_id,
                 operation=operation,
+                cause=cause,
             )
         )
     return decoded
