@@ -147,7 +147,31 @@ describe("random transactions replay to the engine's hashes", () => {
   );
 });
 
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === "object") {
+    for (const item of Object.values(value)) deepFreeze(item);
+    Object.freeze(value);
+  }
+  return value;
+}
+
 describe("applyFlowOperations copies on write", () => {
+  it("never changes the graph it is given", () => {
+    const document = propertyCases as unknown as {
+      base: FlowGraph;
+      sequences: PropertySequence[];
+    };
+    for (const sequence of document.sequences) {
+      let graph = deepFreeze(cloneDeep(document.base));
+      for (const transaction of sequence.transactions) {
+        graph = deepFreeze(
+          applyFlowOperations(graph, cloneDeep(transaction), { inverse: true })
+            .flowData,
+        );
+      }
+    }
+  });
+
   const node = (id: string) => ({
     id,
     data: { node: { template: { text: { value: id } } } },

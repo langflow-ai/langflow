@@ -62,7 +62,8 @@ function ControlButton({
  * Moves through the flow's whole retained history, one recorded change at a
  * time, across entries. Newest is at the top, like the timeline beside it.
  *
- * Every revision was replayed when the history loaded, so moving is a lookup.
+ * The history was replayed when it loaded, with each operation's inverse
+ * kept, so moving applies the operations or inverses in between locally.
  * The slider only changes the selection; the version sidebar draws it.
  */
 export default function HistorySlider() {
