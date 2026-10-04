@@ -1196,6 +1196,19 @@ class OperationsComponent(Component):
         merge_on = getattr(self, "merge_on_column", None)
         merge_how = getattr(self, "merge_how", "inner")
 
+        # Track only columns created by this merge, without colliding with input names.
+        right_columns = {}
+        used_columns = set(df_left.columns) | set(df_right.columns)
+        for col in df_left.columns.intersection(df_right.columns):
+            if merge_on and col == merge_on:
+                continue
+            right_col = f"{col}_right"
+            while right_col in used_columns:
+                right_col += "_right"
+            right_columns[col] = right_col
+            used_columns.add(right_col)
+        df_right = df_right.rename(columns=right_columns)
+
         if merge_on:
             if merge_on not in df_left.columns:
                 msg = f"Column '{merge_on}' not found in left DataFrame. Available: {list(df_left.columns)}"
@@ -1203,17 +1216,14 @@ class OperationsComponent(Component):
             if merge_on not in df_right.columns:
                 msg = f"Column '{merge_on}' not found in right DataFrame. Available: {list(df_right.columns)}"
                 raise ValueError(msg)
-            merged = df_left.merge(df_right, on=merge_on, how=merge_how, suffixes=("", "_right"))
+            merged = df_left.merge(df_right, on=merge_on, how=merge_how)
         else:
-            merged = df_left.merge(df_right, left_index=True, right_index=True, how=merge_how, suffixes=("", "_right"))
+            merged = df_left.merge(df_right, left_index=True, right_index=True, how=merge_how)
 
         cols_to_drop = []
-        for col in merged.columns:
-            if col.endswith("_right"):
-                original_col = col[:-6]
-                if original_col in merged.columns:
-                    merged[original_col] = merged[original_col].combine_first(merged[col])
-                    cols_to_drop.append(col)
+        for col, right_col in right_columns.items():
+            merged[col] = merged[col].combine_first(merged[right_col])
+            cols_to_drop.append(right_col)
 
         if cols_to_drop:
             merged = merged.drop(columns=cols_to_drop)

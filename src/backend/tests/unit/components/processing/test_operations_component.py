@@ -326,6 +326,49 @@ class TestTableOperations:
         assert "name" in result.columns
         assert "city" in result.columns
 
+    @pytest.mark.parametrize(
+        ("component_class", "output_method"),
+        [(OperationsComponent, "as_dataframe"), (DataFrameOperationsComponent, "perform_operation")],
+    )
+    @pytest.mark.parametrize("merge_on", ["id", ""])
+    @pytest.mark.parametrize("overlapping_value", [False, True])
+    def test_merge_preserves_original_suffix_columns(self, component_class, output_method, merge_on, overlapping_value):
+        left = DataFrame({"id": [1, 2], "value": [None, "left"], "value_right": ["metadata", "keep"]})
+        right = DataFrame({"id": [1, 2], "value_right_right": ["source", "keep too"]})
+        if overlapping_value:
+            right["value"] = ["right", "ignored"]
+        left_before, right_before = left.copy(), right.copy()
+        component = component_class(
+            operation=[{"name": "Merge"}],
+            left_dataframe=left,
+            right_dataframe=right,
+            merge_on_column=merge_on,
+        )
+
+        result = getattr(component, output_method)()
+
+        assert result.to_dict(orient="list") == {
+            "id": [1, 2],
+            "value": ["right" if overlapping_value else None, "left"],
+            "value_right": ["metadata", "keep"],
+            "value_right_right": ["source", "keep too"],
+        }
+        pd.testing.assert_frame_equal(left, left_before)
+        pd.testing.assert_frame_equal(right, right_before)
+
+    @pytest.mark.parametrize("component_class", [OperationsComponent, DataFrameOperationsComponent])
+    def test_merge_preserves_distinct_column_label_types(self, component_class):
+        left = DataFrame({1: [None, "left number"], "1": ["left string", None]})
+        right = DataFrame({1: ["right number", "ignored"], "1": ["ignored", "right string"]})
+        component = component_class(left_dataframe=left, right_dataframe=right)
+
+        result = component.merge_dataframes()
+
+        assert result.to_dict(orient="list") == {
+            1: ["right number", "left number"],
+            "1": ["left string", "right string"],
+        }
+
 
 class TestTextOperations:
     def test_word_count_returns_data(self):
