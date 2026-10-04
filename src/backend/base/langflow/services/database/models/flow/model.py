@@ -284,6 +284,9 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     )
 
 
+FLOW_OPERATION_CAUSE_MAX_LENGTH = 64
+
+
 class FlowGraphWriteOptions(SQLModel):
     """Request controls for a write that replaces a flow's graph.
 
@@ -310,6 +313,14 @@ class FlowGraphWriteOptions(SQLModel):
         description=(
             "When the stored or submitted graph breaks the flow graph rules, repair it "
             "instead of refusing the write. The stored original is kept as a view-only version."
+        ),
+    )
+    cause: str | None = Field(
+        default=None,
+        max_length=FLOW_OPERATION_CAUSE_MAX_LENGTH,
+        description=(
+            "What made this write, recorded with each of its operations so the history can "
+            "group them (for example upgrade_component or edit_code). A display hint only."
         ),
     )
 

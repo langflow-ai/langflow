@@ -26,8 +26,10 @@ from langflow.initial_setup.setup import (
 from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models import Flow
+from langflow.services.database.models.flow_operation import FlowOperation
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.flow_history.envelope import decode_row
 from lfx.extension.bundle_registry import BundleRecord, BundleRegistry
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -481,10 +483,13 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
         assert result["description"] == "new description"
         assert result["data"] == new_data
         assert result["locked"] is True
-        # Recorded in the flow's history as the owner's change.
-        revisions = (await client.get(f"api/v1/flows/{flow_id}/revisions", headers=logged_in_headers)).json()
-        assert revisions["latest_revision"] >= 1
-        assert {actor["id"] for entry in revisions["entries"] for actor in entry["actors"]} == {user_id}
+        # Recorded in the flow's history as the owner's change, caused by the file sync.
+        async with session_scope() as session:
+            rows = (await session.exec(select(FlowOperation).where(FlowOperation.flow_id == uuid.UUID(flow_id)))).all()
+            operations = [operation for row in rows for operation in decode_row(row)]
+        assert operations
+        assert {str(operation.actor_user_id) for operation in operations} == {user_id}
+        assert {operation.cause for operation in operations} == {"file_sync"}
         async with session_scope() as session:
             updated_flow = (await session.exec(select(Flow).where(Flow.id == uuid.UUID(flow_id)))).one()
             assert updated_flow.updated_at > original_updated_at
