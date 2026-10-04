@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+import langflow.initial_setup
 import pytest
 from fastapi import status
 from langflow.services.database.models.flow.model import Flow
@@ -189,6 +192,59 @@ async def test_writes_that_change_no_graph_record_nothing(client: AsyncClient, l
     # No revision was recorded, so history has not started either.
     assert await _checkpoints(flow["id"]) == []
     assert (await _flow(flow["id"])).latest_revision == 0
+
+
+async def test_a_starter_project_saved_back_records_nothing_and_an_edit_records_only_itself(
+    client: AsyncClient, logged_in_headers
+):
+    """What the editor sends for an opened flow: the canvas as shown, then one edit.
+
+    View state, display-only template keys the editor refreshes, and handle
+    spelling are not changes, so saving an opened flow back records nothing,
+    and a first edit records only the edited field's value unit.
+    """
+    path = Path(langflow.initial_setup.__file__).parent / "starter_projects" / "Basic Prompting.json"
+    starter = json.loads(path.read_text())["data"]
+    flow = await _create_flow(client, logged_in_headers, starter)
+
+    unedited = copy.deepcopy(starter)
+    unedited["viewport"] = {"x": 7, "y": 8, "zoom": 0.5}
+    for node in unedited["nodes"]:
+        node["selected"] = True
+        node["data"]["node"]["last_updated"] = "2026-10-03T00:00:00Z"
+        for field in node["data"]["node"]["template"].values():
+            if isinstance(field, dict):
+                field["info"] = "refreshed help text"
+    for edge in unedited["edges"]:
+        edge.update(selected=True, animated=True)
+        # Respelled the way the editor writes handles: compact keys, sorted.
+        for key in ("sourceHandle", "targetHandle"):
+            value = json.loads(edge[key].replace("\u0153", '"'))
+            edge[key] = json.dumps(value, separators=(",", ":"), sort_keys=True).replace('"', "\u0153")
+    response = await _patch(client, logged_in_headers, flow["id"], data=unedited)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["history"] is None
+    assert await _rows(flow["id"]) == []
+
+    edited = copy.deepcopy(unedited)
+    chat_input = next(node for node in edited["nodes"] if node["data"]["type"] == "ChatInput")
+    chat_input["data"]["node"]["template"]["input_value"]["value"] = "Hello there"
+    response = await _patch(client, logged_in_headers, flow["id"], data=edited)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    (row,) = await _rows(flow["id"])
+    (recorded,) = decode_row(row)
+    assert recorded.operation.type == "update_nodes"
+    unit = sorted(
+        key
+        for key in ("value", "load_from_db", "file_path", "_connection_mode")
+        if key in chat_input["data"]["node"]["template"]["input_value"]
+    )
+    assert sorted(list(update.path) for update in recorded.operation.updates) == [
+        ["data", "node", "template", "input_value", key] for key in unit
+    ]
+    assert {update.id for update in recorded.operation.updates} == {chat_input["id"]}
 
 
 async def test_a_retry_with_the_same_request_id_records_once(client: AsyncClient, logged_in_headers):
