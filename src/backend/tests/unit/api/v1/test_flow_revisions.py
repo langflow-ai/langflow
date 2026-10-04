@@ -94,10 +94,30 @@ async def test_operations_are_included_on_request_without_secrets(client: AsyncC
     (operation,) = entry["operations"]
     assert operation["revision"] == 1
     assert "labels" not in operation
+    assert operation["cause"] is None
     values = {tuple(update["path"]): update["value"] for update in operation["operation"]["updates"]}
     assert values[("data", "node", "template", "text", "value")] == "changed"
     assert values[("data", "node", "template", "api_key")]["value"] is None
     assert "sk-literal-secret" not in response.text
+
+
+async def test_operations_carry_the_cause_of_their_write(client: AsyncClient, logged_in_headers):
+    flow = await _flow_with_history(client, logged_in_headers, _graph(_node("a")), _graph(_node("a", "one")))
+    caused = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"data": _graph(_node("a", "two"), _node("b")), "cause": "upgrade_component"},
+        headers=logged_in_headers,
+    )
+    assert caused.status_code == status.HTTP_200_OK, caused.text
+
+    response = await client.get(f"api/v1/flows/{flow['id']}/revisions?include=operations", headers=logged_in_headers)
+
+    causes = {
+        operation["revision"]: operation["cause"]
+        for entry in response.json()["entries"]
+        for operation in entry["operations"]
+    }
+    assert causes == {1: None, 2: "upgrade_component", 3: "upgrade_component"}
 
 
 async def test_unknown_include_values_are_rejected(client: AsyncClient, logged_in_headers):
@@ -164,8 +184,12 @@ async def test_restoring_a_revision_keeps_its_secrets_and_records_new_revisions(
     async with session_scope() as session:
         stored = await session.get(Flow, UUID(flow["id"]))
         assert graphs_equal(stored.data, first)
-    entries = (await client.get(f"api/v1/flows/{flow['id']}/revisions", headers=logged_in_headers)).json()["entries"]
+    entries = (
+        await client.get(f"api/v1/flows/{flow['id']}/revisions?include=operations", headers=logged_in_headers)
+    ).json()["entries"]
     assert entries[0]["start_revision"] == 2
+    assert {operation["cause"] for operation in entries[0]["operations"]} == {"restore"}
+    assert {operation["cause"] for operation in entries[1]["operations"]} == {None}
 
 
 async def test_another_users_flow_history_is_not_found(client: AsyncClient, logged_in_headers):
