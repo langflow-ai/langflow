@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import math
+import re
 
 import pytest
 from lfx.services.flow_operations import (
@@ -113,7 +114,7 @@ def test_edges_to_unknown_nodes_are_dropped():
     assert _codes(result) == [GraphViolationCode.EDGE_ENDPOINT_INVALID] * 2
 
 
-def test_missing_and_duplicate_edge_ids_are_generated_like_the_editor():
+def test_missing_and_duplicate_edge_ids_are_opaque_like_the_editor():
     no_id = _edge("x", "a", "b")
     del no_id["id"]
     graph = {"nodes": [_node("a"), _node("b")], "edges": [_edge("e", "a", "b"), _edge("e", "b", "a"), no_id]}
@@ -121,7 +122,9 @@ def test_missing_and_duplicate_edge_ids_are_generated_like_the_editor():
     result = repair_flow_data(graph)
 
     ids = [edge["id"] for edge in result.flow_data["edges"]]
-    assert ids == ["e", "reactflow__edge-bS-aT", "reactflow__edge-aS-bT"]
+    assert ids[0] == "e"
+    assert all(re.fullmatch(r"e-[0-9A-Za-z]{21}", edge_id) for edge_id in ids[1:])
+    assert len(set(ids)) == 3
     assert _codes(result) == [GraphViolationCode.EDGE_ID_DUPLICATE, GraphViolationCode.EDGE_ID_MISSING]
 
 
@@ -142,7 +145,11 @@ def test_repair_is_deterministic_and_leaves_the_input_alone():
     first = repair_flow_data(graph)
     second = repair_flow_data(graph)
 
-    assert first.flow_data == second.flow_data
+    # Node and row ids are derived from content; edge ids are opaque and random.
+    assert first.flow_data["nodes"] == second.flow_data["nodes"]
+    assert [{**edge, "id": None} for edge in first.flow_data["edges"]] == [
+        {**edge, "id": None} for edge in second.flow_data["edges"]
+    ]
     assert graph == original
 
 

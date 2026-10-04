@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from lfx.services.flow_operations.ids import new_edge_id
 from pydantic import BaseModel, Field
 
 
@@ -227,14 +228,13 @@ def _expand_edge(
     source_handle_str = _encode_handle(source_handle_data)
     target_handle_str = _encode_handle(target_handle_data)
 
-    edge_id = f"reactflow__edge-{compact_edge.source}{source_handle_str}-{compact_edge.target}{target_handle_str}"
-
     return {
         "source": compact_edge.source,
         "sourceHandle": source_handle_str,
         "target": compact_edge.target,
         "targetHandle": target_handle_str,
-        "id": edge_id,
+        # Opaque, like the editor's: an edge id never encodes what it connects.
+        "id": new_edge_id(),
         "data": {
             "sourceHandle": source_handle_data,
             "targetHandle": target_handle_data,

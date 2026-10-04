@@ -41,6 +41,7 @@ from lfx.services.flow_operations.fractional_index import (
     generate_n_keys_between,
     is_order_key,
 )
+from lfx.services.flow_operations.ids import new_edge_id, new_table_row_id
 from lfx.services.flow_operations.ops import (
     AddEdgesOp,
     AddNodesOp,
@@ -70,7 +71,16 @@ from lfx.services.flow_operations.python import PythonFlowOperationService
 from lfx.services.flow_operations.repair import REPAIRS, GraphFix, RepairResult, repair_flow_data
 from lfx.services.flow_operations.schema import KeyedList, NodeSchema, load_node_schema
 from lfx.services.flow_operations.service import BaseFlowOperationService
-from lfx.services.flow_operations.table_rows import ROW_ID_KEY, ROW_POSITION_KEY, strip_row_keys
+from lfx.services.flow_operations.table_rows import (
+    ROW_ID_KEY,
+    ROW_POSITION_KEY,
+    assign_changed_table_row_ids,
+    assign_row_ids,
+    assign_table_row_ids,
+    strip_flow_table_row_keys,
+    strip_node_table_row_keys,
+    strip_row_keys,
+)
 from lfx.services.flow_operations.validation import (
     GraphViolation,
     GraphViolationCode,
@@ -119,6 +129,9 @@ __all__ = [
     "UpdateNodeEntry",
     "UpdateNodesOp",
     "apply_flow_operations",
+    "assign_changed_table_row_ids",
+    "assign_row_ids",
+    "assign_table_row_ids",
     "build_graph_state",
     "canonical_edge",
     "canonical_graph",
@@ -140,10 +153,14 @@ __all__ = [
     "is_order_key",
     "json_type",
     "load_node_schema",
+    "new_edge_id",
+    "new_table_row_id",
     "normalize_requested_ops",
     "parse_flow_operation",
     "parse_flow_operations",
     "repair_flow_data",
+    "strip_flow_table_row_keys",
+    "strip_node_table_row_keys",
     "strip_row_keys",
     "validate_flow_data",
     "values_equal",

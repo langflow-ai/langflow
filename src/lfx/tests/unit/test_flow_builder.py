@@ -5,6 +5,7 @@ no I/O, no network.
 """
 
 import json
+import re
 from copy import deepcopy
 from pathlib import Path
 
@@ -476,12 +477,16 @@ class TestConnect:
         assert edge["source"] == r1["id"]
         assert edge["target"] == r2["id"]
 
-    def test_edge_has_reactflow_id(self):
+    def test_edge_has_an_opaque_id_like_the_editor(self):
         flow = _fresh_flow()
         r1 = add_component(flow, "ChatInput", REGISTRY)
         r2 = add_component(flow, "ChatOutput", REGISTRY)
+        r3 = add_component(flow, "ChatOutput", REGISTRY)
         edge = add_connection(flow, r1["id"], "message", r2["id"], "input_value")
-        assert edge["id"].startswith("reactflow__edge-")
+        other = add_connection(flow, r1["id"], "message", r3["id"], "input_value")
+        assert re.fullmatch(r"e-[0-9A-Za-z]{21}", edge["id"])
+        assert r1["id"] not in edge["id"]
+        assert other["id"] != edge["id"]
 
     def test_edge_handle_strings_use_oe(self):
         flow = _fresh_flow()
