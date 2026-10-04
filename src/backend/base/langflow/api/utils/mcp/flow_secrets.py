@@ -20,7 +20,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from langflow.logging import logger
-from langflow.services.auth.mcp_encryption import MCP_SECRET_CONFIG_MAPS, decrypt_mcp_config, encrypt_mcp_config
+from langflow.services.auth.mcp_encryption import (
+    MCP_CONFIG_VALUE_MASK,
+    MCP_SECRET_CONFIG_MAPS,
+    decrypt_mcp_config,
+    encrypt_mcp_config,
+    restore_mcp_config_secrets,
+)
 from langflow.services.database.lock_retry import is_database_lock_error
 from langflow.services.database.models import MCPServer
 from langflow.services.deps import get_variable_service
@@ -244,7 +250,28 @@ async def stage_mcp_secrets(
     if not carried and not variables:
         return
 
-    failed = await _ensure_variables(variables, user_id, session)
+    # A flow can carry the management API's masked config. Resolve masks before
+    # variable creation or rotation so neither credential store receives a mask.
+    resolved_variables = dict(variables)
+    resolved_servers: list[tuple[str, dict[str, Any], MCPServer | None]] = []
+    for name, config in carried:
+        existing = (
+            await session.exec(select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == name))
+        ).first()
+        previous = decrypt_mcp_config(existing.config or {}) if existing is not None else None
+        try:
+            resolved_config = restore_mcp_config_secrets(config, previous)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        _, config_variables, _ = strip_config_secrets(resolved_config, name)
+        for variable_name, value in config_variables.items():
+            if resolved_variables.get(variable_name) == MCP_CONFIG_VALUE_MASK:
+                resolved_variables[variable_name] = value
+        resolved_servers.append((name, resolved_config, existing))
+    if MCP_CONFIG_VALUE_MASK in resolved_variables.values():
+        raise HTTPException(status_code=422, detail="A redacted MCP credential can only preserve an existing value.")
+
+    failed = await _ensure_variables(resolved_variables, user_id, session)
     if failed:
         raise HTTPException(
             status_code=500,
@@ -254,10 +281,7 @@ async def stage_mcp_secrets(
             ),
         )
 
-    for name, config in carried:
-        existing = (
-            await session.exec(select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == name))
-        ).first()
+    for name, config, existing in resolved_servers:
         if existing is not None:
             # Rotating here only makes sense when the user is editing a server this flow was
             # already bound to. The row is keyed on (user, name) and shared by every flow of

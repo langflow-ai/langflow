@@ -12,11 +12,16 @@ scrubbed flow keeps running unchanged. Flows saved before this are left alone.
 
 import uuid
 
+import pytest
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.utils.mcp.flow_secrets import variable_name_for
+from langflow.api.v2.mcp import get_server
+from langflow.services.auth.mcp_encryption import MCP_CONFIG_VALUE_MASK, encrypt_mcp_config
+from langflow.services.database.models import MCPServer
+from langflow.services.deps import get_variable_service, session_scope
 
-SECRET = "sk-mcp-should-never-persist"  # noqa: S105
+SECRET = "sk-mcp-should-never-persist"  # noqa: S105  # pragma: allowlist secret
 
 
 def _flow_payload(server_name: str, config: dict) -> dict:
@@ -89,7 +94,7 @@ async def test_should_keep_non_secret_config_intact(client: AsyncClient, logged_
     assert stored["mode"] == "Streamable_HTTP"
 
 
-async def test_should_move_the_secret_into_the_mcp_server_row(client: AsyncClient, logged_in_headers):
+async def test_should_move_the_secret_into_the_mcp_server_row(client: AsyncClient, logged_in_headers, active_user):
     """Dropping the value without storing it would break the next run."""
     server_name = f"billing-{uuid.uuid4().hex[:6]}"
     config = {"url": "https://serving.internal/mcp", "headers": {"x-api-key": SECRET}}
@@ -100,8 +105,11 @@ async def test_should_move_the_secret_into_the_mcp_server_row(client: AsyncClien
     assert response.status_code == status.HTTP_200_OK, response.text
     stored = response.json()
 
-    assert stored is not None, "the secret must survive somewhere the runtime can reach"
-    assert stored["headers"]["x-api-key"] == SECRET
+    assert SECRET not in response.text
+    assert stored["headers"]["x-api-key"] == MCP_CONFIG_VALUE_MASK
+    async with session_scope() as session:
+        runtime = await get_server(server_name, active_user, session, None, None)
+        assert runtime["headers"]["x-api-key"] == SECRET, "the secret must survive somewhere the runtime can reach"
 
 
 async def test_should_scrub_env_secrets_on_a_stdio_config(client: AsyncClient, logged_in_headers):
@@ -151,7 +159,9 @@ async def test_should_leave_a_static_config_untouched(client: AsyncClient, logge
     assert _stored_config(flow) == config
 
 
-async def test_should_keep_the_credential_across_a_lock_retry(client: AsyncClient, logged_in_headers, monkeypatch):
+async def test_should_keep_the_credential_across_a_lock_retry(
+    client: AsyncClient, logged_in_headers, active_user, monkeypatch
+):
     """A retried PATCH must not leave the flow pointing at a variable that was never created.
 
     ``run_with_lock_retry`` rolls the session back between attempts, which discards the
@@ -161,7 +171,6 @@ async def test_should_keep_the_credential_across_a_lock_retry(client: AsyncClien
     """
     from langflow.api.v1 import flows as flows_module
     from langflow.services.database.models.folder.model import Folder
-    from langflow.services.deps import session_scope
 
     server_name = f"retry-{uuid.uuid4().hex[:6]}"
     project_payload = {"description": "", "flows_list": [], "components_list": []}
@@ -217,10 +226,15 @@ async def test_should_keep_the_credential_across_a_lock_retry(client: AsyncClien
     assert reference in [item["name"] for item in variables.json()], "the retry left a dangling reference"
 
     server = await client.get(f"api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
-    assert server.json()["headers"]["x-api-key"] == SECRET
+    assert server.status_code == status.HTTP_200_OK, server.text
+    assert SECRET not in server.text
+    assert server.json()["headers"]["x-api-key"] == MCP_CONFIG_VALUE_MASK
+    async with session_scope() as session:
+        runtime = await get_server(server_name, active_user, session, None, None)
+        assert runtime["headers"]["x-api-key"] == SECRET
 
 
-async def test_should_apply_a_rotated_credential(client: AsyncClient, logged_in_headers):
+async def test_should_apply_a_rotated_credential(client: AsyncClient, logged_in_headers, active_user):
     """Typing a new key into the node must actually change what the runtime sends.
 
     The variable name does not depend on the value, an existing variable and an existing
@@ -246,4 +260,96 @@ async def test_should_apply_a_rotated_credential(client: AsyncClient, logged_in_
     assert rotated not in response.text
 
     server = await client.get(f"api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
-    assert server.json()["headers"]["x-api-key"] == rotated, "the rotation was silently discarded"
+    assert server.status_code == status.HTTP_200_OK, server.text
+    assert rotated not in server.text
+    assert server.json()["headers"]["x-api-key"] == MCP_CONFIG_VALUE_MASK
+    async with session_scope() as session:
+        runtime = await get_server(server_name, active_user, session, None, None)
+        assert runtime["headers"]["x-api-key"] == rotated, "the rotation was silently discarded"
+
+
+async def test_should_preserve_masked_credentials_when_saving_a_flow(
+    client: AsyncClient, logged_in_headers, active_user
+):
+    """Saving management masks must preserve current server and global-variable credentials."""
+    server_name = f"masked-{uuid.uuid4().hex[:6]}"
+    config = {
+        "url": "https://serving.internal/mcp",
+        "headers": {"x-api-key": SECRET},
+        "env": {"API_TOKEN": "test-env-credential"},
+    }
+    flow, _ = await _saved_flow(client, logged_in_headers, server_name, config)
+    editor = await client.get(f"api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert editor.status_code == status.HTTP_200_OK, editor.text
+    masked_config = editor.json()
+    rotated = "test-current-server-credential"
+    updated = await client.patch(
+        f"api/v2/mcp/servers/{server_name}",
+        json={"headers": {"x-api-key": rotated}},
+        headers=logged_in_headers,
+    )
+    assert updated.status_code == status.HTTP_200_OK, updated.text
+    masked_config["headers"]["X-New-Token"] = "test-added-credential"
+    payload = _flow_payload(server_name, masked_config)
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}", json={"data": payload["data"]}, headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert rotated not in response.text
+    assert "test-env-credential" not in response.text
+    assert "test-added-credential" not in response.text
+    async with session_scope() as session:
+        runtime = await get_server(server_name, active_user, session, None, None)
+        assert runtime["headers"] == {"x-api-key": rotated, "X-New-Token": "test-added-credential"}
+        assert runtime["env"] == config["env"]
+        for key, expected in {
+            "x-api-key": rotated,
+            "API_TOKEN": "test-env-credential",
+            "X-New-Token": "test-added-credential",
+        }.items():
+            actual = await get_variable_service().get_variable(
+                user_id=active_user.id, name=variable_name_for(server_name, key), field="", session=session
+            )
+            assert actual.get_secret_value() == expected, "the flow must retain usable global variables"
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"url": "https://serving.internal/mcp", "headers": {"x-api-key": MCP_CONFIG_VALUE_MASK}},
+        {"command": "uvx", "args": ["mcp-proxy", "--headers", "x-api-key", MCP_CONFIG_VALUE_MASK]},
+    ],
+    ids=["header-map", "header-argument"],
+)
+async def test_should_reject_unresolved_flow_credential_masks(
+    client: AsyncClient, logged_in_headers, active_user, config
+):
+    """An imported management mask cannot become a new server or global-variable credential."""
+    server_name = f"unresolved-{uuid.uuid4().hex[:6]}"
+    response = await client.post("api/v1/flows/", json=_flow_payload(server_name, config), headers=logged_in_headers)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    async with session_scope() as session:
+        assert await get_server(server_name, active_user, session, None, None) is None
+        names = await get_variable_service().list_variables(active_user.id, session)
+        assert variable_name_for(server_name, "x-api-key") not in names
+
+
+async def test_should_not_resolve_flow_masks_from_another_users_server(
+    client: AsyncClient, logged_in_headers, active_user, user_two
+):
+    """Another owner's server cannot supply secrets for a masked flow import."""
+    server_name = f"other-owner-{uuid.uuid4().hex[:6]}"
+    config = {"url": "https://serving.internal/mcp", "headers": {"x-api-key": SECRET}}
+    async with session_scope() as session:
+        session.add(MCPServer(user_id=user_two.id, name=server_name, config=encrypt_mcp_config(config)))
+    masked_config = {**config, "headers": {"x-api-key": MCP_CONFIG_VALUE_MASK}}
+    response = await client.post(
+        "api/v1/flows/", json=_flow_payload(server_name, masked_config), headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert SECRET not in response.text
+    async with session_scope() as session:
+        assert await get_server(server_name, active_user, session, None, None) is None
+        assert await get_server(server_name, user_two, session, None, None) == config
+        names = await get_variable_service().list_variables(active_user.id, session)
+        assert variable_name_for(server_name, "x-api-key") not in names
