@@ -51,10 +51,6 @@ class RevisionOperation(BaseModel):
     actor: RevisionActor
     request_id: UUID
     operation: dict = Field(description="The operation as recorded, with literal secret values removed")
-    labels: dict = Field(
-        default_factory=dict,
-        description="Display names of the nodes the operation touched, as they were when it was recorded",
-    )
 
 
 class RevisionVersion(BaseModel):
@@ -253,7 +249,6 @@ def _entry(entry: TimelineEntry, usernames: dict[UUID, str]) -> RevisionEntry:
                 actor=_actor(operation.actor_user_id, usernames),
                 request_id=operation.request_id,
                 operation=operation.operation,
-                labels=operation.labels,
             )
             for operation in entry.operations
         ],
