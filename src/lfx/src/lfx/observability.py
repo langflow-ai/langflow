@@ -1179,27 +1179,32 @@ def inject_trace_carrier(metadata: dict[str, Any] | None = None) -> dict[str, An
 # reason ``protocol`` is: the graph that opens the flow span sits several layers below the
 # runner that reads the job row, and two of those layers hand the run to a fresh asyncio task,
 # which copies the context.
+_NO_QUEUED_TRACE_CONTEXT = object()
 _current_queued_trace_link: contextvars.ContextVar[Any] = contextvars.ContextVar(
     "lfx_queued_trace_link",
-    default=None,
+    default=_NO_QUEUED_TRACE_CONTEXT,
 )
 
 
 def get_queued_trace_link() -> Link | None:
     """Return the link to the request that queued this run, or None outside a queued run."""
-    return _current_queued_trace_link.get()
+    link = _current_queued_trace_link.get()
+    return None if link is _NO_QUEUED_TRACE_CONTEXT else link
+
+
+def is_queued_trace_context() -> bool:
+    """Distinguish an explicitly unlinked queued run from an ordinary caller."""
+    return _current_queued_trace_link.get() is not _NO_QUEUED_TRACE_CONTEXT
 
 
 @contextlib.contextmanager
 def queued_trace_link(link: Any) -> Iterator[None]:
-    """Bind *link* for runs started in this context, and reset it on exit.
+    """Bind this queued job's *link*, including explicit absence, and reset on exit.
 
     Reset matters: a worker serves many jobs on one task, so a link left bound would attach
     one job's originating request to the next job's run.
     """
-    if link is None:
-        yield
-        return
+    # None is authoritative absence for this queued job, not an inherited prior job.
     token = _current_queued_trace_link.set(link)
     try:
         yield

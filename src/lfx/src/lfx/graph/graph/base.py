@@ -45,6 +45,7 @@ from lfx.observability import (
     get_execution_client,
     get_execution_protocol,
     get_queued_trace_link,
+    is_queued_trace_context,
 )
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
@@ -1045,6 +1046,10 @@ class Graph:
                 context=OtelContext(),
                 links=[queued_link],
             )
+        elif is_queued_trace_context() and not parent.is_recording():
+            # This job has no valid carrier. An ended ambient request may belong to
+            # an earlier job; explicit absence is an unlinked root, not that fallback.
+            span = tracer.start_span(FLOW_EXECUTION_SPAN_NAME, context=OtelContext())
         elif parent_context.is_valid and not parent.is_recording():
             span = tracer.start_span(
                 FLOW_EXECUTION_SPAN_NAME,
