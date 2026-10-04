@@ -28,6 +28,7 @@ from lfx.log.logger import logger
 from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
+from lfx.services.flow_operations import load_node_schema, strip_row_keys
 from lfx.services.integration_policy import IntegrationPolicyError
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
@@ -1856,20 +1857,37 @@ def _raw_component_parameters(
     field: str | None = None,
     field_value: Any = None,
 ) -> dict[str, Any]:
-    """Parse non-secret component form values for provider preflight."""
+    """Parse non-secret component form values for provider preflight.
+
+    Table rows lose the ``_id`` and ``_pos`` the flow's history gives them:
+    components never see them.
+    """
     params: dict[str, Any] = {}
     if isinstance(template, Mapping):
         for key, value_dict in template.items():
             if isinstance(value_dict, Mapping):
-                params[key] = parse_value(value_dict.get("value"), str(value_dict.get("_input_type")))
+                params[key] = _component_value(value_dict, value_dict.get("value"))
 
     # A real-time-refresh event can be newer than the template snapshot sent
     # beside it, so its value wins for the changed field.
     if field:
         field_template = template.get(field) if isinstance(template, Mapping) else None
-        field_input_type = str(field_template.get("_input_type")) if isinstance(field_template, Mapping) else "None"
-        params[field] = parse_value(field_value, field_input_type)
+        params[field] = _component_value(field_template if isinstance(field_template, Mapping) else {}, field_value)
     return params
+
+
+def _component_value(field_template: Mapping[str, Any], value: Any) -> Any:
+    """Return a template field's value as a component receives it."""
+    if _is_table_field(field_template):
+        value = strip_row_keys(value)
+    return parse_value(value, str(field_template.get("_input_type")))
+
+
+def _is_table_field(field_template: Mapping[str, Any]) -> bool:
+    return any(
+        all(field_template.get(key) == expected for key, expected in condition.items())
+        for condition in load_node_schema().table_when_field
+    )
 
 
 @router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)

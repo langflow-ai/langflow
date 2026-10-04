@@ -1163,14 +1163,16 @@ async def _write_flow_data_from_file(session: AsyncSession, flow: Flow, data: An
     File writers change a flow like any save, so they go through the same
     guarded path: the caller holds the flow's row lock, and the change is
     recorded as ``actor_id``'s, normally the flow's owner, with the cause
-    ``file_sync``. A graph that breaks the flow graph rules is refused, as it
-    would be from the API.
+    ``file_sync``. Files hold exported flows, whose table rows have no ids
+    (export strips them), so the write repairs what breaks the flow graph
+    rules instead of refusing it: the backend assigns the ids and records the
+    repairs.
     """
     if flow.user_id is None or actor_id is None:
         # Ownerless flows keep no history (see write_flow_graph).
         flow.data = data
         return
-    options = FlowGraphWriteOptions(cause=FILE_SYNC_CAUSE)
+    options = FlowGraphWriteOptions(cause=FILE_SYNC_CAUSE, repair_invalid_graph=True)
     await write_flow_graph(session, flow, data, actor_id=actor_id, options=options)
 
 

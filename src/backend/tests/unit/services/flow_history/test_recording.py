@@ -300,6 +300,51 @@ async def test_an_overlong_cause_is_rejected(client: AsyncClient, logged_in_head
     assert accepted.status_code == status.HTTP_200_OK, accepted.text
 
 
+def _table_node(node_id: str, rows: list[dict]) -> dict:
+    node = _node(node_id)
+    node["data"]["node"]["template"]["headers"] = {
+        "name": "headers",
+        "type": "table",
+        "_input_type": "TableInput",
+        "value": rows,
+    }
+    return node
+
+
+async def test_a_table_the_write_adds_needs_row_ids_or_a_repair(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    without_ids = _graph(_node("a"), _table_node("t", [{"key": "Accept", "value": "json"}]))
+
+    refused = await _patch(client, logged_in_headers, flow["id"], data=without_ids)
+
+    assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    detail = refused.json()["detail"]
+    assert detail["graph"] == "submitted"
+    assert {violation["code"] for violation in detail["violations"]} == {
+        "TABLE_ROW_ID_MISSING",
+        "TABLE_ROW_POS_INVALID",
+    }
+
+    repaired = await _patch(client, logged_in_headers, flow["id"], data=without_ids, repair_invalid_graph=True)
+
+    assert repaired.status_code == status.HTTP_200_OK, repaired.text
+    (row,) = (await _flow(flow["id"])).data["nodes"][1]["data"]["node"]["template"]["headers"]["value"]
+    assert row["key"] == "Accept"
+    assert row["_id"]
+    assert row["_pos"]
+
+
+async def test_an_unchanged_legacy_table_is_accepted(client: AsyncClient, logged_in_headers):
+    legacy = _table_node("t", [{"key": "Accept", "value": "json"}])
+    flow = await _create_flow(client, logged_in_headers, _graph(legacy))
+    edited = copy.deepcopy(legacy)
+    edited["data"]["node"]["template"]["text"]["value"] = "changed"
+
+    response = await _patch(client, logged_in_headers, flow["id"], data=_graph(edited))
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+
+
 async def test_rows_respect_the_operation_count_limit(client: AsyncClient, logged_in_headers, row_limits):
     row_limits.flow_op_log_row_ops_limit = 2
     flow = await _create_flow(client, logged_in_headers, _graph(_node("a"), _node("gone")))

@@ -217,7 +217,16 @@ async def _get_flow(flow_id: str) -> dict:
 
 
 async def _patch_flow(flow_id: str, flow: dict) -> dict:
-    """Patch a flow on the server."""
+    """Patch a flow on the server.
+
+    Components added here come with their default table rows, and the flow's
+    history needs every table a write adds or changes to name its rows, so
+    those get ids first (rows the stored table already holds keep theirs).
+    """
+    from lfx.services.flow_operations import assign_changed_table_row_ids
+
+    stored = await _get_flow(flow_id)
+    assign_changed_table_row_ids(stored.get("data"), flow["data"])
     return await _get_client().patch(f"/flows/{flow_id}", json_data={"data": flow["data"]})
 
 
@@ -1321,15 +1330,17 @@ async def rename_flow(
 async def export_flow(flow_id: str) -> dict[str, Any]:
     """Export a flow as a complete JSON object for backup or sharing.
 
-    Returns the full flow data with sensitive fields (API keys, passwords) redacted.
+    Returns the full flow data with sensitive fields (API keys, passwords) redacted,
+    and without the ids and positions of table rows, which belong to the flow's history.
 
     Args:
         flow_id: The flow UUID.
     """
     from lfx.mcp.redact import redact_node
+    from lfx.services.flow_operations import strip_flow_table_row_keys
 
     flow = await _get_flow(flow_id)
-    data = flow.get("data", {})
+    data = strip_flow_table_row_keys(copy.deepcopy(flow.get("data") or {}))
     # Redact sensitive fields before exposing to LLM context
     if "nodes" in data:
         data = {
