@@ -44,6 +44,7 @@ ENVELOPE_VERSION = 1
 # (``upgrade_component``, ``edit_code``) with the write options.
 FILE_SYNC_CAUSE = "file_sync"
 ASSISTANT_CAUSE = "assistant"
+RESTORE_CAUSE = "restore"
 
 # Kinds of damage a stored row can show.
 UNSUPPORTED_ENVELOPE = "unsupported operation envelope"

@@ -30,6 +30,7 @@ from langflow.services.database.models.flow.model import FlowUpdate, FlowWriteRe
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_catalog_policy_service, get_storage_service
+from langflow.services.flow_history.envelope import RESTORE_CAUSE
 from langflow.services.flow_history.errors import FlowHistoryError
 from langflow.services.flow_history.replay import reconstruct_graph
 from langflow.services.flow_history.secrets import strip_graph_secrets
@@ -50,6 +51,7 @@ class RevisionOperation(BaseModel):
     revision: int
     actor: RevisionActor
     request_id: UUID
+    cause: str | None = Field(None, description="What made the write that recorded it, when the writer said so")
     operation: dict = Field(description="The operation as recorded, with literal secret values removed")
 
 
@@ -197,6 +199,7 @@ async def restore_revision(
             data=graph,
             request_id=options.request_id,
             repair_revision_mismatch=options.repair_revision_mismatch,
+            cause=RESTORE_CAUSE,
         ),
         user_id=current_user.id,
         storage_service=storage_service,
@@ -248,6 +251,7 @@ def _entry(entry: TimelineEntry, usernames: dict[UUID, str]) -> RevisionEntry:
                 revision=operation.revision,
                 actor=_actor(operation.actor_user_id, usernames),
                 request_id=operation.request_id,
+                cause=operation.cause,
                 operation=operation.operation,
             )
             for operation in entry.operations
