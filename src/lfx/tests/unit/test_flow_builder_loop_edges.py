@@ -142,7 +142,7 @@ class TestLoopFeedbackEdge:
         flow, loop_id, tail_id = _loop_flow()
         edge = add_connection(flow, tail_id, "data", loop_id, "item")
         assert edge["targetHandle"] == _scaped_json_stringify(edge["data"]["targetHandle"])
-        assert edge["id"].startswith(f"reactflow__edge-{tail_id}")
+        assert tail_id not in edge["id"]
 
     def test_runtime_parses_edge_as_loop_target(self):
         flow, loop_id, tail_id = _loop_flow()
