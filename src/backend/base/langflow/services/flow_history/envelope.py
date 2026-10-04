@@ -9,24 +9,21 @@
           "revision": 42,
           "actor_user_id": "<uuid>",
           "request_id": "<uuid>",
-          "operation": {...},
-          "labels": {"nodes": {"<node id>": "<display name>"}, "edges": {...}}
+          "operation": {...}
         }
       ]
     }
 
 The array order is canonical: element ``i`` of a row starting at revision ``s``
 carries revision ``s + i``. Every element names the authenticated actor and the
-request that produced it, so a row never implies a single author. ``labels``
-records the display names of the nodes an operation touches, as of that
-operation, because the node may later be renamed or deleted.
+request that produced it, so a row never implies a single author.
 
 Decoding validates all of it; a row that does not match is corruption.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -55,7 +52,6 @@ class RecordedOperation:
     actor_user_id: UUID
     request_id: UUID
     operation: FlowOperation
-    labels: dict[str, Any] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, Any]:
         element: dict[str, Any] = {
@@ -64,8 +60,6 @@ class RecordedOperation:
             "request_id": str(self.request_id),
             "operation": dump_flow_operation(self.operation),
         }
-        if self.labels:
-            element["labels"] = self.labels
         return element
 
 
@@ -121,14 +115,12 @@ def decode_row(row: FlowOperationRow) -> list[RecordedOperation]:
         if request_id in finished_requests:
             raise corrupt(REQUEST_NOT_CONTIGUOUS, expected_revision)
 
-        labels = element.get("labels")
         decoded.append(
             RecordedOperation(
                 revision=expected_revision,
                 actor_user_id=actor_user_id,
                 request_id=request_id,
                 operation=operation,
-                labels=labels if isinstance(labels, dict) else {},
             )
         )
     return decoded
