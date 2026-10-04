@@ -85,12 +85,11 @@ export type ApplyResult = {
 
 export type ApplyOptions = {
   /**
-   * Skip the `from_type` checks. Operations read from the history API have
-   * literal secrets replaced with null, so in a redacted graph a value's JSON
-   * type no longer says anything; replaying them for display must not fail on
-   * it. Never set this when applying operations that will be stored.
-   *
-   * TODO: drop once the revisions API keeps a stripped secret's JSON type.
+   * Skip the `from_type` checks. The history API redacts every secret
+   * field's value to null, whether it was set or not, so a reader can't tell
+   * which secrets are populated; in a redacted graph a value's JSON type no
+   * longer says anything, and replaying for display must not fail on it.
+   * Never set this when applying operations that will be stored.
    */
   redacted?: boolean;
   /**
