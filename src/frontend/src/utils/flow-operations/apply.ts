@@ -4,18 +4,49 @@
  * This is the editor's copy of the server's flow operation engine
  * (`lfx.services.flow_operations`), used to play a flow's history back on the
  * canvas. It must produce exactly what the server does: both run the shared
- * cases in `src/lfx/tests/unit/services/flow_operations/fixtures/apply_cases.json`.
+ * fixtures in `src/lfx/tests/unit/services/flow_operations/fixtures/`, and
+ * both read `node_schema.json` for where keyed lists are.
  *
  * Application is copy-on-write: the input graph is never changed, and the
- * result shares every node and edge an operation did not touch. Keeping one
- * graph per revision during playback therefore costs only what changed, which
- * is what makes stepping backward free.
+ * result shares every node and edge an operation did not touch.
+ *
+ * With `inverse`, it also returns, for each operation, the operations that
+ * undo it, read from the state each write replaces. History playback keeps
+ * those instead of a graph per revision.
  */
 
 import { cloneDeep } from "lodash";
+import { jsonType, valuesEqual } from "./canonical";
+import {
+  findItem,
+  isSorted,
+  type KeyedList,
+  keyedListAt,
+  keyOf,
+  selectorName,
+  sortItems,
+} from "./schema";
+
+export { jsonType } from "./canonical";
 
 type JsonObject = Record<string, unknown>;
-type PathSegment = string | number;
+
+/** Selects a table row by its `_id`, or a natural-key list item by its key. */
+export type Selector = { id: string } | { key: string };
+export type PathSegment = string | Selector;
+
+/** What a path must hold before a write: a value, or nothing at all. */
+export type Expectation = { value: unknown } | { absent: true };
+
+export type FieldUpdate = {
+  id: string;
+  op: "set_field" | "delete_field";
+  path: PathSegment[];
+  value?: unknown;
+  from_type?: string;
+  template_field?: JsonObject;
+  expect?: Expectation;
+};
 
 export type FlowGraph = JsonObject & {
   nodes: JsonObject[];
@@ -26,6 +57,7 @@ export type FlowOperation = JsonObject & { type: string };
 
 export type FlowOperationErrorName =
   | "FlowOperationValidationError"
+  | "FlowOperationPreconditionError"
   | "FlowDataValidationError";
 
 export class FlowOperationError extends Error {
@@ -43,6 +75,12 @@ export class FlowOperationError extends Error {
 export type ApplyResult = {
   flowData: FlowGraph;
   forwardOperations: FlowOperation[];
+  /**
+   * With `inverse`: for each operation applied, the operations that undo it.
+   * Undo the last operation first, each list in a call of its own, with
+   * `restoring` set.
+   */
+  inverseOperations?: FlowOperation[][];
 };
 
 export type ApplyOptions = {
@@ -51,25 +89,59 @@ export type ApplyOptions = {
    * literal secrets replaced with null, so in a redacted graph a value's JSON
    * type no longer says anything; replaying them for display must not fail on
    * it. Never set this when applying operations that will be stored.
+   *
+   * TODO: drop once the revisions API keeps a stripped secret's JSON type.
    */
   redacted?: boolean;
+  /**
+   * Skip the edge rules. Inverses put back a state the history already held,
+   * whatever rules it broke (a stored flow may hold an edge into a field that
+   * no longer exists). Never set this when applying operations that will be
+   * stored.
+   */
+  restoring?: boolean;
+  /** Also compute each operation's inverse; see `ApplyResult`. */
+  inverse?: boolean;
 };
 
 const GRAPH_COLLECTION_KEYS = new Set(["nodes", "edges"]);
-const NODE_OBJECT_PATHS: PathSegment[][] = [
+const NODE_OBJECT_PATHS: string[][] = [
   ["data"],
   ["data", "node"],
   ["data", "node", "template"],
 ];
+// Replacing these whole objects would record an entire node as one opaque value.
 const FORBIDDEN_WHOLE_NODE_PATHS = new Set(
   NODE_OBJECT_PATHS.map((path) => JSON.stringify(path)),
 );
+// An edge's endpoints are its identity: connecting other nodes is another edge.
+const FORBIDDEN_EDGE_UPDATE_ROOTS = new Set(["id", "source", "target"]);
+// Writes under these edge keys change which output or field the edge connects.
+const EDGE_HANDLE_ROOTS = new Set(["sourceHandle", "targetHandle", "data"]);
+const TEMPLATE_PATH = ["data", "node", "template"];
+const OUTPUTS_PATH = ["data", "node", "outputs"];
+const JSON_TYPE_NAMES = new Set([
+  "object",
+  "array",
+  "string",
+  "number",
+  "boolean",
+  "null",
+]);
 
 function invalidOperation(
   message: string,
   code = "FLOW_OPERATION_INVALID",
 ): FlowOperationError {
   return new FlowOperationError("FlowOperationValidationError", code, message);
+}
+
+function failedExpectation(message: string): FlowOperationError {
+  return new FlowOperationError(
+    "FlowOperationPreconditionError",
+    "EXPECTATION_FAILED",
+    message,
+  );
 }
 
 function invalidGraph(message: string): FlowOperationError {
@@ -80,23 +152,6 @@ function invalidGraph(message: string): FlowOperationError {
   );
 }
 
-export function jsonType(value: unknown): string {
-  if (value === null) return "null";
-  if (Array.isArray(value)) return "array";
-  switch (typeof value) {
-    case "boolean":
-      return "boolean";
-    case "number":
-      return "number";
-    case "string":
-      return "string";
-    case "object":
-      return "object";
-    default:
-      throw invalidGraph(`value of type ${typeof value} is not JSON`);
-  }
-}
-
 function isObject(value: unknown): value is JsonObject {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -105,13 +160,183 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
 }
 
-function isArrayIndex(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value);
+function isSelector(segment: PathSegment): segment is Selector {
+  return typeof segment !== "string";
+}
+
+function selectorKey(selector: Selector): string {
+  return "id" in selector ? selector.id : selector.key;
 }
 
 function clone<T>(value: T): T {
   return value === null || typeof value !== "object" ? value : cloneDeep(value);
 }
+
+function dedupe(ids: string[]): string[] {
+  return [...new Set(ids)];
+}
+
+function pathLabel(path: PathSegment[]): string {
+  return JSON.stringify(path);
+}
+
+// --- Parsing: the same shapes the engine's models accept --------------------------------
+
+function onlyKeys(value: JsonObject, allowed: string[], context: string) {
+  for (const key of Object.keys(value)) {
+    if (!allowed.includes(key))
+      throw invalidOperation(`${context}: unexpected key ${key}`);
+  }
+}
+
+function parseObjectList(value: unknown, context: string): JsonObject[] {
+  if (!Array.isArray(value) || !value.every(isObject))
+    throw invalidOperation(`${context} must be a list of objects`);
+  return value;
+}
+
+function parseStringList(value: unknown, context: string): string[] {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string"))
+    throw invalidOperation(`${context} must be a list of strings`);
+  return value;
+}
+
+function parseSegment(segment: unknown, context: string): PathSegment {
+  if (typeof segment === "string") return segment;
+  if (typeof segment === "number" || typeof segment === "boolean")
+    throw invalidOperation(
+      `${context}: path segments must be object keys or selectors; integer list indexes are not allowed`,
+    );
+  if (isObject(segment)) {
+    const keys = Object.keys(segment);
+    if (
+      keys.length === 1 &&
+      (keys[0] === "id" || keys[0] === "key") &&
+      isNonEmptyString(segment[keys[0]])
+    )
+      return { [keys[0]]: segment[keys[0]] } as Selector;
+  }
+  throw invalidOperation(`${context}: invalid path segment`);
+}
+
+function parseExpectation(value: unknown, context: string): Expectation {
+  if (isObject(value)) {
+    const keys = Object.keys(value);
+    if (keys.length === 1 && keys[0] === "value") return { value: value.value };
+    if (keys.length === 1 && keys[0] === "absent" && value.absent === true)
+      return { absent: true };
+  }
+  throw invalidOperation(
+    `${context}.expect must be {"value": ...} or {"absent": true}`,
+  );
+}
+
+function parseUpdate(value: unknown, context: string): FieldUpdate {
+  if (!isObject(value)) throw invalidOperation(`${context} must be an object`);
+  if (value.op !== "set_field" && value.op !== "delete_field")
+    throw invalidOperation(`${context}: unknown op ${String(value.op)}`);
+  const setField = value.op === "set_field";
+  onlyKeys(
+    value,
+    setField
+      ? ["id", "op", "path", "value", "from_type", "template_field", "expect"]
+      : ["id", "op", "path", "expect"],
+    context,
+  );
+  if (!isNonEmptyString(value.id))
+    throw invalidOperation(`${context}: id must be a non-empty string`);
+  if (!Array.isArray(value.path) || value.path.length === 0)
+    throw invalidOperation(`${context}: path must not be empty`);
+  const update: FieldUpdate = {
+    id: value.id,
+    op: value.op,
+    path: value.path.map((segment) => parseSegment(segment, context)),
+  };
+  if (setField) {
+    if (!("value" in value))
+      throw invalidOperation(`${context}: set_field requires a value`);
+    update.value = value.value;
+    if (value.from_type != null) {
+      if (
+        typeof value.from_type !== "string" ||
+        !JSON_TYPE_NAMES.has(value.from_type)
+      )
+        throw invalidOperation(`${context}: from_type must name a JSON type`);
+      update.from_type = value.from_type;
+    }
+    if (value.template_field != null) {
+      if (!isObject(value.template_field))
+        throw invalidOperation(`${context}: template_field must be an object`);
+      update.template_field = value.template_field;
+    }
+  }
+  if (value.expect != null)
+    update.expect = parseExpectation(value.expect, context);
+  return update;
+}
+
+const OPERATION_KEYS: Record<string, string[]> = {
+  add_nodes: ["type", "nodes"],
+  update_nodes: ["type", "updates"],
+  delete_nodes: ["type", "ids"],
+  add_edges: ["type", "edges"],
+  update_edges: ["type", "updates"],
+  delete_edges: ["type", "ids"],
+  update_metadata: ["type", "fields", "delete_keys"],
+};
+
+type ParsedOperation =
+  | { type: "add_nodes"; nodes: JsonObject[] }
+  | { type: "update_nodes" | "update_edges"; updates: FieldUpdate[] }
+  | { type: "delete_nodes" | "delete_edges"; ids: string[] }
+  | { type: "add_edges"; edges: JsonObject[] }
+  | { type: "update_metadata"; fields: JsonObject; delete_keys: string[] };
+
+function parseOperation(operation: unknown): ParsedOperation {
+  if (!isObject(operation)) throw invalidOperation("operation must be a dict");
+  const type = operation.type as string;
+  const keys = OPERATION_KEYS[type];
+  if (typeof type !== "string" || !keys)
+    throw invalidOperation(
+      `Unsupported operation type: ${String(operation.type)}`,
+    );
+  onlyKeys(operation, keys, type);
+  switch (type) {
+    case "add_nodes":
+      return { type, nodes: parseObjectList(operation.nodes, "nodes") };
+    case "add_edges":
+      return { type, edges: parseObjectList(operation.edges, "edges") };
+    case "delete_nodes":
+    case "delete_edges":
+      return { type, ids: parseStringList(operation.ids, "ids") };
+    case "update_nodes":
+    case "update_edges": {
+      if (!Array.isArray(operation.updates))
+        throw invalidOperation(`${type}.updates must be a list`);
+      return {
+        type,
+        updates: operation.updates.map((update, index) =>
+          parseUpdate(update, `${type}[${index}]`),
+        ),
+      };
+    }
+    default: {
+      const fields = operation.fields ?? {};
+      if (!isObject(fields))
+        throw invalidOperation("update_metadata.fields must be an object");
+      return {
+        type: "update_metadata",
+        fields,
+        delete_keys: parseStringList(
+          operation.delete_keys ?? [],
+          "update_metadata.delete_keys",
+        ),
+      };
+    }
+  }
+}
+
+// --- Graph state ---------------------------------------------------------------------
 
 class GraphState {
   readonly flowData: JsonObject;
@@ -119,11 +344,13 @@ class GraphState {
   readonly edges = new Map<string, JsonObject>();
   readonly edgeIdsByNode = new Map<string, Set<string>>();
   readonly baseNodeIds = new Set<string>();
+  readonly baseEdgeIds = new Set<string>();
   private readonly copiedNodeIds = new Set<string>();
+  private readonly copiedEdgeIds = new Set<string>();
 
   constructor(
     base: unknown,
-    readonly options: ApplyOptions = {},
+    readonly options: ApplyOptions,
   ) {
     validateBase(base);
     const graph = base as FlowGraph;
@@ -132,7 +359,10 @@ class GraphState {
       this.nodes.set(node.id as string, node);
       this.baseNodeIds.add(node.id as string);
     }
-    for (const edge of graph.edges) this.insertEdge(edge);
+    for (const edge of graph.edges) {
+      this.insertEdge(edge);
+      this.baseEdgeIds.add(edge.id as string);
+    }
   }
 
   insertEdge(edge: JsonObject): void {
@@ -145,13 +375,14 @@ class GraphState {
     }
   }
 
-  removeEdges(ids: string[]): string[] {
-    const removed: string[] = [];
+  /** Remove edges by id; return the ones that existed, in the order given. */
+  removeEdges(ids: string[]): JsonObject[] {
+    const removed: JsonObject[] = [];
     for (const id of dedupe(ids)) {
       const edge = this.edges.get(id);
       if (!edge) continue;
       this.edges.delete(id);
-      removed.push(id);
+      removed.push(edge);
       for (const endpoint of [edge.source, edge.target] as string[]) {
         const incident = this.edgeIdsByNode.get(endpoint);
         incident?.delete(id);
@@ -162,6 +393,13 @@ class GraphState {
     return removed;
   }
 
+  /** Edge ids in the order the graph lists the edges. */
+  edgesInGraphOrder(ids: Iterable<string> | undefined): string[] {
+    const wanted = new Set(ids ?? []);
+    if (wanted.size === 0) return [];
+    return [...this.edges.keys()].filter((id) => wanted.has(id));
+  }
+
   /** Copy a node from the base graph before its first change, so the base stays untouched. */
   writableNode(id: string): JsonObject {
     if (this.baseNodeIds.has(id) && !this.copiedNodeIds.has(id)) {
@@ -169,6 +407,15 @@ class GraphState {
       this.copiedNodeIds.add(id);
     }
     return this.nodes.get(id)!;
+  }
+
+  writableEdge(id: string): JsonObject {
+    if (this.baseEdgeIds.has(id) && !this.copiedEdgeIds.has(id)) {
+      const edge = cloneDeep(this.edges.get(id)!);
+      this.edges.set(id, edge);
+      this.copiedEdgeIds.add(id);
+    }
+    return this.edges.get(id)!;
   }
 
   finalize(): FlowGraph {
@@ -216,315 +463,678 @@ function requireNodeObjects(
 ): void {
   let value: unknown = node;
   for (const path of NODE_OBJECT_PATHS) {
-    value = isObject(value)
-      ? value[path[path.length - 1] as string]
-      : undefined;
+    value = isObject(value) ? value[path[path.length - 1]] : undefined;
     if (!isObject(value))
       throw error(`node ${path.join(".")} must be an object`);
   }
 }
 
-function dedupe(ids: string[]): string[] {
-  return [...new Set(ids)];
+// --- Walking paths ---------------------------------------------------------------------
+
+type ListAt = (prefix: PathSegment[]) => KeyedList | null;
+
+const noKeyedLists: ListAt = () => null;
+
+function nodeListAt(node: JsonObject): ListAt {
+  return (prefix) => keyedListAt(node, prefix);
 }
 
-function requireStringList(value: unknown, context: string): string[] {
-  if (!Array.isArray(value) || !value.every((item) => typeof item === "string"))
-    throw invalidOperation(`${context} must be a list of strings`);
+/** Check that `path[index]` is the right kind of selector on a list the schema declares keyed. */
+function keyedListFor(
+  path: PathSegment[],
+  index: number,
+  listAt: ListAt,
+  context: string,
+): KeyedList {
+  const list = listAt(path.slice(0, index));
+  if (!list)
+    throw invalidOperation(
+      `${context}.path[${index}]: selector on a list the node schema does not declare keyed`,
+    );
+  const name = selectorName(list);
+  if (!(name in (path[index] as Selector)))
+    throw invalidOperation(
+      `${context}.path[${index}]: items of this list are selected with {"${name}": ...}`,
+    );
+  return list;
+}
+
+function selectedList(
+  container: unknown,
+  path: PathSegment[],
+  index: number,
+  listAt: ListAt,
+  context: string,
+): [KeyedList, unknown[]] {
+  const list = keyedListFor(path, index, listAt, context);
+  if (!Array.isArray(container))
+    throw invalidOperation(
+      `${context}.path[${index}]: selector on a value that is not a list`,
+    );
+  return [list, container];
+}
+
+/** The container holding the last path segment; every earlier segment must exist. */
+function walkToParent(
+  root: JsonObject,
+  path: PathSegment[],
+  listAt: ListAt,
+  context: string,
+): unknown {
+  let value: unknown = root;
+  for (let index = 0; index < path.length - 1; index++) {
+    const part = path[index];
+    if (!isSelector(part)) {
+      if (!isObject(value) || !(part in value))
+        throw invalidOperation(
+          `${context}.path[${index}]: object path part must be an existing string key: ${part}`,
+        );
+      value = value[part];
+      continue;
+    }
+    const [list, items] = selectedList(value, path, index, listAt, context);
+    const position = findItem(list, items, selectorKey(part));
+    if (position === -1)
+      throw invalidOperation(
+        `${context}.path[${index}]: list item does not exist: ${selectorKey(part)}`,
+      );
+    value = items[position];
+  }
   return value;
 }
 
-function requireObjectList(value: unknown, context: string): JsonObject[] {
-  if (!Array.isArray(value))
-    throw invalidOperation(`${context} must be a list`);
-  return value as JsonObject[];
+/** Whether `path` exists, and its value, without changing anything. */
+function readPath(
+  root: JsonObject,
+  path: PathSegment[],
+  listAt: ListAt,
+  context: string,
+): { exists: boolean; value?: unknown } {
+  let value: unknown = root;
+  for (let index = 0; index < path.length; index++) {
+    const part = path[index];
+    if (!isSelector(part)) {
+      if (!isObject(value) || !(part in value)) return { exists: false };
+      value = value[part];
+      continue;
+    }
+    const list = keyedListFor(path, index, listAt, context);
+    if (!Array.isArray(value)) return { exists: false };
+    const position = findItem(list, value, selectorKey(part));
+    if (position === -1) return { exists: false };
+    value = value[position];
+  }
+  return { exists: true, value };
 }
 
-function applyAddNodes(
-  state: GraphState,
-  operation: FlowOperation,
-): FlowOperation[] {
-  const nodes = requireObjectList(operation.nodes, "add_nodes.nodes");
-  if (nodes.length === 0) return [];
+function checkExpectation(
+  root: JsonObject,
+  update: FieldUpdate,
+  listAt: ListAt,
+  context: string,
+): void {
+  if (!update.expect) return;
+  const { exists, value } = readPath(root, update.path, listAt, context);
+  if ("absent" in update.expect) {
+    if (exists)
+      throw failedExpectation(
+        `${context}: expected ${pathLabel(update.path)} to be absent, but it exists`,
+      );
+    return;
+  }
+  if (!exists || !valuesEqual(value, update.expect.value))
+    throw failedExpectation(
+      `${context}: expected ${pathLabel(update.path)} to hold the given value, but found ${exists ? "a different value" : "nothing"}`,
+    );
+}
+
+/**
+ * Refuse a set_field that silently changes a value's JSON type. A type change
+ * is declared with `from_type`, which also makes it a precondition.
+ */
+function checkTypeChange(
+  exists: boolean,
+  current: unknown,
+  update: FieldUpdate,
+  context: string,
+  redacted: boolean,
+): void {
+  // Types in a redacted graph are not reliable; see ApplyOptions.
+  if (redacted) return;
+  if (update.from_type == null) {
+    if (exists && jsonType(current) !== jsonType(update.value))
+      throw invalidOperation(
+        `${context}: set_field changes a ${jsonType(current)} to a ${jsonType(update.value)} without declaring from_type`,
+        "FIELD_TYPE_CHANGE_UNDECLARED",
+      );
+    return;
+  }
+  if (!exists || jsonType(current) !== update.from_type)
+    throw invalidOperation(
+      `${context}: set_field expected to replace a ${update.from_type} but found ${exists ? jsonType(current) : "nothing"}`,
+      "FIELD_TYPE_PRECONDITION_FAILED",
+    );
+}
+
+/** Apply one set_field or delete_field. Return what a delete removed, if anything. */
+function applyFieldUpdate(
+  root: JsonObject,
+  update: FieldUpdate,
+  listAt: ListAt,
+  context: string,
+  redacted: boolean,
+): { removed: boolean; value?: unknown } {
+  const { path } = update;
+  const parent = walkToParent(root, path, listAt, context);
+  const last = path[path.length - 1];
+  let result: { removed: boolean; value?: unknown } = { removed: false };
+
+  if (!isSelector(last)) {
+    if (!isObject(parent))
+      throw invalidOperation(
+        update.op === "delete_field"
+          ? `${context}: delete only supports object properties and keyed list items`
+          : `${context}: path must end at an object property or a keyed list item`,
+      );
+    if (update.op === "set_field") {
+      checkTypeChange(last in parent, parent[last], update, context, redacted);
+      parent[last] = clone(update.value);
+    } else if (last in parent) {
+      result = { removed: true, value: parent[last] };
+      delete parent[last];
+    }
+  } else {
+    const [list, items] = selectedList(
+      parent,
+      path,
+      path.length - 1,
+      listAt,
+      context,
+    );
+    const key = selectorKey(last);
+    const position = findItem(list, items, key);
+    if (update.op === "set_field") {
+      if (keyOf(list, update.value) !== key)
+        throw invalidOperation(
+          `${context}: a list item written at a selector must carry the same key: ${key}`,
+        );
+      checkTypeChange(
+        position !== -1,
+        position !== -1 ? items[position] : undefined,
+        update,
+        context,
+        redacted,
+      );
+      const value = clone(update.value);
+      if (position === -1) items.push(value);
+      else items[position] = value;
+      sortItems(list, items);
+    } else if (position !== -1) {
+      result = { removed: true, value: items.splice(position, 1)[0] };
+    }
+  }
+
+  checkItemKeysUnchanged(root, path, listAt, context);
+  return result;
+}
+
+/** After a write inside a keyed list item, the item must keep its key; re-sort a moved table row. */
+function checkItemKeysUnchanged(
+  root: JsonObject,
+  path: PathSegment[],
+  listAt: ListAt,
+  context: string,
+): void {
+  let value: unknown = root;
+  for (let index = 0; index < path.length - 1; index++) {
+    const part = path[index];
+    if (!isSelector(part)) {
+      value = isObject(value) ? value[part] : undefined;
+      continue;
+    }
+    const list = listAt(path.slice(0, index)) as KeyedList;
+    const items = value as unknown[];
+    const position = findItem(list, items, selectorKey(part));
+    if (position === -1)
+      throw invalidOperation(
+        `${context}: cannot change a list item's ${selectorName(list)}`,
+      );
+    if (
+      list.kind === "table" &&
+      index + 2 === path.length &&
+      path[index + 1] === list.position
+    ) {
+      sortItems(list, items);
+      return;
+    }
+    value = items[position];
+  }
+}
+
+// --- Inverses of field writes ------------------------------------------------------------
+
+/**
+ * Collects the writes that undo an update batch, read from the state each
+ * write replaces. They are undone last first; a path written twice is split
+ * into separate operations, since one operation may write a path once.
+ */
+class FieldInverses {
+  private readonly entries: FieldUpdate[] = [];
+
+  /** Record what undoes `update`; call before applying it. */
+  before(
+    root: JsonObject,
+    update: FieldUpdate,
+    listAt: ListAt,
+    context: string,
+  ) {
+    const whole = this.wholeListToRestore(root, update, listAt, context);
+    if (whole) {
+      this.entries.push(whole);
+      return;
+    }
+    const { exists, value } = readPath(root, update.path, listAt, context);
+    if (!exists) {
+      if (update.op === "set_field")
+        this.entries.push({
+          id: update.id,
+          op: "delete_field",
+          path: update.path,
+        });
+      return;
+    }
+    const entry: FieldUpdate = {
+      id: update.id,
+      op: "set_field",
+      path: update.path,
+      value,
+    };
+    if (update.op === "set_field" && jsonType(value) !== jsonType(update.value))
+      entry.from_type = jsonType(update.value);
+    this.entries.push(entry);
+  }
+
+  /**
+   * A write that reorders a list in a way a selector write cannot reverse
+   * (removing a natural-key item that was not last, or sorting a table that
+   * was not sorted) is undone by writing the whole list back.
+   */
+  private wholeListToRestore(
+    root: JsonObject,
+    update: FieldUpdate,
+    listAt: ListAt,
+    context: string,
+  ): FieldUpdate | null {
+    const { path } = update;
+    let value: unknown = root;
+    for (let index = 0; index < path.length; index++) {
+      const part = path[index];
+      if (!isSelector(part)) {
+        value = isObject(value) ? value[part] : undefined;
+        continue;
+      }
+      const list = keyedListFor(path, index, listAt, context);
+      if (!Array.isArray(value)) return null;
+      const items = value;
+      const position = findItem(list, items, selectorKey(part));
+      const last = index === path.length - 1;
+      const reorders =
+        list.kind === "table"
+          ? !isSorted(list, items)
+          : last &&
+            update.op === "delete_field" &&
+            position !== -1 &&
+            position !== items.length - 1;
+      if (reorders)
+        return {
+          id: update.id,
+          op: "set_field",
+          path: path.slice(0, index),
+          value: cloneDeep(items),
+        };
+      if (position === -1) return null;
+      value = items[position];
+    }
+    return null;
+  }
+
+  operations(type: string): FlowOperation[] {
+    const operations: FlowOperation[] = [];
+    let batch: FieldUpdate[] = [];
+    let written = new Set<string>();
+    for (const entry of [...this.entries].reverse()) {
+      const key = JSON.stringify([entry.id, entry.path]);
+      if (written.has(key)) {
+        operations.push({ type, updates: batch });
+        batch = [];
+        written = new Set();
+      }
+      written.add(key);
+      batch.push(entry);
+    }
+    if (batch.length > 0) operations.push({ type, updates: batch });
+    return operations;
+  }
+}
+
+// --- Operations ------------------------------------------------------------------------
+
+type Applied = { forward: FlowOperation[]; inverse: FlowOperation[] };
+
+const NOTHING: Applied = { forward: [], inverse: [] };
+
+function forwardUpdates(type: string, updates: FieldUpdate[]): FlowOperation {
+  return { type, updates: cloneDeep(updates) };
+}
+
+function applyAddNodes(state: GraphState, nodes: JsonObject[]): Applied {
+  if (nodes.length === 0) return NOTHING;
   const seen = new Set<string>();
   const payloads: JsonObject[] = [];
-  for (const node of nodes) {
-    if (!isObject(node))
-      throw invalidOperation("add_nodes: node must be a dict");
+  nodes.forEach((node, index) => {
+    const context = `add_nodes[${index}]`;
     if (!isNonEmptyString(node.id))
-      throw invalidOperation("add_nodes: node must have a non-empty string id");
-    requireNodeObjects(node, invalidOperation);
+      throw invalidOperation(
+        `${context}: node must have a non-empty string id`,
+      );
+    requireNodeObjects(node, (message) =>
+      invalidOperation(`${context}: ${message}`),
+    );
     if (seen.has(node.id))
-      throw invalidOperation("add_nodes: duplicate node id in request");
+      throw invalidOperation(
+        `add_nodes: duplicate node id in request: ${node.id}`,
+      );
     if (state.nodes.has(node.id))
-      throw invalidOperation("add_nodes: node id already exists");
+      throw invalidOperation(`add_nodes: node id already exists: ${node.id}`);
     seen.add(node.id);
     const payload = clone(node);
     state.nodes.set(node.id, payload);
     payloads.push(payload);
-  }
-  return [{ type: "add_nodes", nodes: payloads }];
+  });
+  return {
+    forward: [{ type: "add_nodes", nodes: payloads }],
+    inverse: [{ type: "delete_nodes", ids: [...seen] }],
+  };
 }
 
-type NodeUpdate = {
-  id: string;
-  op: "set_field" | "delete_field";
-  path: PathSegment[];
-  value?: unknown;
-  from_type?: string | null;
-  template_field?: JsonObject | null;
-};
-
-function parseUpdates(value: unknown): NodeUpdate[] {
-  const updates = requireObjectList(value, "update_nodes.updates");
-  for (const update of updates) {
-    if (!isObject(update))
-      throw invalidOperation("update_nodes entry must be an object");
-    if (update.op !== "set_field" && update.op !== "delete_field")
-      throw invalidOperation(`update_nodes: unknown op ${String(update.op)}`);
-    if (!isNonEmptyString(update.id))
-      throw invalidOperation(
-        "update_nodes entry id must be a non-empty string",
-      );
-    const path = update.path;
-    if (!Array.isArray(path) || path.length === 0)
-      throw invalidOperation("update_nodes entry path must not be empty");
-    for (const segment of path) {
-      if (typeof segment !== "string" && !isArrayIndex(segment))
-        throw invalidOperation(
-          "update_nodes entry path segments must be strings or integers",
-        );
-    }
-    if (update.op === "set_field" && !("value" in update))
-      throw invalidOperation("set_field requires a value");
-  }
-  return updates as unknown as NodeUpdate[];
-}
-
-function applyUpdateNodes(
-  state: GraphState,
-  operation: FlowOperation,
-): FlowOperation[] {
-  const updates = parseUpdates(operation.updates);
-  if (updates.length === 0) return [];
-  const seenPaths = new Set<string>();
+function rejectRepeatedPaths(updates: FieldUpdate[], kind: string): void {
+  const seen = new Set<string>();
   for (const update of updates) {
     const key = JSON.stringify([update.id, update.path]);
-    if (seenPaths.has(key))
+    if (seen.has(key))
       throw invalidOperation(
-        "update_nodes: multiple field updates for node/path",
+        `${kind}: multiple field updates for one id and path: ${update.id} ${pathLabel(update.path)}`,
       );
-    seenPaths.add(key);
+    seen.add(key);
   }
-  for (const update of updates) {
+}
+
+function samePrefix(path: PathSegment[], prefix: string[]): boolean {
+  return prefix.every((part, index) => path[index] === part);
+}
+
+/** The edges a removed template field or output was connected through. */
+function edgesAttachedTo(
+  state: GraphState,
+  nodeId: string,
+  path: PathSegment[],
+  removed: unknown,
+): string[] {
+  let fieldName: string | null = null;
+  let outputName: string | null = null;
+  const last = path[path.length - 1];
+  if (
+    path.length === TEMPLATE_PATH.length + 1 &&
+    samePrefix(path, TEMPLATE_PATH) &&
+    typeof last === "string" &&
+    isObject(removed)
+  )
+    fieldName = last;
+  else if (
+    path.length === OUTPUTS_PATH.length + 1 &&
+    samePrefix(path, OUTPUTS_PATH) &&
+    isSelector(last) &&
+    "key" in last
+  )
+    outputName = last.key;
+  else return [];
+
+  const attached: string[] = [];
+  for (const edgeId of state.edgesInGraphOrder(
+    state.edgeIdsByNode.get(nodeId),
+  )) {
+    const edge = state.edges.get(edgeId)!;
+    const [sourceHandle, targetHandle] = edgeHandles(edge);
+    if (fieldName !== null) {
+      if (edge.target === nodeId && targetHandle?.fieldName === fieldName)
+        attached.push(edgeId);
+      continue;
+    }
+    const fromOutput =
+      edge.source === nodeId && sourceHandle?.name === outputName;
+    const intoLoopOutput =
+      edge.target === nodeId && loopTargetOutput(targetHandle) === outputName;
+    if (fromOutput || intoLoopOutput) attached.push(edgeId);
+  }
+  return attached;
+}
+
+function applyUpdateNodes(state: GraphState, updates: FieldUpdate[]): Applied {
+  if (updates.length === 0) return NOTHING;
+  rejectRepeatedPaths(updates, "update_nodes");
+  const inverses = state.options.inverse ? new FieldInverses() : null;
+  const cascaded: string[] = [];
+  updates.forEach((update, index) => {
+    const context = `update_nodes[${index}]`;
     if (!state.nodes.has(update.id))
       throw invalidOperation(`update_nodes: node does not exist: ${update.id}`);
     if (!state.baseNodeIds.has(update.id))
       throw invalidOperation(
-        "update_nodes: cannot update node that does not exist in the original flow",
+        `update_nodes: cannot update node that does not exist in the original flow: ${update.id}`,
       );
     if (update.path[0] === "id")
-      throw invalidOperation("cannot modify node identity");
+      throw invalidOperation(`${context}.path: cannot modify node identity`);
     if (FORBIDDEN_WHOLE_NODE_PATHS.has(JSON.stringify(update.path)))
-      throw invalidOperation("cannot update entire node data objects");
-    const node = state.writableNode(update.id);
-    if (update.op === "set_field")
-      setField(node, update, state.options.redacted ?? false);
-    else deleteField(node, update.path);
-  }
-  return [
-    {
-      type: "update_nodes",
-      updates: updates.map((update) => {
-        const copy: JsonObject = cloneDeep(update) as JsonObject;
-        if (copy.from_type == null) delete copy.from_type;
-        if (copy.template_field == null) delete copy.template_field;
-        return copy;
-      }),
-    },
-  ];
-}
-
-function containerAt(
-  node: JsonObject,
-  path: PathSegment[],
-): JsonObject | unknown[] {
-  let value: unknown = node;
-  for (const segment of path.slice(0, -1)) {
-    if (Array.isArray(value)) {
-      if (!isArrayIndex(segment))
-        throw invalidOperation("array path part must be an integer index");
-      if (segment < 0 || segment >= value.length)
-        throw invalidOperation("array index is out of range");
-      value = value[segment];
-    } else if (isObject(value)) {
-      if (typeof segment !== "string" || !(segment in value))
-        throw invalidOperation(
-          "object path part must be an existing string key",
-        );
-      value = value[segment];
-    } else {
-      throw invalidOperation("path must pass through objects or arrays");
-    }
-  }
-  if (!Array.isArray(value) && !isObject(value))
-    throw invalidOperation("path must end at an object or array");
-  return value;
-}
-
-function setField(
-  node: JsonObject,
-  update: NodeUpdate,
-  redacted: boolean,
-): void {
-  const container = containerAt(node, update.path);
-  const last = update.path[update.path.length - 1];
-  const exists = Array.isArray(container)
-    ? isArrayIndex(last) && last >= 0 && last < container.length
-    : typeof last === "string" && last in container;
-  const current = exists
-    ? (container as Record<PathSegment, unknown>)[last]
-    : undefined;
-
-  // Types in a redacted graph are not reliable; see ApplyOptions.
-  if (!redacted && update.from_type == null) {
-    if (exists && jsonType(current) !== jsonType(update.value))
       throw invalidOperation(
-        "set_field changes a value's JSON type without declaring from_type",
-        "FIELD_TYPE_CHANGE_UNDECLARED",
+        `${context}.path: cannot update entire node data objects at path ${pathLabel(update.path)}`,
       );
-  } else if (!redacted && (!exists || jsonType(current) !== update.from_type)) {
-    throw invalidOperation(
-      "set_field from_type does not match the value it replaces",
-      "FIELD_TYPE_PRECONDITION_FAILED",
+    checkExpectation(
+      state.nodes.get(update.id)!,
+      update,
+      nodeListAt(state.nodes.get(update.id)!),
+      context,
     );
-  }
+    const node = state.writableNode(update.id);
+    const listAt = nodeListAt(node);
+    inverses?.before(node, update, listAt, context);
+    const { removed, value } = applyFieldUpdate(
+      node,
+      update,
+      listAt,
+      context,
+      state.options.redacted ?? false,
+    );
+    if (removed)
+      cascaded.push(...edgesAttachedTo(state, update.id, update.path, value));
+  });
 
-  if (Array.isArray(container)) {
-    if (!isArrayIndex(last))
-      throw invalidOperation("array path part must be an integer index");
-    if (last < 0 || last >= container.length)
-      throw invalidOperation("array index is out of range");
-    container[last] = clone(update.value);
-  } else {
-    if (typeof last !== "string")
-      throw invalidOperation("object path part must be a string");
-    container[last] = clone(update.value);
+  const forward = [forwardUpdates("update_nodes", updates)];
+  const inverse = inverses?.operations("update_nodes") ?? [];
+  const removedEdges = state.removeEdges(cascaded);
+  if (removedEdges.length > 0) {
+    forward.push({
+      type: "delete_edges",
+      ids: removedEdges.map((edge) => edge.id as string),
+    });
+    inverse.push({ type: "add_edges", edges: removedEdges });
   }
+  return { forward, inverse };
 }
 
-function deleteField(node: JsonObject, path: PathSegment[]): void {
-  const container = containerAt(node, path);
-  const last = path[path.length - 1];
-  if (Array.isArray(container) || typeof last !== "string")
-    throw invalidOperation("delete only supports object properties");
-  delete container[last];
+function applyUpdateEdges(state: GraphState, updates: FieldUpdate[]): Applied {
+  if (updates.length === 0) return NOTHING;
+  rejectRepeatedPaths(updates, "update_edges");
+  const inverses = state.options.inverse ? new FieldInverses() : null;
+  const endpointsBefore = new Map<string, string>();
+  updates.forEach((update, index) => {
+    const context = `update_edges[${index}]`;
+    if (!state.edges.has(update.id))
+      throw invalidOperation(`update_edges: edge does not exist: ${update.id}`);
+    if (!state.baseEdgeIds.has(update.id))
+      throw invalidOperation(
+        `update_edges: cannot update edge that does not exist in the original flow: ${update.id}`,
+      );
+    const root = update.path[0];
+    if (typeof root === "string" && FORBIDDEN_EDGE_UPDATE_ROOTS.has(root))
+      throw invalidOperation(
+        `${context}.path: cannot modify an edge's ${root}; connecting different nodes is a different edge, so delete it and add another`,
+      );
+    const current = state.edges.get(update.id)!;
+    if (
+      typeof root === "string" &&
+      EDGE_HANDLE_ROOTS.has(root) &&
+      !endpointsBefore.has(update.id)
+    )
+      endpointsBefore.set(update.id, edgeEndpointNames(current));
+    checkExpectation(current, update, noKeyedLists, context);
+    const edge = state.writableEdge(update.id);
+    inverses?.before(edge, update, noKeyedLists, context);
+    applyFieldUpdate(
+      edge,
+      update,
+      noKeyedLists,
+      context,
+      state.options.redacted ?? false,
+    );
+  });
+
+  for (const [edgeId, before] of endpointsBefore) {
+    const edge = state.edges.get(edgeId)!;
+    // Only an edge that now connects a different output or field makes a new
+    // claim; rewriting the types or data of an edge where it stands keeps
+    // legacy edges editable.
+    if (edgeEndpointNames(edge) !== before)
+      checkEdgeRules(state, edge, `update_edges: edge ${edgeId}`);
+  }
+  return {
+    forward: [forwardUpdates("update_edges", updates)],
+    inverse: inverses?.operations("update_edges") ?? [],
+  };
 }
 
-function applyDeleteNodes(
-  state: GraphState,
-  operation: FlowOperation,
-): FlowOperation[] {
-  const ids = dedupe(requireStringList(operation.ids, "delete_nodes.ids"));
-  if (ids.length === 0) return [];
+function applyDeleteNodes(state: GraphState, requested: string[]): Applied {
+  const ids = dedupe(requested);
+  if (ids.length === 0) return NOTHING;
   for (const id of ids) {
     if (!state.baseNodeIds.has(id))
       throw invalidOperation(
-        "delete_nodes: cannot delete node that does not exist in the original flow",
+        `delete_nodes: cannot delete node that does not exist in the original flow: ${id}`,
       );
   }
-  const removedNodes: string[] = [];
+  const removedNodes: JsonObject[] = [];
   const incidentEdges: string[] = [];
   for (const id of ids) {
-    if (!state.nodes.has(id)) continue;
+    const node = state.nodes.get(id);
+    if (!node) continue;
     state.nodes.delete(id);
-    removedNodes.push(id);
-    incidentEdges.push(...(state.edgeIdsByNode.get(id) ?? []));
+    removedNodes.push(node);
+    incidentEdges.push(...state.edgesInGraphOrder(state.edgeIdsByNode.get(id)));
     state.edgeIdsByNode.delete(id);
   }
-  if (removedNodes.length === 0) return [];
+  if (removedNodes.length === 0) return NOTHING;
   const removedEdges = state.removeEdges(incidentEdges);
   const forward: FlowOperation[] = [
-    { type: "delete_nodes", ids: removedNodes },
+    {
+      type: "delete_nodes",
+      ids: removedNodes.map((node) => node.id as string),
+    },
   ];
-  if (removedEdges.length > 0)
-    forward.push({ type: "delete_edges", ids: removedEdges });
-  return forward;
+  const inverse: FlowOperation[] = [{ type: "add_nodes", nodes: removedNodes }];
+  if (removedEdges.length > 0) {
+    forward.push({
+      type: "delete_edges",
+      ids: removedEdges.map((edge) => edge.id as string),
+    });
+    inverse.push({ type: "add_edges", edges: removedEdges });
+  }
+  return { forward, inverse };
 }
 
-function applyAddEdges(
-  state: GraphState,
-  operation: FlowOperation,
-): FlowOperation[] {
-  const edges = requireObjectList(operation.edges, "add_edges.edges");
-  if (edges.length === 0) return [];
+function applyAddEdges(state: GraphState, edges: JsonObject[]): Applied {
+  if (edges.length === 0) return NOTHING;
   const seen = new Set<string>();
   const payloads: JsonObject[] = [];
-  for (const edge of edges) {
-    if (!isObject(edge))
-      throw invalidOperation("add_edges: edge must be a dict");
-    if (!isNonEmptyString(edge.id))
-      throw invalidOperation("add_edges: edge must have a non-empty string id");
-    if (!isNonEmptyString(edge.source))
+  edges.forEach((edge, index) => {
+    const context = `add_edges[${index}]`;
+    for (const key of ["id", "source", "target"]) {
+      if (!isNonEmptyString(edge[key]))
+        throw invalidOperation(
+          `${context}: edge must have a non-empty string ${key}`,
+        );
+    }
+    const id = edge.id as string;
+    if (seen.has(id))
+      throw invalidOperation(`add_edges: duplicate edge id in request: ${id}`);
+    if (state.edges.has(id))
+      throw invalidOperation(`add_edges: edge id already exists: ${id}`);
+    if (!state.nodes.has(edge.source as string))
       throw invalidOperation(
-        "add_edges: edge must have a non-empty string source",
+        `add_edges: source node does not exist: ${edge.source}`,
       );
-    if (!isNonEmptyString(edge.target))
+    if (!state.nodes.has(edge.target as string))
       throw invalidOperation(
-        "add_edges: edge must have a non-empty string target",
+        `add_edges: target node does not exist: ${edge.target}`,
       );
-    if (seen.has(edge.id))
-      throw invalidOperation("add_edges: duplicate edge id in request");
-    if (state.edges.has(edge.id))
-      throw invalidOperation("add_edges: edge id already exists");
-    if (!state.nodes.has(edge.source))
-      throw invalidOperation("add_edges: source node does not exist");
-    if (!state.nodes.has(edge.target))
-      throw invalidOperation("add_edges: target node does not exist");
-    seen.add(edge.id);
+    seen.add(id);
     const payload = clone(edge);
+    if (!state.options.restoring) checkEdgeRules(state, payload, context);
     state.insertEdge(payload);
     payloads.push(payload);
-  }
-  return [{ type: "add_edges", edges: payloads }];
+  });
+  return {
+    forward: [{ type: "add_edges", edges: payloads }],
+    inverse: [{ type: "delete_edges", ids: [...seen] }],
+  };
 }
 
-function applyDeleteEdges(
-  state: GraphState,
-  operation: FlowOperation,
-): FlowOperation[] {
-  const removed = state.removeEdges(
-    requireStringList(operation.ids, "delete_edges.ids"),
-  );
-  return removed.length > 0 ? [{ type: "delete_edges", ids: removed }] : [];
+function applyDeleteEdges(state: GraphState, ids: string[]): Applied {
+  const removed = state.removeEdges(ids);
+  if (removed.length === 0) return NOTHING;
+  return {
+    forward: [
+      { type: "delete_edges", ids: removed.map((edge) => edge.id as string) },
+    ],
+    inverse: [{ type: "add_edges", edges: removed }],
+  };
 }
 
 function applyUpdateMetadata(
   state: GraphState,
-  operation: FlowOperation,
-): FlowOperation[] {
-  const fields = (operation.fields ?? {}) as JsonObject;
-  if (!isObject(fields))
-    throw invalidOperation("update_metadata.fields must be an object");
-  const deleteKeys = dedupe(
-    requireStringList(
-      operation.delete_keys ?? [],
-      "update_metadata.delete_keys",
-    ),
-  );
+  fields: JsonObject,
+  requestedDeleteKeys: string[],
+): Applied {
   for (const key of Object.keys(fields)) {
     if (GRAPH_COLLECTION_KEYS.has(key))
       throw invalidOperation(
         `update_metadata: cannot set graph collection key ${key}`,
       );
   }
-  for (const key of deleteKeys) {
+  for (const key of requestedDeleteKeys) {
     if (GRAPH_COLLECTION_KEYS.has(key))
       throw invalidOperation(
         `update_metadata: cannot delete graph collection key ${key}`,
       );
   }
-  if (Object.keys(fields).length === 0 && deleteKeys.length === 0) return [];
+  const deleteKeys = dedupe(requestedDeleteKeys);
+  if (Object.keys(fields).length === 0 && deleteKeys.length === 0)
+    return NOTHING;
+
+  const restore: JsonObject = {};
+  const remove: string[] = [];
+  for (const key of new Set([...Object.keys(fields), ...deleteKeys])) {
+    if (key in state.flowData) restore[key] = state.flowData[key];
+    else remove.push(key);
+  }
   for (const [key, value] of Object.entries(fields))
     state.flowData[key] = clone(value);
   for (const key of deleteKeys) delete state.flowData[key];
@@ -532,20 +1142,172 @@ function applyUpdateMetadata(
   const forward: FlowOperation = { type: "update_metadata" };
   if (Object.keys(fields).length > 0) forward.fields = cloneDeep(fields);
   if (deleteKeys.length > 0) forward.delete_keys = deleteKeys;
-  return [forward];
+  const inverse: FlowOperation = { type: "update_metadata" };
+  if (Object.keys(restore).length > 0) inverse.fields = restore;
+  if (remove.length > 0) inverse.delete_keys = remove;
+  return { forward: [forward], inverse: [inverse] };
 }
 
-const HANDLERS: Record<
-  string,
-  (state: GraphState, operation: FlowOperation) => FlowOperation[]
-> = {
-  add_nodes: applyAddNodes,
-  update_nodes: applyUpdateNodes,
-  delete_nodes: applyDeleteNodes,
-  add_edges: applyAddEdges,
-  delete_edges: applyDeleteEdges,
-  update_metadata: applyUpdateMetadata,
-};
+// --- Edge rules ------------------------------------------------------------------------
+
+/** Parse a handle string, JSON with `œ` standing for `"`, into its object. */
+function parseHandle(handle: unknown): JsonObject | null {
+  if (isObject(handle)) return handle;
+  if (typeof handle !== "string") return null;
+  try {
+    const parsed = JSON.parse(handle.replaceAll("œ", '"'));
+    return isObject(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** An edge's source and target handle objects, preferring `data` over the strings. */
+function edgeHandles(edge: JsonObject): [JsonObject | null, JsonObject | null] {
+  const data = isObject(edge.data) ? edge.data : {};
+  const source = isObject(data.sourceHandle) ? data.sourceHandle : null;
+  const target = isObject(data.targetHandle) ? data.targetHandle : null;
+  return [
+    source ?? parseHandle(edge.sourceHandle),
+    target ?? parseHandle(edge.targetHandle),
+  ];
+}
+
+/**
+ * The output a loop feedback edge targets, or null. A Loop component takes
+ * its feedback on one of its own outputs: the target handle then names an
+ * output (`name`) instead of a template field (`fieldName`).
+ */
+function loopTargetOutput(targetHandle: JsonObject | null): string | null {
+  if (!targetHandle || "fieldName" in targetHandle) return null;
+  return typeof targetHandle.name === "string" ? targetHandle.name : null;
+}
+
+function edgeEndpointNames(edge: JsonObject): string {
+  const [sourceHandle, targetHandle] = edgeHandles(edge);
+  const target = !targetHandle
+    ? null
+    : "fieldName" in targetHandle
+      ? ["field", targetHandle.fieldName ?? null]
+      : ["output", targetHandle.name ?? null];
+  return JSON.stringify([sourceHandle?.name ?? null, target]);
+}
+
+/** Group nodes and notes have no fixed fields or outputs to check edges against. */
+function isExemptNode(node: JsonObject): boolean {
+  if (node.type === "noteNode") return true;
+  const nodeData = isObject(node.data) ? node.data.node : undefined;
+  return !isObject(nodeData) || "flow" in nodeData;
+}
+
+function nodePart(node: JsonObject, key: string): unknown {
+  const nodeData = isObject(node.data) ? node.data.node : undefined;
+  return isObject(nodeData) ? nodeData[key] : undefined;
+}
+
+function outputNames(node: JsonObject): Set<string> | null {
+  if (isExemptNode(node)) return null;
+  const outputs = nodePart(node, "outputs");
+  if (!Array.isArray(outputs)) return null;
+  return new Set(
+    outputs
+      .filter((output) => isObject(output) && typeof output.name === "string")
+      .map((output) => output.name as string),
+  );
+}
+
+function templateFields(node: JsonObject): JsonObject | null {
+  if (isExemptNode(node)) return null;
+  const template = nodePart(node, "template");
+  return isObject(template) ? template : null;
+}
+
+/**
+ * Check that an edge's handles name an existing output and field, and that a
+ * single input stays single. Edges without handle data, and the ends of edges
+ * at group nodes, notes and nodes without a template or outputs, are exempt.
+ */
+function checkEdgeRules(
+  state: GraphState,
+  edge: JsonObject,
+  context: string,
+): void {
+  const [sourceHandle, targetHandle] = edgeHandles(edge);
+  const source = state.nodes.get(edge.source as string)!;
+  const target = state.nodes.get(edge.target as string)!;
+
+  if (typeof sourceHandle?.name === "string") {
+    const names = outputNames(source);
+    if (names && !names.has(sourceHandle.name))
+      throw invalidOperation(
+        `${context}: source node ${edge.source} has no output ${sourceHandle.name}`,
+        "EDGE_HANDLE_NOT_FOUND",
+      );
+  }
+
+  if (!targetHandle) return;
+  const loopOutput = loopTargetOutput(targetHandle);
+  if (loopOutput !== null) {
+    const names = outputNames(target);
+    if (names && !names.has(loopOutput))
+      throw invalidOperation(
+        `${context}: target node ${edge.target} has no output ${loopOutput}`,
+        "EDGE_HANDLE_NOT_FOUND",
+      );
+    return;
+  }
+
+  const fieldName = targetHandle.fieldName;
+  const template = templateFields(target);
+  if (!template || typeof fieldName !== "string") return;
+  const field = template[fieldName];
+  if (!isObject(field))
+    throw invalidOperation(
+      `${context}: target node ${edge.target} has no field ${fieldName}`,
+      "EDGE_HANDLE_NOT_FOUND",
+    );
+  if (field.list === true) return;
+  for (const otherId of state.edgesInGraphOrder(
+    state.edgeIdsByNode.get(edge.target as string),
+  )) {
+    const other = state.edges.get(otherId)!;
+    if (otherId === edge.id || other.target !== edge.target) continue;
+    const [, otherTarget] = edgeHandles(other);
+    if (otherTarget?.fieldName === fieldName)
+      throw invalidOperation(
+        `${context}: field ${fieldName} of node ${edge.target} takes one connection and already has one (${otherId})`,
+        "EDGE_TARGET_OCCUPIED",
+      );
+  }
+}
+
+// --- Entry point -----------------------------------------------------------------------
+
+function applyOperation(
+  state: GraphState,
+  operation: ParsedOperation,
+): Applied {
+  switch (operation.type) {
+    case "add_nodes":
+      return applyAddNodes(state, operation.nodes);
+    case "update_nodes":
+      return applyUpdateNodes(state, operation.updates);
+    case "delete_nodes":
+      return applyDeleteNodes(state, operation.ids);
+    case "add_edges":
+      return applyAddEdges(state, operation.edges);
+    case "update_edges":
+      return applyUpdateEdges(state, operation.updates);
+    case "delete_edges":
+      return applyDeleteEdges(state, operation.ids);
+    case "update_metadata":
+      return applyUpdateMetadata(
+        state,
+        operation.fields,
+        operation.delete_keys,
+      );
+  }
+}
 
 /** Apply operations in order to a copy of `base`; `base` is never changed. */
 export function applyFlowOperations(
@@ -553,17 +1315,21 @@ export function applyFlowOperations(
   operations: FlowOperation[],
   options: ApplyOptions = {},
 ): ApplyResult {
+  if (!Array.isArray(operations))
+    throw invalidOperation("operations must be a list");
+  const parsed = operations.map(parseOperation);
   const state = new GraphState(base, options);
   const forwardOperations: FlowOperation[] = [];
-  for (const operation of operations) {
-    const handler = isObject(operation)
-      ? HANDLERS[operation.type as string]
-      : undefined;
-    if (!handler)
-      throw invalidOperation(
-        `Unsupported operation type: ${String(operation?.type)}`,
-      );
-    forwardOperations.push(...handler(state, operation));
+  const inverseOperations: FlowOperation[][] = [];
+  for (const operation of parsed) {
+    const { forward, inverse } = applyOperation(state, operation);
+    forwardOperations.push(...forward);
+    inverseOperations.push(inverse);
   }
-  return { flowData: state.finalize(), forwardOperations };
+  const result: ApplyResult = {
+    flowData: state.finalize(),
+    forwardOperations,
+  };
+  if (options.inverse) result.inverseOperations = inverseOperations;
+  return result;
 }
