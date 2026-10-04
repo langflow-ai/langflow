@@ -39,6 +39,7 @@ from lfx.services.flow_operations import (
     FlowOperation,
     FlowOperationError,
     GraphFix,
+    UpdateEdgesOp,
     UpdateMetadataOp,
     UpdateNodesOp,
     dump_flow_operation,
@@ -393,6 +394,8 @@ def _items(operation: FlowOperation):
         return operation.ids, lambda chunk: DeleteEdgesOp(type="delete_edges", ids=chunk)
     if isinstance(operation, UpdateNodesOp):
         return operation.updates, lambda chunk: UpdateNodesOp(type="update_nodes", updates=chunk)
+    if isinstance(operation, UpdateEdgesOp):
+        return operation.updates, lambda chunk: UpdateEdgesOp(type="update_edges", updates=chunk)
     if isinstance(operation, UpdateMetadataOp):
         entries = [("set", key, value) for key, value in operation.fields.items()]
         entries += [("delete", key, None) for key in operation.delete_keys]
@@ -425,8 +428,11 @@ def _labels(
         node_ids = list(operation.ids)
     elif isinstance(operation, AddEdgesOp):
         node_ids = [endpoint for edge in operation.edges for endpoint in (edge["source"], edge["target"])]
-    elif isinstance(operation, DeleteEdgesOp):
-        for edge_id in operation.ids:
+    elif isinstance(operation, (DeleteEdgesOp, UpdateEdgesOp)):
+        edge_ids = (
+            operation.ids if isinstance(operation, DeleteEdgesOp) else [update.id for update in operation.updates]
+        )
+        for edge_id in dict.fromkeys(edge_ids):
             edge = base_edges.get(edge_id)
             if edge is not None:
                 edges[edge_id] = {"source": edge["source"], "target": edge["target"]}
