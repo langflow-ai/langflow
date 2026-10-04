@@ -318,8 +318,9 @@ async def test_should_preserve_masked_credentials_when_saving_a_flow(
     [
         {"url": "https://serving.internal/mcp", "headers": {"x-api-key": MCP_CONFIG_VALUE_MASK}},
         {"command": "uvx", "args": ["mcp-proxy", "--headers", "x-api-key", MCP_CONFIG_VALUE_MASK]},
+        {"url": "https://serving.internal/mcp", "headers": {"Content-Type": MCP_CONFIG_VALUE_MASK}},
     ],
-    ids=["header-map", "header-argument"],
+    ids=["header-map", "header-argument", "allowlisted-header"],
 )
 async def test_should_reject_unresolved_flow_credential_masks(
     client: AsyncClient, logged_in_headers, active_user, config
@@ -332,6 +333,7 @@ async def test_should_reject_unresolved_flow_credential_masks(
         assert await get_server(server_name, active_user, session, None, None) is None
         names = await get_variable_service().list_variables(active_user.id, session)
         assert variable_name_for(server_name, "x-api-key") not in names
+        assert variable_name_for(server_name, "Content-Type") not in names
 
 
 async def test_should_not_resolve_flow_masks_from_another_users_server(
@@ -353,3 +355,94 @@ async def test_should_not_resolve_flow_masks_from_another_users_server(
         assert await get_server(server_name, user_two, session, None, None) == config
         names = await get_variable_service().list_variables(active_user.id, session)
         assert variable_name_for(server_name, "x-api-key") not in names
+
+
+@pytest.mark.parametrize("reference_kind", ["placeholder", "generated"])
+async def test_should_preserve_masked_variable_references_when_saving_a_flow(
+    client: AsyncClient, logged_in_headers, active_user, reference_kind
+):
+    """A masked editor roundtrip must retain references and follow later variable rotation."""
+    server_name = f"reference-{uuid.uuid4().hex[:6]}"
+    variable_name = f"MCP_TOKEN_{uuid.uuid4().hex[:6]}"
+    reference = f"{{{{{variable_name}}}}}" if reference_kind == "placeholder" else variable_name
+    sibling_name = f"MCP_OTHER_{uuid.uuid4().hex[:6]}"
+    sibling_reference = f"{{{{{sibling_name}}}}}" if reference_kind == "placeholder" else sibling_name
+    config = {
+        "url": "https://serving.internal/mcp",
+        "headers": {"x-api-key": reference},
+        "env": {"API_TOKEN": reference},
+    }
+    async with session_scope() as session:
+        session.add(MCPServer(user_id=active_user.id, name=server_name, config=encrypt_mcp_config(config)))
+        await get_variable_service().create_variable(
+            user_id=active_user.id, name=variable_name, value=SECRET, session=session
+        )
+        await get_variable_service().create_variable(
+            user_id=active_user.id, name=sibling_name, value="test-sibling-credential", session=session
+        )
+    flow, _ = await _saved_flow(client, logged_in_headers, server_name, config)
+    editor = await client.get(f"api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert editor.status_code == status.HTTP_200_OK, editor.text
+    assert editor.json()["headers"]["x-api-key"] == MCP_CONFIG_VALUE_MASK
+    payload = _flow_payload(server_name, editor.json())
+    sibling_config = {
+        **config,
+        "headers": {"x-api-key": sibling_reference},
+        "env": {"API_TOKEN": sibling_reference},
+    }
+    sibling_node = _flow_payload(server_name, sibling_config)["data"]["nodes"][0]
+    sibling_node["id"] = sibling_node["data"]["id"] = "MCPTools-explicit"
+    payload["data"]["nodes"].append(sibling_node)
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}", json={"data": payload["data"]}, headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert SECRET not in response.text
+    assert _stored_config(response.json())["headers"] == config["headers"]
+    assert _stored_config(response.json())["env"] == config["env"]
+    saved_sibling = response.json()["data"]["nodes"][1]
+    assert saved_sibling["data"]["node"]["template"]["mcp_server"]["value"]["config"] == sibling_config
+    async with session_scope() as session:
+        runtime = await get_server(server_name, active_user, session, None, None)
+        assert runtime == config
+        names = await get_variable_service().list_variables(active_user.id, session)
+        assert variable_name_for(server_name, "x-api-key") not in names
+        assert variable_name_for(server_name, "API_TOKEN") not in names
+        sibling_value = await get_variable_service().get_variable(
+            user_id=active_user.id, name=sibling_name, field="", session=session
+        )
+        assert sibling_value.get_secret_value() == "test-sibling-credential"
+        rotated = "test-rotated-reference-credential"
+        await get_variable_service().update_variable(
+            user_id=active_user.id, name=variable_name, value=rotated, session=session
+        )
+    from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+    assert _resolve_global_variables_in_headers(runtime["headers"], {variable_name: rotated}) == {"x-api-key": rotated}
+    assert _resolve_global_variables_in_headers(runtime["env"], {variable_name: rotated}) == {"API_TOKEN": rotated}
+
+
+async def test_should_keep_a_masked_allowlisted_header_out_of_the_flow_response(
+    client: AsyncClient, logged_in_headers, active_user
+):
+    """A management mask must stay confidential regardless of the header's name."""
+    server_name = f"allowlisted-{uuid.uuid4().hex[:6]}"
+    config = {"url": "https://serving.internal/mcp", "headers": {"Content-Type": SECRET}}
+    async with session_scope() as session:
+        session.add(MCPServer(user_id=active_user.id, name=server_name, config=encrypt_mcp_config(config)))
+    editor = await client.get(f"api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert editor.status_code == status.HTTP_200_OK, editor.text
+    assert editor.json()["headers"]["Content-Type"] == MCP_CONFIG_VALUE_MASK
+    response = await client.post(
+        "api/v1/flows/", json=_flow_payload(server_name, editor.json()), headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    assert SECRET not in response.text
+    alias = variable_name_for(server_name, "Content-Type")
+    assert _stored_config(response.json())["headers"] == {"Content-Type": alias}
+    async with session_scope() as session:
+        assert await get_server(server_name, active_user, session, None, None) == config
+        credential = await get_variable_service().get_variable(
+            user_id=active_user.id, name=alias, field="", session=session
+        )
+        assert credential.get_secret_value() == SECRET
