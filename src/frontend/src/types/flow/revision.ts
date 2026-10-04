@@ -16,13 +16,12 @@ export type RecordedOperation = {
    * hint only.
    */
   cause?: string;
-  /** The operation as recorded, with literal secret values removed. */
+  /**
+   * The operation as recorded, with literal secret values removed. It names
+   * nodes and edges by id only; `utils/flow-operations/names.ts` resolves
+   * their names.
+   */
   operation: Record<string, unknown> & { type: string };
-  /** Display names of the nodes it touched, as they were when it was recorded. */
-  labels: {
-    nodes?: Record<string, string>;
-    edges?: Record<string, { source: string; target: string }>;
-  };
 };
 
 export type RevisionVersion = {

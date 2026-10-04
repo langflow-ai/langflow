@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { RecordedOperation, RevisionEntry } from "@/types/flow/revision";
+import { flowNames } from "@/utils/flow-operations/names";
 import TimelineEntryItem from "../components/TimelineEntryItem";
 
 jest.mock("@/components/ui/sidebar", () => ({
@@ -40,8 +41,13 @@ const writes = (fields: string[], cause?: string): RecordedOperation => ({
       value: 1,
     })),
   },
-  labels: { nodes: { "Agent-1": "Agent" } },
 });
+
+const describeOptions = {
+  names: flowNames({
+    nodes: [{ id: "Agent-1", data: { node: { display_name: "Agent" } } }],
+  }),
+};
 
 const entry = (operations: RecordedOperation[]): RevisionEntry => ({
   id: "e1",
@@ -62,6 +68,7 @@ describe("TimelineEntryItem", () => {
         entry={entry([writes(["model", "temperature"], "upgrade_component")])}
         isSelected={false}
         onSelect={onSelect}
+        describe={describeOptions}
       />,
     );
 
@@ -90,6 +97,7 @@ describe("TimelineEntryItem", () => {
         entry={entry([writes(["model"])])}
         isSelected={false}
         onSelect={jest.fn()}
+        describe={describeOptions}
       />,
     );
 

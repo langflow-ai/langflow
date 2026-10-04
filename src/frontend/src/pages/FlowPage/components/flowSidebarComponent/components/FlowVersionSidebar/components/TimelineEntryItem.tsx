@@ -14,7 +14,8 @@ interface TimelineEntryItemProps {
   entry: RevisionEntry;
   isSelected: boolean;
   onSelect: (id: string) => void;
-  fieldLabel?: DescribeOptions["fieldLabel"];
+  /** Field labels and names for the entry's changes. */
+  describe?: DescribeOptions;
 }
 
 /**
@@ -26,7 +27,7 @@ export default function TimelineEntryItem({
   entry,
   isSelected,
   onSelect,
-  fieldLabel,
+  describe,
 }: TimelineEntryItemProps) {
   const { t } = useTranslation();
   const authors = entry.actors
@@ -35,7 +36,7 @@ export default function TimelineEntryItem({
   const [firstActor] = entry.actors;
   // An entry one action caused (a component update, a restore) reads as that
   // action; its individual changes stay one click away.
-  const folded = foldedSummary(entry, t);
+  const folded = foldedSummary(entry, t, describe);
   const [showChanges, setShowChanges] = useState(false);
   const changesId = useId();
 
@@ -65,7 +66,7 @@ export default function TimelineEntryItem({
           </div>
           <p className="line-clamp-2 whitespace-normal break-words text-xs leading-snug text-muted-foreground">
             {entry.operations
-              ? summarizeEntry(entry, t, { fieldLabel })
+              ? summarizeEntry(entry, t, describe)
               : t("flowHistory.changes", {
                   count: entry.end_revision - entry.start_revision + 1,
                 })}
@@ -112,9 +113,11 @@ export default function TimelineEntryItem({
               className="mt-1 flex flex-col gap-0.5 break-words text-muted-foreground"
             >
               {(() => {
-                const sentences = describeChanges(entry.operations, t, {
-                  fieldLabel,
-                });
+                const sentences = describeChanges(
+                  entry.operations,
+                  t,
+                  describe,
+                );
                 return sentences.length > 0
                   ? sentences.map((sentence, index) => (
                       // biome-ignore lint/suspicious/noArrayIndexKey: sentences can repeat; the list never reorders

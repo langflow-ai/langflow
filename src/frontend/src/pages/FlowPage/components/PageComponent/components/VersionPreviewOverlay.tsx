@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { usePreviewChanges } from "@/hooks/use-history-changes";
+import { useFlowNames, usePreviewChanges } from "@/hooks/use-history-changes";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useRevisionPlaybackStore from "@/stores/revisionPlaybackStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
@@ -24,6 +24,7 @@ export default function VersionPreviewOverlay() {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const timeline = useRevisionPlaybackStore((s) => s.timeline);
   const changes = usePreviewChanges();
+  const names = useFlowNames();
 
   const { t } = useTranslation();
 
@@ -34,7 +35,7 @@ export default function VersionPreviewOverlay() {
   const removals = [
     ...(changes?.removedNodes ?? []).map((node) =>
       t("flowHistory.highlight.byAuthor", {
-        change: t("flowHistory.op.deletedNode", { name: node.name }),
+        change: t("flowHistory.op.deletedNode", { name: names.node(node.id) }),
         author: authorOf(node.actor),
       }),
     ),
@@ -43,8 +44,8 @@ export default function VersionPreviewOverlay() {
         change:
           edge.source && edge.target
             ? t("flowHistory.op.disconnected", {
-                source: edge.source,
-                target: edge.target,
+                source: names.node(edge.source),
+                target: names.node(edge.target),
               })
             : t("flowHistory.op.removedConnection"),
         author: authorOf(edge.actor),

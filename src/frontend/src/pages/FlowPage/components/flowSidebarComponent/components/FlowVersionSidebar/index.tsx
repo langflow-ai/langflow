@@ -44,7 +44,7 @@ export default function FlowVersionSidebarContent({
     maxEntries,
     timelineEntries,
     selectedTimelineEntryId,
-    fieldLabel,
+    describeOptions,
     olderVersions,
     hasOlderEntries,
     isLoadingOlderEntries,
@@ -147,7 +147,7 @@ export default function FlowVersionSidebarContent({
                       entry={entry}
                       isSelected={entry.id === selectedTimelineEntryId}
                       onSelect={handleSelectEntry}
-                      fieldLabel={fieldLabel}
+                      describe={describeOptions}
                     />
                   ))}
                 </div>
