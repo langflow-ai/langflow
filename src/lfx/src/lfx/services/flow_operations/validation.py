@@ -228,7 +228,8 @@ def changed_tables(base: Any, target: dict[str, Any]) -> list[ChangedTable]:
         stored = base_templates.get(node.get("id")) or {}
         for field_name, field in template.items():
             value_path = ("data", "node", "template", field_name, "value")
-            if schema.keyed_list_at(node, value_path) is None or not isinstance(field.get("value"), list):
+            # Only tables: a natural-key list (tool actions) is not one, even under a table-typed field.
+            if schema.keyed_list_at(node, value_path) is not schema.table or not isinstance(field.get("value"), list):
                 continue
             stored_field = stored.get(field_name)
             if isinstance(stored_field, dict) and "value" in stored_field:
