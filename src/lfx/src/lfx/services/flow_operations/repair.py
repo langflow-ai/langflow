@@ -28,7 +28,7 @@ from lfx.services.flow_operations.canonical import canonical_json
 from lfx.services.flow_operations.fractional_index import generate_n_keys_between
 from lfx.services.flow_operations.ids import new_edge_id
 from lfx.services.flow_operations.schema import load_node_schema
-from lfx.services.flow_operations.table_rows import positions_keeping_order
+from lfx.services.flow_operations.table_rows import match_row_ids, positions_keeping_order
 from lfx.services.flow_operations.validation import (
     NODE_OBJECT_PATHS,
     GraphPath,
@@ -84,10 +84,12 @@ class RepairResult:
 def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
     """Return a copy of ``flow_data`` that follows every rule, and the fixes applied.
 
-    Generated node and row IDs are derived from the entry's content and
-    position, so repairing the same graph twice gives the same nodes and rows.
-    Generated edge IDs are opaque and random, like the editor's. With ``base``, the
-    table rows the write adds or changes are repaired too.
+    Generated node IDs are derived from the node's content and position, so
+    repairing the same graph twice gives the same nodes. Generated edge IDs are
+    opaque and random, like the editor's. With ``base``, the table rows the
+    write adds or changes are repaired too: a row without an ID takes the ID of
+    an identical stored row, so a table written back without IDs keeps the
+    rows it already held, and only new rows get new random IDs.
     """
     fixes: list[GraphFix] = []
 
@@ -110,8 +112,10 @@ def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
     node_ids = {node["id"] for node in repaired["nodes"]}
     repaired["edges"] = _repair_edges(repaired["edges"], node_ids, fix)
     if base is not None:
+        stored = _stored_tables(base)
         for table in changed_tables(base, repaired):
-            _repair_table(table.rows, table.path, fix)
+            node_id = repaired["nodes"][table.path[1]]["id"]
+            _repair_table(table.rows, table.path, fix, stored.get((node_id, table.path[-2])))
 
     # Repair must never return a graph the strict path would refuse.
     validate_flow_data(repaired, context="repaired flow.data", base=base)
@@ -189,7 +193,21 @@ def _repair_edges(edges: list[Any], node_ids: set[str], fix) -> list[dict[str, A
     return [edge for _, edge in kept]
 
 
-def _repair_table(rows: list[Any], path: GraphPath, fix) -> None:
+def _stored_tables(base: Any) -> dict[tuple[str, str], Any]:
+    """Map (node id, field name) to each table value ``base`` stores."""
+    stored: dict[tuple[str, str], Any] = {}
+    nodes = base.get("nodes") if isinstance(base, dict) else None
+    for node in nodes if isinstance(nodes, list) else []:
+        template = node.get("data", {}).get("node", {}).get("template") if isinstance(node, dict) else None
+        if not isinstance(template, dict) or not isinstance(node.get("id"), str):
+            continue
+        for field_name, field in template.items():
+            if isinstance(field, dict) and isinstance(field.get("value"), list):
+                stored.setdefault((node["id"], field_name), field["value"])
+    return stored
+
+
+def _repair_table(rows: list[Any], path: GraphPath, fix, previous: Any = None) -> None:
     """Fix one table value in place: rows are objects with unique ids and positions, in order."""
     table = load_node_schema().table
     id_key, position_key = table.key[0], table.position
@@ -199,7 +217,9 @@ def _repair_table(rows: list[Any], path: GraphPath, fix) -> None:
             fix(GraphViolationCode.TABLE_ROW_NOT_OBJECT, (*path, index))
     rows[:] = [row for row in rows if isinstance(row, dict)]
 
-    used_ids = {row[id_key] for row in rows if _is_id(row.get(id_key))}
+    # Rows that arrive without a position are ordered by where they are in
+    # the list, even when they take a stored row's position below.
+    missing = [index for index, row in enumerate(rows) if not _is_id(row.get(position_key))]
     seen_ids: set[str] = set()
     for index, row in enumerate(rows):
         row_id = row.get(id_key)
@@ -208,12 +228,11 @@ def _repair_table(rows: list[Any], path: GraphPath, fix) -> None:
             continue
         code = GraphViolationCode.TABLE_ROW_ID_DUPLICATE if _is_id(row_id) else GraphViolationCode.TABLE_ROW_ID_MISSING
         fix(code, (*path, index, id_key))
-        new_id = _generate_row_id(path, index, row, used_ids)
-        used_ids.add(new_id)
-        seen_ids.add(new_id)
-        row[id_key] = new_id
+        # A duplicate gives up its id; match_row_ids gives every row without one
+        # the id of an identical stored row, or a new random id.
+        row.pop(id_key, None)
+    match_row_ids(rows, previous)
 
-    missing = [index for index, row in enumerate(rows) if not _is_id(row.get(position_key))]
     if missing:
         for index in missing:
             fix(GraphViolationCode.TABLE_ROW_POS_INVALID, (*path, index, position_key))
@@ -226,16 +245,6 @@ def _repair_table(rows: list[Any], path: GraphPath, fix) -> None:
     if not is_sorted_table(rows):
         fix(GraphViolationCode.TABLE_ROWS_UNSORTED, path)
         table.sort(rows)
-
-
-def _generate_row_id(path: GraphPath, index: int, row: dict[str, Any], used_ids: set[str]) -> str:
-    seed = f"{list(path)}:{index}:{canonical_json(_json_safe(row))}"
-    attempt = 0
-    while True:
-        candidate = _short_digest(f"{seed}:{attempt}")
-        if candidate not in used_ids:
-            return candidate
-        attempt += 1
 
 
 def _replace_non_finite(value: Any, path: GraphPath, fix) -> Any:

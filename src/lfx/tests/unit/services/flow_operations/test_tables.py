@@ -151,7 +151,7 @@ def test_repair_assigns_ids_and_evenly_spaced_positions_in_row_order():
 
     assert [row["key"] for row in rows] == ["Accept", "Auth"]
     assert [row["_pos"] for row in rows] == ["a0", "a1"]
-    assert all(isinstance(row["_id"], str) and len(row["_id"]) == 5 for row in rows)
+    assert all(isinstance(row["_id"], str) and len(row["_id"]) == 10 for row in rows)
     assert rows[0]["_id"] != rows[1]["_id"]
     assert [fix.code for fix in result.fixes] == [
         GraphViolationCode.TABLE_ROW_ID_MISSING,
@@ -196,8 +196,29 @@ def test_repair_regenerates_duplicate_ids_and_sorts():
     ]
 
 
-def test_repair_is_deterministic():
-    assert repair_flow_data(_graph(LEGACY), base=EMPTY) == repair_flow_data(_graph(LEGACY), base=EMPTY)
+def test_repair_keeps_the_ids_of_rows_a_table_already_held():
+    # A writer that strips ids (an exported file) sends the stored rows back.
+    result = repair_flow_data(_graph(LEGACY), base=_graph(KEYED))
+
+    assert result.flow_data == _graph(KEYED)
+    assert [fix.code for fix in result.fixes] == [
+        GraphViolationCode.TABLE_ROW_ID_MISSING,
+        GraphViolationCode.TABLE_ROW_ID_MISSING,
+        GraphViolationCode.TABLE_ROW_POS_INVALID,
+        GraphViolationCode.TABLE_ROW_POS_INVALID,
+    ]
+
+
+def test_repair_gives_only_a_new_row_a_new_id():
+    rows = [{"key": "Trace", "value": "on"}, *LEGACY]
+
+    repaired = repair_flow_data(_graph(rows), base=_graph(KEYED)).flow_data
+    repaired_rows = repaired["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
+
+    assert [row["key"] for row in repaired_rows] == ["Trace", "Accept", "Auth"]
+    assert [row["_id"] for row in repaired_rows[1:]] == ["r1", "r2"]
+    assert repaired_rows[0]["_id"] not in {"r1", "r2"}
+    assert find_graph_violations(repaired, base=_graph(KEYED)) == []
 
 
 def test_strip_row_keys():
