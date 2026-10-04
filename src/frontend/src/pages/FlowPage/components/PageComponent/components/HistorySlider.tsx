@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { useFlowNames } from "@/hooks/use-history-changes";
 import useRevisionPlaybackStore from "@/stores/revisionPlaybackStore";
 import {
   describeOperation,
@@ -71,6 +72,7 @@ export default function HistorySlider() {
   const timeline = useRevisionPlaybackStore((s) => s.timeline);
   const revision = useRevisionPlaybackStore((s) => s.revision);
   const selectRevision = useRevisionPlaybackStore((s) => s.selectRevision);
+  const names = useFlowNames();
   const [playing, setPlaying] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -122,6 +124,7 @@ export default function HistorySlider() {
   const caption = operation
     ? describeOperation(operation, t, {
         fieldLabel: fieldLabelsFrom(graphAt(timeline, position)),
+        names,
       }).join("; ")
     : t("flowHistory.playback.start");
   const author = operation?.actor ?? null;

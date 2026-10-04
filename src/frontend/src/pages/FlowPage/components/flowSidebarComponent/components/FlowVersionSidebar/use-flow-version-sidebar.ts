@@ -20,12 +20,14 @@ import {
   useGetFlowVersionEntry,
   useGetFlowVersions,
 } from "@/controllers/API/queries/flow-version";
+import { useFlowNames } from "@/hooks/use-history-changes";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useRevisionPlaybackStore from "@/stores/revisionPlaybackStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import type { FlowVersionEntry } from "@/types/flow/version";
 import {
+  type DescribeOptions,
   describeOperation,
   fieldLabelsFrom,
 } from "@/utils/flow-operations/describe";
@@ -135,10 +137,12 @@ export function useFlowVersionSidebar(flowId: string) {
       setPlaybackRevision(null);
     };
   }, [setSelectRevision, setPlaybackTimeline, setPlaybackRevision]);
-  // Field labels for the timeline text, from the flow as it is now.
-  const fieldLabel = useMemo(
-    () => fieldLabelsFrom(currentFlow?.data),
-    [currentFlow?.data],
+  // Field labels and names for the timeline text, from the flow as it is
+  // now, then from its history.
+  const names = useFlowNames(timelineEntries);
+  const describeOptions = useMemo<DescribeOptions>(
+    () => ({ fieldLabel: fieldLabelsFrom(currentFlow?.data), names }),
+    [currentFlow?.data, names],
   );
   // Saved versions the timeline cannot place: saved before the flow had
   // history, or older than the history still retained.
@@ -224,9 +228,9 @@ export function useFlowVersionSidebar(flowId: string) {
           // one change that produced this point.
           description:
             !atEntryEnd && operationHere
-              ? `${operationHere.actor.username ?? t("flowHistory.unknownAuthor")}: ${describeOperation(operationHere, t, { fieldLabel }).join("; ")}`
+              ? `${operationHere.actor.username ?? t("flowHistory.unknownAuthor")}: ${describeOperation(operationHere, t, describeOptions).join("; ")}`
               : selectedTimelineEntry
-                ? summarizeEntry(selectedTimelineEntry, t, { fieldLabel })
+                ? summarizeEntry(selectedTimelineEntry, t, describeOptions)
                 : null,
         }
       : selectedVersionFull;
@@ -500,7 +504,7 @@ export function useFlowVersionSidebar(flowId: string) {
     maxEntries,
     timelineEntries,
     selectedTimelineEntryId: selectedTimelineEntry?.id ?? null,
-    fieldLabel,
+    describeOptions,
     olderVersions,
     hasOlderEntries,
     isLoadingOlderEntries,

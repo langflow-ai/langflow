@@ -1,4 +1,5 @@
 import type { RecordedOperation, RevisionEntry } from "@/types/flow/revision";
+import { flowNames } from "@/utils/flow-operations/names";
 import {
   countChanges,
   describeChanges,
@@ -60,7 +61,14 @@ const fieldWrites = (
       },
     ]),
   },
-  labels: { nodes: { [id]: "Agent" } },
+});
+
+// The flow as it is now names the components.
+const names = flowNames({
+  nodes: [
+    { id: "A", data: { node: { display_name: "Agent" } } },
+    { id: "B", data: { node: { display_name: "Prompt" } } },
+  ],
 });
 
 const entry = (operations: RecordedOperation[]): RevisionEntry => ({
@@ -121,8 +129,18 @@ describe("foldedSummary", () => {
   it("reads as the action, with how many fields it changed", () => {
     const fields = Array.from({ length: 42 }, (_, i) => `f${i}`);
     expect(
-      foldedSummary(entry([fieldWrites("A", fields, "upgrade_component")]), t),
+      foldedSummary(entry([fieldWrites("A", fields, "upgrade_component")]), t, {
+        names,
+      }),
     ).toBe("Alice updated Agent; 42 fields changed");
+  });
+
+  it("names a component the flow no longer has by its id", () => {
+    expect(
+      foldedSummary(entry([fieldWrites("X", ["f"], "upgrade_component")]), t, {
+        names,
+      }),
+    ).toBe("Alice updated X; 1 field changed");
   });
 
   it("names how many components a multi-component action touched", () => {
@@ -144,7 +162,7 @@ describe("foldedSummary", () => {
 
 describe("summarizeEntry", () => {
   it("falls back to the entry's changes when it does not fold", () => {
-    expect(summarizeEntry(entry([fieldWrites("A", ["x"])]), t)).toBe(
+    expect(summarizeEntry(entry([fieldWrites("A", ["x"])]), t, { names })).toBe(
       "Edited X on Agent",
     );
   });
@@ -163,10 +181,10 @@ describe("describeChanges", () => {
           {
             ...fieldWrites("B", [], "restore"),
             operation: { type: "add_nodes", nodes: [{ id: "B" }] },
-            labels: { nodes: { B: "Prompt" } },
           },
         ],
         t,
+        { names },
       ),
     ).toEqual(["Edited X on Agent", "Added Prompt"]);
   });

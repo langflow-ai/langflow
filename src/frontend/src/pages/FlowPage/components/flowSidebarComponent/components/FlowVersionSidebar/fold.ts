@@ -4,6 +4,7 @@ import {
   describeOperation,
   summarizeOperations,
 } from "@/utils/flow-operations/describe";
+import { ID_NAMES } from "@/utils/flow-operations/names";
 
 type TFunction = (key: string, opts?: object) => string;
 
@@ -120,14 +121,6 @@ function touchedNodes(operations: RecordedOperation[]): string[] {
   return [...ids];
 }
 
-function nodeLabel(operations: RecordedOperation[], id: string): string {
-  for (const { labels } of operations) {
-    const label = labels?.nodes?.[id];
-    if (label) return label;
-  }
-  return id;
-}
-
 /**
  * One line for an entry whose operations share a folded cause, such as
  * "Alice updated Agent; 42 fields changed". Null for any other entry.
@@ -135,6 +128,7 @@ function nodeLabel(operations: RecordedOperation[], id: string): string {
 export function foldedSummary(
   entry: Pick<RevisionEntry, "operations" | "actors">,
   t: TFunction,
+  options: DescribeOptions = {},
 ): string | null {
   const operations = entry.operations;
   const cause = foldedCause(operations);
@@ -146,7 +140,7 @@ export function foldedSummary(
   const nodes = touchedNodes(operations);
   const name =
     nodes.length === 1
-      ? nodeLabel(operations, nodes[0])
+      ? (options.names ?? ID_NAMES).node(nodes[0])
       : t("flowHistory.fold.components", { count: nodes.length });
   const { count, onlyFields } = countChanges(operations);
   return t("flowHistory.fold.line", {
@@ -165,7 +159,8 @@ export function summarizeEntry(
 ): string | null {
   if (!entry.operations) return null;
   return (
-    foldedSummary(entry, t) ?? summarizeOperations(entry.operations, t, options)
+    foldedSummary(entry, t, options) ??
+    summarizeOperations(entry.operations, t, options)
   );
 }
 
