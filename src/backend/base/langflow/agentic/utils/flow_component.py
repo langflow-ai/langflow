@@ -10,8 +10,9 @@ from lfx.log.logger import logger
 from langflow.api.utils.flow_history import history_http_error
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, FlowGraphWriteOptions
 from langflow.services.deps import session_scope
+from langflow.services.flow_history.envelope import ASSISTANT_CAUSE
 from langflow.services.flow_history.errors import FlowHistoryError
 from langflow.services.flow_history.recorder import write_flow_graph
 
@@ -289,7 +290,13 @@ async def update_component_field_value(
 
             # Update the flow data, recording the edit in the flow's history.
             try:
-                await write_flow_graph(session, db_flow, flow_data, actor_id=UUID(str(user_id)))
+                await write_flow_graph(
+                    session,
+                    db_flow,
+                    flow_data,
+                    actor_id=UUID(str(user_id)),
+                    options=FlowGraphWriteOptions(cause=ASSISTANT_CAUSE),
+                )
             except FlowHistoryError as exc:
                 return {"error": history_http_error(exc).detail, "success": False}
             db_flow.updated_at = datetime.now(timezone.utc)

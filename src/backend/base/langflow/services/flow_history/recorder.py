@@ -190,7 +190,13 @@ async def write_flow_graph(
     if not started:
         session.add(_checkpoint(flow, base, revision=0))
 
-    recorded = _sequence(derived.operations, flow=flow, actor_id=actor_id, request_id=request_id)
+    recorded = _sequence(
+        derived.operations,
+        flow=flow,
+        actor_id=actor_id,
+        request_id=request_id,
+        cause=options.cause if options else None,
+    )
     for row_operations in _pack_rows(recorded):
         session.add(
             FlowOperationRow(
@@ -305,6 +311,7 @@ def _sequence(
     flow: Flow,
     actor_id: UUID,
     request_id: UUID,
+    cause: str | None = None,
 ) -> list[RecordedOperation]:
     """Split operations to fit the row size limit and number them from the flow's head."""
     bytes_limit = get_settings_service().settings.flow_op_log_row_bytes_limit
@@ -320,6 +327,7 @@ def _sequence(
                     actor_user_id=actor_id,
                     request_id=request_id,
                     operation=part,
+                    cause=cause,
                 )
             )
     return recorded

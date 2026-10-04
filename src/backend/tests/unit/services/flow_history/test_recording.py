@@ -267,6 +267,39 @@ async def test_a_write_without_request_id_gets_one(client: AsyncClient, logged_i
     assert row.request_ids == [request_id]
 
 
+async def test_a_write_cause_is_recorded_on_every_operation_of_that_write(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    target = _graph(_node("a", "hello"), _node("b"), edges=[_edge("e", "a", "b")])
+
+    caused = await _patch(client, logged_in_headers, flow["id"], data=target, cause="upgrade_component")
+    plain = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "bye"), _node("b")))
+
+    assert caused.status_code == plain.status_code == status.HTTP_200_OK
+    operations = [operation for row in await _rows(flow["id"]) for operation in decode_row(row)]
+    first = caused.json()["history"]
+    by_write = {
+        "caused": [op for op in operations if first["start_revision"] <= op.revision <= first["end_revision"]],
+        "plain": [op for op in operations if op.revision > first["end_revision"]],
+    }
+    assert len(by_write["caused"]) == 3
+    assert {op.cause for op in by_write["caused"]} == {"upgrade_component"}
+    assert by_write["plain"]
+    assert {op.cause for op in by_write["plain"]} == {None}
+    stored = [element for row in await _rows(flow["id"]) for element in row.ops["operations"]]
+    assert all("cause" not in element for element in stored if element["revision"] > first["end_revision"])
+
+
+async def test_an_overlong_cause_is_rejected(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+
+    response = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")), cause="x" * 65)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert await _rows(flow["id"]) == []
+    accepted = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")), cause="x" * 64)
+    assert accepted.status_code == status.HTTP_200_OK, accepted.text
+
+
 async def test_rows_respect_the_operation_count_limit(client: AsyncClient, logged_in_headers, row_limits):
     row_limits.flow_op_log_row_ops_limit = 2
     flow = await _create_flow(client, logged_in_headers, _graph(_node("a"), _node("gone")))
