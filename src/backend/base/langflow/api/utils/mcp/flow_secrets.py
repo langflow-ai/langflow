@@ -12,6 +12,7 @@ resolving through the same precedence, so no saved flow changes behavior.
 
 import hashlib
 import re
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
@@ -20,7 +21,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from langflow.logging import logger
-from langflow.services.auth.mcp_encryption import MCP_SECRET_CONFIG_MAPS, decrypt_mcp_config, encrypt_mcp_config
+from langflow.services.auth.mcp_encryption import (
+    MCP_CONFIG_VALUE_MASK,
+    MCP_SECRET_CONFIG_MAPS,
+    decrypt_mcp_config,
+    encrypt_mcp_config,
+    restore_mcp_config_secrets,
+)
 from langflow.services.database.lock_retry import is_database_lock_error
 from langflow.services.database.models import MCPServer
 from langflow.services.deps import get_variable_service
@@ -48,6 +55,16 @@ HEADER_ARG_FLAG = "--headers"
 VARIABLE_PREFIX = "MCP_"
 
 PLACEHOLDER_PATTERN = re.compile(r"^\{\{\s*[A-Za-z_][A-Za-z0-9_\-]*\s*\}\}$")
+
+
+@dataclass(frozen=True)
+class MCPSecretTarget:
+    """An originally masked field and its exact scrubbed graph destination."""
+
+    original_config: dict[str, Any]
+    target_config: dict[str, Any]
+    map_name: str
+    key: str
 
 
 def _is_variable_reference(value: str) -> bool:
@@ -176,6 +193,8 @@ def _iter_mcp_server_fields(flow_data: dict[str, Any] | None):
 
 def extract_and_strip_mcp_secrets(
     flow_data: dict[str, Any] | None,
+    *,
+    masked_targets: list[MCPSecretTarget] | None = None,
 ) -> tuple[list[tuple[str, dict[str, Any]]], dict[str, str]]:
     """Strip MCP secrets from ``flow_data`` in place, returning what has to be stored instead.
 
@@ -197,11 +216,24 @@ def extract_and_strip_mcp_secrets(
         server_name = name if isinstance(name, str) and name else "server"
 
         stripped, config_variables, found = strip_config_secrets(config, server_name)
-        if not found:
+        masked_fields = [
+            (map_name, key)
+            for map_name in MCP_SECRET_CONFIG_MAPS
+            if isinstance(config.get(map_name), dict)
+            for key, entry_value in config[map_name].items()
+            if entry_value == MCP_CONFIG_VALUE_MASK
+        ]
+        if not found and not masked_fields:
             continue
 
         if isinstance(name, str) and name:
             carried.append((name, config))
+            if masked_targets is not None:
+                masked_targets.extend(
+                    MCPSecretTarget(config, stripped, map_name, key) for map_name, key in masked_fields
+                )
+        elif masked_fields:
+            raise HTTPException(status_code=422, detail="A redacted MCP credential requires an existing named server.")
         variables.update(config_variables)
         value["config"] = stripped
 
@@ -220,6 +252,43 @@ def mcp_server_names(flow_data: dict[str, Any] | None) -> set[str]:
     return names
 
 
+def _restore_masked_flow_references(
+    original: dict[str, Any],
+    resolved_config: dict[str, Any],
+    server_name: str,
+    targets: list[MCPSecretTarget],
+    variables: dict[str, str],
+) -> None:
+    """Refresh exact masked graph fields with references, never decrypted literals."""
+    for target in targets:
+        if target.original_config is not original:
+            continue
+        resolved_values = resolved_config.get(target.map_name)
+        target_values = target.target_config.get(target.map_name)
+        if (
+            not isinstance(resolved_values, dict)
+            or not isinstance(target_values, dict)
+            or target.key not in resolved_values
+        ):
+            continue
+        # A retry can change a stored reference to a literal, which needs its
+        # generated alias again. Neither case changes the original carried mask.
+        value = resolved_values[target.key]
+        if not isinstance(value, str) or value == MCP_CONFIG_VALUE_MASK:
+            raise HTTPException(status_code=422, detail="A redacted MCP credential requires an existing string value.")
+        alias = variable_name_for(server_name, target.key)
+        if not value or _is_variable_reference(value):
+            target_values[target.key] = value
+            if variables.get(alias) == MCP_CONFIG_VALUE_MASK:
+                del variables[alias]
+        else:
+            # Management masks cover every map value, even an allowlisted header.
+            # A stored credential must not become plaintext in the returned flow.
+            target_values[target.key] = alias
+            if alias not in variables or variables[alias] == MCP_CONFIG_VALUE_MASK:
+                variables[alias] = value
+
+
 async def stage_mcp_secrets(
     carried: list[tuple[str, dict[str, Any]]],
     variables: dict[str, str],
@@ -227,6 +296,7 @@ async def stage_mcp_secrets(
     session,
     *,
     rotatable_servers: set[str] | None = None,
+    masked_targets: list[MCPSecretTarget] | None = None,
 ) -> None:
     """Stage the carried credential on the caller's session.
 
@@ -244,7 +314,29 @@ async def stage_mcp_secrets(
     if not carried and not variables:
         return
 
-    failed = await _ensure_variables(variables, user_id, session)
+    # A flow can carry the management API's masked config. Resolve masks before
+    # variable creation or rotation so neither credential store receives a mask.
+    resolved_variables = dict(variables)
+    resolved_servers: list[tuple[str, dict[str, Any], MCPServer | None]] = []
+    for name, config in carried:
+        existing = (
+            await session.exec(select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == name))
+        ).first()
+        previous = decrypt_mcp_config(existing.config or {}) if existing is not None else None
+        try:
+            resolved_config = restore_mcp_config_secrets(config, previous)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        _, config_variables, _ = strip_config_secrets(resolved_config, name)
+        for variable_name, value in config_variables.items():
+            if resolved_variables.get(variable_name) == MCP_CONFIG_VALUE_MASK:
+                resolved_variables[variable_name] = value
+        _restore_masked_flow_references(config, resolved_config, name, masked_targets or [], resolved_variables)
+        resolved_servers.append((name, resolved_config, existing))
+    if MCP_CONFIG_VALUE_MASK in resolved_variables.values():
+        raise HTTPException(status_code=422, detail="A redacted MCP credential can only preserve an existing value.")
+
+    failed = await _ensure_variables(resolved_variables, user_id, session)
     if failed:
         raise HTTPException(
             status_code=500,
@@ -254,10 +346,7 @@ async def stage_mcp_secrets(
             ),
         )
 
-    for name, config in carried:
-        existing = (
-            await session.exec(select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == name))
-        ).first()
+    for name, config, existing in resolved_servers:
         if existing is not None:
             # Rotating here only makes sense when the user is editing a server this flow was
             # already bound to. The row is keyed on (user, name) and shared by every flow of
@@ -298,8 +387,9 @@ async def persist_and_strip_mcp_secrets(flow_data: dict[str, Any] | None, user_i
     is dropped rather than referenced, because variables are not resolved inside ``args``.
     Under Langflow the ``mcp_server`` row still serves it; under ``lfx serve`` it is gone.
     """
-    carried, variables = extract_and_strip_mcp_secrets(flow_data)
-    await stage_mcp_secrets(carried, variables, user_id, session)
+    masked_targets: list[MCPSecretTarget] = []
+    carried, variables = extract_and_strip_mcp_secrets(flow_data, masked_targets=masked_targets)
+    await stage_mcp_secrets(carried, variables, user_id, session, masked_targets=masked_targets)
 
 
 async def _ensure_variables(variables: dict[str, str], user_id: UUID, session) -> set[str]:
