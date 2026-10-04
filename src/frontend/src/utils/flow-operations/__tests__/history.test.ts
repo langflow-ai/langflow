@@ -29,7 +29,6 @@ function recorded(
     revision,
     actor: { id: "u1", username: "alice" },
     request_id: `r${revision}`,
-    labels: {},
     operation,
   };
 }
