@@ -345,8 +345,9 @@ class GraphState {
   readonly edgeIdsByNode = new Map<string, Set<string>>();
   readonly baseNodeIds = new Set<string>();
   readonly baseEdgeIds = new Set<string>();
-  private readonly copiedNodeIds = new Set<string>();
-  private readonly copiedEdgeIds = new Set<string>();
+  // Containers this call made, and so may change. Everything else is shared
+  // with the base graph and is never changed.
+  private readonly owned = new WeakSet<object>();
 
   constructor(
     base: unknown,
@@ -400,22 +401,28 @@ class GraphState {
     return [...this.edges.keys()].filter((id) => wanted.has(id));
   }
 
-  /** Copy a node from the base graph before its first change, so the base stays untouched. */
+  /**
+   * A container this call may change: `value` itself if this call made it,
+   * else a shallow copy. Copying only the containers along a written path
+   * keeps the base untouched and shares everything else with it.
+   */
+  readonly own = <T extends object>(value: T): T => {
+    if (this.owned.has(value)) return value;
+    const copy = (Array.isArray(value) ? [...value] : { ...value }) as T;
+    this.owned.add(copy);
+    return copy;
+  };
+
   writableNode(id: string): JsonObject {
-    if (this.baseNodeIds.has(id) && !this.copiedNodeIds.has(id)) {
-      this.nodes.set(id, cloneDeep(this.nodes.get(id)!));
-      this.copiedNodeIds.add(id);
-    }
-    return this.nodes.get(id)!;
+    const node = this.own(this.nodes.get(id)!);
+    this.nodes.set(id, node);
+    return node;
   }
 
   writableEdge(id: string): JsonObject {
-    if (this.baseEdgeIds.has(id) && !this.copiedEdgeIds.has(id)) {
-      const edge = cloneDeep(this.edges.get(id)!);
-      this.edges.set(id, edge);
-      this.copiedEdgeIds.add(id);
-    }
-    return this.edges.get(id)!;
+    const edge = this.own(this.edges.get(id)!);
+    this.edges.set(id, edge);
+    return edge;
   }
 
   finalize(): FlowGraph {
@@ -514,14 +521,28 @@ function selectedList(
   return [list, container];
 }
 
-/** The container holding the last path segment; every earlier segment must exist. */
+type Own = <T extends object>(value: T) => T;
+
+/**
+ * The container holding the last path segment; every earlier segment must
+ * exist. Each container on the way is replaced by `own(container)`, so the
+ * write changes only containers the caller owns.
+ */
 function walkToParent(
   root: JsonObject,
   path: PathSegment[],
   listAt: ListAt,
   context: string,
+  own: Own,
 ): unknown {
   let value: unknown = root;
+  const enter = (container: JsonObject | unknown[], at: string | number) => {
+    const child = (container as Record<string | number, unknown>)[at];
+    if (child === null || typeof child !== "object") return child;
+    const owned = own(child);
+    (container as Record<string | number, unknown>)[at] = owned;
+    return owned;
+  };
   for (let index = 0; index < path.length - 1; index++) {
     const part = path[index];
     if (!isSelector(part)) {
@@ -529,7 +550,7 @@ function walkToParent(
         throw invalidOperation(
           `${context}.path[${index}]: object path part must be an existing string key: ${part}`,
         );
-      value = value[part];
+      value = enter(value, part);
       continue;
     }
     const [list, items] = selectedList(value, path, index, listAt, context);
@@ -538,7 +559,7 @@ function walkToParent(
       throw invalidOperation(
         `${context}.path[${index}]: list item does not exist: ${selectorKey(part)}`,
       );
-    value = items[position];
+    value = enter(items, position);
   }
   return value;
 }
@@ -623,9 +644,10 @@ function applyFieldUpdate(
   listAt: ListAt,
   context: string,
   redacted: boolean,
+  own: Own,
 ): { removed: boolean; value?: unknown } {
   const { path } = update;
-  const parent = walkToParent(root, path, listAt, context);
+  const parent = walkToParent(root, path, listAt, context, own);
   const last = path[path.length - 1];
   let result: { removed: boolean; value?: unknown } = { removed: false };
 
@@ -953,6 +975,7 @@ function applyUpdateNodes(state: GraphState, updates: FieldUpdate[]): Applied {
       listAt,
       context,
       state.options.redacted ?? false,
+      state.own,
     );
     if (removed)
       cascaded.push(...edgesAttachedTo(state, update.id, update.path, value));
@@ -1005,6 +1028,7 @@ function applyUpdateEdges(state: GraphState, updates: FieldUpdate[]): Applied {
       noKeyedLists,
       context,
       state.options.redacted ?? false,
+      state.own,
     );
   });
 
