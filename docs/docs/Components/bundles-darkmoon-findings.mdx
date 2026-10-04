@@ -1,0 +1,48 @@
+---
+title: Darkmoon Findings
+slug: /bundles-darkmoon-findings
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="darkmoon_findings" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Darkmoon Findings** bundle.
+
+## Darkmoon Findings Parser
+
+This component reads the findings JSON of a [Darkmoon](https://github.com/ASCIT31/Dark-Moon) scan, filters it, and summarizes it.
+Darkmoon is an open source (GPL-3.0) autonomous AI penetration testing platform, and a scan writes its findings as JSON.
+
+The component is pure computation over a findings file you already have.
+It makes no network calls, does not call any Darkmoon service, and needs no credentials or API key.
+
+The **Findings** input accepts JSON text, a [`Message`](/data-types#message), a [JSON](/data-types#json) object, or a [`Table`](/data-types#table).
+It accepts a bare array of findings, or an object with a `findings` or `data` array.
+Each finding is expected to follow the Darkmoon finding schema, for example `title`, `severity` (`critical`, `high`, `medium`, `low`, or `info`), `cvss_score`, `category`, `status` (`exploited`, `confirmed`, or `unconfirmed`), and `endpoint`.
+A finding with a missing or unknown severity is kept as `info`, so no finding is silently dropped, and it never trips the severity gate.
+If the input is empty, is not valid JSON, or is not a findings document, the component raises an error that describes the problem.
+
+The component has three outputs:
+
+* **Findings Table** is a [`Table`](/data-types#table) of the kept findings, most severe first, then by CVSS score, with every original field preserved.
+* **Summary** is a [JSON](/data-types#json) object with `total`, `severity_counts`, `highest_severity`, and `gate_failed`.
+* **Report** is a [`Message`](/data-types#message) with a Markdown table of the kept findings, which you can send to a chat output or paste into a ticket.
+
+To stop a flow on a serious finding, set **Fail On Severity** and read the `gate_failed` field of the summary in the rest of the flow, for example with a [**Parser** component](/parser).
+
+### Darkmoon Findings Parser parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Findings (`findings`) | Message, JSON, or Table | Input parameter. The findings JSON of a Darkmoon scan. |
+| Minimum Severity (`min_severity`) | Dropdown | Input parameter. Keep only findings at or above this severity: `info`, `low`, `medium`, `high`, or `critical`. Default: `info`. |
+| Proof Status (`proof_status`) | Dropdown | Input parameter. Keep only findings Darkmoon proved: `any`, `confirmed or exploited`, or `exploited`. Default: `any`. |
+| Fail On Severity (`fail_on`) | Dropdown | Input parameter. Set `gate_failed` when a kept finding is at or above this severity: `none`, `low`, `medium`, `high`, or `critical`. Default: `none`. |
+
+## See also
+
+* [**Parser** component](/parser)
