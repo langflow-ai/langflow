@@ -1289,6 +1289,40 @@ async def test_write_opensearch_rejects_is_reported_without_the_chunks(active_us
 
 
 @pytest.mark.api_key_required
+async def test_opensearch_index_that_does_not_say_its_metric_is_told_apart(active_user, kb_root, tmp_path: Path):  # noqa: ARG001
+    if os.getenv("LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS") != "1" or not os.getenv("OPENSEARCH_URL"):
+        pytest.skip("Set LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS=1 and OPENSEARCH_URL")
+    pytest.importorskip("opensearchpy")
+    # The target index is left from something that stored no vectors, so its mapping has no metric to read.
+    kb_name = f"kb_os_plain_{uuid.uuid4().hex[:6]}"
+    config = {"url_variable": "OPENSEARCH_URL"}
+    record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 2, unit=False)
+    target = create_backend(
+        "opensearch", kb_name=kb_name, kb_path=tmp_path, backend_config=config, user_id=active_user.id
+    )
+    try:
+        await target.ensure_ready()
+        _ = target.vector_store
+        target._os_client.indices.create(index=target._os_index, body={"mappings": {"properties": {}}})
+
+        # Accepting a metric change does not get past it: there is no known change to accept.
+        results = await relocate_knowledge_bases(
+            target_backend_type="opensearch", target_backend_config=config, allow_metric_change=True
+        )
+
+        result = next(r for r in results if r.kb_id == record.id)
+        assert (result.status, result.code, result.copied) == ("failed", "kb_metric_unknown", 0)
+        assert result.reason == (
+            "BackendConfigurationError: Cannot determine the search distance metric "
+            f"for OpenSearch index {target._os_index!r}"
+        )
+        assert (await knowledge_base_service.get_by_id(record.id)).backend_type == "sqlite"
+    finally:
+        await target.delete_collection()
+        await target.teardown()
+
+
+@pytest.mark.api_key_required
 async def test_opensearch_kb_is_not_relocated_onto_its_own_index(active_user, kb_root, tmp_path: Path):  # noqa: ARG001
     if os.getenv("LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS") != "1" or not os.getenv("OPENSEARCH_URL"):
         pytest.skip("Set LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS=1 and OPENSEARCH_URL")
