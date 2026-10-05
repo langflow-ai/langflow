@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
 from lfx.base.knowledge_bases.backends import BackendType, create_backend, get_backend_class
+from lfx.base.knowledge_bases.backends.base import BackendConfigurationError
 from lfx.log.logger import logger
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlmodel import select, update
@@ -387,10 +388,16 @@ async def _metric_change(
     Checking reads every source vector, so it can also find what the copy would: a
     chunk without a vector, or a read that stops short. Each reason sets its own code.
     """
-    before = await source.get_distance_metric()
+    # OpenSearch reads its metric from the index's mapping, and a mapping that does
+    # not give one is what it reports as a configuration error.
+    with _failing_as(result, "kb_metric_unknown", BackendConfigurationError):
+        before = await source.get_distance_metric()
     # An OpenSearch target reads its metric from its cluster, which is the first
     # time a relocation needs the target's settings and a connection to it.
-    with _failing_as(result, "kb_target_unreachable"):
+    with (
+        _failing_as(result, "kb_target_unreachable"),
+        _failing_as(result, "kb_metric_unknown", BackendConfigurationError),
+    ):
         after = await target.get_distance_metric()
     if before is None or after is None or before == after:
         return None

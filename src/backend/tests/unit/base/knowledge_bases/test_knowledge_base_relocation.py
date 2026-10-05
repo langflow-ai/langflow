@@ -40,6 +40,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.knowledge_base_storage.runtime import backend_for_record, operation, unfenced_backend
 from lfx.base.knowledge_bases.backends import BackendType, IngestedDocument, PostgresBackend, create_backend
+from lfx.base.knowledge_bases.backends.base import BackendConfigurationError
 from pydantic import SecretStr
 from typer.testing import CliRunner
 
@@ -767,6 +768,23 @@ async def test_unit_vectors_remain_equivalent_across_supported_metrics(metric_re
     assert await _metric_change(source, target, metric_result, allow=False) is None
     assert any("scores change scale" in warning for warning in metric_result.warnings)
     assert source.closed
+
+
+@pytest.mark.parametrize("store", ["source", "target"])
+async def test_store_that_cannot_say_its_metric_is_told_apart(metric_result, store):
+    class _NoMetric(_MetricBackend):
+        async def get_distance_metric(self) -> str:
+            # As OpenSearch does for an index whose mapping does not give the search field's metric.
+            msg = "Cannot determine the search distance metric"
+            raise BackendConfigurationError(msg)
+
+    source = _NoMetric("l2") if store == "source" else _MetricBackend("l2")
+    target = _NoMetric("cosine") if store == "target" else _MetricBackend("cosine")
+
+    with pytest.raises(BackendConfigurationError):
+        await _metric_change(source, target, metric_result, allow=True)
+
+    assert metric_result.code == "kb_metric_unknown"
 
 
 @pytest.mark.parametrize(
