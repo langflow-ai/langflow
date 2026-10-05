@@ -364,6 +364,11 @@ def _standalone_provider(node_inner: dict) -> str | None:
     return model_component_provider_id(component, module_name=module_name if isinstance(module_name, str) else None)
 
 
+#: A model field declares what kind of model it holds (``ModelInput.model_type``),
+#: in the input's vocabulary. The policy keys models by the catalog's vocabulary.
+_FIELD_MODEL_TYPES = {"language": "llm", "embedding": "embeddings"}
+
+
 def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
     """Collect model providers and selected models from regular and grouped nodes.
 
@@ -409,6 +414,12 @@ def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
                 if not isinstance(field_value, dict) or field_value.get("type") != "model":
                     continue
                 saw_model_field = True
+                # A selection saved from the model picker carries no type of its
+                # own, but the runtime still checks one -- a language model as
+                # ``llm`` -- so a typeless model reported here would be refused by
+                # a typed allowlist the runtime satisfies. The field says which.
+                declared_type = field_value.get("model_type")
+                field_type = _FIELD_MODEL_TYPES.get(declared_type) if isinstance(declared_type, str) else None
                 selections = _model_field_selections(field_value.get("value"))
                 if selections is None:
                     continue
@@ -420,7 +431,11 @@ def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
                     providers.add(provider_id)
                     if model_name is not None:
                         models.add(
-                            ProjectArtifactRequiredModel(provider=provider_id, name=model_name, model_type=model_type)
+                            ProjectArtifactRequiredModel(
+                                provider=provider_id,
+                                name=model_name,
+                                model_type=model_type or field_type,
+                            )
                         )
         # A component holding a model field delegates the choice to that field;
         # only one with no such field speaks for its own provider.

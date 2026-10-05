@@ -55,8 +55,11 @@ def _node(
     return {"data": {"node": inner}}
 
 
-def _model_field(value: object) -> dict:
-    return {"model": {"name": "model", "type": "model", "value": value}}
+def _model_field(value: object, *, model_type: str | None = None) -> dict:
+    field: dict = {"name": "model", "type": "model", "value": value}
+    if model_type is not None:
+        field["model_type"] = model_type
+    return {"model": field}
 
 
 def _graph(nodes: list) -> dict:
@@ -221,6 +224,56 @@ def test_collect_model_requirements_omits_a_type_the_flow_did_not_carry() -> Non
 
     assert requirements.models == (
         ProjectArtifactRequiredModel(provider="anthropic", name="claude-x", model_type=None),
+    )
+
+
+# What the model picker actually saves: provider and name, metadata without a type.
+_PICKER_SELECTION = {
+    "name": "gpt-4o-mini",
+    "provider": "OpenAI",
+    "icon": "OpenAI",
+    "metadata": {
+        "model_class": "ChatOpenAI",
+        "model_name_param": "model",
+        "api_key_param": "api_key",  # pragma: allowlist secret
+    },
+}
+
+
+@pytest.mark.parametrize(
+    ("declared", "expected"),
+    [
+        pytest.param("language", "llm", id="a language model field"),
+        pytest.param("embedding", "embeddings", id="an embedding model field"),
+        pytest.param("something-new", None, id="a type this mapping does not know"),
+    ],
+)
+def test_collect_model_requirements_takes_the_type_from_the_field_when_the_selection_has_none(
+    declared: str, expected: str | None
+) -> None:
+    """The runtime checks a typed key, so a picker selection must not be reported typeless.
+
+    A Language Model is instantiated with ``model_type="llm"``; reporting it with no
+    type would let a typed allowlist (``openai::llm::gpt-4o-mini``) refuse at deploy
+    what the runtime allows at invoke. An unrecognised declaration stays absent.
+    """
+    nodes = [_node(template=_model_field([_PICKER_SELECTION], model_type=declared))]
+
+    requirements = _collect_model_requirements(_graph(nodes))
+
+    assert requirements.models == (
+        ProjectArtifactRequiredModel(provider="openai", name="gpt-4o-mini", model_type=expected),
+    )
+
+
+def test_collect_model_requirements_prefers_the_selections_own_type_over_the_field() -> None:
+    selection = {"name": "text-embed-x", "provider": "OpenAI", "metadata": {"model_type": "embeddings"}}
+    nodes = [_node(template=_model_field([selection], model_type="language"))]
+
+    requirements = _collect_model_requirements(_graph(nodes))
+
+    assert requirements.models == (
+        ProjectArtifactRequiredModel(provider="openai", name="text-embed-x", model_type="embeddings"),
     )
 
 
