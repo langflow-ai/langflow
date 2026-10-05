@@ -11,7 +11,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore, { syncNodeTranslations } from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import type { APIClassType } from "@/types/api";
+import type { APIClassType, APITemplateType } from "@/types/api";
 import type { AllNodeType } from "@/types/flow";
 import {
   isCustomComponentBlockError,
@@ -194,42 +194,38 @@ async function refreshSingleNode(
   const currentModelValue = nodeData.template[modelFieldKey]?.value;
 
   try {
-    const requestPayload = buildRefreshPayload(
-      nodeData.template,
-      flowId,
-      folderId,
-    );
-
-    let response;
-    try {
-      const queryParams = new URLSearchParams();
-      appendProviderScope(queryParams, { flowId });
-      response = await api.post<APIClassType>(
-        `${getURL("CUSTOM_COMPONENT", { update: "update" })}${
-          queryParams.toString() ? `?${queryParams.toString()}` : ""
-        }`,
-        {
-          code: nodeData.template.code?.value,
-          template: requestPayload,
-          field: modelFieldKey,
-          field_value: currentModelValue,
-          tool_mode: nodeData.tool_mode,
-        },
-      );
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-    } catch (e: any) {
-      // Fallback 403 suppression for races the outdated-state guards above miss.
-      if (!allowCustomComponents && isCustomComponentBlockError(e)) {
-        console.warn(
-          `Suppressed 403 for outdated component (node ${node.id}):`,
-          e.response.data.detail,
+    const postRefresh = async (template: APITemplateType, value: unknown) => {
+      try {
+        const queryParams = new URLSearchParams();
+        appendProviderScope(queryParams, { flowId });
+        const response = await api.post<APIClassType>(
+          `${getURL("CUSTOM_COMPONENT", { update: "update" })}${
+            queryParams.toString() ? `?${queryParams.toString()}` : ""
+          }`,
+          {
+            code: nodeData.template.code?.value,
+            template: buildRefreshPayload(template, flowId, folderId),
+            field: modelFieldKey,
+            field_value: value,
+            tool_mode: nodeData.tool_mode,
+          },
         );
-        return;
+        return response.data;
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
+      } catch (e: any) {
+        // Fallback 403 suppression for races the outdated-state guards above miss.
+        if (!allowCustomComponents && isCustomComponentBlockError(e)) {
+          console.warn(
+            `Suppressed 403 for outdated component (node ${node.id}):`,
+            e.response.data.detail,
+          );
+          return undefined;
+        }
+        throw e;
       }
-      throw e;
-    }
+    };
 
-    const responseData = response.data;
+    let responseData = await postRefresh(nodeData.template, currentModelValue);
     if (!responseData?.template) return;
 
     // Validate and correct the model value against available options
@@ -238,6 +234,18 @@ async function refreshSingleNode(
       modelFieldKey,
       providerConfiguration,
     );
+    // validateModelValue returns the template it was given unless it
+    // replaced the model.
+    if (validatedTemplate !== responseData.template) {
+      // The backend set the provider's fields (API key, base URL) for the model
+      // it was sent. Ask again for the replacement, or the node keeps the old
+      // provider's fields until the next open corrects them.
+      responseData = await postRefresh(
+        validatedTemplate,
+        validatedTemplate[modelFieldKey]?.value,
+      );
+      if (!responseData?.template) return;
+    }
 
     // Authorized for the flow/project scope captured at refresh start; a
     // navigation or project move while in flight must not reach a same-id node.
@@ -259,17 +267,18 @@ async function refreshSingleNode(
       return;
     }
 
+    const refreshed = responseData;
     // Runs on every flow open, so the user has not asked for this write.
     setNode(
       node.id,
       (currentNode) =>
-        createUpdatedNode(currentNode, validatedTemplate, responseData.outputs),
+        createUpdatedNode(currentNode, refreshed.template, refreshed.outputs),
       false,
       undefined,
       { autoSave: false },
     );
     if (origin === "load") {
-      recordLoadRefresh(flowId, node.id, nodeData.template, validatedTemplate);
+      recordLoadRefresh(flowId, node.id, nodeData.template, refreshed.template);
     }
   } catch (error) {
     console.warn(`Failed to refresh model node ${node.id}:`, error);

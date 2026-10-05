@@ -76,6 +76,9 @@ export function validateModelValue(
   const currentModel = Array.isArray(currentValue)
     ? currentValue[0]
     : currentValue;
+  // An empty model stays empty, as the backend and the model input leave it:
+  // filling it picks a provider the user never chose (LE-2168).
+  if (!currentModel) return template;
   const currentModelName = currentModel?.name;
   const currentProvider = currentModel?.provider;
   const currentProviderConfiguration = currentProvider
