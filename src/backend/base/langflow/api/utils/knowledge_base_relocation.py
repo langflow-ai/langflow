@@ -218,7 +218,6 @@ async def _relocate_one(
             )
         metric_problem = await _metric_change(source, target, result, allow=allow_metric_change)
         if metric_problem:
-            result.code = "kb_metric_change"
             result.reason = metric_problem
             return result
         if dry_run:
@@ -384,6 +383,9 @@ async def _metric_change(
     so only the scores change scale, which is a warning. For any other vectors the
     ranking may change, and nothing else about the copy would show it, so it is refused
     unless ``allow`` accepts it, which leaves a warning instead.
+
+    Checking reads every source vector, so it can also find what the copy would: a
+    chunk without a vector, or a read that stops short. Each reason sets its own code.
     """
     before, after = await source.get_distance_metric(), await target.get_distance_metric()
     if before is None or after is None or before == after:
@@ -395,6 +397,7 @@ async def _metric_change(
         async for batch in documents:
             for doc in batch:
                 if doc.embedding is None:
+                    result.code = "kb_no_vectors"
                     return "source returned chunks without vectors, so they can only be re-ingested"
                 checked += 1
                 unit_length = unit_length and abs(math.hypot(*doc.embedding) - 1) <= _UNIT_NORM_TOLERANCE
@@ -402,6 +405,7 @@ async def _metric_change(
         if close := getattr(documents, "aclose", None):
             await close()
     if checked != result.source_count:
+        result.code = "kb_read_short"
         return f"read {checked} of {result.source_count} chunks while checking metrics; not relocating"
     if not checked:
         return None
@@ -428,6 +432,7 @@ async def _metric_change(
     else:
         result.flag = "--allow-metric-change"
         how = "The target's metric is fixed; re-run with --allow-metric-change to accept the change"
+    result.code = "kb_metric_change"
     return f"{change}, and {uncertainty}, so nearest-neighbour results may change. {how}"
 
 

@@ -703,6 +703,7 @@ async def test_metric_guard_checks_vectors_after_the_first_batch(metric_result):
 
     assert "not unit length" in reason
     assert "--allow-metric-change" in reason
+    assert metric_result.code == "kb_metric_change"
     assert metric_result.warnings == []
     assert source.closed
 
@@ -718,6 +719,9 @@ async def test_metric_guard_refuses_incomplete_vectors_even_when_change_is_allow
 
     expected = "without vectors" if last_vector is None else "read 100 of 101 chunks"
     assert expected in reason
+    # Neither is a metric change, and accepting one does not get past them.
+    code = "kb_no_vectors" if last_vector is None else "kb_read_short"
+    assert (metric_result.code, metric_result.flag, metric_result.target_config) == (code, None, None)
     assert metric_result.warnings == []
     assert source.closed
 
@@ -732,10 +736,12 @@ async def test_unit_vectors_do_not_make_other_metrics_equivalent(metric_result, 
 
     if allow:
         assert reason is None
+        assert metric_result.code is None
         assert any("may rank unit vectors differently" in warning for warning in metric_result.warnings)
     else:
         assert "may rank unit vectors differently" in reason
         assert "--allow-metric-change" in reason
+        assert metric_result.code == "kb_metric_change"
         assert metric_result.warnings == []
 
 
