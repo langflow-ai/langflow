@@ -391,6 +391,14 @@ class BaseVectorStoreBackend(ABC):
             total += len(batch)
         return total
 
+    async def read_only_count(self) -> int | None:
+        """How many chunks the store holds, read without creating the store or anything in it.
+
+        None when the store does not exist. The default is ``count``, for backends
+        whose count only reads; a backend whose count can create storage overrides it.
+        """
+        return await self.count()
+
     async def iter_documents(  # pragma: no cover — overridden by subclasses
         self,
         *,
