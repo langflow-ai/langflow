@@ -174,9 +174,9 @@ async def _new_project(
     effects as ``POST /projects/``. Raises on unique-constraint / deployment-guard errors;
     callers map those to HTTP status.
 
-    ``owns_transaction=False`` is for callers that create more rows in the same transaction
-    and must be able to roll the project back with them: the MCP registration then flushes
-    instead of committing.
+    ``owns_transaction=False`` is for callers that make further writes in the same transaction
+    and must be able to roll the project back with them: the MCP registration (this helper's
+    only commit) then flushes instead of committing.
 
     ``current_user`` (the full ``User``) is required because the MCP registration and flow-move
     side effects operate on the owning user, not just their id.
