@@ -49,7 +49,7 @@ MIGRATION_RELEASE = "1.11.0"
 # that introduced them (one ``bare_class_name`` row per component).  They stay in
 # ``PROVIDER_DEPS`` so re-running the script keeps their extras managed, but the
 # move + migration-discovery steps are skipped for them.
-PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "mrscraper"})
+PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "mrscraper", "opper"})
 
 # Shared spec for providers whose components go through langchain_community
 # wrappers (the wrapper itself; whatever SDK the wrapper lazy-imports at
@@ -124,6 +124,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "lmstudio": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "langchain-nvidia-ai-endpoints~=1.0.0"],
     "novita": ["langchain-openai>=1.1.6", "requests>=2.32.0"],
     "openrouter": ["langchain-openai>=1.1.6"],
+    "opper": ["langchain-openai>=1.1.6"],
     "xai": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"],
     # --- tranche 4: remaining single-SDK providers (post core-tail audit) ---
     "cleanlab": ["cleanlab-tlm>=1.1.2,<2.0.0"],

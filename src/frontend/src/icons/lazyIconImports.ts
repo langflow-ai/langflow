@@ -403,6 +403,8 @@ export const lazyIconsMapping = {
     })),
   OpenSearch: () =>
     import("@/icons/OpenSearch").then((mod) => ({ default: mod.OpenSearch })),
+  Opper: () =>
+    import("@/icons/Opper").then((mod) => ({ default: mod.OpperIcon })),
   Oracle: () =>
     import("@/icons/Oracle").then((mod) => ({ default: mod.OracleIcon })),
   OrcaRouter: () =>

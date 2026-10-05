@@ -577,6 +577,7 @@ module.exports = {
             "Components/bundles-openai",
             "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
+            "Components/bundles-opper",
             "Components/bundles-oracle",
             "Components/bundles-orcarouter",
             "Components/bundles-paddle",

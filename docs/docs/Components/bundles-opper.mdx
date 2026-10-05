@@ -1,0 +1,38 @@
+---
+title: Opper
+slug: /bundles-opper
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Opper** bundle.
+
+[Opper](https://opper.ai) is an EU-hosted AI gateway with 700+ models from 50+ providers behind one OpenAI-compatible API.
+For more information, see the [Opper documentation](https://docs.opper.ai).
+
+## Opper text generation
+
+This component generates text using models available through the Opper API.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use an Opper model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
+
+For more information, see [Language model components](/components-models).
+
+### Opper text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Opper API key. You can create one in the [Opper platform](https://platform.opper.ai). |
+| model_name | Dropdown | Input parameter. The model to use for chat completion. After you enter an API key, options are fetched live from the Opper model catalog. A bare name such as `claude-sonnet-4-6` is routed across the providers that serve the model. A `provider/model` name such as `anthropic/claude-sonnet-4-6` pins a route. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 2.0]. Default: 0.7. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. |
