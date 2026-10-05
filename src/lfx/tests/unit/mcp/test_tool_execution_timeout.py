@@ -190,7 +190,7 @@ async def test_should_still_retry_when_session_closed_before_the_call(client_cla
     session.call_tool.side_effect = [ClosedResourceError(), result]
     # A real manager would start its cleanup loop, which spins forever on the
     # patched sleep below.
-    manager = MagicMock(_cleanup_session=AsyncMock(), invalidate_server_key=AsyncMock())
+    manager = MagicMock(_cleanup_session=AsyncMock(), discard_session=AsyncMock())
 
     with (
         patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)),
@@ -200,6 +200,7 @@ async def test_should_still_retry_when_session_closed_before_the_call(client_cla
         assert await client._run_tool("create_record", {}) is result
 
     assert session.call_tool.await_count == 2
+    assert manager.discard_session.await_args.args[1] is session
 
 
 @pytest.mark.parametrize(
