@@ -287,6 +287,8 @@ class _PostgresVectorStore(VectorStore):
 class PostgresBackend(BaseVectorStoreBackend):
     """Postgres + pgvector as a Langflow KB backend (environment-driven)."""
 
+    distance_metric = "cosine"  # the HNSW index is built with vector_cosine_ops
+
     backend_type = BackendType.POSTGRES
 
     # ---- config / secret resolution -------------------------------------
@@ -306,6 +308,11 @@ class PostgresBackend(BaseVectorStoreBackend):
             )
             raise ValueError(msg)
         self._resolved_connection_string = _normalize_driver(connection_string)
+
+    @property
+    def store_location(self) -> tuple[Any, ...]:
+        """The resolved database and this KB's table."""
+        return (self._resolved_connection_string, self.table_name)
 
     @property
     def collection_name(self) -> str:

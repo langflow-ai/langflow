@@ -130,6 +130,7 @@ module.exports = {
             "Develop/external-authentication",
             "Develop/authorization",
             "Develop/admin-api-cli",
+            "Develop/connections",
             "Develop/connection-oauth",
             "Develop/entra-app-registration",
           ],
