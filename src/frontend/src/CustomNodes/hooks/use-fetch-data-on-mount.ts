@@ -12,6 +12,7 @@ const useFetchDataOnMount = (
   postTemplateValue: UseMutationResult<
     APIClassType | undefined,
     ResponseErrorDetailAPI,
+    // biome-ignore lint/suspicious/noExplicitAny: legacy mutation payload
     any
   >,
 ) => {
@@ -38,12 +39,20 @@ const useFetchDataOnMount = (
         name === "model" &&
         node.template?.api_key != null &&
         !node.template?.api_key?.value;
+      // A node whose model field refreshes prefills its key through that
+      // refresh. Refreshing the key as well would race it with a different
+      // answer: the backend fills a default model for a key refresh but keeps
+      // an empty model empty, and the two responses merge into a node that
+      // matches neither, which the next open corrects again.
+      const modelPrefillsApiKey =
+        !!node.template?.model?.real_time_refresh ||
+        !!node.template?.model?.refresh_button;
 
       const shouldFetchOnMount =
         isRealtimeOrRefresh &&
         ((!hasOptions && fieldSupportsOptions) ||
           (!fieldSupportsOptions && !!template.value) ||
-          (name === "api_key" && !template.value) ||
+          (name === "api_key" && !template.value && !modelPrefillsApiKey) ||
           needApiKeyPrefill);
 
       if (shouldFetchOnMount) {
