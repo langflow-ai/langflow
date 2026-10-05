@@ -60,6 +60,7 @@ class _PendingAppend:
         self.payload = payload
         self.future = future
 
+
 # Statuses that mean the run is over and the row is retention-eligible. Every
 # other status (QUEUED, IN_PROGRESS, SUSPENDED) is live work: a SUSPENDED run
 # is waiting on a human who may answer weeks later, so age never makes it
