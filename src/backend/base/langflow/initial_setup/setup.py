@@ -36,6 +36,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.api.utils.migration_pause import is_paused
 from langflow.initial_setup.constants import (
     ASSISTANT_FOLDER_DESCRIPTION,
     ASSISTANT_FOLDER_NAME,
@@ -1617,6 +1618,10 @@ async def sync_flows_from_fs():
     storage_service = get_storage_service()
     try:
         while True:
+            # A paused instance takes no change from disk. A file that changed is read once the pause ends.
+            if is_paused():
+                await asyncio.sleep(fs_flows_polling_interval)
+                continue
             try:
                 async with session_scope() as session:
                     stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
