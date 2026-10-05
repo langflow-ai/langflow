@@ -292,13 +292,16 @@ async def _relocate_one(
             return result
         result.status = "relocated"
     except Exception as exc:  # noqa: BLE001 - reported per knowledge base
-        if not result.code and await _deleted(record.id):
+        became = None if result.code else await _row_since_read(record)
+        if became == "deleted":
             # Deleting a knowledge base retires its store before its row, so a copy
             # still reading it fails before the repoint could find the row gone.
             result.code = "kb_deleted"
             result.reason = "knowledge base was deleted during the move"
         else:
-            result.code = result.code or "kb_failed"
+            # The storage lock refuses a row that was rerouted, with the error it has
+            # for any row it cannot use, before the repoint could find it changed.
+            result.code = result.code or ("kb_routing_changed" if became == "changed" else "kb_failed")
             result.reason = _describe(exc)
             await logger.awarning("Relocating knowledge base %s for %s failed: %s", record.name, owner, result.reason)
     finally:
@@ -457,14 +460,18 @@ async def _settled_count(backend: BaseVectorStoreBackend, expected: int) -> int:
     return count
 
 
-async def _deleted(record_id: UUID) -> bool:
-    """Whether the row is gone or on its way out, and False when the database cannot say."""
+async def _row_since_read(record: KnowledgeBaseRecord) -> Literal["deleted", "changed"] | None:
+    """What became of the row since ``record`` was read, and None when nothing did or the database cannot say."""
     try:
         async with session_scope() as session:
-            row = await session.get(KnowledgeBaseRecord, record_id)
+            row = await session.get(KnowledgeBaseRecord, record.id)
     except SQLAlchemyError:
-        return False
-    return row is None or row.storage_state in ("deleting", "deleted")
+        return None
+    if row is None or row.storage_state in ("deleting", "deleted"):
+        return "deleted"
+    # The columns the repoint needs unchanged.
+    routing = ("user_id", "name", "backend_type", "backend_config", "storage_generation", "storage_state")
+    return "changed" if any(getattr(row, column) != getattr(record, column) for column in routing) else None
 
 
 async def _repoint(

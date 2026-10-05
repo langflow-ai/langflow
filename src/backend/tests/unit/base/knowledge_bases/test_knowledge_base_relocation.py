@@ -1208,6 +1208,7 @@ class TestRelocationToPostgresLive:
 
         assert result.status == "failed", (result.source_count, result.copied, result.target_count)
         assert "storage changed" in result.reason
+        assert result.code == "kb_routing_changed", result.reason
         row = await knowledge_base_service.get_by_id(record.id)
         assert (row.backend_type, row.storage_generation) == ("sqlite", 2)
 
