@@ -37,6 +37,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies SerpKite as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "SerpKite",
+          icon: "Search",
+          name: "serpkite",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Serply as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([
