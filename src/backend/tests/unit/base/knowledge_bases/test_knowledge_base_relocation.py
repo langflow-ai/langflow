@@ -1068,10 +1068,13 @@ class TestRelocationToPostgresLive:
         assert result.code == "kb_read_short"
         assert (await knowledge_base_service.get_by_id(record.id)).backend_type == "sqlite"
 
-    async def test_chunk_stored_without_a_vector_is_not_copied(self, active_user, tmp_path):
+    @pytest.mark.parametrize("space_type", ["l2", "cosinesimil"])
+    async def test_chunk_stored_without_a_vector_is_not_copied(self, active_user, tmp_path, space_type):
         if os.getenv("LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS") != "1" or not os.getenv("OPENSEARCH_URL"):
             pytest.skip("Set LANGFLOW_RUN_OPENSEARCH_INTEGRATION_TESTS=1 and OPENSEARCH_URL")
         pytest.importorskip("opensearchpy")
+        # Postgres ranks by cosine. For a target that ranks by l2 the metric check reads the
+        # source and finds the chunk, and for one that ranks by cosine too the copy does.
         kb_name = f"kb_bare_{uuid.uuid4().hex[:6]}"
         source = create_backend(
             "postgres", kb_name=kb_name, kb_path=tmp_path, backend_config={}, user_id=active_user.id
@@ -1091,7 +1094,8 @@ class TestRelocationToPostgresLive:
             )
 
             results = await relocate_knowledge_bases(
-                target_backend_type="opensearch", target_backend_config={"url_variable": "OPENSEARCH_URL"}
+                target_backend_type="opensearch",
+                target_backend_config={"url_variable": "OPENSEARCH_URL", "space_type": space_type},
             )
 
             result = next(r for r in results if r.kb_id == record.id)
