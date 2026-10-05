@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from collections import Counter
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -303,6 +304,71 @@ def _add_commands_to_tool_description(tool_description: str, commands: str):
     return f"very_time you see one of those commands {commands} run the tool. tool description is {tool_description}"
 
 
+_MAX_TOOL_NAME_LENGTH = 64
+_MAX_INSTANCE_SUFFIX_LENGTH = 32
+
+
+def _instance_suffix(tool: BaseTool, position: int) -> str:
+    """Identify the component instance a tool runs.
+
+    Falls back to the tool's position for tools built outside
+    ``ComponentToolkit``, which carry no source component.
+    """
+    source_id = (getattr(tool, "metadata", None) or {}).get("source_id")
+    slug = re.sub(r"[^a-zA-Z0-9_]", "_", str(source_id or "")).strip("_")
+    return slug[-_MAX_INSTANCE_SUFFIX_LENGTH:] if slug else str(position)
+
+
+def _rename_tool(tool: BaseTool, name: str) -> None:
+    """Rename a tool, carrying ``tags[0]`` along.
+
+    ``tags[0]`` is the tool's identity for the Actions metadata merge and for
+    HITL gating, so the two must never drift apart.
+    """
+    tool.name = name
+    tool.tags = [name]
+
+
+def disambiguate_tool_names(tools: list[BaseTool]) -> list[BaseTool]:
+    """Give same-named tools from different component instances distinct names.
+
+    ``_MAX_TOOL_NAME_LENGTH`` is the ceiling OpenAI and Anthropic enforce on a
+    tool name; the instance suffix keeps a node id's unique tail.
+
+    ``_derive_tool_name`` names a tool from its component's class and output
+    method, both class-level constants. Two nodes of the same type wired as
+    separate tools into one Agent therefore register under the identical name
+    and the LLM cannot address them individually: every call lands on whichever
+    one won the collision. A toolkit only ever sees one component, so the agent
+    aggregating the connected tools is the first place the whole set is visible.
+
+    Only names that actually collide are rewritten. A tool name is the key a
+    saved flow's ``tools_metadata`` rows match on, so renaming an uncontested
+    tool would discard the user's Actions-panel edits -- and drop the tool
+    itself, since ``update_tools_metadata`` keeps only the tools it finds in
+    that metadata.
+    """
+    named = [tool for tool in tools if isinstance(getattr(tool, "name", None), str)]
+    duplicated = {name for name, count in Counter(tool.name for tool in named).items() if count > 1}
+    if not duplicated:
+        return tools
+
+    taken = {tool.name for tool in named}
+    for position, tool in enumerate(named, start=1):
+        if tool.name not in duplicated:
+            continue
+        suffix = _instance_suffix(tool, position)
+        base = tool.name[: _MAX_TOOL_NAME_LENGTH - len(suffix) - 1]
+        candidate = f"{base}_{suffix}"
+        ordinal = 2
+        while candidate in taken:
+            candidate = f"{base[: len(base) - len(str(ordinal)) - 1]}_{suffix}_{ordinal}"
+            ordinal += 1
+        taken.add(candidate)
+        _rename_tool(tool, _format_tool_name(candidate))
+    return tools
+
+
 class ComponentToolkit:
     def __init__(self, component: Component, metadata: pd.DataFrame | None = None):
         self.component = component
@@ -401,6 +467,11 @@ class ComponentToolkit:
             name = _derive_tool_name(self.component, f"{output.method}".strip("."), eligible_outputs)
             formatted_name = _format_tool_name(name)
             event_manager = self.component.get_event_manager()
+            tool_metadata = {
+                "display_name": formatted_name,
+                "display_description": build_description(self.component, output),
+                "source_id": self.component.get_id(),
+            }
             if asyncio.iscoroutinefunction(output_method):
                 tools.append(
                     ComponentStructuredTool(
@@ -413,10 +484,7 @@ class ComponentToolkit:
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
-                        metadata={
-                            "display_name": formatted_name,
-                            "display_description": build_description(self.component, output),
-                        },
+                        metadata=dict(tool_metadata),
                     )
                 )
             else:
@@ -429,10 +497,7 @@ class ComponentToolkit:
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
-                        metadata={
-                            "display_name": formatted_name,
-                            "display_description": build_description(self.component, output),
-                        },
+                        metadata=dict(tool_metadata),
                     )
                 )
         if len(tools) == 1 and (tool_name or tool_description):
