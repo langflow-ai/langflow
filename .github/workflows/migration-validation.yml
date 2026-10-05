@@ -6,6 +6,8 @@ on:
       - 'src/backend/base/langflow/alembic/**'
       - 'src/backend/base/langflow/services/database/models/**'
       - 'src/backend/base/langflow/services/database/service.py'
+      - 'src/backend/base/langflow/services/database/sqlite_to_postgres.py'
+      - 'src/backend/tests/unit/services/database/test_sqlite_to_postgres.py'
       - 'src/backend/base/langflow/services/connection/**'
       - 'src/backend/base/langflow/api/v1/connections.py'
       - 'src/backend/tests/unit/alembic/**'
@@ -17,6 +19,7 @@ on:
       - 'src/backend/base/langflow/services/job_queue/**'
       - 'src/backend/tests/unit/background_execution/**'
       - 'src/backend/tests/unit/services/database/models/flow_version/**'
+      - 'src/backend/tests/unit/services/jobs/**'
 
 jobs:
   model-migration-consistency:
@@ -71,6 +74,12 @@ jobs:
         run: |
           uv run pytest -c pyproject.toml src/backend/tests/unit/services/database/models/flow_version/test_delete_attachment_concurrency.py -x -v
 
+      - name: Check idempotent job creation concurrency
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+        run: |
+          uv run pytest -c pyproject.toml src/backend/tests/unit/services/jobs/test_jobs_dedupe_concurrency.py -x -v
+
       # Unit-test jobs have no database URI, so they run only the SQLite arm of
       # backend-parametrized migration tests. Partial unique indexes are written
       # per backend, so run the PostgreSQL arm here against the job's database.
@@ -87,6 +96,12 @@ jobs:
           uv run pytest \
             src/backend/tests/unit/alembic/test_connection_oauth_migration.py \
             src/backend/tests/unit/alembic/test_connection_oauth_workers.py -x -v
+
+      - name: Run SQLite to PostgreSQL conversion tests
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+        run: |
+          uv run pytest src/backend/tests/unit/services/database/test_sqlite_to_postgres.py -x -v
 
   background-real-service:
     name: Background Execution Real-Service Tests (real Postgres + Redis)

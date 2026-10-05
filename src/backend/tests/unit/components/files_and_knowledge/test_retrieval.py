@@ -15,7 +15,7 @@ The rewritten suite covers the actual retrieval contract:
   present and the string doesn't map to a current catalog entry.
 * ``retrieve_data`` orchestrating ``get_embeddings`` +
   backend-registry ``similarity_search`` against the right KB path
-  (resolved only when the row says local Chroma).
+  through the owning knowledge base's guarded storage generation.
 * User-scoping + required-field guards that make retrieval safe
   across sessions.
 """
@@ -30,7 +30,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from lfx.base.knowledge_bases.backends import ChromaLocalBackend
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.components.files_and_knowledge.retrieval import KnowledgeBaseComponent
 
@@ -63,10 +62,11 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         return KnowledgeBaseComponent
 
     @pytest.fixture(autouse=True)
-    def mock_knowledge_base_path(self, tmp_path, monkeypatch):
+    def mock_knowledge_base_path(self, tmp_path, monkeypatch, active_user):  # noqa: ARG002 - orders app startup
         """Pin the KB root at a fresh tmp dir for every test.
 
-        Local-Chroma path resolution goes through
+        The user fixture starts the app before we patch its settings service.
+        Local storage path resolution goes through
         ``KBStorageHelper.get_root_path``, which reads the setting live, so the
         setting is what has to move — patching the lfx module-level cache alone
         would leave the two disagreeing.
@@ -78,18 +78,15 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
             yield
 
     @pytest.fixture
-    async def default_kwargs(self, tmp_path, active_user):
+    async def default_kwargs(self, tmp_path, active_user, mock_knowledge_base_path):  # noqa: ARG002 - orders storage root
         """Seed the KB's ``knowledge_base`` row — the sole authority for its config.
 
-        The directory is created too because this KB is local-Chroma backed and
-        that is where its vectors would live; no metadata sidecar is written,
-        because nothing reads one.
+        Creation initializes the UUID-routed SQLite store. No metadata sidecar
+        is written because the database row owns the routing information.
         """
         from langflow.api.utils import knowledge_base_service
 
         kb_name = "test_kb"
-        (tmp_path / active_user.username / kb_name).mkdir(parents=True, exist_ok=True)
-
         await knowledge_base_service.create_record(
             user_id=active_user.id,
             name=kb_name,
@@ -404,27 +401,35 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
                 await component.retrieve_data()
 
     @pytest.mark.parametrize("knowledge_base", ["../../outside", "../victim/secret_kb"])
-    async def test_retrieve_data_rejects_paths_outside_the_current_user_directory(
+    async def test_retrieve_data_uses_uuid_storage_for_path_like_names(
         self, component_class, default_kwargs, active_user, knowledge_base
     ):
-        """A traversing KB *name* is refused when its path is resolved.
-
-        A name like this has no row, so retrieval normally stops at "no
-        metadata" without ever building a path. Seeding a row for the traversing
-        name is what forces path resolution to run — and it must still refuse.
-        """
+        """An existing display name never controls a SQLite storage path."""
         from langflow.api.utils import knowledge_base_service
+        from langflow.services.deps import session_scope
 
-        await knowledge_base_service.create_record(
+        record = await knowledge_base_service.create_record(
             user_id=active_user.id,
-            name=knowledge_base,
+            name="historical_path_like_name",
             model_selection={"name": "m", "provider": "HuggingFace"},
         )
+        # Represent an existing malformed name without bypassing validation
+        # in the production create path. Its UUID-routed store stays fixed.
+        record.name = knowledge_base
+        async with session_scope() as session:
+            session.add(record)
+            await session.commit()
         default_kwargs["knowledge_base"] = knowledge_base
         component = component_class(**default_kwargs)
 
-        with pytest.raises(ValueError, match="KB path escapes root directory"):
-            await component.retrieve_data()
+        with patch(
+            "lfx.components.files_and_knowledge.knowledge.get_embeddings",
+            return_value=_DeterministicEmbeddings(),
+        ):
+            result = await component.retrieve_data()
+        assert result.empty
+        root = Path(default_kwargs["kb_root_path"])
+        assert (root / "sqlite" / str(active_user.id) / str(record.id) / "1" / "vectors.sqlite3").is_file()
 
     async def test_retrieve_data_routes_query_with_scores(
         self,
@@ -463,7 +468,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
                 return_value=MagicMock(),
             ),
             patch(
-                "lfx.components.files_and_knowledge.knowledge.create_backend",
+                "langflow.api.utils.kb_helpers.backend_for_name",
                 return_value=backend_instance,
             ),
         ):
@@ -513,7 +518,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
                 return_value=MagicMock(),
             ),
             patch(
-                "lfx.components.files_and_knowledge.knowledge.create_backend",
+                "langflow.api.utils.kb_helpers.backend_for_name",
                 return_value=backend_instance,
             ),
         ):
@@ -531,8 +536,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         """Teardown on error.
 
         The backend's ``teardown`` must run even when
-        ``similarity_search`` blows up — otherwise Chroma's SQLite
-        handle leaks between tests.
+        ``similarity_search`` blows up, so backend resources are released.
         """
         component = component_class(**default_kwargs)
 
@@ -554,7 +558,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
                 return_value=MagicMock(),
             ),
             patch(
-                "lfx.components.files_and_knowledge.knowledge.create_backend",
+                "langflow.api.utils.kb_helpers.backend_for_name",
                 return_value=backend_instance,
             ),
         ):
@@ -595,7 +599,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
                 return_value=MagicMock(),
             ) as mock_get_embeddings,
             patch(
-                "lfx.components.files_and_knowledge.knowledge.create_backend",
+                "langflow.api.utils.kb_helpers.backend_for_name",
                 return_value=backend_instance,
             ),
         ):
@@ -612,25 +616,49 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         assert call_kwargs["chunk_size"] == 1000
         assert call_kwargs["user_id"] == default_kwargs["_user_id"]
 
-    # ---- include_embeddings against a real Chroma backend ------------
+    # ---- include_embeddings against a real SQLite backend ------------
+
+    async def test_embedding_join_stops_and_closes_after_all_hits(self, component_class, default_kwargs):
+        """Close the iterator as soon as all search hits have their stored vectors."""
+        from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+        default_kwargs["search_query"] = "selected"
+        default_kwargs["include_embeddings"] = True
+        backend = MagicMock()
+        backend.similarity_search = AsyncMock(return_value=[(Document(page_content="selected", metadata={}), 0.0)])
+        backend.teardown = AsyncMock()
+        closed = []
+
+        async def batches(**_kwargs):
+            try:
+                yield [IngestedDocument(id="selected", content="selected", metadata={}, embedding=[1.0, 0.0])]
+                pytest.fail("Embedding lookup scanned past all requested hits")
+            finally:
+                closed.append(True)
+
+        backend.iter_documents = batches
+        component = component_class(**default_kwargs)
+        with (
+            patch(
+                "lfx.components.files_and_knowledge.knowledge.get_embeddings", return_value=_DeterministicEmbeddings()
+            ),
+            patch("langflow.api.utils.kb_helpers.backend_for_name", AsyncMock(return_value=backend)),
+        ):
+            result = await component.retrieve_data()
+        assert result.to_dict("records")[0]["_embeddings"] == [1.0, 0.0]
+        assert closed == [True]
 
     async def _retrieve_against_real_kb(self, component_class, default_kwargs, active_user, docs):
-        """Populate a real Chroma KB with ``docs`` then run ``retrieve_data``.
+        """Exercise guarded SQLite ingestion, reopen, search and embedding join."""
+        from langflow.api.utils.kb_helpers import backend_for_name
 
-        Uses an in-process Chroma backend (no mocks for the vector store) so the
-        embedding-join path — ``similarity_search`` + ``iter_documents`` — is
-        exercised end to end. Only the user/session/path/embedding-config plumbing
-        is patched, mirroring the other ``retrieve_data`` tests in this module.
-        """
-        kb_path = Path(default_kwargs["kb_root_path"]) / active_user.username / default_kwargs["knowledge_base"]
-        kb_path.mkdir(parents=True, exist_ok=True)
         embeddings = _DeterministicEmbeddings()
 
         # Pre-populate the KB through the real backend, then tear it down so the
         # retrieval pass opens its own client (matches production lifecycle).
-        seed_backend = ChromaLocalBackend(
-            kb_name=default_kwargs["knowledge_base"],
-            kb_path=kb_path,
+        seed_backend = await backend_for_name(
+            active_user.id,
+            default_kwargs["knowledge_base"],
             embedding_function=embeddings,
         )
         try:
@@ -638,34 +666,11 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         finally:
             await seed_backend.teardown()
 
-        def _make_backend(*_args, **kwargs):
-            return ChromaLocalBackend(
-                kb_name=kwargs.get("kb_name", default_kwargs["knowledge_base"]),
-                kb_path=kwargs.get("kb_path", kb_path),
-                embedding_function=embeddings,
-            )
-
-        user_record = MagicMock()
-        user_record.username = active_user.username
-
         component = component_class(**default_kwargs)
-        with (
-            patch("lfx.components.files_and_knowledge.knowledge.session_scope") as mock_session_scope,
-            patch(
-                "langflow.services.database.models.user.crud.get_user_by_id",
-                return_value=user_record,
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.knowledge.get_embeddings",
-                return_value=embeddings,
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.knowledge.create_backend",
-                side_effect=_make_backend,
-            ),
+        with patch(
+            "lfx.components.files_and_knowledge.knowledge.get_embeddings",
+            return_value=embeddings,
         ):
-            mock_session_scope.return_value.__aenter__ = AsyncMock(return_value=AsyncMock())
-            mock_session_scope.return_value.__aexit__ = AsyncMock(return_value=False)
             return await component.retrieve_data()
 
     async def test_include_embeddings_populates_for_upload_style_kb(self, component_class, default_kwargs, active_user):

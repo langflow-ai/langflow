@@ -7,6 +7,7 @@ method. These tests pin down what it must catch, so it cannot quietly go vacuous
 import socket
 
 import pytest
+from lfx.base.models.unified_models.credentials import get_all_variables_for_provider
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
 from lfx.schema.message import Message
@@ -72,6 +73,20 @@ def harness():
 
 async def test_passes_when_every_output_returns_a_value(harness):
     await harness.test_latest_version(_EchoComponent, {"text": "hi"}, {})
+
+
+async def test_provider_configuration_does_not_query_the_database_without_a_user(harness, monkeypatch):
+    def unexpected_database_lookup():
+        pytest.fail("The offline component harness must not query user variables")
+
+    base_url = "https://provider.example/v1"
+    monkeypatch.setenv("OPENAI_BASE_URL", base_url)
+    monkeypatch.setattr("lfx.base.models.unified_models.credentials.session_scope", unexpected_database_lookup)
+    component = await harness.component_setup(_EchoComponent, {"text": "hi"})
+
+    variables = get_all_variables_for_provider(component.user_id, "OpenAI")
+
+    assert variables["OPENAI_BASE_URL"] == base_url
 
 
 async def test_fails_when_an_output_returns_none(harness):

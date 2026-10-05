@@ -303,7 +303,7 @@ class DBProviderInput(BaseInputMixin, InputTraceMixin, ToolModeMixin):
 
     Default is intentionally an empty dict so the frontend can populate
     it from the user's configured DB Provider on first render. Falls
-    back to Chroma server-side via ``_normalize_backend_selection``.
+    back to SQLite server-side via ``_normalize_backend_selection``.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.DB_PROVIDER

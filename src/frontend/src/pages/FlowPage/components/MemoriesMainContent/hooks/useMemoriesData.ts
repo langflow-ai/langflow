@@ -127,6 +127,7 @@ export function useMemoriesData({
     isFetchingNextMessagesPage,
     refetchMessages,
   } = useMemoryDocuments({
+    storageState: memory?.storage_state,
     memoryId: selectedMemoryId,
     sessionId: effectiveSessionId,
     memorySessions,

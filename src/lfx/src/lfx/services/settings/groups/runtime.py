@@ -349,6 +349,16 @@ class RuntimeSettings(BaseModel):
     max_file_size_upload: int = 1024
     """The maximum file size for the upload in MB."""
 
+    url_component_max_response_bytes: int = Field(default=10 * 1024 * 1024, gt=0)
+    """Maximum encoded or decoded size, in bytes, of a single response body the URL component
+    will read (LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES). Bounds memory use against a huge or
+    endless page; raise it only if legitimate pages are being rejected."""
+
+    url_component_max_total_bytes: int = Field(default=100 * 1024 * 1024, gt=0)
+    """Maximum total bytes the URL component may read across every URL and crawled link of one
+    fetch (LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES). Each response counts the larger of its
+    encoded and decoded sizes, including rejected responses. The crawl stops once this budget is spent."""
+
     max_ingestion_timeout_secs: int = 600
 
     celery_enabled: bool = False

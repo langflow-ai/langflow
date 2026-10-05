@@ -61,6 +61,10 @@ class MemoryBaseCreate(MemoryBaseBase):
 
     @model_validator(mode="after")
     def preprocessing_defaults(self) -> "MemoryBaseCreate":
+        """Validate storage selection and populate preprocessing defaults when enabled."""
+        if self.backend_type not in (None, "sqlite", "postgres", "opensearch"):
+            msg = "Memory bases support SQLite Local, pgVector and OpenSearch"
+            raise ValueError(msg)
         if self.preprocessing and not self.preproc_model:
             msg = "preproc_model is required when preprocessing is enabled"
             raise ValueError(msg)
@@ -91,8 +95,11 @@ class MemoryBaseRead(MemoryBaseBase):
     # ``backend_type="chroma"``, discriminated by ``backend_config["mode"]``); it
     # carries only variable names / routing flags, never secrets. Defaults suit a
     # Memory Base with no resolvable KB row.
-    backend_type: str = "chroma"
+    backend_type: str = "sqlite"
     backend_config: dict = Field(default_factory=dict)
+    storage_state: str = "ready"
+    storage_kb_id: UUID | None = None
+    active_migration_id: UUID | None = None
 
 
 class MemoryBaseSessionBase(SQLModel):
@@ -116,6 +123,9 @@ class MemoryBaseSession(MemoryBaseSessionBase, table=True):  # type: ignore[call
     )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    purge_pending: bool = Field(
+        default=False, sa_column=Column(sa.Boolean(), nullable=False, server_default=sa.false())
+    )
 
     # FK defined via sa_column so Alembic sees the same shape as the migration:
     # inline ForeignKey on the column with ondelete="CASCADE".

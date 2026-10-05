@@ -17,7 +17,7 @@ _REQUIRED_BACKEND_CONFIG: dict[str, tuple[str, ...]] = {}
 # be read back, but creating a new KB on a stubbed backend would just
 # fail at ingest time. Reject up front instead.
 _CREATION_ALLOWED_BACKENDS: frozenset[str] = frozenset(
-    {BackendType.CHROMA.value, BackendType.OPENSEARCH.value, BackendType.POSTGRES.value}
+    {BackendType.SQLITE.value, BackendType.OPENSEARCH.value, BackendType.POSTGRES.value}
 )
 
 
@@ -40,8 +40,11 @@ class KnowledgeBaseInfo(BaseModel):
     last_job_id: str | None = None
     source_types: list[str] = Field(default_factory=list)
     column_config: list[dict] | None = None
-    backend_type: str = "chroma"
+    backend_type: str = "sqlite"
     backend_config: dict[str, Any] = Field(default_factory=dict)
+    storage_state: str = "ready"
+    storage_generation: int = 1
+    active_migration_id: str | None = None
 
 
 class BulkDeleteRequest(BaseModel):
@@ -61,8 +64,8 @@ class CreateKnowledgeBaseRequest(BaseModel):
     model_selection: dict[str, Any] | list[dict[str, Any]] | None = None
     column_config: list[ColumnConfigItem] | None = None
     # ``None`` means "auto" — the server resolves the default backend at create
-    # time (pgVector when PGVECTOR_CONNECTION_STRING is set, else Chroma). An
-    # explicit value (chroma / opensearch / postgres) is validated and honored.
+    # time (pgVector when PGVECTOR_CONNECTION_STRING is set, else SQLite). An
+    # explicit value (sqlite / opensearch / postgres) is validated and honored.
     backend_type: str | None = None
     backend_config: dict[str, Any] = Field(default_factory=dict)
 
@@ -114,7 +117,8 @@ class TestBackendConnectionRequest(BaseModel):
     @field_validator("backend_type")
     @classmethod
     def validate_backend_type(cls, value: str) -> str:
-        normalized = value or BackendType.CHROMA.value
+        """Reject unsupported and retired providers before connection testing."""
+        normalized = value or BackendType.SQLITE.value
         try:
             backend = BackendType(normalized).value
         except ValueError as exc:

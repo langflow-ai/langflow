@@ -32,10 +32,9 @@ class FakeSharedComponentCache:
 
 class TestSQLComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
-    def test_db(self):
+    def test_db(self, tmp_path: Path):
         """Fixture that creates a temporary SQLite database for testing."""
-        test_data_dir = Path(__file__).parent.parent.parent.parent / "data"
-        db_path = test_data_dir / "test.db"
+        db_path = tmp_path / "test.db"
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute("""

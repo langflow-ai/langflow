@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 from lfx.base.knowledge_bases.backends import (
     BackendType,
     BaseVectorStoreBackend,
-    ChromaBackend,
+    SQLiteBackend,
     create_backend,
     get_backend_class,
     register_backend,
@@ -35,15 +35,15 @@ class _DummyBackend(BaseVectorStoreBackend):
 class TestBackendRegistry:
     """The registry is the swap point for the supported DB backends.
 
-    Chroma, OpenSearch, and Postgres (pgvector) are registered. The Astra /
+    SQLite, OpenSearch, and Postgres (pgvector) are registered. The Astra /
     MongoDB backends ship as stubs that exist for type and enum compatibility
     but are intentionally not in the registry, so ``create_backend('astra')``
     (etc.) raises.
     """
 
-    def test_chroma_registered_by_default(self):
-        assert BackendType.CHROMA in registered_backends()
-        assert get_backend_class(BackendType.CHROMA) is ChromaBackend
+    def test_sqlite_registered_by_default(self):
+        assert BackendType.SQLITE in registered_backends()
+        assert get_backend_class(BackendType.SQLITE) is SQLiteBackend
 
     def test_opensearch_registered_by_default(self):
         # OpenSearch is the second supported backend in this phase.
@@ -64,20 +64,15 @@ class TestBackendRegistry:
         backends = registered_backends()
         assert backends == tuple(sorted(backends, key=lambda bt: bt.value))
 
-    def test_create_backend_returns_chroma_instance(self, tmp_path: Path):
-        backend = create_backend(
-            BackendType.CHROMA,
-            kb_name="test_kb",
-            kb_path=tmp_path,
-        )
-        assert isinstance(backend, ChromaBackend)
-        assert isinstance(backend, BaseVectorStoreBackend)  # Confirms ABC contract
-        assert backend.kb_name == "test_kb"
-        assert backend.kb_path == tmp_path
+    def test_create_backend_returns_sqlite_instance(self, tmp_path: Path):
+        from uuid import uuid4
 
-    def test_create_backend_accepts_string_identifier(self, tmp_path: Path):
-        backend = create_backend("chroma", kb_name="kb2", kb_path=tmp_path)
-        assert isinstance(backend, ChromaBackend)
+        from lfx.base.knowledge_bases.backends.sqlite import SQLiteStorageContext
+
+        context = SQLiteStorageContext(tmp_path, uuid4(), uuid4())
+        backend = create_backend("sqlite", kb_name="test_kb", storage_context=context)
+        assert isinstance(backend, SQLiteBackend)
+        assert backend.kb_name == "test_kb"
 
     def test_resolve_backend_type_rejects_garbage_strings(self):
         with pytest.raises(ValueError, match="Unknown vector-store backend"):
@@ -85,11 +80,11 @@ class TestBackendRegistry:
 
     def test_register_backend_is_idempotent(self):
         # Re-registering the same class is a no-op.
-        register_backend(BackendType.CHROMA, ChromaBackend)
-        assert get_backend_class(BackendType.CHROMA) is ChromaBackend
+        register_backend(BackendType.SQLITE, SQLiteBackend)
+        assert get_backend_class(BackendType.SQLITE) is SQLiteBackend
 
     def test_register_backend_rejects_conflicting_registration(self):
         # Guards against accidental collisions when two modules both try to
         # register under the same identifier.
         with pytest.raises(ValueError, match="already registered"):
-            register_backend(BackendType.CHROMA, _DummyBackend)
+            register_backend(BackendType.SQLITE, _DummyBackend)

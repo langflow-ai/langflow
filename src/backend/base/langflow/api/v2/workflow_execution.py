@@ -888,6 +888,9 @@ async def execute_sync_workflow(
     warnings = [warning] if warning else []
     # user_id stays the executing service account (flow fetch / resume rely on it); the end
     # user is recorded in job_metadata so status/stop isolate to it. See F8 / create_job.
+    # The run starts right below in this request, so the row is born IN_PROGRESS rather
+    # than QUEUED and then flipped: one statement less, and the startup sweep, which
+    # re-enqueues QUEUED workflow rows as background runs, never sees a sync run QUEUED.
     await job_service.create_job(
         job_id=job_id,
         flow_id=flow_id_str,
@@ -895,6 +898,7 @@ async def execute_sync_workflow(
         end_user_id=parsed.end_user_id,
         # Keep the notice available to GET status even when sync result caching is off.
         initial_metadata={"component_substitution_warning": warning} if warning else None,
+        status=JobStatus.IN_PROGRESS,
     )
     _sync_run_paused = False
     _sync_run_success = False
@@ -912,6 +916,7 @@ async def execute_sync_workflow(
             task_result, execution_session_id = await job_service.execute_with_status(
                 job_id=job_id,
                 run_coro_func=run_graph_internal,
+                mark_in_progress=False,
                 graph=graph,
                 flow_id=flow_id_str,
                 session_id=session_id,
