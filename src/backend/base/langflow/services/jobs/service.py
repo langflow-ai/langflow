@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 from lfx.graph.exceptions import GraphPausedException
 from lfx.observability import inject_trace_carrier
 from sqlalchemy import false, update
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.exc import DBAPIError, IntegrityError, OperationalError, StatementError
 from sqlmodel import col, func, select
 
 from langflow.services.base import Service
@@ -547,6 +547,17 @@ class JobService(Service):
                     item.future.cancel()
             raise
         except Exception as exc:  # noqa: BLE001 — every pending future must resolve, success or failure
+            if isinstance(exc, StatementError) and not isinstance(exc, DBAPIError):
+                by_job: dict[UUID, list[_PendingAppend]] = {}
+                for item in items:
+                    by_job.setdefault(item.job_id, []).append(item)
+                if len(by_job) > 1:
+                    # Parameter serialization failed before a database write. Isolate
+                    # the malformed job after rollback so healthy jobs still commit.
+                    # Never replay a batch after an ambiguous database commit error.
+                    for job_items in by_job.values():
+                        await self._flush_append_batch(job_items)
+                    return
             for item in items:
                 if not item.future.done():
                     item.future.set_exception(exc)
