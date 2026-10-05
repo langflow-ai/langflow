@@ -73,9 +73,22 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
             ("True", ["aaa", ".bbb", ".ccc", ".ddd"]),
             ("Start", ["aaa", ".bbb", ".ccc", ".ddd"]),
             ("End", ["aaa.", "bbb.", "ccc.", "ddd"]),
+            ("end", ["aaa.", "bbb.", "ccc.", "ddd"]),
+            (True, ["aaa", ".bbb", ".ccc", ".ddd"]),
+            (False, ["aaa", "bbb", "ccc", "ddd"]),
+            ("", ["aaa", "bbb", "ccc", "ddd"]),
+            (None, ["aaa", "bbb", "ccc", "ddd"]),
         ],
     )
     def test_keep_separator(self, keep_separator, expected):
+        component = self._keep_separator_component(keep_separator)
+
+        result = component.split_text()
+
+        assert result["text"].tolist() == expected
+
+    @staticmethod
+    def _keep_separator_component(keep_separator):
         component = SplitTextComponent()
         component.set_attributes(
             {
@@ -87,10 +100,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
                 "text_key": "text",
             }
         )
-
-        result = component.split_text()
-
-        assert result["text"].tolist() == expected
+        return component
 
     def test_split_text_with_overlap(self):
         """Test text splitting with overlap."""
