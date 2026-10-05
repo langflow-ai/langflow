@@ -148,12 +148,13 @@ async def test_identified_run_stamps_message_user_id_over_http(
 
     _enable_serving(monkeypatch)
     uid = uuid4()  # a UUID-shaped end-user id is stamped directly
-    resp = await _run(client, simple_api_test["id"], created_api_key.api_key, session_id="chat-1", end_user=str(uid))
+    flow_id = simple_api_test["id"]
+    resp = await _run(client, flow_id, created_api_key.api_key, session_id="chat-1", end_user=str(uid))
     assert resp.status_code == status.HTTP_200_OK, resp.text
     scoped_session = resp.json()["session_id"]
     assert scoped_session == f"{uid}::chat-1"
 
     # Stored under the end user...
-    assert len(await aget_messages(session_id=scoped_session, user_id=uid)) >= 1
+    assert len(await aget_messages(session_id=scoped_session, flow_id=flow_id, user_id=uid)) >= 1
     # ...and NOT under the service account (the api-key owner = SID).
-    assert await aget_messages(session_id=scoped_session, user_id=active_user.id) == []
+    assert await aget_messages(session_id=scoped_session, flow_id=flow_id, user_id=active_user.id) == []

@@ -72,6 +72,12 @@ class IngestionCancelledError(Exception):
     """Custom error for when an ingestion job is cancelled."""
 
 
+# Split points tried after a user-supplied separator (the splitter's own
+# defaults). Without them, text between two separators that is longer than
+# ``chunk_size`` has nowhere else to split and is stored as one oversized chunk.
+_FALLBACK_CHUNK_SEPARATORS: tuple[str, ...] = ("\n\n", "\n", " ", "")
+
+
 def chunk_text_for_ingestion(
     text: str,
     *,
@@ -82,13 +88,14 @@ def chunk_text_for_ingestion(
     r"""Split text into chunks using ``RecursiveCharacterTextSplitter``.
 
     Single source of truth for chunking config used by every ingestion path —
-    KB file ingestion and Memory Base raw / preprocessed message ingestion.
-    Centralizing this keeps chunk-size / overlap behavior identical so a
-    chunk that fits in one path won't suddenly overflow in another.
+    KB file ingestion, the ``/preview-chunks`` endpoint, and Memory Base raw /
+    preprocessed message ingestion. Centralizing this keeps chunk-size /
+    overlap behavior identical so the preview shows exactly what is stored.
 
-    ``separator``: when provided, escaped newlines (``"\\n"``) are unescaped
-    and the value is passed as a single-element ``separators`` list, matching
-    the behavior of ``KBIngestionHelper.perform_ingestion``.
+    ``separator``: when provided, escaped newlines / tabs (``"\\n"`` /
+    ``"\\t"``) are unescaped and the value becomes the *preferred* split
+    point, followed by ``_FALLBACK_CHUNK_SEPARATORS`` so no chunk exceeds
+    ``chunk_size``. When empty, the splitter's defaults are used.
 
     Returns ``[]`` for empty / whitespace-only input.
     """
@@ -96,7 +103,8 @@ def chunk_text_for_ingestion(
         return []
     splitter_kwargs: dict = {"chunk_size": chunk_size, "chunk_overlap": chunk_overlap}
     if separator:
-        splitter_kwargs["separators"] = [separator.replace("\\n", "\n")]
+        unescaped = separator.replace("\\n", "\n").replace("\\t", "\t")
+        splitter_kwargs["separators"] = [unescaped, *_FALLBACK_CHUNK_SEPARATORS]
     splitter = RecursiveCharacterTextSplitter(**splitter_kwargs)
     return splitter.split_text(text)
 

@@ -41,10 +41,14 @@ async def db_engine(request, tmp_path):
         def enable_foreign_keys(connection, _record):
             cursor = connection.cursor()
             cursor.execute("PRAGMA foreign_keys=ON")
+            # DatabaseService's global connect listener can override timeout=0.
+            # These assertions require immediate lock errors, not two 30s waits.
+            cursor.execute("PRAGMA busy_timeout=0")
             cursor.close()
 
         try:
             async with engine.begin() as connection:
+                assert await connection.scalar(text("PRAGMA busy_timeout")) == 0
                 await connection.run_sync(SQLModel.metadata.create_all)
             yield engine
         finally:

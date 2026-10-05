@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import urlparse
 
 from langchain_community.vectorstores.redis import Redis
 from langchain_text_splitters import CharacterTextSplitter
@@ -6,6 +7,13 @@ from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vec
 from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import (
+    SSRFProtectionError,
+    is_connector_loopback_allowed,
+    is_connector_ssrf_validation_enabled,
+    is_ssrf_protection_enabled,
+    validate_connector_hostname_for_ssrf,
+)
 
 
 class RedisVectorStoreComponent(LCVectorStoreComponent):
@@ -40,6 +48,25 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> Redis:
+        if is_connector_ssrf_validation_enabled() and is_ssrf_protection_enabled():
+            parsed_url = urlparse(self.redis_server_url)
+            if parsed_url.scheme in {"redis+sentinel", "rediss+sentinel"}:
+                # LangChain parses Sentinel URLs itself; redis-py's parse_url rejects them.
+                # It defaults a missing Sentinel host to localhost.
+                validate_connector_hostname_for_ssrf(parsed_url.hostname or "localhost")
+            else:
+                from redis.connection import parse_url
+
+                connection = parse_url(self.redis_server_url)
+                if host := connection.get("host"):
+                    validate_connector_hostname_for_ssrf(host)
+                elif "path" in connection and not is_connector_loopback_allowed():
+                    msg = "Redis Unix sockets are blocked when connector loopback access is disabled."
+                    raise SSRFProtectionError(msg)
+                elif "path" not in connection:
+                    # redis-py defaults a hostless redis:// URL to localhost.
+                    validate_connector_hostname_for_ssrf("localhost")
+
         # Convert DataFrame to Data if needed using parent's method
         self.ingest_data = self._prepare_ingest_data()
 

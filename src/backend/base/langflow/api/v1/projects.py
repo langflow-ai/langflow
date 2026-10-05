@@ -20,7 +20,7 @@ from langflow.api.utils import (
     custom_params,
 )
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
-from langflow.api.v1.flows import _handle_unique_constraint_error
+from langflow.api.v1.flows import _flow_read_for_caller, _handle_unique_constraint_error
 from langflow.api.v1.mappers.deployments.sync import (
     retry_flow_operation_on_deployment_guard,
     retry_project_operation_on_deployment_guard,
@@ -473,6 +473,7 @@ async def read_project(
                     act=FlowAction.READ,
                 )
 
+            paginated_flows.items = [_flow_read_for_caller(flow, current_user.id) for flow in paginated_flows.items]
             return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)
 
         # If no pagination requested, return flows visible to the caller.
@@ -515,7 +516,7 @@ async def read_project(
         # in this GET handler would delete every hidden flow when the request
         # session commits.
         project_read = FolderReadWithFlows.model_validate(project, from_attributes=True)
-        project_read.flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in visible_flows]
+        project_read.flows = [_flow_read_for_caller(flow, current_user.id) for flow in visible_flows]
         return project_read  # noqa: TRY300 - conversion must happen while the ORM session is active
 
     except Exception as e:
