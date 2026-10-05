@@ -742,6 +742,26 @@ class SQLiteBackend(BaseVectorStoreBackend):
         await self.ensure_ready()
         return await self._run(self._count)
 
+    def _read_only_count(self) -> int | None:
+        """Inspect existing storage without initialization or a writable connection."""
+        import apsw
+
+        try:
+            path = self._check_path()
+        except FileNotFoundError:
+            return None
+        with contextlib.closing(
+            apsw.Connection(str(path), flags=apsw.SQLITE_OPEN_READONLY | apsw.SQLITE_OPEN_NOFOLLOW)
+        ) as connection:
+            # Use the private runtime's WAL reader so committed, uncheckpointed
+            # chunks count too. Validate identity before trusting the stored count.
+            self._header(connection)
+            return connection.execute("SELECT count(*) FROM chunks").fetchone()[0]
+
+    async def read_only_count(self) -> int | None:
+        """Count existing chunks without invoking the store's initialization path."""
+        return await self._run(self._read_only_count)
+
     def _read_batch(
         self, after: str | None, batch_size: int, *, include_embeddings: bool, max_batch_bytes: int
     ) -> list[IngestedDocument]:
