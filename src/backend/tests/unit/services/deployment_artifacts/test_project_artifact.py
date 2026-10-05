@@ -833,7 +833,7 @@ def test_secret_scrub_uses_bounded_memory_for_wide_deep_structured_value() -> No
 
     tracemalloc.start()
     try:
-        content, _, _ = builder._normalized_flow_bytes(snapshot)
+        content, *_ = builder._normalized_flow_bytes(snapshot)
         _, peak = tracemalloc.get_traced_memory()
     finally:
         tracemalloc.stop()
@@ -892,7 +892,7 @@ def test_normalized_flow_bytes_accepts_model_valid_sparse_data(data: object, exp
     )
     original_payload = deepcopy(snapshot.payload)
 
-    content, required_variables, required_connections = builder._normalized_flow_bytes(snapshot)
+    content, required_variables, required_connections, _ = builder._normalized_flow_bytes(snapshot)
     assert json.loads(content) == {"data": expected_data}
     assert required_variables == ()
     assert required_connections == ()
@@ -925,7 +925,7 @@ def test_normalized_flow_bytes_does_not_mutate_shared_flow_data() -> None:
         payload={"data": flow.data},
     )
 
-    content, _, _ = builder._normalized_flow_bytes(snapshot)
+    content, *_ = builder._normalized_flow_bytes(snapshot)
     exported = json.loads(content)
 
     assert exported["data"]["nodes"][0]["data"]["node"]["template"]["password"]["value"] is None
