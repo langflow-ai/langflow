@@ -93,11 +93,16 @@ async def check_version_direction(session: AsyncSession, target_revision: str | 
     target_revision = target_revision.strip("[]'\" ")
     script = script_directory()
     try:
-        # A source with no alembic_version table records no revision, which the schema check reports.
-        source_revisions = sorted(await recorded_revisions(session))
-    except sa.exc.OperationalError:
+        await session.connection()
+    except sa.exc.SQLAlchemyError:
         await session.rollback()
         return CheckResult(name, "warn", "not checked: the database could not be reached")
+    try:
+        # A source with no alembic_version table records no revision, which the schema check reports.
+        source_revisions = sorted(await recorded_revisions(session))
+    except sa.exc.SQLAlchemyError:
+        await session.rollback()
+        return CheckResult(name, "warn", "not checked: the database schema could not be read")
     try:
         target_ancestry = {revision.revision for revision in script.iterate_revisions(target_revision, "base")}
     except Exception:  # noqa: BLE001 - an unknown revision raises one of several alembic errors

@@ -110,13 +110,23 @@ async def check_schema(session: AsyncSession) -> CheckResult:
     """
     heads = set(script_directory().get_heads())
     try:
-        revisions = await recorded_revisions(session)
-    except sa.exc.OperationalError as exc:
+        await session.connection()
+    except sa.exc.SQLAlchemyError as exc:
         await session.rollback()
         # The driver's first line names the host it tried, and never the URL or its password.
-        reason = str(exc.orig).strip().partition("\n")[0]
+        reason = _database_error_reason(exc)
         return CheckResult(
             "schema", "fail", f"the database could not be reached: {reason}. Check LANGFLOW_DATABASE_URL"
+        )
+    try:
+        revisions = await recorded_revisions(session)
+    except sa.exc.SQLAlchemyError as exc:
+        await session.rollback()
+        return CheckResult(
+            "schema",
+            "fail",
+            f"the database schema could not be read: {_database_error_reason(exc)}. "
+            "Check permissions and structure of alembic_version",
         )
     if revisions == heads:
         return CheckResult("schema", "ok", f"database at revision {', '.join(sorted(revisions))}")
@@ -129,12 +139,17 @@ async def check_schema(session: AsyncSession) -> CheckResult:
     )
 
 
+def _database_error_reason(exc: sa.exc.SQLAlchemyError) -> str:
+    """Report only the driver's first line, without SQLAlchemy's query parameters."""
+    return str(exc.orig).strip().partition("\n")[0] if isinstance(exc, sa.exc.DBAPIError) else type(exc).__name__
+
+
 async def recorded_revisions(session: AsyncSession) -> set[str]:
     """The revisions the database records, which is none when it has no alembic_version table.
 
-    The table is looked for before it is read, so what is left to raise is a database
-    that cannot be reached. Alembic's own MigrationContext answers the same question
-    and logs two INFO lines each time, which would land in the command's output.
+    Inspection and reading can still fail on a malformed schema or missing permissions.
+    Alembic's own MigrationContext answers the same question and logs two INFO lines
+    each time, which would land in the command's output.
     """
     connection = await session.connection()
     if not await connection.run_sync(lambda sync: sa.inspect(sync).has_table("alembic_version")):
@@ -353,6 +368,8 @@ async def _check_knowledge_bases(
         )
     ).all()
     upgrading: list[str] = []
+    pending_cleanup: list[str] = []
+    detached = 0
     unreachable: list[str] = []
     mismatched: list[str] = []
     counts: dict[tuple[UUID, str], int | None] = {}
@@ -360,6 +377,13 @@ async def _check_knowledge_bases(
     for record, owner, error_code in rows:
         label = f"{owner}/{record.name} ({record.backend_type})"
         counts[(record.user_id, record.name)] = None
+        if record.storage_state == "detached":
+            # Explicit retirement leaves a routing row and its recovery evidence.
+            detached += 1
+            continue
+        if record.storage_state in ("deleting", "deleted"):
+            pending_cleanup.append(f"{label}: storage state {record.storage_state}")
+            continue
         if record.backend_type == "chroma" or record.storage_state != "ready":
             # The app serves none of these until its storage upgrade finishes, so there is
             # no store to reach or count yet. Listed here only, not again as unreachable.
@@ -399,17 +423,33 @@ async def _check_knowledge_bases(
         if count != record.chunks:
             mismatched.append(f"{label}: store holds {count}, row records {record.chunks}")
 
-    checked = len(rows) - len(upgrading)
+    active = len(rows) - detached
+    checked = active - len(upgrading) - len(pending_cleanup)
     reachable = checked - len(unreachable)
+    storage_summary = []
+    if upgrading:
+        storage_summary.append(
+            f"{len(upgrading)} of {active} knowledge bases have not finished the storage upgrade this Langflow "
+            "reads them through; start this Langflow version once with a single worker and wait for "
+            "/healthz?require_storage_ready=true, or retry them from /api/v1/knowledge-base-storage/status. "
+            "Chroma Cloud stores have no upgrade path: migrate them to a pgvector or OpenSearch store"
+        )
+    if pending_cleanup:
+        storage_summary.append(
+            f"{len(pending_cleanup)} of {active} knowledge bases have pending deletion cleanup. "
+            "List them at /api/v1/knowledge-base-storage/pending-cleanup and retry cleanup with their KB UUID "
+            "and expected storage generation. If a Memory Base still references the store, retry that "
+            "Memory Base's deletion instead"
+        )
+    storage_ok = f"{active} knowledge bases, none waiting on a storage upgrade or deletion cleanup"
+    if detached:
+        storage_ok += f". {detached} detached stores intentionally excluded"
     return [
         _result(
             "knowledge base storage",
-            upgrading,
-            f"{len(rows)} knowledge bases, none waiting on a storage upgrade",
-            f"{len(upgrading)} of {len(rows)} knowledge bases have not finished the storage upgrade this Langflow "
-            "reads them through; start this Langflow version once with a single worker and wait for "
-            "/healthz?require_storage_ready=true, or retry them from /api/v1/knowledge-base-storage/status. "
-            "Chroma Cloud stores have no upgrade path: migrate them to a pgvector or OpenSearch store",
+            [*upgrading, *pending_cleanup],
+            storage_ok,
+            ". ".join(storage_summary),
         ),
         _result(
             "knowledge bases",
