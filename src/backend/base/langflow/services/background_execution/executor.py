@@ -20,6 +20,8 @@ from collections.abc import Awaitable, Callable
 
 from lfx.log.logger import logger
 
+from langflow.api.utils.migration_pause import is_paused
+
 CoroFactory = Callable[[], Awaitable[None]]
 
 
@@ -98,6 +100,10 @@ class InProcessExecutor:
         while True:
             try:
                 key, coro_factory = await self._queue.get()
+                # A paused instance starts nothing: the job waits here, still queued, until the pause ends.
+                # The pause is a file that another process writes, so there is no event to wait on.
+                while is_paused():  # noqa: ASYNC110
+                    await asyncio.sleep(1)
             except asyncio.CancelledError:
                 return
             task = asyncio.create_task(coro_factory())
