@@ -539,6 +539,13 @@ class JobService(Service):
             # Exhausted retries under sustained contention — surface the last collision.
             msg = f"append_event exhausted {_APPEND_EVENT_MAX_RETRIES} retries (seq contention)"
             raise RuntimeError(msg) from last_exc
+        except asyncio.CancelledError:
+            # Shutdown can cancel the flush itself, rather than its shielded owner.
+            # Settle all callers before propagating that cancellation.
+            for item in items:
+                if not item.future.done():
+                    item.future.cancel()
+            raise
         except Exception as exc:  # noqa: BLE001 — every pending future must resolve, success or failure
             for item in items:
                 if not item.future.done():
