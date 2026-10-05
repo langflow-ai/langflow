@@ -57,6 +57,11 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert component.status == result.text
         assert dataframe.to_dict(orient="list") == data
 
+    def test_parse_dataframe_without_columns(self, component_class):
+        component = component_class(input_data=DataFrame(index=[10, 20]), pattern="row", sep=" | ")
+
+        assert component.parse_combined_text().text == "row | row"
+
     def test_parse_data_object(self, component_class):
         # Arrange
         data = Data(text="Hello World")
