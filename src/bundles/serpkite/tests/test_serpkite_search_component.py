@@ -212,8 +212,24 @@ def test_fetch_content_surfaces_quota_error(component):
 
 
 def test_fetch_content_http_error_without_json_body(component):
-    """A non-JSON error body falls back to the HTTP reason phrase."""
-    mock_post = AsyncMock(return_value=_response(503, text="upstream down"))
+    """A non-JSON error body is surfaced as trimmed text."""
+    mock_post = AsyncMock(return_value=_response(503, text="  upstream down \n"))
+    with patch(POST_PATCH_TARGET, mock_post):
+        results = asyncio.run(component.fetch_content())
+    assert results[0].data["error"] == "SerpKite error 503: upstream down"
+
+
+def test_fetch_content_http_error_long_text_body_is_capped(component):
+    """A long non-JSON error body is capped at 500 characters."""
+    mock_post = AsyncMock(return_value=_response(502, text="x" * 2000))
+    with patch(POST_PATCH_TARGET, mock_post):
+        results = asyncio.run(component.fetch_content())
+    assert results[0].data["error"] == "SerpKite error 502: " + "x" * 500
+
+
+def test_fetch_content_http_error_empty_body(component):
+    """An empty error body falls back to the HTTP reason phrase."""
+    mock_post = AsyncMock(return_value=_response(503, text=""))
     with patch(POST_PATCH_TARGET, mock_post):
         results = asyncio.run(component.fetch_content())
     assert results[0].data["error"] == "SerpKite error 503: Service Unavailable"

@@ -12,12 +12,14 @@ MIN_RESULTS = 10
 MAX_RESULTS = 100
 FIRST_PAGE = 1
 MAX_PAGE = 10
+MAX_ERROR_DETAIL = 500
 
 
 def _http_error_message(error: httpx.HTTPStatusError) -> str:
     """Describe a non-2xx SerpKite response, keeping the API's own error message.
 
-    SerpKite errors carry ``{"error": {"code": ..., "message": ...}}``.
+    SerpKite errors carry ``{"error": {"code": ..., "message": ...}}``. A
+    non-JSON body (for example from a proxy) is kept, trimmed to 500 characters.
     """
     response = error.response
     detail = None
@@ -29,7 +31,7 @@ def _http_error_message(error: httpx.HTTPStatusError) -> str:
         elif isinstance(body_error, str):
             detail = body_error
     except ValueError:
-        detail = None
+        detail = response.text.strip()[:MAX_ERROR_DETAIL] or None
     reason = detail or response.reason_phrase or "request failed"
     return f"SerpKite error {response.status_code}: {reason}"
 
