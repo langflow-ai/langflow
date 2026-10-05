@@ -764,7 +764,7 @@ class Vertex:
             return
         from lfx.base.tools.component_tool import disambiguate_tool_names
 
-        disambiguate_tool_names(self.params[key])
+        self.params[key] = disambiguate_tool_names(self.params[key])
 
     def _handle_func(self, key, result) -> None:
         """Handles 'func' key by checking if the result is a function and setting it as coroutine."""

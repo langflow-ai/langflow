@@ -345,7 +345,7 @@ class LCAgentComponent(Component):
         from lfx.base.tools.component_tool import disambiguate_tool_names
 
         if getattr(self, "tools", None):
-            disambiguate_tool_names(self.tools)
+            self.tools = disambiguate_tool_names(self.tools)
 
     def validate_tool_names(self) -> None:
         """Validate tool names to ensure they match the required pattern."""

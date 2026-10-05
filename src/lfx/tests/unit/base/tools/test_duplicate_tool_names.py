@@ -102,7 +102,7 @@ def test_duplicate_names_are_resolved_when_the_agent_aggregates_the_tools():
     alpha = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-alpha", target="alpha"))
     beta = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-beta", target="beta"))
 
-    disambiguate_tool_names([alpha, beta])
+    alpha, beta = disambiguate_tool_names([alpha, beta])
 
     assert alpha.name != beta.name
     assert len({alpha.name, beta.name}) == 2
@@ -112,7 +112,7 @@ def test_resolved_name_identifies_the_component_instance_it_runs():
     alpha = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-alpha", target="alpha"))
     beta = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-beta", target="beta"))
 
-    disambiguate_tool_names([alpha, beta])
+    alpha, beta = disambiguate_tool_names([alpha, beta])
 
     assert alpha.name == "send_to_agent_RemoteAgentCall_alpha"
     assert beta.name == "send_to_agent_RemoteAgentCall_beta"
@@ -123,7 +123,7 @@ def test_resolved_name_also_lands_on_the_tags_the_agent_reads():
     alpha = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-alpha", target="alpha"))
     beta = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-beta", target="beta"))
 
-    disambiguate_tool_names([alpha, beta])
+    alpha, beta = disambiguate_tool_names([alpha, beta])
 
     assert alpha.tags == [alpha.name]
     assert beta.tags == [beta.name]
@@ -132,7 +132,7 @@ def test_resolved_name_also_lands_on_the_tags_the_agent_reads():
 def test_three_instances_of_one_type_all_get_distinct_names():
     tools = [_tool_for(RemoteAgentCall(_id=f"RemoteAgentCall-{n}", target=n)) for n in ("a", "b", "c")]
 
-    disambiguate_tool_names(tools)
+    tools = disambiguate_tool_names(tools)
 
     assert len({tool.name for tool in tools}) == 3
 
@@ -142,7 +142,7 @@ def test_class_name_derived_duplicates_are_resolved_too():
 
     assert all(tool.name.startswith("single_generic_output") for tool in tools)
 
-    disambiguate_tool_names(tools)
+    tools = disambiguate_tool_names(tools)
 
     assert len({tool.name for tool in tools}) == 2
 
@@ -151,7 +151,7 @@ def test_each_resolved_tool_still_runs_its_own_instance():
     alpha = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-alpha", target="alpha"))
     beta = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-beta", target="beta"))
 
-    disambiguate_tool_names([alpha, beta])
+    alpha, beta = disambiguate_tool_names([alpha, beta])
 
     by_name = {alpha.name: alpha, beta.name: beta}
 
@@ -226,7 +226,7 @@ def test_user_renamed_duplicates_are_not_touched():
     beta.name = "ask_beta"
     beta.tags = ["ask_beta"]
 
-    disambiguate_tool_names([alpha, beta])
+    alpha, beta = disambiguate_tool_names([alpha, beta])
 
     assert alpha.name == "ask_alpha"
     assert beta.name == "ask_beta"
@@ -243,7 +243,7 @@ def test_resolved_name_stays_within_the_provider_name_limit(name_length: int):
     long_name = "a" * name_length
     alpha.name = beta.name = long_name
 
-    disambiguate_tool_names([alpha, beta])
+    alpha, beta = disambiguate_tool_names([alpha, beta])
 
     assert alpha.name != beta.name
     for tool in (alpha, beta):
@@ -254,7 +254,7 @@ def test_resolved_name_stays_within_the_provider_name_limit(name_length: int):
 def test_resolved_names_only_use_characters_providers_accept():
     tools = [_tool_for(RemoteAgentCall(_id=f"Remote Agent Call #{n}!", target=n)) for n in ("a", "b")]
 
-    disambiguate_tool_names(tools)
+    tools = disambiguate_tool_names(tools)
 
     pattern_safe = all(all(char.isalnum() or char in "_-" for char in tool.name) for tool in tools)
     assert pattern_safe
@@ -266,7 +266,7 @@ def test_a_non_tool_item_on_the_list_is_ignored():
     alpha = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-alpha", target="alpha"))
     beta = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-beta", target="beta"))
 
-    disambiguate_tool_names([alpha, Message(text="not a tool"), beta])
+    alpha, _, beta = disambiguate_tool_names([alpha, Message(text="not a tool"), beta])
 
     assert alpha.name != beta.name
 
@@ -278,7 +278,7 @@ def test_tools_without_a_source_component_still_end_up_distinct():
         StructuredTool.from_function(func=lambda: "b", name="shared", description="b"),
     ]
 
-    disambiguate_tool_names(plain)
+    plain = disambiguate_tool_names(plain)
 
     assert len({tool.name for tool in plain}) == 2
 
@@ -344,3 +344,48 @@ async def test_graph_leaves_a_lone_tool_name_untouched():
     results = [result async for result in graph.async_start()]
 
     assert _collected_names(results) == "send_to_agent"
+
+
+def test_resolution_does_not_mutate_tools_shared_with_another_consumer():
+    alpha = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-alpha", target="alpha"))
+    beta = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-beta", target="beta"))
+
+    resolved = disambiguate_tool_names([alpha, beta])
+
+    assert len({tool.name for tool in resolved}) == 2
+    assert alpha.name == beta.name == "send_to_agent"
+    assert alpha.tags == beta.tags == ["send_to_agent"]
+    assert disambiguate_tool_names([alpha])[0].name == "send_to_agent"
+
+
+def test_collision_checks_use_the_final_provider_safe_name():
+    tools = [
+        StructuredTool.from_function(func=lambda: "a", name="f x", description="a"),
+        StructuredTool.from_function(func=lambda: "b", name="f x", description="b"),
+        StructuredTool.from_function(func=lambda: "c", name="f-x_1", description="c"),
+    ]
+
+    resolved = disambiguate_tool_names(tools)
+
+    assert len({tool.name for tool in resolved}) == 3
+    assert resolved[2].name == "f-x_1"
+
+
+def test_the_same_tool_connected_twice_gets_distinct_consumer_copies():
+    tool = _tool_for(RemoteAgentCall(_id="RemoteAgentCall-alpha", target="alpha"))
+
+    resolved = disambiguate_tool_names([tool, tool])
+
+    assert resolved[0].name != resolved[1].name
+    assert tool.name == "send_to_agent"
+
+
+def test_renaming_preserves_additional_tracing_tags():
+    tools = [
+        StructuredTool.from_function(func=lambda: "a", name="shared", description="a", tags=["shared", "tracing"]),
+        StructuredTool.from_function(func=lambda: "b", name="shared", description="b", tags=["shared", "tracing"]),
+    ]
+
+    resolved = disambiguate_tool_names(tools)
+
+    assert all(tool.tags == [tool.name, "tracing"] for tool in resolved)

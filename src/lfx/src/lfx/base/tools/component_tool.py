@@ -326,7 +326,7 @@ def _rename_tool(tool: BaseTool, name: str) -> None:
     HITL gating, so the two must never drift apart.
     """
     tool.name = name
-    tool.tags = [name]
+    tool.tags = [name, *(tool.tags or [])[1:]]
 
 
 def disambiguate_tool_names(tools: list[BaseTool]) -> list[BaseTool]:
@@ -347,26 +347,33 @@ def disambiguate_tool_names(tools: list[BaseTool]) -> list[BaseTool]:
     tool would discard the user's Actions-panel edits -- and drop the tool
     itself, since ``update_tools_metadata`` keeps only the tools it finds in
     that metadata.
+
+    Renamed tools are shallow copies so other consumers keep their original
+    names, while each copy still executes against the same component instance.
     """
-    named = [tool for tool in tools if isinstance(getattr(tool, "name", None), str)]
-    duplicated = {name for name, count in Counter(tool.name for tool in named).items() if count > 1}
+    named = [(position, tool) for position, tool in enumerate(tools) if isinstance(tool, BaseTool)]
+    duplicated = {name for name, count in Counter(tool.name for _, tool in named).items() if count > 1}
     if not duplicated:
         return tools
 
-    taken = {tool.name for tool in named}
-    for position, tool in enumerate(named, start=1):
+    resolved = list(tools)
+    taken = {tool.name for _, tool in named}
+    for position, tool in named:
         if tool.name not in duplicated:
             continue
-        suffix = _instance_suffix(tool, position)
-        base = tool.name[: _MAX_TOOL_NAME_LENGTH - len(suffix) - 1]
+        suffix = _instance_suffix(tool, position + 1)
+        base = _format_tool_name(tool.name)[: _MAX_TOOL_NAME_LENGTH - len(suffix) - 1]
         candidate = f"{base}_{suffix}"
         ordinal = 2
         while candidate in taken:
             candidate = f"{base[: len(base) - len(str(ordinal)) - 1]}_{suffix}_{ordinal}"
             ordinal += 1
         taken.add(candidate)
-        _rename_tool(tool, _format_tool_name(candidate))
-    return tools
+        # Outputs can be shared by multiple graph consumers. Keep renames local
+        # while preserving the callable and its component execution context.
+        resolved[position] = tool.model_copy()
+        _rename_tool(resolved[position], candidate)
+    return resolved
 
 
 class ComponentToolkit:
