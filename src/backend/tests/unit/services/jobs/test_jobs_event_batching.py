@@ -9,7 +9,7 @@ from langflow.services.database.models.jobs.model import JobEvent
 from langflow.services.jobs import service as jobs_module
 from langflow.services.jobs.service import JobService
 from sqlalchemy import event
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError, StatementError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -30,6 +30,7 @@ class _EventStore:
         self.allow_commit.set()
         self.fail_commit = False
         self.commit_failures = []
+        self.commit_failure = None
 
     @asynccontextmanager
     async def _with_session(self):
@@ -47,11 +48,13 @@ class _EventStore:
             try:
                 self.checkout_started.set()
                 await self.allow_checkout.wait()
-                if self.fail_commit or self.commit_failures:
+                if self.fail_commit or self.commit_failures or self.commit_failure is not None:
 
                     def fail_commit(_session):
                         if self.commit_failures:
                             raise self.commit_failures.pop(0)
+                        if self.commit_failure is not None:
+                            raise self.commit_failure
                         msg = "injected commit failure"
                         raise RuntimeError(msg)
 
@@ -255,7 +258,7 @@ async def test_commit_contention_retries_without_acknowledging_failed_writes(eve
 
 
 async def test_non_contention_database_error_reaches_every_appender(event_store):
-    event_store.commit_failures = [OperationalError("INSERT", {}, Exception("connection unavailable"))]
+    event_store.commit_failure = OperationalError("INSERT", {}, Exception("connection unavailable"))
     service = JobService()
     results = await asyncio.gather(
         service.append_event(uuid4(), "first", {}),
@@ -264,12 +267,11 @@ async def test_non_contention_database_error_reaches_every_appender(event_store)
     )
     assert all(isinstance(result, OperationalError) for result in results)
     assert await event_store.events() == []
-    assert event_store.checkouts == 1
 
 
 async def test_exhausted_contention_reaches_every_appender(event_store, monkeypatch):
     monkeypatch.setattr(jobs_module, "_APPEND_EVENT_MAX_RETRIES", 2)
-    event_store.commit_failures = [OperationalError("INSERT", {}, Exception("database is locked")) for _ in range(2)]
+    event_store.commit_failure = OperationalError("INSERT", {}, Exception("database is locked"))
     service = JobService()
     results = await asyncio.gather(
         service.append_event(uuid4(), "first", {}),
@@ -293,3 +295,19 @@ async def test_independent_service_writers_preserve_gap_free_order(event_store):
     )
     assert sorted(seqs) == list(range(1, 37))
     assert [row.seq for row in await event_store.events()] == list(range(1, 37))
+
+
+async def test_invalid_event_does_not_fail_another_job(event_store):
+    service = JobService()
+    bad_job, healthy_job = uuid4(), uuid4()
+    results = await asyncio.gather(
+        service.append_event(bad_job, "invalid", {"value": object()}),
+        service.append_event(healthy_job, "healthy", {"value": "persisted"}),
+        return_exceptions=True,
+    )
+    assert isinstance(results[0], StatementError)
+    assert results[1] == 1
+    events = await event_store.events()
+    assert len(events) == 1
+    assert events[0].job_id == healthy_job
+    assert events[0].payload == {"value": "persisted"}
