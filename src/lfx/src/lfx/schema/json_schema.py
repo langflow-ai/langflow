@@ -6,8 +6,6 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, create_model
 
 from lfx.log.logger import logger
 
-NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
-
 
 def _snake_to_camel(name: str) -> str:
     """Convert snake_case to camelCase, preserving leading/trailing underscores."""
@@ -97,6 +95,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
     model_cache: dict[str, type[BaseModel]] = {}
     # Tracks $def names currently being built to detect self-referential schemas
     building: set[str] = set()
+    parsing_any_of: set[int] = set()
     # Monotonic counter for anonymous nested-object models. Using len(model_cache)
     # is unsafe during recursive descent because the cache is populated only after
     # a build completes, causing concurrent in-progress models to collide on the
@@ -136,15 +135,21 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         s = resolve_ref(s)
 
         if "anyOf" in s:
-            subtypes = [parse_type(sub) for sub in s["anyOf"]]
-            non_null_types = [t for t in subtypes if t is not None and t is not type(None)]
-            # Retain the full non-null schema, including array items and object properties.
-            if len(subtypes) == NULLABLE_TYPE_LENGTH and len(non_null_types) == 1:
-                return non_null_types[0] | None
-            # For other anyOf cases, use the first non-null type.
-            if non_null_types:
-                return non_null_types[0]
-            return type(None) if subtypes else str
+            schema_id = id(s)
+            if schema_id in parsing_any_of:
+                logger.warning("Parsing input schema: Recursive anyOf detected, treating recursive branch as Any")
+                return Any
+            parsing_any_of.add(schema_id)
+            try:
+                subtypes = [parse_type(sub) for sub in s["anyOf"]]
+            finally:
+                parsing_any_of.discard(schema_id)
+            if not subtypes:
+                return str
+            union_type = subtypes[0]
+            for subtype in subtypes[1:]:
+                union_type |= subtype
+            return union_type
 
         t = s.get("type", "any")  # Use string "any" as default instead of Any type
         if isinstance(t, list):
