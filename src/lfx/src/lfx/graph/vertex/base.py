@@ -747,6 +747,24 @@ class Vertex:
                         f"Error building Component {self.display_name}: \n\n{e}"
                     )
                     raise ValueError(msg) from e
+        self._resolve_duplicate_tool_names(key)
+
+    def _resolve_duplicate_tool_names(self, key: str) -> None:
+        """Keep every tool on a Tool list input individually addressable.
+
+        A tool's name comes from its component's class and output method, so two
+        nodes of the same type wired into one agent arrive under the same name
+        and the model cannot tell them apart: every call lands on whichever one
+        won the collision. This runs engine-side on purpose -- a saved flow
+        carries its own frozen copy of the consuming component's code, so a fix
+        made there would never reach the flows already hitting this.
+        """
+        field = self.data.get("node", {}).get("template", {}).get(key) or {}
+        if "Tool" not in (field.get("input_types") or []):
+            return
+        from lfx.base.tools.component_tool import disambiguate_tool_names
+
+        self.params[key] = disambiguate_tool_names(self.params[key])
 
     def _handle_func(self, key, result) -> None:
         """Handles 'func' key by checking if the result is a function and setting it as coroutine."""
