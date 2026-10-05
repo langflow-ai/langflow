@@ -78,8 +78,8 @@ class KBRelocationResult:
     warnings: list[str] = field(default_factory=list)
     # A stable name for why it failed, for callers that cannot match on ``reason``.
     code: str | None = None
-    # How to get past a metric refusal: the flag that accepts the change, or the
-    # target config that avoids it.
+    # How to get past a metric refusal: the flag that accepts the change and, for a
+    # target whose new index can take the source's metric, the config that avoids it.
     flag: str | None = None
     target_config: dict[str, Any] | None = None
 
@@ -441,8 +441,8 @@ async def _metric_change(
             "to accept the change"
         )
     else:
-        result.flag = "--allow-metric-change"
         how = "The target's metric is fixed; re-run with --allow-metric-change to accept the change"
+    result.flag = "--allow-metric-change"
     result.code = "kb_metric_change"
     return f"{change}, and {uncertainty}, so nearest-neighbour results may change. {how}"
 

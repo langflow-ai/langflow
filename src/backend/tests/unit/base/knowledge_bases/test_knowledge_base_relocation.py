@@ -308,11 +308,12 @@ class TestRelocationWithoutATarget:
         ("target", "config", "how", "flag", "suggested"),
         [
             ("postgres", {}, "--allow-metric-change", "--allow-metric-change", None),
+            # A new OpenSearch index can take the source's metric and an existing one cannot, so both are offered.
             (
                 "opensearch",
                 {"url_variable": "OPENSEARCH_URL", "space_type": "cosinesimil"},
                 '{"space_type": "l2"}',
-                None,
+                "--allow-metric-change",
                 {"space_type": "l2"},
             ),
         ],
@@ -343,6 +344,7 @@ class TestRelocationWithoutATarget:
         result = next(r for r in results if r.kb_id == record.id)
         assert result.status == "failed"
         assert how in result.reason
+        assert flag in result.reason
         assert (result.code, result.flag, result.target_config) == ("kb_metric_change", flag, suggested)
 
     async def test_unknown_target_backend_is_reported_as_missing(self, active_user):
