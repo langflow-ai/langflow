@@ -302,6 +302,163 @@ def test_collect_model_requirements_prefers_the_selections_own_type_over_the_fie
     )
 
 
+@pytest.mark.parametrize(("field_type", "model_type"), [("language", "llm"), ("embedding", "embeddings")])
+@pytest.mark.parametrize(
+    ("overrides", "provider", "name"),
+    [
+        ({"provider": " Cohere ", "model_name": " custom-model "}, "cohere", "custom-model"),
+        ({"provider": "Cohere"}, "cohere", "gpt-4o-mini"),
+        ({"model_name": "custom-model"}, "openai", "custom-model"),
+        ({"provider": " ", "model_name": ""}, "openai", "gpt-4o-mini"),
+    ],
+)
+def test_deploy_requirements_follow_static_model_overrides(
+    field_type: str, model_type: str, overrides: dict[str, str], provider: str, name: str
+) -> None:
+    template = _model_field([{"provider": "OpenAI", "name": "gpt-4o-mini"}], model_type=field_type)
+    template.update({key: {"type": "str", "value": value} for key, value in overrides.items()})
+    snapshot = _snapshot(
+        [_node(template=template, base_classes=["Embeddings" if field_type == "embedding" else "LanguageModel"])]
+    )
+
+    manifest = _manifest_of(
+        _build_archive(
+            project_id=uuid4(), project_name="Overrides", snapshots=(snapshot,), limits=ProjectArtifactLimits()
+        )
+    )
+    _, _, _, requirements = _build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())
+
+    assert requirements.providers == (provider,)
+    assert requirements.models == (ProjectArtifactRequiredModel(provider=provider, name=name, model_type=model_type),)
+    assert requirements.unresolved_fields == 0
+    assert manifest["required_providers"] == [provider]
+    assert manifest["required_models"] == [{"provider": provider, "name": name, "model_type": model_type}]
+    assert manifest["unresolved_model_fields"] == 0
+
+
+@pytest.mark.parametrize(("field_name", "providers"), [("provider", ()), ("model_name", ("openai",))])
+def test_variable_backed_model_overrides_are_unresolved(field_name: str, providers: tuple[str, ...]) -> None:
+    template = _model_field([_PICKER_SELECTION], model_type="language")
+    template[field_name] = {"type": "str", "value": "GLOBAL_MODEL_SETTING", "load_from_db": True}
+
+    requirements = _collect_model_requirements(_graph([_node(template=template, base_classes=["LanguageModel"])]))
+
+    assert requirements.providers == providers
+    assert requirements.models == ()
+    assert requirements.unresolved_fields == 1
+
+
+@pytest.mark.parametrize(("field_name", "providers"), [("provider", ()), ("model_name", ("openai",))])
+@pytest.mark.parametrize("legacy", [False, True])
+def test_connected_model_overrides_are_unresolved(field_name: str, providers: tuple[str, ...], *, legacy: bool) -> None:
+    template = _model_field([_PICKER_SELECTION], model_type="language")
+    template[field_name] = {"type": "str", "value": "saved-default"}
+    node = {"id": "model-node", **_node(template=template, base_classes=["LanguageModel"])}
+    edge = {"source": "upstream", "target": "model-node"}
+    if legacy:
+        edge["targetHandle"] = f"str|{field_name}|model-node"
+    else:
+        edge["data"] = {"targetHandle": {"fieldName": field_name, "id": "model-node"}}
+    graph = {"nodes": [node], "edges": [edge]}
+    # Grouped flows have their own edge scope, just like their own nodes.
+    requirements = _collect_model_requirements(_graph([_node(flow={"data": graph})]))
+
+    assert requirements.providers == providers
+    assert requirements.models == ()
+    assert requirements.unresolved_fields == 1
+
+
+def test_model_overrides_do_not_change_other_model_fields() -> None:
+    template = {
+        "other_model": {"type": "model", "value": [_PICKER_SELECTION], "model_type": "language"},
+        "provider": {"type": "str", "value": "Cohere"},
+        "model_name": {"type": "str", "value": "custom-model"},
+    }
+
+    requirements = _collect_model_requirements(_graph([_node(template=template)]))
+
+    assert requirements.models == (
+        ProjectArtifactRequiredModel(provider="openai", name="gpt-4o-mini", model_type="llm"),
+    )
+    assert requirements.unresolved_fields == 0
+
+
+def test_non_model_component_scalar_fields_do_not_override_its_model_input() -> None:
+    template = _model_field([_PICKER_SELECTION], model_type="language")
+    template["provider"] = {"type": "str", "value": "Cohere"}
+    template["model_name"] = {"type": "str", "value": "custom-model"}
+
+    requirements = _collect_model_requirements(_graph([_node(template=template, base_classes=["Message"])]))
+
+    assert requirements.models == (
+        ProjectArtifactRequiredModel(provider="openai", name="gpt-4o-mini", model_type="llm"),
+    )
+
+
+def test_changed_provider_override_discards_the_old_selections_model_type() -> None:
+    template = _model_field(
+        [{"provider": "OpenAI", "name": "old-model", "metadata": {"model_type": "llm"}}], model_type="embedding"
+    )
+    template["provider"] = {"type": "str", "value": "Cohere"}
+    template["model_name"] = {"type": "str", "value": "embed-model"}
+
+    requirements = _collect_model_requirements(_graph([_node(template=template, base_classes=["Embeddings"])]))
+
+    assert requirements.models == (
+        ProjectArtifactRequiredModel(provider="cohere", name="embed-model", model_type="embeddings"),
+    )
+
+
+def test_dynamic_model_name_keeps_a_static_provider_override_and_counts_once() -> None:
+    template = _model_field([_PICKER_SELECTION], model_type="language")
+    template["provider"] = {"type": "str", "value": "Cohere"}
+    template["model_name"] = {"type": "str", "value": "GLOBAL_MODEL", "load_from_db": True}
+
+    requirements = _collect_model_requirements(_graph([_node(template=template, base_classes=["LanguageModel"])]))
+
+    assert requirements.providers == ("cohere",)
+    assert requirements.models == ()
+    assert requirements.unresolved_fields == 1
+
+
+@pytest.mark.parametrize("policy_mode", ["standalone", "unrecognized", None])
+def test_unknown_policy_mode_keeps_the_standalone_provider_requirement(policy_mode: str | None) -> None:
+    node = _node(
+        base_classes=["LanguageModel"],
+        metadata={"model_provider_policy_mode": policy_mode, "module": "lfx_openai.models.openai_chat"},
+        display_name="OpenAI",
+    )
+
+    assert _collect_model_requirements(_graph([node])).providers == ("openai",)
+
+
+@pytest.mark.parametrize("policy_mode", ["none", "delegate"])
+def test_identity_free_components_do_not_declare_standalone_providers(policy_mode: str) -> None:
+    node = _node(
+        base_classes=["Embeddings"],
+        metadata={
+            "model_provider_policy_mode": policy_mode,
+            "module": "lfx.components.langchain_utilities.fake_embeddings.FakeEmbeddingsComponent",
+        },
+        display_name="Fake Embeddings",
+        template={"dimensions": {"type": "int", "value": 5}},
+    )
+    snapshot = _snapshot([node])
+
+    manifest = _manifest_of(
+        _build_archive(
+            project_id=uuid4(), project_name="Local embeddings", snapshots=(snapshot,), limits=ProjectArtifactLimits()
+        )
+    )
+    _, _, _, requirements = _build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())
+
+    assert requirements.providers == ()
+    assert requirements.models == ()
+    assert requirements.unresolved_fields == 0
+    assert manifest["schema_version"] == 1
+    assert "required_providers" not in manifest
+
+
 def test_collect_model_requirements_keeps_the_provider_of_a_model_it_cannot_name() -> None:
     """A standalone component implies a provider but selects no model."""
     nodes = [

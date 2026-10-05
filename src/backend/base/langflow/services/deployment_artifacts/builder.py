@@ -372,6 +372,73 @@ def _model_field_selections(value: object) -> tuple[list[tuple[str, str | None, 
     return readable, not entries or len(readable) < len(selections)
 
 
+def _connected_model_overrides(flow_data: dict) -> dict[str, set[str]]:
+    """Index runtime override inputs by node, within this graph's edge scope."""
+    connected: dict[str, set[str]] = {}
+    edges = flow_data.get("edges")
+    if not isinstance(edges, list):
+        return connected
+    for edge in edges:
+        if not isinstance(edge, dict) or not isinstance(target := edge.get("target"), str):
+            continue
+        data = edge.get("data")
+        if isinstance(data, dict) and data:
+            handle = data.get("targetHandle")
+            field_name = handle.get("fieldName") if isinstance(handle, dict) else None
+        else:
+            # Legacy edges encode the input as ``types|field|node``.
+            handle = edge.get("targetHandle")
+            parts = handle.split("|") if isinstance(handle, str) else []
+            field_name = parts[1] if len(parts) > 1 else None
+        if field_name in ("provider", "model_name"):
+            connected.setdefault(target, set()).add(field_name)
+    return connected
+
+
+def _apply_model_requirement_overrides(
+    selections: tuple[list[tuple[str, str | None, str | None]], bool] | None,
+    template: dict,
+    connected_fields: Collection[str],
+) -> tuple[list[tuple[str, str | None, str | None]], bool] | None:
+    """Apply the canonical model selector's scalar overlays without resolving variables.
+
+    Runtime ``apply_model_overrides`` uses the first selection when an overlay
+    is active. Variable- or edge-backed values are unknown at packaging time:
+    retain only identities still known and mark the field as incomplete.
+    """
+    overrides: dict[str, str] = {}
+    dynamic: set[str] = set()
+    for name in ("provider", "model_name"):
+        field_value = template.get(name)
+        if not isinstance(field_value, dict):
+            continue
+        if name in connected_fields or coalesce_bool(field_value.get("load_from_db")):
+            dynamic.add(name)
+        elif isinstance(value := field_value.get("value"), str):
+            overrides[name] = value.strip()
+        elif value is not None:
+            dynamic.add(name)
+    if not any(overrides.values()) and not dynamic:
+        return selections
+    if "provider" in dynamic or selections is None:
+        return [], True
+    readable, incomplete = selections
+    provider_override = overrides.get("provider")
+    name_override = overrides.get("model_name")
+    if readable:
+        provider, model_name, model_type = readable[0]
+        # A different provider clears the old selection's metadata at runtime.
+        if provider_override and provider_override != provider:
+            model_type = None
+        provider = provider_override or provider
+        model_name = None if "model_name" in dynamic else (name_override or model_name)
+        return [(provider, model_name, model_type)], incomplete or bool(dynamic)
+    if provider_override:
+        model_name = None if "model_name" in dynamic else (name_override or None)
+        return [(provider_override, model_name, None)], True
+    return [], True
+
+
 def _standalone_provider(node_inner: dict) -> str | None:
     """The provider of a component that is itself a model, not one that holds a field."""
     base_classes = node_inner.get("base_classes")
@@ -379,6 +446,9 @@ def _standalone_provider(node_inner: dict) -> str | None:
         return None
     metadata = node_inner.get("metadata")
     metadata = metadata if isinstance(metadata, dict) else {}
+    # Local utilities and delegating wrappers have no provider of their own.
+    if metadata.get("model_provider_policy_mode") in ("none", "delegate"):
+        return None
     component = SimpleNamespace(
         display_name=node_inner.get("display_name"),
         model_provider_id=metadata.get("model_provider_id"),
@@ -408,9 +478,9 @@ def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
     but names no model - so the model list is never a complete mirror of the
     provider list.
 
-    ``unresolved_fields`` counts model fields that named no provider. Those are
-    real requirements the artifact cannot state, so a caller that treats the
-    lists as the whole answer would pass a project the target cannot serve.
+    ``unresolved_fields`` counts model fields whose effective requirements
+    cannot be fully read, including runtime overrides. A caller that treats
+    the lists as the whole answer would pass a project the target cannot serve.
     """
     if not isinstance(flow_data, dict):
         return _ModelRequirements()
@@ -420,10 +490,11 @@ def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
     providers: set[str] = set()
     models: set[ProjectArtifactRequiredModel] = set()
     unresolved = 0
-    node_frames = [iter(nodes)]
+    node_frames = [(iter(nodes), _connected_model_overrides(flow_data))]
     while node_frames:
+        node_iterator, connected_overrides = node_frames[-1]
         try:
-            node = next(node_frames[-1])
+            node = next(node_iterator)
         except StopIteration:
             node_frames.pop()
             continue
@@ -433,9 +504,13 @@ def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
         if not isinstance(node_inner, dict):
             continue
         template = node_inner.get("template")
+        base_classes = node_inner.get("base_classes")
+        has_model_output = isinstance(base_classes, list) and any(
+            isinstance(base_class, str) and base_class in _MODEL_BASE_CLASSES for base_class in base_classes
+        )
         saw_model_field = False
         if isinstance(template, dict):
-            for field_value in template.values():
+            for field_name, field_value in template.items():
                 if not isinstance(field_value, dict) or field_value.get("type") != "model":
                     continue
                 saw_model_field = True
@@ -446,6 +521,12 @@ def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
                 declared_type = field_value.get("model_type")
                 field_type = _FIELD_MODEL_TYPES.get(declared_type) if isinstance(declared_type, str) else None
                 field_selections = _model_field_selections(field_value.get("value"))
+                # Model consumers may have unrelated scalar fields with these
+                # names. The overlays belong to the model selector components.
+                if field_name == "model" and has_model_output:
+                    node_id = node.get("id")
+                    connected_fields = connected_overrides.get(node_id, set()) if isinstance(node_id, str) else set()
+                    field_selections = _apply_model_requirement_overrides(field_selections, template, connected_fields)
                 if field_selections is None:
                     continue
                 selections, incomplete = field_selections
@@ -471,7 +552,7 @@ def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
             nested_data = nested_flow.get("data")
             nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
             if isinstance(nested_nodes, list):
-                node_frames.append(iter(nested_nodes))
+                node_frames.append((iter(nested_nodes), _connected_model_overrides(nested_data)))
     return _ModelRequirements(
         providers=tuple(sorted(providers)),
         models=tuple(sorted(models, key=_model_sort_key)),

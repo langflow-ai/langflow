@@ -228,8 +228,9 @@ This `schema_version` belongs to the project artifact manifest and is unrelated 
 
 When any flow selects a model provider, the manifest also carries `required_providers`: the stable provider identities the project's model fields and standalone model components select, per flow and aggregated for the project.
 Alongside it, `required_models` lists the individual models those fields select as `{"provider": "openai", "name": "gpt-4o", "model_type": "llm"}`, because a deployment policy can approve a provider and still block one of its models. `model_type` is omitted when the saved selection did not carry one. A component that is itself a model implies a provider without naming a model, so `required_models` is never a complete mirror of `required_providers`.
-Beside them is `unresolved_model_fields`, the number of model fields that named no provider at all.
-A model chosen at run time has no selector to read, so that count is what keeps `required_providers` from reading as the complete set of requirements: a deploy target should treat a non-zero count as "this project may need providers this list does not name".
+Static provider and model-name overrides on the model selector are reflected in these requirements. Local utilities such as Fake Embeddings do not declare a provider requirement.
+Beside them is `unresolved_model_fields`, the number of model fields whose effective requirements cannot be fully read, including overrides supplied by global variables or graph connections.
+A model chosen at run time has no selector to read, so that count is what keeps the lists from reading as the complete set of requirements: a deploy target should treat a non-zero count as "this project may need providers or models these lists do not name".
 
 :::note
 Check that your deployment tooling explicitly supports the artifact's schema version before using it. Readers limited to lower versions reject it; setting environment variables does not make that artifact compatible.
