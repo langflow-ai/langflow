@@ -136,31 +136,15 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         s = resolve_ref(s)
 
         if "anyOf" in s:
-            # Handle common pattern for nullable types (anyOf with string and null)
-            subtypes = [sub.get("type") for sub in s["anyOf"] if isinstance(sub, dict) and "type" in sub]
-
-            # Check if this is a simple nullable type (e.g., str | None)
-            if len(subtypes) == NULLABLE_TYPE_LENGTH and "null" in subtypes:
-                # Get the non-null type
-                non_null_type = next(t for t in subtypes if t != "null")
-                # Map it to Python type
-                if isinstance(non_null_type, str):
-                    return {
-                        "string": str,
-                        "integer": int,
-                        "number": float,
-                        "boolean": bool,
-                        "object": dict,
-                        "array": list,
-                    }.get(non_null_type, Any)
-                return Any
-
-            # For other anyOf cases, use the first non-null type
             subtypes = [parse_type(sub) for sub in s["anyOf"]]
             non_null_types = [t for t in subtypes if t is not None and t is not type(None)]
+            # Retain the full non-null schema, including array items and object properties.
+            if len(subtypes) == NULLABLE_TYPE_LENGTH and len(non_null_types) == 1:
+                return non_null_types[0] | None
+            # For other anyOf cases, use the first non-null type.
             if non_null_types:
                 return non_null_types[0]
-            return str
+            return type(None) if subtypes else str
 
         t = s.get("type", "any")  # Use string "any" as default instead of Any type
         if isinstance(t, list):
@@ -196,6 +180,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
         # primitive fallback
         return {
+            "null": type(None),
             "string": str,
             "integer": int,
             "number": float,

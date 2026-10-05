@@ -27,6 +27,87 @@ class TestCreateInputSchemaFromJsonSchema:
         assert instance.name == "hello"  # type: ignore[attr-defined]
         assert instance.count is None  # type: ignore[attr-defined]
 
+    @pytest.mark.parametrize("null_first", [False, True])
+    @pytest.mark.parametrize(
+        ("subschema", "value"),
+        [
+            ({"type": "string"}, "hello"),
+            ({"type": "integer"}, 7),
+            ({"type": "number"}, 1.5),
+            ({"type": "boolean"}, False),
+            ({"type": "array", "items": {"type": "integer"}}, [1, 2]),
+            ({"$ref": "#/$defs/Details"}, {"count": 2}),
+        ],
+    )
+    def test_required_nullable_anyof(self, subschema, value, null_first):
+        """A nullable field accepts null while remaining required."""
+        alternatives = [subschema, {"type": "null"}]
+        if null_first:
+            alternatives.reverse()
+        schema = {
+            "type": "object",
+            "$defs": {
+                "Details": {
+                    "type": "object",
+                    "properties": {"count": {"type": "integer"}},
+                    "required": ["count"],
+                }
+            },
+            "properties": {"payload": {"anyOf": alternatives}},
+            "required": ["payload"],
+        }
+        model = create_input_schema_from_json_schema(schema)
+
+        assert model.model_validate({"payload": None}).model_dump() == {"payload": None}
+        assert model.model_validate({"payload": value}).model_dump() == {"payload": value}
+        with pytest.raises(ValidationError, match="payload"):
+            model.model_validate({})
+
+    @pytest.mark.parametrize(
+        "subschema",
+        [
+            {"type": "null"},
+            {"anyOf": [{"type": "null"}]},
+            {"anyOf": [{"type": "null"}, {"type": "null"}]},
+        ],
+    )
+    def test_null_only_schema(self, subschema):
+        """Null-only schemas accept null and reject other values."""
+        model = create_input_schema_from_json_schema(
+            {"type": "object", "properties": {"payload": subschema}, "required": ["payload"]}
+        )
+
+        assert model.model_validate({"payload": None}).model_dump() == {"payload": None}
+        with pytest.raises(ValidationError, match="payload"):
+            model.model_validate({"payload": "not null"})
+
+    @pytest.mark.parametrize("null_first", [False, True])
+    @pytest.mark.parametrize(
+        ("subschema", "invalid_value"),
+        [
+            ({"type": "array", "items": {"type": "integer"}}, ["not an integer"]),
+            (
+                {
+                    "type": "object",
+                    "properties": {"count": {"type": "integer"}},
+                    "required": ["count"],
+                },
+                {},
+            ),
+        ],
+    )
+    def test_nullable_anyof_preserves_nested_validation(self, subschema, invalid_value, null_first):
+        """Making an array or object nullable must retain its inner schema."""
+        alternatives = [subschema, {"type": "null"}]
+        if null_first:
+            alternatives.reverse()
+        model = create_input_schema_from_json_schema(
+            {"type": "object", "properties": {"payload": {"anyOf": alternatives}}}
+        )
+
+        with pytest.raises(ValidationError, match="payload"):
+            model.model_validate({"payload": invalid_value})
+
     def test_schema_with_defs(self):
         """A schema with $defs and $ref should resolve correctly."""
         schema = {
