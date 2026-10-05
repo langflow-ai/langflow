@@ -62,6 +62,10 @@ on:
         required: false
         type: boolean
         default: true
+      migration_helper_release:
+        description: "Qualified signed helper release tag (helper-1.13-<40-char source SHA>), required for 1.13 publication"
+        required: false
+        type: string
       run_pip_check:
         description: "Whether to run pip check - ONLY SET TO FALSE ONCE YOU HAVE ALREADY ATTEMPTED AND FAILED A RUN THEN MADE SURE DEPS DO NOT CAUSE FAILURES"
         required: false
@@ -1385,14 +1389,75 @@ jobs:
       main-artifact-name: ${{ needs.build-main.result == 'success' && 'dist-main' || '' }}
       bundles-artifact-name: ${{ needs.build-bundles.result == 'success' && needs.build-bundles.outputs.bundles-found == '1' && 'dist-bundles' || '' }}
 
+  validate-migration-helper:
+    name: Verify signed migration helper qualification
+    needs: [validate-tag]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.release_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Determine whether helper qualification is required
+        id: required
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          HELPER_RELEASE: ${{ inputs.migration_helper_release }}
+        run: |
+          version=$(python3 -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          if [[ "$version" != 1.13.* ]]; then
+            echo "required=false" >> "$GITHUB_OUTPUT"
+          elif [ "$DRY_RUN" = true ] && [ -z "$HELPER_RELEASE" ]; then
+            echo "Dry run only: helper publication gate remains unqualified." >> "$GITHUB_STEP_SUMMARY"
+            echo "required=false" >> "$GITHUB_OUTPUT"
+          else
+            [[ "$HELPER_RELEASE" =~ ^helper-1\.13-[0-9a-f]{40}$ ]] || {
+              echo "A signed, qualified migration helper release is required before publishing 1.13."
+              exit 1
+            }
+            echo "required=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Download immutable helper verification evidence
+        if: steps.required.outputs.required == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HELPER_RELEASE: ${{ inputs.migration_helper_release }}
+        run: |
+          gh release download "$HELPER_RELEASE" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/helper-proof" \
+            --pattern helper-release.json --pattern helper-verification.sigstore.json \
+            --pattern helper-qualification.json --pattern helper-qualification.sigstore.json
+      - name: Provision independent verification tools and trust
+        if: steps.required.outputs.required == 'true'
+        env:
+          TUF_ROOT: ${{ runner.temp }}/helper-sigstore-trust
+        run: |
+          mkdir -p "$RUNNER_TEMP/cosign-bin"
+          curl --fail --location --retry 3 https://github.com/sigstore/cosign/releases/download/v3.1.3/cosign-linux-amd64 --output "$RUNNER_TEMP/cosign-bin/cosign"
+          printf '%s  %s\n' 4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71 "$RUNNER_TEMP/cosign-bin/cosign" | sha256sum --check
+          chmod 700 "$RUNNER_TEMP/cosign-bin/cosign"
+          "$RUNNER_TEMP/cosign-bin/cosign" initialize
+      - name: Authenticate both-platform qualification and unchanged helper source
+        if: steps.required.outputs.required == 'true'
+        env:
+          HELPER_RELEASE: ${{ inputs.migration_helper_release }}
+        run: |
+          python3 scripts/ci/check_migration_helper_release.py \
+            --kit "$RUNNER_TEMP/helper-proof" \
+            --trusted-root "$RUNNER_TEMP/helper-sigstore-trust/tuf-repo-cdn.sigstore.dev/targets/trusted_root.json" \
+            --release-tag "$HELPER_RELEASE" --source-ref HEAD --cosign "$RUNNER_TEMP/cosign-bin/cosign"
+
   reserve-final-release:
     name: Reserve final publication
-    needs: [validate-tag, validate-tag-format, ci, test-cross-platform, release-inventory]
+    needs: [validate-tag, validate-tag-format, validate-migration-helper, ci, test-cross-platform, release-inventory]
     if: |
       always() &&
       !cancelled() &&
       needs.validate-tag.result == 'success' &&
       needs.validate-tag-format.result == 'success' &&
+      needs.validate-migration-helper.result == 'success' &&
       needs.ci.result == 'success' &&
       (needs.test-cross-platform.result == 'success' || needs.test-cross-platform.result == 'skipped') &&
       (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped')

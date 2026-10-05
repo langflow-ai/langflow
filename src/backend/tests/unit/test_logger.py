@@ -967,6 +967,8 @@ class TestProductionObservability:
     def test_intercept_handler_not_installed_in_pretty_mode(self, monkeypatch):
         # Pretty/console mode must NOT route stdlib through structlog,
         # otherwise dev terminals get duplicated lines.
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        assert any(isinstance(h, InterceptHandler) for h in logging.root.handlers)
         monkeypatch.setenv("LANGFLOW_PRETTY_LOGS", "true")
         configure(log_env="", log_level="DEBUG", cache=False)
         handlers = [h for h in logging.root.handlers if isinstance(h, InterceptHandler)]
@@ -1970,6 +1972,21 @@ class TestConfigureEarlyReturnFingerprint:
         configure(log_level="INFO", log_env="container", cache=False)
         second = structlog.get_config()["processors"]
         assert first is second, "identical configure() rebuilt the pipeline; early-return regressed"
+
+    def test_pretty_toggle_changes_renderer_and_stdlib_routing(self, monkeypatch):
+        """Changing the environment toggle must reconfigure otherwise identical calls."""
+        monkeypatch.setenv("LANGFLOW_PRETTY_LOGS", "false")
+        configure(log_level="INFO", log_env="", cache=False)
+        first = structlog.get_config()["processors"]
+        assert any(isinstance(h, InterceptHandler) for h in logging.root.handlers)
+
+        monkeypatch.setenv("LANGFLOW_PRETTY_LOGS", "true")
+        configure(log_level="INFO", log_env="", cache=False)
+        second = structlog.get_config()["processors"]
+
+        assert first is not second
+        assert isinstance(second[-1], structlog.dev.ConsoleRenderer)
+        assert not any(isinstance(h, InterceptHandler) for h in logging.root.handlers)
 
     def test_same_level_new_output_file_takes_effect(self):
         """Same level, new output_file must reconfigure (the lfx.run.base path).
