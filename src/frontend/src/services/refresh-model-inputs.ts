@@ -11,7 +11,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore, { syncNodeTranslations } from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import type { APIClassType } from "@/types/api";
+import type { APIClassType, APITemplateType } from "@/types/api";
 import type { AllNodeType } from "@/types/flow";
 import {
   isCustomComponentBlockError,
@@ -237,34 +237,28 @@ async function refreshSingleNode(
   }
 
   try {
-    // One request per shown model field, in turn: each response is the whole
-    // template, so the next field refreshes on top of the previous result.
-    let refreshedTemplate = nodeData.template;
-    let refreshedOutputs: APIClassType["outputs"] | undefined;
-    for (const modelFieldKey of modelFieldKeys) {
-      const requestPayload = buildRefreshPayload(
-        refreshedTemplate,
-        flowId,
-        folderId,
-      );
-
-      let response;
+    const postRefresh = async (
+      template: APITemplateType,
+      modelFieldKey: string,
+      value: unknown,
+    ) => {
       try {
         const queryParams = new URLSearchParams();
         appendProviderScope(queryParams, { flowId });
-        response = await api.post<APIClassType>(
+        const response = await api.post<APIClassType>(
           `${getURL("CUSTOM_COMPONENT", { update: "update" })}${
             queryParams.toString() ? `?${queryParams.toString()}` : ""
           }`,
           {
             code: nodeData.template.code?.value,
             frontend_node: { metadata: nodeData.metadata },
-            template: requestPayload,
+            template: buildRefreshPayload(template, flowId, folderId),
             field: modelFieldKey,
-            field_value: refreshedTemplate[modelFieldKey]?.value,
+            field_value: value,
             tool_mode: nodeData.tool_mode,
           },
         );
+        return response.data;
         // biome-ignore lint/suspicious/noExplicitAny: legacy
       } catch (e: any) {
         // Fallback 403 suppression for races the outdated-state guards above miss.
@@ -273,20 +267,44 @@ async function refreshSingleNode(
             `Suppressed 403 for outdated component (node ${node.id}):`,
             e.response.data.detail,
           );
-          return;
+          return undefined;
         }
         throw e;
       }
+    };
 
-      const responseData = response.data;
+    // One request per shown model field, in turn: each response is the whole
+    // template, so the next field refreshes on top of the previous result.
+    let refreshedTemplate = nodeData.template;
+    let refreshedOutputs: APIClassType["outputs"] | undefined;
+    for (const modelFieldKey of modelFieldKeys) {
+      let responseData = await postRefresh(
+        refreshedTemplate,
+        modelFieldKey,
+        refreshedTemplate[modelFieldKey]?.value,
+      );
       if (!responseData?.template) return;
 
       // Validate and correct the model value against available options
-      refreshedTemplate = validateModelValue(
+      const validatedTemplate = validateModelValue(
         responseData.template,
         modelFieldKey,
         providerConfiguration,
       );
+      // validateModelValue returns the template it was given unless it
+      // replaced the model.
+      if (validatedTemplate !== responseData.template) {
+        // The backend set the provider's fields (API key, base URL) for the model
+        // it was sent. Ask again for the replacement, or the node keeps the old
+        // provider's fields until the next open corrects them.
+        responseData = await postRefresh(
+          validatedTemplate,
+          modelFieldKey,
+          validatedTemplate[modelFieldKey]?.value,
+        );
+        if (!responseData?.template) return;
+      }
+      refreshedTemplate = responseData.template;
       refreshedOutputs = responseData.outputs;
     }
 
