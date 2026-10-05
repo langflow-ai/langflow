@@ -12,6 +12,7 @@ import asyncio
 import json
 import os
 import signal
+import subprocess
 import sys
 import textwrap
 import uuid
@@ -121,6 +122,15 @@ def gate(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
+def unreaped():
+    """A process nothing reaps: once killed it keeps its pid, as the child of a dead worker can in a container."""
+    process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"])  # noqa: S603
+    yield process
+    process.kill()
+    process.wait()
+
+
+@pytest.fixture
 async def other_worker(config_dir: Path):
     """Start a run from a second server process, and hand back that process and the run's id."""
     workers = []
@@ -151,47 +161,26 @@ async def test_events_arrive_in_order_and_the_run_ends_done_with_its_report(conf
         """
         emit(event="progress", phase="copying", done=1, total=2, unit="rows")
         emit(event="item", table="flow", source_rows=2, target_rows=2)
-        emit(event="report", ok=False, problems=[{"code": "count_mismatch", "message": "flow"}])
+        emit(event="report", ok=False, problems=[{"code": "count_mismatch"}])
         """
     )
 
     events = await _follow(run_id)
 
-    assert [(event["seq"], event["event"]) for event in events] == [
-        (1, "progress"),
-        (2, "item"),
-        (3, "report"),
-        (4, "end"),
-    ]
+    assert [event["seq"] for event in events] == [1, 2, 3, 4]
+    assert [event["event"] for event in events] == ["progress", "item", "report", "end"]
     # Whether the report says ok is the caller's business: it arrives as the command wrote it.
-    assert events[2] == {
-        "event": "report",
-        "ok": False,
-        "problems": [{"code": "count_mismatch", "message": "flow"}],
-        "seq": 3,
-    }
+    assert events[2] == {"event": "report", "ok": False, "problems": [{"code": "count_mismatch"}], "seq": 3}
     assert events[3] == {"event": "end", "status": "done", "exit_code": 0, "seq": 4}
     run = migration_runs.read_run(run_id)
     assert (run["step_id"], run["status"], run["started_by"], run["exit_code"]) == ("copy_database", "done", "alice", 0)
     assert run["started_at"] <= run["finished_at"]
-    # What the endpoints will build on: two files per run, and these fields in the status.
-    assert {path.name for path in (config_dir / "migrations" / "runs").iterdir()} == {
-        f"{run_id}.ndjson",
-        f"{run_id}.json",
-        "start.lock",
-    }
-    assert set(run) == {
-        "run_id",
-        "step_id",
-        "status",
-        "started_by",
-        "started_at",
-        "finished_at",
-        "exit_code",
-        "stderr",
-        "child",
-        "worker",
-    }
+    # What the endpoints will build on: two files per run, a log that holds what was followed, these fields.
+    runs = config_dir / "migrations" / "runs"
+    assert {path.name for path in runs.iterdir()} == {f"{run_id}.ndjson", f"{run_id}.json", "start.lock"}
+    assert [json.loads(line) for line in (runs / f"{run_id}.ndjson").read_text().splitlines()] == events
+    recorded = {"run_id", "step_id", "status", "started_by", "started_at", "finished_at", "exit_code", "stderr"}
+    assert set(run) == recorded | {"child", "worker"}
 
 
 async def test_a_follower_that_starts_late_gets_only_the_later_events(gate: Path):
@@ -343,32 +332,32 @@ async def test_a_log_longer_than_one_read_arrives_whole_and_in_order():
     assert await _follow(run_id) == events
 
 
-async def test_a_line_still_being_written_is_read_once_it_is_whole(config_dir: Path):
-    # This test is the worker: it writes a run's files itself, to stop halfway through a line.
+async def test_a_line_still_being_written_is_read_once_it_is_whole(config_dir: Path, unreaped: subprocess.Popen):
+    # One process stands in for a worker and its child, and this test does their writing, so the
+    # log can stop halfway through a line.
+    identity = migration_runs._identity(unreaped.pid)
     run_id = uuid.uuid4().hex
     runs = config_dir / "migrations" / "runs"
     runs.mkdir(parents=True)
-    log, status = runs / f"{run_id}.ndjson", runs / f"{run_id}.json"
-    running = {"run_id": run_id, "step_id": "copy_files", "status": "running", "exit_code": None, "child": None}
-    status.write_text(json.dumps({**running, "worker": migration_runs._identity(os.getpid())}))
+    log = runs / f"{run_id}.ndjson"
     log.write_text('{"event": "progress", "done": 1, "seq": 1}\n{"event": "progress", "do')
+    status = {"run_id": run_id, "step_id": "copy_files", "status": "running", "exit_code": None}
+    (runs / f"{run_id}.json").write_text(json.dumps({**status, "child": identity, "worker": identity}))
     seen, follower = _follow_in_background(run_id)
     await _until(lambda: seen)
 
     with log.open("a") as lines:
         lines.write('ne": 2, "seq": 2}\n')
     await _until(lambda: len(seen) == 2)
-    # A worker that dies halfway through a line leaves that half behind for good.
+    # A worker that dies halfway through a line leaves that half behind for good. Nothing reaps
+    # the process here, so it keeps its pid too, and that must not make the run look live.
     with log.open("a") as lines:
         lines.write('{"event": "progr')
-    status.write_text(json.dumps({**running, "worker": None}))
+    unreaped.kill()
     await asyncio.wait_for(follower, _TIMEOUT)
 
-    assert seen == [
-        {"event": "progress", "done": 1, "seq": 1},
-        {"event": "progress", "done": 2, "seq": 2},
-        {"event": "end", "status": "interrupted", "exit_code": None, "seq": 3},
-    ]
+    assert [event.get("done") for event in seen] == [1, 2, None]
+    assert seen[-1] == {"event": "end", "status": "interrupted", "exit_code": None, "seq": 3}
 
 
 async def test_cancel_ends_the_run_cancelled(gate: Path):
@@ -469,6 +458,31 @@ async def test_a_run_that_cannot_be_recorded_does_not_leave_its_child_running(co
     await _until(lambda: set(psutil.Process().children()) <= children)
 
 
+async def test_a_run_whose_log_can_no_longer_be_written_ends_failed_and_stops_its_child(config_dir: Path, gate: Path):
+    if os.getuid() == 0:
+        pytest.skip("Root can write to a file whatever its permissions say")
+    run_id = await _start(
+        """
+        emit(event="progress", done=1)
+        wait_for_gate()
+        emit(event="progress", done=2)
+        time.sleep(120)
+        """,
+        gate,
+    )
+    seen, follower = _follow_in_background(run_id)
+    await _until(lambda: seen)
+    child = migration_runs.read_run(run_id)["child"]
+
+    (config_dir / "migrations" / "runs" / f"{run_id}.ndjson").chmod(0o400)
+    gate.touch()
+    await asyncio.wait_for(follower, _TIMEOUT)
+
+    # The worker could not write the end to the log either, so the follower read it from the status.
+    assert seen[-1] == {"event": "end", "status": "failed", "exit_code": None, "seq": 2}
+    await _until(lambda: migration_runs._process(child) is None)
+
+
 async def test_a_new_run_replaces_the_earlier_run_of_its_step(config_dir: Path):
     async def run(step: str) -> str:
         run_id = await _start('emit(event="report", ok=True)', step=step)
@@ -528,11 +542,7 @@ async def test_a_run_is_not_interrupted_while_its_worker_still_reads_it(gate: Pa
 
     assert migration_runs.read_run(run_id)["status"] == "running"
     gate.touch()
-    assert [(event["seq"], event["event"]) for event in await _follow(run_id)] == [
-        (1, "progress"),
-        (2, "report"),
-        (3, "end"),
-    ]
+    assert [event["event"] for event in await _follow(run_id)] == ["progress", "report", "end"]
     assert migration_runs.read_run(run_id)["status"] == "done"
 
 

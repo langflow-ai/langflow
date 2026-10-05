@@ -259,7 +259,8 @@ def _identity(pid: int) -> dict[str, Any] | None:
     """What tells this process from a later one given the same pid. None when it has already exited."""
     try:
         return process_identity(psutil.Process(pid))
-    except psutil.NoSuchProcess:
+    except (psutil.NoSuchProcess, ProcessLookupError):
+        # Linux answers with the second when the process is reaped while its entry in /proc is read.
         return None
 
 
@@ -267,7 +268,7 @@ def _process(identity: dict[str, Any] | None) -> psutil.Process | None:
     """The process a status file names. None when it is gone, or when its pid now belongs to another."""
     # ponytail: a pid means something on one host. Replicas that share CONFIG_DIR would need a lease instead.
     if identity:
-        with contextlib.suppress(psutil.Error):
+        with contextlib.suppress(psutil.Error, ProcessLookupError):
             process = psutil.Process(identity["pid"])
             # A child that exited and was never reaped keeps its pid, but can no longer write.
             if process.status() != psutil.STATUS_ZOMBIE and identity_matches(process, identity):
