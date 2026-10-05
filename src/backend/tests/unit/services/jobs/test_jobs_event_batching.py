@@ -9,6 +9,7 @@ from langflow.services.database.models.jobs.model import JobEvent
 from langflow.services.jobs import service as jobs_module
 from langflow.services.jobs.service import JobService
 from sqlalchemy import event
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -28,6 +29,7 @@ class _EventStore:
         self.allow_commit = asyncio.Event()
         self.allow_commit.set()
         self.fail_commit = False
+        self.commit_failures = []
 
     @asynccontextmanager
     async def _with_session(self):
@@ -45,9 +47,11 @@ class _EventStore:
             try:
                 self.checkout_started.set()
                 await self.allow_checkout.wait()
-                if self.fail_commit:
+                if self.fail_commit or self.commit_failures:
 
                     def fail_commit(_session):
+                        if self.commit_failures:
+                            raise self.commit_failures.pop(0)
                         msg = "injected commit failure"
                         raise RuntimeError(msg)
 
@@ -224,3 +228,68 @@ async def test_appends_arriving_during_commit_are_flushed(event_store):
     finally:
         event_store.allow_commit.set()
         await _finish_tasks([leader, *([follower] if follower is not None else [])])
+
+
+async def test_database_cancellation_settles_every_appender(event_store):
+    event_store.commit_failures = [asyncio.CancelledError()]
+    service = JobService()
+    tasks = [asyncio.create_task(service.append_event(uuid4(), "event", {})) for _ in range(2)]
+    try:
+        results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=2)
+        assert all(isinstance(result, asyncio.CancelledError) for result in results)
+        assert await event_store.events() == []
+        assert event_store.active_sessions == 0
+    finally:
+        await _finish_tasks(tasks)
+
+
+@pytest.mark.parametrize("error_type", [IntegrityError, OperationalError])
+async def test_commit_contention_retries_without_acknowledging_failed_writes(event_store, error_type):
+    event_store.commit_failures = [error_type("INSERT", {}, Exception("database is locked"))]
+    service = JobService()
+    job_id = uuid4()
+    seqs = await asyncio.gather(service.append_event(job_id, "first", {}), service.append_event(job_id, "second", {}))
+    assert seqs == [1, 2]
+    assert [row.seq for row in await event_store.events()] == [1, 2]
+    assert event_store.checkouts == 2
+
+
+async def test_non_contention_database_error_reaches_every_appender(event_store):
+    event_store.commit_failures = [OperationalError("INSERT", {}, Exception("connection unavailable"))]
+    service = JobService()
+    results = await asyncio.gather(
+        service.append_event(uuid4(), "first", {}),
+        service.append_event(uuid4(), "second", {}),
+        return_exceptions=True,
+    )
+    assert all(isinstance(result, OperationalError) for result in results)
+    assert await event_store.events() == []
+    assert event_store.checkouts == 1
+
+
+async def test_exhausted_contention_reaches_every_appender(event_store, monkeypatch):
+    monkeypatch.setattr(jobs_module, "_APPEND_EVENT_MAX_RETRIES", 2)
+    event_store.commit_failures = [OperationalError("INSERT", {}, Exception("database is locked")) for _ in range(2)]
+    service = JobService()
+    results = await asyncio.gather(
+        service.append_event(uuid4(), "first", {}),
+        service.append_event(uuid4(), "second", {}),
+        return_exceptions=True,
+    )
+    assert all(isinstance(result, RuntimeError) for result in results)
+    assert all("exhausted 2 retries" in str(result) for result in results)
+    assert await event_store.events() == []
+
+
+async def test_independent_service_writers_preserve_gap_free_order(event_store):
+    services = [JobService() for _ in range(3)]
+    job_id = uuid4()
+    seqs = await asyncio.gather(
+        *(
+            service.append_event(job_id, "event", {"writer": writer, "i": i})
+            for writer, service in enumerate(services)
+            for i in range(12)
+        )
+    )
+    assert sorted(seqs) == list(range(1, 37))
+    assert [row.seq for row in await event_store.events()] == list(range(1, 37))
