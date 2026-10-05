@@ -250,6 +250,21 @@ class TestTableOperations:
         assert len(result) == 2
         assert all(result["department"] == "IT")
 
+    @pytest.mark.parametrize(
+        ("operator", "expected_names"),
+        [("equals", ["Bob", "Carol"]), ("not equals", ["Ann"])],
+    )
+    def test_filter_numeric_column_by_text_value(self, operator, expected_names):
+        component = OperationsComponent(
+            df=DataFrame(pd.DataFrame({"name": ["Ann", "Bob", "Carol"], "score": [2.5, 7.0, 7.0]})),
+            operation=[{"name": "Filter"}],
+            column_name="score",
+            filter_operator=operator,
+            filter_value="7",
+        )
+        result = component.as_dataframe()
+        assert result["name"].tolist() == expected_names
+
     def test_filter_contains(self, sample_dataframe):
         component = OperationsComponent(
             df=sample_dataframe,
@@ -365,6 +380,43 @@ class TestTextOperations:
         assert isinstance(result, DataFrame)
         assert list(result.columns) == ["name", "age"]
         assert len(result) == 2
+
+    def test_text_to_dataframe_skips_markdown_delimiter_row(self):
+        component = OperationsComponent(
+            text_input="| name | age |\n|:-----|----:|\n| Alice | 30 |\n| Bob | 25 |",
+            operation=[{"name": "Text to DataFrame"}],
+            table_separator="|",
+            has_header=True,
+        )
+        result = component.as_dataframe()
+        assert list(result.columns) == ["name", "age"]
+        assert result["name"].tolist() == ["Alice", "Bob"]
+        assert result["age"].tolist() == [30, 25]
+
+    def test_text_to_dataframe_preserves_headerless_delimiter_like_rows(self):
+        component = OperationsComponent(
+            text_input="Alice|30\n---|:--\nBob|25",
+            operation=[{"name": "Text to DataFrame"}],
+            table_separator="|",
+            has_header=False,
+        )
+
+        result = component.as_dataframe()
+
+        assert result.to_numpy().tolist() == [["Alice", "30"], ["---", ":--"], ["Bob", "25"]]
+
+    def test_text_to_dataframe_handles_empty_markdown_table(self):
+        component = OperationsComponent(
+            text_input="| name | age |\n|---|---|",
+            operation=[{"name": "Text to DataFrame"}],
+            table_separator="|",
+            has_header=True,
+        )
+
+        result = component.as_dataframe()
+
+        assert result.empty
+        assert list(result.columns) == ["name", "age"]
 
     def test_text_clean(self):
         component = OperationsComponent(
