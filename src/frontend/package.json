@@ -47,7 +47,7 @@
     "minimatch": "^10.2.6",
     "serialize-javascript": "^7.0.5",
     "undici": "^8.10.2",
-    "postcss-selector-parser": "^6.1.4",
+    "postcss-selector-parser": "^7.1.6",
     "form-data": "^4.0.6",
     "fast-uri": "^4.1.5",
     "proxy-addr": "^2.0.8",
