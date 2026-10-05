@@ -121,6 +121,7 @@ lfx-firecrawl = { workspace = true }
 lfx-nextplaid = { workspace = true }
 lfx-paddle = { workspace = true }
 lfx-vllm = { workspace = true }
+lfx-atlascloud = { workspace = true }
 lfx-empiriolabs = { workspace = true }
 lfx-openai-compatible = { workspace = true }
 lfx-exa = { workspace = true }
@@ -161,6 +162,7 @@ members = [
     "src/bundles/nextplaid",
     "src/bundles/paddle",
     "src/bundles/vllm",
+    "src/bundles/atlascloud",
     "src/bundles/empiriolabs",
     "src/bundles/openai-compatible",
     "src/bundles/exa",
@@ -185,6 +187,7 @@ Documentation = "https://docs.langflow.org"
 bundles = [
     "lfx-bundles[all-no-torch]>=1.2.0,<2.0",
     "lfx-arxiv>=0.2.0,<1.0.0",
+    "lfx-atlascloud>=0.1.0,<1.0.0",
     "lfx-confluent>=0.2.0,<1.0.0",
     "lfx-duckduckgo>=0.2.0,<1.0.0",
     "lfx-empiriolabs>=0.2.0,<1.0.0",
