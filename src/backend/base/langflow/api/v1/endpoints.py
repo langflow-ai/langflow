@@ -117,6 +117,7 @@ from langflow.services.deps import (
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
+from langflow.utils.flow_secrets import strip_secret_field_values
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -141,6 +142,19 @@ def _enforce_owner_only_tweaks(
     """Reject caller-controlled graph mutation without revealing a shared flow."""
     if _has_nonempty_tweaks(tweaks) and not _caller_owns_flow(flow, user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+
+
+def _reject_shared_secret_variable_overrides(
+    flow: Flow | FlowRead,
+    user: User | UserRead | None,
+    variables: object,
+) -> None:
+    """Keep request variables from redirecting a shared flow's hidden credential."""
+    if variables and not _caller_owns_flow(flow, user) and strip_secret_field_values(flow.data) != flow.data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot override variables in a shared flow using its owner's hidden credentials.",
+        )
 
 
 def _graph_executes_as_actor(
@@ -392,6 +406,7 @@ async def simple_run_flow(
     http_request: Request | None = None,
 ):
     validate_input_and_tweaks(input_request)
+    _reject_shared_secret_variable_overrides(flow, api_key_user, (context or {}).get("request_variables"))
     policy_context_token = set_current_model_provider_policy_context(
         user_id=getattr(api_key_user, "id", None),
         attributes=provider_policy_attributes_for_flow(
@@ -929,6 +944,8 @@ async def _run_flow_internal(
 
     # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
     request_variables = extract_global_variables_from_headers(http_request.headers)
+    _reject_shared_secret_variable_overrides(flow, api_key_user, request_variables)
+    _reject_shared_secret_variable_overrides(flow, api_key_user, (context or {}).get("request_variables"))
 
     # Merge request variables with existing context
     if request_variables:

@@ -27,7 +27,7 @@ from typing import Final
 from uuid import UUID, uuid4
 
 from ag_ui.core import CustomEvent
-from fastapi import BackgroundTasks, Request
+from fastapi import BackgroundTasks, HTTPException, Request
 from fastapi.responses import EventSourceResponse
 from fastapi.sse import format_sse_event
 from lfx.events.event_manager import create_default_event_manager
@@ -39,6 +39,7 @@ from lfx.log.logger import logger
 from lfx.observability import execution_protocol, extract_trace_link, queued_trace_link, tracing_is_available
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
+from lfx.utils.flow_validation import prepare_flow_build_for_user_from_cache
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
 from lfx.workflow.adapters.langflow import (
     WORKFLOW_OUTPUT_CAPTURE_EVENT,
@@ -59,11 +60,16 @@ from langflow.api.v2.workflow_validation import _validate_output_ids
 from langflow.api.warm_graph import warm_deepcopy
 from langflow.exceptions.api import WorkflowTimeoutError, WorkflowValidationError
 from langflow.processing.process import process_tweaks, run_graph_internal
-from langflow.services.database.models.flow.model import FlowRead
+from langflow.services.database.models.flow.model import AccessTypeEnum, FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_job_service, get_memory_base_service, get_settings_service, get_task_service
 from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.warm_registry.service import flow_version
+from langflow.utils.flow_secrets import (
+    HiddenFieldMetadataError,
+    restore_redacted_flow_values,
+    strip_secret_field_values,
+)
 
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution, used as a fallback
@@ -275,7 +281,6 @@ async def _stream_event_frames(
     queue = _WorkflowEventQueue(maxsize=_EVENT_QUEUE_MAX_SIZE)
     event_manager = create_default_event_manager(queue)
     input_request = _single_input_value_request(parsed)
-    flow_data = FlowDataRequest(**parsed.data) if parsed.data else None
     # Ceiling for the modes whose caller is waiting on a socket (stream, public).
     # Sync uses its own asyncio.wait_for upstream; background passes None and is
     # bounded by JobRunner instead. wait_for(timeout=None) simply awaits.
@@ -302,6 +307,30 @@ async def _stream_event_frames(
     async def drive() -> None:
         nonlocal drive_error
         try:
+            runtime_data = parsed.data
+            if (
+                runtime_data
+                and provider_policy_flow is not None
+                and protocol != "v2.public"
+                and not caller_owns_flow(provider_policy_flow, current_user)
+                and getattr(provider_policy_flow, "access_type", None) != AccessTypeEnum.PUBLIC
+            ):
+                # Keep the submitted/persisted graph redacted. Only the detached
+                # graph passed into the build loop receives stored hidden values.
+                try:
+                    runtime_data = restore_redacted_flow_values(runtime_data, provider_policy_flow.data)
+                except HiddenFieldMetadataError:
+                    # The admission gate may have replaced stale component source
+                    # with server-trusted code. Compare against that canonical
+                    # policy result, never arbitrary changed code from the job.
+                    trusted_data = prepare_flow_build_for_user_from_cache(
+                        provider_policy_flow.data,
+                        is_superuser=current_user.is_superuser,
+                    )
+                    if trusted_data is None:
+                        raise
+                    runtime_data = restore_redacted_flow_values(runtime_data, trusted_data)
+            flow_data = FlowDataRequest(**runtime_data) if runtime_data else None
             # Bound here rather than in the enclosing generator: drive() runs as its own task, so
             # the set/reset pair cannot straddle a generator suspension point and leak into the
             # consumer task that resumes it.
@@ -346,6 +375,10 @@ async def _stream_event_frames(
                         # and background paths silently drop request tweaks.
                         tweaks=parsed.tweaks,
                         expose_error_details=expose_error_details,
+                        redact_build_params=(
+                            provider_policy_flow is not None
+                            and not caller_owns_flow(provider_policy_flow, current_user)
+                        ),
                         # Anonymous serving runs are ephemeral: thread the no-persist
                         # decision onto the graph so astore_message skips the DB write.
                         persist_messages=parsed.persist_messages,
@@ -728,6 +761,18 @@ async def execute_sync_workflow(
     # X-LANGFLOW-GLOBAL-VAR-* headers (still used by the Responses API).
     # Body globals win on conflict.
     request_variables = _resolve_request_variables(parsed.globals, http_request)
+    if (
+        request_variables
+        and not caller_owns_flow(flow, current_user)
+        and strip_secret_field_values(flow.data) != flow.data
+    ):
+        # Headers are resolved only in the sync execution path, after the
+        # request admission gate. A bound URL override could redirect an
+        # owner's hidden credential despite an unchanged stored graph.
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot override variables in a shared flow using its owner's hidden credentials.",
+        )
 
     # Build context from request variables (similar to V1's _run_flow_internal)
     context = {"request_variables": request_variables} if request_variables else None

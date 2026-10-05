@@ -256,6 +256,7 @@ EXPECTED_FIELDS = {
     "allow_public_custom_components",
     "block_code_interpreter_components",
     "restrict_local_file_access",
+    "database_tls_files_dir",
     "mcp_server_docker_hardening",
     "mcp_server_allowed_packages",
     "mcp_server_interpreter_hardening",
@@ -315,6 +316,7 @@ def test_critical_defaults_unchanged():
     assert settings.block_code_interpreter_components is False
     assert settings.substitute_outdated_component_code is True
     assert settings.restrict_local_file_access is True
+    assert settings.database_tls_files_dir is None
     assert settings.mcp_server_docker_hardening is False
     assert settings.mcp_server_interpreter_hardening is False
     assert settings.mcp_server_allowed_packages is None
@@ -332,6 +334,11 @@ def test_critical_defaults_unchanged():
     assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
     assert settings.dangerously_allow_multi_worker_without_shared_queue is False
+
+
+def test_database_tls_files_dir_reads_operator_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("LANGFLOW_DATABASE_TLS_FILES_DIR", str(tmp_path))
+    assert Settings(_env_file=None).database_tls_files_dir == tmp_path
 
 
 def test_dict_defaults_unchanged():
