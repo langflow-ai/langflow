@@ -36,6 +36,23 @@ if TYPE_CHECKING:
     from langflow.services.telemetry.schema import IntegrationActionPayload
 
 
+def database_dialect(database_url: str | None) -> str:
+    """Return only the engine name of a database URL, such as ``sqlite`` or ``postgresql``.
+
+    The rest of the URL carries a host and often credentials, so nothing but the
+    backend name may reach a telemetry payload.
+    """
+    if not database_url:
+        return "unknown"
+    from sqlalchemy.engine import make_url
+    from sqlalchemy.exc import ArgumentError
+
+    try:
+        return make_url(database_url).get_backend_name()
+    except (ArgumentError, ValueError):
+        return "unknown"
+
+
 class TelemetryService(Service):
     name = "telemetry_service"
 
@@ -181,6 +198,7 @@ class TelemetryService(Service):
             backend_only=self.settings_service.settings.backend_only,
             arch=self.architecture,
             auto_login=self.settings_service.auth_settings.AUTO_LOGIN,
+            database_dialect=database_dialect(self.settings_service.settings.database_url),
             client_type=self.client_type,
         )
         await self._queue_event((self.send_telemetry_data, payload, None))

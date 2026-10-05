@@ -40,6 +40,9 @@ export const mapMemoryApiToMemoryInfo = (dto: MemoryApiDTO): MemoryInfo => {
     preprocessing_model: dto.preproc_model,
     preproc_instructions: dto.preproc_instructions,
     batch_size: Math.max(1, Math.trunc(dto.threshold ?? 1)),
+    storage_state: dto.storage_state,
+    storage_kb_id: dto.storage_kb_id,
+    active_migration_id: dto.active_migration_id,
     backend_type: dto.backend_type,
     backend_config: dto.backend_config,
   };

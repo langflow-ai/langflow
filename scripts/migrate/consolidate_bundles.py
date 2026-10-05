@@ -73,11 +73,11 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "yahoosearch": ["yfinance==0.2.50"],
     "wolframalpha": ["wolframalpha==5.1.3", _LC_COMMUNITY],
     # --- tranche 2: vector stores ---
-    "chroma": ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6"],
+    "chroma": [],  # Retired SDK, retained component compatibility alias.
     "clickhouse": ["clickhouse-connect==0.7.19", _LC_COMMUNITY],
     "couchbase": ["couchbase>=4.2.1", _LC_COMMUNITY],
     "milvus": ["langchain-milvus~=0.3.2"],
-    "mongodb": ["pymongo>=4.10.1", "langchain-mongodb>=0.11.0"],
+    "mongodb": ["pymongo>=4.18.2,<5.0.0", "langchain-mongodb>=0.11.0"],
     "pgvector": ["pgvector>=0.4.2", _LC_COMMUNITY],
     # Marker preserved from langflow-base: no py3.14 wheel yet; on 3.14 the
     # component degrades exactly as it does in today's published images.
@@ -147,9 +147,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     # "google" graduated to the standalone lfx-google bundle so Gemini is
     # available in every default Langflow install.
     "vertexai": ["langchain-google-vertexai>=3.2.0"],
-    "altk": [
-        "agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
-    ],
+    "altk": [],  # Retired in 1.13.0. Keep saved-node and extra compatibility.
     "codeagents": [
         # OpenDsStar is a manual opt-in: its DiskCache dependency has no released fix.
         # Keep the component code, but never add it to managed extras or aggregates.

@@ -1,5 +1,6 @@
 import io
 import re
+import unicodedata
 import uuid
 import zipfile
 from collections.abc import AsyncGenerator, AsyncIterable
@@ -29,6 +30,61 @@ router = APIRouter(tags=["Files"], prefix="/files")
 # Set the static name of the MCP servers file
 MCP_SERVERS_FILE = "_mcp_servers"
 SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
+MAX_FILENAME_BYTES = 255
+_UNSAFE_ARCHIVE_NAME_CHARS = re.compile(r'[\\/\x00-\x1f\x7f-\x9f<>:"|?*]')
+_WINDOWS_DEVICE_NAME = re.compile(
+    r"^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[0-9¹²³]|LPT[0-9¹²³])(?=[ .]|$)",
+    re.IGNORECASE,
+)
+_UNSAFE_UNICODE_CATEGORIES = frozenset({"Cf", "Zl", "Zp"})
+
+
+def _truncate_utf8(value: str, max_bytes: int) -> str:
+    return value.encode("utf-8")[:max_bytes].decode("utf-8", errors="ignore")
+
+
+def _replace_unsafe_archive_chars(value: str) -> str:
+    value = _UNSAFE_ARCHIVE_NAME_CHARS.sub("_", value)
+    return "".join("_" if unicodedata.category(char) in _UNSAFE_UNICODE_CATEGORIES else char for char in value)
+
+
+def _safe_archive_member_name(name: str, *, extension: str = "", collision_suffix: str = "") -> str:
+    """Return a portable ZIP member name of at most 255 UTF-8 bytes."""
+    safe_name = _replace_unsafe_archive_chars(name).replace("..", "_").strip(" .") or "file"
+    safe_extension = _replace_unsafe_archive_chars(extension).replace("..", "_").rstrip(" .")
+    # Long legacy extensions must leave room for a nonempty stem and the
+    # collision suffix, which can be added to an otherwise 255-byte name.
+    tail = collision_suffix + _truncate_utf8(
+        safe_extension, MAX_FILENAME_BYTES - len(collision_suffix.encode("utf-8")) - len("file")
+    )
+    stem_budget = MAX_FILENAME_BYTES - len(tail.encode("utf-8"))
+    safe_name = _truncate_utf8(safe_name, stem_budget).rstrip(" .") or "file"
+    if _WINDOWS_DEVICE_NAME.match(safe_name):
+        safe_name = _truncate_utf8(f"_{safe_name}", stem_budget).rstrip(" .")
+    return f"{safe_name}{tail}"
+
+
+def _validate_file_name(name: str | None) -> str:
+    """Apply the same path and length rules to uploads and renames."""
+    if (
+        not name
+        or any(char in name for char in ("..", "/", "\\", "\x00", "\n", "\r"))
+        or any(unicodedata.category(char) in _UNSAFE_UNICODE_CATEGORIES for char in name)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file name: paths, '..', NUL, CR/LF, and unsafe Unicode formatting are forbidden.",
+        )
+    if len(name.encode("utf-8")) > MAX_FILENAME_BYTES:
+        raise HTTPException(status_code=400, detail="File name is too long. Maximum 255 bytes allowed.")
+
+    basename = Path(name).name
+    if not basename or basename in (".", ".."):
+        raise HTTPException(status_code=400, detail="Invalid file name after sanitization")
+
+    if _WINDOWS_DEVICE_NAME.match(basename):
+        raise HTTPException(status_code=400, detail=f"Invalid file name. '{basename}' is a reserved system name.")
+    return basename
 
 
 def is_permanent_storage_failure(error: Exception) -> bool:
@@ -202,73 +258,7 @@ async def upload_user_file(
 
     # Create a new database record for the uploaded file.
     try:
-        # SECURITY FIX: Validate and sanitize multipart upload filename to prevent path traversal attacks
-        # First, validate the original filename to reject obvious malicious attempts
-        if not file.filename:
-            raise HTTPException(status_code=400, detail="No filename provided")
-
-        # Reject filenames containing directory traversal sequences or path separators
-        # This prevents attackers from using directory traversal in the Content-Disposition header
-        # Check for: path separators (/, \), traversal (..), null bytes, and other dangerous chars
-        dangerous_chars = ["..", "/", "\\", "\x00", "\n", "\r"]
-        if any(char in file.filename for char in dangerous_chars):
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Invalid file name. Filename must not contain directory paths, "
-                    "'..' sequences, or control characters."
-                ),
-            )
-
-        # Additional check: reject filenames that are too long (prevent DoS)
-        # Most filesystems have a 255 byte limit for filenames
-        MAX_FILENAME_BYTES = 255  # noqa: N806
-        if len(file.filename.encode("utf-8")) > MAX_FILENAME_BYTES:
-            raise HTTPException(
-                status_code=400,
-                detail="File name is too long. Maximum 255 bytes allowed.",
-            )
-
-        # Extract only the basename as an additional safety measure
-        # This provides defense-in-depth in case the above checks are bypassed
-        new_filename = Path(file.filename).name
-
-        # Final validation: ensure the sanitized filename is valid and not empty
-        if not new_filename or new_filename in (".", ".."):
-            raise HTTPException(status_code=400, detail="Invalid file name after sanitization")
-
-        # Reject reserved filenames on Windows (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
-        # This prevents issues when code runs on Windows systems
-        reserved_names = {
-            "CON",
-            "PRN",
-            "AUX",
-            "NUL",
-            "COM1",
-            "COM2",
-            "COM3",
-            "COM4",
-            "COM5",
-            "COM6",
-            "COM7",
-            "COM8",
-            "COM9",
-            "LPT1",
-            "LPT2",
-            "LPT3",
-            "LPT4",
-            "LPT5",
-            "LPT6",
-            "LPT7",
-            "LPT8",
-            "LPT9",
-        }
-        name_without_ext = new_filename.rsplit(".", 1)[0].upper()
-        if name_without_ext in reserved_names:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid file name. '{name_without_ext}' is a reserved system name.",
-            )
+        new_filename = _validate_file_name(file.filename)
 
         # Enforce unique constraint on name, except for the special _mcp_servers file
         try:
@@ -343,6 +333,10 @@ async def upload_user_file(
 
             # Create the unique filename with extension for storage
             unique_filename = f"{root_filename}.{file_extension}" if file_extension else root_filename
+
+        # The duplicate suffix can push an otherwise valid upload past the
+        # filesystem's single-segment byte limit.
+        _validate_file_name(unique_filename)
 
         # Read file content, save with unique filename, and compute file size in one routine
         try:
@@ -671,6 +665,7 @@ async def download_files_batch(
 
         # Create a ZIP file. Each file is read from its owner's storage
         # namespace, not the actor's.
+        used_names: set[str] = set()
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
             for file in files:
                 file_content = await storage_service.get_file(flow_id=str(file.user_id), file_name=Path(file.path).name)
@@ -678,7 +673,14 @@ async def download_files_batch(
                 # Get the file extension from the original filename
                 file_extension = Path(file.path).suffix
                 # Create the filename with extension
-                filename_with_extension = f"{file.name}{file_extension}"
+                filename_with_extension = _safe_archive_member_name(file.name, extension=file_extension)
+                duplicate = 0
+                while unicodedata.normalize("NFC", filename_with_extension).casefold() in used_names:
+                    duplicate += 1
+                    filename_with_extension = _safe_archive_member_name(
+                        file.name, extension=file_extension, collision_suffix=f"_{file.id}_{duplicate}"
+                    )
+                used_names.add(unicodedata.normalize("NFC", filename_with_extension).casefold())
 
                 # Write the file to the ZIP with the proper extension
                 zip_file.writestr(filename_with_extension, file_content)
@@ -841,6 +843,10 @@ async def edit_file_name(
             )
         except HTTPException as exc:
             raise deny_to_404(exc, detail="File not found") from exc
+
+        # Use the upload rules for display names; batch export makes legacy and
+        # platform-specific names portable without changing the stored name.
+        _validate_file_name(name)
 
         # Update the file name
         file.name = name

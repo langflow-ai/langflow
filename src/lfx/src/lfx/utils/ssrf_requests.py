@@ -1,27 +1,33 @@
-"""SSRF-protected helpers for the synchronous ``requests`` library.
+"""SSRF-protected helpers with a synchronous ``requests`` response interface.
 
 The httpx-based components (``api_request``, ``url``) route user-controlled URLs
 through SSRF validation. Components built on the synchronous ``requests`` library
-need the same protection. This module provides a drop-in ``requests.get`` wrapper
-that validates the initial URL and re-validates every redirect hop, so a public URL
-cannot reach internal services either directly or by redirecting to them.
+need the same protection. This module provides a ``requests.Response`` wrapper
+that validates and pins the IP for the initial URL and every redirect hop, so a
+public URL cannot reach internal services by DNS rebinding or redirecting to them.
 
 ``requests.get`` follows redirects by default, so validating only the initial URL is
 insufficient: a public URL could redirect to ``http://169.254.169.254/`` (cloud
 metadata), loopback, or an RFC1918 address. ``ssrf_safe_get`` disables automatic
-redirects and re-applies :func:`validate_url_for_ssrf` to each ``Location`` before
-following it. All validation is a no-op when SSRF protection is disabled, so behavior
-is unchanged for operators who have not enabled it.
+redirects and re-applies :func:`validate_and_resolve_url` to each ``Location`` before
+following it. With protection disabled, the host explicitly allowlisted, or an
+environment proxy selected, the existing ``requests.get`` path is used. Proxied
+requests require the deployment proxy to enforce the egress policy.
 """
 
 from __future__ import annotations
 
+import os
+import ssl
+from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
+import httpx
 import requests
 
-from lfx.utils.ssrf_protection import SSRFProtectionError, validate_url_for_ssrf
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_and_resolve_url
+from lfx.utils.ssrf_transport import SSRFProtectedSyncTransport, pin_host_for_url
 
 # HTTP status codes that represent a redirect carrying a Location header (RFC 9110).
 REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
@@ -34,6 +40,73 @@ DEFAULT_MAX_REDIRECTS = 30
 # when it follows redirects itself; because we follow redirects manually with
 # ``allow_redirects=False`` we must reproduce that protection. Compared lowercase.
 SENSITIVE_REDIRECT_HEADERS = frozenset({"authorization", "cookie", "proxy-authorization"})
+
+
+def _pinned_get(
+    url: str,
+    validated_ips: list[str],
+    *,
+    timeout: float | tuple[float, float],
+    headers: dict | None,
+    params: dict | None,
+) -> requests.Response:
+    """Fetch through the validated IPs without changing the caller's response type."""
+    if isinstance(timeout, tuple):
+        connect_timeout, read_timeout = timeout
+        httpx_timeout = httpx.Timeout(
+            connect=connect_timeout, read=read_timeout, write=read_timeout, pool=connect_timeout
+        )
+    else:
+        httpx_timeout = httpx.Timeout(timeout)
+
+    # Preserve Requests' default headers, notably its User-Agent, for existing feeds.
+    request_headers = requests.structures.CaseInsensitiveDict(requests.utils.default_headers())
+    if headers:
+        request_headers.update(headers)
+
+    try:
+        # Requests uses these CA bundle overrides; httpx's defaults use different
+        # variable names, so pass the Requests setting into the pinned transport.
+        ca_bundle = os.environ.get("REQUESTS_CA_BUNDLE") or os.environ.get("CURL_CA_BUNDLE")
+        verify: bool | ssl.SSLContext
+        if ca_bundle:
+            # httpx deprecates passing CA paths as strings. Requests accepts both
+            # files and OpenSSL certificate directories for these overrides.
+            verify = (
+                ssl.create_default_context(capath=ca_bundle)
+                if Path(ca_bundle).is_dir()
+                else ssl.create_default_context(cafile=ca_bundle)
+            )
+        else:
+            verify = True
+        transport = SSRFProtectedSyncTransport(pinned_ips={pin_host_for_url(url): validated_ips}, verify=verify)
+        with httpx.Client(transport=transport) as client:
+            result = client.get(
+                url, timeout=httpx_timeout, headers=request_headers, params=params, follow_redirects=False
+            )
+    except httpx.InvalidURL as exc:
+        raise requests.exceptions.InvalidURL(str(exc)) from exc
+    except httpx.ConnectTimeout as exc:
+        raise requests.ConnectTimeout(str(exc)) from exc
+    except httpx.ReadTimeout as exc:
+        raise requests.ReadTimeout(str(exc)) from exc
+    except httpx.TimeoutException as exc:
+        raise requests.Timeout(str(exc)) from exc
+    except httpx.ConnectError as exc:
+        raise requests.ConnectionError(str(exc)) from exc
+    except httpx.RequestError as exc:
+        raise requests.RequestException(str(exc)) from exc
+
+    response = requests.Response()
+    response.status_code = result.status_code
+    response.headers = requests.structures.CaseInsensitiveDict(result.headers)
+    response.url = str(result.url)
+    response.reason = result.reason_phrase
+    response.encoding = requests.utils.get_encoding_from_headers(response.headers)
+    response._content = result.content  # noqa: SLF001 - adapt the buffered httpx body to Requests
+    response._content_consumed = True  # noqa: SLF001
+    response.request = requests.Request("GET", url, headers=request_headers, params=params).prepare()
+    return response
 
 
 def refuse_redirects(session: requests.Session) -> requests.Session:
@@ -139,7 +212,7 @@ def ssrf_safe_get(
 
     Args:
         url: The URL to fetch.
-        timeout: Timeout passed to ``requests.get`` (seconds, or a (connect, read) tuple).
+        timeout: Timeout in seconds, or a (connect, read) tuple.
         headers: Optional request headers, forwarded on every hop. Credential-bearing
             headers (Authorization, Cookie, Proxy-Authorization) are dropped when a
             redirect crosses to a different host, so they are not leaked to an unrelated
@@ -161,18 +234,29 @@ def ssrf_safe_get(
     current_headers = headers
 
     for _ in range(max_redirects + 1):
-        # Validate scheme, resolve the host, and check it against the SSRF denylist.
-        # No-op when SSRF protection is disabled.
-        validate_url_for_ssrf(current_url, warn_only=False)
-
-        response = requests.get(
-            current_url,
-            timeout=timeout,
-            headers=current_headers,
-            params=current_params,
-            # Never let requests auto-follow redirects; each hop is validated above.
-            allow_redirects=False,
-        )
+        # Use the IPs returned by this validation for the connection itself. A second
+        # hostname lookup inside Requests could otherwise rebind to an internal IP.
+        validated_url, validated_ips = validate_and_resolve_url(current_url)
+        # An explicit HTTP(S) proxy resolves the destination on the proxy side.
+        # Our direct pinned transport would silently bypass that proxy, including
+        # mandatory egress controls. Preserve the Requests path for proxy users;
+        # the deployment proxy must block internal destinations and DNS rebinding.
+        proxies = requests.utils.get_environ_proxies(validated_url)
+        selected_proxy = requests.utils.select_proxy(validated_url, proxies)
+        if validated_ips and not selected_proxy:
+            response = _pinned_get(
+                validated_url, validated_ips, timeout=timeout, headers=current_headers, params=current_params
+            )
+        else:
+            # Protection is disabled, the host is explicitly allowlisted, or
+            # this URL is routed through an environment proxy.
+            response = requests.get(
+                validated_url,
+                timeout=timeout,
+                headers=current_headers,
+                params=current_params,
+                allow_redirects=False,
+            )
 
         location = response.headers.get("Location")
         if response.status_code in REDIRECT_STATUS_CODES and location:

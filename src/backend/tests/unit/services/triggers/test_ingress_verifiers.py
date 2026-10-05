@@ -174,7 +174,7 @@ def test_a_graph_notification_verifies_against_the_stored_client_state_digest() 
     ).encode()
     request = IngressRequest(provider="microsoft", body=body, headers={}, query={})
     verified = verify(request, IngressSecrets(client_state_digest=state_digest(secret)), tolerance_s=TOLERANCE)
-    assert verified.dedupe_suffix == "sub-1:msg-1:created"
+    assert verified.dedupe_suffix is None  # No notification id or item version to deduplicate.
     # Thin notification: ids only. Nothing is fetched back in the request.
     assert "resourceData" in verified.payload["value"][0]
 
@@ -475,10 +475,10 @@ def test_two_edits_to_one_graph_resource_are_two_events() -> None:
 
 def test_a_graph_batch_is_keyed_on_every_notification_in_it() -> None:
     """Keying on the first entry alone would drop the rest of a batch as a duplicate."""
-    alone = _graph_suffix(_graph_notification(resource_id="msg-1", change="created"))
+    alone = _graph_suffix(_graph_notification(resource_id="msg-1", change="created", etag="v1"))
     batched = _graph_suffix(
-        _graph_notification(resource_id="msg-1", change="created"),
-        _graph_notification(resource_id="msg-2", change="created"),
+        _graph_notification(resource_id="msg-1", change="created", etag="v1"),
+        _graph_notification(resource_id="msg-2", change="created", etag="v1"),
     )
 
     assert alone != batched

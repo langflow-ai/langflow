@@ -116,6 +116,10 @@ class StorageService(Service):
     async def get_file_size(self, flow_id: str, file_name: str):
         raise NotImplementedError
 
+    async def get_file_md5(self, flow_id: str, file_name: str) -> str | None:  # noqa: ARG002
+        """The file's MD5 when the backend already has it, or None when it would have to read the file."""
+        return None
+
     @abstractmethod
     async def delete_file(self, flow_id: str, file_name: str) -> None:
         raise NotImplementedError

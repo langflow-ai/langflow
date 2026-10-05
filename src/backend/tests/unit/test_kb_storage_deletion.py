@@ -1,7 +1,7 @@
 """Tests for unified Knowledge Base deletion and resource cleanup.
 
-Covers the delete_storage method, release_chroma_resources, private helpers
-(_remove_sqlite_lock_files, _truncate_sqlite_files), and the delete endpoints.
+Covers retained legacy-directory cleanup and SQLite tombstone-before-row deletion.
+No test installs or imports a Chroma SDK.
 """
 
 import json
@@ -42,95 +42,14 @@ def empty_kb_dir(tmp_path):
 # ===========================================================================
 
 
-class TestRemoveSqliteLockFiles:
-    """Tests for _remove_sqlite_lock_files — removes WAL, SHM, journal files."""
-
-    def test_should_remove_all_lock_files(self, kb_dir):
-        from langflow.api.utils.kb_helpers import _remove_sqlite_lock_files
-
-        (kb_dir / "chroma.sqlite3-journal").write_bytes(b"journal")
-        assert (kb_dir / "chroma.sqlite3-wal").exists()
-        assert (kb_dir / "chroma.sqlite3-shm").exists()
-
-        _remove_sqlite_lock_files(kb_dir)
-
-        assert not (kb_dir / "chroma.sqlite3-wal").exists()
-        assert not (kb_dir / "chroma.sqlite3-shm").exists()
-        assert not (kb_dir / "chroma.sqlite3-journal").exists()
-        assert (kb_dir / "chroma.sqlite3").exists()
-
-    def test_should_not_raise_when_no_lock_files(self, empty_kb_dir):
-        from langflow.api.utils.kb_helpers import _remove_sqlite_lock_files
-
-        _remove_sqlite_lock_files(empty_kb_dir)
-
-    def test_should_handle_permission_error_gracefully(self, kb_dir):
-        from langflow.api.utils.kb_helpers import _remove_sqlite_lock_files
-
-        with patch.object(Path, "unlink", side_effect=OSError("Permission denied")):
-            _remove_sqlite_lock_files(kb_dir)
-
-
 # ===========================================================================
 # Unit tests: _truncate_sqlite_files
 # ===========================================================================
 
 
-class TestTruncateSqliteFiles:
-    """Tests for _truncate_sqlite_files — truncates .sqlite3 files."""
-
-    def test_should_truncate_sqlite_files_to_zero(self, kb_dir):
-        from langflow.api.utils.kb_helpers import _truncate_sqlite_files
-
-        assert (kb_dir / "chroma.sqlite3").stat().st_size > 0
-
-        _truncate_sqlite_files(kb_dir)
-
-        assert (kb_dir / "chroma.sqlite3").stat().st_size == 0
-
-    def test_should_not_raise_when_no_sqlite_files(self, empty_kb_dir):
-        from langflow.api.utils.kb_helpers import _truncate_sqlite_files
-
-        _truncate_sqlite_files(empty_kb_dir)
-
-    def test_should_handle_locked_file_gracefully(self, kb_dir):
-        from langflow.api.utils.kb_helpers import _truncate_sqlite_files
-
-        with patch("builtins.open", side_effect=OSError("File is locked")):
-            _truncate_sqlite_files(kb_dir)
-
-
 # ===========================================================================
 # Unit tests: KBStorageHelper.release_chroma_resources
 # ===========================================================================
-
-
-class TestReleaseChromaResources:
-    """Tests for release_chroma_resources — clears registry and forces GC."""
-
-    def test_should_clear_registry_entry_for_path(self, kb_dir):
-        from chromadb.api.shared_system_client import SharedSystemClient
-        from langflow.api.utils.kb_helpers import KBStorageHelper
-
-        path_key = str(kb_dir)
-        SharedSystemClient._identifier_to_system[path_key] = MagicMock()
-
-        KBStorageHelper.release_chroma_resources(kb_dir)
-
-        assert path_key not in SharedSystemClient._identifier_to_system
-
-    def test_should_not_raise_when_path_not_in_registry(self, tmp_path):
-        from langflow.api.utils.kb_helpers import KBStorageHelper
-
-        KBStorageHelper.release_chroma_resources(tmp_path / "nonexistent")
-
-    @patch("langflow.api.utils.kb_helpers.gc.collect")
-    def test_should_call_gc_collect(self, mock_gc, tmp_path):
-        from langflow.api.utils.kb_helpers import KBStorageHelper
-
-        KBStorageHelper.release_chroma_resources(tmp_path)
-
-        mock_gc.assert_called_once()
 
 
 # ===========================================================================
@@ -141,8 +60,6 @@ class TestReleaseChromaResources:
 class TestDeleteStorage:
     """Tests for KBStorageHelper.delete_storage — unified deletion with retry."""
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client", new=MagicMock())
-    @patch("langflow.api.utils.kb_helpers.Chroma", new=MagicMock())
     @patch("langflow.api.utils.kb_helpers.time.sleep", new=MagicMock())
     def test_should_return_true_when_path_does_not_exist(self, tmp_path):
         from langflow.api.utils.kb_helpers import KBStorageHelper
@@ -152,8 +69,6 @@ class TestDeleteStorage:
 
         assert result is True
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client", new=MagicMock())
-    @patch("langflow.api.utils.kb_helpers.Chroma", new=MagicMock())
     @patch("langflow.api.utils.kb_helpers.time.sleep", new=MagicMock())
     def test_should_delete_directory_on_first_attempt(self, kb_dir):
         from langflow.api.utils.kb_helpers import KBStorageHelper
@@ -163,8 +78,6 @@ class TestDeleteStorage:
         assert result is True
         assert not kb_dir.exists()
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client", new=MagicMock())
-    @patch("langflow.api.utils.kb_helpers.Chroma", new=MagicMock())
     @patch("langflow.api.utils.kb_helpers.time.sleep", new=MagicMock())
     def test_should_retry_and_succeed_on_second_attempt(self, kb_dir):
         from langflow.api.utils.kb_helpers import KBStorageHelper
@@ -186,8 +99,6 @@ class TestDeleteStorage:
         assert result is True
         assert call_count == 2
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client", new=MagicMock())
-    @patch("langflow.api.utils.kb_helpers.Chroma", new=MagicMock())
     @patch("langflow.api.utils.kb_helpers.time.sleep", new=MagicMock())
     def test_should_write_sentinel_when_all_retries_fail(self, kb_dir):
         """Locked directory falls back to a ``.kb_deleted`` sentinel file.
@@ -207,8 +118,6 @@ class TestDeleteStorage:
         assert kb_dir.exists(), "dir should remain on disk; the sentinel hides it from listings"
         assert (kb_dir / KB_DELETED_SENTINEL).is_file()
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client", new=MagicMock())
-    @patch("langflow.api.utils.kb_helpers.Chroma", new=MagicMock())
     @patch("langflow.api.utils.kb_helpers.time.sleep", new=MagicMock())
     def test_should_return_false_when_rmtree_and_sentinel_both_fail(self, kb_dir):
         """If even the sentinel write fails, the helper reports the failure.
@@ -232,8 +141,6 @@ class TestDeleteStorage:
         assert result is False
         assert kb_dir.exists()
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client", new=MagicMock())
-    @patch("langflow.api.utils.kb_helpers.Chroma", new=MagicMock())
     @patch("langflow.api.utils.kb_helpers.time.sleep")
     def test_should_use_exponential_backoff_on_retries(self, mock_sleep, kb_dir):
         from langflow.api.utils.kb_helpers import KBStorageHelper
@@ -256,35 +163,6 @@ class TestDeleteStorage:
         sleep_values = [call.args[0] for call in mock_sleep.call_args_list]
         assert sleep_values == [1.0, 2.0, 4.0]
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client")
-    @patch("langflow.api.utils.kb_helpers.Chroma")
-    @patch("langflow.api.utils.kb_helpers.time.sleep", new=MagicMock())
-    def test_should_teardown_collection_before_deletion(self, mock_chroma_cls, mock_client_cls, kb_dir):
-        from langflow.api.utils.kb_helpers import KBStorageHelper
-
-        mock_chroma = MagicMock()
-        mock_chroma_cls.return_value = mock_chroma
-        mock_client_cls.return_value = MagicMock()
-
-        KBStorageHelper.delete_storage(kb_dir, "test_kb")
-
-        mock_chroma.delete_collection.assert_called_once()
-        assert not kb_dir.exists()
-
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client")
-    @patch("langflow.api.utils.kb_helpers.time.sleep", new=MagicMock())
-    def test_should_not_fail_when_teardown_raises(self, mock_client_cls, kb_dir):
-        from langflow.api.utils.kb_helpers import KBStorageHelper
-
-        mock_client_cls.side_effect = OSError("Cannot open database")
-
-        result = KBStorageHelper.delete_storage(kb_dir, "test_kb")
-
-        assert result is True
-        assert not kb_dir.exists()
-
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client", new=MagicMock())
-    @patch("langflow.api.utils.kb_helpers.Chroma", new=MagicMock())
     @patch("langflow.api.utils.kb_helpers.time.sleep", new=MagicMock())
     def test_should_skip_teardown_when_no_chroma_data(self, empty_kb_dir):
         from langflow.api.utils.kb_helpers import KBStorageHelper
@@ -313,139 +191,6 @@ async def _seed_kb_row(active_user, name: str):
         name=name,
         model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
     )
-
-
-class TestDeleteEndpoint:
-    """Tests that delete endpoint uses KBStorageHelper.delete_storage."""
-
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client", new=MagicMock())
-    @patch("langflow.api.utils.kb_helpers.Chroma", new=MagicMock())
-    @patch("langflow.api.utils.kb_helpers.time.sleep", new=MagicMock())
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_should_delete_kb_successfully(self, mock_root, client, logged_in_headers, active_user, tmp_path):
-        mock_root.return_value = tmp_path
-        (tmp_path / "activeuser" / "My_KB").mkdir(parents=True)
-        await _seed_kb_row(active_user, "My_KB")
-
-        response = await client.delete("api/v1/knowledge_bases/My_KB", headers=logged_in_headers)
-
-        assert response.status_code == 200
-
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=False)
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_should_return_200_with_warning_when_storage_cleanup_fails(
-        self, mock_root, mock_delete, client, logged_in_headers, active_user, tmp_path
-    ):
-        """Storage failure must not block the user from removing the KB.
-
-        DB-first ordering: by the time delete_storage() returns False the
-        row has already been dropped, so the user no longer sees the KB.
-        We surface a warning with the on-disk consequence so an operator
-        can follow up, but the request itself succeeds.
-        """
-        mock_root.return_value = tmp_path
-        (tmp_path / "activeuser" / "My_KB").mkdir(parents=True)
-        await _seed_kb_row(active_user, "My_KB")
-
-        response = await client.delete("api/v1/knowledge_bases/My_KB", headers=logged_in_headers)
-
-        assert response.status_code == 200
-        body = response.json()
-        assert body["message"].startswith("Knowledge base 'My_KB' deleted")
-        assert "could not be cleaned up" in body.get("warning", "")
-        mock_delete.assert_called_once()
-
-    async def test_should_return_404_when_kb_not_found(self, client, logged_in_headers):
-        response = await client.delete("api/v1/knowledge_bases/NonExistent_KB", headers=logged_in_headers)
-
-        assert response.status_code == 404
-
-
-class TestBulkDeleteEndpoint:
-    """Tests that bulk delete endpoint uses KBStorageHelper.delete_storage."""
-
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client", new=MagicMock())
-    @patch("langflow.api.utils.kb_helpers.Chroma", new=MagicMock())
-    @patch("langflow.api.utils.kb_helpers.time.sleep", new=MagicMock())
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_should_delete_multiple_kbs(self, mock_root, client, logged_in_headers, active_user, tmp_path):
-        mock_root.return_value = tmp_path
-        kb_user_path = tmp_path / "activeuser"
-        kb_user_path.mkdir(parents=True)
-        (kb_user_path / "KB1").mkdir()
-        (kb_user_path / "KB2").mkdir()
-        await _seed_kb_row(active_user, "KB1")
-        await _seed_kb_row(active_user, "KB2")
-
-        response = await client.request(
-            "DELETE",
-            "api/v1/knowledge_bases",
-            headers=logged_in_headers,
-            json={"kb_names": ["KB1", "KB2"]},
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["deleted_count"] == 2
-
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage")
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_should_handle_partial_storage_failure_with_warning(
-        self, mock_root, mock_delete, client, logged_in_headers, active_user, tmp_path
-    ):
-        """Storage failure on one KB still counts as deleted, with a warning.
-
-        DB-first ordering: the second KB's row is dropped before storage
-        cleanup runs, so the user sees both KBs disappear from the list
-        even when delete_storage() returns False on one.  The response
-        includes a warning so an operator can follow up on the orphaned
-        bytes.
-        """
-        mock_root.return_value = tmp_path
-        kb_user_path = tmp_path / "activeuser"
-        kb_user_path.mkdir(parents=True)
-        (kb_user_path / "KB1").mkdir()
-        (kb_user_path / "KB2").mkdir()
-        await _seed_kb_row(active_user, "KB1")
-        await _seed_kb_row(active_user, "KB2")
-
-        mock_delete.side_effect = [True, False]
-
-        response = await client.request(
-            "DELETE",
-            "api/v1/knowledge_bases",
-            headers=logged_in_headers,
-            json={"kb_names": ["KB1", "KB2"]},
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["deleted_count"] == 2
-        # Warnings field is named ``remote_warnings`` server-side; test the
-        # external contract: a warning string mentioning the failed KB.
-        warnings_field = data.get("remote_warnings") or data.get("warnings") or data.get("warning") or ""
-        assert "KB2" in str(warnings_field) or "could not be cleaned up" in str(warnings_field)
-
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", new=MagicMock(return_value=True))
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_should_report_not_found_kbs(self, mock_root, client, logged_in_headers, active_user, tmp_path):
-        mock_root.return_value = tmp_path
-        kb_user_path = tmp_path / "activeuser"
-        kb_user_path.mkdir(parents=True)
-        (kb_user_path / "KB1").mkdir()
-        await _seed_kb_row(active_user, "KB1")
-
-        response = await client.request(
-            "DELETE",
-            "api/v1/knowledge_bases",
-            headers=logged_in_headers,
-            json={"kb_names": ["KB1", "Ghost"]},
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["deleted_count"] == 1
-        assert "Ghost" in data["not_found"]
 
 
 # ===========================================================================
@@ -516,3 +261,66 @@ class TestLfxSentinelStringInSync:
         # ".kb_deleted" inside ``lfx.base.knowledge_bases.knowledge_base_utils``;
         # see the get_knowledge_bases() implementation.
         assert KB_DELETED_SENTINEL == ".kb_deleted"
+
+
+@pytest.fixture
+def sqlite_storage(active_user, monkeypatch, tmp_path):  # noqa: ARG001 -- initialize application settings
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(tmp_path / "kb"))
+    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+
+
+@pytest.mark.usefixtures("sqlite_storage")
+async def test_delete_endpoint_keeps_routing_on_storage_failure(client, logged_in_headers, active_user, monkeypatch):
+    from langflow.api.utils import knowledge_base_service
+    from lfx.base.knowledge_bases.backends.sqlite import SQLiteBackend
+
+    record = await _seed_kb_row(active_user, "failed_delete")
+    original = SQLiteBackend.delete_collection
+
+    async def failed_delete(_self):
+        msg = "disk unavailable"
+        raise OSError(msg)
+
+    monkeypatch.setattr(SQLiteBackend, "delete_collection", failed_delete)
+    response = await client.delete("api/v1/knowledge_bases/failed_delete", headers=logged_in_headers)
+    assert response.status_code == 500
+    retained = await knowledge_base_service.get_by_user_and_name(active_user.id, record.name)
+    assert retained.id == record.id
+    assert retained.storage_state == "deleting"
+    monkeypatch.setattr(SQLiteBackend, "delete_collection", original)
+    response = await client.delete("api/v1/knowledge_bases/failed_delete", headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    assert await knowledge_base_service.get_by_user_and_name(active_user.id, record.name) is None
+
+
+@pytest.mark.usefixtures("sqlite_storage")
+async def test_bulk_delete_counts_only_completed_storage_deletions(client, logged_in_headers, active_user, monkeypatch):
+    from langflow.api.utils import knowledge_base_service
+    from lfx.base.knowledge_bases.backends.sqlite import SQLiteBackend
+
+    await _seed_kb_row(active_user, "good_delete")
+    await _seed_kb_row(active_user, "retry_delete")
+    original = SQLiteBackend.delete_collection
+
+    async def sometimes_fails(self):
+        if self.kb_name == "retry_delete":
+            msg = "disk unavailable"
+            raise OSError(msg)
+        return await original(self)
+
+    monkeypatch.setattr(SQLiteBackend, "delete_collection", sometimes_fails)
+    response = await client.request(
+        "DELETE",
+        "api/v1/knowledge_bases",
+        headers=logged_in_headers,
+        json={"kb_names": ["good_delete", "retry_delete", "unknown"]},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["deleted_count"] == 1
+    assert "retry_delete" in response.json()["failed"]
+    assert "unknown" in response.json()["not_found"]
+    assert await knowledge_base_service.get_by_user_and_name(active_user.id, "good_delete") is None
+    retained = await knowledge_base_service.get_by_user_and_name(active_user.id, "retry_delete")
+    assert retained.storage_state == "deleting"

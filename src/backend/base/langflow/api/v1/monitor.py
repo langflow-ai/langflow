@@ -35,6 +35,8 @@ from langflow.services.database.models.vertex_builds.crud import (
 )
 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
 from langflow.services.deps import get_memory_base_service, get_tracing_service
+from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
+from langflow.services.memory_base.ingestion import session_storage_operation
 from langflow.services.tracing.langfuse import (
     delete_feedback_score,
     langfuse_is_configured,
@@ -162,28 +164,10 @@ async def _ensure_flow_action_or_404(
     return flow
 
 
-async def _purge_memory_base_session_data(user_id: UUID, session_ids: list[str]) -> None:
-    """Best-effort: drop ingested chunks for the deleted sessions from each MB.
-
-    Failures here are logged but never abort the message-delete response — the
-    user expects "delete this session" to succeed even if KB cleanup hits an
-    issue. The follow-up consequence (ghost chunks) is logged for ops to fix.
-    """
-    if not session_ids:
-        return
-    try:
-        await get_memory_base_service().purge_session_data(user_id=user_id, session_ids=session_ids)
-    except Exception:  # noqa: BLE001
-        # Lazy import to avoid pulling logger into the module-import path for
-        # an endpoint that doesn't need it on the happy path.
-        from lfx.log.logger import logger
-
-        await logger.aerror(
-            "Memory Base session purge failed for user=%s sessions=%d",
-            user_id,
-            len(session_ids),
-            exc_info=True,
-        )
+async def _purge_memory_base_session_data(user_id: UUID, session_ids: list[str], *, db=None) -> None:
+    """Purge vectors before committing message deletion, preserving retry on failure."""
+    if session_ids:
+        await get_memory_base_service().purge_session_data(user_id=user_id, session_ids=session_ids, db=db)
 
 
 @router.get("/builds", dependencies=[Depends(get_current_active_user)])
@@ -340,6 +324,7 @@ async def delete_messages(
     session: DbSession,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> None:
+    """Delete authorized messages after fencing associated Memory storage and tracking data."""
     try:
         # Ownership guard lives in the CRUD layer: only messages belonging to
         # current_user are selected and deleted; foreign IDs are ignored.
@@ -347,7 +332,22 @@ async def delete_messages(
         # Practical effect:
         # - Mixed lists (owned + foreign IDs) only delete owned rows.
         # - Pure foreign lists keep endpoint idempotent with 204 and no changes.
-        await delete_messages_for_user(session, current_user.id, message_ids)
+        owned_sessions = list(
+            await session.exec(
+                select(MessageTable.session_id)
+                .distinct()
+                .join(Flow, MessageTable.flow_id == Flow.id)
+                .where(Flow.user_id == current_user.id)
+                .where(col(MessageTable.id).in_(message_ids))
+                .where(col(MessageTable.session_id).isnot(None))
+            )
+        )
+        async with session_storage_operation(user_id=current_user.id, session_ids=owned_sessions):
+            await delete_messages_for_user(session, current_user.id, message_ids)
+            await session.commit()
+    except StorageUnavailableError as e:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -489,18 +489,19 @@ async def delete_messages_session(
     Only deletes messages from sessions belonging to flows owned by the current user.
     """
     try:
-        # Keep endpoint idempotent (204) while enforcing ownership in CRUD.
-        # If the session belongs to another user, this becomes a safe no-op.
-        # This preserves existing client behavior while blocking cross-user deletes.
-        await delete_messages_for_user_by_session(session, current_user.id, session_id)
-        await session.commit()
+        # Memory tracking is owner-scoped independently of message rows. It
+        # must still be purged when the last message was deleted earlier.
+        owned_sessions = [session_id]
+        async with session_storage_operation(user_id=current_user.id, session_ids=owned_sessions):
+            await _purge_memory_base_session_data(current_user.id, owned_sessions, db=session)
+            await delete_messages_for_user_by_session(session, current_user.id, session_id)
+            await session.commit()
+    except StorageUnavailableError as e:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:
         await session.rollback()
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-    # Purge ingested chunks AFTER the message rows are committed so a chunk-delete
-    # failure can never roll back the user-visible message delete.
-    await _purge_memory_base_session_data(current_user.id, [session_id])
 
     return {"message": "Messages deleted successfully"}
 
@@ -546,35 +547,45 @@ async def delete_messages_sessions(
         session_stmt = session_stmt.where(col(MessageTable.session_id).in_(session_ids))
 
         result = await session.exec(session_stmt)
-        affected_session_ids = list(result)
+        from langflow.services.database.models.memory_base.model import MemoryBase, MemoryBaseSession
+
+        tracked = await session.exec(
+            select(MemoryBaseSession.session_id)
+            .join(MemoryBase, MemoryBaseSession.memory_base_id == MemoryBase.id)
+            .where(MemoryBase.user_id == current_user.id)
+            .where(col(MemoryBaseSession.session_id).in_(session_ids))
+        )
+        affected_session_ids = sorted(set(result).union(tracked))
         affected_count = len(affected_session_ids)
 
         if not affected_session_ids:
             # No messages found for this user's flows with these session_ids
             return {"message": "No sessions to delete", "deleted_count": 0}
 
-        # Get message IDs to delete
-        msg_stmt = select(MessageTable.id)
-        msg_stmt = msg_stmt.join(Flow, MessageTable.flow_id == Flow.id)
-        msg_stmt = msg_stmt.where(Flow.user_id == current_user.id)
-        msg_stmt = msg_stmt.where(col(MessageTable.session_id).in_(affected_session_ids))
+        async with session_storage_operation(user_id=current_user.id, session_ids=affected_session_ids):
+            await _purge_memory_base_session_data(current_user.id, affected_session_ids, db=session)
+            # Get message IDs to delete
+            msg_stmt = select(MessageTable.id)
+            msg_stmt = msg_stmt.join(Flow, MessageTable.flow_id == Flow.id)
+            msg_stmt = msg_stmt.where(Flow.user_id == current_user.id)
+            msg_stmt = msg_stmt.where(col(MessageTable.session_id).in_(affected_session_ids))
 
-        msg_result = await session.exec(msg_stmt)
-        message_ids = list(msg_result)
+            msg_result = await session.exec(msg_stmt)
+            message_ids = list(msg_result)
 
-        # Delete only the messages that belong to the user
-        await session.exec(
-            delete(MessageTable)
-            .where(col(MessageTable.id).in_(message_ids))
-            .execution_options(synchronize_session="fetch")
-        )
-        await session.commit()
+            # Delete only the messages that belong to the user
+            await session.exec(
+                delete(MessageTable)
+                .where(col(MessageTable.id).in_(message_ids))
+                .execution_options(synchronize_session="fetch")
+            )
+            await session.commit()
+    except StorageUnavailableError as e:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:
         await session.rollback()
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-    # Purge ingested chunks AFTER the messages are committed; same reasoning as above.
-    await _purge_memory_base_session_data(current_user.id, list(affected_session_ids))
 
     return {
         "message": f"Messages deleted successfully for {affected_count} session{'s' if affected_count != 1 else ''}",
