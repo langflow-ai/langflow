@@ -349,7 +349,7 @@ class TextOperations(Component):
         separator = getattr(self, "table_separator", "|")
         has_header = getattr(self, "has_header", True)
 
-        rows = self._parse_table_rows(lines, separator)
+        rows = self._parse_table_rows(lines, separator, has_header=has_header)
         if not rows:
             return DataFrame(pd.DataFrame())
 
@@ -359,21 +359,21 @@ class TextOperations(Component):
         self.log(f"Converted text to DataFrame: {len(df)} rows, {len(df.columns)} columns")
         return DataFrame(df)
 
-    def _parse_table_rows(self, lines: list[str], separator: str) -> list[list[str]]:
+    def _parse_table_rows(self, lines: list[str], separator: str, *, has_header: bool = True) -> list[list[str]]:
         """Parse table lines into rows of cells."""
         rows = []
         for index, line in enumerate(lines):
             cleaned_line = line.strip(separator)
             cells = [cell.strip() for cell in cleaned_line.split(separator)]
             # Skip the markdown delimiter row under the header instead of reading it as data.
-            if index == 1 and all(MARKDOWN_DELIMITER_CELL.fullmatch(cell) for cell in cells):
+            if has_header and index == 1 and all(MARKDOWN_DELIMITER_CELL.fullmatch(cell) for cell in cells):
                 continue
             rows.append(cells)
         return rows
 
     def _create_dataframe(self, rows: list[list[str]], *, has_header: bool) -> pd.DataFrame:
         """Create DataFrame from parsed rows."""
-        if has_header and len(rows) > 1:
+        if has_header and rows:
             header = rows[0]
             data_rows = rows[1:]
             header_col_count = len(header)

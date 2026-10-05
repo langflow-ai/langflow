@@ -12,7 +12,14 @@ from lfx.base.data.storage_utils import (
     read_file_text,
     to_storage_path,
 )
+from lfx.services.deps import get_settings_service
 from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access
+
+
+@pytest.fixture(autouse=True)
+def unrestricted_standalone_reads(monkeypatch):
+    """Direct local-path controls opt out. Containment cases explicitly enable restriction."""
+    monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", False)
 
 
 class TestParseStoragePath:

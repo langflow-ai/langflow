@@ -378,6 +378,31 @@ class TestTextOperations:
         assert result["name"].tolist() == ["Alice", "Bob"]
         assert result["age"].tolist() == [30, 25]
 
+    def test_text_to_dataframe_preserves_headerless_delimiter_like_rows(self):
+        component = OperationsComponent(
+            text_input="Alice|30\n---|:--\nBob|25",
+            operation=[{"name": "Text to DataFrame"}],
+            table_separator="|",
+            has_header=False,
+        )
+
+        result = component.as_dataframe()
+
+        assert result.to_numpy().tolist() == [["Alice", "30"], ["---", ":--"], ["Bob", "25"]]
+
+    def test_text_to_dataframe_handles_empty_markdown_table(self):
+        component = OperationsComponent(
+            text_input="| name | age |\n|---|---|",
+            operation=[{"name": "Text to DataFrame"}],
+            table_separator="|",
+            has_header=True,
+        )
+
+        result = component.as_dataframe()
+
+        assert result.empty
+        assert list(result.columns) == ["name", "age"]
+
     def test_text_clean(self):
         component = OperationsComponent(
             text_input="hello    world",

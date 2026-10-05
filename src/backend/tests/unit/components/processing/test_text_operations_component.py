@@ -505,6 +505,26 @@ class TestTextOperationsToDataFrame:
         assert result["Name"].tolist() == ["John", "Jane"]
         assert result["Age"].tolist() == [25, 30]
 
+    def test_dataframe_preserves_headerless_delimiter_like_rows(self):
+        component = TextOperations(
+            table_separator="|",
+            has_header=False,
+        )
+        component.log = lambda _: None
+
+        result = component._text_to_dataframe("John|25\n---|:--\nJane|30")
+
+        assert result.to_numpy().tolist() == [["John", "25"], ["---", ":--"], ["Jane", "30"]]
+
+    def test_dataframe_handles_empty_markdown_table(self):
+        component = TextOperations(table_separator="|", has_header=True)
+        component.log = lambda _: None
+
+        result = component._text_to_dataframe("| Name | Age |\n|---|---|")
+
+        assert result.empty
+        assert list(result.columns) == ["Name", "Age"]
+
 
 class TestTextOperationsUpdateBuildConfig:
     def test_update_build_config_word_count(self):

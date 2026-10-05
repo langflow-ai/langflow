@@ -54,32 +54,138 @@
     "node": "22.22.0"
   },
   "overrides": {
+    "axios": "^1.20.0",
+    "basic-ftp": "^6.2.1",
+    "source-map-js": "^1.2.2",
     "shell-quote": "^1.9.0",
     "websocket-driver": "^0.7.5",
-    "brace-expansion": "^5.0.9",
-    "ip-address": "^10.3.1",
-    "undici": "^7.29.0",
+    "brace-expansion@^1": "^1.1.21",
+    "brace-expansion@^2": "^2.1.7",
+    "ip-address": "^10.7.2",
+    "undici": "^7.29.1",
     "serialize-javascript": "^7.0.5",
     "nanoid": "^3.3.17",
-    "dompurify": "^3.4.13",
-    "js-yaml": "^4.3.1",
+    "dompurify": "^3.4.16",
+    "browserslist": "^4.28.7",
+    "image-size": "^2.0.3",
+    "joi": "^17.13.7",
+    "baseline-browser-mapping": "^2.11.0",
+    "@babel/core": "^7.29.1",
+    "@babel/plugin-transform-modules-systemjs": "^7.29.4",
+    "ai": "^5.0.207",
+    "@ai-sdk/gateway": {
+      "@ai-sdk/provider-utils": "^3.0.28"
+    },
+    "@ai-sdk/react": {
+      ".": "^2.0.30",
+      "@ai-sdk/provider-utils": "^3.0.28",
+      "ai": "^5.0.207"
+    },
+    "express": {
+      ".": "^4.22.3",
+      "path-to-regexp": "^0.1.13"
+    },
+    "js-yaml": "^4.3.2",
     "picomatch": "^4.0.4",
-    "lodash": "4.17.21",
-    "fast-xml-parser": "4.5.4",
-    "openapi-to-postmanv2": {
-      "lodash": "4.17.21"
+    "lodash": "4.18.1",
+    "fast-xml-parser": "4.5.5",
+    "openapi-sampler": {
+      ".": "^1.7.6",
+      "fast-xml-parser": "^5.11.2"
     },
-    "postman-collection": {
-      "lodash": "4.17.21"
+    "chromedriver": "^154.0.1",
+    "fast-uri": "^3.1.8",
+    "svgo": "^3.3.5",
+    "postcss": "^8.5.23",
+    "qs": "^6.16.0",
+    "launch-editor": "^2.14.1",
+    "body-parser": "^1.20.6",
+    "colord": "^2.9.4",
+    "fflate": "^0.4.9",
+    "http-proxy-middleware": "^2.0.10",
+    "postcss-selector-parser": "^6.1.3",
+    "yaml": "^1.10.3",
+    "postcss-load-config": {
+      "yaml": "^2.8.3"
     },
-    "json-schema-resolve-allof": {
-      "lodash": "4.17.21"
+    "@csstools/postcss-cascade-layers": {
+      "postcss-selector-parser": "^7.1.3"
     },
-    "json-refs": {
-      "lodash": "4.17.21"
+    "@csstools/postcss-is-pseudo-class": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "@csstools/postcss-scope-pseudo-class": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "css-blank-pseudo": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "css-has-pseudo": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-attribute-case-insensitive": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-custom-selectors": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-dir-pseudo-class": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-focus-visible": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-focus-within": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-modules-local-by-default": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-modules-scope": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-nesting": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-pseudo-class-any-link": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "postcss-selector-not": {
+      "postcss-selector-parser": "^7.1.3"
+    },
+    "ajv@^6": "^6.14.0",
+    "ajv@^8": "^8.18.0",
+    "ajv-formats": {
+      "ajv": "^8.18.0"
+    },
+    "@redocly/openapi-core": {
+      "minimatch": "^5.1.8"
+    },
+    "rimraf": {
+      "glob": {
+        "minimatch": "^8.0.6"
+      }
+    },
+    "sucrase": {
+      "glob": {
+        "minimatch": "^9.0.7"
+      }
+    },
+    "ws": "^7.5.11",
+    "webpack": "5.104.1",
+    "webpack-dev-server": {
+      ".": "^5.2.6",
+      "ws": "^8.21.0"
+    },
+    "puppeteer-core": {
+      "ws": "^8.21.0"
+    },
+    "styled-components": "^6.5.3",
+    "serve-handler": {
+      ".": "^6.1.7"
     },
     "gray-matter": {
-      "js-yaml": "^3.15.1"
+      "js-yaml": "^3.15.2"
     }
   }
 }
