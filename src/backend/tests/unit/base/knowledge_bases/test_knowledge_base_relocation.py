@@ -1214,6 +1214,37 @@ class TestRelocationToPostgresLive:
         row = await knowledge_base_service.get_by_id(record.id)
         assert (row.backend_type, row.storage_generation) == ("sqlite", 2)
 
+    async def test_storage_lock_that_stays_busy_is_a_plain_failure(
+        self, active_user, tmp_path, during_copy, monkeypatch
+    ):
+        # The lock refuses a row it cannot get with the error it has for a rerouted one,
+        # and this row is as it was read.
+        monkeypatch.setattr("langflow.services.knowledge_base_storage.runtime.LOCK_TIMEOUT_SECONDS", 0.2)
+        kb_name = f"kb_busy_{uuid.uuid4().hex[:6]}"
+        held, release = asyncio.Event(), asyncio.Event()
+        holders: list[asyncio.Task] = []
+
+        async def hold_lock():
+            record = await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name)
+            async with operation(record):
+                held.set()
+                await release.wait()
+
+        async def start_holding():
+            holders.append(asyncio.create_task(hold_lock()))
+            await held.wait()
+
+        during_copy(start_holding)
+        try:
+            record, result = await self._move(active_user, tmp_path, kb_name)
+        finally:
+            release.set()
+            await holders[0]
+
+        assert (result.status, result.code) == ("failed", "kb_failed"), result.reason
+        assert result.reason == "StorageUnavailableError: Knowledge base storage is busy. Retry the operation."
+        assert (await knowledge_base_service.get_by_id(record.id)).backend_type == "sqlite"
+
     async def test_write_under_way_when_the_copy_ends_is_counted_before_the_repoint(
         self, active_user, tmp_path, during_copy
     ):
