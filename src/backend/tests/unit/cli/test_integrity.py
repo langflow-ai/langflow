@@ -145,6 +145,26 @@ class TestCleanInstance:
 class TestSchema:
     """A database that cannot be reached is not one on another schema."""
 
+    async def test_a_malformed_revision_table_is_reported_as_a_schema_read_failure(self, instance_on, tmp_path):
+        database = tmp_path / "malformed.db"
+        with sqlite3.connect(database) as connection:
+            connection.execute("CREATE TABLE alembic_version (unexpected_column TEXT)")
+        instance_on(f"sqlite:///{database}")
+
+        report = await check_instance()
+
+        assert [(c.name, c.status) for c in report.checks] == [("schema", "fail")]
+        assert "schema could not be read" in report.checks[0].summary
+        assert "version_num" in report.checks[0].summary
+        assert "could not be reached" not in report.checks[0].summary
+
+    async def test_revision_read_permissions_are_reported_without_a_traceback(self, deny_revision_read):  # noqa: ARG002
+        report = await check_instance()
+
+        assert [(c.name, c.status) for c in report.checks] == [("schema", "fail")]
+        assert "schema could not be read" in report.checks[0].summary
+        assert "permission denied for table alembic_version" in report.checks[0].summary
+
     async def test_a_database_file_that_cannot_be_opened_is_reported_as_unreachable(self, instance_on, tmp_path):
         # A path under a regular file can be neither opened nor created, with any driver.
         (tmp_path / "not-a-directory").write_text("")
@@ -399,6 +419,95 @@ class TestKnowledgeBases:
 
 
 class TestKnowledgeBaseStorage:
+    @pytest.mark.parametrize("backend_type", ["sqlite", "chroma"])
+    async def test_intentionally_detached_stores_are_excluded(
+        self,
+        active_user,
+        storage_dir,  # noqa: ARG002
+        kb_root,
+        backend_type,
+    ):
+        await _add(
+            KnowledgeBaseRecord(
+                name="kb-detached",
+                user_id=active_user.id,
+                backend_type=backend_type,
+                storage_state="detached",
+                chunks=3,
+            )
+        )
+        before = _contents(kb_root)
+
+        report = await check_instance()
+
+        storage = _check(report, "knowledge base storage")
+        assert storage.status == "ok"
+        assert "1 detached" in storage.summary
+        for name in ("knowledge bases", "vector counts"):
+            check = _check(report, name)
+            assert check.status == "ok"
+            assert check.summary.startswith("0 ")
+        assert _contents(kb_root) == before
+
+    @pytest.mark.parametrize("storage_state", ["deleting", "deleted"])
+    @pytest.mark.parametrize("backend_type", ["sqlite", "chroma"])
+    async def test_pending_deletions_have_cleanup_guidance(
+        self,
+        active_user,
+        storage_dir,  # noqa: ARG002
+        kb_root,
+        storage_state,
+        backend_type,
+    ):
+        await _add(
+            KnowledgeBaseRecord(
+                name="kb-cleanup",
+                user_id=active_user.id,
+                backend_type=backend_type,
+                storage_state=storage_state,
+                chunks=3,
+            )
+        )
+        before = _contents(kb_root)
+
+        report = await check_instance()
+
+        storage = _check(report, "knowledge base storage")
+        assert storage.status == "fail"
+        assert "pending-cleanup" in storage.summary
+        assert "storage upgrade" not in storage.summary
+        assert "require_storage_ready" not in storage.summary
+        assert storage.problems == [
+            f"{active_user.username}/kb-cleanup ({backend_type}): storage state {storage_state}"
+        ]
+        for name in ("knowledge bases", "vector counts"):
+            check = _check(report, name)
+            assert check.status == "ok"
+            assert check.summary.startswith("0 ")
+        assert _contents(kb_root) == before
+
+    async def test_upgrades_and_pending_deletions_keep_their_own_guidance(
+        self,
+        active_user,
+        storage_dir,  # noqa: ARG002
+        kb_root,  # noqa: ARG002
+    ):
+        await _add(
+            KnowledgeBaseRecord(name="kb-upgrade", user_id=active_user.id, backend_type="chroma"),
+            KnowledgeBaseRecord(name="kb-cleanup", user_id=active_user.id, storage_state="deleted"),
+            KnowledgeBaseRecord(name="kb-detached", user_id=active_user.id, storage_state="detached"),
+        )
+
+        storage = _check(await check_instance(), "knowledge base storage")
+
+        assert storage.status == "fail"
+        assert "1 of 2 knowledge bases have not finished" in storage.summary
+        assert "require_storage_ready=true" in storage.summary
+        assert "1 of 2 knowledge bases have pending deletion cleanup" in storage.summary
+        assert "pending-cleanup" in storage.summary
+        assert len(storage.problems) == 2
+        assert not any("kb-detached" in problem for problem in storage.problems)
+
     async def test_rows_whose_upgrade_has_not_finished_are_listed_and_left_out_of_the_other_checks(
         self,
         active_user,

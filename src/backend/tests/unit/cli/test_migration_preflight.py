@@ -7,6 +7,7 @@ leave the database as it found it.
 
 from __future__ import annotations
 
+import sqlite3
 import uuid
 from typing import TYPE_CHECKING
 
@@ -161,6 +162,25 @@ class TestVersionDirection:
 
 class TestSourceThatCannotBeRead:
     """With a target revision the version check reads the source first, and leaves reporting it to the schema check."""
+
+    async def test_a_malformed_revision_table_fails_the_schema_check(self, instance_on, tmp_path):
+        database = tmp_path / "malformed.db"
+        with sqlite3.connect(database) as connection:
+            connection.execute("CREATE TABLE alembic_version (unexpected_column TEXT)")
+        instance_on(f"sqlite:///{database}")
+
+        report = await run_preflight(target_revision=HEAD)
+
+        assert [(c.name, c.status) for c in report.checks] == [("version", "warn"), ("source: schema", "fail")]
+        assert "schema could not be read" in report.checks[0].summary
+        assert "schema could not be read" in report.checks[1].summary
+
+    async def test_revision_read_permissions_fail_the_schema_check(self, deny_revision_read):  # noqa: ARG002
+        report = await run_preflight(target_revision=HEAD)
+
+        assert [(c.name, c.status) for c in report.checks] == [("version", "warn"), ("source: schema", "fail")]
+        assert "schema could not be read" in report.checks[0].summary
+        assert "permission denied" in report.checks[1].summary
 
     async def test_a_source_with_no_alembic_version_table_fails_the_schema_check(self, instance_on, tmp_path):
         instance_on(f"sqlite:///{tmp_path}/empty.db")
