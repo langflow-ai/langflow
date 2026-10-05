@@ -1,0 +1,103 @@
+---
+title: Upgrade Knowledge and Memory storage
+slug: /knowledge-storage-upgrade
+---
+
+Langflow 1.13 replaces local Chroma with SQLite and sqlite-vec.
+Existing OpenSearch and Postgres pgvector stores keep their routing.
+Chroma Cloud and the Chroma, Local DB, and ALTK components are retired.
+Saved components from released 1.x versions can still load for inspection and replacement without reinstalling the retired SDKs.
+
+## Local development: upgrade and keep working
+
+Before changing Langflow versions, back up the application database and the complete knowledge-base directory.
+Keep these old-version backups if you need to roll back. See [database migration guidance](./database-migrations.mdx).
+
+For a single local Langflow instance, upgrade the package or container image and start Langflow normally.
+On first startup, Langflow automatically upgrades supported local Chroma Knowledge and Memory stores in the background.
+The built-in reader copies existing vectors directly into SQLite without Docker, a helper image, a Chroma SDK, or calls to the embedding provider.
+The base IDs, names, document IDs, text, metadata, vector dimensions and distance metric are retained.
+The reader is qualified against persistent HNSW stores produced by Chroma 0.5.23 and 1.5.9, including pending additions, updates and deletes.
+Unsupported or damaged formats remain preserved and show recovery guidance.
+
+You can use the rest of Langflow during the upgrade, including existing ready bases and newly created bases.
+Only a base waiting for or undergoing migration is temporarily unavailable.
+The upgrade notice shows progress from any screen. Knowledge and Memory details show the affected base's availability.
+An affected base does not display **Ready**, and a flow that accesses it explains that an upgrade is in progress.
+Ordinary `/healthz` checks remain available during discovery and copying.
+
+Langflow retains the original Chroma directory, takes a pristine source snapshot, and saves private routing metadata before copying.
+For a SQLite application database, it also takes one consistent database backup shared by the migration runs.
+This automatic `application-before-upgrade-*.sqlite3` backup is created **after** the application schema upgrade.
+It supports recovery within 1.13. It is not an old-version database backup and must not be used to downgrade to 1.12.
+Each run records the backup's location, so multiple bases do not duplicate the full application database.
+For a PostgreSQL application database, the local copy uses the same path and saves the base's routing metadata. Keep your usual PostgreSQL backups.
+The target remains unpublished until the complete export and import have passed validation.
+Exact SQLite search can order tied results differently from Chroma's approximate search.
+
+If Langflow restarts or an upgrade is interrupted, the next startup automatically resumes the durable migration.
+An incomplete target cannot be used as an empty replacement for the old base.
+Do not remove retained originals or backups until you have verified your data.
+Allow free space for approximately four times each Chroma store's size plus 64 MiB while it is migrated.
+The application database backup also requires twice the combined database and WAL size plus 64 MiB of free space.
+Retained files include `.migration/<base-id>/<run-id>/source/`, `routing-before-upgrade.json`, and `.migration/application-backups/`.
+They can contain document text, user data and encrypted credentials. Protect them as you protect the application database.
+After verifying all migrated bases and making a fresh backup, an administrator can archive or remove the retained source snapshots and application backups.
+Keep `.migration/bindings/` and active migration targets. Bindings prevent an old source from being adopted again.
+Existing installations already upgraded to 1.13 resume through the same startup path. You do not need to downgrade first.
+
+## Shared and distributed installations
+
+Automatic local migration requires one worker on a supported local filesystem, with no other running Langflow instance that could write the source.
+It applies to single-host local data with either a SQLite or PostgreSQL application database.
+Set `LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE=false` to leave migration under operator control.
+
+Multiple workers, orchestrators and shared filesystems require a maintenance window managed by the administrator.
+For Docker Desktop bind mounts that report `fuse.grpcfuse`, move the data to a local named volume for migration.
+Local VirtioFS mounts, including the `fakeowner` passthrough, are supported.
+Stop all old API and Memory workers before migrating. An old worker cannot honor the new storage fences.
+Retain a backup of the application database and the complete knowledge-base directory, including native indexes and WAL files.
+For local stores, run one Langflow worker outside the orchestrator on a supported local filesystem with the original data and authoritative application database.
+The automatic migration then copies the data without re-embedding. A local SQLite vector store must continue to run on one host and local disk.
+For stores that must serve across hosts, export or re-ingest into a supported remote provider using an isolated old-release environment.
+The notice explains the required recovery action, and ordinary users see instructions to contact their administrator.
+
+The [managed controller](https://github.com/langflow-ai/langflow/blob/release-1.13.0/docs/development/sqlite-kb-controller.md) remains available for operators who want a supervised stop, backup, launch and readiness check.
+That optional path uses the [signed helper](https://github.com/langflow-ai/langflow/blob/release-1.13.0/tools/chroma_migration_helper/README.md) and its own POSIX/Docker/SQLite prerequisites.
+Those prerequisites do not apply to the built-in automatic reader.
+
+Chroma Cloud stores require migration to a supported provider. They are never replaced silently.
+Existing OpenSearch and pgvector stores continue to work with their configured providers.
+
+## Inspect and recover a failed upgrade
+
+Users can open the upgrade notice and see progress for their own bases through `/api/v1/knowledge-base-storage/status`.
+Administrators can retry a failed migration from that notice after resolving the reported cause.
+Active superusers can also inspect `/api/v1/knowledge-base-storage/migrations` and `/api/v1/knowledge-base-storage/inventory`.
+Inventory reports the latest completed scan shared across workers on the configured storage root.
+Use the returned KB UUID and storage generation for retry or detachment.
+Retries never change the readiness of unrelated flows.
+After an interrupted controller run, repeat its original command with the original state directory.
+Use `/healthz?require_storage_ready=true` when checking completion of the managed migration.
+
+Owners can delete failed or detached Knowledge and Memory bases without instantiating a retired provider.
+Local sources receive a durable retirement binding so they cannot be adopted again after restart or name reuse.
+Migration ledgers remain available after the application record is removed.
+For an unreachable remote store, including a deletion that failed before starting, an administrator can explicitly detach the store before its owner removes the application record.
+Clean up retained remote data through the provider after confirming that no remaining store references it.
+
+Deleting chat history for a failed or detached Memory store records a durable vector-purge intent.
+Migration applies that intent before enabling retrieval, or deleting the Memory base discards it with that store.
+Deleting a session also purges its Memory data when its message rows were already removed.
+
+Successful SQLite deletion wipes text from live pages, reclaims the database, truncates its WAL, and keeps a small generation tombstone to fence stale workers.
+This does not remove retained pre-upgrade backups or promise erasure of filesystem snapshots.
+
+## Concurrency and platform support
+
+PostgreSQL application databases use a separate storage-coordination pool.
+Set `LANGFLOW_KNOWLEDGE_BASE_STORAGE_POOL_SIZE` to fit expected concurrency. The default is 20 connections per process.
+Embedding calls and retry waits run outside the storage lease, and writes recheck routing and Memory source messages before committing.
+
+The bundled sqlite-vec release supplies wheels rather than a source distribution.
+Use a platform in Langflow's supported wheel matrix. Python 3.14 on Windows ARM64 is outside that matrix.

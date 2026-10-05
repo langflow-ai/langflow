@@ -76,6 +76,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Local vector storage uses a private, pinned SQLite runtime. Keep this extra
+# independent from the provider bundle collection and the application SQL driver.
+sqlite = ["apsw==3.53.4.0", "sqlite-vec==0.1.9"]
 # Opt-in hardware-isolated execution backend for the code-execution components
 # (LANGFLOW_SANDBOX_BACKEND=exec-sandbox, issue #12029). exec-sandbox requires
 # Python >= 3.12, so on 3.10/3.11 this extra installs nothing and the backend

@@ -136,6 +136,7 @@ async def cascade_delete_flow(
     """
     # Imported lazily so this module (loaded early, via ``api.utils``) stays free
     # of the memory-base service import chain.
+    from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
     from langflow.services.memory_base.flow_cleanup import purge_flow_memory_bases
 
     try:
@@ -176,6 +177,8 @@ async def cascade_delete_flow(
             delete(AuthzShare).where(AuthzShare.resource_type == "flow").where(AuthzShare.resource_id == flow_id)
         )
         result = await session.exec(delete(Flow).where(Flow.id == flow_id))
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,

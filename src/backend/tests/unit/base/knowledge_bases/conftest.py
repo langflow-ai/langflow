@@ -27,12 +27,20 @@ def fake_opensearchpy(monkeypatch: pytest.MonkeyPatch) -> None:
     connection_error = type("ConnectionError", (Exception,), {})
     ssl_error = type("SSLError", (Exception,), {})
 
+    class NotFoundError(Exception):
+        def __init__(self, status_code: int, error: str, info: dict) -> None:
+            super().__init__(status_code, error, info)
+            self.status_code = status_code
+            self.error = error
+            self.info = info
+
     opensearchpy.OpenSearch = MagicMock(name="OpenSearch")
     helpers.scan = MagicMock(name="scan")
     exceptions.AuthenticationException = authentication_exception
     exceptions.AuthorizationException = authorization_exception
     exceptions.ConnectionError = connection_error
     exceptions.SSLError = ssl_error
+    exceptions.NotFoundError = NotFoundError
     opensearchpy.helpers = helpers
     opensearchpy.exceptions = exceptions
 
