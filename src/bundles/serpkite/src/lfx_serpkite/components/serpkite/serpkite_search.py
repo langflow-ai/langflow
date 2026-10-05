@@ -119,6 +119,9 @@ class SerpKiteSearchComponent(Component):
         if not FIRST_PAGE <= page <= MAX_PAGE:
             msg = "Page must be between 1 and 10."
             raise ValueError(msg)
+        if num > DEFAULT_RESULTS and page > FIRST_PAGE:
+            msg = "Search depth above 10 results requires page 1."
+            raise ValueError(msg)
         if page > FIRST_PAGE:
             body["page"] = page
         return body

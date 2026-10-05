@@ -254,3 +254,10 @@ def test_malformed_results_field_is_reported(component):
     with patch(POST_PATCH_TARGET, mock_post):
         results = asyncio.run(component.fetch_content())
     assert "expected a list" in results[0].data["error"]
+
+
+def test_deep_search_with_later_page_is_rejected(component):
+    component.max_results = 20
+    component.page = 2
+    with pytest.raises(ValueError, match="requires page 1"):
+        component._request_body()
