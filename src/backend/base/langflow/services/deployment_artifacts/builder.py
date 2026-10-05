@@ -276,9 +276,19 @@ class _ModelRequirements:
             unresolved += part.unresolved_fields
         return _ModelRequirements(
             providers=tuple(sorted(providers)),
-            models=tuple(sorted(models)),
+            models=tuple(sorted(models, key=_model_sort_key)),
             unresolved_fields=unresolved,
         )
+
+
+def _model_sort_key(model: ProjectArtifactRequiredModel) -> tuple[str, str, str]:
+    """Order models deterministically even when only some carry a type.
+
+    The dataclass ordering compares ``model_type`` directly, and ``None``
+    cannot be ordered against a string: one flow can type a model the other
+    leaves untyped, and the merged set holds both.
+    """
+    return (model.provider, model.name, model.model_type or "")
 
 
 _MODEL_BASE_CLASSES = frozenset({"LanguageModel", "Embeddings"})
@@ -315,38 +325,45 @@ def _model_entry_selection(entry: object) -> tuple[str, str | None, str | None] 
     if isinstance(name, str) and name.strip().startswith(("[", "{")):
         try:
             parsed = json.loads(name)
-        except ValueError:
+        except (ValueError, RecursionError):
+            # RecursionError: JSON nested inside a string escapes the flow's own
+            # depth preflight, so a deeply nested value must not crash packaging.
             return None
         inner = parsed[0] if isinstance(parsed, list) and parsed else parsed
         return _model_entry_selection(inner)
     return None
 
 
-def _model_field_selections(value: object) -> list[tuple[str, str | None, str | None]] | None:
-    """Every selection one model-field value carries.
+def _model_field_selections(value: object) -> tuple[list[tuple[str, str | None, str | None]], bool] | None:
+    """Every selection one model-field value carries, and whether any entry was unreadable.
 
-    ``None`` means the field states no requirement at all. An empty list means
-    it states one this code cannot read, which is the only case worth counting.
+    ``None`` means the field states no requirement at all. Otherwise the flag
+    is true when the field states a requirement this code cannot fully read:
+    no entries, or one entry among readable ones that names no provider. Either
+    way the selections listed are not the field's whole answer, so the field
+    counts as unresolved even though its readable providers are still listed.
     """
     if isinstance(value, str):
         text = value.strip()
         if not text:
-            return []
+            return [], True
         if text == _MODEL_CONNECTED_SENTINEL:
             return None
         try:
             parsed = json.loads(text)
-        except ValueError:
+        except (ValueError, RecursionError):
             # A bare name. The catalog decides the provider, so nothing to read.
-            return []
+            return [], True
         entries = parsed if isinstance(parsed, list) else [parsed]
     elif isinstance(value, dict):
         entries = [value]
     elif isinstance(value, list):
         entries = list(value)
     else:
-        return []
-    return [selection for entry in entries if (selection := _model_entry_selection(entry)) is not None]
+        return [], True
+    selections = [_model_entry_selection(entry) for entry in entries]
+    readable = [selection for selection in selections if selection is not None]
+    return readable, not entries or len(readable) < len(selections)
 
 
 def _standalone_provider(node_inner: dict) -> str | None:
@@ -366,6 +383,8 @@ def _standalone_provider(node_inner: dict) -> str | None:
 
 #: A model field declares what kind of model it holds (``ModelInput.model_type``),
 #: in the input's vocabulary. The policy keys models by the catalog's vocabulary.
+#: A declaration outside this map yields no type, and an untyped model makes the
+#: policy try every type segment, so an unknown declaration never widens access.
 _FIELD_MODEL_TYPES = {"language": "llm", "embedding": "embeddings"}
 
 
@@ -420,12 +439,12 @@ def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
                 # a typed allowlist the runtime satisfies. The field says which.
                 declared_type = field_value.get("model_type")
                 field_type = _FIELD_MODEL_TYPES.get(declared_type) if isinstance(declared_type, str) else None
-                selections = _model_field_selections(field_value.get("value"))
-                if selections is None:
+                field_selections = _model_field_selections(field_value.get("value"))
+                if field_selections is None:
                     continue
-                if not selections:
+                selections, incomplete = field_selections
+                if incomplete:
                     unresolved += 1
-                    continue
                 for provider, model_name, model_type in selections:
                     provider_id = resolve_provider_id(provider)
                     providers.add(provider_id)
@@ -449,7 +468,7 @@ def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
                 node_frames.append(iter(nested_nodes))
     return _ModelRequirements(
         providers=tuple(sorted(providers)),
-        models=tuple(sorted(models)),
+        models=tuple(sorted(models, key=_model_sort_key)),
         unresolved_fields=unresolved,
     )
 
@@ -804,7 +823,9 @@ def _build_archive(
         # older reader refuses an artifact instead of deploying without
         # provisioning required resources. Each level is claimed only when its
         # field is populated, so a project that needs no provider still
-        # packages as a version older readers already accept.
+        # packages as a version older readers already accept. An unresolved
+        # count alone does not claim v5: it names nothing a target could
+        # provision or approve, so an older reader loses nothing by ignoring it.
         "schema_version": (
             5 if manifest_models.providers else (4 if manifest_required_connections else (3 if dependencies else 1))
         ),

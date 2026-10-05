@@ -28,6 +28,7 @@ from langflow.services.deployment_artifacts.builder import (
     _build_deployment_snapshot_flows,
     _collect_model_requirements,
     _FlowSnapshot,
+    _model_entry,
 )
 
 STARTER_PROJECTS = Path(initial_setup.__file__).parent / "starter_projects"
@@ -108,6 +109,16 @@ def _manifest_of(artifact) -> dict:
             "a multi-entry value names every provider it carries",
             [_node(template=_model_field(json.dumps([{"provider": "OpenAI"}, {"provider": "Groq"}])))],
             (("groq", "openai"), 0),
+        ),
+        (
+            "an unreadable entry beside a readable one is counted, not dropped",
+            [_node(template=_model_field([{"provider": "OpenAI", "name": "x"}, {"name": "bare"}]))],
+            (("openai",), 1),
+        ),
+        (
+            "JSON nested too deep inside a name is counted instead of crashing",
+            [_node(template=_model_field({"provider": "unknown", "name": "[" * 200_000}))],
+            ((), 1),
         ),
         (
             "a native list of dicts is the shape ModelInput documents",
@@ -427,9 +438,28 @@ def test_manifest_reports_an_unresolved_count_even_with_no_resolvable_provider()
     assert manifest["unresolved_model_fields"] == 1
 
 
+def test_models_typed_in_one_flow_and_untyped_in_another_still_package() -> None:
+    """The merged set holds both forms of one model; ordering must not compare a type with None."""
+    selection = {"provider": "OpenAI", "name": "gpt-4o"}
+    artifact = _build_archive(
+        project_id=uuid4(),
+        project_name="Mixed types",
+        snapshots=(
+            _snapshot([_node(template=_model_field([selection], model_type="language"))], name="Typed"),
+            _snapshot([_node(template=_model_field([selection]))], name="Untyped"),
+        ),
+        limits=ProjectArtifactLimits(),
+    )
+
+    assert _manifest_of(artifact)["required_models"] == [
+        {"provider": "openai", "name": "gpt-4o"},
+        {"provider": "openai", "name": "gpt-4o", "model_type": "llm"},
+    ]
+
+
 def test_deployment_snapshot_reports_the_same_providers_as_the_manifest() -> None:
     snapshots = (
-        _snapshot([_node(template=_model_field({"provider": "OpenAI"}))], name="Chat"),
+        _snapshot([_node(template=_model_field({"provider": "OpenAI", "name": "gpt-4o"}))], name="Chat"),
         _snapshot(
             [
                 _node(template=_model_field({"provider": "Anthropic"})),
@@ -453,6 +483,8 @@ def test_deployment_snapshot_reports_the_same_providers_as_the_manifest() -> Non
     assert snapshot_models.unresolved_fields == 1
     assert list(snapshot_models.providers) == manifest["required_providers"]
     assert snapshot_models.unresolved_fields == manifest["unresolved_model_fields"]
+    assert [model.name for model in snapshot_models.models] == ["gpt-4o"]
+    assert [_model_entry(model) for model in snapshot_models.models] == manifest["required_models"]
 
 
 def test_shipped_starter_projects_select_no_provider_and_defer_every_model_field() -> None:
