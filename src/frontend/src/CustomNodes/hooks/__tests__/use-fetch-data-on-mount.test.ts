@@ -61,4 +61,38 @@ describe("useFetchDataOnMount", () => {
 
     expect(mockMutateTemplate.mock.calls[0][3]).toBe(setNodeClass);
   });
+
+  describe("a node with a model and an empty API key", () => {
+    const modelNode = (): APIClassType =>
+      ({
+        template: {
+          model: { real_time_refresh: true, options: [], value: "" },
+          api_key: { real_time_refresh: true, value: "" },
+        },
+      }) as unknown as APIClassType;
+
+    const mountField = (node: APIClassType, name: string) =>
+      renderHook(() =>
+        useFetchDataOnMount(node, "node-1", jest.fn(), name, {} as never),
+      );
+
+    it("prefills the key through the model refresh only", () => {
+      const node = modelNode();
+      mountField(node, "model");
+      mountField(node, "api_key");
+
+      expect(mockMutateTemplate).toHaveBeenCalledTimes(1);
+      expect(mockMutateTemplate.mock.calls[0][6]).toBe("model");
+    });
+
+    it("still refreshes the key of a node without a model field", () => {
+      const node = {
+        template: { api_key: { real_time_refresh: true, value: "" } },
+      } as unknown as APIClassType;
+      mountField(node, "api_key");
+
+      expect(mockMutateTemplate).toHaveBeenCalledTimes(1);
+      expect(mockMutateTemplate.mock.calls[0][6]).toBe("api_key");
+    });
+  });
 });
