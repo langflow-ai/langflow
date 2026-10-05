@@ -21,6 +21,7 @@ from httpx import ASGITransport, AsyncClient
 from langflow.api.utils.migration_pause import MigrationPauseMiddleware, is_paused
 from langflow.initial_setup.setup import sync_flows_from_fs
 from langflow.main import create_app
+from langflow.services.background_execution.executor import InProcessExecutor
 from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import JobStatus
@@ -270,6 +271,31 @@ async def test_a_queued_job_stays_queued_while_paused_and_starts_after(active_us
     _write_record(config_dir, RECORD)
 
     assert await _eventually(lambda: _completed(job_id))
+
+
+async def test_a_job_the_pause_holds_survives_a_stop_and_runs_after_the_next_start(config_dir):
+    _write_record(config_dir, PAUSED)
+    executor = InProcessExecutor(max_concurrency=1)
+    ran = asyncio.Event()
+
+    async def job() -> None:
+        ran.set()
+
+    async def taken() -> bool:
+        return executor._queue.empty()
+
+    await executor.start()
+    await executor.submit("held", job)
+    # The worker has the job in hand and is waiting out the pause.
+    assert await _eventually(taken)
+    await executor.stop()
+    _write_record(config_dir, RECORD)
+
+    await executor.start()
+    try:
+        await asyncio.wait_for(ran.wait(), timeout=5)
+    finally:
+        await executor.stop()
 
 
 def test_a_second_worker_process_sees_the_pause_when_the_record_changes(tmp_path: Path):
