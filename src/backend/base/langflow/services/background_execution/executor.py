@@ -100,11 +100,17 @@ class InProcessExecutor:
         while True:
             try:
                 key, coro_factory = await self._queue.get()
+            except asyncio.CancelledError:
+                return
+            try:
                 # A paused instance starts nothing: the job waits here, still queued, until the pause ends.
                 # The pause is a file that another process writes, so there is no event to wait on.
                 while is_paused():  # noqa: ASYNC110
                     await asyncio.sleep(1)
             except asyncio.CancelledError:
+                # stop() arrived during the pause. The job goes back, so the next start() still runs it.
+                self._queue.put_nowait((key, coro_factory))
+                self._queue.task_done()
                 return
             task = asyncio.create_task(coro_factory())
             self._in_flight[key] = task
