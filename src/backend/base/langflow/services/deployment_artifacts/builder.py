@@ -329,8 +329,14 @@ def _model_entry_selection(entry: object) -> tuple[str, str | None, str | None] 
             # RecursionError: JSON nested inside a string escapes the flow's own
             # depth preflight, so a deeply nested value must not crash packaging.
             return None
-        inner = parsed[0] if isinstance(parsed, list) and parsed else parsed
-        return _model_entry_selection(inner)
+        if isinstance(parsed, list):
+            # Only a single wrapped spec is unwrapped. Reading the first of
+            # several would report a partial list as the whole answer; as
+            # unreadable, the field is counted as unresolved instead.
+            if len(parsed) != 1:
+                return None
+            parsed = parsed[0]
+        return _model_entry_selection(parsed)
     return None
 
 

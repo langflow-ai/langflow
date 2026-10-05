@@ -116,6 +116,20 @@ def _manifest_of(artifact) -> dict:
             (("openai",), 1),
         ),
         (
+            "several specs serialized into one name are counted, not read as the first",
+            [
+                _node(
+                    template=_model_field(
+                        {
+                            "provider": "unknown",
+                            "name": json.dumps([{"provider": "OpenAI"}, {"provider": "Groq"}]),
+                        }
+                    )
+                )
+            ],
+            ((), 1),
+        ),
+        (
             "JSON nested too deep inside a name is counted instead of crashing",
             [_node(template=_model_field({"provider": "unknown", "name": "[" * 200_000}))],
             ((), 1),
