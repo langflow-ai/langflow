@@ -4,12 +4,14 @@ A copy can take hours, so a run belongs to no request. The worker that starts on
 reads the child's stdout in a background task and keeps two files per run under
 CONFIG_DIR/migrations/runs:
 
-    <run_id>.ndjson  every JSON object the child printed, one per line, each given a seq
+    <run_id>.ndjson  every JSON object the child printed, one per line, each given a seq,
+                     then one last "end" event that says how the run ended
     <run_id>.json    the status: the step, who started it and when, how it ended
 
 Following, cancelling and listing read those files and nothing in memory, so any
 worker can serve a run that another worker started. Only the worker that started a
-run writes them.
+run writes them. A cancel leaves a <run_id>.cancel file beside them, which tells that
+worker why the child exited.
 
 A run is live while its status says running and its child, or the worker reading the
 child, still exists. A run that says running with both gone was interrupted: the
@@ -45,6 +47,8 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 # A report line holds every failed item, which can pass asyncio's 64 KiB default.
+# ponytail: a line longer than this is skipped, and a run whose report is skipped ends as failed.
+# Raise it if a report outgrows it.
 _LINE_LIMIT = 16 * 1024 * 1024
 # How much of the child's stderr the status file keeps.
 _STDERR_LINES = 40
@@ -125,7 +129,8 @@ def read_run(run_id: str) -> dict[str, Any]:
     """The status of a run: running, done, failed, cancelled or interrupted. Raises RunNotFoundError."""
     try:
         run = json.loads(_path(run_id, ".json").read_text())
-    except FileNotFoundError:
+    except (FileNotFoundError, ValueError):
+        # A status is replaced whole, so one that is not JSON is what a machine that lost power left.
         raise RunNotFoundError(run_id) from None
     if run["status"] == "running" and not (_process(run["worker"]) or _process(run["child"])):
         # Nothing is left to write how it ended.
@@ -199,10 +204,14 @@ async def _read_child(status: dict[str, Any], process: asyncio.subprocess.Proces
     reported = False
     outcome = "failed"
     try:
-        async for line in process.stdout:
+        while True:
             try:
+                line = await process.stdout.readline()
+                if not line:
+                    break
                 event = json.loads(line)
             except ValueError:
+                # Not JSON, or longer than _LINE_LIMIT, which the stream drops before it goes on.
                 continue
             if not isinstance(event, dict):
                 continue
@@ -225,6 +234,8 @@ async def _read_child(status: dict[str, Any], process: asyncio.subprocess.Proces
             process.kill()
         lines = _ANSI.sub("", stderr.decode(errors="replace")).splitlines()[-_STDERR_LINES:]
         # The status first: a follower that finds no end in the log reads how the run ended from it.
+        # ponytail: if this write fails, as on a full disk, the run reads as running until this worker
+        # stops. A lock the reader holds for as long as it reads would tell the other workers at once.
         _write_status(
             {
                 **status,

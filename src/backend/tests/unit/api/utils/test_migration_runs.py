@@ -46,14 +46,18 @@ def wait_for_gate():
 """
 
 # A second server process: it starts one run, then keeps reading it as a worker would.
+# It logs down to DEBUG, so nothing it sends to the application log stays hidden.
 _WORKER = """
 import asyncio, contextlib, os, sys
 from langflow.api.utils import migration_runs
+from lfx.log.logger import configure, logger
 
 async def main():
     await migration_runs.start_run("copy_files", sys.argv[1:], dict(os.environ), started_by="bob")
     await asyncio.Event().wait()
 
+configure(log_level="DEBUG")
+logger.debug("The worker logs at DEBUG")
 with contextlib.suppress(KeyboardInterrupt):
     asyncio.run(main())
 """
@@ -121,14 +125,14 @@ async def other_worker(config_dir: Path):
     """Start a run from a second server process, and hand back that process and the run's id."""
     workers = []
 
-    async def start(body: str, *args: object) -> tuple[asyncio.subprocess.Process, str]:
+    async def start(body: str, *args: object, **env: str) -> tuple[asyncio.subprocess.Process, str]:
+        # Its output goes where this process's output goes, so a test can read what it logged.
         worker = await asyncio.create_subprocess_exec(
             sys.executable,
             "-c",
             _WORKER,
             *_child(body, *args),
-            env={**os.environ, "LANGFLOW_CONFIG_DIR": str(config_dir)},
-            stdout=asyncio.subprocess.DEVNULL,
+            env={**os.environ, **env, "LANGFLOW_CONFIG_DIR": str(config_dir)},
         )
         workers.append(worker)
         # This process learns of the run the way any worker does: from the files.
@@ -306,6 +310,22 @@ async def test_a_line_far_larger_than_the_default_stream_limit_survives():
     assert events[1] == {"event": "end", "status": "done", "exit_code": 0, "seq": 2}
 
 
+async def test_a_line_longer_than_the_raised_limit_is_skipped_and_the_run_goes_on(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(migration_runs, "_LINE_LIMIT", 64 * 1024)
+    run_id = await _start(
+        """
+        emit(event="progress", done=1)
+        emit(event="item", reason="r" * 200_000)
+        emit(event="report", ok=True)
+        """
+    )
+
+    events = await _follow(run_id)
+
+    assert [(event["seq"], event["event"]) for event in events] == [(1, "progress"), (2, "report"), (3, "end")]
+    assert events[-1] == {"event": "end", "status": "done", "exit_code": 0, "seq": 3}
+
+
 async def test_a_log_longer_than_one_read_arrives_whole_and_in_order():
     run_id = await _start(
         """
@@ -319,6 +339,36 @@ async def test_a_log_longer_than_one_read_arrives_whole_and_in_order():
 
     assert [event["seq"] for event in events] == list(range(1, 3003))
     assert [event["number"] for event in events[:3000]] == list(range(3000))
+    # Followed again now that the run is over, when a full read is not yet the whole log.
+    assert await _follow(run_id) == events
+
+
+async def test_a_line_still_being_written_is_read_once_it_is_whole(config_dir: Path):
+    # This test is the worker: it writes a run's files itself, to stop halfway through a line.
+    run_id = uuid.uuid4().hex
+    runs = config_dir / "migrations" / "runs"
+    runs.mkdir(parents=True)
+    log, status = runs / f"{run_id}.ndjson", runs / f"{run_id}.json"
+    running = {"run_id": run_id, "step_id": "copy_files", "status": "running", "exit_code": None, "child": None}
+    status.write_text(json.dumps({**running, "worker": migration_runs._identity(os.getpid())}))
+    log.write_text('{"event": "progress", "done": 1, "seq": 1}\n{"event": "progress", "do')
+    seen, follower = _follow_in_background(run_id)
+    await _until(lambda: seen)
+
+    with log.open("a") as lines:
+        lines.write('ne": 2, "seq": 2}\n')
+    await _until(lambda: len(seen) == 2)
+    # A worker that dies halfway through a line leaves that half behind for good.
+    with log.open("a") as lines:
+        lines.write('{"event": "progr')
+    status.write_text(json.dumps({**running, "worker": None}))
+    await asyncio.wait_for(follower, _TIMEOUT)
+
+    assert seen == [
+        {"event": "progress", "done": 1, "seq": 1},
+        {"event": "progress", "done": 2, "seq": 2},
+        {"event": "end", "status": "interrupted", "exit_code": None, "seq": 3},
+    ]
 
 
 async def test_cancel_ends_the_run_cancelled(gate: Path):
@@ -435,11 +485,13 @@ async def test_a_new_run_replaces_the_earlier_run_of_its_step(config_dir: Path):
         migration_runs.read_run(first)
 
 
-@pytest.mark.parametrize("run_id", ["0" * 32, "../migration", ""])
+@pytest.mark.parametrize("run_id", ["0" * 32, "../migration", "", "f" * 32])
 async def test_a_run_that_does_not_exist_is_not_found(run_id: str, config_dir: Path):
     # A file that an id with a path in it would reach.
     (config_dir / "migrations" / "runs").mkdir(parents=True)
     (config_dir / "migrations" / "migration.json").write_text('{"status": "done"}')
+    # A status with nothing in it, as a machine that lost power can leave one. It is no run.
+    (config_dir / "migrations" / "runs" / f"{'f' * 32}.json").touch()
 
     with pytest.raises(migration_runs.RunNotFoundError):
         migration_runs.read_run(run_id)
@@ -447,22 +499,32 @@ async def test_a_run_that_does_not_exist_is_not_found(run_id: str, config_dir: P
         await migration_runs.cancel_run(run_id)
     with pytest.raises(migration_runs.RunNotFoundError):
         await _follow(run_id)
+    # Nor does it stand in the way of the next start, which lists the runs first.
+    assert migration_runs.list_runs() == []
 
 
-async def test_a_run_is_not_interrupted_while_its_worker_still_reads_it(gate: Path):
-    # The child hands its stdout to a process of its own and exits, so the process the
-    # status file names is gone while output is still to come.
+async def _start_and_outlive_the_child(last_words: str, gate: Path) -> str:
+    """Start a run whose child hands its stdout to a process of its own and exits.
+
+    The process the status file names is then gone while output is still to come: the
+    other process holds for the gate, runs last_words and exits.
+    """
     run_id = await _start(
         """
         import subprocess
         subprocess.Popen([sys.executable, "-c", sys.argv[1], sys.argv[-1]])
         emit(event="progress", done=1)
         """,
-        _PRELUDE + 'wait_for_gate()\nemit(event="report", ok=True)\n',
+        _PRELUDE + f"wait_for_gate()\n{last_words}\n",
         gate,
     )
     child = migration_runs.read_run(run_id)["child"]
     await _until(lambda: child is None or not psutil.pid_exists(child["pid"]))
+    return run_id
+
+
+async def test_a_run_is_not_interrupted_while_its_worker_still_reads_it(gate: Path):
+    run_id = await _start_and_outlive_the_child('emit(event="report", ok=True)', gate)
 
     assert migration_runs.read_run(run_id)["status"] == "running"
     gate.touch()
@@ -472,6 +534,19 @@ async def test_a_run_is_not_interrupted_while_its_worker_still_reads_it(gate: Pa
         (3, "end"),
     ]
     assert migration_runs.read_run(run_id)["status"] == "done"
+
+
+async def test_a_cancel_that_arrives_after_the_child_exited_changes_nothing(gate: Path):
+    run_id = await _start_and_outlive_the_child("sys.exit(3)", gate)
+
+    await migration_runs.cancel_run(run_id)
+    gate.touch()
+
+    # The run ends as it would have without the cancel: failed, since no report came.
+    assert (await _follow(run_id))[-1] == {"event": "end", "status": "failed", "exit_code": 0, "seq": 2}
+    # And a cancel after the end does nothing at all.
+    await migration_runs.cancel_run(run_id)
+    assert migration_runs.read_run(run_id)["status"] == "failed"
 
 
 async def test_another_worker_can_follow_and_cancel_a_run(gate: Path, other_worker):
@@ -574,26 +649,31 @@ async def test_a_worker_that_stops_records_the_run_as_interrupted_and_stops_its_
     await _until(lambda: migration_runs._process(run["child"]) is None)
 
 
-async def test_the_environment_and_the_arguments_are_never_written(config_dir: Path, capfd: pytest.CaptureFixture):
+async def test_the_environment_and_the_arguments_are_never_written(
+    config_dir: Path, other_worker, capfd: pytest.CaptureFixture
+):
     password, argument = f"password-{uuid.uuid4().hex}", f"argument-{uuid.uuid4().hex}"
-    child = _child(
+    # Started by a worker of its own, whose log is all on, and which passes its own environment on.
+    worker, run_id = await other_worker(
         """
         emit(event="progress", done=1)
         print("could not connect", file=sys.stderr)
         sys.exit(1)
         """,
         argument,
+        LANGFLOW_MIGRATION_TARGET_URL=f"postgresql://langflow:{password}@db/langflow",
     )
-    env = {**os.environ, "LANGFLOW_MIGRATION_TARGET_URL": f"postgresql://langflow:{password}@db/langflow"}
-
-    run_id = await migration_runs.start_run("copy_database", child, env, started_by="alice")
     await _follow(run_id)
+    # Stopped, so everything it had to log is written.
+    worker.send_signal(signal.SIGINT)
+    await worker.wait()
 
     written = b"".join(path.read_bytes() for path in config_dir.rglob("*") if path.is_file())
-    # The run's files are the ones being read here.
+    logged = "".join(capfd.readouterr())
+    # The run's files and the worker's log are the ones being read here.
     assert b"could not connect" in written
     assert b'"progress"' in written
-    output = capfd.readouterr()
+    assert "The worker logs at DEBUG" in logged
     for value in (password, argument):
         assert value.encode() not in written
-        assert value not in output.out + output.err
+        assert value not in logged
