@@ -82,6 +82,7 @@ jobs:
           echo "pre_release: ${{ inputs.pre_release }}"
           echo "create_release: ${{ inputs.create_release }}"
           echo "dry_run: ${{ inputs.dry_run }}"
+          echo "run_pip_check: ${{ inputs.run_pip_check }}"
 
   validate-tag:
     name: Validate Tag Input
@@ -138,10 +139,17 @@ jobs:
 
       - name: Validate Tag Has v Prefix
         if: ${{ !inputs.dry_run }}
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          PRE_RELEASE: ${{ inputs.pre_release }}
         run: |
-          TAG="${{ inputs.release_tag }}"
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ Error: Tag must start with 'v' and follow semver format (v1.2.3)"
+          TAG="$RELEASE_TAG"
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            :
+          elif [ "$PRE_RELEASE" = "true" ] && [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+rc(0|[1-9][0-9]*)$ ]]; then
+            echo "Validated immutable pre-release source tag."
+          else
+            echo "❌ Error: Use v1.2.3, or v1.2.3rcN with pre_release enabled"
             echo "   Got: $TAG"
             echo ""
             echo "This is required to ensure GitHub's generateReleaseNotes uses the correct base comparison."
@@ -260,6 +268,8 @@ jobs:
         id: rc
         if: ${{ inputs.pre_release }}
         shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           set -euo pipefail
 
@@ -309,6 +319,17 @@ jobs:
           }
 
           max_rc=0
+          # A failed attempt may never publish its RC. An immutable retry tag
+          # supplies a floor so the next attempt can advance without moving tags.
+          if [[ "${RELEASE_TAG:-}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)rc([0-9]+)$ ]]; then
+            tag_version="${BASH_REMATCH[1]}"
+            max_rc="${BASH_REMATCH[2]}"
+            source_version="$(read_pyproject_version pyproject.toml)"
+            if [ "$tag_version" != "$source_version" ]; then
+              echo "Pre-release tag base $tag_version does not match source version $source_version." >&2
+              exit 1
+            fi
+          fi
           consider_versions() {
             local label="$1"
             local base_version="$2"

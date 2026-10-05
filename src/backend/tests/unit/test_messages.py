@@ -313,7 +313,32 @@ def test_convert_to_langchain(method_name):
     assert len(list(iterator)) == expected_len
 
 
-def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
+@pytest.fixture
+def attachment_upload_dir(tmp_path, monkeypatch):
+    """Exercise attachment parsing inside an authorized local upload namespace."""
+    from langflow.services.deps import get_settings_service
+    from lfx.services.storage.local import LocalStorageService
+    from lfx.utils.file_path_security import file_access_scope
+    from lfx.utils.image import create_image_content_dict
+
+    storage_dir = tmp_path / "storage"
+    scope_id = str(uuid4())
+    upload_dir = storage_dir / scope_id
+    upload_dir.mkdir(parents=True)
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "storage_type", "local")
+    monkeypatch.setattr(settings_service.settings, "restrict_local_file_access", True)
+    monkeypatch.setattr(settings_service.settings, "config_dir", str(storage_dir))
+    storage = LocalStorageService(session_service=None, settings_service=settings_service)
+    monkeypatch.setattr("lfx.schema.image.get_storage_service", lambda: storage)
+    monkeypatch.setattr("lfx.utils.image.get_storage_service", lambda: storage)
+    create_image_content_dict.cache_clear()
+    with file_access_scope((scope_id,)):
+        yield upload_dir
+    create_image_content_dict.cache_clear()
+
+
+def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch, attachment_upload_dir):
     events: list[str] = []
 
     def record(event: str, **_kwargs):
@@ -324,12 +349,14 @@ def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
         SimpleNamespace(debug=record, warning=record, error=lambda *_args, **_kwargs: None),
     )
 
+    unsupported_path = attachment_upload_dir / "file.unsupported"
+    unsupported_path.write_bytes(b"\x00unsupported attachment canary")
     message = Message(
         text="Hello",
         sender="User",
         sender_name="User",
         session_id="session-id",
-        files=["nonexistent.unsupported"],
+        files=[str(unsupported_path)],
     )
 
     lc_message = message.to_lc_message()
@@ -339,8 +366,8 @@ def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
     assert any("Skipping attachment during message conversion" in event for event in events)
 
 
-def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
-    csv_path = tmp_path / "table.csv"
+def test_to_lc_message_keeps_supported_csv_attachments_as_text(attachment_upload_dir):
+    csv_path = attachment_upload_dir / "table.csv"
     csv_path.write_text("name,role\nAda,Engineer\n", encoding="utf-8")
 
     message = Message(
@@ -361,8 +388,8 @@ def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
     assert "name,role" in lc_message.content[1]["text"]
 
 
-def test_to_lc_message_keeps_supported_image_attachments(tmp_path):
-    image_path = tmp_path / "image.png"
+def test_to_lc_message_keeps_supported_image_attachments(attachment_upload_dir):
+    image_path = attachment_upload_dir / "image.png"
     image_content = base64.b64decode(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
     )
@@ -384,8 +411,8 @@ def test_to_lc_message_keeps_supported_image_attachments(tmp_path):
     assert lc_message.content[1]["type"] == "image_url"
 
 
-def test_to_lc_message_skips_oversized_file_attachments(tmp_path):
-    big_path = tmp_path / "big.txt"
+def test_to_lc_message_skips_oversized_file_attachments(attachment_upload_dir):
+    big_path = attachment_upload_dir / "big.txt"
 
     big_size = MAX_ATTACHMENT_SIZE_BYTES + 1
     with big_path.open("wb") as handle:
