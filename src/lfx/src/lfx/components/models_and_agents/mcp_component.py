@@ -972,11 +972,28 @@ class MCPToolsComponent(ComponentWithCache):
             value == {} and model_field.default is None and cls._is_object_like_annotation(model_field.annotation)
         )
 
+    def _tool_argument_value(self, arg_name: str) -> Any:
+        """Retrieve the value of a tool argument from component inputs or attributes.
+
+        Avoids falling back to getattr() on the component instance, which could return
+        inherited Component methods (e.g. index, run, log) or class attributes
+        (e.g. description, name) instead of the configured value or None.
+        """
+        attributes = self.__dict__.get("_attributes", {})
+        if arg_name in attributes:
+            return attributes[arg_name]
+
+        inputs = self.__dict__.get("_inputs", {})
+        if arg_name in inputs:
+            return inputs[arg_name].value
+
+        return None
+
     def _build_tool_kwargs(self, args_schema: type[BaseModel]) -> dict[str, Any]:
         """Collect tool kwargs from component inputs, omitting blank optional values."""
         kwargs: dict[str, Any] = {}
         for arg_name, model_field in args_schema.model_fields.items():
-            value = getattr(self, arg_name, None)
+            value = self._tool_argument_value(arg_name)
             if isinstance(value, Message):
                 value = value.text
 
