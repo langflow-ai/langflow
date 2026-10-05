@@ -354,17 +354,30 @@ class TestRelocationWithoutATarget:
         assert result.reason.startswith("ValueError: Unknown vector-store backend 'nope'")
         assert result.code == "kb_backend_missing"
 
+    @pytest.mark.parametrize(
+        ("target", "config", "variable", "needs"),
+        [
+            ("postgres", {}, "PGVECTOR_CONNECTION_STRING", "PostgresBackend needs the 'PGVECTOR_CONNECTION_STRING'"),
+            # An OpenSearch target resolves its settings earlier, to read the metric its index ranks by.
+            (
+                "opensearch",
+                {"url_variable": "OPENSEARCH_URL"},
+                "OPENSEARCH_URL",
+                "OpenSearchBackend needs the 'OPENSEARCH_URL'",
+            ),
+        ],
+    )
     async def test_target_without_its_connection_settings_is_told_apart_from_other_failures(
-        self, active_user, monkeypatch
+        self, active_user, monkeypatch, target, config, variable, needs
     ):
-        monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
-        record, _ = await _seed_sqlite_kb(active_user.id, "kb_no_target", 2)
+        monkeypatch.delenv(variable, raising=False)
+        record, _ = await _seed_sqlite_kb(active_user.id, f"kb_no_target_{target}", 2)
 
-        results = await relocate_knowledge_bases(target_backend_type="postgres", target_backend_config={})
+        results = await relocate_knowledge_bases(target_backend_type=target, target_backend_config=config)
 
         result = next(r for r in results if r.kb_id == record.id)
         assert result.status == "failed"
-        assert result.reason.startswith("ValueError: PostgresBackend needs the 'PGVECTOR_CONNECTION_STRING'")
+        assert result.reason.startswith(f"ValueError: {needs}")
         assert result.code == "kb_target_unreachable"
 
     async def test_source_that_cannot_be_opened_is_a_plain_failure(self, active_user):
@@ -407,7 +420,8 @@ class TestRelocationWithoutATarget:
 async def test_target_that_cannot_be_reached_at_the_write_is_told_apart(
     active_user, monkeypatch, target, config, variable, nowhere, driver, error
 ):
-    # A real run first connects to the target when it writes, and nothing listens there.
+    # Nothing listens there. A real run first connects to Postgres when it writes, and to
+    # OpenSearch before that, to read the metric its index ranks by.
     pytest.importorskip(driver)
     if target == "postgres":
         pytest.importorskip("pgvector")

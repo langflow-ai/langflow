@@ -387,7 +387,11 @@ async def _metric_change(
     Checking reads every source vector, so it can also find what the copy would: a
     chunk without a vector, or a read that stops short. Each reason sets its own code.
     """
-    before, after = await source.get_distance_metric(), await target.get_distance_metric()
+    before = await source.get_distance_metric()
+    # An OpenSearch target reads its metric from its cluster, which is the first
+    # time a relocation needs the target's settings and a connection to it.
+    with _failing_as(result, "kb_target_unreachable"):
+        after = await target.get_distance_metric()
     if before is None or after is None or before == after:
         return None
     checked = 0
