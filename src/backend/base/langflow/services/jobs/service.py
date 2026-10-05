@@ -54,7 +54,7 @@ class _PendingAppend:
 
     __slots__ = ("event_type", "future", "job_id", "payload")
 
-    def __init__(self, job_id: UUID, event_type: str, payload: dict, future: asyncio.Future) -> None:
+    def __init__(self, job_id: UUID, event_type: str, payload: dict, future: asyncio.Future[int]) -> None:
         self.job_id = job_id
         self.event_type = event_type
         self.payload = payload
@@ -95,7 +95,7 @@ class JobService(Service):
         """Initialize the job service."""
         self.set_ready()
         self._append_queue: list[_PendingAppend] = []
-        self._append_flushing = False
+        self._append_lock = asyncio.Lock()
 
     async def get_jobs_by_flow_id(
         self, flow_id: UUID | str, user_id: UUID, page: int = 1, page_size: int = 10
@@ -449,70 +449,78 @@ class JobService(Service):
     async def append_event(self, job_id: UUID, event_type: str, payload: dict) -> int:
         """Append a durable event for a job and return its per-job seq.
 
-        Queues the request; if no flush is currently in flight, this call becomes the
-        flusher for the batch window (see the inline flush below), otherwise it just
-        waits on its future alongside whichever call IS the current flusher. The flush
-        is deliberately inline on a real caller's own await chain rather than a detached
-        ``asyncio.create_task`` -- a detached task can outlive the caller that spawned it
-        (e.g. across a test's fixture teardown swapping the database service mid-flight),
-        so tying it to a live caller means it can never run after every caller is gone.
-        The caller's contract is unchanged -- this still awaits and returns the real,
-        gap-free seq -- only the number of DB connection checkouts changes.
+        Calls within the batching window share one transaction, including calls for
+        different jobs. A cancelled window owner releases the lock so another caller
+        can flush the queue. Once database work starts, its owner joins the shielded
+        flush even on cancellation: another job's append must not be cancelled with
+        it, and database work must never outlive all its callers.
         """
-        future: asyncio.Future = asyncio.get_running_loop().create_future()
-        self._append_queue.append(_PendingAppend(job_id, event_type, payload, future))
-        if not self._append_flushing:
-            self._append_flushing = True
-            try:
-                await asyncio.sleep(_APPEND_EVENT_BATCH_WINDOW_S)
-                batch, self._append_queue = self._append_queue, []
-            finally:
-                # Reset before the (slow) flush below so a caller appending while this
-                # batch is being written becomes the flusher for the next window
-                # immediately, instead of queuing behind a flush that already stopped
-                # watching self._append_queue. Reset is unconditional (finally) so a
-                # cancelled flusher never leaves every future caller waiting forever.
-                self._append_flushing = False
-            if batch:
-                by_job: dict[UUID, list[_PendingAppend]] = {}
-                for item in batch:
-                    by_job.setdefault(item.job_id, []).append(item)
-                await asyncio.gather(*(self._flush_job_batch(job_id, items) for job_id, items in by_job.items()))
-        return await future
+        future: asyncio.Future[int] = asyncio.get_running_loop().create_future()
+        item = _PendingAppend(job_id, event_type, payload, future)
+        self._append_queue.append(item)
+        try:
+            async with self._append_lock:
+                if not future.done():
+                    await asyncio.sleep(_APPEND_EVENT_BATCH_WINDOW_S)
+                    batch, self._append_queue = self._append_queue, []
+                    flush = asyncio.create_task(self._flush_append_batch(batch))
+                    try:
+                        await asyncio.shield(flush)
+                    except asyncio.CancelledError:
+                        # Shield alone would detach the flush. Join it before releasing
+                        # the lock or propagating cancellation, including repeated cancels.
+                        while not flush.done():
+                            with contextlib.suppress(asyncio.CancelledError):
+                                await asyncio.shield(flush)
+                        flush.result()
+                        raise
+            return await future
+        except asyncio.CancelledError:
+            if future.done() and not future.cancelled():
+                # A failed commit may have resolved our future while we joined the flush.
+                # Retrieve its exception even though this caller propagates cancellation.
+                future.exception()
+            else:
+                future.cancel()
+            with contextlib.suppress(ValueError):
+                self._append_queue.remove(item)
+            raise
 
-    async def _flush_job_batch(self, job_id: UUID, items: list[_PendingAppend]) -> None:
-        """Insert one job's batched events in a single session, retrying on seq collision.
+    async def _flush_append_batch(self, items: list[_PendingAppend]) -> None:
+        """Commit a batch across jobs, retrying the transaction on seq collisions.
 
-        seq is assigned as max(existing seq for job) + 1 for the whole batch in one read.
-        UNIQUE(job_id, seq) guards against concurrent double-assignment: a colliding flush
-        hits IntegrityError, and the whole batch retries with a freshly re-read max so every
-        event lands gap-free even when a worker and the orphan sweep (or, in the scaled
-        backend, multiple processes) append to the same job at once. Every pending future is
-        guaranteed to resolve, successfully or with the failure, so no caller hangs.
+        UNIQUE(job_id, seq) guards per-job ordering against other processes. No
+        caller receives a seq until session_scope has successfully committed it.
         """
         last_exc: Exception | None = None
         try:
             for attempt in range(_APPEND_EVENT_MAX_RETRIES):
                 try:
                     async with session_scope() as session:
-                        stmt = select(func.max(JobEvent.seq)).where(JobEvent.job_id == job_id)
+                        job_ids = {item.job_id for item in items}
+                        stmt = (
+                            select(JobEvent.job_id, func.max(JobEvent.seq))
+                            .where(col(JobEvent.job_id).in_(job_ids))
+                            .group_by(JobEvent.job_id)
+                        )
                         result = await session.exec(stmt)
-                        current_max = result.one() or 0
-                        events = [
-                            JobEvent(
-                                job_id=job_id,
-                                seq=current_max + offset,
-                                event_type=item.event_type,
-                                payload=item.payload,
+                        last_seqs = {job_id: max_seq or 0 for job_id, max_seq in result.all()}
+                        events = []
+                        seqs = []
+                        for item in items:
+                            next_seq = last_seqs.get(item.job_id, 0) + 1
+                            last_seqs[item.job_id] = next_seq
+                            seqs.append(next_seq)
+                            events.append(
+                                JobEvent(
+                                    job_id=item.job_id,
+                                    seq=next_seq,
+                                    event_type=item.event_type,
+                                    payload=item.payload,
+                                )
                             )
-                            for offset, item in enumerate(items, start=1)
-                        ]
                         session.add_all(events)
                         await session.flush()
-                        for item, event in zip(items, events, strict=True):
-                            if not item.future.done():
-                                item.future.set_result(event.seq)
-                        return
                 except IntegrityError as exc:
                     # Lost the (job_id, seq) race for this batch — re-read max and retry.
                     last_exc = exc
@@ -521,10 +529,15 @@ class JobService(Service):
                     if "lock" not in str(exc).lower() and "busy" not in str(exc).lower():
                         raise
                     last_exc = exc
+                else:
+                    for item, seq in zip(items, seqs, strict=True):
+                        if not item.future.done():
+                            item.future.set_result(seq)
+                    return
                 # Yield + brief backoff so the contending writer can commit before we retry.
                 await asyncio.sleep(min(0.05, 0.002 * (attempt + 1)))
             # Exhausted retries under sustained contention — surface the last collision.
-            msg = f"append_event exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (seq contention)"
+            msg = f"append_event exhausted {_APPEND_EVENT_MAX_RETRIES} retries (seq contention)"
             raise RuntimeError(msg) from last_exc
         except Exception as exc:  # noqa: BLE001 — every pending future must resolve, success or failure
             for item in items:
