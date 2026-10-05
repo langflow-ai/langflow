@@ -145,6 +145,39 @@ wheels = [
 ]
 
 [[package]]
+name = "aerospike"
+version = "19.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/63/a2/504a02f008f696ee543d6fec8893a1bc19e39ed7a8f3d3c83596ec4a0116/aerospike-19.3.0.tar.gz", hash = "sha256:d9f25a50f4944799b31a320fcd3a56846d3e5a9090b514ca73efd5a1eebcaf07", size = 2452528, upload-time = "2026-09-25T07:55:17.639Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/40/5c/3832d6eecbfe34005fb36235b3de266e8b7ca322512a1a81b994fe695893/aerospike-19.3.0-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:cb4af20ab1f78e6ffb8d310091d65c7b8e1849185389bfc66cc20eeaecba590d", size = 3386641, upload-time = "2026-09-25T07:54:29.86Z" },
+    { url = "https://files.pythonhosted.org/packages/44/d3/18e6d28a2015fc4573f705c35056e124599ac2d9b349da9f4639639b54ca/aerospike-19.3.0-cp310-cp310-macosx_14_0_x86_64.whl", hash = "sha256:affe6e04e103f3daa7f265692be25d4fae8cd91283b17a59e7ce728927725bb9", size = 3188464, upload-time = "2026-09-25T07:54:32.054Z" },
+    { url = "https://files.pythonhosted.org/packages/09/f0/2537832c0db81af8919ad8860107fe424b4a17dd7014640278b8c649609e/aerospike-19.3.0-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:56106a56bf4d8b7dc151a61852ee9a810c30a827f48607e513ddcafd8f5d2c58", size = 6147999, upload-time = "2026-09-25T07:54:33.594Z" },
+    { url = "https://files.pythonhosted.org/packages/b0/9f/8c08bdf9887f83b46fc91ab417094b31051fed2b10b362ad30f17ea1b050/aerospike-19.3.0-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:cb504bb5ff410965c5f27bbfd53f67434dbf4cc2666a739c4528e23d5df1de07", size = 6266324, upload-time = "2026-09-25T07:54:35.68Z" },
+    { url = "https://files.pythonhosted.org/packages/91/12/ee7c27ea2d94996a7ea58b9c2122ba4fe386eb356864647406c4489b399e/aerospike-19.3.0-cp310-cp310-win_amd64.whl", hash = "sha256:14698a309a19558780f4dadc3495d9c5d956554007f3404833e24c6d56621e69", size = 3425127, upload-time = "2026-09-25T07:54:37.611Z" },
+    { url = "https://files.pythonhosted.org/packages/84/72/82468841ed5a430d934b6d03ff42316a72a8f445f6c61f6d7df2a93bb2cb/aerospike-19.3.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:3f8bfdb0f0e4ba3b533a6db401fecd1021b1b645ddb6cb0722298a322462e8f7", size = 3386636, upload-time = "2026-09-25T07:54:39.332Z" },
+    { url = "https://files.pythonhosted.org/packages/73/2f/6736e9c36b893cf236131ac123817a884b8ce96f5b14e85649e95c71a7d5/aerospike-19.3.0-cp311-cp311-macosx_14_0_x86_64.whl", hash = "sha256:dda218580e9f3986fdf7f38a7d48c4da16ad20b75df1b5977724283adb295437", size = 3188458, upload-time = "2026-09-25T07:54:40.986Z" },
+    { url = "https://files.pythonhosted.org/packages/71/1f/2f195e7048e93ba49cf1705021453a052424f87bb32e05bf988dcf253954/aerospike-19.3.0-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:115887e94af30f09bbb943bbd40b70b0094965d1be42aa098487a739e8968232", size = 6174580, upload-time = "2026-09-25T07:54:43.032Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/a0/e45e5d8d42feb2ad2722e8e31ce7f9106d8b4a932daec853759f119df8c9/aerospike-19.3.0-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:8fd8dec1a1d46bfe4ce5a7ab504d9b8b385732dc2c823bc3ae31824f983b7666", size = 6293163, upload-time = "2026-09-25T07:54:45.376Z" },
+    { url = "https://files.pythonhosted.org/packages/3c/ae/1b32ef3add2d76dbb23c841b8525e232b537034c002de7f54b8e2e4081f7/aerospike-19.3.0-cp311-cp311-win_amd64.whl", hash = "sha256:07a98008faaec985d3f46bfb72ce7a3925da470bbfd83f085633dbcda23458fb", size = 3425284, upload-time = "2026-09-25T07:54:47.505Z" },
+    { url = "https://files.pythonhosted.org/packages/f3/6d/4c38f68661e762ff997a749e6a8ef626bf4a6ec9308555e4c586b4e92eb9/aerospike-19.3.0-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:f076bd29fa070cd6b8d3ef64512c1a57034bf1f79ba0eb9a13f2c8deab8460c8", size = 3387669, upload-time = "2026-09-25T07:54:49.161Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/8a/5d84fca40fb2aa74dd6e92ed295801168002eb9fb0593fcfb0939b2ea7e2/aerospike-19.3.0-cp312-cp312-macosx_14_0_x86_64.whl", hash = "sha256:310e18ebc3352ee2b65322f62ad9735d6667776b391ebb4049f19c832de43aaa", size = 3189924, upload-time = "2026-09-25T07:54:51.441Z" },
+    { url = "https://files.pythonhosted.org/packages/61/bf/ad32f889b2853b0f32402ae676b0b3d07957e2a645e4549b15d6f86c63c0/aerospike-19.3.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:6b47c5e3ad6d9beb8124250905765c6b6f77c05300f9193bb8cf123c4522b595", size = 6202390, upload-time = "2026-09-25T07:54:53.212Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/b2/e73803187d11692f631d14fb1688a5999f3a292cf87d7e6cad55b4ba34a1/aerospike-19.3.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:d307028fba2920acfe0d0a238dcf9e2d8f71fd6c15ac4633a7f9422687f47413", size = 6323202, upload-time = "2026-09-25T07:54:55.295Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/7d/f833f8afe390ec18c7d4c783d6e34814acbbdb268129ea53846fb8d816e1/aerospike-19.3.0-cp312-cp312-win_amd64.whl", hash = "sha256:c6318c845d5e64bf7febabba3d67f59c6ead7a5eee006ba72d4e6a7101df6e6b", size = 3426412, upload-time = "2026-09-25T07:54:57.029Z" },
+    { url = "https://files.pythonhosted.org/packages/38/02/fb50a493e3738b918939445d9dcd97450bc6b2aa0ebae66cb386722f4830/aerospike-19.3.0-cp313-cp313-macosx_14_0_arm64.whl", hash = "sha256:926e52f9bf4a5629a116431787ebaf189daf10d62e91cd844c7fd2c837f3470b", size = 3387253, upload-time = "2026-09-25T07:54:58.509Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/5e/b4f3a3427054d737399a6df91211581a65e213f9b19690cd9e8b1dbaa110/aerospike-19.3.0-cp313-cp313-macosx_14_0_x86_64.whl", hash = "sha256:81e05860465404693b33b80b784b3c58695bf6ed55ea856e0b272167910502b2", size = 3189604, upload-time = "2026-09-25T07:55:00.236Z" },
+    { url = "https://files.pythonhosted.org/packages/35/cc/674e1d75b0f0c17db371a44a18ebfaf9f52dd55eee6c39198f85efb1a30d/aerospike-19.3.0-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:23da14f18f033b02c01e86b10a67e593ea9db1b0fdbd765897e06edbea4e52a3", size = 6213187, upload-time = "2026-09-25T07:55:01.817Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/ee/5f8edd76896b9051e72bf71e79b99ec3502fbaec7430d8c4169b0b8dc94b/aerospike-19.3.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:ec46b2f56ef281a17207979d9c8ace94fa8033e7b1b43899738e7635a568b51a", size = 6332302, upload-time = "2026-09-25T07:55:04.533Z" },
+    { url = "https://files.pythonhosted.org/packages/03/32/0d77313865190df97a440c5d3ec0aedbe247a278f39182a5db48304b3fd3/aerospike-19.3.0-cp313-cp313-win_amd64.whl", hash = "sha256:08bd56b15fcaf987a564c495b2a8a606ddf6446e96e3badc1cbd408c0f349b48", size = 3425987, upload-time = "2026-09-25T07:55:06.667Z" },
+    { url = "https://files.pythonhosted.org/packages/33/e8/d57e7e2d62fe60f72dba81fa218fca6f9ecb465b12964f5e4a28536d10c9/aerospike-19.3.0-cp314-cp314-macosx_14_0_arm64.whl", hash = "sha256:72f37678798a403a6c562d6e20987b83eb44116a4537e972b772b0f2e8995b58", size = 3387634, upload-time = "2026-09-25T07:55:08.555Z" },
+    { url = "https://files.pythonhosted.org/packages/2d/53/d6d734552d012343e375b56afe73498791f0662c72dfb22f3a3137302099/aerospike-19.3.0-cp314-cp314-macosx_14_0_x86_64.whl", hash = "sha256:7ab78a199795ba7a7a182a6f7f5270efd956bc3c8e8479342e60b7ba595681bf", size = 3189429, upload-time = "2026-09-25T07:55:10.212Z" },
+    { url = "https://files.pythonhosted.org/packages/18/bb/64c12c6e5d558bc2688ddd662f2f537c388289083ae0ff9ed534fe63f34a/aerospike-19.3.0-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:42a298a87543d226e52749ee6ed2ae7ed3e4ad460c24aa62b1e3e6f33aea27f3", size = 6201739, upload-time = "2026-09-25T07:55:12.404Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/3b/25becd20ff24a920d042fd48d80e92a850cca8064308fb05e959d167e63a/aerospike-19.3.0-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:cf72b7b8a12e137c73f7b31dbb823d71c8eaaa63ab956e2493a2e3b14e4c3793", size = 6320475, upload-time = "2026-09-25T07:55:14.31Z" },
+    { url = "https://files.pythonhosted.org/packages/d0/9e/56815e45f5e6a917ae0d3ef43376b051082478b6c4851f55430032f2fa32/aerospike-19.3.0-cp314-cp314-win_amd64.whl", hash = "sha256:0686b9ad952ecfb748e4bdbfda60bfe388353b719ce8ee33682069ad78301eda", size = 3544508, upload-time = "2026-09-25T07:55:16.029Z" },
+]
+
+[[package]]
 name = "ag-ui-protocol"
 version = "0.1.18"
 source = { registry = "https://pypi.org/simple" }
@@ -7985,6 +8018,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+aerospike = [
+    { name = "aerospike" },
+]
 ag2 = [
     { name = "ag2" },
 ]
@@ -8346,6 +8382,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", specifier = ">=1.1.0,<2.0.0" },
+    { name = "aerospike", marker = "extra == 'aerospike'", specifier = ">=15.0.0" },
     { name = "ag-ui-protocol", specifier = "==0.1.18" },
     { name = "ag2", marker = "extra == 'ag2'", specifier = ">=0.1.0" },
     { name = "aiobotocore", specifier = ">=3.7.0,<4.0.0" },
@@ -8580,7 +8617,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "sandbox", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aiobotocore", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "sandbox", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "aerospike", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aiobotocore", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [

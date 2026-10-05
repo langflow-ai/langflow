@@ -309,6 +309,54 @@ async def test_cache_redis_reachable_ok(monkeypatch):
     assert result.status == "ok"
 
 
+def _fake_aerospike_cache(*, reachable: bool):
+    import threading
+
+    from langflow.services.cache.service import AerospikeCache
+
+    class _Client:
+        def is_connected(self):
+            return True
+
+        def close(self):
+            return None
+
+    def _get_client():
+        if not reachable:
+            msg = "no aerospike"
+            raise ConnectionError(msg)
+        fake._client = _Client()
+        return fake._client
+
+    fake = AerospikeCache.__new__(AerospikeCache)
+    fake._client = None
+    fake._client_lock = threading.Lock()
+    fake._get_client = _get_client
+    return fake
+
+
+async def test_cache_aerospike_unreachable_fails(monkeypatch):
+    from langflow.services.cache.factory import CacheServiceFactory
+
+    fake = _fake_aerospike_cache(reachable=False)
+    monkeypatch.setattr(CacheServiceFactory, "create", lambda *_a, **_k: fake)
+
+    result = await probe_cache(_StubService(cache_type="aerospike"))
+    assert result.status == "fail"
+    assert "LANGFLOW_AEROSPIKE_" in result.remediation
+
+
+async def test_cache_aerospike_reachable_ok(monkeypatch):
+    from langflow.services.cache.factory import CacheServiceFactory
+
+    fake = _fake_aerospike_cache(reachable=True)
+    monkeypatch.setattr(CacheServiceFactory, "create", lambda *_a, **_k: fake)
+
+    result = await probe_cache(_StubService(cache_type="aerospike"))
+    assert result.status == "ok"
+    assert fake._client is None  # torn down: no connection kept in the parent
+
+
 async def test_shared_queue_redis_unreachable_fails(monkeypatch):
     from langflow.services.job_queue.factory import JobQueueServiceFactory
     from langflow.services.job_queue.service import RedisJobQueueService

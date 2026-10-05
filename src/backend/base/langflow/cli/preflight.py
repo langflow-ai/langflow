@@ -422,11 +422,11 @@ async def probe_cache(settings_service: SettingsService) -> CheckResult:
     """Cache reachability.
 
     - In-memory default (async/memory) → warn (single-instance fallback).
-    - External backend selected (redis) and reachable → ok.
+    - External backend selected (redis, aerospike) and reachable → ok.
     - External backend selected but unreachable → fail (aborts the boot). The
       operator must fix the backend or unset LANGFLOW_CACHE_TYPE to fall back.
 
-    The Redis cache is built as a throwaway and torn down before returning so
+    The external cache is built as a throwaway and torn down before returning so
     no fork-unsafe connection is retained in the parent.
     """
     cache_type = (settings_service.settings.cache_type or "async").lower()
@@ -436,15 +436,15 @@ async def probe_cache(settings_service: SettingsService) -> CheckResult:
             f"no external cache selected — falls back to an in-memory cache ('{cache_type}'); "
             "not shared across pods, so multi-replica deployments run with isolated, "
             "single-instance cache semantics",
-            "Set LANGFLOW_CACHE_TYPE=redis (with LANGFLOW_REDIS_* / LANGFLOW_REDIS_URL) for a "
-            "cache shared across replicas.",
+            "Set LANGFLOW_CACHE_TYPE=redis (with LANGFLOW_REDIS_* / LANGFLOW_REDIS_URL) or "
+            "LANGFLOW_CACHE_TYPE=aerospike (with LANGFLOW_AEROSPIKE_*) for a cache shared across replicas.",
         )
 
     from langflow.services.cache.factory import CacheServiceFactory
-    from langflow.services.cache.service import RedisCache
+    from langflow.services.cache.service import AerospikeCache, RedisCache
 
     cache_service = CacheServiceFactory().create(settings_service)
-    # Ping the Redis client directly rather than via is_connected(): the latter
+    # Probe the client directly rather than via is_connected(): the latter
     # logs a full traceback on failure, which is noise here since we render our
     # own concise result below.
     connected = False
@@ -454,6 +454,9 @@ async def probe_cache(settings_service: SettingsService) -> CheckResult:
             with contextlib.suppress(Exception):
                 await asyncio.wait_for(client.ping(), timeout=_PROBE_TIMEOUT)
                 connected = True
+        elif isinstance(cache_service, AerospikeCache):
+            with contextlib.suppress(Exception):
+                connected = await asyncio.wait_for(cache_service.ping(), timeout=_PROBE_TIMEOUT)
     finally:
         teardown = getattr(cache_service, "teardown", None)
         if teardown is not None:
@@ -465,7 +468,8 @@ async def probe_cache(settings_service: SettingsService) -> CheckResult:
     return CheckResult(
         "fail",
         f"cache backend '{cache_type}' selected (LANGFLOW_CACHE_TYPE) but unreachable",
-        "Start the cache backend / fix LANGFLOW_REDIS_* settings, or unset LANGFLOW_CACHE_TYPE "
+        "Start the cache backend / fix LANGFLOW_REDIS_* or LANGFLOW_AEROSPIKE_* settings "
+        "(aerospike also needs langflow-base[aerospike]), or unset LANGFLOW_CACHE_TYPE "
         "to boot with a degraded in-memory cache.",
     )
 
