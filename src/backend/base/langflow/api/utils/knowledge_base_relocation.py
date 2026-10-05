@@ -49,8 +49,8 @@ _UNIT_NORM_TOLERANCE = 1e-3
 _UNIT_EQUIVALENT_METRICS = {"cosine", "l2", "inner_product"}
 _OPENSEARCH_SPACE_TYPES = {"cosine": "cosinesimil", "l2": "l2", "inner_product": "innerproduct"}
 
-# What a write raises when the target cannot be reached, by the type each driver
-# has for it.
+# What a write or a count raises when the target cannot be reached, by the type
+# each driver has for it.
 _UNREACHABLE: tuple[type[Exception], ...] = (OperationalError,)
 with suppress(ImportError):
     from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
@@ -253,7 +253,8 @@ async def _relocate_one(
             result.reason = f"read {result.copied} of {result.source_count} chunks from the source; not repointing"
             return result
 
-        result.target_count = await _settled_count(target, result.source_count)
+        with _failing_as(result, "kb_target_unreachable", _UNREACHABLE):
+            result.target_count = await _settled_count(target, result.source_count)
         if result.target_count != result.source_count:
             # More than the source means the target already held other chunks
             # (a store left from an earlier move, say), which would join this KB.

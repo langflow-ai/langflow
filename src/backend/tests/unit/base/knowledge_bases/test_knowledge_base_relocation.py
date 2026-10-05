@@ -419,18 +419,20 @@ class TestRelocationWithoutATarget:
         ),
     ],
 )
+@pytest.mark.parametrize("chunks", [2, 0])
 @pytest.mark.usefixtures("kb_root")
-async def test_target_that_cannot_be_reached_at_the_write_is_told_apart(
-    active_user, monkeypatch, target, config, variable, nowhere, driver, error
+async def test_target_that_cannot_be_reached_is_told_apart(
+    active_user, monkeypatch, target, config, variable, nowhere, driver, error, chunks
 ):
     # Nothing listens there. A real run first connects to Postgres when it writes, and to
-    # OpenSearch before that, to read the metric its index ranks by.
+    # OpenSearch before that, to read the metric its index ranks by. A knowledge base with
+    # no chunks has nothing to write, so it first connects to Postgres to count what arrived.
     pytest.importorskip(driver)
     if target == "postgres":
         pytest.importorskip("pgvector")
     monkeypatch.setenv(variable, nowhere)
     kb_name = f"kb_nowhere_{target}"
-    record, _ = await _seed_sqlite_kb(active_user.id, kb_name, 2)
+    record, _ = await _seed_sqlite_kb(active_user.id, kb_name, chunks)
 
     results = await relocate_knowledge_bases(target_backend_type=target, target_backend_config=config)
 
