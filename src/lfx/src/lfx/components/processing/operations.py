@@ -1092,15 +1092,28 @@ class OperationsComponent(Component):
             raise ValueError(msg)
         return handler(df_copy)
 
+    @staticmethod
+    def _comparable_filter_value(column: pd.Series, filter_value: Any) -> Any:
+        """Return the Filter Value as a number when the column is numeric.
+
+        The value arrives as text, and ``30 == "30"`` never matches in pandas.
+        """
+        if pd.api.types.is_numeric_dtype(column) and not pd.api.types.is_bool_dtype(column):
+            try:
+                return pd.to_numeric(filter_value)
+            except (ValueError, TypeError):
+                return filter_value
+        return filter_value
+
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
         column = df[self.column_name]
         filter_value = self.filter_value
         operator = getattr(self, "filter_operator", "equals")
 
         if operator == "equals":
-            mask = column == filter_value
+            mask = column == self._comparable_filter_value(column, filter_value)
         elif operator == "not equals":
-            mask = column != filter_value
+            mask = column != self._comparable_filter_value(column, filter_value)
         elif operator == "contains":
             mask = column.astype(str).str.contains(str(filter_value), na=False)
         elif operator == "not contains":
@@ -1122,7 +1135,7 @@ class OperationsComponent(Component):
             except (ValueError, TypeError):
                 mask = column.astype(str) < str(filter_value)
         else:
-            mask = column == filter_value
+            mask = column == self._comparable_filter_value(column, filter_value)
 
         return DataFrame(df[mask])
 
