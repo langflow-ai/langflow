@@ -94,6 +94,35 @@ async def test_voice_catalog_denial_precedes_credential_and_provider_lookup(monk
     client_lookup.assert_not_awaited()
 
 
+@pytest.mark.asyncio
+async def test_voice_catalog_releases_auth_transaction_before_provider_work(monkeypatch):
+    calls = []
+
+    async def allow_voice(*_args, **_kwargs):
+        calls.append("authorization")
+
+    async def commit():
+        calls.append("release")
+
+    def get_all():
+        calls.append("provider")
+        return SimpleNamespace(voices=[SimpleNamespace(voice_id="voice-1", name="First")])
+
+    async def lookup(user_id):
+        assert user_id == "catalog-user"
+        assert calls == ["authorization", "release"]
+        calls.append("credential")
+        return SimpleNamespace(voices=SimpleNamespace(get_all=get_all))
+
+    monkeypatch.setattr(vm, "ensure_voice_permission", allow_voice)
+    monkeypatch.setattr(vm, "get_or_create_elevenlabs_client", lookup)
+    result = await vm.get_elevenlabs_voice_ids(
+        current_user=SimpleNamespace(id="catalog-user"), session=SimpleNamespace(commit=commit)
+    )
+    assert result == [{"voice_id": "voice-1", "name": "First"}]
+    assert calls == ["authorization", "release", "credential", "provider"]
+
+
 def test_get_voice_config_scoped_by_user():
     """Same client-supplied session_id but different users must not share a VoiceConfig."""
     vm.voice_config_cache.clear()
