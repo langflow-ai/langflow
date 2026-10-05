@@ -5180,7 +5180,7 @@
               "dependencies": [
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "lfx",
@@ -6632,7 +6632,7 @@
                 },
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 }
               ],
               "total_dependencies": 4
@@ -8198,7 +8198,7 @@
               "dependencies": [
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "lfx",
@@ -32361,6 +32361,6 @@
     "num_components": 130,
     "num_modules": 17
   },
-  "sha256": "ed77e01da799ad7b5c6bf2e1c28934e0444cdfcdb983a01ce72c53557606025e",
+  "sha256": "d8072c54dc56fd6d685e36550deaae96250750c03fd42fdde7254ef2a9e19c65",
   "version": "1.13.0"
 }
