@@ -220,6 +220,9 @@ export function AddConnectionDialog({
     if (authorize?.kind !== "waiting") return;
     if (hasConsentLanded(poll.data, baseline)) {
       const row = poll.data as ConnectionRead;
+      // Polling stops on failure. Retain that outcome so a retry's baseline
+      // cannot mistake the cached failed callback for the new attempt.
+      setPendingRow(row);
       if (row.status_reason?.startsWith("oauth-")) {
         const message =
           row.status_reason === "oauth-denied"
