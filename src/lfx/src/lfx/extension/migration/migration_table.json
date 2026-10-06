@@ -5057,6 +5057,11 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "UniRateConversionComponent",
+      "target": "ext:unirate:UniRateConversionComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
       "bare_class_name": "GmailSendComponent",
       "target": "ext:google:GmailSendComponent@official",
       "added_in": "1.13.0"
