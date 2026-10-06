@@ -5260,6 +5260,26 @@
       "legacy_slot": "ext:slack:SlackListChannelMembersComponent@official-pre-a",
       "target": "ext:slack:SlackListChannelMembersComponent@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SendHQListEmailsComponent",
+      "target": "ext:sendhq:SendHQListEmailsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SendHQReadEmailComponent",
+      "target": "ext:sendhq:SendHQReadEmailComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SendHQReplyToEmailComponent",
+      "target": "ext:sendhq:SendHQReplyToEmailComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SendHQSendEmailComponent",
+      "target": "ext:sendhq:SendHQSendEmailComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [

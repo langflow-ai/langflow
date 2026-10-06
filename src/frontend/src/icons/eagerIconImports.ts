@@ -96,6 +96,7 @@ import { SearchHybridIcon } from "@/icons/SearchHybrid";
 import { SearchLexicalIcon } from "@/icons/SearchLexical";
 import { SearchVectorIcon } from "@/icons/SearchVector";
 import { SearxIcon } from "@/icons/Searx";
+import { SendHQIcon } from "@/icons/SendHQ";
 import { SerperIcon } from "@/icons/Serper";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { ShareIcon } from "@/icons/Share";
@@ -222,6 +223,7 @@ export const eagerIconsMapping = {
   SearchHybrid: SearchHybridIcon,
   SearchVector: SearchVectorIcon,
   Searx: SearxIcon,
+  SendHQ: SendHQIcon,
   SerpSearch: SerpSearchIcon,
   Serper: SerperIcon,
   Share: ShareIcon,

@@ -516,6 +516,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "SambaNova", name: "sambanova", icon: "SambaNova" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
   { display_name: "SearchApi", name: "searchapi", icon: "SearchAPI" },
+  { display_name: "SendHQ", name: "sendhq", icon: "SendHQ" },
   { display_name: "SerpApi", name: "serpapi", icon: "SerpSearch" },
   { display_name: "Serper", name: "serper", icon: "Serper" },
   { display_name: "Serping API", name: "serpingapi", icon: "Search" },

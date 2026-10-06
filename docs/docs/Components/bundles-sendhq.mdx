@@ -1,0 +1,80 @@
+---
+title: SendHQ
+slug: /bundles-sendhq
+---
+
+import Icon from "@site/src/components/icon";
+
+[SendHQ](https://sendhq.cc/?utm_source=github&utm_medium=oss&utm_campaign=langflow-sendhq) is an email API for sending from your own verified domain and receiving at inbox addresses on it. Received mail is threaded together with sent mail.
+
+Your flows can use the **SendHQ** bundle components to send email, read what arrives, follow a conversation, and reply inside the same thread, so an agent can work an inbox end to end.
+
+All components authenticate with a SendHQ **API key**, which you can create in the [SendHQ dashboard](https://sendhq.cc/app?utm_source=github&utm_medium=oss&utm_campaign=langflow-sendhq).
+Sending requires a verified sending domain, and receiving requires an inbox address on that domain.
+For more information, see the [SendHQ documentation](https://sendhq.cc/docs/quickstart?utm_source=github&utm_medium=oss&utm_campaign=langflow-sendhq).
+
+To use these components, install the bundle with `uv pip install "lfx-bundles[sendhq]"`, and then restart Langflow.
+
+## SendHQ Send Email
+
+The **SendHQ Send Email** component sends an email through the [SendHQ API](https://sendhq.cc/docs/sending?utm_source=github&utm_medium=oss&utm_campaign=langflow-sendhq).
+
+1. Add the **SendHQ Send Email** component to your flow, and then configure it as follows:
+
+    * **SendHQ API Key**: Enter your SendHQ API key.
+    * **From**: Enter the sender, such as `Support <support@example.com>`. The domain must be verified in your SendHQ workspace.
+    * **To**: Enter the recipient's address. Separate several addresses with commas.
+    * **Subject** and **Body**: Enter the subject line and the plain-text message.
+    * Optional: In the component's advanced settings, set **CC**, **Reply-To**, or an **HTML Body**.
+
+2. Connect the component to other components in your flow.
+The component can be used as a standalone step in a flow or as a tool for an agent.
+
+    To enable **Tool Mode** for this component, change the component's output type from **Output** to **Tool**, and then connect it to the **Tools** port on an **Agent** component.
+
+    The component returns the new email's `id` and `thread_id` in Langflow's [`Data` type](/data-types). If SendHQ rejects the request, it returns an `error` with the reason and HTTP `status`.
+
+## SendHQ List Emails
+
+The **SendHQ List Emails** component lists email newest first, with a short snippet of each message instead of the full body.
+
+1. Add the **SendHQ List Emails** component to your flow, and then configure it as follows:
+
+    * **SendHQ API Key**: Enter your SendHQ API key.
+    * **Direction**: Choose `Received` for mail that arrived at your inbox addresses, `Sent` for mail you sent, or `All`.
+    * **Unread Only**: Turn on to return unread messages only.
+    * **Search**: Optionally enter text to search for in subjects, bodies, addresses, and attachment names.
+
+2. Connect the component to other components in your flow, or use it in **Tool Mode** as described above.
+
+    The component returns `emails`, each with its `id`, `thread_id`, sender, recipients, subject, and snippet, in Langflow's [`Data` type](/data-types).
+
+## SendHQ Read Email
+
+The **SendHQ Read Email** component reads one email in full, or the whole conversation it belongs to.
+
+1. Add the **SendHQ Read Email** component to your flow, and then configure it as follows:
+
+    * **SendHQ API Key**: Enter your SendHQ API key.
+    * **Email ID**: Enter the email's ID, which starts with `em_`.
+    * **Whole Conversation**: Turn on to return every sent and received message in the thread, oldest first.
+
+2. Connect the component to other components in your flow, or use it in **Tool Mode** as described above.
+
+    The component returns the message body, sender, recipients, and attachment names, or the thread's `messages`, in Langflow's [`Data` type](/data-types).
+
+## SendHQ Reply to Email
+
+The **SendHQ Reply to Email** component answers an email inside the same conversation thread.
+A reply to a received email goes to its sender, and a follow-up to a sent email goes to the same recipients.
+
+1. Add the **SendHQ Reply to Email** component to your flow, and then configure it as follows:
+
+    * **SendHQ API Key**: Enter your SendHQ API key.
+    * **Email ID**: Enter the ID of the email being answered.
+    * **Reply**: Enter the plain-text reply.
+    * Optional: In the component's advanced settings, set **From** to reply from a different verified address. By default, the reply is sent from the address that received the original email.
+
+2. Connect the component to other components in your flow, or use it in **Tool Mode** as described above.
+
+    The component returns the reply's `id` and `thread_id` in Langflow's [`Data` type](/data-types).
