@@ -21,6 +21,7 @@ import pytest
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding, Embeddings
 from lfx.base.knowledge_bases.backends import BackendType, PostgresBackend, create_backend
+from lfx.base.knowledge_bases.backends import postgres as pg_module
 from lfx.base.knowledge_bases.backends.base import BackendConfigurationError
 from lfx.base.knowledge_bases.backends.postgres import (
     _HNSW_MAX_DIM,
@@ -30,6 +31,7 @@ from lfx.base.knowledge_bases.backends.postgres import (
     MISSING_EXTENSION_MESSAGE,
     _coerce_embedding,
     _count_sql,
+    _ddl_lock_key,
     _delete_by_sql,
     _dimension_mismatch_message,
     _drop_table_sql,
@@ -81,6 +83,18 @@ class _FakeResult:
     def all(self) -> list[Any]:
         return list(self._rows)
 
+    def one(self) -> Any:
+        assert len(self._rows) == 1
+        return self._rows[0]
+
+
+class _SqlStateError(RuntimeError):
+    """A SQLAlchemy-style DBAPI error whose ``orig`` carries a SQLSTATE."""
+
+    def __init__(self, sqlstate: str, message: str = "driver error") -> None:
+        super().__init__(message)
+        self.orig = SimpleNamespace(sqlstate=sqlstate)
+
 
 class _FakeStream:
     def __init__(self, rows: tuple[Any, ...]) -> None:
@@ -114,6 +128,9 @@ class _FakeConn:
         storage_size: int = 0,
         can_create: bool | None = True,
         raise_on: str | None = None,
+        has_gin_index: bool | None = None,
+        has_hnsw_index: bool | None = None,
+        fail_once_on: tuple[str, Exception] | None = None,
     ) -> None:
         self._ext_version = ext_version
         self._server_version = server_version
@@ -125,6 +142,10 @@ class _FakeConn:
         self._storage_size = storage_size
         self._can_create = can_create
         self._raise_on = raise_on
+        # Indexes exist exactly when the table does, unless a test says otherwise.
+        self._has_gin_index = table_exists if has_gin_index is None else has_gin_index
+        self._has_hnsw_index = table_exists if has_hnsw_index is None else has_hnsw_index
+        self._fail_once_on = fail_once_on
         self.statements: list[str] = []
 
     def _record(self, statement: Any) -> str:
@@ -135,7 +156,24 @@ class _FakeConn:
         return sql
 
     async def execute(self, statement: Any, params: dict[str, Any] | None = None) -> _FakeResult:  # noqa: ARG002
-        self._record(statement)
+        sql = self._record(statement)
+        if self._fail_once_on is not None and self._fail_once_on[0] in sql:
+            error = self._fail_once_on[1]
+            self._fail_once_on = None
+            raise error
+        if "has_hnsw_index" in sql:  # the bootstrap's one-query catalog probe
+            dim = self._existing_dim if self._table_exists else None
+            return _FakeResult(
+                (
+                    SimpleNamespace(
+                        extversion=self._ext_version,
+                        embedding_type=None if dim is None else f"vector({dim})",
+                        has_table=self._table_exists,
+                        has_gin_index=self._has_gin_index,
+                        has_hnsw_index=self._has_hnsw_index,
+                    ),
+                )
+            )
         return _FakeResult(self._select_rows)
 
     async def scalar(self, statement: Any, params: dict[str, Any] | None = None) -> Any:  # noqa: ARG002
@@ -206,6 +244,14 @@ class _CountingEmbeddings(Embeddings):
 
     def embed_query(self, text: str) -> list[float]:  # noqa: ARG002
         return self._vectors[0] if self._vectors else []
+
+
+@pytest.fixture(autouse=True)
+def _clear_ready_tables():
+    """The verified-table memo is process-wide; isolate every test from it."""
+    pg_module._READY_TABLES.clear()
+    yield
+    pg_module._READY_TABLES.clear()
 
 
 @pytest.fixture
@@ -490,6 +536,10 @@ class TestEmbeddingTable:
 # --------------------------------------------------------------------------
 
 
+def _ddl(statements: list[str]) -> list[str]:
+    return [sql for sql in statements if sql.lstrip().upper().startswith(("CREATE", "DROP", "ALTER"))]
+
+
 class TestEnsureEmbeddingTable:
     @pytest.mark.parametrize("dim", [0, -1])
     async def test_rejects_non_positive_dimension(self, make_backend, dim: int) -> None:
@@ -498,7 +548,7 @@ class TestEnsureEmbeddingTable:
             await backend._ensure_embedding_table(dim)
 
     async def test_creates_table_and_both_indexes(self, make_backend) -> None:
-        conn = _FakeConn(table_exists=False, existing_dim=8)
+        conn = _FakeConn(table_exists=False)
         backend = make_backend(conn)
 
         await backend._ensure_embedding_table(8)
@@ -510,26 +560,93 @@ class TestEnsureEmbeddingTable:
         assert f'"{backend.table_name}_cmeta_gin"' in joined
         assert f'"{backend.table_name}_hnsw"' in joined
 
+    async def test_ready_table_runs_no_lock_and_no_ddl(self, make_backend) -> None:
+        # The steady state: table, column type and both indexes already exist.
+        # ``CREATE INDEX IF NOT EXISTS`` would take a SHARE lock and wait for
+        # in-flight inserts, so nothing but the catalog probe may run.
+        conn = _FakeConn(existing_dim=8)
+        backend = make_backend(conn)
+
+        await backend._ensure_embedding_table(8)
+
+        assert len(conn.statements) == 1
+        assert "has_hnsw_index" in conn.statements[0]
+        assert "pg_advisory" not in conn.statements[0]
+
+    async def test_verified_table_is_not_probed_again_in_this_process(self, make_backend) -> None:
+        conn = _FakeConn(existing_dim=8)
+        kb_name = "shared"
+        first = make_backend(conn, kb_name=kb_name)
+        await first._ensure_embedding_table(8)
+        probes = len(conn.statements)
+
+        # A new backend instance per job (as ingestion does) reuses the memo.
+        second = make_backend(conn, kb_name=kb_name)
+        second.user_id = first.user_id
+        await second._ensure_embedding_table(8)
+
+        assert len(conn.statements) == probes
+
+    async def test_another_dimension_is_verified_separately(self, make_backend) -> None:
+        backend = make_backend(_FakeConn(existing_dim=8))
+        await backend._ensure_embedding_table(8)
+
+        backend._pg_engine = _FakeEngine(_FakeConn(existing_dim=8))
+        with pytest.raises(ValueError, match="was created with 8-dimensional embeddings"):
+            await backend._ensure_embedding_table(16)
+
+    async def test_creates_only_the_missing_index(self, make_backend) -> None:
+        conn = _FakeConn(existing_dim=8, has_gin_index=False, has_hnsw_index=True)
+        backend = make_backend(conn)
+
+        await backend._ensure_embedding_table(8)
+
+        ddl = _ddl(conn.statements)
+        assert len(ddl) == 1
+        assert f'"{backend.table_name}_cmeta_gin"' in ddl[0]
+
+    async def test_lock_is_scoped_to_the_table(self, make_backend) -> None:
+        first, second = make_backend(), make_backend()
+        assert first.table_name != second.table_name
+        assert _ddl_lock_key(first.table_name) != _ddl_lock_key(second.table_name)
+        assert _ddl_lock_key(first.table_name) == _ddl_lock_key(first.table_name)
+
+        conn = _FakeConn(table_exists=False)
+        first._pg_engine = _FakeEngine(conn)
+        await first._ensure_embedding_table(8)
+        lock_sql = next(sql for sql in conn.statements if "pg_advisory_xact_lock" in sql)
+        assert ":key" in lock_sql  # bound, derived from the table name
+
     async def test_skips_hnsw_above_the_index_ceiling(self, make_backend) -> None:
         oversized = _HNSW_MAX_DIM + 1
-        conn = _FakeConn(existing_dim=oversized)
+        conn = _FakeConn(table_exists=False)
         backend = make_backend(conn)
 
         await backend._ensure_embedding_table(oversized)
 
-        joined = "\n".join(conn.statements)
+        joined = "\n".join(_ddl(conn.statements))
         assert "_cmeta_gin" in joined  # metadata filtering still gets its index
         assert "hnsw" not in joined  # pgvector cannot index this width
 
+    async def test_oversized_table_without_hnsw_counts_as_ready(self, make_backend) -> None:
+        oversized = _HNSW_MAX_DIM + 1
+        conn = _FakeConn(existing_dim=oversized, has_hnsw_index=False)
+        backend = make_backend(conn)
+
+        await backend._ensure_embedding_table(oversized)
+
+        assert _ddl(conn.statements) == []
+
     async def test_missing_extension_raises_the_shared_message_without_ddl(self, make_backend) -> None:
-        conn = _FakeConn(ext_version=None)
+        conn = _FakeConn(ext_version=None, table_exists=False)
         backend = make_backend(conn)
 
         with pytest.raises(ValueError, match="extension is not installed"):
             await backend._ensure_embedding_table(4)
 
-        assert conn.statements  # the advisory lock was taken
-        assert not any("CREATE" in sql for sql in conn.statements)
+        assert conn.statements  # the catalog was probed
+        assert _ddl(conn.statements) == []
+        assert not any("pg_advisory" in sql for sql in conn.statements)
 
     async def test_dimension_change_is_reported_clearly(self, make_backend) -> None:
         # ``CREATE TABLE IF NOT EXISTS`` never widens an existing column, so a
@@ -539,12 +656,13 @@ class TestEnsureEmbeddingTable:
 
         with pytest.raises(ValueError, match="was created with 1536-dimensional embeddings"):
             await backend._ensure_embedding_table(768)
+        assert _ddl(conn.statements) == []
 
     async def test_matching_existing_dimension_is_accepted(self, make_backend) -> None:
         conn = _FakeConn(existing_dim=768)
         backend = make_backend(conn)
         await backend._ensure_embedding_table(768)
-        assert any("_hnsw" in sql for sql in conn.statements)
+        assert _ddl(conn.statements) == []
 
 
 class TestCatalogProbes:
@@ -552,15 +670,38 @@ class TestCatalogProbes:
         assert await make_backend(_FakeConn(table_exists=True))._table_exists(_FakeConn(table_exists=True)) is True
         assert await make_backend(_FakeConn())._table_exists(_FakeConn(table_exists=False)) is False
 
-    async def test_existing_embedding_dim_parses_the_column_type(self, make_backend) -> None:
+    async def test_catalog_state_reports_every_bootstrap_input(self, make_backend) -> None:
         backend = make_backend(_FakeConn())
-        assert await backend._existing_embedding_dim(_FakeConn(existing_dim=384)) == 384
-        assert await backend._existing_embedding_dim(_FakeConn(existing_dim=None)) is None
+        state = await backend._catalog_state(_FakeConn(existing_dim=384, has_gin_index=False))
+        assert state.extversion == "0.7.0"
+        assert state.has_table is True
+        assert state.existing_dim == 384
+        assert state.has_gin_index is False
+        assert state.has_hnsw_index is True
 
-    async def test_vector_extension_installed(self, make_backend) -> None:
-        backend = make_backend(_FakeConn())
-        assert await backend._vector_extension_installed(_FakeConn(ext_version="0.8.0")) is True
-        assert await backend._vector_extension_installed(_FakeConn(ext_version=None)) is False
+        missing = await backend._catalog_state(_FakeConn(table_exists=False, ext_version=None))
+        assert (missing.extversion, missing.has_table, missing.existing_dim) == (None, False, None)
+
+    async def test_catalog_probe_binds_the_index_names(self, make_backend) -> None:
+        conn = _FakeConn()
+        backend = make_backend(conn)
+        await backend._catalog_state(conn)
+        assert "to_regclass(:gin_index)" in conn.statements[0]
+        assert "to_regclass(:hnsw_index)" in conn.statements[0]
+
+
+class TestStaleTableErrors:
+    def test_undefined_table_is_stale(self) -> None:
+        assert pg_module._is_stale_table_error(_SqlStateError("42P01")) is True
+
+    def test_dimension_mismatch_is_stale(self) -> None:
+        error = _SqlStateError("22000", "expected 768 dimensions, not 8")
+        error.orig = RuntimeError("expected 768 dimensions, not 8")
+        assert pg_module._is_stale_table_error(error) is True
+
+    def test_other_errors_are_not_stale(self) -> None:
+        assert pg_module._is_stale_table_error(_SqlStateError("23505")) is False
+        assert pg_module._is_stale_table_error(RuntimeError("boom")) is False
 
 
 class TestExtensionOwnership:
@@ -657,7 +798,7 @@ class TestAddDocuments:
             await backend._add_documents([Document(page_content="a")], ids=["one", "two"])
 
     async def test_provisions_the_table_then_upserts(self, make_backend, fake_embeddings) -> None:
-        conn = _FakeConn(existing_dim=8)
+        conn = _FakeConn(table_exists=False)
         backend = make_backend(conn, embeddings=fake_embeddings)
 
         returned = await backend._add_documents(
@@ -676,6 +817,54 @@ class TestAddDocuments:
         assert "ON CONFLICT (id) DO UPDATE" in insert_sql
         # collection_id belonged to the old shared-table layout and must be gone.
         assert "collection_id" not in insert_sql
+
+    async def test_later_writes_skip_the_bootstrap(self, make_backend, fake_embeddings) -> None:
+        conn = _FakeConn(existing_dim=8)
+        backend = make_backend(conn, embeddings=fake_embeddings)
+
+        await backend._add_documents([Document(page_content="a")])
+        await backend._add_documents([Document(page_content="b")])
+
+        assert sum("has_hnsw_index" in sql for sql in conn.statements) == 1
+        assert sum(sql.startswith("INSERT INTO") for sql in conn.statements) == 2
+        assert _ddl(conn.statements) == []
+        assert not any("pg_advisory" in sql for sql in conn.statements)
+
+    async def test_write_to_a_dropped_table_reverifies_and_retries(self, make_backend, fake_embeddings) -> None:
+        # Another process dropped (and maybe recreated) the table after this
+        # process verified it: the stale memo must not fail the write.
+        conn = _FakeConn(existing_dim=8)
+        backend = make_backend(conn, embeddings=fake_embeddings)
+        await backend._add_documents([Document(page_content="a")])
+        conn._fail_once_on = ("INSERT INTO", _SqlStateError("42P01", "relation does not exist"))
+
+        await backend._add_documents([Document(page_content="b")])
+
+        assert sum("has_hnsw_index" in sql for sql in conn.statements) == 2
+        assert sum(sql.startswith("INSERT INTO") for sql in conn.statements) == 3  # first, failed, retried
+
+    async def test_write_after_a_model_change_reports_the_dimension(self, make_backend, fake_embeddings) -> None:
+        conn = _FakeConn(existing_dim=8)
+        backend = make_backend(conn, embeddings=fake_embeddings, kb_name="research")
+        await backend._add_documents([Document(page_content="a")])
+        # Recreated elsewhere for a 768-dim model while this process still
+        # remembers the 8-dim table.
+        conn._existing_dim = 768
+        error = _SqlStateError("22000")
+        error.orig = RuntimeError("expected 768 dimensions, not 8")
+        conn._fail_once_on = ("INSERT INTO", error)
+
+        with pytest.raises(ValueError, match="was created with 768-dimensional embeddings"):
+            await backend._add_documents([Document(page_content="b")])
+
+    async def test_unrelated_write_errors_are_not_retried(self, make_backend, fake_embeddings) -> None:
+        conn = _FakeConn(existing_dim=8)
+        backend = make_backend(conn, embeddings=fake_embeddings)
+        conn._fail_once_on = ("INSERT INTO", _SqlStateError("23505"))
+
+        with pytest.raises(_SqlStateError):
+            await backend._add_documents([Document(page_content="a")])
+        assert sum(sql.startswith("INSERT INTO") for sql in conn.statements) == 1
 
     async def test_honours_explicit_and_document_ids(self, make_backend, fake_embeddings) -> None:
         backend = make_backend(_FakeConn(existing_dim=8), embeddings=fake_embeddings)
@@ -895,6 +1084,16 @@ class TestDeleteCollection:
         await backend.delete_collection()
 
         assert conn.statements[-1] == f'DROP TABLE IF EXISTS "{backend.table_name}"'
+
+    async def test_drop_forgets_the_verified_table(self, make_backend) -> None:
+        conn = _FakeConn(existing_dim=8)
+        backend = make_backend(conn)
+        await backend._ensure_embedding_table(8)
+        assert backend._ready_key(8) in pg_module._READY_TABLES
+
+        await backend.delete_collection()
+
+        assert backend._ready_key(8) not in pg_module._READY_TABLES
 
     async def test_database_error_is_raised(self, make_backend) -> None:
         backend = make_backend(_FakeConn(raise_on="DROP TABLE"))
