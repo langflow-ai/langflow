@@ -348,7 +348,7 @@ async def test_handle_on_chain_start_no_input():
 
 @pytest.mark.asyncio
 async def test_handle_on_chain_end_with_output():
-    """Test handle_on_chain_end with output."""
+    """Chain output stays partial until the stream attaches usage and completes."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
@@ -363,7 +363,8 @@ async def test_handle_on_chain_end_with_output():
     updated_message, start_time = await handle_on_chain_end(event, agent_message, send_message, None, 0.0)
 
     assert updated_message.properties.icon == "Bot"
-    assert updated_message.properties.state == "complete"
+    assert updated_message.properties.state == "partial"
+    send_message.assert_not_awaited()
     assert updated_message.text == "final output"
     assert isinstance(start_time, float)
 
