@@ -1174,8 +1174,16 @@ async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> Non
 
 @app.command(name="convert-sqlite-to-postgres")
 def convert_sqlite_to_postgres(
-    source: str = typer.Option(..., help="SQLite database URL to read, e.g. sqlite:////data/langflow.db."),
-    target: str = typer.Option(..., help="Postgres database URL to write. It is upgraded to the latest schema first."),
+    source: str = typer.Option(
+        ...,
+        help="SQLite database URL to read, e.g. sqlite:////data/langflow.db.",
+        envvar="LANGFLOW_MIGRATION_SOURCE_URL",
+    ),
+    target: str = typer.Option(
+        ...,
+        help="Postgres database URL to write. It is upgraded to the latest schema first.",
+        envvar="LANGFLOW_MIGRATION_TARGET_URL",
+    ),
     batch_size: int = typer.Option(1000, help="Rows per insert batch."),
     drop_orphans: bool = typer.Option(  # noqa: FBT001
         default=False,
@@ -1183,6 +1191,12 @@ def convert_sqlite_to_postgres(
         "leave them out (ON DELETE CASCADE) or clear the key (ON DELETE SET NULL). Without it they are refused.",
     ),
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    json_output: bool = typer.Option(  # noqa: FBT001
+        False,  # noqa: FBT003
+        "--json",
+        help="Write progress, each copied table and a final report to stdout as one JSON object per line, "
+        "for a program that runs this command. Logs go to stderr.",
+    ),
 ) -> None:
     """Copy every row of a Langflow SQLite database into Postgres.
 
@@ -1193,11 +1207,29 @@ def convert_sqlite_to_postgres(
 
     SQLite never enforced Langflow's foreign keys, so deletes can leave rows that
     point at nothing. They are refused, naming each key, unless --drop-orphans.
+
+    A command line is visible to other users of the machine. Set the URLs in
+    LANGFLOW_MIGRATION_SOURCE_URL and LANGFLOW_MIGRATION_TARGET_URL instead of
+    the options to keep the target's password out of it.
+
+    Exits non-zero if anything was refused or failed. With --json every problem
+    carries a stable code, and the last line is the report.
     """
+    from langflow.cli import sqlite_to_postgres_events as events
     from langflow.services.database.sqlite_to_postgres import convert_sqlite_to_postgres as convert
 
-    configure(log_level=log_level)
-    report = convert(source, target, batch_size=batch_size, drop_orphans=drop_orphans)
+    configure(log_level=log_level, output_file=sys.stderr if json_output else None)
+    report = convert(
+        source,
+        target,
+        batch_size=batch_size,
+        drop_orphans=drop_orphans,
+        on_progress=events.emit_progress if json_output else None,
+        on_table=events.emit_table if json_output else None,
+    )
+    if json_output:
+        events.emit_report(report)
+        raise typer.Exit(0 if report.ok else 1)
     if not report.ok:
         # A failed copy is rolled back, so per-table counts would describe rows that are gone.
         for problem in report.problems:
@@ -1448,6 +1480,81 @@ async def _relocate_kb(
     summary = ", ".join(f"{count} {status}" for status, count in sorted(by_status.items())) or "no knowledge bases"
     typer.echo(f"Knowledge base relocation {'dry run ' if dry_run else ''}complete: {summary}.")
     return by_status.get("failed", 0)
+
+
+@app.command(name="check-integrity")
+def check_integrity(
+    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+) -> None:
+    """Report where this instance's database disagrees with what lives outside it.
+
+    Checks that the secret key opens every encrypted value, that every file row has
+    bytes in storage, that every knowledge base's store can be reached and holds as
+    many vectors as its row records, that memory bases with ingested messages have
+    vectors behind them, and that role assignments resolve and match the compiled
+    policy.
+
+    Read-only: it reports and never repairs, so it is safe to run on production.
+    Exits non-zero if any check fails.
+    """
+    configure(log_level=log_level)
+    if not asyncio.run(_check_integrity()):
+        raise typer.Exit(1)
+
+
+async def _check_integrity() -> bool:
+    from langflow.cli.integrity import check_instance, open_instance
+
+    open_instance()
+    report = await check_instance()
+    for check in report.checks:
+        typer.echo(f"{check.status:5} {check.name:16} {check.summary}")
+        for problem in check.problems:
+            typer.echo(f"        - {problem}")
+    return report.ok
+
+
+@app.command(name="migration-preflight")
+def migration_preflight(
+    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    target_revision: str = typer.Option(
+        "", help="Alembic revision the target image runs. Refuses a target older than this database."
+    ),
+    target_secret_key_file: Path | None = typer.Option(
+        None,
+        help="File holding the LANGFLOW_SECRET_KEY the target will run with.",
+        envvar="LANGFLOW_TARGET_SECRET_KEY_FILE",
+        exists=True,
+        dir_okay=False,
+    ),
+) -> None:
+    """Refuse a migration from this instance that cannot succeed, before anything moves.
+
+    Checks that the target's schema is not older than this database's, that the
+    default superuser will survive a target with AUTO_LOGIN off, that the target's
+    key opens every stored credential, and which knowledge bases record the model
+    their vectors need. Then runs check-integrity against this instance.
+
+    Read-only. Exits non-zero if any check fails.
+    """
+    configure(log_level=log_level)
+    # Not stripped: a Secret made from this file with --from-file carries its whitespace, so the key is tested with it.
+    key = target_secret_key_file.read_text() if target_secret_key_file else None
+    if not asyncio.run(_migration_preflight(target_revision or None, key)):
+        raise typer.Exit(1)
+
+
+async def _migration_preflight(target_revision: str | None, target_secret_key: str | None) -> bool:
+    from langflow.cli.integrity import open_instance
+    from langflow.cli.migration_preflight import run_preflight
+
+    open_instance()
+    report = await run_preflight(target_revision=target_revision, target_secret_key=target_secret_key)
+    for check in report.checks:
+        typer.echo(f"{check.status:5} {check.name:24} {check.summary}")
+        for problem in check.problems:
+            typer.echo(f"        - {problem}")
+    return report.ok
 
 
 # command to copy the langflow database from the cache to the current directory

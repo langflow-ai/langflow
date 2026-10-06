@@ -49,6 +49,7 @@ from langflow.api.v1.schemas.deployment_snapshot import (
     DeploymentSnapshotFlow,
     DeploymentSnapshotProject,
     DeploymentSnapshotRequiredConnection,
+    DeploymentSnapshotRequiredModel,
 )
 from langflow.api.v1.schemas.replacement_operations import (
     ProjectReplacementRequest,
@@ -549,6 +550,16 @@ async def read_project_deployment_snapshot(
             )
             for connection in snapshot.required_connections
         ],
+        required_providers=list(snapshot.required_providers),
+        required_models=[
+            DeploymentSnapshotRequiredModel(
+                provider=model.provider,
+                name=model.name,
+                model_type=model.model_type,
+            )
+            for model in snapshot.required_models
+        ],
+        unresolved_model_fields=snapshot.unresolved_model_fields,
     )
 
 
