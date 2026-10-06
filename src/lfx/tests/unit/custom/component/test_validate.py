@@ -539,6 +539,9 @@ class Greeter(Component):
     def setup_method(self):
         extract_class_name.cache_clear()
 
+    def teardown_method(self):
+        extract_class_name.cache_clear()
+
     def test_name_is_extracted_and_cached(self):
         first = extract_class_name(self.SOURCE)
         second = extract_class_name(self.SOURCE)
@@ -552,6 +555,34 @@ class Greeter(Component):
         modified = self.SOURCE.replace("class Greeter(Component)", "class Farewell(Component)")
 
         assert extract_class_name(modified) == "Farewell"
+
+    def test_cache_capacity_and_lru_eviction(self):
+        capacity = 128
+        sources = [self.SOURCE.replace("Greeter", f"Component{i}") for i in range(capacity + 1)]
+        for i, source in enumerate(sources[:-1]):
+            assert extract_class_name(source) == f"Component{i}"
+
+        info = extract_class_name.cache_info()
+        assert info.maxsize == capacity
+        assert info.currsize == capacity
+        assert info.misses == capacity
+
+        # Refresh the oldest entry so the second entry becomes least recently used.
+        assert extract_class_name(sources[0]) == "Component0"
+        assert extract_class_name(sources[-1]) == f"Component{capacity}"
+        assert extract_class_name.cache_info().currsize == capacity
+        assert extract_class_name.cache_info().misses == capacity + 1
+
+        # The refreshed entry and newest entry are still hits after overflowing the cache.
+        assert extract_class_name(sources[0]) == "Component0"
+        assert extract_class_name(sources[-1]) == f"Component{capacity}"
+        assert extract_class_name.cache_info().hits == 3
+        assert extract_class_name.cache_info().misses == capacity + 1
+
+        # The evicted entry is parsed again without growing the cache.
+        assert extract_class_name(sources[1]) == "Component1"
+        assert extract_class_name.cache_info().misses == capacity + 2
+        assert extract_class_name.cache_info().currsize == capacity
 
     @pytest.mark.parametrize(
         ("code", "error"),

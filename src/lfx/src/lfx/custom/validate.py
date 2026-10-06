@@ -754,7 +754,8 @@ def extract_function_name(code):
     raise ValueError(msg)
 
 
-@lru_cache(maxsize=512)
+# Keep this small: each cache key retains the full component source string.
+@lru_cache(maxsize=128)
 def extract_class_name(code: str) -> str:
     """Extract the name of the first Component subclass found in the code.
 
