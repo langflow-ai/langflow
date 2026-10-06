@@ -24,6 +24,7 @@ from .test_migration import (
     DB_PASSWORD,
     NOWHERE,
     PASSING,
+    PAUSE,
     PAUSED_BEFORE_THE_CHECK,
     PREPARED,
     _checked,
@@ -79,6 +80,21 @@ async def unanswering() -> AsyncIterator[str]:
     server.close()
 
 
+@pytest.fixture
+def at_the_door(monkeypatch: pytest.MonkeyPatch) -> tuple[asyncio.Event, asyncio.Event]:
+    """Hold a copy between the check that lets it in and the start of its command, until the test lets it go."""
+    arrived, let_go = asyncio.Event(), asyncio.Event()
+    start_run = migration_module.start_run
+
+    async def held(*args: Any, **kwargs: Any) -> str:
+        arrived.set()
+        await let_go.wait()
+        return await start_run(*args, **kwargs)
+
+    monkeypatch.setattr(migration_module, "start_run", held)
+    return arrived, let_go
+
+
 def _ready_to_copy(config_dir: Path, **changes: Any) -> None:
     """What the five steps before the copies leave in the record once each of them is done."""
     _checked(config_dir, [PASSING], **{**PREPARED, "pause": PAUSED_BEFORE_THE_CHECK, "backup": BACKED_UP, **changes})
@@ -95,6 +111,7 @@ def _ran(config_dir: Path, step: str = "copy_database", **run: Any) -> None:
         "started_by": "alice",
         "started_at": "2026-09-30T01:00:00+00:00",
         "finished_at": "2026-09-30T01:05:00+00:00",
+        "pause": PAUSED_BEFORE_THE_CHECK["frozen_at"],
         "report": COPIED,
         "error": None,
         "decision_needed": None,
@@ -107,6 +124,8 @@ def _send_to(monkeypatch: pytest.MonkeyPatch, address: str) -> None:
     """Give this worker a destination database, as testing one that answers does."""
     url = f"postgresql://migrator:{DB_PASSWORD}@{address}/langflow"
     monkeypatch.setitem(migration_module._secrets, "database_url", url)
+    # The worker also keeps which saved destination it holds the password of.
+    monkeypatch.setitem(migration_module._secrets, "for", {"database": PREPARED["destinations"]["database"]})
 
 
 async def _start(client, headers, step: str = "copy_database", **body: Any) -> str:
@@ -128,6 +147,9 @@ async def _connected(client, headers, config_dir: Path, **destination: Any):
     _checked(config_dir, [PASSING], secret_key=PREPARED["secret_key"], pause=PAUSED_BEFORE_THE_CHECK, backup=BACKED_UP)
     connected = await client.put("api/v1/migration/destinations", json=destination, headers=headers)
     assert {result["ok"] for result in connected.json()["results"].values()} == {True}, connected.text
+    # The endpoint does not say yet which saved destination the worker's secrets are for, so this does.
+    saved = connected.json()["record"]["destinations"]
+    migration_module._secrets.setdefault("for", {part: saved[part] for part in ("database", "files") if part in saved})
     return connected
 
 
@@ -234,10 +256,21 @@ async def test_a_copy_this_instance_does_not_need_is_refused(
     assert refused.json()["detail"] == {"code": "skipped", "reason": "already_postgresql"}
 
 
-async def test_a_copy_needs_the_destination_this_worker_was_given(client, logged_in_headers_super_user, config_dir):
+@pytest.mark.parametrize(
+    "held",
+    [
+        # After a restart the record still says where the data goes, and the password went with the old process.
+        {},
+        # Another worker saved another destination since this one tested its own. Its password is for the earlier one.
+        {"database_url": f"postgresql://{NOWHERE}/langflow", "for": {"database": {"location": "db.internal/earlier"}}},
+    ],
+)
+async def test_a_copy_needs_the_secrets_of_the_destination_that_is_saved(
+    client, logged_in_headers_super_user, config_dir, monkeypatch, held
+):
     headers = logged_in_headers_super_user
-    # After a restart the record still says where the data goes, and the password went with the old process.
     _ready_to_copy(config_dir)
+    monkeypatch.setattr(migration_module, "_secrets", held)
 
     refused = await client.post(RUNS.format("copy_database"), json={}, headers=headers)
 
@@ -278,6 +311,8 @@ async def test_a_copy_the_destination_refuses_blocks_the_step_with_the_commands_
         "started_by": "activeuser",
         "started_at": run["started_at"],
         "finished_at": run["finished_at"],
+        # The pause that let it in.
+        "pause": PAUSED_BEFORE_THE_CHECK["frozen_at"],
         "report": {key: value for key, value in report.items() if key not in ("event", "seq")},
         "error": None,
         "decision_needed": None,
@@ -294,8 +329,8 @@ async def test_a_copy_the_destination_refuses_blocks_the_step_with_the_commands_
     ("run", "expected"),
     [
         ({}, ("done", None)),
-        # Whatever changed after an earlier pause ended is missing from a copy made during it.
-        ({"started_at": "2026-09-28T00:00:00+00:00"}, ("current", None)),
+        # Let in by an earlier pause. It started during this one, which checked and backed up nothing of its own yet.
+        ({"pause": "2026-09-28T00:00:00+00:00"}, ("current", None)),
         (
             {"status": "failed", "report": None, "error": {"code": "crashed", "message": "Killed"}},
             ("blocked", "crashed"),
@@ -307,7 +342,7 @@ async def test_a_copy_the_destination_refuses_blocks_the_step_with_the_commands_
         ),
     ],
 )
-async def test_a_copy_completes_its_step_only_when_it_ran_during_this_pause_and_reported_ok(
+async def test_a_copy_completes_its_step_only_when_this_pause_let_it_in_and_it_reported_ok(
     client, logged_in_headers_super_user, config_dir, run, expected
 ):
     _ready_to_copy(config_dir)
@@ -335,6 +370,61 @@ async def test_a_copy_from_before_the_pause_was_lifted_has_to_be_made_again(
     steps = await _steps(client, headers)
     assert steps["pause"] == ("current", None)
     assert steps["copy_database"] == ("locked", "earlier_step")
+
+
+@pytest.mark.parametrize(
+    ("change", "pause", "copy"),
+    [
+        ("changes turned back on", ("current", None), ("locked", "earlier_step")),
+        # The new pause has checked and backed up nothing yet, so no copy can stand for it.
+        ("paused again", ("blocked", "recheck_pending"), ("locked", "earlier_step")),
+        ("another database saved", ("done", None), ("current", None)),
+    ],
+)
+async def test_a_copy_is_stopped_as_it_starts_when_what_let_it_in_has_changed(
+    client,
+    logged_in_headers_super_user,
+    active_super_user,
+    config_dir,
+    monkeypatch,
+    at_the_door,
+    server_log,
+    change,
+    pause,
+    copy,
+):
+    headers = logged_in_headers_super_user
+    arrived, let_go = at_the_door
+    _ready_to_copy(config_dir)
+    _send_to(monkeypatch, NOWHERE)
+    starting = asyncio.create_task(client.post(RUNS.format("copy_database"), json={}, headers=headers))
+    await asyncio.wait_for(arrived.wait(), _TIMEOUT)
+
+    # The copy was let in, and its command has not started yet.
+    if change == "another database saved":
+        path = config_dir / "migrations" / "migration.json"
+        record = json.loads(path.read_text())
+        record["destinations"]["database"] = {"location": "db.internal:5432/another"}
+        path.write_text(json.dumps(record))
+    else:
+        await client.delete(PAUSE, headers=headers)
+    if change == "paused again":
+        assert (await client.post(PAUSE, headers=headers)).status_code == 200
+    let_go.set()
+    refused = await asyncio.wait_for(starting, _TIMEOUT)
+
+    assert refused.status_code == 409
+    assert refused.json()["detail"] == {"code": "state_changed"}
+    # The command had started by then, and was stopped. The record keeps nothing of it.
+    [run] = migration_runs.list_runs()
+    assert run["status"] == "cancelled"
+    stopped = "after what let it in had changed, so it was stopped"
+    started = f"Migration: user_id={active_super_user.id} started the copy of the database"
+    assert f"{started} {stopped} (run {run['run_id']})" in server_log.getvalue()
+    migration = await _migration(client, headers)
+    assert "copy_database" not in migration["record"]["steps"]
+    steps = {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}
+    assert (steps["pause"], steps["copy_database"]) == (pause, copy)
 
 
 async def test_a_run_whose_files_are_gone_reads_as_interrupted(client, logged_in_headers_super_user, config_dir):

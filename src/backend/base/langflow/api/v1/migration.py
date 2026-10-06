@@ -115,6 +115,12 @@ _CHUNK = 1024 * 1024
 # file or to Redis when a copy has to be able to start on any worker.
 # "for" says which saved part each secret belongs to, so a copy never pairs one with another destination.
 _secrets: dict[str, Any] = {"for": {}}
+# The parts of the destination each copy writes to. The two later copies also change rows of the database.
+_WRITES_TO = {
+    "copy_database": ("database",),
+    "copy_knowledge_bases": ("database", "vectors"),
+    "copy_files": ("database", "files"),
+}
 
 
 class CheckRequest(BaseModel):
@@ -453,11 +459,18 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
     if request and request.dry_run:
         # convert-sqlite-to-postgres has no way to try a copy without making it.
         raise HTTPException(status_code=422, detail={"code": "no_dry_run"})
-    _require_unlocked(await _state(_read_record()), step_id)
+    record = _read_record()
+    _require_unlocked(await _state(record), step_id)
+    let_in = _lets_in(record, step_id)
+    held = _secrets.get("for") or {}
+    # The knowledge base store has no secret of its own: it is the destination database.
+    if any(held.get(part) != saved for part, saved in let_in["destination"].items() if part != "vectors"):
+        # This worker was never given the destination that is saved, or it restarted since, or it holds the
+        # secrets of an earlier one. The page asks for it again.
+        raise HTTPException(status_code=409, detail={"code": "secrets_missing"})
     try:
         env = copy_environment(_source_env(), _secrets)
     except KeyError as exc:
-        # This worker was never given the destination, or it restarted since. The page asks for it again.
         raise HTTPException(status_code=409, detail={"code": "secrets_missing"}) from exc
     try:
         run_id = await start_run(step_id, copy_command(step_id), env, started_by=admin.username)
@@ -465,6 +478,13 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
         raise HTTPException(status_code=409, detail={"code": "run_active"}) from exc
     # Read again: another request may have saved the record while the command was started.
     record = _read_record()
+    if _lets_in(record, step_id) != let_in:
+        # Changes were turned back on, or another destination was saved, between the check above and the
+        # start of the command. A copy of what the record now asks for has to pass that check itself.
+        await cancel_run(run_id)
+        why = "what let it in had changed, so it was stopped"
+        await logger.ainfo(f"Migration: user_id={admin.id} started {_copy(step_id)} after {why} (run {run_id})")
+        raise HTTPException(status_code=409, detail={"code": "state_changed"})
     record["steps"][step_id] = {
         "run_id": run_id,
         "status": "running",
@@ -472,6 +492,7 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
         "started_by": admin.username,
         "started_at": read_run(run_id)["started_at"],
         "finished_at": None,
+        "pause": let_in["pause"],
         "report": None,
         "error": None,
         "decision_needed": None,
@@ -505,6 +526,15 @@ async def stop_copy(step_id: str, run_id: str, admin: Superuser) -> dict[str, st
 def _copy(step_id: str) -> str:
     """A copy step as an audit line names it, such as "the copy of the knowledge bases"."""
     return f"the copy of the {step_id.removeprefix('copy_').replace('_', ' ')}"
+
+
+def _lets_in(record: dict[str, Any], step_id: str) -> dict[str, Any]:
+    """What a copy is let in for: the pause that is on, and the saved parts of the destination it writes to."""
+    saved = record.get("destinations") or {}
+    return {
+        "pause": (record.get("pause") or {}).get("frozen_at"),
+        "destination": {part: saved[part] for part in _WRITES_TO[step_id] if part in saved},
+    }
 
 
 def _find_run(step_id: str, run_id: str) -> dict[str, Any]:
@@ -872,10 +902,11 @@ def _pause_step(record: dict[str, Any], blocking: list[str]) -> tuple[str, str |
 
 
 def _copy_step(record: dict[str, Any], step_id: str) -> tuple[str, str | None]:
-    """Where a copy stands. It is done once a run made during the pause that is on now copied everything."""
+    """Where a copy stands. It is done once a run that the pause that is on now let in copied everything."""
     run = record["steps"].get(step_id)
-    # A copy made during an earlier pause lacks whatever changed since.
-    if not run or run["status"] == "running" or not _during_pause(record, run["started_at"]):
+    pause = record.get("pause")
+    # A copy that an earlier pause let in lacks whatever changed since, whenever it started.
+    if not run or run["status"] == "running" or not pause or run.get("pause") != pause["frozen_at"]:
         return "current", None
     code = blocking_code(run)
     return ("blocked", code) if code else ("done", None)
