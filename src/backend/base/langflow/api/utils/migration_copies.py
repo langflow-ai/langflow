@@ -20,6 +20,13 @@ COPY_COMMANDS = {
     "copy_knowledge_bases": ("relocate-kb", "--to", "postgres", "--json"),
     "copy_files": ("relocate-files", "--json"),
 }
+# What an admin may decide about a copy, by step. A decision that names an option of the command adds it to
+# every later run of the step. The others accept one failed item as it is, so it no longer blocks the step.
+DECISIONS: dict[str, dict[str, str | None]] = {
+    "copy_database": {"drop_orphans": "--drop-orphans"},
+    "copy_knowledge_bases": {"accept_ranking_change": "--allow-metric-change", "leave_behind": None},
+    "copy_files": {"keep_bucket_file": None, "accept_missing_attachment": None},
+}
 # The events of a run that say how it went. The others say how far it has got.
 KEPT_EVENTS = ("report", "error", "decision_needed")
 # How many failed items of a report the record keeps. Every one of them is in the run's events.
@@ -31,10 +38,13 @@ _OWN_SETTINGS = ("LANGFLOW_", "AWS_", "PGVECTOR_")
 _SOURCE_SETTINGS = ("LANGFLOW_CONFIG_DIR", "LANGFLOW_KNOWLEDGE_BASES_DIR", "LANGFLOW_SECRET_KEY")
 
 
-def copy_command(step_id: str, destinations: dict[str, Any], *, dry_run: bool = False) -> list[str]:
+def copy_command(
+    step_id: str, destinations: dict[str, Any], decisions: list[dict[str, Any]], *, dry_run: bool = False
+) -> list[str]:
     """The command line of a step. It names no address and no key: any user of the machine can read it.
 
-    destinations is what the record says of where the data goes, which holds no secret.
+    destinations is what the record says of where the data goes, which holds no secret,
+    and decisions what it says the admin decided.
     """
     argv = [sys.executable, "-m", "langflow", *COPY_COMMANDS[step_id]]
     if step_id == "copy_knowledge_bases":
@@ -47,6 +57,8 @@ def copy_command(step_id: str, destinations: dict[str, Any], *, dry_run: bool = 
         argv.append("--verify-skipped" if "database" in destinations else "--no-verify-skipped")
     if step_id == "copy_files":
         argv += ["--bucket", destinations["files"]["bucket"], "--prefix", destinations["files"]["prefix"]]
+    options = DECISIONS[step_id]
+    argv += [options[made["kind"]] for made in decisions if made["step"] == step_id and options[made["kind"]]]
     return [*argv, "--dry-run"] if dry_run else argv
 
 
@@ -110,7 +122,11 @@ def copy_outcome(run: dict[str, Any], events: dict[str, dict[str, Any]]) -> dict
     if report and "attention" in report:
         # ponytail: a report can list every file of an instance, and the record is read on each request,
         # so it keeps the first of them. The report's counts still say how many failed.
-        report["attention"] = report["attention"][:_ATTENTION_KEPT]
+        # Each is given the name a decision about it uses: a knowledge base's id, or a file's owner and name.
+        report["attention"] = [
+            {**item, "subject": item.get("kb_id") or f"{item['owner']}/{item['file_name']}"}
+            for item in report["attention"][:_ATTENTION_KEPT]
+        ]
     return {
         "status": run["status"],
         "finished_at": run["finished_at"],
@@ -120,16 +136,23 @@ def copy_outcome(run: dict[str, Any], events: dict[str, dict[str, Any]]) -> dict
     }
 
 
-def blocking_code(run: dict[str, Any]) -> str | None:
-    """Why a run that has ended does not complete its step, or None when it does."""
+def blocking_code(step_id: str, run: dict[str, Any], decisions: list[dict[str, Any]]) -> str | None:
+    """Why a run that has ended does not complete its step, or None when it does.
+
+    A knowledge base or a file that was not copied blocks the step until the admin accepts it.
+    """
     if run["error"]:
         return run["error"]["code"]
     report = run["report"]
     if report["ok"]:
         return None
     if "attention" in report:
-        # A knowledge base or a file that was not copied.
-        return report["attention"][0]["code"]
+        failed = report["attention"]
+        # The record may hold fewer items than failed. The ones it does not hold cannot have been accepted.
+        if report["counts"]["failed"] <= len(failed):
+            accepted = {decision["subject"] for decision in decisions if decision["step"] == step_id}
+            failed = [item for item in failed if item["subject"] not in accepted]
+        return failed[0]["code"] if failed else None
     codes = [problem["code"] for problem in report["problems"]]
     # Rows that point at nothing can be left out on the admin's word, once nothing else stands in the way.
     return next((code for code in codes if code != "orphans_droppable"), codes[0])
