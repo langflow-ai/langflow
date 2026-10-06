@@ -153,10 +153,16 @@ export const JOB_STATES: Record<string, string> = {
  * The server gives the location as `host:port/database`, or `host/database` on the default port.
  */
 export function pgDumpCommand(location: string) {
-  const slash = location.lastIndexOf("/");
+  const slash = location.indexOf("/");
   const address = location.slice(0, slash);
-  // ponytail: a bare IPv6 host on the default port reads as a host and a port. The command is an example the admin adapts.
-  const port = /:(\d+)$/.exec(address)?.[1];
-  const host = port ? address.slice(0, -port.length - 1) : address;
-  return `pg_dump -h ${host}${port ? ` -p ${port}` : ""} -d ${location.slice(slash + 1)} -F c -f langflow-backup.dump`;
+  const parts = /^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/.exec(address);
+  const host = parts ? parts[1].replace(/^\[|\]$/g, "") : address;
+  const port = parts?.[2];
+  return `pg_dump -h ${shellArgument(host)}${port ? ` -p ${port}` : ""} -d ${shellArgument(location.slice(slash + 1))} -F c -f langflow-backup.dump`;
+}
+
+function shellArgument(value: string) {
+  return /^[A-Za-z0-9_.:/-]+$/.test(value)
+    ? value
+    : `'${value.replaceAll("'", "'\\''")}'`;
 }

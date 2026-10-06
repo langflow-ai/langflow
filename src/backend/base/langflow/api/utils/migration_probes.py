@@ -45,7 +45,8 @@ def location(address: str) -> str | None:
         url = sa.make_url(address)
     except (sa.exc.ArgumentError, ValueError):
         return None
-    return f"{url.host}:{url.port}/{url.database}" if url.port else f"{url.host}/{url.database}"
+    host = f"[{url.host}]" if url.host and ":" in url.host else url.host
+    return f"{host}:{url.port}/{url.database}" if url.port else f"{host}/{url.database}"
 
 
 def database_identity(address: str) -> str:
