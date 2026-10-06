@@ -51,6 +51,7 @@ from lfx.integrations.errors import (
 )
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.log.logger import logger
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from pydantic import ValidationError
 from sqlmodel import col, select, update
 
@@ -350,6 +351,20 @@ class ListenerSupervisor:
 
     async def reconcile(self) -> None:
         """One pass toward agreement between the table and the held set."""
+        if not FEATURE_FLAGS.instance_migration:
+            await self._reconcile()
+            return
+        # Loaded only where an instance can be paused, so the listener process carries none of the API otherwise.
+        from langflow.api.utils.migration_pause import writing
+
+        # A paused instance takes no events: a listener that starts during a pause announces and
+        # claims nothing until it ends. The place is held for the pass, so a pause that is written
+        # meanwhile waits for it and then finds this listener's lease.
+        with writing() as let_in:
+            if let_in:
+                await self._reconcile()
+
+    async def _reconcile(self) -> None:
         settings = get_settings_service().settings
         async with session_scope() as session:
             desired = await load_desired_state(session)
