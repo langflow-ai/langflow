@@ -41,6 +41,12 @@ const getStoredMessages = (
       : 1;
   const offset = typeof params.offset === "number" ? params.offset : 0;
   const limit = typeof params.limit === "number" ? params.limit : undefined;
+  const beforeTimestamp =
+    typeof params.before_timestamp === "string"
+      ? params.before_timestamp
+      : undefined;
+  const beforeId =
+    typeof params.before_id === "string" ? params.before_id : undefined;
 
   const filteredMessages = sessionId
     ? storedMessages.filter(
@@ -49,12 +55,39 @@ const getStoredMessages = (
           (sessionId === id && !message.session_id),
       )
     : storedMessages;
+  // Order by (timestamp, id), like the server, so ties page consistently.
   const orderedMessages = [...filteredMessages].sort((a, b) => {
     const timeA = new Date(a.timestamp).getTime();
     const timeB = new Date(b.timestamp).getTime();
     if (Number.isNaN(timeA) || Number.isNaN(timeB)) return 0;
-    return direction * (timeA - timeB);
+    if (timeA !== timeB) return direction * (timeA - timeB);
+    return direction * ((a.id ?? "") < (b.id ?? "") ? -1 : 1);
   });
+
+  // Mirror the server's cursor contract.
+  if ((beforeTimestamp === undefined) !== (beforeId === undefined)) {
+    throw new Error("Send before_timestamp and before_id together.");
+  }
+  if (beforeId !== undefined && params.offset !== undefined) {
+    throw new Error(
+      "Use either offset or before_timestamp/before_id, not both.",
+    );
+  }
+  if (beforeTimestamp !== undefined && beforeId !== undefined) {
+    const cursorTime = new Date(beforeTimestamp).getTime();
+    const newestFirst =
+      direction === -1 ? orderedMessages : [...orderedMessages].reverse();
+    const page = newestFirst
+      .filter((message) => {
+        const time = new Date(message.timestamp).getTime();
+        return (
+          time < cursorTime ||
+          (time === cursorTime && (message.id ?? "") < beforeId)
+        );
+      })
+      .slice(0, limit);
+    return direction === -1 ? page : page.reverse();
+  }
 
   return orderedMessages.slice(
     offset,

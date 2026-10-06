@@ -63,13 +63,13 @@ const queryRetry = makeRetry(5);
 const retryDelay = (attemptIndex: number) =>
   Math.min(1000 * 2 ** attemptIndex, MAX_RETRY_DELAY_MS);
 
-function useInfiniteRequest<TPage>(
+function useInfiniteRequest<TPage, TPageParam = number>(
   options: UseInfiniteQueryOptions<
     TPage,
     Error,
-    InfiniteData<TPage>,
+    InfiniteData<TPage, TPageParam>,
     QueryKey,
-    number
+    TPageParam
   >,
 ) {
   return useInfiniteQuery({ retry: queryRetry, retryDelay, ...options });

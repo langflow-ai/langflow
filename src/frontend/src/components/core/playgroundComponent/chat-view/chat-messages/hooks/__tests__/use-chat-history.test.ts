@@ -73,25 +73,103 @@ describe("useChatHistory message ordering", () => {
       session_id: "session-1",
       limit: 20,
       order: "DESC",
-      offset: 0,
     });
   });
 
-  it("stops loading when a source repeats the same page", async () => {
+  const page = (from: number) =>
+    Array.from({ length: 20 }, (_, index) => ({
+      id: `message-${from + index}`,
+      timestamp: `timestamp-${from + index}`,
+      flow_id: "flow-1",
+      session_id: "session-1",
+    }));
+  const sessionCacheKey = [
+    "useGetMessagesQuery",
+    { id: "flow-1", session_id: "session-1" },
+  ];
+
+  it("continues from the oldest row of the initial page", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    const repeatedPage = Array.from({ length: 20 }, (_, index) => ({
-      id: `message-${index}`,
-    }));
-    const sessionCacheKey = [
-      "useGetMessagesQuery",
-      { id: "flow-1", session_id: "session-1" },
-    ];
-    queryClient.setQueryData(sessionCacheKey, repeatedPage);
+    mockUseGetMessagesQuery.mockReturnValue({
+      data: { rows: { data: page(0) } },
+      isPlaceholderData: false,
+    });
+    mockGetMessages.mockResolvedValueOnce({ data: page(20) });
+
+    const { result } = renderHook(() => useChatHistory("session-1"), {
+      wrapper: createWrapper(queryClient),
+    });
+    await act(async () => {
+      await result.current.loadMore();
+    });
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(
+      mockGetMessages.mock.calls.map(([, params]) => [
+        params.before_timestamp,
+        params.before_id,
+      ]),
+    ).toEqual([
+      ["timestamp-19", "message-19"],
+      ["timestamp-39", "message-39"],
+    ]);
+  });
+
+  it("stops when a server ignores the cursor and repeats a page", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(sessionCacheKey, page(0));
+    mockUseGetMessagesQuery.mockReturnValue({
+      data: { rows: { data: page(0) } },
+      isPlaceholderData: false,
+    });
+    mockGetMessages.mockResolvedValue({ data: page(0) });
+
+    const { result } = renderHook(() => useChatHistory("session-1"), {
+      wrapper: createWrapper(queryClient),
+    });
+    let prepended = -1;
+    await act(async () => {
+      prepended = await result.current.loadMore();
+    });
+
+    expect(prepended).toBe(0);
+    expect(mockGetMessages).toHaveBeenCalledTimes(1);
+    expect(result.current.hasMore).toBe(false);
+  });
+
+  it("does not anchor on placeholder rows from the previous session", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    mockUseGetMessagesQuery.mockReturnValue({
+      data: { rows: { data: page(0) } },
+      isPlaceholderData: true,
+    });
+
+    const { result } = renderHook(() => useChatHistory("session-1"), {
+      wrapper: createWrapper(queryClient),
+    });
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(mockGetMessages.mock.calls[0][1]).not.toHaveProperty("before_id");
+  });
+
+  it("walks past cached pages after a remount instead of stalling", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(sessionCacheKey, page(0));
     mockGetMessages
-      .mockResolvedValueOnce({ data: repeatedPage })
-      .mockResolvedValueOnce({ data: repeatedPage });
+      .mockResolvedValueOnce({ data: page(0) })
+      .mockResolvedValueOnce({ data: page(20).slice(0, 5) });
 
     const { result } = renderHook(() => useChatHistory("session-1"), {
       wrapper: createWrapper(queryClient),
@@ -102,8 +180,11 @@ describe("useChatHistory message ordering", () => {
       prepended = await result.current.loadMore();
     });
 
-    expect(prepended).toBe(0);
-    expect(mockGetMessages).toHaveBeenCalledTimes(2);
+    expect(prepended).toBe(5);
+    expect(
+      mockGetMessages.mock.calls.map(([, params]) => params.before_id),
+    ).toEqual([undefined, "message-19"]);
+    expect(result.current.hasMore).toBe(false);
   });
 });
 

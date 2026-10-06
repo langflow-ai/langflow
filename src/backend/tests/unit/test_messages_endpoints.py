@@ -210,6 +210,22 @@ async def test_get_messages_does_not_return_other_users_messages(
     assert str(cross_user_messages["owned_message"].id) not in other_returned_ids
 
 
+async def test_get_messages_cursor_from_another_users_message_stays_in_the_callers_history(
+    client: AsyncClient, logged_in_headers, cross_user_messages
+):
+    """The cursor only bounds the caller's own history, so a foreign position reveals nothing."""
+    foreign = cross_user_messages["foreign_message"]
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"before_timestamp": timestamp_to_str(foreign.timestamp), "before_id": str(foreign.id)},
+    )
+    assert response.status_code == 200, response.text
+    returned_ids = {message["id"] for message in response.json()}
+    assert str(foreign.id) not in returned_ids
+    assert returned_ids <= {str(cross_user_messages["owned_message"].id)}
+
+
 @pytest.mark.usefixtures("timestamped_messages")
 async def test_get_messages_defaults_to_timestamp_ascending(client: AsyncClient, logged_in_headers):
     response = await client.get(

@@ -1,15 +1,19 @@
+from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from sqlalchemy import or_
 from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import col, delete, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow.api.utils import DbSession, custom_params
 from langflow.api.utils.flow_utils import compute_virtual_flow_id
 from langflow.schema.message import MessageResponse
+from langflow.schema.validators import str_to_timestamp
 from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
@@ -55,6 +59,81 @@ MESSAGE_UPDATE_FAILED = "Could not update the message."
 # routers (_LIST_DEFAULT_LIMIT / _LIST_MAX_LIMIT).
 _MESSAGES_DEFAULT_LIMIT = 100
 _MESSAGES_MAX_LIMIT = 200
+
+
+def _history_cursor(
+    *, offset: int | None, before_timestamp: str | None, before_id: UUID | None
+) -> tuple[datetime, UUID] | None:
+    """Validate the cursor parameters and return the ``(timestamp, id)`` position to page below.
+
+    The cursor carries the position's values rather than referring to a stored message, so a
+    page is still right after that message is deleted. Cursor and ``offset`` paging are
+    mutually exclusive: ``offset`` counts from the newest row and drifts as history changes,
+    so combining them has no single meaning.
+    """
+    if before_timestamp is None and before_id is None:
+        return None
+    if before_timestamp is None or before_id is None:
+        raise HTTPException(status_code=400, detail="Send before_timestamp and before_id together.")
+    if offset is not None:
+        raise HTTPException(status_code=400, detail="Use either offset or before_timestamp/before_id, not both.")
+    try:
+        timestamp = str_to_timestamp(before_timestamp)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=f"Invalid before_timestamp: {before_timestamp}") from e
+    # message.timestamp is SQLModel's UTCDateTime (timestamptz on Postgres since f2a7c9e4b681),
+    # which binds aware values as UTC instants, so the database session's time zone never
+    # enters the comparison.
+    return timestamp.astimezone(timezone.utc), before_id
+
+
+async def _read_history_window(
+    session: DbSession,
+    stmt: SelectOfScalar[MessageTable],
+    *,
+    order_by: str | None,
+    order: str,
+    limit: int | None,
+    offset: int | None,
+    before: tuple[datetime, UUID] | None,
+) -> list[MessageResponse]:
+    """Select one bounded history window from ``stmt`` and return it in display order.
+
+    The window is always the newest ``limit`` rows by ``(timestamp, id)``, either skipping
+    ``offset`` rows or starting strictly below the ``before`` position. The position only
+    bounds ``stmt``, which carries the caller's ownership and filters, so a position taken
+    from someone else's history cannot reveal anything outside the caller's own.
+    """
+    normalized_order = order.upper()
+    if normalized_order not in {"ASC", "DESC"}:
+        raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
+    if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+        raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+    if before is not None:
+        before_timestamp, before_id = before
+        # Rows strictly older than the cursor: an earlier timestamp, or the same timestamp and
+        # a smaller id (the tie-break). The `<=` line looks redundant, but it is what makes this
+        # fast: it lets the database jump straight to the cursor's spot in the
+        # (flow_id, timestamp, id) index. With only the OR, the database starts at the newest
+        # message and checks each one until it gets past the cursor, which is slow deep in history.
+        stmt = stmt.where(
+            col(MessageTable.timestamp) <= before_timestamp,
+            or_(col(MessageTable.timestamp) < before_timestamp, col(MessageTable.id) < before_id),
+        )
+    # Always select the newest window by timestamp DESC (anchored at the most
+    # recent row): polling callers pass flow_id only, and an unbounded default
+    # serializes the whole history on every poll (issue #15023). Selecting by
+    # timestamp keeps paging aligned with history age even when the caller sorts
+    # by a non-timestamp field. A falsy limit (None/0) falls back to the default,
+    # matching the previous `if limit:` behavior where 0 meant "no limit".
+    effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
+    stmt = stmt.order_by(col(MessageTable.timestamp).desc(), col(MessageTable.id).desc())
+    if offset:
+        stmt = stmt.offset(offset)
+    stmt = stmt.limit(effective_limit)
+    window = list(await session.exec(stmt))
+    window = _sorted_for_display(window, order_by=order_by, descending=normalized_order == "DESC")
+    return [_message_history_response(message) for message in window]
 
 
 def _sorted_for_display(messages: list[MessageTable], *, order_by: str | None, descending: bool) -> list[MessageTable]:
@@ -258,7 +337,16 @@ async def get_messages(
     order: Annotated[str, Query()] = "ASC",
     limit: Annotated[int | None, Query(ge=0)] = None,
     offset: Annotated[int | None, Query(ge=0)] = None,
+    before_timestamp: Annotated[
+        str | None,
+        Query(description="With before_id: return messages strictly older than this position. Not with offset."),
+    ] = None,
+    before_id: Annotated[
+        UUID | None,
+        Query(description="With before_timestamp: the id of the last message already loaded, to break timestamp ties."),
+    ] = None,
 ) -> list[MessageResponse]:
+    before = _history_cursor(offset=offset, before_timestamp=before_timestamp, before_id=before_id)
     try:
         # When a flow_id is provided, gate on flow READ permission first; the
         # share-aware path lets a non-owner with a read grant see the flow's
@@ -292,26 +380,9 @@ async def get_messages(
             stmt = stmt.where(MessageTable.sender == sender)
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
-        normalized_order = order.upper()
-        if normalized_order not in {"ASC", "DESC"}:
-            raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
-        if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
-            raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-        # Always select the newest window by timestamp DESC (anchored at the most
-        # recent row): the editor polls with flow_id only, and an unbounded default
-        # serializes the whole history on every poll (issue #15023). Selecting by
-        # timestamp keeps offset paging aligned with history age even when the
-        # caller sorts by a non-timestamp field. A falsy limit (None/0) falls back
-        # to the default, matching the previous `if limit:` behavior where 0 meant
-        # "no limit".
-        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
-        stmt = stmt.order_by(col(MessageTable.timestamp).desc(), col(MessageTable.id).desc())
-        if offset:
-            stmt = stmt.offset(offset)
-        stmt = stmt.limit(effective_limit)
-        window = list(await session.exec(stmt))
-        window = _sorted_for_display(window, order_by=order_by, descending=normalized_order == "DESC")
-        return [_message_history_response(message) for message in window]
+        return await _read_history_window(
+            session, stmt, order_by=order_by, order=order, limit=limit, offset=offset, before=before
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -631,12 +702,21 @@ async def get_shared_messages(
     order: Annotated[str, Query()] = "ASC",
     limit: Annotated[int | None, Query(ge=0)] = None,
     offset: Annotated[int | None, Query(ge=0)] = None,
+    before_timestamp: Annotated[
+        str | None,
+        Query(description="With before_id: return messages strictly older than this position. Not with offset."),
+    ] = None,
+    before_id: Annotated[
+        UUID | None,
+        Query(description="With before_timestamp: the id of the last message already loaded, to break timestamp ties."),
+    ] = None,
 ) -> list[MessageResponse]:
     """Get messages for a shared/public flow, scoped to the authenticated user.
 
     Uses a deterministic virtual flow_id derived from the user's ID and the
     original flow ID. Only messages stored under this virtual flow_id are returned.
     """
+    before = _history_cursor(offset=offset, before_timestamp=before_timestamp, before_id=before_id)
     try:
         virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         stmt = select(MessageTable)
@@ -647,20 +727,9 @@ async def get_shared_messages(
 
             decoded_session_id = unquote(session_id)
             stmt = stmt.where(MessageTable.session_id == decoded_session_id)
-        normalized_order = order.upper()
-        if normalized_order not in {"ASC", "DESC"}:
-            raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
-        if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
-            raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-        # Select the newest window by timestamp DESC, mirroring get_messages (issue #15023).
-        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
-        stmt = stmt.order_by(col(MessageTable.timestamp).desc(), col(MessageTable.id).desc())
-        if offset:
-            stmt = stmt.offset(offset)
-        stmt = stmt.limit(effective_limit)
-        window = list(await session.exec(stmt))
-        window = _sorted_for_display(window, order_by=order_by, descending=normalized_order == "DESC")
-        return [_message_history_response(message) for message in window]
+        return await _read_history_window(
+            session, stmt, order_by=order_by, order=order, limit=limit, offset=offset, before=before
+        )
     except HTTPException:
         raise
     except Exception as e:
