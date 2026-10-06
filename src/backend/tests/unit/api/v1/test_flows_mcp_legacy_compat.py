@@ -12,11 +12,13 @@ from uuid import UUID
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets
+from langflow.api.v2.mcp import get_server
+from langflow.services.auth.mcp_encryption import MCP_CONFIG_VALUE_MASK
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
 from sqlmodel import select
 
-SECRET = "sk-legacy-embedded-key"  # noqa: S105
+SECRET = "sk-legacy-embedded-key"  # noqa: S105  # pragma: allowlist secret
 
 
 def _legacy_flow_data(server_name: str) -> dict:
@@ -183,7 +185,9 @@ def test_should_tolerate_flow_data_without_nodes():
     assert extract_and_strip_mcp_secrets({"nodes": None}) == ([], {})
 
 
-async def test_should_carry_the_credential_when_a_legacy_flow_is_resaved(client: AsyncClient, logged_in_headers):
+async def test_should_carry_the_credential_when_a_legacy_flow_is_resaved(
+    client: AsyncClient, logged_in_headers, active_user
+):
     """The migration moment: an old flow re-saved with its graph gets scrubbed.
 
     That is the intended forward-only behavior, but it must not strand the deployment —
@@ -208,4 +212,9 @@ async def test_should_carry_the_credential_when_a_legacy_flow_is_resaved(client:
     assert reference in [item["name"] for item in variables.json()], "the reference must resolve to a real variable"
 
     server = await client.get(f"api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
-    assert server.json()["headers"]["x-api-key"] == SECRET, "the runtime must still find the credential"
+    assert server.status_code == status.HTTP_200_OK, server.text
+    assert SECRET not in server.text
+    assert server.json()["headers"]["x-api-key"] == MCP_CONFIG_VALUE_MASK
+    async with session_scope() as session:
+        runtime = await get_server(server_name, active_user, session, None, None)
+        assert runtime["headers"]["x-api-key"] == SECRET, "the runtime must still find the credential"
