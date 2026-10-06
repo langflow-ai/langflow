@@ -422,6 +422,7 @@
   "modal.io.builtWithLangflowTooltip": "Langflow로 제작",
   "success.sessionDeleted": "세션을 삭제했습니다.",
   "errors.deleteSession": "세션을 삭제하지 못했습니다.",
+  "errors.createSession": "세션을 만들지 못했습니다.",
   "home.dragFlowsOrComponents": "Flow나 Component 파일을 여기에 놓으세요",
   "home.dragFlowType": "{{flowType}} 파일을 여기에 놓으세요",
   "home.flowTypeNotSupported": "{{flowType}} 유형은 지원하지 않습니다",
