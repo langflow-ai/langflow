@@ -19,19 +19,20 @@ import sys
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 import psutil
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from lfx.base.knowledge_bases.backends import is_local_backend
 from lfx.log.logger import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr, ValidationError
 from sqlalchemy.engine import make_url
 from sqlmodel import select
 
 from langflow.api.utils.migration_jobs import active_jobs, live_listeners
 from langflow.api.utils.migration_pause import drained
+from langflow.api.utils.migration_probes import location, probe_database, probe_files, probe_vectors
 from langflow.cli.migration_preflight import check_target_version
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.file.model import File
@@ -73,6 +74,10 @@ _LATER_STEPS = (
 # A report line holds every check's problems, which can pass asyncio's 64 KiB default.
 _LINE_LIMIT = 16 * 1024 * 1024
 _ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+# ponytail: a destination's password and keys are held here, in this worker's memory, and nowhere else.
+# A restart or a second worker has none, and the page asks for them again. Move them to an encrypted
+# file or to Redis when a copy has to be able to start on any worker.
+_secrets: dict[str, Any] = {}
 
 
 class CheckRequest(BaseModel):
@@ -81,6 +86,27 @@ class CheckRequest(BaseModel):
 
 class FindingRequest(BaseModel):
     name: str
+
+
+class VectorsDestination(BaseModel):
+    # OpenSearch comes once its copy takes the password from the environment and not from the command line.
+    kind: Literal["pgvector"]
+
+
+class FilesDestination(BaseModel):
+    bucket: str
+    prefix: str
+    access_key_id: SecretStr
+    secret_access_key: SecretStr
+    endpoint_url: str | None = None
+    ca_bundle: str | None = None
+
+
+class DestinationsRequest(BaseModel):
+    # The address holds a password, so no error and no log line spells it out.
+    database_url: SecretStr | None = None
+    vectors: VectorsDestination | None = None
+    files: FilesDestination | None = None
 
 
 @router.get("")
@@ -211,6 +237,73 @@ async def resume_changes(admin: Superuser) -> dict[str, Any]:
     return await _state(record)
 
 
+@router.put("/destinations")
+async def save_destinations(http_request: Request, admin: Superuser) -> dict[str, Any]:
+    """Test where this instance's data will go, and save what was tested.
+
+    A part that is sent replaces what was saved for it, whether it passed or not. A part
+    that is left out stays as it was.
+    """
+    # Read and checked here, so that a body that fails is answered and never logged: it holds a password
+    # and keys. The answer names each field that failed and repeats no value.
+    try:
+        request = DestinationsRequest.model_validate_json(await http_request.body())
+    except ValidationError as exc:
+        errors = exc.errors(include_url=False, include_context=False, include_input=False)
+        detail = [{**error, "loc": ("body", *error["loc"])} for error in errors]
+        raise HTTPException(status_code=422, detail=detail) from None
+    instance = await _instance()
+    needed = _needed_destinations(instance)
+    sent = {"database": request.database_url, "vectors": request.vectors, "files": request.files}
+    if unneeded := sorted(part for part in sent if sent[part] and part not in needed):
+        raise HTTPException(status_code=422, detail={"code": "not_needed", "parts": unneeded})
+    parts: dict[str, dict[str, Any]] = {}
+    results: dict[str, dict[str, Any]] = {}
+    if request.database_url:
+        address = request.database_url.get_secret_value()
+        results["database"] = await asyncio.to_thread(probe_database, address, get_db_service().database_url)
+        parts["database"] = {"location": location(address)}
+        _hold("database_url", address, results["database"])
+    if request.vectors:
+        # Knowledge bases go into the destination database. An instance already on PostgreSQL keeps them in its own.
+        own = instance["database"]["type"] == "postgresql"
+        address = get_db_service().database_url if own else _secrets.get("database_url")
+        results["vectors"] = (
+            await asyncio.to_thread(probe_vectors, address)
+            if address
+            else {"ok": False, "code": "secrets_missing", "reason": "Enter the database address again."}
+        )
+        parts["vectors"] = {"kind": request.vectors.kind}
+    if files := request.files:
+        keys = {
+            "access_key_id": files.access_key_id.get_secret_value(),
+            "secret_access_key": files.secret_access_key.get_secret_value(),
+            "endpoint_url": files.endpoint_url or None,
+            "ca_bundle": files.ca_bundle or None,
+        }
+        results["files"] = await probe_files(bucket=files.bucket, prefix=files.prefix, **keys)
+        parts["files"] = {"bucket": files.bucket, "prefix": files.prefix, "endpoint_url": keys["endpoint_url"]}
+        _hold("files", keys, results["files"])
+    # A test can take seconds. The record is read only now, so that what other requests saved meanwhile is kept.
+    record = _read_record()
+    saved = record.setdefault("destinations", {})
+    # How each test ended is kept, and the driver's own words are not: they can name the database user.
+    outcomes = {part: {key: result[key] for key in result if key != "reason"} for part, result in results.items()}
+    saved.update(parts, results={**saved.get("results", {}), **outcomes}, saved_by=admin.username, saved_at=_now())
+    _write_record(record)
+    tested = ", ".join(f"{part} {outcome.get('code', 'ok')}" for part, outcome in outcomes.items())
+    await logger.ainfo(f"Migration: user_id={admin.id} tested the destination: {tested}")
+    return {**await _state(record), "results": results}
+
+
+def _hold(name: str, secret: Any, result: dict[str, Any]) -> None:
+    """Keep a destination's secret while its test passes, and forget it when it does not."""
+    if result["ok"]:
+        _secrets[name] = secret
+    else:
+        _secrets.pop(name, None)
+
+
 async def _stream_checks(step: dict[str, Any]) -> AsyncIterator[bytes]:
     env = _source_env()
     # The page never sends the target's key, and the run takes none from the server's own environment.
@@ -326,7 +419,7 @@ async def _instance() -> dict[str, Any]:
         database["path"] = url.database
     else:
         # Never the user or password.
-        database["location"] = f"{url.host}:{url.port}/{url.database}" if url.port else f"{url.host}/{url.database}"
+        database["location"] = location(get_db_service().database_url)
     async with session_scope() as session:
         knowledge_bases = (
             await session.exec(select(KnowledgeBaseRecord.backend_type, KnowledgeBaseRecord.backend_config))
@@ -359,6 +452,16 @@ async def _instance() -> dict[str, Any]:
     }
 
 
+def _needed_destinations(instance: dict[str, Any]) -> list[str]:
+    """The parts of a destination this instance has to name: one for each thing it keeps on its own disk."""
+    needs = {
+        "database": instance["database"]["type"] != "postgresql",
+        "vectors": instance["knowledge_bases"]["local"],
+        "files": instance["files"]["local"],
+    }
+    return [part for part, needed in needs.items() if needed]
+
+
 def _has_uploads(folder: Path, namespaces: set[str]) -> bool:
     """Whether CONFIG_DIR holds files relocate-files would copy.
 
@@ -385,17 +488,18 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
     postgresql = instance["database"]["type"] == "postgresql"
     local_kbs = instance["knowledge_bases"]["local"]
     files = instance["files"]
+    needed = _needed_destinations(instance)
     # Skipped always wins, even before a step ships.
     skipped = {
-        "connect_target": "nothing_to_connect" if postgresql and files["storage"] == "s3" and not local_kbs else None,
+        "connect_target": None if needed else "nothing_to_connect",
         "copy_database": "already_postgresql" if postgresql else None,
         "copy_knowledge_bases": None if local_kbs else "no_local_knowledge_bases",
         "copy_files": "files_in_s3" if files["storage"] == "s3" else None if files["local"] else "no_local_files",
     }
     # What each later step says for itself. A step with no entry is not built yet.
     own = {
-        # Connecting and the key get their routes next. Until then only the record can say they are done.
-        "connect_target": ("done", None) if record.get("destinations") else ("current", "not_available"),
+        "connect_target": _connect_step(record, needed),
+        # The key gets its route next. Until then only the record can say that step is done.
         "secret_key": ("done", None) if record.get("secret_key") else ("current", "not_available"),
         "pause": _pause_step(record, blocking),
     }
@@ -431,6 +535,15 @@ def _lift(pause: dict[str, Any]) -> None:
     if record.get("pause") == pause:
         del record["pause"]
         _write_record(record)
+
+
+def _connect_step(record: dict[str, Any], needed: list[str]) -> tuple[str, str | None]:
+    """Where connecting stands. It is done once every part this instance needs was saved and passed its test."""
+    saved = record.get("destinations") or {}
+    if any(part not in saved for part in needed):
+        return "current", None
+    failed = [saved["results"][part]["code"] for part in needed if not saved["results"][part]["ok"]]
+    return ("blocked", failed[0]) if failed else ("done", None)
 
 
 def _pause_step(record: dict[str, Any], blocking: list[str]) -> tuple[str, str | None]:
