@@ -225,10 +225,10 @@ class ValidatedTool(ALTKBaseTool):
             try:
                 schema = self.wrapped_tool.args_schema
                 field_source = None
-                if hasattr(schema, "__fields__"):
-                    field_source = schema.__fields__
-                elif hasattr(schema, "model_fields"):
+                if hasattr(schema, "model_fields"):
                     field_source = schema.model_fields
+                elif hasattr(schema, "__fields__"):
+                    field_source = schema.__fields__
                 if field_source:
                     field_names = list(field_source.keys())
                     for i, arg in enumerate(args):
