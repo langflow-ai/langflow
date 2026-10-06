@@ -9,6 +9,7 @@ from lfx.custom.validate import (
     create_class,
     create_function,
     execute_function,
+    extract_class_name,
     prepare_global_scope,
 )
 
@@ -520,3 +521,35 @@ class Comp(Component):
         """)
         result = create_class(code, "Comp")
         assert result.__name__ == "Comp"
+
+
+@pytest.mark.parametrize("base", ["Component", "LCBase"])
+def test_extract_class_name_rejects_multiple_component_subclasses(base):
+    code = dedent(
+        f"""
+        class FirstComponent({base}):
+            pass
+
+        class SecondComponent({base}):
+            pass
+        """
+    )
+
+    with pytest.raises(
+        ValueError, match="Multiple Component subclasses found in the code string: FirstComponent, SecondComponent"
+    ):
+        extract_class_name(code)
+
+
+def test_extract_class_name_allows_helpers_with_one_component_subclass():
+    code = dedent(
+        """
+        class Helper:
+            pass
+
+        class OnlyComponent(Component):
+            pass
+        """
+    )
+
+    assert extract_class_name(code) == "OnlyComponent"
