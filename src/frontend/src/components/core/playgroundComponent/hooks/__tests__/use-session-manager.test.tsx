@@ -102,6 +102,109 @@ beforeEach(() => {
 });
 
 describe("useSessionManager.createSession", () => {
+  it.each(["available", "taken", "error"] as const)(
+    "discards an unmounted playground's %s lookup after reopening the same flow",
+    async (outcome) => {
+      let answerOldCheck: (response: { data: { id: string }[] }) => void =
+        () => {};
+      let rejectOldCheck: (error: Error) => void = () => {};
+      let checks = 0;
+      mockGet.mockImplementation((url: string) => {
+        if (url.endsWith("/sessions")) {
+          return Promise.resolve({ data: recentSessions(100) });
+        }
+        if (checks++ === 0) {
+          return new Promise((resolve, reject) => {
+            answerOldCheck = resolve;
+            rejectOldCheck = reject;
+          });
+        }
+        return Promise.resolve({ data: [] });
+      });
+
+      const first = await renderManager();
+      let oldCheck = Promise.resolve();
+      act(() => {
+        oldCheck = first.result.current.createSession();
+      });
+      first.unmount();
+
+      const reopened = await renderManager();
+      await act(() => reopened.result.current.createSession());
+      await act(() => reopened.result.current.createSession());
+      expect(activeSessionId()).toBe("New Session 1");
+
+      await act(async () => {
+        if (outcome === "error") {
+          rejectOldCheck(new Error("network down"));
+        } else {
+          answerOldCheck({ data: outcome === "taken" ? [{ id: "m" }] : [] });
+        }
+        await oldCheck;
+      });
+
+      expect(activeSessionId()).toBe("New Session 1");
+      expect(existenceChecks()).toEqual([
+        "New Session 0",
+        "New Session 0",
+        "New Session 1",
+      ]);
+      expect(mockSetErrorData).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps the new lookup guarded after switching away and back to a flow", async () => {
+    const answers: ((response: { data: [] }) => void)[] = [];
+    mockGet.mockImplementation(
+      (url: string, { params }: { params: Record<string, string> }) => {
+        if (url.endsWith("/sessions")) {
+          return Promise.resolve({
+            data:
+              params.flow_id === FLOW_ID
+                ? recentSessions(100)
+                : ["other-flow-session"],
+          });
+        }
+        return new Promise((resolve) => answers.push(resolve));
+      },
+    );
+    const { result, rerender } = await renderManager();
+    let oldCheck = Promise.resolve();
+    act(() => {
+      oldCheck = result.current.createSession();
+    });
+
+    rerender({ flowId: "flow-b" });
+    await waitFor(() =>
+      expect(result.current.fetchedSessions).toEqual(["other-flow-session"]),
+    );
+    rerender({ flowId: FLOW_ID });
+    await waitFor(() =>
+      expect(result.current.fetchedSessions).toEqual(recentSessions(100)),
+    );
+
+    let newCheck = Promise.resolve();
+    act(() => {
+      newCheck = result.current.createSession();
+    });
+    expect(answers).toHaveLength(2);
+
+    await act(async () => {
+      answers[0]({ data: [] });
+      await oldCheck;
+    });
+    expect(activeSessionId()).toBe(FLOW_ID);
+    await act(() => result.current.createSession());
+    expect(answers).toHaveLength(2);
+
+    await act(async () => {
+      answers[1]({ data: [] });
+      await newCheck;
+    });
+    expect(activeSessionId()).toBe("New Session 0");
+    expect(mockSetErrorData).not.toHaveBeenCalled();
+  });
+
   it("names the session synchronously, without a request, when every session is loaded", async () => {
     serve(["New Session 0", "other"]);
     const { result } = await renderManager();

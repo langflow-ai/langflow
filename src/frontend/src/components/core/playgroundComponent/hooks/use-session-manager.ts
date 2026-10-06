@@ -69,9 +69,9 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     sessionsQuery.isSuccess &&
     !sessionsQuery.isPlaceholderData &&
     fetchedSessions.length < SESSION_LIST_LIMIT;
-  // The flow whose new-session name is being checked, so a check for one flow
-  // never blocks or leaks into another.
-  const creatingSessionFor = useRef<string | null>(null);
+  // Each attempt has its own identity so a stale lookup cannot complete or
+  // release the guard for a newer attempt, even for the same flow.
+  const creatingSessionFor = useRef<{ flowId: string } | null>(null);
 
   const { mutate: deleteSessionApi } = useDeleteSession({});
   const { mutate: bulkDeleteSessionsApi } = useBulkDeleteSessions();
@@ -86,6 +86,9 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     if (flowId) {
       initialize(flowId);
     }
+    return () => {
+      creatingSessionFor.current = null;
+    };
   }, [flowId, initialize]);
 
   // Sync server sessions into store (include flowId in deps to avoid stale
@@ -104,9 +107,7 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
   // so candidates are checked on the server first: N, N+1, N+2, N+4, N+8, ...
   // and the first free one wins (e.g. 0..29 taken: 0, 1, 2, 4, 8, 16, 32).
   const createSession = useCallback(async () => {
-    if (!flowId || creatingSessionFor.current === flowId) return;
-    const isCurrentFlow = () =>
-      useSessionManagerStore.getState().flowId === flowId;
+    if (!flowId || creatingSessionFor.current?.flowId === flowId) return;
     const startSession = (sessionId: string) => {
       addSession({ id: sessionId, isLocal: true });
       setActiveSessionId(sessionId);
@@ -118,7 +119,11 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
       return;
     }
 
-    creatingSessionFor.current = flowId;
+    const attempt = { flowId };
+    creatingSessionFor.current = attempt;
+    const isCurrentAttempt = () =>
+      creatingSessionFor.current === attempt &&
+      useSessionManagerStore.getState().flowId === flowId;
     try {
       for (let check = 0; check < MAX_SESSION_NAME_CHECKS; check++) {
         const step = check === 0 ? 0 : 2 ** (check - 1);
@@ -127,16 +132,18 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
           session_id: candidate,
           limit: 1,
         });
+        if (!isCurrentAttempt()) return;
         if (data.length > 0) continue;
-        // The user may have switched flows while the check was in flight.
-        if (isCurrentFlow()) startSession(candidate);
+        startSession(candidate);
         return;
       }
-      if (isCurrentFlow()) setErrorData({ title: t("errors.createSession") });
+      if (isCurrentAttempt())
+        setErrorData({ title: t("errors.createSession") });
     } catch {
-      if (isCurrentFlow()) setErrorData({ title: t("errors.createSession") });
+      if (isCurrentAttempt())
+        setErrorData({ title: t("errors.createSession") });
     } finally {
-      if (creatingSessionFor.current === flowId) {
+      if (creatingSessionFor.current === attempt) {
         creatingSessionFor.current = null;
       }
     }
