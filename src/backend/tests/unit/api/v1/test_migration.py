@@ -506,6 +506,49 @@ async def test_an_acceptance_lapses_when_the_finding_changes(client, logged_in_h
     assert "source: files" in (await _migration(client, headers))["blocking_findings"]
 
 
+async def test_an_acceptance_lapses_when_a_different_file_is_missing_with_the_same_count(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers = logged_in_headers_super_user
+    await _add_file_without_bytes(active_super_user.id, name="first")
+    await _add_file_without_bytes(active_super_user.id, name="second")
+    folder = config_dir / str(active_super_user.id)
+    folder.mkdir()
+    (folder / "second.txt").write_text("present at the first check")
+    *_, original_report = await _run_checks(client, headers)
+    accepted = await client.post("api/v1/migration/accepted-findings", json={"name": "source: files"}, headers=headers)
+    assert accepted.status_code == 200
+    assert "source: files" not in accepted.json()["blocking_findings"]
+    original = next(check for check in original_report["checks"] if check["name"] == "source: files")
+
+    (folder / "first.txt").write_text("recovered")
+    (folder / "second.txt").unlink()
+    *_, report = await _run_checks(client, headers)
+    changed = next(check for check in report["checks"] if check["name"] == "source: files")
+
+    assert changed["summary"] == original["summary"]
+    assert changed["problems"] != original["problems"]
+    assert "source: files" in (await _migration(client, headers))["blocking_findings"]
+
+
+async def test_an_acceptance_without_recorded_problems_requires_accepting_again(
+    client, logged_in_headers_super_user, config_dir
+):
+    check = {"name": "source: files", "status": "fail", "summary": "one missing file", "problems": ["file A missing"]}
+    _checked(config_dir, [check])
+    path = config_dir / "migrations" / "migration.json"
+    record = json.loads(path.read_text())
+    record["accepted_findings"] = [{"name": check["name"], "summary": check["summary"], "accepted_by": "alice"}]
+    _write_record(config_dir, record)
+
+    assert "source: files" in (await _migration(client, logged_in_headers_super_user))["blocking_findings"]
+    accepted = await client.post(
+        "api/v1/migration/accepted-findings", json={"name": "source: files"}, headers=logged_in_headers_super_user
+    )
+    assert accepted.status_code == 200
+    assert "source: files" not in accepted.json()["blocking_findings"]
+
+
 async def test_a_check_that_makes_the_move_unsafe_cannot_be_accepted(
     client, logged_in_headers_super_user, active_super_user
 ):
