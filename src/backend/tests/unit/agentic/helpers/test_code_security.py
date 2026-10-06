@@ -82,6 +82,67 @@ result = math.sqrt(16)
         assert result.is_safe is True
 
 
+class TestScanCodeSecurityModuleReexports:
+    """Modules must not expose blocked capabilities through safe package imports."""
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import pydoc",
+            "import pydoc\npydoc.pipepager(text, command)",
+            "import pydoc as documentation\ndocumentation.importfile(source_path)",
+            "from pydoc import importfile as load_module\nload_module(source_path)",
+            "from pydoc import tempfile\nvalue = tempfile.NamedTemporaryFile()",
+            "from pydoc import *\nimportfile(source_path)",
+        ],
+    )
+    def test_rejects_pydoc_imports(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("pydoc" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy.ctypeslib",
+            "import numpy.ctypeslib as npct\nnpct.ctypes.CDLL(library_path)",
+            "from numpy import ctypeslib as ffi\nffi.ctypes.CDLL(library_path)",
+            "from numpy.ctypeslib import ctypes as ffi\nffi.CDLL(library_path)",
+            "from numpy.ctypeslib import load_library\nload_library(library_name, library_path)",
+            "from numpy.ctypeslib import *\nload_library(library_name, library_path)",
+            "import numpy\nnumpy.ctypeslib.ctypes.CDLL(library_path)",
+            "import numpy as np\nnp.ctypeslib.ctypes.CDLL(library_path)",
+            "import numpy as np\nffi = np.ctypeslib\nffi.ctypes.CDLL(library_path)",
+            "import numpy as np\ngetattr(np, 'ctypeslib').ctypes.CDLL(library_path)",
+            "import numpy as np\ngetattr(np, 'ctypes' + 'lib').ctypes.CDLL(library_path)",
+            "import numpy as np\nvars(np)['ctypeslib'].ctypes.CDLL(library_path)",
+            "import numpy as np\nvars(np).get('ctypeslib').ctypes.CDLL(library_path)",
+            "from numpy import *\nctypeslib.ctypes.CDLL(library_path)",
+        ],
+    )
+    def test_rejects_numpy_ctypeslib_access(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("numpy.ctypeslib" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy as np\nvalue = np.array([1, 2, 3]).mean()",
+            "from numpy import array\nvalue = array([1, 2, 3]).sum()",
+            "import numpy.linalg as linalg\nvalue = linalg.norm([1, 2, 3])",
+            "import numpy as np\nvalue = getattr(np, 'array')([1, 2, 3])",
+            "import numpy as np\nvalue = vars(np)['array']([1, 2, 3])",
+            "from numpy import *\nvalue = array([1, 2, 3])",
+            "import numpy as np\nvalue = np.load(payload, allow_pickle=False)",
+        ],
+    )
+    def test_preserves_safe_numpy_operations(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is True
+        assert result.violations == ()
+
+
 class TestScanCodeSecurityDangerousCalls:
     """Tests that dangerous function calls are detected."""
 
