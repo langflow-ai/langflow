@@ -87,19 +87,29 @@ async def real_services_job_service(real_services_db_url: str) -> AsyncGenerator
     manager = get_service_manager()
     settings_service = get_settings_service()
     original_url = settings_service.settings.database_url
+    original_env_url = os.environ.get("LANGFLOW_DATABASE_URL")
     original_db_service = manager.services.pop(ServiceType.DATABASE_SERVICE, None)
-
-    settings_service.settings.database_url = real_services_db_url
-    db_service = DatabaseServiceFactory().create(settings_service)
-    manager.services[ServiceType.DATABASE_SERVICE] = db_service
+    db_service = None
 
     try:
+        # Assignment validation reads the environment, so assigning only the
+        # setting silently binds the default database instead of this test's DB.
+        os.environ["LANGFLOW_DATABASE_URL"] = real_services_db_url
+        settings_service.settings.database_url = real_services_db_url
+        assert settings_service.settings.database_url == real_services_db_url
+        db_service = DatabaseServiceFactory().create(settings_service)
+        manager.services[ServiceType.DATABASE_SERVICE] = db_service
         await db_service.run_migrations()
         yield JobService()
     finally:
         manager.services.pop(ServiceType.DATABASE_SERVICE, None)
-        with contextlib.suppress(Exception):
-            await db_service.teardown()
+        if db_service is not None:
+            with contextlib.suppress(Exception):
+                await db_service.teardown()
+        if original_env_url is None:
+            os.environ.pop("LANGFLOW_DATABASE_URL", None)
+        else:
+            os.environ["LANGFLOW_DATABASE_URL"] = original_env_url
         settings_service.settings.database_url = original_url
         if original_db_service is not None:
             manager.services[ServiceType.DATABASE_SERVICE] = original_db_service

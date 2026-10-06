@@ -29,6 +29,7 @@ from lfx.template.utils import update_frontend_node_with_template_values
 from lfx.type_extraction import post_process_type
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.file_path_security import validate_storage_key
+from lfx.utils.flow_validation import is_protected_tweak_field
 
 if TYPE_CHECKING:
     from langchain_core.callbacks.base import BaseCallbackHandler
@@ -493,8 +494,11 @@ class CustomComponent(BaseComponent):
             if context and "request_variables" in context:
                 request_variables = context["request_variables"]
                 if name in request_variables:
-                    logger.debug(f"Found context override for variable '{name}'")
-                    return request_variables[name]
+                    if is_protected_tweak_field(type(self).__name__, field):
+                        logger.warning("Ignoring request variable override for protected field {!r}.", field)
+                    else:
+                        logger.debug(f"Found context override for variable '{name}'")
+                        return request_variables[name]
 
         # Only check user_id when we need to access the database
         if hasattr(self, "_user_id") and not self.user_id:

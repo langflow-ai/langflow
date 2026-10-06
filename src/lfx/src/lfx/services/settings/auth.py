@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
-from passlib.context import CryptContext
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -15,6 +14,7 @@ from lfx.services.settings.constants import (
     MINIMUM_SECRET_KEY_LENGTH,
     SHORT_SECRET_KEY_WARNING,
 )
+from lfx.services.settings.password_hashing import PasswordContext
 from lfx.services.settings.utils import (
     derive_public_key_from_private,
     generate_rsa_key_pair,
@@ -339,7 +339,7 @@ class AuthSettings(BaseSettings):
         ),
     )
 
-    pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    pwd_context: PasswordContext = Field(default_factory=PasswordContext)
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 

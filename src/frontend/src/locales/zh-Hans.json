@@ -810,6 +810,7 @@
   "files.emptyDescription": "上传文件或从您常用的云端导入。",
   "files.errorDeleting": "删除文件时出错",
   "files.errorDeletingDetail": "删除文件时发生错误",
+  "files.errorRenaming": "重命名文件时出错",
   "files.errorUploading": "上传文件时出错",
   "files.errorUploadingDetail": "上传文件时发生错误",
   "files.filesUploadedSuccessfully": "文件已上传成功",
