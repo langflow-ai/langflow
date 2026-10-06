@@ -105,6 +105,13 @@ def _header_arg_positions(args: list[str] | None) -> dict[str, list[int]]:
     return positions
 
 
+def _argv_secret_positions(args: list[str] | None) -> list[int]:
+    """Return header-value indices for secret-key rotation and integrity checks."""
+    if not isinstance(args, list):
+        return []
+    return sorted(index for positions in _header_arg_positions(args).values() for index in positions)
+
+
 def encrypt_mcp_config(config: dict[str, Any] | None) -> dict[str, Any] | None:
     """Encrypt secret-bearing values inside an ``mcpServers`` entry for storage.
 
