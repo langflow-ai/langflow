@@ -20773,7 +20773,7 @@
           "icon": "bot",
           "legacy": false,
           "metadata": {
-            "code_hash": "f3adf53067b3",
+            "code_hash": "86c517b74235",
             "dependencies": {
               "dependencies": [
                 {
@@ -32361,6 +32361,6 @@
     "num_components": 130,
     "num_modules": 17
   },
-  "sha256": "f9974335e5006d3c5b289b0a109e2a1ca65ba91ffa91094321697dc095db4402",
+  "sha256": "97765364e9d51efbf7aa8ca06e01997cbef638a71b8cc9ef26aa526301759a3d",
   "version": "1.13.0"
 }
