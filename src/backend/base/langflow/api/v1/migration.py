@@ -30,6 +30,7 @@ from pydantic import BaseModel
 from sqlalchemy.engine import make_url
 from sqlmodel import select
 
+from langflow.api.utils.migration_jobs import active_jobs, live_listeners
 from langflow.cli.migration_preflight import check_target_version
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.file.model import File
@@ -54,7 +55,7 @@ ACCEPTABLE_FINDINGS = frozenset(
 _KEY_CHECK = "target key"
 # How much of a failed command's stderr the record keeps.
 _STDERR_LINES = 40
-# The steps after the check, in page order. None of them ships yet.
+# The steps after the check, in page order.
 _LATER_STEPS = (
     "connect_target",
     "secret_key",
@@ -156,6 +157,42 @@ async def withdraw_finding(name: str, admin: Superuser) -> dict[str, Any]:
     record["accepted_findings"] = [finding for finding in record["accepted_findings"] if finding["name"] != name]
     _write_record(record)
     await logger.ainfo(f"Migration: user_id={admin.id} withdrew the acceptance of '{name}'")
+    return await _state(record)
+
+
+@router.post("/pause")
+async def pause_changes(admin: Superuser) -> dict[str, Any]:
+    """Stop changes to this instance, so that what is copied next is all of it.
+
+    Nothing is cancelled here. The admin ends what is still writing, then asks again.
+    """
+    record = _read_record()
+    state = await _state(record)
+    if record.get("pause"):
+        # The moment the re-check and the copies are measured against stays the first one.
+        return state
+    _require_unlocked(state, "pause")
+    async with session_scope() as session:
+        jobs, listeners = await active_jobs(session, admin.id), await live_listeners(session)
+    if jobs or listeners:
+        raise HTTPException(status_code=409, detail={"code": "jobs_active", "jobs": jobs, "listeners": listeners})
+    # ponytail: a job that starts between the look above and the write below is not seen. One that is
+    # still queued then waits out the pause. Take the look inside the executor if one ever runs through.
+    # Read again, so that what another request saved while this one looked is kept.
+    record = _read_record()
+    record["pause"] = {"frozen_at": _now(), "frozen_by": admin.username}
+    _write_record(record)
+    await logger.ainfo(f"Migration: user_id={admin.id} paused changes to this instance")
+    return await _state(record)
+
+
+@router.delete("/pause")
+async def resume_changes(admin: Superuser) -> dict[str, Any]:
+    """End the pause. What was checked or copied during it no longer counts, because later changes are in none of it."""
+    record = _read_record()
+    if record.pop("pause", None):
+        _write_record(record)
+        await logger.ainfo(f"Migration: user_id={admin.id} resumed changes to this instance")
     return await _state(record)
 
 
@@ -340,18 +377,50 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
         "copy_knowledge_bases": None if local_kbs else "no_local_knowledge_bases",
         "copy_files": "files_in_s3" if files["storage"] == "s3" else None if files["local"] else "no_local_files",
     }
+    # What each later step says for itself. A step with no entry is not built yet.
+    own = {
+        # Connecting and the key get their routes next. Until then only the record can say they are done.
+        "connect_target": ("done", None) if record.get("destinations") else ("current", "not_available"),
+        "secret_key": ("done", None) if record.get("secret_key") else ("current", "not_available"),
+        "pause": _pause_step(record, blocking),
+    }
     steps = [first]
-    # The first step neither done nor skipped is the one to do now, and every later one waits for it.
+    # The first step neither done nor skipped is the one to do now. A later step that has not started
+    # waits for it, and one that has started keeps saying where it stands.
     frontier_open = first["state"] == "done"
     for step in _LATER_STEPS:
+        state, reason = own.get(step, ("current", "not_available"))
         if skipped.get(step):
-            steps.append({"id": step, "state": "skipped", "reason": skipped[step]})
-        elif frontier_open:
-            steps.append({"id": step, "state": "current", "reason": "not_available"})
-            frontier_open = False
-        else:
-            steps.append({"id": step, "state": "locked", "reason": "earlier_step"})
+            state, reason = "skipped", skipped[step]
+        elif state == "current" and not frontier_open:
+            state, reason = "locked", "earlier_step"
+        steps.append({"id": step, "state": state, "reason": reason})
+        frontier_open = frontier_open and state in {"done", "skipped"}
     return steps
+
+
+def _pause_step(record: dict[str, Any], blocking: list[str]) -> tuple[str, str | None]:
+    """Where the pause stands. It is done once a check that started during it has passed."""
+    if not record.get("pause"):
+        return "current", None
+    check = record["steps"].get("check_source") or {}
+    # The page starts that check. One from before the pause says nothing about what the instance held when it stopped.
+    if check.get("status") != "done" or not _during_pause(record, check["started_at"]):
+        return "blocked", "recheck_pending"
+    return ("blocked", "recheck_failed") if blocking else ("done", None)
+
+
+def _during_pause(record: dict[str, Any], moment: str | None) -> bool:
+    """Whether this moment falls in the pause that is on now. What an earlier pause saw no longer counts."""
+    pause = record.get("pause")
+    return bool(pause and moment) and datetime.fromisoformat(moment) > datetime.fromisoformat(pause["frozen_at"])
+
+
+def _require_unlocked(state: dict[str, Any], step_id: str) -> None:
+    """Refuse to act on a step that still waits for an earlier one."""
+    step = next(step for step in state["steps"] if step["id"] == step_id)
+    if step["state"] == "locked":
+        raise HTTPException(status_code=409, detail={"code": "locked", "reason": step["reason"]})
 
 
 def _failing_checks(record: dict[str, Any]) -> dict[str, dict[str, Any]]:
