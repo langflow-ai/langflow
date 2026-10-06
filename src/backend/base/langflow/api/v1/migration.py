@@ -500,7 +500,9 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
         # convert-sqlite-to-postgres has no way to try a copy without making it.
         raise HTTPException(status_code=422, detail={"code": "no_dry_run"})
     record = _read_record()
-    _require_unlocked(await _state(record), step_id)
+    state = await _state(record)
+    _require_unlocked(state, step_id)
+    _require_reached(state, step_id)
     let_in = _lets_in(record, step_id)
     held = _secrets.get("for") or {}
     # The knowledge base store has no secret of its own: it is the destination database.
@@ -1001,6 +1003,16 @@ def _require_unlocked(state: dict[str, Any], step_id: str) -> None:
     step = next(step for step in state["steps"] if step["id"] == step_id)
     if step["state"] in {"locked", "skipped"}:
         raise HTTPException(status_code=409, detail={"code": step["state"], "reason": step["reason"]})
+
+
+def _require_reached(state: dict[str, Any], step_id: str) -> None:
+    """Refuse to run a step while one before it is neither done nor skipped, whatever the step says of itself.
+
+    A step that has run keeps saying where it stands when an earlier one opens again.
+    """
+    ids = [step["id"] for step in state["steps"]]
+    if any(step["state"] not in {"done", "skipped"} for step in state["steps"][: ids.index(step_id)]):
+        raise HTTPException(status_code=409, detail={"code": "locked", "reason": "earlier_step"})
 
 
 def _failing_checks(record: dict[str, Any]) -> dict[str, dict[str, Any]]:
