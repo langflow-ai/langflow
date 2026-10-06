@@ -7,6 +7,7 @@ import type {
   MigrationState,
   MigrationStepId,
 } from "@/controllers/API/queries/migration";
+import { formatFileSize } from "@/utils/stringManipulation";
 
 /** The steps in page order, by part. Each slug names its copy under `settings.migration.step.*`. */
 export const PARTS: {
@@ -169,9 +170,31 @@ function shellArgument(value: string) {
     : `'${value.replaceAll("'", "'\\''")}'`;
 }
 
-/** The copy steps this page can run. Each slug names its copy under `settings.migration.*`. */
-export const COPIES: Partial<Record<CopyStepId, { slug: string }>> = {
-  copy_database: { slug: "copyDb" },
+/**
+ * The copy steps, with the keys of their own lines under `settings.migration.*`: the progress line is
+ * `<slug>.progress`. `testRun` is set where the server can say what a copy would do without making it.
+ */
+export const COPIES: Record<
+  CopyStepId,
+  { slug: string; body: string; stopBody: string; testRun?: boolean }
+> = {
+  copy_database: {
+    slug: "copyDb",
+    body: "copyDb.body",
+    stopBody: "copyDb.stopBody",
+  },
+  copy_knowledge_bases: {
+    slug: "kb",
+    body: "copy.body",
+    stopBody: "copy.stopBody",
+    testRun: true,
+  },
+  copy_files: {
+    slug: "files",
+    body: "copy.body",
+    stopBody: "copy.stopBody",
+    testRun: true,
+  },
 };
 
 export const isCopy = (id: MigrationStepId): id is CopyStepId => id in COPIES;
@@ -193,7 +216,44 @@ export const COPY_CODES: Record<string, string> = {
   count_mismatch: "error.dbCountMismatch",
   orphans_no_rule: "error.orphansNoRule",
   value_rejected: "error.valueRejected",
+  bucket_error: "error.bucket",
 };
+
+/**
+ * The page's line, under `settings.migration.*`, for each reason one knowledge base or one file is not copied.
+ * Any other code reads as not copied, with the command's own words under it.
+ */
+export const ITEM_CODES: Record<string, string> = {
+  kb_ingesting: "error.kbIngesting",
+  kb_short: "error.kbShort",
+  kb_target_more: "error.kbTargetMore",
+  // Each of these three is over once the copy is made again.
+  kb_changed: "error.kbChanged",
+  kb_routing_changed: "error.kbChanged",
+  kb_deleted: "error.kbChanged",
+  kb_backend_missing: "error.kbBackend",
+  kb_metric_change: "kb.ranking.body",
+  kb_upgrade_pending: "error.kbUpgrade",
+  file_conflict: "files.conflict",
+  bad_name: "files.badName",
+  no_source_bytes: "files.noFile",
+  attachment_unmatched: "files.noFile",
+  bucket_error: "error.bucket",
+};
+
+/**
+ * What a copy of knowledge bases or of files counted, whichever it was and whether it was a test run:
+ * copied (or to copy), there already, and not copied.
+ */
+export function copyCounts(counts: Record<string, number> = {}) {
+  const sum = (...statuses: string[]) =>
+    statuses.reduce((total, status) => total + (counts[status] ?? 0), 0);
+  return {
+    copied: sum("relocated", "copied", "would_relocate", "would_copy"),
+    skipped: sum("skipped"),
+    failed: sum("failed"),
+  };
+}
 
 /** How far a run has got: the key of its line under `settings.migration.*`, and the counts that fill it. */
 export function copyProgress(
@@ -206,7 +266,11 @@ export function copyProgress(
   const count = (value?: number | null) =>
     (value ?? 0).toLocaleString(language);
   return [
-    `${COPIES[step]?.slug}.progress`,
-    { done: count(event.done), total: count(event.total) },
+    `${COPIES[step].slug}.progress`,
+    {
+      done: count(event.done),
+      total: count(event.total),
+      ...(event.bytes !== undefined && { bytes: formatFileSize(event.bytes) }),
+    },
   ];
 }

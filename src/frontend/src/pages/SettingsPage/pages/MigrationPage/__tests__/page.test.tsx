@@ -100,10 +100,13 @@ describe("the steps after the check", () => {
 
     expect(row("connect_target").getByText("Coming soon")).toBeInTheDocument();
     expect(row("connect_target").queryByRole("button")).not.toBeInTheDocument();
-    // A step the admin has not reached says nothing of the kind.
+    // A step the admin has not reached says nothing of the kind. It waits for the steps above it.
     expect(
       row("secret_key").queryByText("Coming soon"),
     ).not.toBeInTheDocument();
+    expect(
+      row("secret_key").getByText("Finish the steps above first."),
+    ).toBeInTheDocument();
   });
 
   it("says the same of a step this page has no form for yet, whatever the server can do", () => {
@@ -454,5 +457,62 @@ describe("the steps after the check", () => {
     );
     expect(marker()).not.toHaveClass("bg-primary");
     expect(row("copy_database").getByText("Starting…")).toBeVisible();
+  });
+
+  it("sums up the two store copies once they are done", () => {
+    const stores = (counts: Record<string, number>) => ({
+      ...run("done"),
+      report: { ok: true, counts },
+    });
+    open(
+      state(
+        {
+          ...copied,
+          copy_database: ["done"],
+          copy_knowledge_bases: ["done"],
+          copy_files: ["done"],
+        },
+        {
+          steps: {
+            copy_database: run("done"),
+            // One was left behind on the admin's word, so the step is done with one not copied.
+            copy_knowledge_bases: stores({
+              relocated: 3,
+              skipped: 1,
+              failed: 1,
+            }),
+            copy_files: stores({ copied: 1200, skipped: 34, repointed: 9 }),
+          },
+        },
+      ),
+    );
+
+    expect(
+      row("copy_knowledge_bases").getByText("Copied: 4 of 5"),
+    ).toBeInTheDocument();
+    expect(
+      row("copy_files").getByText("Copied: 1,234 of 1,234"),
+    ).toBeInTheDocument();
+  });
+
+  it("says a step is not available yet when the server holds it back after the copies", () => {
+    open(
+      state({
+        ...copied,
+        copy_database: ["skipped", "already_postgresql"],
+        copy_knowledge_bases: ["skipped", "no_local_knowledge_bases"],
+        copy_files: ["skipped", "files_in_s3"],
+        start_target: ["locked", "not_available"],
+        check_target: ["locked", "not_available"],
+      }),
+    );
+
+    expect(row("start_target").getByText("Coming soon")).toBeInTheDocument();
+    expect(row("check_target").getByText("Coming soon")).toBeInTheDocument();
+    expect(row("start_target").queryByRole("button")).not.toBeInTheDocument();
+    // Nothing above them is left to finish, so a screen reader is not told to finish it.
+    expect(
+      row("start_target").queryByText("Finish the steps above first."),
+    ).not.toBeInTheDocument();
   });
 });

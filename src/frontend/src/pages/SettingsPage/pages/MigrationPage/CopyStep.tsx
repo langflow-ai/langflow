@@ -15,7 +15,14 @@ import {
 } from "@/controllers/API/queries/migration";
 import ConfirmationModal from "@/modals/confirmationModal";
 import { Details } from "./CheckStep";
-import { COPIES, COPY_CODES, copyProgress, STEP_SLUGS } from "./catalog";
+import {
+  COPIES,
+  COPY_CODES,
+  copyCounts,
+  copyProgress,
+  ITEM_CODES,
+  STEP_SLUGS,
+} from "./catalog";
 
 // How long the page waits before it asks again for a run whose connection dropped.
 const RETRY_MS = 2000;
@@ -36,7 +43,7 @@ export function CopyStep({
   const start = useStartCopyMutation(step);
   const stop = useStopCopyMutation(step);
   const [confirming, setConfirming] = useState(false);
-  const slug = COPIES[step]?.slug;
+  const { body, stopBody, testRun } = COPIES[step];
   // The step a refusal sends the admin back to.
   const destinations = t(
     `settings.migration.step.${STEP_SLUGS.connect_target}.title`,
@@ -84,7 +91,7 @@ export function CopyStep({
           size="x-small"
         >
           <ConfirmationModal.Content>
-            {t(`settings.migration.${slug}.stopBody`)}
+            {t(`settings.migration.${stopBody}`)}
           </ConfirmationModal.Content>
         </ConfirmationModal>
       </div>
@@ -95,19 +102,86 @@ export function CopyStep({
   const said =
     run?.error?.message ??
     run?.report?.problems?.map((problem) => problem.message).join("\n");
-  // A copy that ended in a step that waits again no longer counts, so it is history.
-  const stale = state.state === "current" && Boolean(run);
+  // Why the last copy does not count. A test run blocks nothing, so one that could not finish says why here.
+  const code =
+    state.state === "blocked"
+      ? state.reason
+      : run?.dry_run
+        ? run.error?.code
+        : undefined;
+  // A copy that ended in a step that waits again no longer counts, so it is history. A test run never counted.
+  const stale = state.state === "current" && Boolean(run) && !run?.dry_run;
+  // What the last run found. A copy that is history has no result to show.
+  const report = stale ? undefined : run?.report;
+  const items = report?.attention ?? [];
+  const counted = copyCounts(report?.counts);
+  const count = (value: number) => value.toLocaleString(i18n.language);
   return (
     <div className="flex flex-col items-start gap-3">
       <p className="text-sm text-muted-foreground">
-        {t(`settings.migration.${slug}.body`)}
+        {t(`settings.migration.${body}`)}
       </p>
+      {step === "copy_knowledge_bases" &&
+        migration.instance.database.type === "postgresql" && (
+          <p className="text-sm">{t("settings.migration.kb.postgresNote")}</p>
+        )}
       {stale && <p className="text-sm">{t("settings.migration.copy.stale")}</p>}
-      {state.state === "blocked" && (
+      {report?.counts && (
+        <p className="text-sm">
+          {t(
+            `settings.migration.copy.${run?.dry_run ? "testCounts" : "counts"}`,
+            {
+              copied: count(counted.copied),
+              skipped: count(counted.skipped),
+              failed: count(counted.failed),
+            },
+          )}
+        </p>
+      )}
+      {code && (
         <div role="alert" className="flex flex-col gap-1 text-sm">
-          <p className="text-destructive">{line(state.reason)}</p>
+          <p className="text-destructive">
+            {/* What stops the step is one of the items below, which says so itself. */}
+            {items.some((item) => item.code === code)
+              ? t("settings.migration.copy.attention")
+              : line(code)}
+          </p>
           {said && <Details text={said} />}
         </div>
+      )}
+      {items.length > 0 && (
+        <ul className="flex w-full flex-col gap-2 text-sm">
+          {items.map((item, index) => {
+            const name = item.kb_name ?? item.file_name;
+            return (
+              <li
+                // Two chat messages that miss the same file are two items with one subject.
+                key={`${item.subject} ${index}`}
+                className="flex flex-col gap-1 rounded-md border p-3"
+              >
+                <span className="break-words">
+                  <span className="font-medium">{name}</span>{" "}
+                  <span className="text-muted-foreground">({item.owner})</span>
+                </span>
+                <span>
+                  {t(
+                    `settings.migration.${ITEM_CODES[item.code ?? ""] ?? "error.notCopied"}`,
+                    { step: destinations },
+                  )}
+                </span>
+                {item.reason && <Details text={item.reason} title={name} />}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {counted.failed > items.length && (
+        <p className="text-xs text-muted-foreground">
+          {t("settings.migration.copy.attentionMore", {
+            shown: count(items.length),
+            count: count(counted.failed),
+          })}
+        </p>
       )}
       {start.isError && (
         <p role="alert" className="text-sm text-destructive">
@@ -116,16 +190,30 @@ export function CopyStep({
             : t("settings.migration.failed")}
         </p>
       )}
-      <Button
-        className="w-full sm:w-fit"
-        loading={start.isPending}
-        onClick={() => start.mutate()}
-        ignoreTitleCase
-      >
-        {run
-          ? t("settings.migration.copy.again")
-          : t(`settings.migration.step.${STEP_SLUGS[step]}.title`)}
-      </Button>
+      <div className="flex w-full flex-col gap-2 sm:flex-row">
+        <Button
+          className="w-full sm:w-fit"
+          loading={start.isPending && !start.variables}
+          onClick={() => start.mutate(false)}
+          ignoreTitleCase
+        >
+          {/* A test run copied nothing, so the copy after it is still the first. */}
+          {run && !run.dry_run
+            ? t("settings.migration.copy.again")
+            : t(`settings.migration.step.${STEP_SLUGS[step]}.title`)}
+        </Button>
+        {testRun && (
+          <Button
+            variant="outline"
+            className="w-full sm:w-fit"
+            loading={start.isPending && start.variables}
+            onClick={() => start.mutate(true)}
+            ignoreTitleCase
+          >
+            {t("settings.migration.copy.testRun")}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
