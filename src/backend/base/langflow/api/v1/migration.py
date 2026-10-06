@@ -40,6 +40,7 @@ from sqlmodel import select
 
 from langflow.api.utils.migration_copies import (
     COPY_COMMANDS,
+    DECISIONS,
     KEPT_EVENTS,
     blocking_code,
     copy_command,
@@ -162,6 +163,12 @@ class BackupRequest(BaseModel):
 
 class RunRequest(BaseModel):
     dry_run: bool = False
+
+
+class DecisionRequest(BaseModel):
+    step: str
+    kind: str
+    subject: str | None = None
 
 
 @router.get("")
@@ -478,7 +485,7 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
         env = copy_environment(step_id, _source_env(), _secrets)
     except KeyError as exc:
         raise HTTPException(status_code=409, detail={"code": "secrets_missing"}) from exc
-    argv = copy_command(step_id, record.get("destinations", {}), dry_run=dry_run)
+    argv = copy_command(step_id, record.get("destinations", {}), record.get("decisions", []), dry_run=dry_run)
     try:
         run_id = await start_run(step_id, argv, env, started_by=admin.username)
     except RunActiveError as exc:
@@ -529,6 +536,49 @@ async def stop_copy(step_id: str, run_id: str, admin: Superuser) -> dict[str, st
         await logger.ainfo(f"Migration: user_id={admin.id} stopped {_copy(step_id)} (run {run_id})")
         await cancel_run(run_id)
     return {"run_id": run_id}
+
+
+@router.post("/decisions")
+async def decide(request: DecisionRequest, admin: Superuser) -> dict[str, Any]:
+    """Record what the admin decided about a copy: an option for its next run, or a failed item to accept as it is."""
+    decision = _decision(request)
+    record = _read_record()
+    record["decisions"] = [*_other_decisions(record, decision), {**decision, "by": admin.username, "at": _now()}]
+    _write_record(record)
+    await logger.ainfo(f"Migration: user_id={admin.id} decided {_named(decision)}")
+    return await _state(record)
+
+
+@router.delete("/decisions")
+async def withdraw_decision(request: DecisionRequest, admin: Superuser) -> dict[str, Any]:
+    decision = _decision(request)
+    record = _read_record()
+    record["decisions"] = _other_decisions(record, decision)
+    _write_record(record)
+    await logger.ainfo(f"Migration: user_id={admin.id} withdrew the decision {_named(decision)}")
+    return await _state(record)
+
+
+def _decision(request: DecisionRequest) -> dict[str, Any]:
+    """What a request decides, or a refusal when its step has no such decision to make."""
+    kinds = DECISIONS.get(request.step, {})
+    if request.kind not in kinds:
+        raise HTTPException(status_code=400, detail={"code": "unknown_decision"})
+    # An option holds for the whole step. An accepted item has to be named.
+    accepts_an_item = kinds[request.kind] is None
+    if accepts_an_item and not request.subject:
+        raise HTTPException(status_code=400, detail={"code": "subject_missing"})
+    return {"step": request.step, "kind": request.kind, "subject": request.subject if accepts_an_item else None}
+
+
+def _other_decisions(record: dict[str, Any], decision: dict[str, Any]) -> list[dict[str, Any]]:
+    return [made for made in record.get("decisions", []) if any(made[key] != decision[key] for key in decision)]
+
+
+def _named(decision: dict[str, Any]) -> str:
+    """A decision as an audit line names it. A subject is quoted, so one with a line break in it stays on its line."""
+    about = f": {decision['subject']!r}" if decision["subject"] else ""
+    return f"'{decision['kind']}' for {_copy(decision['step'])}{about}"
 
 
 def _copy(step_id: str) -> str:
@@ -933,7 +983,7 @@ def _copy_step(record: dict[str, Any], step_id: str) -> tuple[str, str | None]:
     database = record["steps"].get("copy_database") or run
     if datetime.fromisoformat(database["started_at"]) > datetime.fromisoformat(run["started_at"]):
         return "current", None
-    code = blocking_code(run)
+    code = blocking_code(step_id, run, record.get("decisions", []))
     return ("blocked", code) if code else ("done", None)
 
 
