@@ -2,18 +2,10 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SessionSelector } from "../session-selector";
 
-jest.mock("@/controllers/API/queries/messages/use-rename-session", () => ({
-  useUpdateSessionName: () => ({ mutate: jest.fn() }),
-}));
-
 type VoiceState = { setNewSessionCloseVoiceAssistant: jest.Mock };
 jest.mock("@/stores/voiceStore", () => ({
   useVoiceStore: <TResult,>(selector: (state: VoiceState) => TResult) =>
     selector({ setNewSessionCloseVoiceAssistant: jest.fn() }),
-}));
-
-jest.mock("../../hooks/use-session-has-messages", () => ({
-  useSessionHasMessages: () => true,
 }));
 
 jest.mock("../session-more-menu", () => ({
@@ -31,6 +23,7 @@ const baseProps = {
   toggleVisibility: jest.fn(),
   updateVisibleSession: jest.fn(),
   handleRename: jest.fn().mockResolvedValue(undefined),
+  hasMessages: true,
   onMenuOpenChange: jest.fn(),
   onToggleSelect: jest.fn(),
   showCheckbox: true,

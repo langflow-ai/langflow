@@ -11069,6 +11069,40 @@
               ],
               "title": "Flow Id"
             }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset"
+            }
           }
         ],
         "responses": {
@@ -11394,7 +11428,7 @@
     },
     "/api/v1/monitor/messages/shared/sessions": {
       "get": {
-        "description": "Get session IDs for a shared/public flow, scoped to the authenticated user.\n\nUses a deterministic virtual flow_id derived from the user's ID and the\noriginal flow ID. Only messages stored under this virtual flow_id are returned.",
+        "description": "Get session IDs for a shared/public flow, scoped to the authenticated user.\n\nUses a deterministic virtual flow_id derived from the user's ID and the\noriginal flow ID. Only messages stored under this virtual flow_id are returned,\nmost recently active session first, bounded by ``limit``/``offset``.",
         "operationId": "get_shared_message_sessions_api_v1_monitor_messages_shared_sessions_get",
         "parameters": [
           {
@@ -11407,6 +11441,40 @@
               "format": "uuid",
               "title": "Source Flow Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset"
             }
           }
         ],
