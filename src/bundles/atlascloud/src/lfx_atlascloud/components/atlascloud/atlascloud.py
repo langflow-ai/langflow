@@ -22,8 +22,8 @@ ATLASCLOUD_BASE_URL = "https://api.atlascloud.ai/v1"
 ATLASCLOUD_MODELS = [
     "deepseek-ai/deepseek-v4-flash",
     "deepseek-ai/deepseek-v4-pro",
-    "zai-org/glm-5.3-flash",
     "zai-org/glm-5.3",
+    "deepseek-ai/deepseek-v3.2",
     "moonshotai/kimi-k2.6",
     "qwen/qwen3.5-flash",
     "minimaxai/minimax-m2.5",

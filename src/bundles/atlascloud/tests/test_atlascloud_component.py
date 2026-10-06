@@ -67,7 +67,7 @@ def test_models_are_unique_strings():
 
 
 def test_specific_models_present():
-    for expected in ["deepseek-ai/deepseek-v4-flash", "zai-org/glm-5.3-flash", "moonshotai/kimi-k2.6"]:
+    for expected in ["deepseek-ai/deepseek-v4-flash", "zai-org/glm-5.3", "moonshotai/kimi-k2.6"]:
         assert expected in ATLASCLOUD_MODELS
 
 
@@ -160,7 +160,7 @@ def test_build_model_exception_handling(mock_chat_openai):
 def test_get_models_success(mock_get):
     mock_response = MagicMock()
     mock_response.json.return_value = {
-        "data": [{"id": "deepseek-ai/deepseek-v4-flash"}, {"id": "zai-org/glm-5.3-flash"}]
+        "data": [{"id": "deepseek-ai/deepseek-v4-flash"}, {"id": "zai-org/glm-5.3"}]
     }
     mock_response.raise_for_status.return_value = None
     mock_get.return_value = mock_response
@@ -169,7 +169,7 @@ def test_get_models_success(mock_get):
     component.set_attributes(dict(DEFAULT_KWARGS))
     models = component.get_models()
 
-    assert models == ["deepseek-ai/deepseek-v4-flash", "zai-org/glm-5.3-flash"]
+    assert models == ["deepseek-ai/deepseek-v4-flash", "zai-org/glm-5.3"]
     mock_get.assert_called_once()
     assert mock_get.call_args[0][0] == f"{ATLASCLOUD_BASE_URL}/models"
 
@@ -184,7 +184,7 @@ def test_get_models_drops_non_chat_entries(mock_get):
             {"id": "openai/gpt-image-2"},
             {"id": "google/gemini-3-pro-image"},
             {"id": "deepseek-ai/deepseek-ocr"},
-            {"id": "zai-org/glm-5.3-flash"},
+            {"id": "zai-org/glm-5.3"},
         ]
     }
     mock_response.raise_for_status.return_value = None
@@ -193,7 +193,7 @@ def test_get_models_drops_non_chat_entries(mock_get):
     component = AtlasCloudModelComponent()
     component.set_attributes(dict(DEFAULT_KWARGS))
 
-    assert component.get_models() == ["deepseek-ai/deepseek-v4-flash", "zai-org/glm-5.3-flash"]
+    assert component.get_models() == ["deepseek-ai/deepseek-v4-flash", "zai-org/glm-5.3"]
 
 
 @patch("requests.get")
@@ -224,7 +224,7 @@ def test_get_models_fallback(mock_get):
 @patch("requests.get")
 def test_get_models_sends_the_key_when_present(mock_get):
     mock_response = MagicMock()
-    mock_response.json.return_value = {"data": [{"id": "zai-org/glm-5.3-flash"}]}
+    mock_response.json.return_value = {"data": [{"id": "zai-org/glm-5.3"}]}
     mock_response.raise_for_status.return_value = None
     mock_get.return_value = mock_response
 
@@ -240,7 +240,7 @@ def test_get_models_sends_the_key_when_present(mock_get):
 def test_get_models_works_without_a_key(mock_get):
     """Atlas Cloud serves /v1/models unauthenticated, so the dropdown fills in first."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {"data": [{"id": "zai-org/glm-5.3-flash"}]}
+    mock_response.json.return_value = {"data": [{"id": "zai-org/glm-5.3"}]}
     mock_response.raise_for_status.return_value = None
     mock_get.return_value = mock_response
 
@@ -249,7 +249,7 @@ def test_get_models_works_without_a_key(mock_get):
     component = AtlasCloudModelComponent()
     component.set_attributes(kwargs)
 
-    assert component.get_models() == ["zai-org/glm-5.3-flash"]
+    assert component.get_models() == ["zai-org/glm-5.3"]
     assert "Authorization" not in mock_get.call_args.kwargs["headers"]
 
 
