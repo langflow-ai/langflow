@@ -2143,3 +2143,39 @@ async def test_an_instance_on_postgresql_confirms_its_backup_without_a_download(
 
     assert confirmed.status_code == 200, confirmed.text
     assert confirmed.json()["record"]["backup"]["confirmed_by"] == "activeuser"
+
+
+async def test_a_backup_finishing_in_a_new_pause_does_not_count(
+    client, logged_in_headers_super_user, active_super_user, config_dir, tmp_path
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED, pause=PAUSED_BEFORE_THE_CHECK)
+    response = await migration_module.download_database(active_super_user)
+    # Consume the route's source directly so middleware buffering cannot finish it before the new pause.
+    source = response.body_iterator
+    try:
+        copied = bytearray(await anext(source))
+        assert (await client.delete(PAUSE, headers=headers)).status_code == 200
+        created = await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)
+        assert created.status_code == 201, created.text
+        assert (await client.post(PAUSE, headers=headers)).status_code == 200
+        await _run_checks(client, headers)
+        async for chunk in source:
+            copied.extend(chunk)
+    finally:
+        await source.aclose()
+
+    backup_path = tmp_path / "old-pause-backup.db"
+    backup_path.write_bytes(copied)
+    old = sqlite3.connect(backup_path)
+    try:
+        assert old.execute("SELECT id FROM flow WHERE name = ?", (NEW_FLOW["name"],)).fetchall() == []
+    finally:
+        old.close()
+    state = await _migration(client, headers)
+    assert {step["id"]: step["state"] for step in state["steps"]}["pause"] == "done"
+    response = await client.post(
+        "api/v1/migration/steps/backup/confirm", json={"location": "old-pause-backup.db"}, headers=headers
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["detail"] == {"code": "database_not_downloaded"}
