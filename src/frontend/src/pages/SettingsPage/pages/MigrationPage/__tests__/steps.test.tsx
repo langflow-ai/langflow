@@ -1,14 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError } from "axios";
 import type { ReactElement } from "react";
 import { api } from "@/controllers/API/api";
 import type {
+  MigrationCopyRun,
   MigrationState,
   MigrationStepState,
 } from "@/controllers/API/queries/migration";
 import { BackupStep } from "../BackupStep";
+import { CopyStep } from "../CopyStep";
 import { DestinationsStep } from "../DestinationsStep";
 import { PausedBanner, PauseStep, Recovery, Waiting } from "../PauseStep";
 import { SecretKeyStep } from "../SecretKeyStep";
@@ -30,6 +32,7 @@ const originalFetch = global.fetch;
 afterEach(() => {
   global.fetch = originalFetch;
   jest.restoreAllMocks();
+  jest.useRealTimers();
 });
 
 const migration = (
@@ -1021,5 +1024,339 @@ describe("Back up this instance", () => {
       expect.stringContaining("steps/backup/confirm"),
       { location: "s3://backups/langflow" },
     );
+  });
+});
+
+describe("Copy the database", () => {
+  const copying = (run?: Partial<MigrationCopyRun>) =>
+    migration(
+      {},
+      {
+        steps: {
+          copy_database: run && {
+            run_id: "run-1",
+            status: "done",
+            dry_run: false,
+            started_by: "alice",
+            started_at: "2026-10-06T12:05:00Z",
+            finished_at: "2026-10-06T12:06:00Z",
+            report: null,
+            error: null,
+            ...run,
+          },
+        },
+      },
+    );
+  const panel = (
+    run: Partial<MigrationCopyRun> | undefined,
+    ...where: [MigrationStepState["state"], string?]
+  ) => (
+    <CopyStep
+      migration={copying(run)}
+      state={step("copy_database", ...where)}
+      step="copy_database"
+    />
+  );
+  // A stream as the server sends one: each line an event. It ends, or the connection drops.
+  const stream = (lines: object[], dropped = false) => {
+    const chunks = [
+      Buffer.from(lines.map((line) => `${JSON.stringify(line)}\n\n`).join("")),
+    ];
+    return {
+      ok: true,
+      status: 200,
+      body: {
+        getReader: () => ({
+          read: async () => {
+            const value = chunks.shift();
+            if (!value && dropped) throw new TypeError("network error");
+            return { done: !value, value };
+          },
+        }),
+      },
+    };
+  };
+  // A stream that stays open and says nothing.
+  const silent = () => jest.fn(() => new Promise<Response>(() => {}));
+
+  it("offers the copy and sends it as a real run", async () => {
+    const post = jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    show(panel(undefined, "current"));
+
+    expect(
+      screen.getByText(/^Copies every table in one go\./),
+    ).toBeInTheDocument();
+    // The database copy has no way to try it first.
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.queryByText(/out of date/)).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Copy the database" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Something went wrong. Try again.",
+    );
+    expect(post).toHaveBeenCalledWith(
+      expect.stringContaining("steps/copy_database/runs"),
+      { dry_run: false },
+    );
+  });
+
+  it.each([
+    [
+      "secrets_missing",
+      "Langflow no longer holds the passwords and keys of the new instance. Enter them again in 'Where your data goes'.",
+    ],
+    ["run_active", "Another step is running. Wait for it to finish."],
+  ])("says why the server would not start it: %s", async (code, line) => {
+    jest.spyOn(api, "post").mockRejectedValue(refused(409, { code }));
+    show(panel(undefined, "current"));
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Copy the database" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(line);
+  });
+
+  it("follows a run from the last line it saw, and reads the record again when it ends", async () => {
+    jest.useFakeTimers();
+    const fetched = jest
+      .fn()
+      .mockResolvedValueOnce(
+        stream(
+          [
+            {
+              event: "progress",
+              phase: "checking",
+              done: 0,
+              total: null,
+              seq: 1,
+            },
+            {
+              event: "progress",
+              phase: "copying",
+              done: 10,
+              total: 57,
+              seq: 2,
+            },
+          ],
+          true,
+        ),
+      )
+      .mockResolvedValueOnce(
+        stream([{ event: "end", status: "done", exit_code: 0, seq: 3 }]),
+      );
+    global.fetch = fetched;
+    const client = new QueryClient();
+    const reread = jest.spyOn(client, "invalidateQueries");
+    render(
+      <QueryClientProvider client={client}>
+        {panel({ status: "running", finished_at: null }, "current")}
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText("Rows: 10 of 57")).toBeInTheDocument();
+    expect(fetched.mock.calls[0][0]).toContain(
+      "steps/copy_database/runs/run-1/events?after=0",
+    );
+    expect(reread).not.toHaveBeenCalled();
+
+    // The connection dropped. After a moment the page asks again for what came after the last line it saw.
+    await act(() => jest.advanceTimersByTimeAsync(1000));
+    expect(fetched).toHaveBeenCalledTimes(1);
+    await act(() => jest.advanceTimersByTimeAsync(1000));
+
+    expect(fetched.mock.calls[1][0]).toContain("events?after=2");
+    await waitFor(() => expect(reread).toHaveBeenCalledTimes(1));
+  });
+
+  it("stops asking for a run the server no longer has, and reads the record again", async () => {
+    jest.useFakeTimers();
+    const fetched = jest
+      .fn()
+      .mockResolvedValue({ ok: false, status: 404, body: null });
+    global.fetch = fetched;
+    const client = new QueryClient();
+    const reread = jest.spyOn(client, "invalidateQueries");
+    render(
+      <QueryClientProvider client={client}>
+        {panel({ status: "running", finished_at: null }, "current")}
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(reread).toHaveBeenCalledTimes(1));
+    await act(() => jest.advanceTimersByTimeAsync(10000));
+    expect(fetched).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks before it stops a run, and lets go of the run when the page goes away", async () => {
+    const fetched = silent();
+    global.fetch = fetched;
+    const stop = jest.spyOn(api, "delete").mockRejectedValue(unreachable());
+    const { unmount } = show(
+      panel({ status: "running", finished_at: null }, "current"),
+    );
+
+    expect(screen.getByText("Starting…")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Copy/ }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Stop" }));
+
+    const asked = screen.getByRole("dialog", { name: "Stop copying?" });
+    expect(asked).toHaveTextContent("Nothing from a stopped copy is kept.");
+    await userEvent.click(
+      within(asked).getAllByRole("button", { name: "Cancel" })[0],
+    );
+    expect(stop).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Stop" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Stop" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Something went wrong. Try again.",
+    );
+    expect(stop).toHaveBeenCalledWith(
+      expect.stringContaining("steps/copy_database/runs/run-1"),
+    );
+
+    // Leaving the page stops listening and nothing else: the run is the server's.
+    const [, { signal }] = fetched.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(signal?.aborted).toBe(false);
+    unmount();
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it.each<[string, Partial<MigrationCopyRun>, string, string | undefined]>([
+    [
+      "target_unreachable",
+      {
+        report: {
+          ok: false,
+          problems: [
+            { code: "target_unreachable", message: "connection refused" },
+          ],
+        },
+      },
+      "Can't reach the new instance's database. Check 'Where your data goes', then try again.",
+      "connection refused",
+    ],
+    [
+      "target_not_empty",
+      {
+        report: {
+          ok: false,
+          problems: [
+            { code: "target_not_empty", message: "at revision abc" },
+            { code: "value_rejected", message: "bad enum" },
+          ],
+        },
+      },
+      "The new instance's database isn't empty. Use a new, empty database, change it in 'Where your data goes', then copy again.",
+      "at revision abc bad enum",
+    ],
+    // The destination holds an earlier copy, and a row was deleted here since. Copying again cannot get past it.
+    [
+      "count_mismatch",
+      {
+        report: {
+          ok: false,
+          problems: [
+            {
+              code: "count_mismatch",
+              message: "file: source has 1 rows, target has 2 after copy",
+            },
+          ],
+        },
+      },
+      "The new instance's database holds an earlier copy that no longer matches this instance. Copying into it again can't fix that. Save a new, empty database in 'Where your data goes', then copy again.",
+      "file: source has 1 rows, target has 2 after copy",
+    ],
+    [
+      "crashed",
+      {
+        status: "failed",
+        error: { code: "crashed", message: "Traceback: boom" },
+      },
+      "The step stopped with an error. Run it again.",
+      "Traceback: boom",
+    ],
+    // A code this page has no words for reads as a failure, with the tool's own words under it.
+    [
+      "copy_failed",
+      {
+        report: {
+          ok: false,
+          problems: [{ code: "copy_failed", message: "rolled back" }],
+        },
+      },
+      "The step stopped with an error. Run it again.",
+      "rolled back",
+    ],
+    [
+      "cancelled",
+      { status: "cancelled", error: { code: "cancelled" } },
+      "Stopped before it finished. Run it again.",
+      undefined,
+    ],
+    [
+      "destination_changed",
+      { report: { ok: true, tables_copied: 59, rows_copied: 57 } },
+      "The destination changed after this copy was made. Copy again.",
+      undefined,
+    ],
+  ])("says why the last copy does not count: %s", (reason, run, line, said) => {
+    show(panel(run, "blocked", reason));
+
+    const why = screen.getByRole("alert");
+    expect(why).toHaveTextContent(line);
+    if (said)
+      expect(within(why).getByText(/./, { selector: "pre" })).toHaveTextContent(
+        said,
+      );
+    else expect(why.querySelector("pre")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Copy again" }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers a done copy again, with nothing to explain", () => {
+    show(
+      panel(
+        { report: { ok: true, tables_copied: 59, rows_copied: 57 } },
+        "done",
+      ),
+    );
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText(/out of date/)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copy again" }),
+    ).toBeInTheDocument();
+  });
+
+  it("says a copy the step no longer counts has to be made again", () => {
+    // The copy ended well, and the step waits again: the instance changed after it.
+    show(
+      panel(
+        { report: { ok: true, tables_copied: 59, rows_copied: 57 } },
+        "current",
+      ),
+    );
+
+    expect(
+      screen.getByText(
+        "This copy is out of date, so it no longer counts. Copy again.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copy again" }),
+    ).toBeInTheDocument();
   });
 });
