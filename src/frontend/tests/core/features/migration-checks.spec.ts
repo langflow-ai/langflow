@@ -69,5 +69,17 @@ test(
     expect((await download).suggestedFilename()).toMatch(
       /^langflow-migration-\d{8}\.json$/,
     );
+
+    // On a phone the link wraps, so its end stays inside the page's column.
+    await page.setViewportSize({ width: 390, height: 844 });
+    const rightEdge = async (locator: ReturnType<typeof page.locator>) => {
+      const box = await locator.boundingBox();
+      return box ? box.x + box.width : Number.NaN;
+    };
+    expect(
+      await rightEdge(
+        page.getByRole("button", { name: "Download the migration record" }),
+      ),
+    ).toBeLessThanOrEqual((await rightEdge(step)) + 1);
   },
 );
