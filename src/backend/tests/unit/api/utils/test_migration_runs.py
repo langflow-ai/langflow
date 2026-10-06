@@ -15,6 +15,7 @@ import signal
 import subprocess
 import sys
 import textwrap
+import time
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -633,15 +634,19 @@ async def test_a_run_whose_worker_dies_reads_as_interrupted_and_its_follower_end
 
 
 async def test_a_pid_that_went_to_another_process_does_not_keep_a_run_live(gate: Path, other_worker, config_dir: Path):
-    worker, run_id = await other_worker("wait_for_gate()", gate)
-    worker.kill()
-    await worker.wait()
-    os.kill(migration_runs.read_run(run_id)["child"]["pid"], signal.SIGKILL)
-    await _until(lambda: migration_runs.read_run(run_id)["status"] == "interrupted")
-
-    # After a restart the same pids are handed out again. Here both go to a process the run never had.
+    # A process is told apart by when it started, to within a clock tick. This one is given a tenth
+    # of a second on the run's worker and child, so it can never share a tick with either of them.
     stranger = await asyncio.create_subprocess_exec(sys.executable, "-c", "import time; time.sleep(120)")
     try:
+        started = psutil.Process(stranger.pid).create_time()
+        await _until(lambda: time.time() - started > 0.1)
+        worker, run_id = await other_worker("wait_for_gate()", gate)
+        worker.kill()
+        await worker.wait()
+        os.kill(migration_runs.read_run(run_id)["child"]["pid"], signal.SIGKILL)
+        await _until(lambda: migration_runs.read_run(run_id)["status"] == "interrupted")
+
+        # After a restart the same pids are handed out again. Here both go to a process the run never had.
         status = config_dir / "migrations" / "runs" / f"{run_id}.json"
         recorded = json.loads(status.read_text())
         recorded["child"]["pid"] = recorded["worker"]["pid"] = stranger.pid
