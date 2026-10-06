@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import ssl
 from unittest.mock import patch
 
 import pytest
@@ -130,8 +131,16 @@ def test_get_llm_preserves_explicit_ollama_ssrf_opt_outs(policy):
         )
 
     assert captured["base_url"] == "http://127.0.0.1:11434"
-    assert captured["sync_client_kwargs"] == {"follow_redirects": False}
-    assert captured["async_client_kwargs"] == {"follow_redirects": False}
+    sync_kwargs = captured["sync_client_kwargs"]
+    async_kwargs = captured["async_client_kwargs"]
+    assert set(sync_kwargs) == set(async_kwargs) == {"follow_redirects", "verify"}
+    assert sync_kwargs["follow_redirects"] is False
+    assert async_kwargs["follow_redirects"] is False
+    context = sync_kwargs["verify"]
+    assert isinstance(context, ssl.SSLContext)
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    assert context.check_hostname is True
+    assert async_kwargs["verify"] is context
 
 
 def test_get_llm_protects_final_openai_base_url_after_overrides():

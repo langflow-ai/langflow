@@ -1,5 +1,7 @@
 """Unit coverage for the shared model-provider base-URL SSRF helpers."""
 
+import ssl
+
 import pytest
 from lfx.base.models.provider_ssrf import (
     ensure_credential_endpoint_allowed,
@@ -516,7 +518,12 @@ class TestProviderCidrAllowlist:
         if helper is validate_provider_base_url:
             assert result is None
         elif helper is provider_httpx_client_kwargs:
-            assert result == ({"follow_redirects": False}, {"follow_redirects": False})
+            sync_kwargs, async_kwargs = result
+            assert sync_kwargs["follow_redirects"] is async_kwargs["follow_redirects"] is False
+            context = sync_kwargs["verify"]
+            assert context is async_kwargs["verify"]
+            assert context.verify_mode == ssl.CERT_REQUIRED
+            assert context.check_hostname
         else:
             assert set(result) == {"http_client", "http_async_client"}
             try:

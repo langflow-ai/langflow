@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ssl
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -246,4 +247,14 @@ def test_process_task_id_allows_explicitly_allowlisted_internal_docling(monkeypa
     result = component._process_task_id()
 
     assert result[0] is expected
-    assert client_kwargs == {"headers": {}, "follow_redirects": False}
+    assert client_kwargs["headers"] == {}
+    assert client_kwargs["follow_redirects"] is False
+    assert set(client_kwargs) == {"headers", "follow_redirects", "verify"}
+    assert isinstance(client_kwargs["verify"], ssl.SSLContext)
+    assert client_kwargs["verify"].verify_mode == ssl.CERT_REQUIRED
+    assert client_kwargs["verify"].check_hostname
+    first_context = client_kwargs["verify"]
+    assert component._process_task_id()[0] is expected
+    assert client_kwargs["verify"] is not first_context
+    assert client_kwargs["verify"].verify_mode == ssl.CERT_REQUIRED
+    assert client_kwargs["verify"].check_hostname
