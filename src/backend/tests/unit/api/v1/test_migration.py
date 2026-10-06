@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import io
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -20,6 +21,7 @@ import pytest
 import structlog
 from anyio import Path as AsyncPath
 from fastapi import APIRouter
+from langflow.api.utils import migration_pause
 from langflow.api.v1 import migration as migration_module
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.flow.model import Flow
@@ -717,6 +719,246 @@ async def test_each_pause_and_resume_is_logged(
 
     assert f"Migration: user_id={active_super_user.id} paused changes to this instance" in server_log.getvalue()
     assert f"Migration: user_id={active_super_user.id} resumed changes to this instance" in server_log.getvalue()
+
+
+# A second worker process that lets a change in and keeps it going until it is told to end it.
+WORKER_WITH_A_CHANGE = """
+import sys
+from langflow.api.utils.migration_pause import writing
+with writing() as let_in:
+    print(f"let_in={let_in}", flush=True)
+    sys.stdin.readline()
+"""
+
+
+async def _upload_held_open(client, headers, arrived: asyncio.Event, release: asyncio.Event) -> int:
+    """Upload a file as a raw ASGI client that keeps back the end of its body until release is set.
+
+    arrived is set when the server asks for the body, which it does after the pause middleware let
+    the upload in. Returns the status the upload ends with.
+    """
+    body = (
+        b'--held\r\nContent-Disposition: form-data; name="file"; filename="notes.txt"\r\n'
+        b"Content-Type: text/plain\r\n\r\nwritten around a pause\r\n--held--\r\n"
+    )
+    pieces = [body[:-10], body[-10:]]
+    statuses: list[int] = []
+
+    async def receive():
+        if len(pieces) == 2:
+            arrived.set()
+            return {"type": "http.request", "body": pieces.pop(0), "more_body": True}
+        if pieces:
+            await release.wait()
+            return {"type": "http.request", "body": pieces.pop(0), "more_body": False}
+        return {"type": "http.disconnect"}
+
+    async def send(message):
+        if message["type"] == "http.response.start":
+            statuses.append(message["status"])
+
+    raw_headers = [(b"content-type", b"multipart/form-data; boundary=held")]
+    raw_headers += [(b"content-length", str(len(body)).encode())]
+    raw_headers += [(name.lower().encode(), value.encode()) for name, value in headers.items()]
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": "/api/v2/files/",
+        "raw_path": b"/api/v2/files/",
+        "query_string": b"",
+        "root_path": "",
+        "headers": raw_headers,
+        "client": ("127.0.0.1", 50000),
+        "server": ("testserver", 80),
+    }
+    await client._transport.app(scope, receive, send)
+    return statuses[0]
+
+
+def _tell_when_the_pause_is_written(monkeypatch: pytest.MonkeyPatch) -> tuple[asyncio.Event, list[str]]:
+    """An event set when the pause route writes the pause, and each frozen_at it writes."""
+    written, moments = asyncio.Event(), []
+    write = migration_module._write_record
+
+    def write_and_tell(record: dict) -> None:
+        write(record)
+        if record.get("pause"):
+            moments.append(record["pause"]["frozen_at"])
+            written.set()
+
+    monkeypatch.setattr(migration_module, "_write_record", write_and_tell)
+    return written, moments
+
+
+@pytest.mark.parametrize("counted_by", ["the lock that workers share", "this worker's count alone"])
+async def test_the_pause_is_refused_while_a_change_let_in_before_it_is_still_going(
+    client, logged_in_headers_super_user, config_dir, monkeypatch, counted_by
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
+    if counted_by == "this worker's count alone":
+        # As on Windows, which has no flock.
+        monkeypatch.setattr(migration_pause, "fcntl", None)
+    arrived, release = asyncio.Event(), asyncio.Event()
+    uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
+    await arrived.wait()
+
+    # The upload was let in and has not sent the end of its file. Paused now, it would write while paused.
+    refused = await client.post(PAUSE, headers=headers)
+
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["detail"] == {"code": "requests_active"}
+    assert "pause" not in (await _migration(client, headers))["record"]
+
+    release.set()
+
+    # It ends as a change made before any pause, because the pause was taken out again.
+    assert await uploading == 201
+    assert (await _migration(client, headers))["instance"]["files"]["local"] is True
+    assert (await client.post(PAUSE, headers=headers)).status_code == 200
+
+
+async def test_the_pause_begins_once_the_last_change_let_in_before_it_has_ended(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    written, moments = _tell_when_the_pause_is_written(monkeypatch)
+    arrived, release, ended = asyncio.Event(), asyncio.Event(), []
+    uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
+    uploading.add_done_callback(lambda _: ended.append("the upload"))
+    await arrived.wait()
+    pausing = asyncio.create_task(client.post(PAUSE, headers=headers))
+    pausing.add_done_callback(lambda _: ended.append("the pause"))
+    await written.wait()
+
+    # From the moment the pause is written no new change is let in, while the one let in before goes on.
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 503
+    release.set()
+
+    assert await uploading == 201
+    paused = await pausing
+    assert paused.status_code == 200, paused.text
+    assert ended == ["the upload", "the pause"]
+    # The moment the re-check and the copies are measured against is the one the instance became still at.
+    frozen_at = paused.json()["record"]["pause"]["frozen_at"]
+    assert datetime.fromisoformat(frozen_at) > datetime.fromisoformat(moments[0])
+
+
+async def test_a_job_started_by_a_change_that_was_still_going_stops_the_pause(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    headers, flow_id, job_id = logged_in_headers_super_user, uuid4(), uuid4()
+    _checked(config_dir, [PASSING], **PREPARED)
+    written, _ = _tell_when_the_pause_is_written(monkeypatch)
+    arrived, release = asyncio.Event(), asyncio.Event()
+    uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
+    await arrived.wait()
+    pausing = asyncio.create_task(client.post(PAUSE, headers=headers))
+    await written.wait()
+
+    # What a change that was let in before the pause can still do: queue a job, after the pause is written.
+    await _add(
+        Flow(id=flow_id, name="nightly report", data={}, user_id=active_super_user.id),
+        Job(job_id=job_id, flow_id=flow_id, user_id=active_super_user.id, status=JobStatus.QUEUED),
+    )
+    release.set()
+
+    assert await uploading == 201
+    refused = await pausing
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["detail"]["code"] == "jobs_active"
+    assert [job["id"] for job in refused.json()["detail"]["jobs"]] == [str(job_id)]
+    assert "pause" not in (await _migration(client, headers))["record"]
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 201
+
+
+async def test_a_refused_pause_leaves_a_pause_that_another_request_made(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    headers, flow_id = logged_in_headers_super_user, uuid4()
+    _checked(config_dir, [PASSING], **PREPARED)
+    written, _ = _tell_when_the_pause_is_written(monkeypatch)
+    arrived, release = asyncio.Event(), asyncio.Event()
+    uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
+    await arrived.wait()
+    pausing = asyncio.create_task(client.post(PAUSE, headers=headers))
+    await written.wait()
+
+    # While this request waits, another worker's request pauses for itself, and a job is queued.
+    record = (await _migration(client, headers))["record"]
+    theirs = {"frozen_at": "2026-10-06T12:00:00+00:00", "frozen_by": "bob"}
+    _write_record(config_dir, {**record, "pause": theirs})
+    await _add(
+        Flow(id=flow_id, name="nightly report", data={}, user_id=active_super_user.id),
+        Job(job_id=uuid4(), flow_id=flow_id, user_id=active_super_user.id, status=JobStatus.QUEUED),
+    )
+    release.set()
+
+    assert await uploading == 201
+    assert (await pausing).status_code == 409
+    assert (await _migration(client, headers))["record"]["pause"] == theirs
+
+
+async def test_a_pause_request_that_is_cut_off_while_it_waits_leaves_no_pause_behind(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    written, _ = _tell_when_the_pause_is_written(monkeypatch)
+    arrived, release = asyncio.Event(), asyncio.Event()
+    uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
+    await arrived.wait()
+    pausing = asyncio.create_task(client.post(PAUSE, headers=headers))
+    await written.wait()
+
+    # The admin's browser gives up while the pause waits for the upload. Nobody checked that pause.
+    pausing.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await pausing
+
+    assert "pause" not in (await _migration(client, headers))["record"]
+    release.set()
+    assert await uploading == 201
+
+
+async def test_the_pause_is_refused_while_another_worker_has_a_change_going(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    pytest.importorskip("fcntl", reason="workers share the lock through flock")
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
+    env = {**os.environ, "LANGFLOW_CONFIG_DIR": str(config_dir), "LANGFLOW_FEATURE_INSTANCE_MIGRATION": "true"}
+    pipe = asyncio.subprocess.PIPE
+    worker = await asyncio.create_subprocess_exec(
+        sys.executable, "-c", WORKER_WITH_A_CHANGE, env=env, stdin=pipe, stdout=pipe
+    )
+    try:
+        said = b"the worker exited"
+        # Imports may print before the worker says that it let its change in.
+        async for line in worker.stdout:
+            if line.startswith(b"let_in="):
+                said = line
+                break
+        assert said == b"let_in=True\n"
+
+        refused = await client.post(PAUSE, headers=headers)
+
+        assert refused.status_code == 409, refused.text
+        assert refused.json()["detail"] == {"code": "requests_active"}
+        assert "pause" not in (await _migration(client, headers))["record"]
+    finally:
+        if worker.returncode is None:
+            worker.stdin.write(b"\n")
+            await worker.stdin.drain()
+        await worker.wait()
+
+    assert (await client.post(PAUSE, headers=headers)).status_code == 200
 
 
 @pytest.mark.parametrize(
