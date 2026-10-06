@@ -110,6 +110,8 @@ export function PauseStep({
 
   const refusal = pause.error?.response?.data?.detail;
   const waiting = refusal?.code === "jobs_active" ? refusal : undefined;
+  // Changes that were already under way had not finished. They do in a moment, with nothing for the admin to do.
+  const unfinished = refusal?.code === "requests_active";
   return (
     <div className="flex flex-col items-start gap-4">
       <p className="text-sm text-muted-foreground">
@@ -118,18 +120,22 @@ export function PauseStep({
       {waiting && <Waiting refusal={waiting} />}
       {pause.isError && !waiting && (
         <p role="alert" className="text-sm text-destructive">
-          {t(
-            refusal?.code === "pause_ended"
-              ? "settings.migration.pause.ended"
-              : "settings.migration.failed",
-          )}
+          {unfinished
+            ? t("settings.migration.pause.requestsActive")
+            : t(
+                refusal?.code === "pause_ended"
+                  ? "settings.migration.pause.ended"
+                  : "settings.migration.failed",
+              )}
         </p>
       )}
       <Button
         className="w-full sm:w-fit"
         loading={pause.isPending}
-        // Asked once: checking again is the same pause the admin already agreed to.
-        onClick={() => (waiting ? pauseNow() : setConfirming(true))}
+        // Asked once: checking or trying again is the same pause the admin already agreed to.
+        onClick={() =>
+          waiting || unfinished ? pauseNow() : setConfirming(true)
+        }
         ignoreTitleCase
       >
         {waiting

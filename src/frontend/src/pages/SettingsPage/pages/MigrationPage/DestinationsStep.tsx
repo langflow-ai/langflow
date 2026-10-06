@@ -98,7 +98,10 @@ export function DestinationsStep({
       {instance.knowledge_bases.local && (
         <Section title={t("settings.migration.dest.kb.title")}>
           <p className="text-sm text-muted-foreground">
-            {t("settings.migration.dest.kb.pgvector")}
+            {/* An instance on PostgreSQL copies them to the store its own server reads, which is no database of the new instance's. */}
+            {instance.database.type === "sqlite"
+              ? t("settings.migration.dest.kb.pgvector")
+              : t("settings.migration.dest.kb.pgvectorOwn")}
           </p>
           <Probe id="migration-probe-vectors" result={results?.vectors} />
         </Section>
