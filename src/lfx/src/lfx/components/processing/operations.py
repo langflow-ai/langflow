@@ -1099,9 +1099,9 @@ class OperationsComponent(Component):
         elif operator == "not equals":
             mask = column != filter_value
         elif operator == "contains":
-            mask = column.astype(str).str.contains(str(filter_value), na=False)
+            mask = column.astype(str).str.contains(str(filter_value), na=False, regex=False)
         elif operator == "not contains":
-            mask = ~column.astype(str).str.contains(str(filter_value), na=False)
+            mask = ~column.astype(str).str.contains(str(filter_value), na=False, regex=False)
         elif operator == "starts with":
             mask = column.astype(str).str.startswith(str(filter_value), na=False)
         elif operator == "ends with":

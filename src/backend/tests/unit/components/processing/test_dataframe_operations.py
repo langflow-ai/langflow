@@ -154,6 +154,22 @@ class TestFilterOperations:
         assert len(result) == 2  # John and Bob have gmail
         assert all("gmail" in email for email in result["email"])
 
+    @pytest.mark.parametrize("operator", ["contains", "not contains"])
+    @pytest.mark.parametrize(("value", "matching"), [(".", [0]), ("report.pdf", [0]), ("[", [2])])
+    def test_filter_contains_literal_text(self, component, operator, value, matching):
+        """Legacy contains filters also use literal substring matching."""
+        values = ["report.pdf", "reportXpdf", "[citation]", "other"]
+        component.df = DataFrame({"value": values})
+        component.operation = [{"name": "Filter"}]
+        component.column_name = "value"
+        component.filter_operator = operator
+        component.filter_value = value
+
+        result = component.perform_operation()
+
+        expected = matching if operator == "contains" else [i for i in range(len(values)) if i not in matching]
+        assert result["value"].tolist() == [values[i] for i in expected]
+
     def test_filter_starts_with(self, component, sample_dataframe):
         """Test prefix matching."""
         component.df = sample_dataframe
