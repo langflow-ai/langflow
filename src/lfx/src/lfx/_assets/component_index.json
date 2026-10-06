@@ -11312,7 +11312,7 @@
           "icon": "MessagesSquare",
           "legacy": false,
           "metadata": {
-            "code_hash": "0aab1c78e1dc",
+            "code_hash": "85d42883eb31",
             "dependencies": {
               "dependencies": [
                 {
@@ -20773,7 +20773,7 @@
           "icon": "bot",
           "legacy": false,
           "metadata": {
-            "code_hash": "f3adf53067b3",
+            "code_hash": "8527ed62b980",
             "dependencies": {
               "dependencies": [
                 {
@@ -32361,6 +32361,6 @@
     "num_components": 130,
     "num_modules": 17
   },
-  "sha256": "ae17a3ea07c89dde4b8ec78e7cfba57d48926625753ebb3750e6d06a85e13872",
+  "sha256": "7731f86f28f98dd9e744347a6c542847c778684d1be52bff97a443e016c63056",
   "version": "1.13.0"
 }
