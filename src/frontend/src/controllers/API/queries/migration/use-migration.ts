@@ -3,6 +3,8 @@ import type { AxiosError } from "axios";
 import { api, performStreamingRequest } from "../../api";
 import { getURL } from "../../helpers/constants";
 import type {
+  DestinationsRequest,
+  DestinationsSaved,
   MigrationCheckEvent,
   MigrationError,
   MigrationState,
@@ -92,3 +94,22 @@ export const useWithdrawFindingMutation = () => {
     onSuccess: (state) => client.setQueryData(migrationKeys.all, state),
   });
 };
+
+/** A step's request, which answers with the new state. The page shows that state in place of the one it held. */
+const useStepMutation = <Body, State extends MigrationState = MigrationState>(
+  request: (body: Body) => Promise<{ data: State }>,
+) => {
+  const client = useQueryClient();
+  return useMutation<State, AxiosError<{ detail?: MigrationError }>, Body>({
+    mutationFn: async (body) => (await request(body)).data,
+    onSuccess: (state) => client.setQueryData(migrationKeys.all, state),
+    // A refusal can come with a change the answer doesn't carry, such as a step that reopened.
+    onError: () => client.invalidateQueries({ queryKey: migrationKeys.all }),
+  });
+};
+
+/** Tests each destination and saves the ones that pass. The passwords and keys stay in the server's memory. */
+export const useSaveDestinationsMutation = () =>
+  useStepMutation<DestinationsRequest, DestinationsSaved>((body) =>
+    api.put(getURL("MIGRATION", { path: "destinations" }), body),
+  );

@@ -49,7 +49,8 @@ export interface MigrationStepState {
 export interface MigrationState {
   instance: {
     version: string;
-    database: { type: "sqlite" | "postgresql" };
+    /** `location` is the host, the port and the database name. It holds no user and no password. */
+    database: { type: "sqlite" | "postgresql"; location?: string };
     knowledge_bases: { local: boolean };
     files: { storage: "local" | "s3"; local: boolean };
   };
@@ -57,10 +58,50 @@ export interface MigrationState {
     target: { version?: string; set_by?: string; set_at?: string };
     steps: { check_source?: MigrationStep };
     accepted_findings: AcceptedFinding[];
+    /** Where the new instance keeps its data. Each part is there only when this instance needs it, and none holds a secret. */
+    destinations?: {
+      database?: { location: string | null };
+      vectors?: { kind: string };
+      files?: { bucket: string; prefix: string; endpoint_url?: string | null };
+      /** What the last test of each part found. A part that failed is saved too. */
+      results?: ProbeResults;
+      saved_by: string;
+      saved_at: string;
+    };
   };
   steps: MigrationStepState[];
   blocking_findings: string[];
   acceptable_checks: string[];
+}
+
+/** `PUT /api/v1/migration/destinations`: only the parts this instance needs. */
+export interface DestinationsRequest {
+  database_url?: string;
+  vectors?: { kind: "pgvector" };
+  files?: {
+    bucket: string;
+    prefix: string;
+    access_key_id: string;
+    secret_access_key: string;
+    endpoint_url?: string;
+    ca_bundle?: string;
+  };
+}
+
+/** What the server found when it tried one destination. `reason` is in the server's own words, with no secret in it. */
+export interface ProbeResult {
+  ok: boolean;
+  code?: string;
+  reason?: string;
+}
+
+export type ProbeResults = Partial<
+  Record<"database" | "vectors" | "files", ProbeResult>
+>;
+
+/** The answer to saving the destinations: the new state and one result for each part sent. */
+export interface DestinationsSaved extends MigrationState {
+  results: ProbeResults;
 }
 
 /** The `detail` of a request the server refused. */
