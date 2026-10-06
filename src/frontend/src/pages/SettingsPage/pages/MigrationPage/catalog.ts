@@ -1,6 +1,8 @@
 import type {
   AcceptedFinding,
+  DestinationsRequest,
   MigrationCheck,
+  MigrationState,
   MigrationStepId,
 } from "@/controllers/API/queries/migration";
 
@@ -100,3 +102,40 @@ export function acceptanceOf(
 
 export const formatTime = (value: string | undefined, language: string) =>
   value ? new Date(value).toLocaleString(language) : "";
+
+/** The page's line, under `settings.migration.*`, for each reason the server refuses a destination. */
+export const PROBES: Record<string, string> = {
+  db_unreachable: "probe.unreachable",
+  db_not_empty: "probe.dbNotEmpty",
+  no_create: "probe.noCreate",
+  pgvector_missing: "probe.pgvector",
+  bucket_missing: "probe.bucketMissing",
+  bucket_unreachable: "probe.bucketUnreachable",
+  bucket_denied: "probe.denied",
+  secrets_missing: "dest.enterAgain", // pragma: allowlist secret
+};
+
+/** What "Where your data goes" sends: only the parts this instance keeps on its own server. Fields are named as the API names them. */
+export function destinationsRequest(
+  instance: MigrationState["instance"],
+  form: FormData,
+): DestinationsRequest {
+  const field = (name: string) => String(form.get(name) ?? "").trim();
+  return {
+    ...(instance.database.type === "sqlite" && {
+      database_url: field("database_url"),
+    }),
+    // The only store the copy can write to for now, so the admin isn't asked.
+    ...(instance.knowledge_bases.local && { vectors: { kind: "pgvector" } }),
+    ...(instance.files.local && {
+      files: {
+        bucket: field("bucket"),
+        prefix: field("prefix"),
+        access_key_id: field("access_key_id"),
+        secret_access_key: field("secret_access_key"), // pragma: allowlist secret
+        ...(field("endpoint_url") && { endpoint_url: field("endpoint_url") }),
+        ...(field("ca_bundle") && { ca_bundle: field("ca_bundle") }),
+      },
+    }),
+  };
+}
