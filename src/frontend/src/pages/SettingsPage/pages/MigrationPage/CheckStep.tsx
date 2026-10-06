@@ -202,7 +202,7 @@ export function CheckStep({ migration }: { migration: MigrationState }) {
         {!running && run?.status === "cancelled" && (
           <p className="text-sm">{t("settings.migration.check.stopped")}</p>
         )}
-        {!running && run?.status === "done" && (
+        {!running && !startFailed && run?.status === "done" && (
           <div
             className={cn(
               "flex items-start gap-3 rounded-md border p-3",
