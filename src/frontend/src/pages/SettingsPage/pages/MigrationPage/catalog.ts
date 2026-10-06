@@ -139,3 +139,11 @@ export function destinationsRequest(
     }),
   };
 }
+
+/** The page's words, under `settings.migration.job.*`, for each state of something the pause waits for. */
+export const JOB_STATES: Record<string, string> = {
+  queued: "queued",
+  in_progress: "running",
+  suspended: "waiting",
+  ingesting: "ingesting",
+};

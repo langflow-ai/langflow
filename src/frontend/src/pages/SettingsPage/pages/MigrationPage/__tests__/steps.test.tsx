@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError } from "axios";
 import type { ReactElement } from "react";
@@ -9,6 +9,7 @@ import type {
   MigrationStepState,
 } from "@/controllers/API/queries/migration";
 import { DestinationsStep } from "../DestinationsStep";
+import { PausedBanner, PauseStep, Recovery, Waiting } from "../PauseStep";
 import { SecretKeyStep } from "../SecretKeyStep";
 
 // No request leaves these tests. A test that submits first makes the request fail: the connection, as it does when the
@@ -23,8 +24,12 @@ const refused = (status: number, detail: object) =>
   });
 const unreachable = () =>
   new AxiosError("Network Error", AxiosError.ERR_NETWORK);
+const originalFetch = global.fetch;
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => {
+  global.fetch = originalFetch;
+  jest.restoreAllMocks();
+});
 
 const migration = (
   instance: Partial<MigrationState["instance"]> = {},
@@ -434,5 +439,351 @@ describe("Hand over the secret key", () => {
     expect(
       screen.queryByText(/doesn't match this instance's key/),
     ).not.toBeInTheDocument();
+  });
+});
+
+const paused = { frozen_at: "2026-10-06T12:00:00Z", frozen_by: "alice" };
+
+describe("Pause changes", () => {
+  it("asks before it pauses", async () => {
+    show(
+      <PauseStep migration={migration()} state={step("pause", "current")} />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Pause changes" }),
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Pause changes now?" });
+    expect(dialog).toHaveTextContent("Tell people first.");
+    // The dialog wraps its Cancel button in a second one.
+    await userEvent.click(
+      within(dialog).getAllByRole("button", { name: "Cancel" })[0],
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("lists what is still running, with a way to cancel only what can be cancelled", async () => {
+    show(
+      <Waiting
+        refusal={{
+          code: "jobs_active",
+          jobs: [
+            {
+              id: "job-1",
+              flow_name: "Support bot",
+              owner: "bob",
+              state: "suspended",
+              started_at: "2026-10-06T11:00:00Z",
+              cancel: {
+                method: "POST",
+                url: "/api/v2/workflows/stop",
+                body: { job_id: "job-1" },
+              },
+            },
+            {
+              id: "job-2",
+              flow_name: "Nightly digest",
+              owner: "carol",
+              state: "in_progress",
+              started_at: "2026-10-06T11:30:00Z",
+              cancel: null,
+            },
+            {
+              id: "kb-1",
+              flow_name: null,
+              knowledge_base: "Handbook",
+              owner: "dave",
+              state: "ingesting",
+              started_at: "2026-10-06T11:45:00Z",
+              cancel: {
+                method: "POST",
+                url: "/api/v1/knowledge_bases/Handbook/cancel",
+                body: null,
+              },
+            },
+            {
+              id: "job-4",
+              flow_name: null,
+              owner: null,
+              state: "held_elsewhere",
+              started_at: "2026-10-06T11:50:00Z",
+              cancel: null,
+            },
+          ],
+          listeners: [{ holder: "listener:4242:1a2b3c4d" }],
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/^Still running: 4\./)).toBeInTheDocument();
+    // A job with no name goes by its id, and a state this page has no words for by the server's.
+    const unnamed = screen.getByTestId("migration-job-job-4");
+    expect(unnamed).toHaveTextContent("job-4");
+    expect(unnamed).toHaveTextContent("held_elsewhere");
+    const waiting = screen.getByTestId("migration-job-job-1");
+    expect(waiting).toHaveTextContent("Support bot");
+    expect(waiting).toHaveTextContent("bob");
+    expect(waiting).toHaveTextContent("Waiting for a person's answer");
+    expect(waiting).toHaveTextContent(
+      "Cancel it only if the answer is no longer needed.",
+    );
+    expect(
+      screen.getByRole("button", { name: "Cancel run, Support bot" }),
+    ).toBeInTheDocument();
+
+    const running = screen.getByTestId("migration-job-job-2");
+    expect(running).toHaveTextContent("Running");
+    expect(running).toHaveTextContent("You can't cancel this one from here.");
+    expect(
+      screen.queryByRole("button", { name: /Nightly digest/ }),
+    ).not.toBeInTheDocument();
+
+    expect(screen.getByTestId("migration-job-kb-1")).toHaveTextContent(
+      "Adding content to a knowledge base",
+    );
+    expect(
+      screen.getByRole("button", { name: "Cancel run, Handbook" }),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(/^Trigger listeners still running: 1\./),
+    ).toBeInTheDocument();
+    expect(screen.getByText("listener:4242:1a2b3c4d")).toBeInTheDocument();
+
+    // Cancelling sends the request the server gave for this run. Whatever comes back, the row says how it went.
+    const request = jest
+      .spyOn(api, "request")
+      .mockRejectedValueOnce(unreachable())
+      .mockResolvedValueOnce({});
+    const cancel = screen.getByRole("button", {
+      name: "Cancel run, Support bot",
+    });
+    await userEvent.click(cancel);
+    expect(await within(waiting).findByRole("alert")).toHaveTextContent(
+      "Couldn't cancel it.",
+    );
+    expect(request).toHaveBeenCalledWith({
+      method: "POST",
+      url: "/api/v2/workflows/stop",
+      data: { job_id: "job-1" },
+    });
+    await userEvent.click(cancel);
+    expect(await within(waiting).findByText("Cancel requested.")).toBeVisible();
+    expect(cancel).not.toBeInTheDocument();
+  });
+
+  it("lists what the server says is still writing, and checks again without asking twice", async () => {
+    const post = jest.spyOn(api, "post").mockRejectedValue(
+      refused(409, {
+        code: "jobs_active",
+        jobs: [
+          {
+            id: "job-1",
+            flow_name: "Support bot",
+            owner: "bob",
+            state: "in_progress",
+            started_at: "2026-10-06T11:00:00Z",
+            cancel: null,
+          },
+        ],
+        listeners: [],
+      }),
+    );
+    show(
+      <PauseStep migration={migration()} state={step("pause", "current")} />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Pause changes" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Pause",
+      }),
+    );
+
+    expect(await screen.findByTestId("migration-job-job-1")).toHaveTextContent(
+      "Support bot",
+    );
+    // The list says why, so the line for a request that failed stays away.
+    expect(
+      screen.queryByText("Something went wrong. Try again."),
+    ).not.toBeInTheDocument();
+
+    // The admin agreed to this pause already.
+    await userEvent.click(screen.getByRole("button", { name: "Check again" }));
+
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("stays blocked until the check has passed again, and says what to do", () => {
+    const check = (status: "running" | "done") => ({
+      steps: {
+        check_source: {
+          status,
+          started_by: "alice",
+          started_at: "2026-10-06T11:00:00Z",
+          target_version: "1.13.0",
+          exit_code: null,
+          report: null,
+          error: null,
+        },
+      },
+      pause: paused,
+    });
+    const { unmount } = show(
+      <PauseStep
+        migration={migration({}, check("running"))}
+        state={step("pause", "blocked", "recheck_pending")}
+      />,
+    );
+    // Read out when it changes, without taking the focus.
+    expect(
+      screen
+        .getByText("Changes are paused. Running the check again…")
+        .closest('[aria-live="polite"]'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    unmount();
+
+    // The page was reloaded, or the run was stopped: the admin starts it again.
+    const idle = show(
+      <PauseStep
+        migration={migration({}, check("done"))}
+        state={step("pause", "blocked", "recheck_pending")}
+      />,
+    );
+    expect(
+      screen.getByText(
+        "Changes are paused. The check has to pass again before you continue.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run again" })).toBeEnabled();
+    idle.unmount();
+
+    show(
+      <PauseStep
+        migration={migration({}, check("done"))}
+        state={step("pause", "blocked", "recheck_failed")}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Something changed before the pause. Review 'Check this instance'.",
+    );
+  });
+
+  it("shows a pause that never reached the server", async () => {
+    jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    show(
+      <PauseStep migration={migration()} state={step("pause", "current")} />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Pause changes" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Pause",
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Something went wrong. Try again.",
+    );
+  });
+
+  it("shows a check that could not start after the pause, and lets the admin run it again", async () => {
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(new TypeError("Failed to fetch"));
+    show(
+      <PauseStep
+        migration={migration(
+          {},
+          { target: { version: "1.13.0" }, pause: paused },
+        )}
+        state={step("pause", "blocked", "recheck_pending")}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Run again" }));
+
+    expect(
+      await screen.findByText("The check couldn't finish."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run again" })).toBeEnabled();
+    // It asked for the version the admin checked against before the pause.
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("migration/checks"),
+      expect.objectContaining({
+        body: JSON.stringify({ target_version: "1.13.0" }),
+      }),
+    );
+
+    // Another admin's run is already going (409). That is no failure: it shows in the check's own step.
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      status: 409,
+      body: null,
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Run again" }));
+
+    expect(
+      await screen.findByRole("button", { name: "Run again" }),
+    ).toBeEnabled();
+    expect(
+      screen.queryByText("The check couldn't finish."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps a banner up while paused, and confirms before turning changes back on", async () => {
+    const { unmount } = show(<PausedBanner migration={migration()} />);
+    // There before the pause, so a screen reader hears it start.
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    unmount();
+
+    show(<PausedBanner migration={migration({}, { pause: paused })} />);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Changes are paused on this instance\. Paused .* by alice\./,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Turn changes back on" }),
+    );
+
+    const asked = screen.getByRole("dialog", { name: "Turn changes back on?" });
+    expect(asked).toHaveTextContent(
+      "The backup and any copies made so far become out of date",
+    );
+
+    // Confirmed, it asks the server. The banner says so when that does not get through.
+    const resume = jest.spyOn(api, "delete").mockRejectedValue(unreachable());
+    await userEvent.click(
+      within(asked).getByRole("button", { name: "Resume" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Something went wrong. Try again.",
+    );
+    expect(resume).toHaveBeenCalledTimes(1);
+  });
+
+  it("says how to go back from where the move stands", () => {
+    const { unmount } = show(<Recovery migration={migration()} />);
+    expect(
+      screen.getByText(/^Nothing has changed on this instance\./),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    unmount();
+
+    show(<Recovery migration={migration({}, { pause: paused })} />);
+    expect(
+      screen.getByText(/^Turn changes back on\. Nothing is lost here\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Turn changes back on" }),
+    ).toBeInTheDocument();
   });
 });

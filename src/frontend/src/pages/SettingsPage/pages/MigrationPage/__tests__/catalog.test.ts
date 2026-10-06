@@ -8,6 +8,7 @@ import {
   CHECKS,
   destinationsRequest,
   groupChecks,
+  JOB_STATES,
   PROBES,
 } from "../catalog";
 
@@ -177,6 +178,22 @@ describe("PROBES", () => {
     expect(
       Object.values(PROBES).filter(
         (key) => !(`settings.migration.${key}` in en),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("JOB_STATES", () => {
+  it("has words for every state of what the pause waits for", () => {
+    expect(Object.keys(JOB_STATES).sort()).toEqual([
+      "in_progress",
+      "ingesting",
+      "queued",
+      "suspended",
+    ]);
+    expect(
+      Object.values(JOB_STATES).filter(
+        (slug) => !(`settings.migration.job.${slug}` in en),
       ),
     ).toEqual([]);
   });

@@ -7,6 +7,7 @@ import type {
   DestinationsSaved,
   MigrationCheckEvent,
   MigrationError,
+  MigrationJob,
   MigrationState,
 } from "./types";
 
@@ -121,3 +122,20 @@ export const useVerifySecretKeyMutation = () =>
       fingerprint,
     }),
   );
+
+/** Stops changes to this instance. The server refuses while anything is still writing, and says what. */
+export const usePauseMutation = () =>
+  useStepMutation<void>(() => api.post(getURL("MIGRATION", { path: "pause" })));
+
+/** Lets changes through again. What was backed up or copied during the pause no longer counts. */
+export const useResumeMutation = () =>
+  useStepMutation<void>(() =>
+    api.delete(getURL("MIGRATION", { path: "pause" })),
+  );
+
+/** Sends the request the server gave for cancelling a job. Only the job's own route knows who may. */
+export const useCancelJobMutation = () =>
+  useMutation<unknown, AxiosError, NonNullable<MigrationJob["cancel"]>>({
+    mutationFn: ({ method, url, body }) =>
+      api.request({ method, url, data: body }),
+  });
