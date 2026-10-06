@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
 from httpx import AsyncClient
 
 MODULE = "langflow.agentic.utils.assistant_runner"
@@ -121,3 +121,15 @@ class TestAssistHeadlessRouteAuth:
     async def test_should_reject_unauthenticated(self, client: AsyncClient):
         response = await client.post("api/v1/agentic/assist/run", json={"instruction": "hi"})
         assert response.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+
+
+async def test_validate_flow_access_rejects_empty_flow_id():
+    from langflow.agentic.api.router import _validate_flow_access
+
+    session = AsyncMock()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await _validate_flow_access("", uuid4(), session)
+
+    assert exc_info.value.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    session.get.assert_not_awaited()

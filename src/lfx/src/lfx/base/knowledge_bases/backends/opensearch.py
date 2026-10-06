@@ -19,13 +19,26 @@ secrets — and round-trips cleanly through the UI.
   variable name. Only the *variable name* lives in config — never
   the raw credential.
 * ``index_name`` — OpenSearch index this KB writes / reads.
-  Optional. When omitted, the index is derived from ``kb_name`` (see
-  ``derive_index_name``) so every Knowledge Base / Memory Base gets its
-  own isolated index — mirroring how the Chroma backends use
-  ``collection_name=kb_name``. Set this explicitly only to point the KB
-  at a pre-existing, externally-managed index; doing so opts out of
+  Optional. When omitted, the index is owner-scoped (see
+  ``derive_index_name``): the same ``lf_<sha256[:24]>`` name pgvector gives
+  this KB's table. KB names are unique per user, not globally, so an index
+  named from ``kb_name`` alone would let two users' same-named KBs read,
+  count, and delete each other's chunks. Set this explicitly only to point
+  the KB at a pre-existing, externally-managed index; doing so opts out of
   per-KB isolation (the index is then shared by every KB configured with
-  the same value), so it should name a dedicated index per KB.
+  the same value), so it should name a dedicated index per KB. Names shaped
+  like an owner-scoped index are rejected unless they are this KB's own.
+  Alembic revision ``386662af02e9`` pins KBs created before owner scoping to
+  the ``kb_name``-derived index they already use, recording
+  ``index_name_origin: legacy_kb_name``.
+* ``legacy_shared_index`` — written by that migration instead of a pin
+  when two users' KBs already shared one ``kb_name``-derived index (those
+  chunks cannot be attributed to one owner), or when that index's name is
+  shaped like an owner-scoped name. The KB moves to its own empty index and
+  the old index is left untouched for an operator to resolve. The backend
+  logs a warning while the marker is present.
+* ``index_name`` and the migration markers can only be persisted by a
+  superuser (see ``naming.ensure_storage_routing_allowed``).
 * ``vector_field`` — document field for the embedding vector.
   Defaults to ``vector_field`` — the field LangChain's
   ``OpenSearchVectorSearch`` actually writes to. That wrapper derives
@@ -56,7 +69,6 @@ from __future__ import annotations
 
 import asyncio
 import queue as sync_queue
-import re
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -67,10 +79,14 @@ from lfx.base.knowledge_bases.backends.base import (
     TestConnectionResult,
     drain_queue_until_sentinel,
 )
+from lfx.base.knowledge_bases.backends.destination_policy import enforce_kb_destination
+from lfx.base.knowledge_bases.backends.naming import owner_scoped_collection_name, resolve_storage_name
 from lfx.log.logger import logger
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+    from uuid import UUID
 
     from langchain_core.vectorstores import VectorStore
 
@@ -105,36 +121,24 @@ DEFAULT_TEXT_FIELD = "text"
 DEFAULT_ENGINE = "faiss"
 DEFAULT_SPACE_TYPE = "l2"
 
-# Chars OpenSearch forbids anywhere in an index name, plus whitespace.
-_OS_INDEX_FORBIDDEN = re.compile(r'[\\/*?"<>|,#: \t\n\r]+')
-# Anything outside the safe index-name alphabet (after the pass above).
-_OS_INDEX_NON_ALNUM = re.compile(r"[^a-z0-9._-]+")
+# ``backend_config`` keys written by the migration that moved existing installs
+# to owner-scoped indexes. Kept in sync with alembic revision ``386662af02e9``.
+INDEX_NAME_ORIGIN_KEY = "index_name_origin"
+LEGACY_KB_NAME_ORIGIN = "legacy_kb_name"
+LEGACY_SHARED_INDEX_KEY = "legacy_shared_index"
 
 
-def derive_index_name(kb_name: str) -> str:
-    r"""Derive a valid OpenSearch index name from a KB name.
+def derive_index_name(kb_name: str, owner_id: UUID) -> str:
+    """Derive the owner-scoped OpenSearch index for ``owner_id``'s ``kb_name``.
 
-    OpenSearch index names must be lowercase, may not contain
-    ``\\ / * ? " < > | , # :`` / whitespace, and may not begin with
-    ``-``, ``_``, ``+`` or ``.``. Memory-Base ``kb_name``s are already
-    lowercase ``<sanitized>_<8hex>`` and pass through unchanged; regular
-    Knowledge Base names are user-supplied (only spaces get replaced at
-    create time) so they need full sanitization here.
-
-    This is what gives each KB / MB its own index: MB names are globally
-    unique by construction, and KB names are unique per user, so the
-    derived index isolates one base's vectors from another's — the same
-    role ``collection_name=kb_name`` plays for the Chroma backends.
+    KB names are unique per user, not globally, so the owner is part of the
+    name. The result is the name pgvector uses for the same KB's table:
+    ``lf_`` + 24 lowercase hex chars, which is a valid OpenSearch index name
+    for any ``kb_name`` (lowercase, no reserved characters, far below the
+    255-byte limit). Memory Base names are globally unique already; scoping
+    them too keeps one rule for every base.
     """
-    name = (kb_name or "").strip().lower()
-    name = _OS_INDEX_FORBIDDEN.sub("_", name)
-    name = _OS_INDEX_NON_ALNUM.sub("_", name)
-    # Index names cannot start with these; strip leading occurrences.
-    name = name.lstrip("-_+.")
-    if not name or name in {".", ".."}:
-        name = "kb"
-    # OpenSearch caps index names at 255 bytes.
-    return name[:255]
+    return owner_scoped_collection_name(owner_id, kb_name)
 
 
 def _coerce_bool(value: Any, *, default: bool) -> bool:
@@ -176,14 +180,18 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         """Resolve the effective index for this KB.
 
         An explicit ``index_name`` in ``backend_config`` is honored as an
-        operator override (e.g. an externally-managed index); otherwise the
-        index is derived per-KB from ``kb_name`` so each Knowledge Base /
-        Memory Base is isolated in its own index.
+        operator override (an externally-managed index, or the pre-scoping
+        index a migration pinned). Otherwise the index is owner-scoped, and a
+        missing owner fails closed instead of falling back to a shared name.
         """
-        configured = self.backend_config.get("index_name")
-        if configured:
-            return str(configured)
-        return derive_index_name(self.kb_name)
+        return resolve_storage_name(
+            kb_name=self.kb_name,
+            owner_id=self._coerce_user_uuid(),
+            override=self.backend_config.get("index_name"),
+            override_key="index_name",
+            backend="OpenSearchBackend",
+            storage="index",
+        )
 
     async def _resolve_secrets(self) -> None:
         """Resolve URL + optional basic-auth credentials via variable_service.
@@ -196,19 +204,63 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         invent here.
         """
         url_variable = self.backend_config.get("url_variable") or DEFAULT_URL_VARIABLE
-        url = await self.resolve_secret(url_variable)
+        # The provenance decides whether the destination counts as operator-chosen:
+        # a Langflow variable is tenant-written, a process env var is not.
+        url, url_source = await self.resolve_secret_with_source(url_variable)
         if not url:
             msg = (
                 f"OpenSearchBackend needs the {url_variable!r} Langflow variable "
                 "(or env var of the same name) populated with the cluster URL."
             )
             raise ValueError(msg)
+        # The URL comes from a tenant-controlled Langflow variable, so the server must
+        # not dial it blindly (CWE-918). Running the check here — inside
+        # ensure_ready()'s one-shot hook — covers test_connection, ingestion, and
+        # retrieval alike, so a KB created against a hostile variable stays blocked
+        # after configuration time too.
+        await self._validate_url(url, url_variable, url_source)
         self._resolved_url = url
 
         username_variable = self.backend_config.get("username_variable") or DEFAULT_USERNAME_VARIABLE
         password_variable = self.backend_config.get("password_variable") or DEFAULT_PASSWORD_VARIABLE
         self._resolved_username = await self.resolve_secret(username_variable)
         self._resolved_password = await self.resolve_secret(password_variable)
+
+    @staticmethod
+    async def _validate_url(url: str, url_variable: str, url_source: str) -> None:
+        """Check the resolved cluster URL against both destination gates before use.
+
+        The URL comes from a tenant-controlled Langflow variable (``backend_config``
+        only names the variable), and the client built from it makes server-side
+        connections whose outcome is echoed back by the test-connection route.
+        Without validation a tenant can probe cloud-metadata (169.254.169.254),
+        RFC1918, or loopback targets from the server's network position. Apply the
+        same connector SSRF policy every other tenant-URL sink uses (vector-store
+        components, MCP, model providers); operators reach legitimate internal
+        clusters via ``LANGFLOW_SSRF_ALLOWED_HOSTS``. ``resolve_hostname`` blocks,
+        so the check runs off the event loop.
+
+        This is the *only* place the cluster URL is validated. ``_resolve_secrets``
+        briefly called the validator itself as well, which resolved DNS twice per
+        KB and left the re-raise below unreachable.
+
+        Re-raised as ``SSRFProtectionError`` (which subclasses ``ValueError``, so every
+        existing ``except ValueError`` config path still catches it) rather than flattened
+        to a bare ``ValueError``: ``test_connection`` reports ``type(exc).__name__`` back to
+        the caller, and a blocked destination should not read as a typo in the index name.
+
+        The second gate is ``enforce_kb_destination``: opensearch-py re-resolves DNS when it
+        connects and offers no seam to pin the validated address (langchain's wrapper hands one
+        kwargs dict to both the urllib3 and aiohttp clients), so a tenant-written hostname is
+        additionally required to be one the operator approved. It runs first, and without a DNS
+        lookup, so a refused destination is never resolved on the tenant's behalf.
+        """
+        enforce_kb_destination(url, source=url_source, description=f"Langflow variable {url_variable!r}")
+        try:
+            await asyncio.to_thread(validate_connector_url_for_ssrf, url)
+        except SSRFProtectionError as exc:
+            msg = f"OpenSearch URL from variable {url_variable!r} is not allowed: {exc}"
+            raise SSRFProtectionError(msg) from exc
 
     def _build_vector_store(self) -> VectorStore:
         # Validate config before touching optional deps so missing
@@ -219,6 +271,17 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         if not url:
             msg = "OpenSearchBackend.ensure_ready() must be awaited before _build_vector_store."
             raise RuntimeError(msg)
+        shared_legacy_index = self.backend_config.get(LEGACY_SHARED_INDEX_KEY)
+        if shared_legacy_index and index_name != shared_legacy_index:
+            logger.warning(
+                "Knowledge base %s no longer uses OpenSearch index %s: another user's knowledge base used the "
+                "same index, or the name is reserved for owner-scoped indexes. Its earlier chunks were left in "
+                "%s, and it now uses its own index %s. Re-ingest its sources to restore them.",
+                self.kb_name,
+                shared_legacy_index,
+                shared_legacy_index,
+                index_name,
+            )
 
         vector_field = self.backend_config.get("vector_field") or DEFAULT_VECTOR_FIELD
         text_field = self.backend_config.get("text_field") or DEFAULT_TEXT_FIELD
@@ -353,6 +416,14 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         """
         try:
             await self.ensure_ready()
+        except SSRFProtectionError as exc:
+            # SSRFProtectionError subclasses ValueError, so it must be caught
+            # ahead of the ConfigError branch to keep the reported type honest.
+            return TestConnectionResult(
+                ok=False,
+                message=str(exc),
+                details={"type": type(exc).__name__},
+            )
         except ValueError as exc:
             return TestConnectionResult(
                 ok=False,

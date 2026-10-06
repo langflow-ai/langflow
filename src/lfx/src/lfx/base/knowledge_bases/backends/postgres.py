@@ -22,7 +22,6 @@ preserving Langflow's security floor on the Python pgvector client; released
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import uuid
@@ -38,6 +37,7 @@ from lfx.base.knowledge_bases.backends.base import (
     IngestedDocument,
     TestConnectionResult,
 )
+from lfx.base.knowledge_bases.backends.naming import owner_scoped_collection_name
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
@@ -306,9 +306,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         if owner_id is None:
             msg = "PostgresBackend requires a valid user_id to isolate its collection."
             raise ValueError(msg)
-        owner = str(owner_id)
-        payload = f"{len(owner)}:{owner}{len(self.kb_name)}:{self.kb_name}"
-        return f"lf_{hashlib.sha256(payload.encode()).hexdigest()[:24]}"
+        return owner_scoped_collection_name(owner_id, self.kb_name)
 
     @property
     def table_name(self) -> str:

@@ -70,7 +70,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 
-router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"])
+router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"], include_in_schema=False)
 
 
 def _enforce_public_rate_limit(http_request: Request) -> None:
@@ -226,17 +226,27 @@ async def execute_public_workflow(
             UnknownStreamProtocolError(request.stream_protocol, available_protocols())
         )
 
-    job_id = uuid4()
+    run_id = str(uuid4())
     adapter = get_stream_adapter(
         request.stream_protocol,
         StreamAdapterContext(
-            run_id=str(job_id),
+            run_id=run_id,
             thread_id=scoped_session or str(virtual_flow_id),
+            # Forced, not a caller choice: an anonymous visitor has no reason to
+            # receive the flow's topology or its components' outputs, and this
+            # endpoint already defaults to the restrictive choice elsewhere (it
+            # strips secrets, forbids data/tweaks, namespaces sessions). The
+            # field is absent from ``PublicWorkflowRunRequest``, so a body that
+            # asks for it is rejected by ``extra="forbid"`` rather than silently
+            # ignored.
+            expose_graph_state=False,
         ),
     )
 
     # The narrower public schema has no ``data``/``tweaks`` fields; we
     # carry only the partial-run knobs into ParsedWorkflowRun.
+    # Substitution notices are for authenticated callers. Anonymous shared-link
+    # visitors cannot edit the flow and should not receive server policy details.
     parsed = ParsedWorkflowRun(
         flow_id=str(virtual_flow_id),
         input_value=request.input_value,
@@ -250,6 +260,12 @@ async def execute_public_workflow(
         # opt-in preserves approved code without restoring owner credentials.
         data=sanitized_public_data,
         files=request.files,
+        expose_graph_state=False,
+        # The shareable playground runs on this endpoint and its chat-view still
+        # renders from the v1 side-channel, so the mirror stays on. It carries
+        # the conversation (add_message/token/remove_message/error/end), not the
+        # graph state suppressed above.
+        emit_v1_side_channel=True,
     )
 
     async def _frames_only() -> AsyncIterator[bytes]:
@@ -260,8 +276,10 @@ async def execute_public_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=public_user,
+            provider_policy_flow=flow,
             source_flow_id=real_flow_id,
             source_flow_owner_id=source_flow_owner_id,
+            run_id=run_id,
             # Anonymous shared-link traffic, kept apart from signed-in v2 runs the same way
             # playground.public is kept apart from playground.
             protocol="v2.public",

@@ -9,7 +9,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import typer
 import uvicorn
@@ -91,6 +91,43 @@ def _gate_flow_for_serve(
     return merge_flow_envelope(outer_envelope, inner, wrap_bare=True)
 
 
+async def _registry_from_temp_flow_json(
+    json_data: Any,
+    *,
+    verbose_print: Callable[[str], None],
+    check_variables: bool,
+    no_env_fallback: bool,
+    flow_store: FlowStore,
+) -> tuple[FlowRegistry, str]:
+    """Build a registry from *json_data* staged in a temporary ``.json`` file.
+
+    Returns ``(registry, temp_path)``. Ownership of the temp file passes to the caller
+    only on a clean return; every other exit unlinks it here — the ``typer.Exit`` raised
+    for a load error, a Ctrl-C or cancellation mid-load, an unexpected loader failure —
+    because the caller never receives a path for its own ``finally`` to clean up.
+    """
+    fd, temp_path = tempfile.mkstemp(suffix=".json")
+    registry: FlowRegistry | None = None
+    try:
+        with os.fdopen(fd, "w") as tmp:
+            json.dump(json_data, tmp, indent=2)
+        registry = await build_registry_from_paths(
+            [Path(temp_path)],
+            verbose_print,
+            check_variables=check_variables,
+            no_env_fallback=no_env_fallback,
+            store=flow_store,
+        )
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
+    finally:
+        if registry is None:
+            with contextlib.suppress(OSError):
+                Path(temp_path).unlink()
+    return registry, temp_path
+
+
 async def _build_serve_registry(
     *,
     script_paths: list[str] | None,
@@ -133,20 +170,13 @@ async def _build_serve_registry(
                 raise typer.Exit(1) from e
         if upgrade_flow:
             json_data = _gate_flow_for_serve(json_data, upgrade_flow, verbose=verbose)
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-            json.dump(json_data, tmp, indent=2)
-            temp_file_to_cleanup = tmp.name
-        try:
-            registry = await build_registry_from_paths(
-                [Path(temp_file_to_cleanup)],
-                verbose_print,
-                check_variables=check_variables,
-                no_env_fallback=no_env_fallback,
-                store=flow_store,
-            )
-        except ValueError as e:
-            typer.echo(f"Error: {e}", err=True)
-            raise typer.Exit(1) from e
+        registry, temp_file_to_cleanup = await _registry_from_temp_flow_json(
+            json_data,
+            verbose_print=verbose_print,
+            check_variables=check_variables,
+            no_env_fallback=no_env_fallback,
+            flow_store=flow_store,
+        )
 
     elif script_paths:
         resolved = [Path(p).resolve() for p in script_paths]
@@ -175,20 +205,13 @@ async def _build_serve_registry(
                 )
                 raise typer.Exit(1) from e
             gated = _gate_flow_for_serve(payload, upgrade_flow, verbose=verbose)
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-                json.dump(gated, tmp, indent=2)
-                temp_file_to_cleanup = tmp.name
-            try:
-                registry = await build_registry_from_paths(
-                    [Path(temp_file_to_cleanup)],
-                    verbose_print,
-                    check_variables=check_variables,
-                    no_env_fallback=no_env_fallback,
-                    store=flow_store,
-                )
-            except ValueError as e:
-                typer.echo(f"Error: {e}", err=True)
-                raise typer.Exit(1) from e
+            registry, temp_file_to_cleanup = await _registry_from_temp_flow_json(
+                gated,
+                verbose_print=verbose_print,
+                check_variables=check_variables,
+                no_env_fallback=no_env_fallback,
+                flow_store=flow_store,
+            )
 
         elif len(resolved) == 1 and resolved[0].is_dir():
             dir_path = resolved[0]

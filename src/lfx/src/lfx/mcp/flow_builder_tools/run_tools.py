@@ -451,6 +451,9 @@ class GenerateComponent(Component):
                 provider=model.get("provider"),
                 model_name=model.get("model_name"),
                 api_key_var=model.get("api_key_var"),
+                # The AGENT's prose, not a user turn: a guardrail component is specified
+                # by naming the attacks it catches, which the injection regex rejected.
+                trusted_source=True,
             )
 
         # create_task copies the context: ContextVar writes inside it

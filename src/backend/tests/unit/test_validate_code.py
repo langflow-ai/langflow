@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from unittest import mock
 
@@ -62,6 +63,56 @@ def square(x)
         "imports": {"errors": []},
         "function": {"errors": ["expected ':' (<unknown>, line 4)"]},
     }
+
+
+def test_validate_code_does_not_execute_imported_modules(tmp_path, monkeypatch):
+    """H1-3992099: validate_code must locate imports without executing them.
+
+    A module planted on a writable sys.path entry must not run its top-level
+    code when "validated" — importlib.import_module() executed it; find_spec()
+    does not.
+    """
+    marker = tmp_path / "planted_module_executed.txt"
+    (tmp_path / "planted_validate_rce.py").write_text(
+        f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed')\n",
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.delitem(sys.modules, "planted_validate_rce", raising=False)
+
+    errors = validate_code("import planted_validate_rce")
+
+    assert errors == {"imports": {"errors": []}, "function": {"errors": []}}
+    assert not marker.exists()
+
+    # The same import through importlib DOES execute the module, proving the
+    # marker path is live and the control above is meaningful.
+    import importlib
+
+    importlib.import_module("planted_validate_rce")
+    assert marker.exists()
+
+
+def test_validate_code_does_not_import_parent_packages(tmp_path, monkeypatch):
+    """find_spec() on a dotted name would import (execute) parent packages.
+
+    validate_code must only resolve the top-level package.
+    """
+    marker = tmp_path / "planted_parent_executed.txt"
+    package = tmp_path / "planted_parent_pkg"
+    package.mkdir()
+    (package / "__init__.py").write_text(
+        f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed')\n",
+        encoding="utf-8",
+    )
+    (package / "child.py").write_text("", encoding="utf-8")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.delitem(sys.modules, "planted_parent_pkg", raising=False)
+
+    errors = validate_code("import planted_parent_pkg.child")
+
+    assert errors == {"imports": {"errors": []}, "function": {"errors": []}}
+    assert not marker.exists()
 
 
 def test_execute_function_success():

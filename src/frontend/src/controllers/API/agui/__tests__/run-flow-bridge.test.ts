@@ -11,6 +11,7 @@
 import { type BaseEvent, EventType } from "@ag-ui/client";
 import {
   type BridgeContext,
+  buildBackgroundRunRequest,
   handleAGUIEvent,
 } from "@/controllers/API/agui/run-flow-bridge";
 
@@ -28,6 +29,7 @@ function makeRecordingContext() {
     handleLogEvent: () => calls.push("log"),
     onFinished: () => calls.push("finished"),
     onError: (message) => calls.push(`error:${message}`),
+    onWarning: (message) => calls.push(`warning:${message}`),
   };
   return { ctx, calls };
 }
@@ -71,6 +73,38 @@ describe("handleAGUIEvent terminal contract", () => {
 });
 
 describe("handleAGUIEvent non-terminal contract", () => {
+  it("surfaces a workflow warning without ending the run", () => {
+    const { ctx, calls } = makeRecordingContext();
+    const terminal = handleAGUIEvent(
+      {
+        type: EventType.CUSTOM,
+        name: "langflow.warning",
+        value: { message: "Server code substituted" },
+      } as BaseEvent,
+      ctx,
+    );
+    expect(terminal).toBe(false);
+    expect(calls).toEqual(["warning:Server code substituted"]);
+  });
+
+  it.each([undefined, null, {}, { message: 7 }, { message: "" }])(
+    "ignores malformed warning payloads: %j",
+    (value) => {
+      const { ctx, calls } = makeRecordingContext();
+      expect(
+        handleAGUIEvent(
+          {
+            type: EventType.CUSTOM,
+            name: "langflow.warning",
+            value,
+          } as BaseEvent,
+          ctx,
+        ),
+      ).toBe(false);
+      expect(calls).toEqual([]);
+    },
+  );
+
   it("returns false for RUN_STARTED and propagates the runId", () => {
     const { ctx, calls } = makeRecordingContext();
 
@@ -175,6 +209,25 @@ describe("handleAGUIEvent non-terminal contract", () => {
 
     expect(terminal).toBe(false);
     expect(calls).toEqual([]);
+  });
+});
+
+describe("buildBackgroundRunRequest", () => {
+  it("asks for graph state, which the canvas and playground both render from", () => {
+    const body = buildBackgroundRunRequest({ flowId: "flow-1" });
+
+    expect(body.expose_graph_state).toBe(true);
+    expect(body.stream_protocol).toBe("agui");
+    expect(body.mode).toBe("background");
+  });
+
+  it("forwards an explicit opt-out", () => {
+    const body = buildBackgroundRunRequest({
+      flowId: "flow-1",
+      exposeGraphState: false,
+    });
+
+    expect(body.expose_graph_state).toBe(false);
   });
 });
 

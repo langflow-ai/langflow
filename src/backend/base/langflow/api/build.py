@@ -4,6 +4,7 @@ import time
 import traceback
 import uuid
 from collections.abc import AsyncIterator
+from functools import wraps
 
 from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.exceptions.tweaks import TweakRefusedError
@@ -11,7 +12,7 @@ from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
-from lfx.processing.process import process_tweaks_on_graph
+from lfx.processing.process import process_tweaks_on_graph, validate_targeted_inputs
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.file_path_security import LocalFileAccessError
@@ -49,6 +50,7 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.telemetry.schema import (
     ComponentInputsPayload,
     ComponentPayload,
@@ -97,6 +99,14 @@ def _project_event_to_v1(raw: str) -> str:
     # and the co-located non-string text is coerced, matching what /run already does.
     event["data"] = project_payload_to_v1(data)
     return json.dumps(event) + "\n\n"
+
+
+def _vertex_build_data_for_event(response: VertexBuildResponse, *, redact_build_params: bool) -> dict:
+    """Serialize a vertex event while withholding raw parameters from shared callers."""
+    build_data = json.loads(response.model_dump_json())
+    if redact_build_params:
+        build_data["params"] = None
+    return build_data
 
 
 def _output_meta_for_vertex(graph: Graph, vertex_id: str) -> dict:
@@ -191,11 +201,13 @@ async def start_flow_build(
     start_component_id: str | None,
     log_builds: bool,
     current_user: User | UserRead,
+    provider_policy_flow: Flow,
     queue_service: JobQueueService,
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
     source_flow_owner_id: uuid.UUID | None = None,
     expose_error_details: bool = False,
+    redact_build_params: bool = False,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
 
@@ -209,6 +221,8 @@ async def start_flow_build(
         start_component_id: Optional component ID to start from.
         log_builds: Whether to log build events.
         current_user: The currently authenticated user.
+        provider_policy_flow: Server-loaded flow whose project/workspace scope
+            governs provider use for the queued graph.
         queue_service: The job queue service instance.
         flow_name: Optional flow name override.
         source_flow_id: If provided, the actual flow ID to load from DB.
@@ -216,10 +230,16 @@ async def start_flow_build(
             but the flow data must be loaded from the original flow in the database.
         source_flow_owner_id: Stored owner of the source flow, used to gate owner-scoped side effects.
         expose_error_details: Whether client events may include component errors and tracebacks.
+        redact_build_params: Hide raw vertex parameters from non-owner event consumers.
 
     Returns:
         the job_id.
     """
+    # Reject before allocating a queue or starting the background build. Once a
+    # job id has been returned, a policy refusal can only arrive as an event on
+    # an HTTP 200 rather than the documented structured 422.
+    validate_targeted_inputs([inputs] if inputs is not None else None)
+
     job_id = str(uuid.uuid4())
     try:
         _, event_manager = queue_service.create_queue(job_id)
@@ -234,10 +254,12 @@ async def start_flow_build(
             start_component_id=start_component_id,
             log_builds=log_builds,
             current_user=current_user,
+            provider_policy_flow=provider_policy_flow,
             flow_name=flow_name,
             source_flow_id=source_flow_id,
             source_flow_owner_id=source_flow_owner_id,
             expose_error_details=expose_error_details,
+            redact_build_params=redact_build_params,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
@@ -437,7 +459,7 @@ async def create_flow_response(
     )
 
 
-async def generate_flow_events(
+async def _generate_flow_events(
     *,
     flow_id: uuid.UUID,
     background_tasks: BackgroundTasks,
@@ -458,6 +480,7 @@ async def generate_flow_events(
     track_job_status: bool = True,
     tweaks: dict | None = None,
     expose_error_details: bool = False,
+    redact_build_params: bool = False,
     persist_messages: bool = True,
     end_user_id: str | None = None,
 ) -> None:
@@ -588,11 +611,11 @@ async def generate_flow_events(
             # A refused tweak is a caller error, not a build failure, so it must
             # not be flattened into the generic 500 below.
             #
-            # Where it surfaces depends on how this ran. Called inline, it
-            # reaches the app-level handler and answers 422. Streaming and
-            # background callers run this in their own task, so the refusal is
-            # reported as an error event on an already-committed HTTP 200
-            # instead. Enforcement holds either way: the tweak is never applied.
+            # ``start_flow_build`` eagerly refuses targeted inputs and does not
+            # accept tweaks. V2 streaming and background callers instead pass
+            # tweaks directly to ``generate_flow_events`` after their response or
+            # job is committed, so refusal is reported as an error event there.
+            # Enforcement still holds: the tweak is never applied.
             raise
         except Exception as exc:
             await log_telemetry(
@@ -762,7 +785,7 @@ async def generate_flow_events(
                     flow_id=flow_id_str,
                     vertex_id=vertex_id,
                     valid=valid,
-                    params=params,
+                    params=None if redact_build_params else params,
                     data=result_data_response,
                     artifacts=artifacts,
                     # Key the persisted build by the run id so job-tracked runs can
@@ -780,7 +803,7 @@ async def generate_flow_events(
             vertex.add_build_time(timedelta)
             # Capture both inactivated and conditionally excluded vertices
             inactivated_vertices = list(graph.inactivated_vertices.union(graph.conditionally_excluded_vertices))
-            graph.reset_inactivated_vertices()
+            graph.reset_inactivated_vertices(vertex.id)
             graph.reset_activated_vertices()
 
             # Note: Do not reset conditionally_excluded_vertices each iteration
@@ -874,8 +897,7 @@ async def generate_flow_events(
 
         # send built event or error event
         try:
-            vertex_build_response_json = vertex_build_response.model_dump_json()
-            build_data = json.loads(vertex_build_response_json)
+            build_data = _vertex_build_data_for_event(vertex_build_response, redact_build_params=redact_build_params)
         except Exception as exc:
             msg = f"Error serializing vertex build response: {exc}"
             raise ValueError(msg) from exc
@@ -1049,6 +1071,23 @@ async def generate_flow_events(
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
 
     await event_manager.queue.put((None, None, time.time()))
+
+
+@wraps(_generate_flow_events)
+async def generate_flow_events(*args, provider_policy_flow: Flow | None = None, **kwargs) -> None:
+    """Run the build driver under a trusted, required provider-policy scope.
+
+    Production callers pass the exact server-loaded flow they authorized. A
+    missing flow remains a required unresolved scope so provider-bearing test
+    or internal callers fail closed in the Enterprise policy implementation.
+    """
+    current_user = kwargs.get("current_user")
+    with scoped_model_provider_policy_for_flow(
+        provider_policy_flow,
+        user_id=getattr(current_user, "id", None),
+        is_superuser=bool(getattr(current_user, "is_superuser", False)),
+    ):
+        await _generate_flow_events(*args, **kwargs)
 
 
 async def cancel_flow_build(

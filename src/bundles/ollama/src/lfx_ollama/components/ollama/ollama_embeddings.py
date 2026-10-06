@@ -163,7 +163,16 @@ class OllamaEmbeddingsComponent(LCModelComponent):
 
                 payload = {"model": model_name}
                 show_response = await ssrf_safe_async_post(show_url, json=payload, headers=headers)
-                show_response.raise_for_status()
+                try:
+                    show_response.raise_for_status()
+                except httpx.HTTPStatusError as exc:
+                    # A model listed by /api/tags can still be uninspectable -- a cloud
+                    # model the daemon is not signed in for answers 410. Skipping it keeps
+                    # the rest of the picker usable; aborting emptied it entirely.
+                    await logger.awarning(
+                        f"Skipping Ollama model {model_name}: /api/show returned {exc.response.status_code}"
+                    )
+                    continue
                 json_data = show_response.json()
                 if asyncio.iscoroutine(json_data):
                     json_data = await json_data
@@ -177,7 +186,9 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         except SSRFProtectionError as e:
             msg = f"SSRF Protection: {e}"
             raise ValueError(msg) from e
-        except (httpx.RequestError, ValueError) as e:
+        except (httpx.HTTPError, ValueError) as e:
+            # HTTPStatusError is NOT a RequestError, so a non-2xx used to escape this
+            # handler and leak the raw httpx text into the editor.
             msg = "Could not get model names from Ollama."
             raise ValueError(msg) from e
 

@@ -134,6 +134,7 @@ describe("memories mutation hooks cache wiring", () => {
         name: "New Memory",
         flow_id: "flow-1",
         embedding_model: "text-embedding-3-small",
+        embedding_provider: "OpenAI",
       });
     });
 

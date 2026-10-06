@@ -18,8 +18,12 @@ import {
   runFlowAGUI,
   runFlowHITL,
 } from "@/controllers/API/agui/run-flow-bridge";
+import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-variable-scope";
+import { getSettledSuccessfulQueryData } from "@/controllers/API/helpers/query-cache";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { track, trackFlowBuild } from "@/customization/utils/analytics";
+import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
+import type { GlobalVariable } from "@/types/global_variables";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import i18n from "../i18n";
@@ -56,7 +60,6 @@ import useAlertStore from "./alertStore";
 import useAuthStore from "./authStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
-import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
 import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
 import { useUtilityStore } from "./utilityStore";
@@ -135,6 +138,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     if (get().reactFlowInstance && get().nodes.find((n) => n.id === nodeId)) {
       get().reactFlowInstance?.fitView({ nodes: [{ id: nodeId }] });
     }
+  },
+  fitViewRequest: { id: 0 },
+  // Fitting immediately would measure an incomplete graph, so this only records
+  // the intent — the canvas performs the fit once every node has dimensions and
+  // then runs `onFitted`. See `useFitViewWhenMeasured`.
+  requestFitView: (onFitted) => {
+    const superseded = get().fitViewRequest.onFitted;
+    set((state) => ({
+      fitViewRequest: { id: state.fitViewRequest.id + 1, onFitted },
+    }));
+    // A request replaced before it ran must not strand its caller: the welcome
+    // overlay waits on this callback before it uncovers the canvas.
+    superseded?.();
   },
   autoSaveFlow: undefined,
   componentsToUpdate: [],
@@ -636,6 +652,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     internalPostionDictionary[insidePosition.x] = insidePosition.y;
     get().setPositionDictionary(internalPostionDictionary);
 
+    const currentFlowId = useFlowsManagerStore.getState().currentFlowId;
+    const scopedGlobalVariables = currentFlowId
+      ? getSettledSuccessfulQueryData<GlobalVariable[]>(
+          queryClient,
+          getGlobalVariablesQueryKey({ flowId: currentFlowId }),
+        )
+      : undefined;
+    const scopedUnavailableFields = scopedGlobalVariables
+      ? getUnavailableFields(scopedGlobalVariables)
+      : undefined;
+    const scopedGlobalVariableEntries = scopedGlobalVariables?.map(
+      (variable) => variable.name,
+    );
+
     selection.nodes.forEach((node: AllNodeType) => {
       // Generate a unique node ID
       const newId = getNodeId(node.data.type);
@@ -661,8 +691,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       updateGroupRecursion(
         newNode,
         selection.edges,
-        useGlobalVariablesStore.getState().unavailableFields,
-        useGlobalVariablesStore.getState().globalVariablesEntries,
+        scopedUnavailableFields,
+        scopedGlobalVariableEntries,
       );
 
       // Add the new node to the list of nodes in state

@@ -160,7 +160,7 @@ async function mockProviderCatalog(
   } = {},
 ) {
   await page.route(
-    /\/api\/v1\/models\?include_deprecated=true$/,
+    /\/api\/v1\/models\?[^#]*include_deprecated=true(?:&[^#]*)?$/,
     async (route: Route) => {
       if (providersDelayMs > 0) {
         await new Promise((resolve) => setTimeout(resolve, providersDelayMs));
@@ -170,7 +170,7 @@ async function mockProviderCatalog(
   );
 
   await page.route(
-    /\/api\/v1\/models\/enabled_models$/,
+    /\/api\/v1\/models\/enabled_models(?:\?[^#]*)?$/,
     async (route: Route) => {
       if (route.request().method() === "POST") {
         await route.fulfill({ json: { disabled_models: [] } });
@@ -181,7 +181,7 @@ async function mockProviderCatalog(
   );
 
   await page.route(
-    /\/api\/v1\/models\/provider-variable-mapping$/,
+    /\/api\/v1\/models\/provider-variable-mapping(?:\?[^#]*)?$/,
     async (route: Route) => {
       await route.fulfill({ json: providerVariables });
     },

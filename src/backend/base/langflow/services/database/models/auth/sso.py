@@ -253,6 +253,9 @@ class SSOUserProfile(SQLModel, table=True):  # type: ignore[call-arg]
     sso_provider: str = Field(description="SSO connection slug or expand-phase legacy provider key")
     sso_user_id: str = Field()
     email: str | None = Field(default=None, index=True)
+    first_name: str | None = Field(default=None)
+    last_name: str | None = Field(default=None)
+    picture: str | None = Field(default=None)
     sso_last_login_at: datetime | None = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -721,7 +724,7 @@ class SSOSettings(SQLModel, table=True):  # type: ignore[call-arg]
     """Singleton instance-level SSO policy settings."""
 
     __tablename__ = "sso_settings"
-    __table_args__ = (CheckConstraint("id = 1", name="ck_sso_settings_singleton"),)
+    __table_args__ = (CheckConstraint("id = 1", name=conv("ck_sso_settings_singleton")),)
 
     id: int = Field(default=1, primary_key=True)
     enforce_sso: bool = Field(default=False)

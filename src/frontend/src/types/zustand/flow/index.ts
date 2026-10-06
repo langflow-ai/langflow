@@ -72,6 +72,9 @@ export type ComponentsToUpdateType = {
 export type AutoSaveFlowType = ((flow?: FlowType) => void) & {
   cancel: () => void;
   flush: () => Promise<void> | void;
+  // Saves `flow` after every pending and in-flight save; later autosaves wait
+  // for it. Rejects when that save fails.
+  enqueue: (flow: FlowType) => Promise<void>;
 };
 
 export type FlowStoreType = {
@@ -87,6 +90,9 @@ export type FlowStoreType = {
     [key: number]: number;
   }) => void;
   fitViewNode: (nodeId: string) => void;
+  /** Set by `requestFitView`; the canvas fits once every node is measured. */
+  fitViewRequest: { id: number; onFitted?: () => void };
+  requestFitView: (onFitted?: () => void) => void;
   autoSaveFlow: AutoSaveFlowType | undefined;
   componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (

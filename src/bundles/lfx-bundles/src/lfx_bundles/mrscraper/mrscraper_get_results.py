@@ -5,7 +5,7 @@ from lfx.io import DropdownInput, IntInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 
-from .mrscraper_common import build_client, payload, result_rows
+from lfx_bundles.mrscraper.mrscraper_common import build_client, payload, result_rows
 
 
 class MrscraperGetResults(Component):

@@ -32,6 +32,7 @@ from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from lfx.services.authorization import AuthorizationPrincipal
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 # Shared audit result vocabulary.
 AUDIT_ALLOW = "allow"
@@ -465,38 +466,80 @@ async def _flush_audit_batch(batch: list[_AuditEntry]) -> None:
     """Insert a batch of ``_AuditEntry`` rows in a single session."""
     if not batch:
         return
-    # Imported lazily so the request path doesn't pull DB modules until the
-    # writer first runs (matches the lazy import in the old per-row path).
+    from langflow.services.deps import session_scope
+
+    async with session_scope() as session:
+        _stage_audit_entries(session, batch)
+
+
+def _stage_audit_entries(session: AsyncSession, entries: list[_AuditEntry]) -> None:
+    """Add audit rows and plugin events to an existing transaction."""
+    # Imported lazily so callers with auditing disabled do not pull DB models.
     from lfx.services.authorization import AuthorizationAuditEvent
 
     from langflow.services.database.models.auth import AuthzAuditLog
-    from langflow.services.deps import get_authorization_service, session_scope
+    from langflow.services.deps import get_authorization_service
 
-    async with session_scope() as session:
-        events: list[AuthorizationAuditEvent] = []
-        for entry in batch:
-            resource_type, resource_id = _split_obj(entry.obj)
-            session.add(
-                AuthzAuditLog(
-                    id=entry.event_id,
-                    timestamp=entry.occurred_at,
-                    user_id=entry.user_id,
-                    actor_type=entry.actor_type,
-                    actor_id=entry.actor_id,
-                    action=entry.action,
-                    resource_type=resource_type,
-                    resource_id=resource_id,
-                    result=entry.result,
-                    details=entry.details,
-                )
+    events: list[AuthorizationAuditEvent] = []
+    for entry in entries:
+        resource_type, resource_id = _split_obj(entry.obj)
+        session.add(
+            AuthzAuditLog(
+                id=entry.event_id,
+                timestamp=entry.occurred_at,
+                user_id=entry.user_id,
+                actor_type=entry.actor_type,
+                actor_id=entry.actor_id,
+                action=entry.action,
+                resource_type=resource_type,
+                resource_id=resource_id,
+                result=entry.result,
+                details=entry.details,
             )
-            events.append(
-                AuthorizationAuditEvent(
-                    event_id=entry.event_id,
-                    occurred_at=entry.occurred_at,
-                )
+        )
+        events.append(
+            AuthorizationAuditEvent(
+                event_id=entry.event_id,
+                occurred_at=entry.occurred_at,
             )
-        get_authorization_service().stage_audit_events(session=session, events=tuple(events))
+        )
+    get_authorization_service().stage_audit_events(session=session, events=tuple(events))
+
+
+def stage_audit_decision(
+    *,
+    session: AsyncSession,
+    user_id: UUID | None,
+    principal: AuthorizationPrincipal | None = None,
+    action: str,
+    obj: str,
+    result: str,
+    details: dict[str, Any] | None = None,
+) -> bool:
+    """Stage a durable audit row in a caller-owned mutation transaction.
+
+    Returns ``True`` when the row was staged. Best-effort mode returns ``False``
+    so the caller can submit through the asynchronous audit pipeline after its
+    mutation commits.
+    """
+    auth_settings = get_settings_service().auth_settings
+    if not getattr(auth_settings, "AUTHZ_AUDIT_ENABLED", False) or not getattr(
+        auth_settings, "AUTHZ_AUDIT_DURABLE", False
+    ):
+        return False
+
+    resolved_user_id, actor_type, actor_id = _resolve_actor(user_id, principal)
+    entry = _AuditEntry(
+        user_id=resolved_user_id,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        action=action,
+        obj=obj,
+        result=result,
+        details=_merge_audit_details(details, include_credential=resolved_user_id is not None),
+    )
+    _stage_audit_entries(session, [entry])
+    return True
 
 
 async def drain_pending_audit_writes(timeout: float = 5.0) -> None:

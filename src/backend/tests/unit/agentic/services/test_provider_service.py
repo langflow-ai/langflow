@@ -15,7 +15,13 @@ from langflow.agentic.services.provider_service import (
     get_default_model,
     get_enabled_providers_for_user,
 )
-from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyContext,
+    ModelProviderPolicyPurpose,
+    ModelProviderPolicySnapshot,
+    reset_current_model_provider_policy_context,
+    set_current_model_provider_policy_context,
+)
 
 _DENIED_PROVIDER_SERVICE_CATALOG_CALLS: list[None] = []
 
@@ -193,6 +199,60 @@ class TestGetEnabledProvidersForUser:
         assert result == ([], {})
 
     @pytest.mark.asyncio
+    async def test_scoped_policy_denial_happens_before_provider_credentials_are_read(self):
+        """A denied Assistant flow must not inspect the user's provider variables."""
+        from langflow.services.variable.service import DatabaseVariableService
+
+        user_id = UUID("12345678-1234-5678-1234-567812345678")
+        project_id = UUID("22345678-1234-5678-1234-567812345678")
+        workspace_id = UUID("32345678-1234-5678-1234-567812345678")
+        mock_db_service = MagicMock(spec=DatabaseVariableService)
+        mock_db_service.get_all = AsyncMock(side_effect=AssertionError("credentials read before policy denial"))
+
+        async def deny_all(*, user_id, providers, purpose, attributes=None):
+            assert attributes is None
+            assert set(providers) == {"OpenAI"}
+            candidates = frozenset({"openai"})
+            return ModelProviderPolicySnapshot(
+                context=ModelProviderPolicyContext(user_id=user_id),
+                purpose=purpose,
+                candidate_provider_ids=candidates,
+                allowed_provider_ids=frozenset(),
+            )
+
+        token = set_current_model_provider_policy_context(
+            user_id=user_id,
+            attributes={
+                "provider_scope_required": True,
+                "project_id": project_id,
+                "workspace_id": workspace_id,
+            },
+        )
+        try:
+            with (
+                patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
+                patch(
+                    "langflow.agentic.services.provider_service.get_model_provider_variable_mapping",
+                    return_value={"OpenAI": "OPENAI_API_KEY"},
+                ),
+                patch(
+                    "langflow.agentic.services.provider_service._get_registered_provider_names",
+                    return_value=["OpenAI"],
+                ),
+                patch(
+                    "langflow.agentic.services.provider_service.aresolve_model_provider_policy",
+                    side_effect=deny_all,
+                ),
+            ):
+                enabled, status = await get_enabled_providers_for_user(user_id, MagicMock())
+        finally:
+            reset_current_model_provider_policy_context(token)
+
+        assert enabled == []
+        assert status == {}
+        mock_db_service.get_all.assert_not_awaited()
+
+    @pytest.mark.asyncio
     async def test_should_return_empty_when_no_credentials(self):
         """Should return no enabled providers when user has variables but none are credentials."""
         from langflow.services.variable.service import DatabaseVariableService
@@ -313,7 +373,7 @@ class TestGetEnabledProvidersForUser:
         mock_db_service = MagicMock(spec=DatabaseVariableService)
         mock_db_service.get_all = AsyncMock(return_value=variables)
         policy = MagicMock()
-        policy.allows.side_effect = lambda provider: provider == "OpenAI"
+        policy.filter.side_effect = lambda providers: [provider for provider in providers if provider == "OpenAI"]
 
         with (
             patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
@@ -330,15 +390,56 @@ class TestGetEnabledProvidersForUser:
                 side_effect=lambda provider: [f"{provider.upper()}_API_KEY"],
             ),
             patch(
-                "langflow.agentic.services.provider_service.resolve_model_provider_policy",
-                return_value=policy,
+                "langflow.agentic.services.provider_service.aresolve_model_provider_policy",
+                new=AsyncMock(return_value=policy),
             ) as resolve_policy,
         ):
             enabled, provider_status = await get_enabled_providers_for_user("user-1", MagicMock())
 
         assert enabled == ["OpenAI"]
         assert provider_status == {"OpenAI": True}
-        assert resolve_policy.call_args.kwargs["purpose"] is ModelProviderPolicyPurpose.CONFIGURE
+        assert resolve_policy.await_args.kwargs["purpose"] is ModelProviderPolicyPurpose.CONFIGURE
+
+    @pytest.mark.asyncio
+    async def test_runtime_provider_discovery_uses_use_policy(self):
+        """Runtime discovery authorizes provider use; check-config remains configuration discovery."""
+        from langflow.services.variable.service import DatabaseVariableService
+
+        variable = MagicMock(name="OPENAI_API_KEY")
+        variable.name = "OPENAI_API_KEY"
+        mock_db_service = MagicMock(spec=DatabaseVariableService)
+        mock_db_service.get_all = AsyncMock(return_value=[variable])
+        policy = MagicMock()
+        policy.filter.side_effect = list
+
+        with (
+            patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
+            patch(
+                "langflow.agentic.services.provider_service.get_model_provider_variable_mapping",
+                return_value={"OpenAI": "OPENAI_API_KEY"},
+            ),
+            patch(
+                "langflow.agentic.services.provider_service._get_registered_provider_names",
+                return_value=["OpenAI"],
+            ),
+            patch(
+                "langflow.agentic.services.provider_service.get_provider_required_variable_keys",
+                return_value=["OPENAI_API_KEY"],
+            ),
+            patch(
+                "langflow.agentic.services.provider_service.aresolve_model_provider_policy",
+                new=AsyncMock(return_value=policy),
+            ) as resolve_policy,
+        ):
+            enabled, status = await get_enabled_providers_for_user(
+                "user-1",
+                MagicMock(),
+                purpose=ModelProviderPolicyPurpose.USE,
+            )
+
+        assert enabled == ["OpenAI"]
+        assert status == {"OpenAI": True}
+        assert resolve_policy.await_args.kwargs["purpose"] is ModelProviderPolicyPurpose.USE
 
     @pytest.mark.asyncio
     async def test_credentialless_extension_provider_is_enabled(self):
@@ -347,7 +448,7 @@ class TestGetEnabledProvidersForUser:
         mock_db_service = MagicMock(spec=DatabaseVariableService)
         mock_db_service.get_all = AsyncMock(return_value=[])
         policy = MagicMock()
-        policy.allows.return_value = True
+        policy.filter.side_effect = list
 
         with (
             patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
@@ -361,7 +462,10 @@ class TestGetEnabledProvidersForUser:
                 "langflow.agentic.services.provider_service.get_provider_required_variable_keys",
                 return_value=[],
             ),
-            patch("langflow.agentic.services.provider_service.resolve_model_provider_policy", return_value=policy),
+            patch(
+                "langflow.agentic.services.provider_service.aresolve_model_provider_policy",
+                new=AsyncMock(return_value=policy),
+            ),
         ):
             enabled, provider_status = await get_enabled_providers_for_user("user-1", MagicMock())
 
@@ -391,14 +495,14 @@ class TestGetEnabledProvidersForUser:
         mock_db_service = MagicMock(spec=DatabaseVariableService)
         mock_db_service.get_all = AsyncMock(return_value=[])
         policy = MagicMock()
-        policy.allows.side_effect = lambda candidate: candidate == "OpenAI"
+        policy.filter.side_effect = lambda providers: [candidate for candidate in providers if candidate == "OpenAI"]
 
         try:
             with (
                 patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
                 patch(
-                    "langflow.agentic.services.provider_service.resolve_model_provider_policy",
-                    return_value=policy,
+                    "langflow.agentic.services.provider_service.aresolve_model_provider_policy",
+                    new=AsyncMock(return_value=policy),
                 ),
                 patch("langflow.agentic.services.provider_service.os.getenv", return_value=None),
             ):

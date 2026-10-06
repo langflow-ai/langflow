@@ -1,6 +1,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import DialogContentWithouFixed from "@/customization/components/custom-dialog-content-without-fixed";
 import { dialogClass } from "@/customization/utils/dialog-class";
 import { cn } from "../../utils/utils";
@@ -103,6 +104,7 @@ const DialogContent = React.forwardRef<
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     // Check if DialogTitle is included in children
     const hasDialogTitle = hideTitle || hasChildOfType(children, DialogTitle);
     const hasDialogDescription =
@@ -162,7 +164,7 @@ const DialogContent = React.forwardRef<
         >
           {!hasDialogTitle && (
             <VisuallyHidden>
-              <DialogTitle>Dialog</DialogTitle>
+              <DialogTitle>{t("common.dialog")}</DialogTitle>
             </VisuallyHidden>
           )}
           {!hasDialogDescription && (
@@ -174,7 +176,7 @@ const DialogContent = React.forwardRef<
           {!hideCloseButton && (
             <ShadTooltip
               styleClasses="z-50"
-              content="Close"
+              content={t("common.close")}
               side="bottom"
               avoidCollisions
             >
@@ -185,7 +187,7 @@ const DialogContent = React.forwardRef<
                 )}
               >
                 <Cross2Icon className="h-[18px] w-[18px]" aria-hidden="true" />
-                <span className="sr-only">Close</span>
+                <span className="sr-only">{t("common.close")}</span>
               </DialogPrimitive.Close>
             </ShadTooltip>
           )}

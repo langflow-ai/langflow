@@ -1,0 +1,38 @@
+Starting in Langflow 1.12, `uv pip install langflow` includes a curated provider set only.
+The following bundles are **not** installed by default.
+
+To install one provider from `lfx-bundles`, run:
+
+```bash
+uv pip install "lfx-bundles[<bundle-name>]"
+```
+
+To install one opt-in standalone package, run:
+
+```bash
+uv pip install lfx-<bundle>
+```
+
+To install every no-Torch opt-in provider at once, including the standalone packages:
+
+```bash
+uv pip install "langflow[bundles]"
+```
+
+Restart Langflow after installing. To confirm a bundle loaded, run `lfx extension list`.
+The extra name is the identifier shown, such as `groq` or `exa`.
+
+Knowledge bases still use local Chroma storage in the default install.
+The **Chroma DB** bundle component in the visual editor is opt-in.
+
+### Model providers
+
+[`aiml`](/bundles-aiml) · [`baidu`](/bundles-baidu) · [`cloudflare`](/bundles-cloudflare) · [`cometapi`](/bundles-cometapi) · [`deepseek`](/bundles-deepseek) · [`empiriolabs`](/bundles-empiriolabs) · [`groq`](/bundles-groq) · [`huggingface`](/bundles-huggingface) · [`litellm`](/bundles-lite-llm) · [`lmstudio`](/bundles-lmstudio) · [`maritalk`](/bundles-maritalk) · [`mistral`](/bundles-mistralai) · `notdiamond` · [`novita`](/bundles-novita) · [`nvidia`](/bundles-nvidia) · [`openrouter`](/bundles-openrouter) · [`orcarouter`](./bundles-orcarouter) · [`perplexity`](/bundles-perplexity) · [`sambanova`](/bundles-sambanova) · [`vertexai`](/bundles-vertexai) · [`xai`](/bundles-xai)
+
+### Vector stores and memory
+
+[`chroma`](/bundles-chroma) · [`clickhouse`](/bundles-clickhouse) · [`couchbase`](/bundles-couchbase) · [`elastic`](/bundles-elastic) · [`faiss`](/bundles-faiss) · [`mem0`](/bundles-mem0) · [`milvus`](/bundles-milvus) · [`mongodb`](/bundles-mongodb) · `needle` · [`pgvector`](/bundles-pgvector) · [`pinecone`](/bundles-pinecone) · [`qdrant`](/bundles-qdrant) · [`redis`](/bundles-redis) · [`supabase`](/bundles-supabase) · [`upstash`](/bundles-upstash) · [`valkey`](/bundles-valkey) · [`vectara`](/bundles-vectara) · [`weaviate`](/bundles-weaviate) · `zep`
+
+### Tools, search, and integrations
+
+`agentql` · [`altk`](/bundles-altk) · [`apify`](/bundles-apify) · [`arxiv`](/bundles-arxiv) · [`assemblyai`](/bundles-assemblyai) · [`bing`](/bundles-bing) · [`cleanlab`](/bundles-cleanlab) · [`composio`](/bundles-composio) · [`confluent`](./bundles-confluent) · `confluence` · [`duckduckgo`](/bundles-duckduckgo) · [`exa`](/bundles-exa) · [`firecrawl`](/bundles-firecrawl) · `git` · [`glean`](/bundles-glean) · `homeassistant` · [`icosacomputing`](/bundles-icosacomputing) · `jigsawstack` · `langwatch` · [`mrscraper`](./bundles-mrscraper) · [`nextplaid`](/bundles-nextplaid) · [`notion`](/bundles-notion) · `olivya` · [`paddle`](/bundles-paddle) · `scrapegraph` · [`searchapi`](/bundles-searchapi) · `serpapi` · `spider` · `tavily` · `twelvelabs` · `unstructured` · `vlmrun` · [`wikipedia`](/bundles-wikipedia) · `wolframalpha` · `yahoosearch` · `youtube`

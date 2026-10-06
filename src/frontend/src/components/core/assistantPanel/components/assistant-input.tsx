@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,14 @@ import { getRandomPlaceholderMessage } from "../helpers/messages";
 import { useAssistantSelectedModel } from "../hooks/use-assistant-selected-model";
 import { useAutoGrowTextarea } from "../hooks/use-auto-grow-textarea";
 import { useComponentMentions } from "../hooks/use-component-mentions";
+import { useEnabledModels } from "../hooks/use-enabled-models";
 import { useInputHistory } from "../hooks/use-input-history";
+import { useSlashCommands } from "../hooks/use-slash-commands";
 import { AssistantMentionPopover } from "./assistant-mention-popover";
+import {
+  AssistantSlashCommandPopover,
+  slashCommandOptionId,
+} from "./assistant-slash-command-popover";
 import { ModelSelector } from "./model-selector";
 
 // During these steps the message area shows the thinking animation, so the
@@ -123,7 +130,9 @@ export function AssistantInput({
     !GENERATING_STEPS.includes(currentStep);
   const animatedPlaceholder = useAnimatedPlaceholder(isPostGenerationStep);
   const [selectedModel, setSelectedModel] = useAssistantSelectedModel();
+  const { isCatalogReady, isModelEnabled } = useEnabledModels();
   const limitHintId = useId();
+  const slashListboxId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputHistory = useInputHistory();
   useAutoGrowTextarea(textareaRef, message, COMPOSER_MAX_HEIGHT_PX);
@@ -146,18 +155,37 @@ export function AssistantInput({
     textareaRef,
   });
 
-  useEffect(() => {
-    onMentionOpenChange?.(mentions.isOpen);
-  }, [mentions.isOpen, onMentionOpenChange]);
+  const completeSlashCommand = (text: string) => {
+    // Commit synchronously so the caret lands after the completion before the next
+    // keystroke; a deferred caret move would split a fast-typed argument.
+    flushSync(() => updateMessage(text));
+    textareaRef.current?.setSelectionRange(text.length, text.length);
+  };
+
+  const slashCommands = useSlashCommands({
+    onComplete: completeSlashCommand,
+  });
 
   const handleSend = () => {
     const trimmedMessage = message.trim();
     if (!trimmedMessage || disabled || isProcessing) return;
     if (trimmedMessage.length > maxMessageLength) return;
+    if (!isCatalogReady || !isModelEnabled(selectedModel)) return;
     inputHistory.push(trimmedMessage);
     onSend(trimmedMessage, selectedModel);
     updateMessage("");
+    // Popovers only re-evaluate on textarea input, so a programmatic clear (the Send
+    // button) would leave them open over an empty draft.
+    slashCommands.close();
+    mentions.handleValueChange("", 0);
   };
+  const activeSlashCommand = slashCommands.isOpen
+    ? slashCommands.items[slashCommands.activeIndex]
+    : undefined;
+
+  useEffect(() => {
+    onMentionOpenChange?.(mentions.isOpen || slashCommands.isOpen);
+  }, [mentions.isOpen, slashCommands.isOpen, onMentionOpenChange]);
 
   /**
    * Up/Down trigger history recall only when the cursor is on the edge of
@@ -193,6 +221,7 @@ export function AssistantInput({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (slashCommands.handleKeyDown(e)) return;
     if (mentions.handleKeyDown(e)) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -228,7 +257,10 @@ export function AssistantInput({
   // Gate on selectedModel too: a fast click during the model selector's
   // auto-select window would fire with a null model and drop the message.
   const canSend =
-    message.trim().length > 0 && !disabled && selectedModel !== null;
+    message.trim().length > 0 &&
+    !disabled &&
+    isCatalogReady &&
+    isModelEnabled(selectedModel);
 
   return (
     <div className="relative px-2 pb-2">
@@ -251,7 +283,16 @@ export function AssistantInput({
         )}
         onClick={() => textareaRef.current?.focus()}
       >
-        {mentions.isOpen && (
+        {slashCommands.isOpen && (
+          <AssistantSlashCommandPopover
+            listboxId={slashListboxId}
+            items={slashCommands.items}
+            activeIndex={slashCommands.activeIndex}
+            onHover={slashCommands.setActiveIndex}
+            onSelect={slashCommands.complete}
+          />
+        )}
+        {mentions.isOpen && !slashCommands.isOpen && (
           <AssistantMentionPopover
             items={mentions.items}
             activeIndex={mentions.activeIndex}
@@ -265,15 +306,23 @@ export function AssistantInput({
             value={message}
             maxLength={maxMessageLength}
             aria-describedby={isAtLimit ? limitHintId : undefined}
+            aria-autocomplete={slashCommands.isOpen ? "list" : undefined}
+            aria-controls={slashCommands.isOpen ? slashListboxId : undefined}
+            aria-activedescendant={
+              activeSlashCommand
+                ? slashCommandOptionId(slashListboxId, activeSlashCommand.name)
+                : undefined
+            }
             onChange={(e) => {
+              const caret = e.target.selectionStart ?? e.target.value.length;
               updateMessage(e.target.value);
-              mentions.handleValueChange(
-                e.target.value,
-                e.target.selectionStart ?? e.target.value.length,
-              );
+              slashCommands.handleValueChange(e.target.value, caret);
+              mentions.handleValueChange(e.target.value, caret);
             }}
             data-testid="assistant-input-textarea"
             onKeyDown={handleKeyDown}
+            // Option clicks keep focus (the list prevents mousedown), so blur means focus really left.
+            onBlur={slashCommands.close}
             placeholder={
               isProcessing
                 ? isPostGenerationStep

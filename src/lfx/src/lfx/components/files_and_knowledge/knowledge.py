@@ -18,8 +18,8 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-import re
 import uuid
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
@@ -27,7 +27,8 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 from langchain_chroma import Chroma
 
-from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend, create_backend
+from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend, create_backend, is_local_chroma
+from lfx.base.knowledge_bases.backends.naming import ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.ingestion_sources.base import (
     IngestionItemResult,
     IngestionItemStatus,
@@ -36,10 +37,17 @@ from lfx.base.knowledge_bases.ingestion_sources.base import (
 )
 from lfx.base.knowledge_bases.ingestion_sources.flow_component import FlowComponentSource
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
+from lfx.base.knowledge_bases.validation import (
+    is_valid_collection_name as is_valid_kb_collection_name,
+)
+from lfx.base.knowledge_bases.validation import (
+    validate_collection_name,
+)
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
+from lfx.helpers.base_model import coalesce_bool
 from lfx.io import (
     BoolInput,
     DBProviderInput,
@@ -105,6 +113,17 @@ def _is_retrieve_mode(value: Any) -> bool:
     return isinstance(value, str) and "Retrieve" in value
 
 
+# Boolean flags of a ``column_config`` row. Toggled cells hold real booleans,
+# but a typed cell (or a flow saved while the cell rendered as plain text)
+# keeps the raw string, e.g. ``"true"`` — read them with ``coalesce_bool``.
+_COLUMN_FLAGS = ("vectorize", "identifier")
+
+
+def _normalize_column_config(config_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return copies of the rows with every flag as a real boolean."""
+    return [{**row, **{key: coalesce_bool(row.get(key)) for key in _COLUMN_FLAGS}} for row in config_list]
+
+
 # Error message used by both the ingest and retrieve paths when the user is
 # running against an Astra cloud environment that disables these flows.
 astra_error_msg = "Knowledge ingestion and retrieval are not supported in Astra cloud environment."
@@ -166,6 +185,54 @@ class KnowledgeComponent(Component):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._cached_kb_path: Path | None = None
+
+    @staticmethod
+    def _embedding_provider_from_selection(selection: Any) -> str | None:
+        """Read a provider name from a raw or persisted model selection."""
+        if isinstance(selection, list):
+            selection = selection[0] if selection else None
+        if not isinstance(selection, Mapping):
+            return None
+        provider = selection.get("provider")
+        if not isinstance(provider, str) or not provider.strip():
+            return None
+        return provider.strip()
+
+    async def _additional_model_provider_policy_ids(self, purpose, parameters=None) -> tuple[str, ...]:
+        """Resolve the embedding provider before dialog hooks or runtime secrets.
+
+        New-KB configuration carries its ModelInput inside a dropdown dialog,
+        while existing KBs persist the provider in the KB row. Neither is a
+        top-level ModelInput, so both must be resolved explicitly before the
+        generic component pipeline hydrates ``api_key``.
+        """
+        from lfx.base.models.provider_registry import resolve_provider_id
+        from lfx.services.model_provider_policy import ModelProviderPolicyError
+
+        effective_parameters = parameters if isinstance(parameters, Mapping) else getattr(self, "_parameters", None)
+        if not isinstance(effective_parameters, Mapping):
+            effective_parameters = {}
+        knowledge_value = effective_parameters.get("knowledge_base", getattr(self, "knowledge_base", None))
+
+        if isinstance(knowledge_value, Mapping):
+            if "02_embedding_model" not in knowledge_value:
+                return ()
+            provider = self._embedding_provider_from_selection(knowledge_value.get("02_embedding_model"))
+        elif isinstance(knowledge_value, str) and knowledge_value.strip():
+            metadata = await self._get_kb_metadata(knowledge_value.strip())
+            provider = self._embedding_provider_from_selection(metadata.get("model_selection"))
+            if provider is None:
+                legacy_provider = metadata.get("embedding_provider")
+                provider = legacy_provider.strip() if isinstance(legacy_provider, str) else None
+                if provider == "Unknown":
+                    provider = None
+        else:
+            return ()
+
+        if provider is None:
+            unknown_provider = "unknown"
+            raise ModelProviderPolicyError(unknown_provider, purpose)
+        return (resolve_provider_id(provider),)
 
     @dataclass
     class NewKnowledgeBaseInput:
@@ -423,9 +490,33 @@ class KnowledgeComponent(Component):
         canvas could land with both outputs visible.
         """
         await super().update_frontend_node(new_frontend_node, current_frontend_node)
-        mode_value = new_frontend_node.get("template", {}).get("mode", {}).get("value", MODE_INGEST)
+        template = new_frontend_node.get("template", {})
+        mode_value = template.get("mode", {}).get("value", MODE_INGEST)
         self.update_outputs(new_frontend_node, "mode", mode_value)
+        # The rebuilt template carries class-default (Ingest) ``show`` flags,
+        # so a saved Retrieve node returned ``search_query`` hidden and the canvas
+        # silently dropped the edge feeding it.
+        self._apply_mode_visibility(template)
         return new_frontend_node
+
+    def _apply_mode_visibility(self, build_config, field_name: str | None = None, field_value: Any = None):
+        """Show only the inputs that belong to the effective mode."""
+        current_mode = build_config.get("mode", {}).get("value") if isinstance(build_config, dict) else None
+        if field_name == "mode":
+            current_mode = field_value
+        # Map legacy/emoji-prefixed labels onto the current canonical values so
+        # flows saved before the label change still toggle visibility correctly.
+        if _is_retrieve_mode(current_mode):
+            current_mode = MODE_RETRIEVE
+        elif current_mode not in self.mode_config:
+            current_mode = MODE_INGEST
+        return set_current_fields(
+            build_config=build_config if isinstance(build_config, dotdict) else dotdict(build_config),
+            action_fields=self.mode_config,
+            selected_action=current_mode,
+            default_fields=self.default_keys,
+            func=set_field_display,
+        )
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Filter visible outputs to match the selected mode.
@@ -505,10 +596,6 @@ class KnowledgeComponent(Component):
                     raise ValueError(msg)
                 kb_user = current_user.username
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
-                if not self.is_valid_collection_name(field_value["01_new_kb_name"]):
-                    msg = f"Invalid knowledge base name: {field_value['01_new_kb_name']}"
-                    raise ValueError(msg)
-
                 model_selection = field_value["02_embedding_model"]
                 if isinstance(model_selection, dict):
                     model_selection = [model_selection]
@@ -516,6 +603,14 @@ class KnowledgeComponent(Component):
                 backend_type, backend_config = self._normalize_backend_selection(
                     field_value.get("03_knowledge_backend")
                 )
+                ensure_storage_routing_allowed(backend_config, is_superuser=bool(current_user.is_superuser))
+                new_kb_name = field_value["01_new_kb_name"]
+                if backend_type == BackendType.CHROMA.value:
+                    validate_collection_name(
+                        new_kb_name,
+                        resource="Knowledge base",
+                        local=is_local_chroma(backend_type, backend_config),
+                    )
 
                 embed_model = get_embeddings(
                     model=model_selection,
@@ -534,7 +629,6 @@ class KnowledgeComponent(Component):
                     msg = f"Embedding validation failed: {e!s}"
                     raise ValueError(msg) from e
 
-                new_kb_name = field_value["01_new_kb_name"]
                 # Only local Chroma gets a directory; every remote backend
                 # returns None here and creates its collection on first write.
                 from langflow.api.utils.kb_helpers import resolve_local_store_path
@@ -561,23 +655,7 @@ class KnowledgeComponent(Component):
                 build_config["knowledge_base"]["value"] = None
 
         # Honor the current mode regardless of which field triggered the refresh.
-        # Falls back to MODE_INGEST when ``mode`` is missing (legacy nodes).
-        current_mode = build_config.get("mode", {}).get("value") if isinstance(build_config, dict) else None
-        if field_name == "mode":
-            current_mode = field_value
-        # Map legacy/emoji-prefixed labels onto the current canonical values so
-        # flows saved before the label change still toggle visibility correctly.
-        if _is_retrieve_mode(current_mode):
-            current_mode = MODE_RETRIEVE
-        elif current_mode not in self.mode_config:
-            current_mode = MODE_INGEST
-        return set_current_fields(
-            build_config=build_config if isinstance(build_config, dotdict) else dotdict(build_config),
-            action_fields=self.mode_config,
-            selected_action=current_mode,
-            default_fields=self.default_keys,
-            func=set_field_display,
-        )
+        return self._apply_mode_visibility(build_config, field_name, field_value)
 
     # =====================================================================
     #                       INGESTION CODE PATH
@@ -823,7 +901,9 @@ class KnowledgeComponent(Component):
                 user_id=user_id,
                 name=name,
                 model_selection=model_selection,
-                column_config=self.column_config if isinstance(self.column_config, list) else [],
+                column_config=_normalize_column_config(self.column_config)
+                if isinstance(self.column_config, list)
+                else [],
                 backend_type=backend_type,
                 backend_config=backend_config,
             )
@@ -842,8 +922,8 @@ class KnowledgeComponent(Component):
 
         for config in config_list:
             col_name = config.get("column_name")
-            vectorize = config.get("vectorize") == "True" or config.get("vectorize") is True
-            identifier = config.get("identifier") == "True" or config.get("identifier") is True
+            vectorize = coalesce_bool(config.get("vectorize"))
+            identifier = coalesce_bool(config.get("identifier"))
 
             metadata["columns"].append(
                 {
@@ -941,12 +1021,10 @@ class KnowledgeComponent(Component):
 
         for config in config_list:
             col_name = config.get("column_name")
-            vectorize = config.get("vectorize") == "True" or config.get("vectorize") is True
-            identifier = config.get("identifier") == "True" or config.get("identifier") is True
 
-            if vectorize:
+            if coalesce_bool(config.get("vectorize")):
                 content_cols.append(col_name)
-            if identifier:
+            if coalesce_bool(config.get("identifier")):
                 identifier_cols.append(col_name)
 
         for _, row in df_source.iterrows():
@@ -981,20 +1059,9 @@ class KnowledgeComponent(Component):
 
         return data_objects
 
-    def is_valid_collection_name(self, name, min_length: int = 3, max_length: int = 63) -> bool:
-        """Validate collection name.
-
-        1. Contains 3-63 characters
-        2. Starts and ends with alphanumeric character
-        3. Contains only alphanumeric characters, underscores, or hyphens.
-        """
-        if not (min_length <= len(name) <= max_length):
-            return False
-
-        if not (name[0].isalnum() and name[-1].isalnum()):
-            return False
-
-        return re.match(r"^[a-zA-Z0-9_-]+$", name) is not None
+    def is_valid_collection_name(self, name: str) -> bool:
+        """Return whether ``name`` satisfies the shared collection-name contract."""
+        return is_valid_kb_collection_name(name)
 
     def _resolve_store_path(
         self,
@@ -1390,7 +1457,7 @@ class KnowledgeComponent(Component):
             return None
         return self.user_id if isinstance(self.user_id, uuid.UUID) else uuid.UUID(self.user_id)
 
-    async def _get_kb_metadata(self) -> dict:
+    async def _get_kb_metadata(self, knowledge_base: str | None = None) -> dict:
         """Load this knowledge base's embedding config from its database row.
 
         The row is the sole authority. There is no on-disk sidecar to fall back
@@ -1406,7 +1473,10 @@ class KnowledgeComponent(Component):
         user_uuid = self._user_uuid
         if user_uuid is None:
             return {}
-        record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
+        record = await knowledge_base_service.get_by_user_and_name(
+            user_uuid,
+            knowledge_base or self.knowledge_base,
+        )
         if record is None:
             return {}
         return knowledge_base_service.record_to_metadata_dict(record)

@@ -90,6 +90,9 @@ class TestSSOUserProfile:
             sso_provider="oidc",
             sso_user_id="sub-123",
             email="user@example.com",
+            first_name="Deon",
+            last_name="Sanchez",
+            picture="https://idp.example.com/Deon.png",
         )
         sso_async_session.add(profile)
         await sso_async_session.commit()
@@ -100,8 +103,30 @@ class TestSSOUserProfile:
         assert profile.sso_provider == "oidc"
         assert profile.sso_user_id == "sub-123"
         assert profile.email == "user@example.com"
+        assert profile.first_name == "Deon"
+        assert profile.last_name == "Sanchez"
+        assert profile.picture == "https://idp.example.com/Deon.png"
         assert profile.created_at is not None
         assert profile.updated_at is not None
+
+    async def test_identity_details_default_to_none(self, sso_async_session):
+        user = User(username="legacy_sso_user", password=_TEST_PASSWORD)
+        sso_async_session.add(user)
+        await sso_async_session.commit()
+        await sso_async_session.refresh(user)
+
+        profile = SSOUserProfile(
+            user_id=user.id,
+            sso_provider="oidc",
+            sso_user_id="legacy-subject",
+        )
+        sso_async_session.add(profile)
+        await sso_async_session.commit()
+        await sso_async_session.refresh(profile)
+
+        assert profile.first_name is None
+        assert profile.last_name is None
+        assert profile.picture is None
 
     async def test_user_can_have_profiles_for_distinct_providers(self, sso_async_session):
         """One user can have one SSO profile for each distinct provider."""

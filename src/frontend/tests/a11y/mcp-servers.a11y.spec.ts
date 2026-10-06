@@ -403,7 +403,14 @@ test.describe("MCP servers route accessibility", () => {
         dialog.getByRole("button", { name: "Add Argument" }),
       ).toBeVisible();
       await expect(
-        dialog.getByRole("button", { name: "Add row" }),
+        dialog
+          .getByRole("group", { name: "Headers" })
+          .getByRole("button", { name: "Add row" }),
+      ).toBeVisible();
+      await expect(
+        dialog
+          .getByRole("group", { name: "Environment Variables" })
+          .getByRole("button", { name: "Add row" }),
       ).toBeVisible();
 
       // A second argument row exposes the named remove control.
@@ -578,10 +585,11 @@ test.describe("MCP servers route accessibility", () => {
 
       await page.getByTestId("stdio-tab").click();
       const order: string[] = [];
-      for (let i = 0; i < 11; i++) {
+      for (let i = 0; i < 20; i++) {
         await page.keyboard.press("Tab");
         const id = await focusedTestId(page);
         if (id) order.push(id);
+        if (id === "stdio-tab") break;
       }
       // Tab leaves the tablist straight onto the first field: the panel itself
       // opts out of the tab order. Fields precede the footer actions, and the
@@ -591,6 +599,9 @@ test.describe("MCP servers route accessibility", () => {
         "stdio-command-input",
         "input-list-plus-btn_-0",
         "stdio-args_0",
+        "stdio-headers-key-0",
+        "popover-anchor-stdio-headers-value-0",
+        "stdio-headers-plus-btn-0",
         "stdio-env-key-0",
         "stdio-env-value-0",
         "stdio-env-plus-btn-0",

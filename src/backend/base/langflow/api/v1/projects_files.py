@@ -13,6 +13,7 @@ import orjson
 from fastapi import File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
+from pydantic import ValidationError
 from sqlmodel import select
 
 from langflow.api.utils import (
@@ -25,7 +26,7 @@ from langflow.api.utils import (
 )
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.flows import create_flows
-from langflow.api.v1.flows_helpers import _sanitize_flow_filename
+from langflow.api.v1.flows_helpers import _export_variable_names, _sanitize_flow_filename
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
@@ -75,7 +76,12 @@ async def download_project_flows(
 
         # Strip secret field values then normalise for git-friendly export
         # (sorted keys, volatile fields removed, code fields as line arrays).
-        normalised_flows = [normalize_flow_for_export(strip_flow_secrets(flow.model_dump())) for flow in flows]
+        # Bindings survive only when they name one of the owner's global variables.
+        known_variable_names = await _export_variable_names(session, owner_id)
+        normalised_flows = [
+            normalize_flow_for_export(strip_flow_secrets(flow.model_dump(), known_variable_names=known_variable_names))
+            for flow in flows
+        ]
         zip_stream = io.BytesIO()
 
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
@@ -169,7 +175,11 @@ async def upload_project_flows(
 
     data["folder_name"] = project_name
 
-    project = FolderCreate(name=data["folder_name"], description=data.get("folder_description", ""))
+    try:
+        project = FolderCreate(name=data["folder_name"], description=data.get("folder_description", ""))
+    except ValidationError as e:
+        # The imported name is validated like a typed one; report why rather than 500
+        raise HTTPException(status_code=422, detail=e.errors()[0]["msg"]) from e
 
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.id = None

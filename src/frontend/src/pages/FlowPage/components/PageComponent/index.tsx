@@ -22,6 +22,11 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import {
+  FIT_VIEW_OPTIONS,
+  MAX_ZOOM,
+  MIN_ZOOM,
+} from "@/components/core/canvasControlsComponent/fit-view-options";
 import { FlowBuilderWelcomeMount } from "@/components/core/flowBuilderWelcome/flow-builder-welcome-mount";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
@@ -80,6 +85,7 @@ import {
   getSnapPosition,
   type HelperLinesState,
 } from "./helpers/helper-lines";
+import { useFitViewWhenMeasured } from "./hooks/use-fit-view-when-measured";
 import { useKeyboardMovePersistence } from "./hooks/use-keyboard-move-persistence";
 import { useCanvasDragSelectFix } from "./hooks/useCanvasDragSelectFix";
 import { usePresentationalEdgeSvgs } from "./hooks/usePresentationalEdgeSvgs";
@@ -298,14 +304,9 @@ export default function Page({
             return;
           }
 
-          applyFlowToCanvas(response.data);
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              reactFlowInstance?.fitView({
-                padding: { left: "20px", right: "20px", top: "80px" },
-              });
-            });
-          });
+          // A settle refresh is a background sync of a canvas the user is
+          // already working in, so it reloads the graph without re-framing it.
+          applyFlowToCanvas(response.data, { fitView: false });
 
           const nonSettleEvents = settleEvents.filter(
             (e) => e.type !== "flow_settled",
@@ -429,6 +430,13 @@ export default function Page({
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
+    return () => {
+      // Once unmounted, its save never settles (no mutation observer). Leave
+      // an autosave the version sidebar or a newer editor registered.
+      if (useFlowStore.getState().autoSaveFlow === autoSaveFlow) {
+        useFlowStore.setState({ autoSaveFlow: undefined });
+      }
+    };
   }, [autoSaveFlow]);
 
   function handleUndo(e: KeyboardEvent) {
@@ -802,7 +810,7 @@ export default function Page({
         });
       }
     },
-    [takeSnapshot, addComponent],
+    [effectiveLocked, takeSnapshot, addComponent],
   );
 
   const onEdgeUpdateStart = useCallback(() => {
@@ -959,12 +967,9 @@ export default function Page({
     };
   }, [effectiveLocked, reactFlowInstance, getNodeId, setNodes]);
 
-  const MIN_ZOOM = 0.25;
-  const MAX_ZOOM = 2;
-  const fitViewOptions = {
-    minZoom: MIN_ZOOM,
-    maxZoom: MAX_ZOOM,
-  };
+  // ReactFlow's `fitView` prop only fits whatever was measured in the first
+  // internals batch; this re-fits once the whole graph has dimensions.
+  useFitViewWhenMeasured(FIT_VIEW_OPTIONS);
 
   // Get inspection panel visibility from store
   const inspectionPanelVisible = useFlowStore(
@@ -1014,7 +1019,7 @@ export default function Page({
                 <MemoizedCanvasControls
                   selectedNode={selectedNode}
                   isAgentWorking={isAgentWorking}
-                  isReadOnly={effectiveLocked}
+                  isReadOnly={isPermissionReadOnly}
                 />
                 {!isPreviewActive && <FlowToolbar />}
                 {inspectionPanelVisible && !effectiveLocked && (
@@ -1095,7 +1100,7 @@ export default function Page({
               onSelectionChange={onSelectionChange}
               deleteKeyCode={[]}
               fitView={isEmptyFlow.current ? false : true}
-              fitViewOptions={fitViewOptions}
+              fitViewOptions={FIT_VIEW_OPTIONS}
               className="theme-attribution"
               tabIndex={effectiveLocked ? -1 : undefined}
               minZoom={MIN_ZOOM}

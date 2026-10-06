@@ -13,6 +13,10 @@ import { Separator } from "@/components/ui/separator";
 import useFlowStore from "@/stores/flowStore";
 import { AllNodeType } from "@/types/flow";
 import DropdownControlButton from "./DropdownControlButton";
+import {
+  FIT_VIEW_OPTIONS,
+  FIT_VIEW_PADDING_WITH_INSPECTION_PANEL,
+} from "./fit-view-options";
 import { formatZoomPercentage, reactFlowSelector } from "./utils/canvasUtils";
 
 export const KEYBOARD_SHORTCUTS = {
@@ -84,13 +88,15 @@ const CanvasControlsDropdown = ({
 
   const handleFitView = useCallback(() => {
     fitView({
-      padding: {
-        left: "20px",
-        right: inspectionPanelVisible && selectedNode ? "340px" : "20px",
-        top: "80px",
-      },
+      ...FIT_VIEW_OPTIONS,
+      // The inspection panel covers the right of the canvas, so the graph has
+      // to clear it rather than the usual edge padding.
+      padding:
+        inspectionPanelVisible && selectedNode
+          ? FIT_VIEW_PADDING_WITH_INSPECTION_PANEL
+          : FIT_VIEW_OPTIONS.padding,
     });
-  }, [fitView, selectedNode]);
+  }, [fitView, inspectionPanelVisible, selectedNode]);
 
   const handleResetZoom = useCallback(() => {
     zoomTo(1);

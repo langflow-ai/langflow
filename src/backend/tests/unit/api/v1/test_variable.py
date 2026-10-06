@@ -229,6 +229,65 @@ async def test_update_variable(client: AsyncClient, generic_variable, logged_in_
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_clear_optional_provider_variable_preserves_identity(client: AsyncClient, logged_in_headers):
+    variable = {
+        "name": "OPENAI_BASE_URL",
+        "value": "https://example.com/v1",
+        "type": GENERIC_TYPE,
+        "default_fields": [],
+    }
+    create_response = await client.post("api/v1/variables/", json=variable, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    variable_id = create_response.json()["id"]
+
+    clear_response = await client.patch(
+        f"api/v1/variables/{variable_id}",
+        json={"id": variable_id, "value": ""},
+        headers=logged_in_headers,
+    )
+    assert clear_response.status_code == status.HTTP_200_OK
+    assert clear_response.json()["id"] == variable_id
+    assert clear_response.json()["has_value"] is False
+
+    list_response = await client.get("api/v1/variables/", headers=logged_in_headers)
+    listed = next(item for item in list_response.json() if item["name"] == "OPENAI_BASE_URL")
+    assert listed["id"] == variable_id
+    assert listed["value"] == ""
+    assert listed["has_value"] is False
+
+    restore_response = await client.patch(
+        f"api/v1/variables/{variable_id}",
+        json={"id": variable_id, "value": "https://replacement.example/v1"},
+        headers=logged_in_headers,
+    )
+    assert restore_response.status_code == status.HTTP_200_OK
+    assert restore_response.json()["id"] == variable_id
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_clear_required_provider_variable_stays_hidden(client: AsyncClient, logged_in_headers):
+    variable = {
+        "name": "WATSONX_PROJECT_ID",
+        "value": "project-id",
+        "type": GENERIC_TYPE,
+        "default_fields": [],
+    }
+    create_response = await client.post("api/v1/variables/", json=variable, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    variable_id = create_response.json()["id"]
+
+    clear_response = await client.patch(
+        f"api/v1/variables/{variable_id}",
+        json={"id": variable_id, "value": ""},
+        headers=logged_in_headers,
+    )
+    assert clear_response.status_code == status.HTTP_200_OK
+
+    list_response = await client.get("api/v1/variables/", headers=logged_in_headers)
+    assert not any(item["name"] == "WATSONX_PROJECT_ID" for item in list_response.json())
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_update_variable__exception(client: AsyncClient, generic_variable, logged_in_headers):
     wrong_id = uuid4()
     generic_variable["id"] = str(wrong_id)

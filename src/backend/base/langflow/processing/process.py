@@ -7,61 +7,20 @@ from lfx.processing.process import apply_tweaks as _lfx_apply_tweaks
 from lfx.processing.process import apply_tweaks_on_vertex as _lfx_apply_tweaks_on_vertex
 from lfx.processing.process import process_tweaks as _lfx_process_tweaks
 from lfx.processing.process import process_tweaks_on_graph as _lfx_process_tweaks_on_graph
+from lfx.processing.process import run_graph_internal as _lfx_run_graph_internal
 from pydantic import BaseModel
 
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
-    from lfx.events.event_manager import EventManager
     from lfx.graph.graph.base import Graph
     from lfx.graph.schema import RunOutputs
-    from lfx.schema.schema import InputValueRequest
 
 
 class Result(BaseModel):
     result: Any
     session_id: str
-
-
-async def run_graph_internal(
-    graph: Graph,
-    flow_id: str,
-    *,
-    stream: bool = False,
-    session_id: str | None = None,
-    inputs: list[InputValueRequest] | None = None,
-    outputs: list[str] | None = None,
-    event_manager: EventManager | None = None,
-) -> tuple[list[RunOutputs], str]:
-    """Run the graph and generate the result."""
-    inputs = inputs or []
-    effective_session_id = session_id or flow_id
-    components = []
-    inputs_list = []
-    types = []
-    for input_value_request in inputs:
-        if input_value_request.input_value is None:
-            await logger.awarning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
-            input_value_request.input_value = ""
-        components.append(input_value_request.components or [])
-        inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
-        types.append(input_value_request.type)
-
-    fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
-    graph.session_id = effective_session_id
-    run_outputs = await graph.arun(
-        inputs=inputs_list,
-        inputs_components=components,
-        types=types,
-        outputs=outputs or [],
-        stream=stream,
-        session_id=effective_session_id or "",
-        fallback_to_env_vars=fallback_to_env_vars,
-        event_manager=event_manager,
-    )
-    return run_outputs, effective_session_id
 
 
 async def run_graph(
@@ -147,6 +106,7 @@ def validate_input(
 # `is_protected_tweak_field` while this copy kept the older inline checks and a
 # separate "code field" warning. The guards were equivalent, so no request was
 # unguarded, but the drift is why a second copy is not worth keeping.
+run_graph_internal = _lfx_run_graph_internal
 apply_tweaks = _lfx_apply_tweaks
 apply_tweaks_on_vertex = _lfx_apply_tweaks_on_vertex
 process_tweaks = _lfx_process_tweaks

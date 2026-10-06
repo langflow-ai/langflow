@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock
 
 import filelock
 import pytest
@@ -42,6 +43,50 @@ async def initialized_services(monkeypatch, tmp_path):
     yield
 
     await teardown_services()
+
+
+async def test_server_startup_imports_environment_for_existing_users(initialized_services, monkeypatch):  # noqa: ARG001
+    """Startup must import newly configured variables for SSO and password users."""
+    from langflow.preload import _STATE, initialize_environment_variables
+    from langflow.services.database.models.auth import SSOUserProfile
+    from langflow.services.deps import get_variable_service
+    from langflow.services.utils import initialize_services
+
+    async with session_scope() as session:
+        # Cross the startup sweep's page boundary, including an existing SSO account.
+        users = [
+            User(username=f"existing-user-{index}", password="unused")  # noqa: S106  # pragma: allowlist secret
+            for index in range(101)
+        ]
+        session.add_all(users)
+        await session.flush()
+        user_ids = [user.id for user in users]
+        session.add(SSOUserProfile(user_id=user_ids[0], sso_provider="external", sso_user_id="existing-subject"))
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "store_environment_variables", True)
+    monkeypatch.setattr(settings, "variables_to_get_from_environment", ["NEW_SERVICE_URL"])
+    for env_value in ["https://service.example.com", "https://rotated.example.com"]:
+        monkeypatch.setenv("NEW_SERVICE_URL", env_value)
+        await initialize_services(skip_superuser_setup=True)
+        monkeypatch.setattr(_STATE, "environment_variables_initialized", False)
+        await initialize_environment_variables()
+
+        async with session_scope() as session:
+            for user_id in user_ids:
+                value = await get_variable_service().get_variable(user_id, "NEW_SERVICE_URL", "", session)
+                assert value.get_secret_value() == env_value
+
+
+async def test_cli_service_initialization_does_not_sweep_users(initialized_services, monkeypatch):  # noqa: ARG001
+    """Shared service initialization used by migration commands must not run the sweep."""
+    from langflow.services.deps import get_variable_service
+    from langflow.services.utils import initialize_services
+
+    sweep = AsyncMock()
+    monkeypatch.setattr(get_variable_service(), "initialize_all_user_variables", sweep)
+    await initialize_services(skip_superuser_setup=True)
+    sweep.assert_not_awaited()
 
 
 @pytest.mark.asyncio

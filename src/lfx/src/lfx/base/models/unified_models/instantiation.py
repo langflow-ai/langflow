@@ -76,7 +76,15 @@ def _apply_registered_provider_connection(provider: str, user_id: UUID | str | N
         langchain_param = var.get("langchain_param")
         if not langchain_param or kwargs.get(langchain_param):
             continue
-        kwargs[langchain_param] = transform_localhost_url(value) if langchain_param == "base_url" else value
+        if langchain_param == "base_url":
+            value = transform_localhost_url(value)
+            base_url_suffix = var.get("base_url_suffix")
+            if isinstance(base_url_suffix, str) and base_url_suffix:
+                normalized_suffix = f"/{base_url_suffix.strip('/')}"
+                value = value.rstrip("/")
+                if not value.endswith(normalized_suffix):
+                    value = f"{value}{normalized_suffix}"
+        kwargs[langchain_param] = value
     if default_headers:
         kwargs.setdefault("default_headers", {}).update(default_headers)
 

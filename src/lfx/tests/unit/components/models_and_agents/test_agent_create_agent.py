@@ -5,8 +5,10 @@ It does NOT rely on `LCAgentComponent.run_agent()` or `ToolCallingAgentComponent
 internally — those code paths still exist for legacy components but are bypassed here.
 """
 
+import json
 import os
 from collections.abc import AsyncIterator
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -1333,9 +1335,8 @@ async def test_should_pass_recursion_limit_derived_from_max_iterations_when_stre
     would have taken effect. The graph guard MUST sit above the middleware so the
     middleware's user-facing cap is what bounds the loop.
 
-    Each iteration is roughly 2 graph steps (model node + tools node) plus a small
-    constant overhead, so `recursion_limit >= max_iterations * 2 + 5` is the bare
-    minimum that lets the middleware fire first.
+    Each iteration uses four graph steps with the model-call limiter, plus a
+    fifth when tool approval adds HumanInTheLoopMiddleware.
     """
     captured_config: dict = {}
 
@@ -1367,11 +1368,60 @@ async def test_should_pass_recursion_limit_derived_from_max_iterations_when_stre
         "default of 25 fires before ModelCallLimitMiddleware reaches the user-set cap "
         "(UI-009/UI-010 regression)."
     )
-    # Each user-visible iteration is ~2 graph steps (model + tools), plus overhead.
-    assert captured_config["recursion_limit"] >= 15 * 2 + 5, (
-        f"recursion_limit must sit above max_iterations * 2 + safety; got "
+    # Each user-visible iteration is ~4 graph steps (before_model + model + after_model + tools), plus overhead.
+    assert captured_config["recursion_limit"] >= 15 * 4 + 10, (
+        f"recursion_limit must sit above max_iterations * 4 + safety; got "
         f"{captured_config['recursion_limit']} for max_iterations=15"
     )
+
+
+def test_gated_tool_budget_lets_model_call_limiter_end_an_ungated_tool_loop() -> None:
+    """A gated tool adds a graph node even when the model only calls an ungated tool."""
+    from langchain_core.language_models.chat_models import BaseChatModel
+    from langchain_core.messages import AIMessage, HumanMessage
+    from langchain_core.outputs import ChatGeneration, ChatResult
+    from langchain_core.tools import tool
+
+    class RepeatingToolModel(BaseChatModel):
+        calls: int = 0
+
+        @property
+        def _llm_type(self) -> str:
+            return "repeating-tool"
+
+        def bind_tools(self, tools: Any, **kwargs: Any) -> BaseChatModel:  # noqa: ARG002
+            return self
+
+        def _generate(self, messages: list, stop: list[str] | None = None, **kwargs: Any) -> ChatResult:  # noqa: ARG002
+            self.calls += 1
+            response = AIMessage(content="", tool_calls=[{"name": "ping", "args": {}, "id": f"call_{self.calls}"}])
+            return ChatResult(generations=[ChatGeneration(message=response)])
+
+    @tool
+    def ping() -> str:
+        """Return pong."""
+        return "pong"
+
+    @tool
+    def gated() -> str:
+        """Require approval."""
+        return "approved"
+
+    gated.metadata = {"approval_actions": ["approve"]}
+    component = _build_component()
+    component.set_attributes({"tools": [ping, gated], "max_iterations": 15, "handle_parsing_errors": False})
+    model = RepeatingToolModel()
+
+    with patch.object(type(component), "_get_llm", return_value=model):
+        graph = component.create_agent_runnable()
+
+    result = graph.invoke(
+        {"messages": [HumanMessage(content="Keep calling ping")]},
+        config={"recursion_limit": component._compute_recursion_limit()},
+    )
+
+    assert model.calls == 15
+    assert "Model call limits exceeded" in result["messages"][-1].content
 
 
 @pytest.mark.asyncio
@@ -1466,9 +1516,9 @@ async def test_should_pass_recursion_limit_when_max_iterations_is_clamped_from_z
     ):
         await component.run_agent(fake_graph)
 
-    # Clamped max_iterations=1 → at least 1*2+5 = 7 graph steps must be allowed.
-    assert captured_config.get("recursion_limit", 0) >= 7, (
-        "Clamped max_iterations of 1 must still permit at least one model+tool round-trip"
+    # Clamped max_iterations=1 → at least 1*4+10 = 14 graph steps must be allowed.
+    assert captured_config.get("recursion_limit", 0) >= 14, (
+        "Clamped max_iterations of 1 must permit at least one full 4-step middleware+model+tools round-trip"
     )
 
 
@@ -1788,3 +1838,147 @@ async def test_should_not_probe_interrupts_when_agent_has_no_checkpointer() -> N
 
     langflow_graph.request_pause.assert_not_called()
     assert result.properties.state == "complete"
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_llm_selection_participates_in_async_provider_policy(monkeypatch) -> None:
+    from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    component = AgentComponent(
+        model=[],
+        agent_llm="Anthropic",
+        model_name="claude-test",
+        _user_id="resource-owner",
+        _parameters={"model": [], "agent_llm": "Anthropic", "model_name": "claude-test"},
+    )
+    denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE)
+    snapshot = SimpleNamespace(require=MagicMock(side_effect=denial))
+    resolve_policy = AsyncMock(return_value=snapshot)
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+
+    with pytest.raises(ModelProviderPolicyError):
+        await component.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.USE,
+            user_id="policy-actor",
+            parameters={"model": [], "agent_llm": "Anthropic", "model_name": "claude-test"},
+        )
+
+    resolve_policy.assert_awaited_once_with(
+        user_id="policy-actor",
+        providers=["anthropic"],
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+
+@pytest.mark.asyncio
+async def test_historical_embedded_agent_llm_selection_uses_base_provider_policy(monkeypatch) -> None:
+    """A saved 1.6 Agent lacks today's override but inherits the current base gate."""
+    from lfx.base.models import model_input_constants
+    from lfx.custom.custom_component.component import Component
+    from lfx.custom.utils import build_custom_component_template
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    fixture = Path(__file__).parents[3] / "data" / "starter_projects_1_6_0" / "News Aggregator.json"
+    flow = json.loads(fixture.read_text(encoding="utf-8"))["data"]
+    agent_template = next(
+        node["data"]["node"]["template"] for node in flow["nodes"] if "agent_llm" in node["data"]["node"]["template"]
+    )
+    source = agent_template["code"]["value"]
+    # The fixture's provider catalog predates the current compatibility module.
+    # Supply only the inert metadata needed to evaluate its class definition.
+    monkeypatch.setattr(
+        model_input_constants,
+        "MODEL_PROVIDERS_DICT",
+        {provider: {"inputs": []} for provider in ("Anthropic", "Google Generative AI", "OpenAI")},
+    )
+    monkeypatch.setattr(
+        model_input_constants,
+        "MODELS_METADATA",
+        {provider: {} for provider in ("Anthropic", "Google Generative AI", "OpenAI")},
+    )
+    _frontend_node, historical_agent = build_custom_component_template(Component(_code=source))
+
+    denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.USE)
+    snapshot = SimpleNamespace(require=MagicMock(side_effect=denial))
+    resolve_policy = AsyncMock(return_value=snapshot)
+    credential_read = MagicMock(side_effect=AssertionError("credential read reached after policy denial"))
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+    monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", credential_read)
+
+    with pytest.raises(ModelProviderPolicyError):
+        await historical_agent.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.USE,
+            user_id="policy-actor",
+            parameters={"agent_llm": "OpenAI", "model_name": "gpt-4o"},
+        )
+
+    resolve_policy.assert_awaited_once_with(
+        user_id="policy-actor",
+        providers=["openai"],
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+    credential_read.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_runtime_denial_precedes_model_resolution(monkeypatch) -> None:
+    from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    component = AgentComponent(model=[], agent_llm="Anthropic", model_name="claude-test", _user_id="policy-actor")
+    denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE)
+    require_policy = AsyncMock(side_effect=denial)
+    resolve_model = MagicMock(side_effect=AssertionError("legacy model resolved after policy denial"))
+    monkeypatch.setattr(component, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(component, "_resolve_selected_model", resolve_model)
+
+    with pytest.raises(ModelProviderPolicyError):
+        await component.get_agent_requirements()
+
+    require_policy.assert_awaited_once_with(ModelProviderPolicyPurpose.USE)
+    resolve_model.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_config_denial_precedes_model_update_hook(monkeypatch) -> None:
+    from lfx.components.models_and_agents import agent as agent_module
+    from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    component = AgentComponent(model=[], agent_llm="Anthropic", _user_id="policy-actor")
+    denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+    require_policy = AsyncMock(side_effect=denial)
+    update_hook = MagicMock(side_effect=AssertionError("model update hook reached after policy denial"))
+    monkeypatch.setattr(component, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(agent_module, "handle_model_input_update", update_hook)
+
+    with pytest.raises(ModelProviderPolicyError):
+        await component.update_build_config({}, "Anthropic", "agent_llm")
+
+    require_policy.assert_awaited_once_with(
+        ModelProviderPolicyPurpose.CONFIGURE,
+        parameters={"model": [], "agent_llm": "Anthropic"},
+    )
+    update_hook.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_provider_options_are_filtered_by_active_scope(monkeypatch) -> None:
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    component = AgentComponent(_user_id="policy-actor")
+    snapshot = SimpleNamespace(filter=lambda providers: [provider for provider in providers if provider == "OpenAI"])
+    resolve_policy = AsyncMock(return_value=snapshot)
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+    build_config = {
+        "agent_llm": {
+            "options": ["Anthropic", "OpenAI"],
+            "options_metadata": [{"icon": "Anthropic"}, {"icon": "OpenAI"}],
+        }
+    }
+
+    await component._filter_legacy_provider_options(build_config)
+
+    assert build_config["agent_llm"]["options"] == ["OpenAI"]
+    assert build_config["agent_llm"]["options_metadata"] == [{"icon": "OpenAI"}]

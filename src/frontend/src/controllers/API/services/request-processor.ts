@@ -1,7 +1,11 @@
 import {
+  type InfiniteData,
   type QueryClient,
+  type QueryKey,
+  type UseInfiniteQueryOptions,
   type UseMutationOptions,
   type UseQueryOptions,
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -59,6 +63,18 @@ const queryRetry = makeRetry(5);
 const retryDelay = (attemptIndex: number) =>
   Math.min(1000 * 2 ** attemptIndex, MAX_RETRY_DELAY_MS);
 
+function useInfiniteRequest<TPage>(
+  options: UseInfiniteQueryOptions<
+    TPage,
+    Error,
+    InfiniteData<TPage>,
+    QueryKey,
+    number
+  >,
+) {
+  return useInfiniteQuery({ retry: queryRetry, retryDelay, ...options });
+}
+
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -104,6 +120,7 @@ export function withTransientErrorRetry<TArgs extends unknown[], TData>(
 }
 
 export function UseRequestProcessor(): {
+  infiniteQuery: typeof useInfiniteRequest;
   query: QueryFunctionType;
   mutate: MutationFunctionType;
   queryClient: QueryClient;
@@ -152,5 +169,5 @@ export function UseRequestProcessor(): {
     });
   }
 
-  return { query, mutate, queryClient };
+  return { query, mutate, queryClient, infiniteQuery: useInfiniteRequest };
 }

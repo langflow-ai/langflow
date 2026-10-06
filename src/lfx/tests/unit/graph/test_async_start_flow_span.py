@@ -250,13 +250,13 @@ def test_the_sync_start_runs_under_the_caller_span():
 
 
 @pytest.mark.parametrize(
-    ("mode", "expected_error"),
+    ("mode", "expected_raised", "expected_error_type"),
     [
-        ("sync_start_value_error", "ValueError"),
-        ("sync_start_other_error", "ComponentBuildError"),
+        ("sync_start_value_error", "ValueError", "ValueError"),
+        ("sync_start_other_error", "ComponentBuildError", "TypeError"),
     ],
 )
-def test_a_failing_sync_run_reaches_the_caller_and_the_span(mode: str, expected_error: str):
+def test_a_failing_sync_run_reaches_the_caller_and_the_span(mode: str, expected_raised: str, expected_error_type: str):
     """A failure has to leave the span scope, then be caught at the worker boundary.
 
     Caught inside the scope, the context manager exits cleanly and the run's telemetry is wrong.
@@ -271,9 +271,9 @@ def test_a_failing_sync_run_reaches_the_caller_and_the_span(mode: str, expected_
     """
     result = run_probe(mode)
 
-    assert result["raised"] == expected_error, result
+    assert result["raised"] == expected_raised, result
 
     flow_spans = [s for s in result["spans"] if s["name"] == "flow.execute"]
     assert len(flow_spans) == 1, result["spans"]
     assert flow_spans[0]["status"] == "error", flow_spans[0]
-    assert flow_spans[0]["error_type"] == expected_error, flow_spans[0]
+    assert flow_spans[0]["error_type"] == expected_error_type, flow_spans[0]

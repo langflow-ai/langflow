@@ -145,9 +145,9 @@ class RuntimeSettings(BaseModel):
     """Timeout for the API calls in seconds."""
 
     workflow_execution_timeout: int = 300
-    """Wall-clock ceiling in seconds for a single v2 workflow run, applied to every
-    execution mode. Sync runs raise a 408; stream, background, and public runs emit
-    the protocol's terminal-error event and (for background) mark the job failed."""
+    """Wall-clock ceiling in seconds for a client-attached v2 workflow run.
+    Sync runs raise a 408; stream and public runs emit the protocol's terminal-error
+    event. Background runs use ``background_job_timeout`` instead."""
 
     model_provider_policy_refresh_interval_s: float = Field(default=10.0, gt=0)
     """How often each backend worker refreshes the install-wide model-provider policy.

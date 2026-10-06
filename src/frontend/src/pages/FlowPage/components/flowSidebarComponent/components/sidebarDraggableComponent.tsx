@@ -185,7 +185,11 @@ export const SidebarDraggableComponent = forwardRef(
               tabIndex={0}
               onKeyDown={handleKeyDown}
               className={cn(
-                "flex flex-1 items-center gap-2 rounded-md outline-none ring-ring focus-visible:ring-1",
+                // `min-w-0` (LE-2311): without it this flex item keeps the
+                // default `min-width: auto` and refuses to shrink below the
+                // component name's intrinsic width, pushing the sibling
+                // add/drag container off the row.
+                "flex min-w-0 flex-1 items-center gap-2 rounded-md outline-none ring-ring focus-visible:ring-1",
                 isUnavailable ? "cursor-not-allowed" : "cursor-grab",
               )}
               draggable={!error && !isUnavailable}

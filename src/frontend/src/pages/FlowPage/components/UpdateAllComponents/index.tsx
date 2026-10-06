@@ -154,10 +154,12 @@ export default function UpdateAllComponents() {
         }
 
         const currentCode = thisNodeTemplate.code.value;
-        const { data: resData, type } = await validateComponentCode({
+        const validation = await validateComponentCode({
           code: currentCode,
           frontend_node: node.data.node!,
         });
+        if (!validation) return undefined;
+        const { data: resData, type } = validation;
 
         if (!resData || !type) {
           throw new Error(`Validation returned no update for ${nodeUpdate.id}`);
@@ -174,7 +176,7 @@ export default function UpdateAllComponents() {
 
       const results = await Promise.allSettled(updatePromises);
       const updates = results.flatMap((result) =>
-        result.status === "fulfilled" ? [result.value] : [],
+        result.status === "fulfilled" && result.value ? [result.value] : [],
       );
       const updatedNodeIds = updates.map(({ nodeId }) => nodeId);
 

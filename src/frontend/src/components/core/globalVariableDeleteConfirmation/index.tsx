@@ -1,33 +1,35 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import {
-  useDeleteGlobalVariables,
-  useGetGlobalVariables,
-} from "@/controllers/API/queries/variables";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
+import { useDeleteGlobalVariables } from "@/controllers/API/queries/variables";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 
 interface GlobalVariableDeleteConfirmationProps {
   option: string;
+  variableId?: string;
   onConfirmDelete: () => void;
+  providerScope?: ProviderScopeParams;
 }
 
 const GlobalVariableDeleteConfirmation = ({
   option,
+  variableId,
   onConfirmDelete,
+  providerScope,
 }: GlobalVariableDeleteConfirmationProps) => {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
-  const { data: globalVariables } = useGetGlobalVariables();
 
-  async function handleDelete(key: string) {
-    if (!globalVariables) return;
-    const id = globalVariables.find((variable) => variable.name === key)?.id;
-    if (id !== undefined) {
+  // Resolve the id in the parent query owner. Mounting another scoped query in
+  // every option row would refetch stale data, hide the options fail-closed,
+  // and recreate the rows in a loop after the request settles.
+  function handleDelete() {
+    if (variableId !== undefined) {
       mutateDeleteGlobalVariable(
-        { id },
+        { id: variableId, ...(providerScope ?? {}) },
         {
           onSuccess: () => {
             onConfirmDelete();
@@ -35,7 +37,7 @@ const GlobalVariableDeleteConfirmation = ({
           onError: () => {
             setErrorData({
               title: t("globalVars.errorDeletingVariable"),
-              list: [t("globalVars.errorIdNotFound", { name: key })],
+              list: [t("globalVars.errorIdNotFound", { name: option })],
             });
           },
         },
@@ -43,7 +45,7 @@ const GlobalVariableDeleteConfirmation = ({
     } else {
       setErrorData({
         title: t("globalVars.errorDeletingVariable"),
-        list: [t("globalVars.errorIdNotFound", { name: key })],
+        list: [t("globalVars.errorIdNotFound", { name: option })],
       });
     }
   }
@@ -54,7 +56,7 @@ const GlobalVariableDeleteConfirmation = ({
         onConfirm={(e) => {
           e.stopPropagation();
           e.preventDefault();
-          handleDelete(option);
+          handleDelete();
         }}
         description={'variable "' + option + '"'}
         asChild

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, cast
@@ -224,9 +225,9 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
-            info="Maximum number of tokens to generate. Field name varies by provider.",
+            info="Maximum number of tokens to generate. Set to 0 for no explicit limit. Field name varies by provider.",
             advanced=True,
-            range_spec=RangeSpec(min=1, max=128000, step=1, step_type="int"),
+            range_spec=RangeSpec(min=0, max=128000, step=1, step_type="int"),
         ),
         MultilineInput(
             name="format_instructions",
@@ -327,6 +328,49 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         ),
     ]
 
+    async def _additional_model_provider_policy_ids(self, purpose, parameters=None) -> tuple[str, ...]:
+        """Gate the provider selector retained by legacy Agent/ALTK flows."""
+        _ = purpose
+        from lfx.base.models.provider_registry import resolve_provider_id
+
+        effective_parameters = parameters if isinstance(parameters, Mapping) else getattr(self, "_parameters", None)
+        if not isinstance(effective_parameters, Mapping):
+            effective_parameters = {}
+        selected_model = effective_parameters.get("model", getattr(self, "model", None))
+        if selected_model:
+            # The shared Component hook already handles a selected ModelInput;
+            # connected model objects are gated by their upstream vertex.
+            return ()
+        legacy_provider = effective_parameters.get("agent_llm", getattr(self, "agent_llm", None))
+        if not isinstance(legacy_provider, str) or not legacy_provider.strip() or legacy_provider == "Custom":
+            return ()
+        return (resolve_provider_id(legacy_provider),)
+
+    async def _filter_legacy_provider_options(self, build_config: Mapping[str, Any]) -> None:
+        """Filter ALTK/legacy Agent provider choices through the active scope."""
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
+
+        provider_field = build_config.get("agent_llm")
+        if not isinstance(provider_field, dict):
+            return
+        options = provider_field.get("options")
+        if not isinstance(options, list):
+            return
+        candidates = [option for option in options if isinstance(option, str) and option != "Custom"]
+        if not candidates:
+            return
+        snapshot = await aresolve_model_provider_policy(
+            user_id=self.user_id,
+            providers=candidates,
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        allowed = set(snapshot.filter(candidates))
+        keep_indexes = [index for index, option in enumerate(options) if option == "Custom" or option in allowed]
+        provider_field["options"] = [options[index] for index in keep_indexes]
+        metadata = provider_field.get("options_metadata")
+        if isinstance(metadata, list) and len(metadata) == len(options):
+            provider_field["options_metadata"] = [metadata[index] for index in keep_indexes]
+
     def _resolve_selected_model(self):
         """Resolve the selected model, including legacy agent_llm/model_name inputs."""
         try:
@@ -391,6 +435,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
     async def get_agent_requirements(self):
         """Get the agent requirements for the agent."""
         from langchain_core.tools import StructuredTool
+
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
 
         selected_model = self._resolve_selected_model()
         try:
@@ -561,11 +609,18 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         Mirrors the clamp in `_build_middleware` (max(1, max_iterations)) so a
         saved 0 or negative value cannot under-cap the graph below one full
-        iteration. The +5 buffer covers start/end/router overhead.
+        iteration.
+
+        A tool-calling cycle visits the model-call limiter's before_model and
+        after_model nodes, the model, and tools. When any tool requires approval,
+        HumanInTheLoopMiddleware adds another after_model node to every cycle,
+        even if the model repeatedly calls an ungated tool. Leave transition
+        room so the model-call limiter can end the run first.
         """
         raw = getattr(self, "max_iterations", None)
         run_limit = max(1, int(raw)) if raw is not None else 15
-        return run_limit * 2 + 5
+        steps_per_cycle = 4 + bool(self._gated_interrupt_on())
+        return run_limit * steps_per_cycle + 10
 
     def _build_middleware(self, llm: Any, *, allow_interrupts: bool = True) -> list:
         # `llm` is passed in (rather than re-fetched via `self._get_llm()`)
@@ -642,8 +697,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # middleware cap (ModelCallLimitMiddleware) is what bounds the loop —
         # not LangGraph's default 25-step guard, which fires at ~12 model+tool
         # iterations and raises a raw GraphRecursionError (QA UI-009/UI-010).
-        # Each iteration is ~2 graph steps (model node + tools node); add 5
-        # for start/end overhead.
+        # Include the extra after_model node when tool approval is configured.
         recursion_limit = self._compute_recursion_limit()
 
         agent_config: dict[str, Any] = {
@@ -978,6 +1032,15 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         field_value: list[dict],
         field_name: str | None = None,
     ) -> dotdict:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        policy_parameters = dict(getattr(self, "_parameters", {}) or {})
+        if field_name:
+            policy_parameters[field_name] = field_value
+        await self.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.CONFIGURE,
+            parameters=policy_parameters,
+        )
         # Update model options with caching (for all field changes).
         # The tool-calling constraint lives on the ModelInput's ``filters``
         # field (declared above); ``handle_model_input_update`` reads it
@@ -1015,6 +1078,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
+        await self._filter_legacy_provider_options(build_config)
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
     async def _get_tools(self) -> list[Tool]:

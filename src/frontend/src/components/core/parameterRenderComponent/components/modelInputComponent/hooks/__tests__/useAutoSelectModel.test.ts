@@ -64,6 +64,34 @@ describe("useAutoSelectModel", () => {
     expect(renderAutoSelect({ value: [OPENAI] })).not.toHaveBeenCalled();
   });
 
+  it("keeps a canonical WatsonX selection when the component option uses the legacy provider name", () => {
+    const canonicalSaved = {
+      name: "ibm/granite-3",
+      provider: "IBM WatsonX",
+      icon: "IBMWatsonx",
+      metadata: {},
+    };
+    const legacyOption = {
+      ...canonicalSaved,
+      provider: "IBM watsonx.ai",
+    };
+
+    const handleOnNewValue = renderAutoSelect({
+      flatOptions: [legacyOption, ANTHROPIC],
+      value: [canonicalSaved],
+      providers: [
+        {
+          provider: "IBM WatsonX",
+          is_configured: true,
+          is_enabled: true,
+        },
+      ] as never,
+      enabledModels: { "IBM WatsonX": { "ibm/granite-3": true } },
+    });
+
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+  });
+
   it("should_replace_a_selection_whose_provider_no_longer_offers_it", () => {
     const handleOnNewValue = renderAutoSelect({
       value: [{ ...ANTHROPIC, name: "claude-retired" }],

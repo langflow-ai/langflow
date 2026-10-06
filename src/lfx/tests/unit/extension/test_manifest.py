@@ -83,6 +83,52 @@ def test_minimal_manifest_round_trip() -> None:
     assert manifest.description is None
 
 
+@pytest.mark.parametrize(
+    "version",
+    [
+        "1.2.3",
+        "1.2.3-alpha.1",
+        "1.2.3-alpha.1+build.5",
+        "1.2.3+build.5",
+        "1.2.3.dev0",
+        "1.2.3a1",
+        "1.2.3b2",
+        "1.2.3rc3",
+    ],
+)
+def test_accepts_semver_and_repository_pep440_versions(version: str) -> None:
+    manifest = ExtensionManifest.model_validate(_with(_VALID, version=version))
+
+    assert manifest.version == version
+
+
+@pytest.mark.parametrize(
+    "version",
+    [
+        "1.2",
+        "01.2.3",
+        "v1.2.3",
+        "1.2.3.dev",
+        "1.2.3dev1",
+        "1.2.3a",
+        "1.2.3alpha1",
+        "1.2.3rc",
+        "1.2.3post1",
+        "1.2.3a01",
+        "1.2.3b01",
+        "1.2.3rc01",
+        "1.2.3.dev01",
+        "1.2.\u0663",
+        "\uff11.2.3",
+        "1.2.3\n",
+        "1.2.3rc1\n",
+    ],
+)
+def test_rejects_unsupported_version_forms(version: str) -> None:
+    with pytest.raises(ValidationError, match="version"):
+        ExtensionManifest.model_validate(_with(_VALID, version=version))
+
+
 # ---------------------------------------------------------------------------
 # v0 field validation -- malformed manifests
 # ---------------------------------------------------------------------------

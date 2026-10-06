@@ -26,6 +26,7 @@ import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useTypesStore } from "@/stores/typesStore";
+import { uiLocale } from "@/utils/format-date";
 import { customStringify } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import useFlowStore from "../../stores/flowStore";
@@ -84,10 +85,9 @@ function FlowPageMainContent({
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
+  const { id } = useParams();
 
-  useGetTypes({
-    enabled: Object.keys(types).length <= 0,
-  });
+  useGetTypes({ flowId: id });
 
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentFlow = useFlowStore((state) => state.currentFlow);
@@ -106,7 +106,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const blocker = useBlocker(changesNotSaved || isBuilding);
 
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
-  const { id } = useParams();
   const navigate = useCustomNavigate();
   const saveFlow = useSaveFlow();
 
@@ -370,7 +369,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               flowName={currentSavedFlow.name}
               lastSaved={
                 updatedAt
-                  ? new Date(updatedAt).toLocaleString("en-US", {
+                  ? new Date(updatedAt).toLocaleString(uiLocale(), {
                       hour: "numeric",
                       minute: "numeric",
                       second: "numeric",

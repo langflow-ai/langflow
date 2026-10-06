@@ -1,6 +1,6 @@
 [project]
 name = "lfx-openai-compatible"
-version = "0.1.2"
+version = "0.1.5"
 description = "Generic OpenAI-compatible endpoints (OpenRouter, Together, Groq, self-hosted vLLM/TGI, ...) as a first-class Langflow model provider, packaged as a standalone Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"

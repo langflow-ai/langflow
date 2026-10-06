@@ -679,6 +679,67 @@ async def test_flush_batch_stages_plugin_events_in_same_transaction(monkeypatch)
     assert not hasattr(events[0], "details")
 
 
+def test_stage_audit_decision_uses_caller_transaction(monkeypatch):
+    """Mutation audit rows and plugin events are staged without a separate commit."""
+    from langflow.services import deps
+
+    install_settings(monkeypatch, authz_enabled=True, audit_enabled=True, audit_durable=True)
+    rows = []
+    staged = []
+
+    class _Session:
+        def add(self, row):
+            rows.append(row)
+
+    class _AuthorizationService:
+        def stage_audit_events(self, *, session, events):
+            staged.append((session, tuple(events)))
+
+    session = _Session()
+    user_id = uuid4()
+    resource_id = uuid4()
+    monkeypatch.setattr(deps, "get_authorization_service", lambda: _AuthorizationService())
+
+    staged_in_transaction = authz_audit.stage_audit_decision(
+        session=session,
+        user_id=user_id,
+        action="user:update",
+        obj=f"user:{resource_id}",
+        result="allow",
+        details={"event": authz_audit.AUDIT_EVENT_MUTATION},
+    )
+
+    assert len(rows) == 1
+    assert rows[0].user_id == user_id
+    assert rows[0].resource_type == "user"
+    assert rows[0].resource_id == resource_id
+    assert rows[0].details == {"event": authz_audit.AUDIT_EVENT_MUTATION}
+    assert len(staged) == 1
+    assert staged[0][0] is session
+    assert staged[0][1][0].event_id == rows[0].id
+    assert staged_in_transaction is True
+
+
+def test_stage_audit_decision_preserves_best_effort_pipeline(monkeypatch):
+    """Best-effort mutation audits remain asynchronous after commit."""
+    install_settings(monkeypatch, authz_enabled=True, audit_enabled=True, audit_durable=False)
+
+    class _Session:
+        def add(self, _row):
+            pytest.fail("best-effort audit must not join the mutation transaction")
+
+    staged_in_transaction = authz_audit.stage_audit_decision(
+        session=_Session(),
+        user_id=uuid4(),
+        action="user:update",
+        obj=f"user:{uuid4()}",
+        result="allow",
+        details={"event": authz_audit.AUDIT_EVENT_MUTATION},
+    )
+
+    assert staged_in_transaction is False
+
+
 @pytest.mark.anyio
 async def test_audit_decision_batches_multiple_entries(monkeypatch, patched_audit_flush):
     """Multiple concurrent ``audit_decision`` calls coalesce into a single DB batch.

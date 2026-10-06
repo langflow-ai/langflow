@@ -59,6 +59,11 @@ export default function ToolsTable({
   const skipSelectionReapply = useRef<number>(0);
   const [isGridReady, setIsGridReady] = useState(false);
 
+  // The approval toggle persists through a deferred callback that may have
+  // been created a render ago; keep the latest data reachable from it.
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
@@ -320,10 +325,17 @@ export default function ToolsTable({
     actions: string[],
   ) => {
     if (!row?._uniqueId) return;
+    // The deferred persist can fire from a closure that predates the latest
+    // sidebar edits; rebuild from the current row so it can't revert them.
+    const latestData = dataRef.current;
+    const currentRow = latestData.find((r) => r._uniqueId === row._uniqueId);
+    if (!currentRow) return;
     skipSelectionReapply.current++;
-    const updatedRow = { ...row, approval_actions: actions };
+    const updatedRow = { ...currentRow, approval_actions: actions };
     agGrid.current?.api.applyTransaction({ update: [updatedRow] });
-    setData(data.map((r) => (r._uniqueId === row._uniqueId ? updatedRow : r)));
+    setData(
+      latestData.map((r) => (r._uniqueId === row._uniqueId ? updatedRow : r)),
+    );
   };
 
   const actionArgs = useMemo(() => {

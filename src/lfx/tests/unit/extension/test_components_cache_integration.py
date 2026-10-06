@@ -428,6 +428,10 @@ async def test_inline_bundle_components_decorated_with_extension_metadata(tmp_pa
     # The legacy in-tree identity (name attr falling back to class name) is
     # carried in the template value so saved flows' node types still resolve.
     assert template["name"] == "AlphaThing"
+    # The source file's stem is the *other* key the legacy custom scanner can use
+    # for this component: lazy metadata loading never imports the file, so it names
+    # the entry after the file. Carried so the cache merge can retire that stub.
+    assert template["legacy_module"] == "thing"
 
 
 @pytest.mark.asyncio
@@ -520,6 +524,10 @@ async def test_seed_directory_bundle_loads_at_official_slot(tmp_path: Path, monk
     template = result["pilot"][expected_id]
     assert template["bundle"] == "pilot"
     assert template["extension"] == "lfx-pilot"
+    # @official bundles live outside LANGFLOW_COMPONENTS_PATH, so the legacy custom
+    # scanner never produces a copy of them -- carrying the file-stem alias here
+    # could only evict an unrelated same-named custom component.
+    assert "legacy_module" not in template
 
     # Bundle is in the BundleRegistry so reload + the events pipeline can find it.
     record = fresh_registry.get_bundle("pilot")

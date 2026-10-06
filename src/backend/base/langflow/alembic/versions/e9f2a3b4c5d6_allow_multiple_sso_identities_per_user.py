@@ -214,7 +214,7 @@ def _create_and_backfill_sso_settings(conn: sa.Connection) -> None:
             _SETTINGS_TABLE,
             sa.Column("id", sa.Integer(), nullable=False),
             sa.Column("enforce_sso", sa.Boolean(), nullable=False),
-            sa.CheckConstraint("id = 1", name=_SETTINGS_SINGLETON_CHECK),
+            sa.CheckConstraint("id = 1", name=op.f(_SETTINGS_SINGLETON_CHECK)),
             sa.PrimaryKeyConstraint("id"),
         )
 

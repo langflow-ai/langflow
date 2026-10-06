@@ -1,6 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { isEqual } from "lodash";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
+import { appendProviderScope } from "@/controllers/API/helpers/provider-scope";
 import {
   getModelProvidersQueryOptions,
   type ModelProviderWithStatus,
@@ -65,6 +67,9 @@ export async function refreshAllModelInputs(
       await queryClient.invalidateQueries({
         queryKey: ["useGetEnabledModels"],
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["useGetProviderVariables"],
+      });
     }
 
     const nodesWithModelFields = allNodes.filter(isModelNode);
@@ -81,7 +86,7 @@ export async function refreshAllModelInputs(
     if (queryClient) {
       try {
         const providers = await queryClient.fetchQuery(
-          getModelProvidersQueryOptions({}),
+          getModelProvidersQueryOptions({ flowId, purpose: "configure" }),
         );
         providerConfiguration = buildProviderConfiguration(providers);
       } catch {
@@ -124,6 +129,18 @@ export async function refreshAllModelInputs(
       await refreshAllModelInputs(qc, opts);
     }
   }
+}
+
+// The template serves an unset model as "" while the store normalizes it to [].
+const isEmptyModelValue = (value: unknown): boolean =>
+  value === undefined ||
+  value === null ||
+  value === "" ||
+  (Array.isArray(value) && value.length === 0);
+
+function isSameModelSelection(left: unknown, right: unknown): boolean {
+  if (isEmptyModelValue(left) && isEmptyModelValue(right)) return true;
+  return isEqual(left, right);
 }
 
 function buildProviderConfiguration(
@@ -174,8 +191,12 @@ async function refreshSingleNode(
 
     let response;
     try {
+      const queryParams = new URLSearchParams();
+      appendProviderScope(queryParams, { flowId });
       response = await api.post<APIClassType>(
-        getURL("CUSTOM_COMPONENT", { update: "update" }),
+        `${getURL("CUSTOM_COMPONENT", { update: "update" })}${
+          queryParams.toString() ? `?${queryParams.toString()}` : ""
+        }`,
         {
           code: nodeData.template.code?.value,
           template: requestPayload,
@@ -186,9 +207,7 @@ async function refreshSingleNode(
       );
       // biome-ignore lint/suspicious/noExplicitAny: legacy
     } catch (e: any) {
-      // Suppress 403 specifically from custom component blocking — fallback
-      // for race conditions where guards above couldn't detect the outdated
-      // state.
+      // Fallback 403 suppression for races the outdated-state guards above miss.
       if (!allowCustomComponents && isCustomComponentBlockError(e)) {
         console.warn(
           `Suppressed 403 for outdated component (node ${node.id}):`,
@@ -208,6 +227,26 @@ async function refreshSingleNode(
       modelFieldKey,
       providerConfiguration,
     );
+
+    // Authorized for the flow/project scope captured at refresh start; a
+    // navigation or project move while in flight must not reach a same-id node.
+    const activeFlow = useFlowsManagerStore.getState();
+    if (
+      activeFlow.currentFlowId !== flowId ||
+      activeFlow.currentFlow?.folder_id !== folderId
+    ) {
+      return;
+    }
+
+    // A pick made in flight is newer; applying this response would swap it for options[0].
+    const liveNode = useFlowStore
+      .getState()
+      .nodes.find((candidate) => candidate.id === node.id);
+    const liveModelValue = (liveNode?.data?.node as APIClassType | undefined)
+      ?.template?.[modelFieldKey]?.value;
+    if (!isSameModelSelection(liveModelValue, currentModelValue)) {
+      return;
+    }
 
     setNode(
       node.id,

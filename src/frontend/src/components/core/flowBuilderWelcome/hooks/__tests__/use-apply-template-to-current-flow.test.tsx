@@ -12,13 +12,14 @@ const setNodes = jest.fn();
 const setEdges = jest.fn();
 const setCurrentFlowInManager = jest.fn();
 const saveFlow = jest.fn().mockResolvedValue(undefined);
+const requestFitView = jest.fn();
 
 let currentFlow: unknown;
 
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: jest.fn((selector?: (state: unknown) => unknown) => {
-    const state = { setNodes, setEdges, currentFlow };
+    const state = { setNodes, setEdges, currentFlow, requestFitView };
     return selector ? selector(state) : state;
   }),
 }));
@@ -86,6 +87,7 @@ describe("useApplyTemplateToCurrentFlow", () => {
     setEdges.mockClear();
     setCurrentFlowInManager.mockClear();
     saveFlow.mockClear();
+    requestFitView.mockClear();
     currentFlow = {
       id: "flow-1",
       name: "New Flow",
@@ -309,6 +311,30 @@ describe("useApplyTemplateToCurrentFlow", () => {
       expect.objectContaining({ name: "Simple Agent" }),
     );
     expect(setCurrentFlowInManager).toHaveBeenLastCalledWith(original);
+  });
+
+  // A template's nodes measure over several frames; fitting before they all
+  // have dimensions frames the flow around a subset, which is what the welcome
+  // overlay would then uncover.
+  it("should_defer_the_fit_until_the_canvas_reports_the_graph_measured", () => {
+    const onFitted = jest.fn();
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    act(() => {
+      result.current("simple_agent", onFitted);
+    });
+
+    expect(requestFitView).toHaveBeenCalledTimes(1);
+    expect(onFitted).not.toHaveBeenCalled();
+
+    act(() => {
+      requestFitView.mock.calls[0][0]();
+    });
+
+    expect(onFitted).toHaveBeenCalledTimes(1);
+    // The canvas corrects the framing itself when uncovering narrows it, so
+    // uncovering must not queue a second fit that races that resize.
+    expect(requestFitView).toHaveBeenCalledTimes(1);
   });
 
   it("should_not_rename_or_persist_when_there_is_no_current_flow", () => {

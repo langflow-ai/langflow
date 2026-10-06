@@ -2,20 +2,31 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import IOKeyPairInputWithVariables from "../key-pair-input-with-variables";
 
+let mockCurrentFlowId = "flow-project-a";
+let mockGlobalVariables: Array<{ name: string; type: string }> | undefined = [
+  { name: "API_KEY_1", type: "CREDENTIAL" },
+  { name: "API_KEY_2", type: "GENERIC" },
+  { name: "TOKEN", type: "CREDENTIAL" },
+];
+const mockUseGetGlobalVariables = jest.fn((_options?: unknown) => ({
+  data: mockGlobalVariables,
+  isLoading: false,
+}));
+
 // Mock the useGetGlobalVariables hook
 jest.mock(
   "@/controllers/API/queries/variables/use-get-global-variables",
   () => ({
-    useGetGlobalVariables: jest.fn(() => ({
-      data: [
-        { name: "API_KEY_1", type: "CREDENTIAL" },
-        { name: "API_KEY_2", type: "GENERIC" },
-        { name: "TOKEN", type: "CREDENTIAL" },
-      ],
-      isLoading: false,
-    })),
+    useGetGlobalVariables: (options?: unknown) =>
+      mockUseGetGlobalVariables(options),
   }),
 );
+
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlowId: string }) => unknown) =>
+    selector({ currentFlowId: mockCurrentFlowId }),
+}));
 
 // Mock nanoid
 jest.mock("nanoid", () => ({
@@ -50,15 +61,18 @@ jest.mock(
       placeholder,
       id,
       disabled,
+      selectedOption,
     }: {
       value: string;
       onChange: (value: string) => void;
       placeholder?: string;
       id?: string;
       disabled?: boolean;
+      selectedOption?: string;
     }) => (
       <input
         data-testid={id || "input-component"}
+        data-selected-option={selectedOption}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -116,6 +130,12 @@ describe("IOKeyPairInputWithVariables", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCurrentFlowId = "flow-project-a";
+    mockGlobalVariables = [
+      { name: "API_KEY_1", type: "CREDENTIAL" },
+      { name: "API_KEY_2", type: "GENERIC" },
+      { name: "TOKEN", type: "CREDENTIAL" },
+    ];
   });
 
   it("renders with initial empty row", () => {
@@ -125,6 +145,10 @@ describe("IOKeyPairInputWithVariables", () => {
 
     const keyInputs = screen.getAllByPlaceholderText("Type key...");
     expect(keyInputs).toHaveLength(1);
+    expect(mockUseGetGlobalVariables).toHaveBeenCalledWith({
+      flowId: "flow-project-a",
+      enabled: true,
+    });
   });
 
   it("renders with existing key-value pairs", () => {
@@ -136,11 +160,11 @@ describe("IOKeyPairInputWithVariables", () => {
       ],
     };
 
-    render(<IOKeyPairInputWithVariables {...defaultProps} />, {
+    render(<IOKeyPairInputWithVariables {...props} />, {
       wrapper: createWrapper(),
     });
 
-    expect(screen.getAllByPlaceholderText("Type key...")).toHaveLength(1);
+    expect(screen.getAllByPlaceholderText("Type key...")).toHaveLength(2);
   });
 
   it("calls onChange when key input changes", () => {
@@ -204,6 +228,49 @@ describe("IOKeyPairInputWithVariables", () => {
 
     // Should render without crashing
     expect(container).toBeInTheDocument();
+  });
+
+  it("stays stable while the scoped variable query masks pending data", () => {
+    mockGlobalVariables = undefined;
+
+    render(<IOKeyPairInputWithVariables {...defaultProps} />, {
+      wrapper: createWrapper(),
+    });
+
+    expect(screen.getByTestId("test-input-value-0")).toHaveAttribute(
+      "data-selected-option",
+      "",
+    );
+  });
+
+  it("clears a stale variable selection when an equal-sized scoped catalog replaces it", () => {
+    const props = {
+      ...defaultProps,
+      value: [
+        { key: "authorization", value: "API_KEY_1", id: "1", error: false },
+      ],
+    };
+    const { rerender } = render(<IOKeyPairInputWithVariables {...props} />, {
+      wrapper: createWrapper(),
+    });
+
+    expect(screen.getByTestId("test-input-value-0")).toHaveAttribute(
+      "data-selected-option",
+      "API_KEY_1",
+    );
+
+    mockCurrentFlowId = "flow-project-b";
+    mockGlobalVariables = [
+      { name: "API_KEY_3", type: "CREDENTIAL" },
+      { name: "API_KEY_4", type: "GENERIC" },
+      { name: "OTHER_TOKEN", type: "CREDENTIAL" },
+    ];
+    rerender(<IOKeyPairInputWithVariables {...props} />);
+
+    expect(screen.getByTestId("test-input-value-0")).toHaveAttribute(
+      "data-selected-option",
+      "",
+    );
   });
 
   it("marks duplicate keys as errors when duplicateKey is true", () => {

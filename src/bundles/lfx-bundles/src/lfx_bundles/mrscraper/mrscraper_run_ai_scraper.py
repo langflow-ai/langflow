@@ -4,7 +4,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import IntInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
 
-from .mrscraper_common import build_client, payload
+from lfx_bundles.mrscraper.mrscraper_common import build_client, payload
 
 
 class MrscraperRunAiScraper(Component):

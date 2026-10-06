@@ -147,6 +147,14 @@ class TestRegisterUserComponentHappyPath:
 
 
 class TestRegisterUserComponentRefusesUntrustedInputs:
+    def test_should_refuse_code_that_fails_security_scan(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
+        with pytest.raises(UserComponentError, match="security validation"):
+            register_user_component(
+                user_id="user-alice",
+                class_name="UnsafeComponent",
+                code="import os\nos.spawnv()\n",
+            )
+
     def test_should_refuse_when_user_id_missing_and_auto_login_false(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         with pytest.raises(UserComponentError, match="authenticated user"):
             register_user_component(

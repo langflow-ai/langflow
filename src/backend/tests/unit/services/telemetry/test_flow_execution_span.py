@@ -93,7 +93,7 @@ class Boom(Component):
     outputs = [Output(name="message", display_name="Message", method="explode")]
 
     def explode(self) -> Message:
-        raise RuntimeError({SENTINEL!r})
+        raise KeyError({SENTINEL!r})
 
 async def main():
     chat_input = ChatInput(_id="chat-input")
@@ -352,13 +352,16 @@ def test_arun_emits_one_application_span():
 
 def test_failing_flow_marks_the_span_as_an_error_without_leaking_the_message():
     result = run_probe(FAILING_PROBE)
+    # Graph execution wraps the component failure for the API, but telemetry must classify the
+    # actionable root cause rather than the wrapper shared by unrelated failures.
     assert result["error"] == "ValueError"
 
     assert len(result["spans"]) == 1
     span = result["spans"][0]
     assert span["status"] == "ERROR"
+    assert span["description"] == "KeyError"
     assert span["attrs"]["status"] == "error"
-    assert span["attrs"]["error.type"] == "ValueError"
+    assert span["attrs"]["error.type"] == "KeyError"
     # The wrapped message embeds component output, which must not reach the operator's APM.
     assert SENTINEL not in json.dumps(span)
 

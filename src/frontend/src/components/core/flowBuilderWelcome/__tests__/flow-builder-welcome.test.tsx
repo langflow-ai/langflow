@@ -8,6 +8,7 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { AssistantModel } from "@/components/core/assistantPanel/assistant-panel.types";
 import { DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH } from "@/constants/constants";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -40,12 +41,21 @@ jest.mock("@/components/core/assistantPanel/components/model-selector", () => ({
   ModelSelector: () => <div data-testid="mock-model-selector" />,
 }));
 
+const SELECTED_MODEL: AssistantModel = {
+  id: "OpenAI-gpt-4o",
+  name: "gpt-4o",
+  provider: "OpenAI",
+  displayName: "gpt-4o",
+};
+let mockSelectedModel: AssistantModel | null = SELECTED_MODEL;
+
 // The shared model state hook touches ``localStorage`` on init — keep that
-// path inert and predictable in tests.
+// path predictable in tests while still exercising authorization of the
+// selected value.
 jest.mock(
   "@/components/core/assistantPanel/hooks/use-assistant-selected-model",
   () => ({
-    useAssistantSelectedModel: () => [null, jest.fn()],
+    useAssistantSelectedModel: () => [mockSelectedModel, jest.fn()],
   }),
 );
 
@@ -56,6 +66,9 @@ const mockUseEnabledModels = jest.fn(() => ({
   hasEnabledModels: true,
   filteredProviders: [],
   isLoading: false,
+  isError: false,
+  isCatalogReady: true,
+  isModelEnabled: (model: AssistantModel | null): boolean => model !== null,
 }));
 jest.mock("@/components/core/assistantPanel/hooks/use-enabled-models", () => ({
   useEnabledModels: () => mockUseEnabledModels(),
@@ -95,10 +108,14 @@ const FULL_CATALOG = [
 describe("FlowBuilderWelcome", () => {
   beforeEach(() => {
     useFlowsManagerStore.setState({ examples: FULL_CATALOG });
+    mockSelectedModel = SELECTED_MODEL;
     mockUseEnabledModels.mockReturnValue({
       hasEnabledModels: true,
       filteredProviders: [],
       isLoading: false,
+      isError: false,
+      isCatalogReady: true,
+      isModelEnabled: (model: AssistantModel | null): boolean => model !== null,
     });
     useUtilityStore
       .getState()
@@ -111,6 +128,9 @@ describe("FlowBuilderWelcome", () => {
         hasEnabledModels: false,
         filteredProviders: [],
         isLoading: false,
+        isError: false,
+        isCatalogReady: true,
+        isModelEnabled: () => false,
       });
       render(<FlowBuilderWelcome {...makeProps()} />);
       expect(
@@ -126,6 +146,9 @@ describe("FlowBuilderWelcome", () => {
         hasEnabledModels: false,
         filteredProviders: [],
         isLoading: false,
+        isError: false,
+        isCatalogReady: true,
+        isModelEnabled: () => false,
       });
       render(<FlowBuilderWelcome {...makeProps()} />);
       expect(
@@ -141,6 +164,9 @@ describe("FlowBuilderWelcome", () => {
         hasEnabledModels: false,
         filteredProviders: [],
         isLoading: false,
+        isError: false,
+        isCatalogReady: true,
+        isModelEnabled: () => false,
       });
       render(<FlowBuilderWelcome {...makeProps()} />);
       await userEvent.click(
@@ -156,6 +182,9 @@ describe("FlowBuilderWelcome", () => {
         hasEnabledModels: false,
         filteredProviders: [],
         isLoading: true,
+        isError: false,
+        isCatalogReady: false,
+        isModelEnabled: () => false,
       });
       render(<FlowBuilderWelcome {...makeProps()} />);
       expect(
@@ -248,6 +277,54 @@ describe("FlowBuilderWelcome", () => {
 
       expect(props.onSubmit).not.toHaveBeenCalled();
       expect(textarea).toHaveValue("line1\nline2");
+    });
+
+    it("should_disable_send_and_block_Enter_while_the_scoped_catalog_is_loading", async () => {
+      mockUseEnabledModels.mockReturnValue({
+        hasEnabledModels: false,
+        filteredProviders: [],
+        isLoading: true,
+        isError: false,
+        isCatalogReady: false,
+        isModelEnabled: () => false,
+      });
+      const props = makeProps();
+      render(<FlowBuilderWelcome {...props} />);
+
+      const textarea = screen.getByPlaceholderText(
+        WELCOME_TEXTAREA_PLACEHOLDER,
+      );
+      await userEvent.type(textarea, "build a scoped agent");
+
+      expect(
+        screen.getByTestId("flow-builder-welcome-send-button"),
+      ).toBeDisabled();
+      fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
+      expect(props.onSubmit).not.toHaveBeenCalled();
+    });
+
+    it("should_reject_a_stale_saved_model_after_the_flow_scope_changes", async () => {
+      mockUseEnabledModels.mockReturnValue({
+        hasEnabledModels: true,
+        filteredProviders: [],
+        isLoading: false,
+        isError: false,
+        isCatalogReady: true,
+        isModelEnabled: () => false,
+      });
+      const props = makeProps();
+      render(<FlowBuilderWelcome {...props} />);
+
+      const textarea = screen.getByPlaceholderText(
+        WELCOME_TEXTAREA_PLACEHOLDER,
+      );
+      await userEvent.type(textarea, "build a scoped agent");
+
+      expect(
+        screen.getByTestId("flow-builder-welcome-send-button"),
+      ).toBeDisabled();
+      fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
+      expect(props.onSubmit).not.toHaveBeenCalled();
     });
   });
 

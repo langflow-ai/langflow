@@ -85,11 +85,32 @@ BUNDLE_NAME_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
 _PROVIDER_ID_RE: re.Pattern[str] = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 
 _SEMVER_RE: re.Pattern[str] = re.compile(
-    r"^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)"
+    r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
     r"(?:-(?:[0-9A-Za-z-]+)(?:\.[0-9A-Za-z-]+)*)?"
     r"(?:\+(?:[0-9A-Za-z-]+)(?:\.[0-9A-Za-z-]+)*)?$"
 )
 """SemVer 2.0.0 pattern (https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string)."""
+
+_REPOSITORY_PEP440_RE: re.Pattern[str] = re.compile(
+    r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:(?:a|b|rc)(?:0|[1-9][0-9]*)|\.dev(?:0|[1-9][0-9]*))?$"
+)
+"""Canonical PEP 440 forms emitted by the repository's bundle release tooling."""
+
+
+def _json_schema_fullmatch(pattern: re.Pattern[str]) -> str:
+    """Adapt a Python-anchored regex to JSON Schema's search semantics.
+
+    The trailing lookahead prevents ``$`` from accepting a match immediately
+    before a final newline, keeping the authoring schema aligned with the
+    runtime validator's ``fullmatch`` behavior.
+    """
+    return rf"(?:{pattern.pattern})(?![\s\S])"
+
+
+_EXTENSION_VERSION_JSON_SCHEMA: dict[str, list[dict[str, str]]] = {
+    "anyOf": [{"pattern": _json_schema_fullmatch(pattern)} for pattern in (_SEMVER_RE, _REPOSITORY_PEP440_RE)]
+}
 
 # Deferred manifest fields.  Validators reject any non-null value with
 # ``field-deferred-in-this-milestone``.  Listed here so tests can iterate and so
@@ -283,6 +304,25 @@ class ProviderEmbeddingRef(BaseModel):
     )
 
 
+_PROVIDER_VARIABLE_KEYS: frozenset[str] = frozenset(
+    {
+        "base_url_suffix",
+        "combobox",
+        "component_metadata",
+        "description",
+        "header_name",
+        "is_header",
+        "is_list",
+        "is_secret",
+        "langchain_param",
+        "options",
+        "required",
+        "variable_key",
+        "variable_name",
+    }
+)
+
+
 class ProviderManifestEntry(BaseModel):
     """A model provider contributed by an extension bundle (``providers[]``).
 
@@ -320,6 +360,26 @@ class ProviderManifestEntry(BaseModel):
     metadata: dict[str, Any] = Field(
         ...,
         description="MODEL_PROVIDER_METADATA value: icon, variables, mapping (with model_class), api_docs_url, etc.",
+        json_schema_extra={
+            "properties": {
+                "variables": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "base_url_suffix": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": (
+                                    "Optional path suffix appended to a variable mapped to the base_url LangChain "
+                                    "parameter when the configured URL does not already end with it."
+                                ),
+                            }
+                        },
+                    },
+                }
+            }
+        },
     )
     model_class: ProviderClassRef | None = Field(
         default=None,
@@ -371,11 +431,34 @@ class ProviderManifestEntry(BaseModel):
 
     @field_validator("metadata")
     @classmethod
-    def _metadata_has_model_class(cls, value: dict[str, Any]) -> dict[str, Any]:
+    def _metadata_is_valid(cls, value: dict[str, Any]) -> dict[str, Any]:
         mapping = value.get("mapping") if isinstance(value, dict) else None
         if not isinstance(mapping, dict) or not mapping.get("model_class"):
             msg = "provider.metadata must include a 'mapping' object with a non-empty 'model_class'"
             raise ValueError(msg)
+        variables = value.get("variables", [])
+        if isinstance(variables, list):
+            for index, variable in enumerate(variables):
+                if not isinstance(variable, dict):
+                    continue
+                langchain_param = variable.get("langchain_param")
+                if langchain_param == "base_url":
+                    unknown_keys = sorted(set(variable) - _PROVIDER_VARIABLE_KEYS)
+                    if unknown_keys:
+                        msg = (
+                            f"provider.metadata.variables[{index}] contains unrecognized base_url variable key(s): "
+                            f"{', '.join(unknown_keys)}"
+                        )
+                        raise ValueError(msg)
+                suffix = variable.get("base_url_suffix")
+                if suffix is None:
+                    continue
+                if langchain_param != "base_url":
+                    msg = f"provider.metadata.variables[{index}].base_url_suffix requires langchain_param='base_url'"
+                    raise ValueError(msg)
+                if not isinstance(suffix, str) or not suffix.strip("/"):
+                    msg = f"provider.metadata.variables[{index}].base_url_suffix must contain a non-empty path suffix"
+                    raise ValueError(msg)
         return value
 
     @model_validator(mode="after")
@@ -422,8 +505,11 @@ class ExtensionManifest(BaseModel):
     )
     version: StrictStr = Field(
         ...,
-        pattern=_SEMVER_RE.pattern,
-        description="SemVer 2.0.0 version string for this extension release.",
+        description=(
+            "SemVer 2.0.0 or repository-supported PEP 440 stable/dev/alpha/beta/rc version string "
+            "for this extension release."
+        ),
+        json_schema_extra=_EXTENSION_VERSION_JSON_SCHEMA,
     )
     name: StrictStr = Field(
         ...,
@@ -499,6 +585,17 @@ class ExtensionManifest(BaseModel):
     # ------------------------------------------------------------------
     # Validators
     # ------------------------------------------------------------------
+
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str) -> str:
+        if not any(pattern.fullmatch(value) for pattern in (_SEMVER_RE, _REPOSITORY_PEP440_RE)):
+            msg = (
+                "version must be SemVer 2.0.0 or a supported PEP 440 form: "
+                "X.Y.Z, X.Y.Z.devN, X.Y.ZaN, X.Y.ZbN, or X.Y.ZrcN"
+            )
+            raise ValueError(msg)
+        return value
 
     @model_validator(mode="after")
     def _validate_declares_something(self) -> ExtensionManifest:

@@ -1,13 +1,14 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import CustomModelProvidersEmptyState from "@/customization/components/custom-model-providers-empty-state";
 import type { ModelTypeFilter } from "@/types/models";
 import ProviderListItem from "./ProviderListItem";
 import { Provider } from "./types";
 
-export interface ProviderListProps {
+export interface ProviderListProps extends ProviderScopeParams {
   modelType: ModelTypeFilter;
   onProviderSelect?: (provider: Provider) => void;
   selectedProviderName?: string | null;
@@ -20,13 +21,22 @@ const ProviderList = ({
   onProviderSelect,
   selectedProviderName,
   query,
+  flowId,
+  projectId,
 }: ProviderListProps) => {
   const { t } = useTranslation();
   const {
     data: rawProviders = [],
     isLoading,
     isFetching,
-  } = useGetModelProviders({ includeDeprecated: true });
+    fetchStatus,
+    isError,
+  } = useGetModelProviders({
+    includeDeprecated: true,
+    flowId,
+    projectId,
+    purpose: "configure",
+  });
 
   const trimmedQuery = (query ?? "").trim().toLowerCase();
 
@@ -63,7 +73,7 @@ const ProviderList = ({
   };
 
   const isLoadingProviders =
-    isLoading || (isFetching && filteredProviders.length === 0);
+    isLoading || isFetching || fetchStatus === "paused";
 
   if (isLoadingProviders) {
     return (
@@ -72,6 +82,18 @@ const ProviderList = ({
         data-testid="provider-list-loading"
       >
         <LoadingTextComponent text={t("modelProviders.loadingProviders")} />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div
+        role="alert"
+        className="text-muted-foreground px-4 py-2 text-sm"
+        data-testid="provider-list-error"
+      >
+        {t("modelProviders.errorUnexpected")}
       </div>
     );
   }

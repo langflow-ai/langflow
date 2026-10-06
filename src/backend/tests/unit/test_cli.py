@@ -265,6 +265,23 @@ def test_build_direct_uvicorn_kwargs_forwards_tls_paths():
     assert result["ssl_keyfile"] == "/etc/key.pem"
 
 
+def test_build_direct_uvicorn_kwargs_starts_each_request_task_from_a_clean_context():
+    """Direct-uvicorn startup must opt into uvicorn's per-request context reset.
+
+    Same reason as ``LangflowUvicornWorker.CONFIG_KWARGS`` on the Gunicorn path: a pipelined
+    request is started from inside the finishing request's task, and the copied context
+    otherwise carries that request's ended server span into the new one, which OpenTelemetry
+    reports as nesting. Kept on both paths so platform parity does not drift.
+
+    Asserted through a real ``uvicorn.Config`` so a renamed or rejected option fails here.
+    """
+    import uvicorn
+
+    config = uvicorn.Config("langflow.main:create_app", **build_direct_uvicorn_kwargs(**_kwargs()))
+
+    assert config.reset_contextvars is True
+
+
 def test_build_direct_uvicorn_kwargs_forwards_none_when_no_tls():
     # Plain HTTP startup: cert/key remain None so uvicorn doesn't try to load anything.
     result = build_direct_uvicorn_kwargs(**_kwargs())
@@ -333,6 +350,7 @@ def test_build_direct_uvicorn_kwargs_pins_full_shape():
         "ssl_certfile",
         "ssl_keyfile",
         "forwarded_allow_ips",
+        "reset_contextvars",
     }
     assert result["reload"] is False
 

@@ -38,6 +38,12 @@ jest.mock("@/stores/alertStore", () => ({
   default: () => ({ setErrorData: jest.fn() }),
 }));
 
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlowId: string }) => unknown) =>
+    selector({ currentFlowId: "flow-one" }),
+}));
+
 jest.mock("@/hooks/use-refresh-model-inputs", () => ({
   useRefreshModelInputs: () => ({ refreshAllModelInputs: jest.fn() }),
 }));

@@ -15,6 +15,7 @@ import importlib
 import json
 import logging
 import os
+import re
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -32,8 +33,15 @@ from lfx.log.logger import (
     log_buffer,
     setup_gunicorn_logger,
     setup_uvicorn_logger,
+    structlog_routes_to_stdlib,
 )
 from loguru import logger as loguru_logger
+
+_ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    return _ANSI_ESCAPE.sub("", text)
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -481,6 +489,116 @@ class TestInterceptHandler:
         self.mock_logger.info.assert_called_once_with("Message with string and 42")
 
 
+class TestInterceptHandlerReentrancy:
+    """Regression cover for the LE-2454 / #14776 logging cycle.
+
+    When structlog is backed by the stdlib factory, the structlog call inside
+    ``emit`` resolves to the same stdlib logger the handler is attached to, so the
+    record comes straight back in -- carrying the previous lap's rendered payload.
+    ``emit`` drops a record that arrives while the thread is already inside it.
+    """
+
+    # A regression here recurses until memory runs out. Cap the laps so the test
+    # fails an assert in milliseconds instead of taking CI down with it.
+    LAP_CAP = 10
+
+    def _record(self, message="boom"):
+        return logging.LogRecord(
+            name="gunicorn.error",
+            level=logging.ERROR,
+            pathname="test.py",
+            lineno=1,
+            msg=message,
+            args=(),
+            exc_info=None,
+        )
+
+    def test_reentrant_record_is_dropped(self):
+        """The record that re-enters emit() is dropped rather than forwarded again."""
+        handler = InterceptHandler()
+        forwarded = []
+
+        class CyclingLogger:
+            """Stands in for the stdlib-backed structlog logger that feeds emit()."""
+
+            def error(inner_self, message, **_kwargs):  # noqa: N805
+                forwarded.append(message)
+                if len(forwarded) > TestInterceptHandlerReentrancy.LAP_CAP:
+                    msg = "emit() cycled past the lap cap -- the re-entrancy guard is gone"
+                    raise AssertionError(msg)
+                # Exactly what the stdlib logger does in file mode: hand the
+                # rendered payload straight back to the handler that emitted it.
+                handler.emit(self._record(f"rendered({message})"))
+
+        with patch("structlog.get_logger", return_value=CyclingLogger()):
+            handler.emit(self._record())
+
+        assert forwarded == ["boom"]
+
+    def test_guard_is_released_after_a_successful_emit(self):
+        """A completed emit must not leave the thread's logging wedged shut."""
+        handler = InterceptHandler()
+        mock_logger = Mock()
+
+        with patch("structlog.get_logger", return_value=mock_logger):
+            handler.emit(self._record("first"))
+            handler.emit(self._record("second"))
+
+        assert [call.args[0] for call in mock_logger.error.call_args_list] == ["first", "second"]
+
+    def test_guard_is_released_after_handle_error(self):
+        """One malformed record must not silence every record after it."""
+        handler = InterceptHandler()
+        mock_logger = Mock()
+
+        with (
+            patch("structlog.get_logger", side_effect=RuntimeError("broken")),
+            patch.object(handler, "handleError") as mock_handle_error,
+        ):
+            handler.emit(self._record("explodes"))
+        assert mock_handle_error.called
+
+        with patch("structlog.get_logger", return_value=mock_logger):
+            handler.emit(self._record("still works"))
+        mock_logger.error.assert_called_once_with("still works")
+
+
+class TestStructlogRoutesToStdlib:
+    """``structlog_routes_to_stdlib()`` is what callers check before intercepting."""
+
+    def test_false_without_a_log_file(self):
+        """Stdout mode renders directly, so an intercept terminates safely."""
+        configure(log_level="ERROR")
+
+        assert structlog_routes_to_stdlib() is False
+
+    def test_true_with_a_log_file(self, tmp_path):
+        """File mode routes structlog back through stdlib -- intercepting would cycle."""
+        configure(log_level="ERROR", log_file=tmp_path / "langflow.log")
+
+        assert structlog_routes_to_stdlib() is True
+
+
+class TestRootInterceptAcrossModes:
+    """The root intercept must not survive the switch into log-file mode.
+
+    ``--log-file`` carries no ``envvar``, so a JSON-mode process can install the
+    root intercept at import time (``json_mode and not log_file``) and only learn
+    about the log file on the next ``configure()``. Left in place, that handler is
+    the root-logger form of the LE-2454 cycle.
+    """
+
+    def test_root_intercept_is_dropped_when_a_log_file_arrives(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_LOG_ENV", "container")
+
+        configure(log_level="ERROR", log_env="container")
+        assert any(isinstance(h, InterceptHandler) for h in logging.root.handlers)
+
+        configure(log_level="ERROR", log_env="container", log_file=tmp_path / "langflow.log")
+
+        assert not any(isinstance(h, InterceptHandler) for h in logging.root.handlers)
+
+
 class TestSetupFunctions:
     """Test suite for setup_uvicorn_logger() and setup_gunicorn_logger()."""
 
@@ -754,12 +872,14 @@ class TestProductionObservability:
         assert rec["internal_key"] == "***"
         assert rec["safe"] == "ok"
 
-    def test_traceback_locals_disabled_by_default(self, capsys):
+    def test_traceback_locals_disabled_by_default(self, capsys, monkeypatch):
+        monkeypatch.delenv("LANGFLOW_LOG_TRACE_LOCALS", raising=False)
         configure(log_env="container", log_level="DEBUG", cache=False)
         log = structlog.get_logger("locals.test")
-        secret_var = "sk-do-not-leak"  # pragma: allowlist secret # noqa: F841, S105
 
         def emit():
+            # Must live in a traced frame, or the assertion below passes with locals on.
+            secret_var = "sk-do-not-leak"  # pragma: allowlist secret # noqa: F841, S105
             try:
                 msg = "boom"
                 raise RuntimeError(msg)
@@ -791,6 +911,48 @@ class TestProductionObservability:
         records = self._emit_and_parse(capsys, emit)
         rendered = json.dumps(records[-1])
         assert "marker-locals-on" in rendered
+
+    def test_console_traceback_locals_disabled_by_default(self, capsys, monkeypatch):
+        # The pretty console renderer is the default for `langflow run`. structlog's rich
+        # formatter shows frame locals unless told otherwise, which printed settings env
+        # values (e.g. a database URL with its password) when startup validation failed.
+        monkeypatch.delenv("LANGFLOW_LOG_TRACE_LOCALS", raising=False)
+        monkeypatch.setenv("LANGFLOW_PRETTY_LOGS", "true")
+        configure(log_env="", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("locals.console")
+
+        def emit():
+            # Built at runtime: rich also prints the source lines around the raise, so a
+            # literal here would show up even with locals off.
+            secret_var = "-".join(["sk", "do", "not", "leak"])  # noqa: F841, FLY002
+            try:
+                msg = "boom"
+                raise RuntimeError(msg)
+            except RuntimeError:
+                log.exception("trace")
+
+        emit()
+        out = _strip_ansi(capsys.readouterr().out)
+        assert "RuntimeError: boom" in out
+        assert "sk-do-not-leak" not in out  # pragma: allowlist secret
+
+    def test_console_traceback_locals_enabled_via_opt_in(self, capsys, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_LOG_TRACE_LOCALS", "true")
+        monkeypatch.setenv("LANGFLOW_PRETTY_LOGS", "true")
+        configure(log_env="", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("locals.console.optin")
+
+        def emit():
+            # Built at runtime so only the locals panel, not the source excerpt, can render it.
+            traceable_marker = "-".join(["marker", "locals", "on"])  # noqa: F841, FLY002
+            try:
+                msg = "boom"
+                raise RuntimeError(msg)
+            except RuntimeError:
+                log.exception("trace")
+
+        emit()
+        assert "marker-locals-on" in _strip_ansi(capsys.readouterr().out)
 
     def test_intercept_handler_is_idempotent(self):
         # Two configure() calls must leave exactly one InterceptHandler

@@ -12,6 +12,7 @@ export interface SectionVisibilityOutput {
   showBundles: boolean;
   showMcp: boolean;
   isMcpTabActive: boolean;
+  showDiscoverMore: boolean;
 }
 
 export function computeSectionVisibility(
@@ -44,5 +45,19 @@ export function computeSectionVisibility(
 
   const isMcpTabActive = enableNewSidebar && activeSection === "mcp";
 
-  return { showComponents, showBundles, showMcp, isMcpTabActive };
+  // The "Discover more components" shortcut only makes sense when clicking it
+  // actually changes what the sidebar renders: it has to switch to a bundles
+  // section that isn't already on screen and that has something to show.
+  // Without the new sidebar every section renders at once, and during a search
+  // bundle matches are already listed, so in both cases the button is a no-op.
+  const showDiscoverMore =
+    enableNewSidebar && showComponents && !showBundles && hasBundleItems;
+
+  return {
+    showComponents,
+    showBundles,
+    showMcp,
+    isMcpTabActive,
+    showDiscoverMore,
+  };
 }

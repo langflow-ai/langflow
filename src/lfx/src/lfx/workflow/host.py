@@ -176,7 +176,11 @@ class WorkflowHostBase(ABC):
         thread_id = parsed.session_id or flow.session_id_default or flow.flow_id
         adapter = get_stream_adapter(
             stream_protocol,
-            StreamAdapterContext(run_id=str(uuid4()), thread_id=thread_id),
+            StreamAdapterContext(
+                run_id=str(uuid4()),
+                thread_id=thread_id,
+                expose_graph_state=parsed.expose_graph_state,
+            ),
         )
         return StreamingResponse(
             stream_workflow_frames(flow.graph, parsed, adapter, user_id=self._run_user_id(caller)),

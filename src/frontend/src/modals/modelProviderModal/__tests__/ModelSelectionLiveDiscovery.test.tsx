@@ -17,6 +17,10 @@ jest.mock("@/controllers/API/queries/models/use-get-enabled-models", () => ({
   useGetEnabledModels: jest.fn(() => ({
     data: { enabled_models: {} },
     isLoading: false,
+    isSuccess: true,
+    isFetching: false,
+    isFetchedAfterMount: true,
+    fetchStatus: "idle",
   })),
 }));
 

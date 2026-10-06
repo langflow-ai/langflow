@@ -13,11 +13,18 @@ Element.prototype.scrollIntoView = jest.fn();
 
 // Mock stores
 const mockSetErrorData = jest.fn();
+let mockCurrentFlowId = "flow-one";
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
   default: () => ({
     setErrorData: mockSetErrorData,
   }),
+}));
+
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlowId: string }) => unknown) =>
+    selector({ currentFlowId: mockCurrentFlowId }),
 }));
 
 // Mock useRefreshModelInputs with controllable promise
@@ -61,6 +68,11 @@ jest.mock("@/stores/typesStore", () => ({
 const mockProvidersData = [
   { provider: "OpenAI", is_enabled: true },
   { provider: "Anthropic", is_enabled: false },
+  {
+    provider: "Azure AI Foundry",
+    is_enabled: true,
+    is_configured: true,
+  },
 ];
 
 jest.mock("@/controllers/API/queries/models/use-get-model-providers", () => ({
@@ -229,6 +241,23 @@ const renderWithQueryClient = (component: React.ReactElement) => {
 describe("ModelInputComponent", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCurrentFlowId = "flow-one";
+    (useGetModelProviders as jest.Mock).mockReturnValue({
+      data: mockProvidersData,
+      isLoading: false,
+      isFetching: false,
+      fetchStatus: "idle",
+      error: null,
+      refetch: jest.fn(),
+    });
+    (useGetEnabledModels as jest.Mock).mockReturnValue({
+      data: { enabled_models: {} },
+      isLoading: false,
+      isFetching: false,
+      fetchStatus: "idle",
+      error: null,
+      refetch: jest.fn(),
+    });
   });
 
   describe("Model identity", () => {
@@ -243,9 +272,165 @@ describe("ModelInputComponent", () => {
       ).toBe(false);
       expect(matchesModelIdentity(openAiOption, { name: "gpt-4o" })).toBe(true);
     });
+
+    it("matches canonical and legacy WatsonX provider names", () => {
+      expect(
+        matchesModelIdentity(
+          { name: "ibm/granite-3", provider: "IBM watsonx.ai" },
+          { name: "ibm/granite-3", provider: "IBM WatsonX" },
+        ),
+      ).toBe(true);
+    });
   });
 
   describe("Rendering", () => {
+    it("loads both runtime policy queries with USE authorization", () => {
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      expect(useGetModelProviders).toHaveBeenCalledWith(
+        {
+          flowId: "flow-one",
+          purpose: "use",
+        },
+        {
+          enabled: true,
+        },
+      );
+      expect(useGetEnabledModels).toHaveBeenCalledWith({
+        flowId: "flow-one",
+        purpose: "use",
+        enabled: true,
+      });
+    });
+
+    it("keeps the in-flow picker inert until a stored flow scope exists", () => {
+      mockCurrentFlowId = "";
+
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      expect(useGetModelProviders).toHaveBeenCalledWith(
+        { flowId: "", purpose: "use" },
+        { enabled: false },
+      );
+      expect(useGetEnabledModels).toHaveBeenCalledWith({
+        flowId: "",
+        purpose: "use",
+        enabled: false,
+      });
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    });
+
+    it("supports an explicit install-wide policy context outside a flow", () => {
+      mockCurrentFlowId = "";
+
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} providerScope={{}} />,
+      );
+
+      expect(useGetModelProviders).toHaveBeenCalledWith(
+        { purpose: "use" },
+        { enabled: true },
+      );
+      expect(useGetEnabledModels).toHaveBeenCalledWith({
+        purpose: "use",
+        enabled: true,
+      });
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
+
+    it("fails closed for an explicitly empty flow scope", () => {
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          providerScope={{ flowId: "" }}
+        />,
+      );
+
+      expect(useGetModelProviders).toHaveBeenCalledWith(
+        { flowId: "", purpose: "use" },
+        { enabled: false },
+      );
+      expect(useGetEnabledModels).toHaveBeenCalledWith({
+        flowId: "",
+        purpose: "use",
+        enabled: false,
+      });
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    });
+
+    it("fails closed for an explicit undefined scope", () => {
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          providerScope={{ flowId: undefined }}
+        />,
+      );
+
+      expect(useGetModelProviders).toHaveBeenCalledWith(
+        { flowId: undefined, purpose: "use" },
+        { enabled: false },
+      );
+      expect(useGetEnabledModels).toHaveBeenCalledWith({
+        flowId: undefined,
+        purpose: "use",
+        enabled: false,
+      });
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    });
+
+    it("fails closed when both explicit scope keys are present", () => {
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          providerScope={{ flowId: "flow-one", projectId: "project-one" }}
+        />,
+      );
+
+      expect(useGetModelProviders).toHaveBeenCalledWith(
+        {
+          flowId: "flow-one",
+          projectId: "project-one",
+          purpose: "use",
+        },
+        { enabled: false },
+      );
+      expect(useGetEnabledModels).toHaveBeenCalledWith({
+        flowId: "flow-one",
+        projectId: "project-one",
+        purpose: "use",
+        enabled: false,
+      });
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    });
+
+    it("fails closed while a policy query is paused with cached data", () => {
+      (useGetModelProviders as jest.Mock).mockReturnValue({
+        data: mockProvidersData,
+        isLoading: false,
+        isFetching: false,
+        fetchStatus: "paused",
+        error: null,
+        refetch: jest.fn(),
+      });
+      (useGetEnabledModels as jest.Mock).mockReturnValue({
+        data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        isLoading: false,
+        isFetching: false,
+        fetchStatus: "idle",
+        error: null,
+        refetch: jest.fn(),
+      });
+
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    });
+
     it("keeps the saved provider when providers share a model name", async () => {
       renderWithQueryClient(
         <ModelInputComponent
@@ -538,9 +723,42 @@ describe("ModelInputComponent", () => {
       });
     });
 
+    it("keeps the provider dialog mounted during a picker policy refetch", async () => {
+      let providersFetching = false;
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      mockedProviders.mockImplementation(
+        () =>
+          ({
+            data: mockProvidersData,
+            isLoading: false,
+            isFetching: providersFetching,
+            fetchStatus: providersFetching ? "fetching" : "idle",
+            error: null,
+            refetch: jest.fn(),
+          }) as unknown as ReturnType<typeof useGetModelProviders>,
+      );
+
+      const user = userEvent.setup();
+      const { rerenderWithProvider } = renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} />,
+      );
+
+      await user.click(screen.getByRole("combobox"));
+      await user.click(await screen.findByTestId("manage-model-providers"));
+      expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+
+      providersFetching = true;
+      rerenderWithProvider(<ModelInputComponent {...defaultProps} />);
+
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+      expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+    });
+
     it("keeps loading state until providers and enabled-models refetches settle", async () => {
-      let providersFetching = true;
-      let enabledFetching = true;
+      let providersFetching = false;
+      let enabledFetching = false;
 
       const mockedProviders = useGetModelProviders as jest.MockedFunction<
         typeof useGetModelProviders
@@ -583,6 +801,8 @@ describe("ModelInputComponent", () => {
         expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
       });
 
+      providersFetching = true;
+      enabledFetching = true;
       await user.click(screen.getByTestId("close-provider-modal-with-changes"));
       await waitFor(() => {
         expect(screen.getByText("Loading models")).toBeInTheDocument();
@@ -795,6 +1015,64 @@ describe("ModelInputComponent", () => {
       ).not.toBeInTheDocument();
     });
 
+    it("does not authorize an LLM from the flat union when only the same-name embedding is enabled", async () => {
+      mockedUseGetModelProviders.mockReturnValue({
+        data: [
+          {
+            provider: "OpenAI",
+            is_enabled: true,
+            is_configured: true,
+            icon: "OpenAI",
+            models: [
+              {
+                model_name: "shared-deployment",
+                metadata: { model_type: "llm" },
+              },
+              {
+                model_name: "shared-deployment",
+                metadata: { model_type: "embeddings" },
+              },
+            ],
+          },
+        ],
+        isLoading: false,
+      });
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: { OpenAI: { "shared-deployment": true } },
+          enabled_models_by_type: {
+            OpenAI: {
+              llm: { "shared-deployment": false },
+              embeddings: { "shared-deployment": true },
+            },
+          },
+        },
+        isLoading: false,
+      });
+
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          modelType="llm"
+          options={[
+            {
+              id: "shared-llm",
+              name: "shared-deployment",
+              icon: "Bot",
+              provider: "OpenAI",
+              metadata: { model_type: "llm" },
+            },
+          ]}
+        />,
+      );
+
+      await user.click(screen.getByRole("combobox"));
+      expect(
+        screen.queryByTestId("OpenAI-shared-deployment-option"),
+      ).not.toBeInTheDocument();
+    });
+
     it("augments dropdown with enabled models that are missing from the saved options", async () => {
       // Simulates an imported flow whose exporter only knew about gpt-4, but
       // the importing user also has gpt-4o and gpt-4.1 enabled. Those extra
@@ -951,6 +1229,100 @@ describe("ModelInputComponent", () => {
       expect(
         screen.queryByTestId(`${defaultProps.id}-configure`),
       ).not.toBeInTheDocument();
+    });
+
+    it("does not offer an untagged imported option whose provider is omitted by policy", async () => {
+      mockedUseGetModelProviders.mockReturnValue({
+        data: [
+          {
+            provider: "OpenAI",
+            is_enabled: true,
+            is_configured: true,
+            models: [{ model_name: "gpt-4", metadata: { model_type: "llm" } }],
+          },
+        ],
+        isLoading: false,
+      });
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        isLoading: false,
+      });
+      const restricted = {
+        id: "restricted-model",
+        name: "restricted-model",
+        icon: "Bot",
+        provider: "Restricted Provider",
+        metadata: { model_type: "llm" },
+      };
+
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={[restricted]}
+          value={[restricted]}
+        />,
+      );
+
+      expect(
+        screen.getByTestId(`${defaultProps.id}-unavailable`),
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("combobox"));
+      expect(
+        screen.queryByTestId("Restricted Provider-restricted-model-option"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("matches the legacy WatsonX option to the canonical authorized provider without rewriting it", async () => {
+      mockedUseGetModelProviders.mockReturnValue({
+        data: [
+          {
+            provider: "IBM WatsonX",
+            is_enabled: true,
+            is_configured: true,
+            models: [
+              {
+                model_name: "ibm/granite-3",
+                metadata: { model_type: "llm" },
+              },
+            ],
+          },
+        ],
+        isLoading: false,
+      });
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: { "IBM WatsonX": { "ibm/granite-3": true } },
+        },
+        isLoading: false,
+      });
+      const legacyOption = {
+        id: "ibm/granite-3",
+        name: "ibm/granite-3",
+        icon: "IBMWatsonx",
+        provider: "IBM watsonx.ai",
+        metadata: { model_type: "llm" },
+      };
+      const handleOnNewValue = jest.fn();
+      const user = userEvent.setup();
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={[legacyOption]}
+          value={[legacyOption]}
+          handleOnNewValue={handleOnNewValue}
+        />,
+      );
+
+      expect(
+        screen.queryByTestId(`${defaultProps.id}-unavailable`),
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByRole("combobox"));
+      expect(
+        screen.getByTestId("IBM watsonx.ai-ibm/granite-3-option"),
+      ).toBeInTheDocument();
+      expect(handleOnNewValue).not.toHaveBeenCalled();
     });
 
     it("renders the Configure wrench for a provider that is offered but not yet configured", async () => {
@@ -1250,7 +1622,7 @@ describe("ModelInputComponent", () => {
       expect(refetchEnabled).toHaveBeenCalledTimes(1);
     });
 
-    it("keeps the working dropdown when a background refetch errors but stale data is preserved", async () => {
+    it("hides stale model options when a background policy refetch errors", () => {
       const mockedProviders = useGetModelProviders as jest.MockedFunction<
         typeof useGetModelProviders
       >;
@@ -1258,8 +1630,8 @@ describe("ModelInputComponent", () => {
         typeof useGetEnabledModels
       >;
 
-      // Background refetch failed, but TanStack Query preserved stale data
-      // for both queries — we should NOT regress to the error UI.
+      // TanStack Query preserves the previous data after a background error,
+      // but that snapshot may contain a provider or model that was revoked.
       mockedProviders.mockReturnValue({
         data: mockProvidersData,
         isLoading: false,
@@ -1275,23 +1647,14 @@ describe("ModelInputComponent", () => {
         refetch: jest.fn(),
       } as unknown as ReturnType<typeof useGetEnabledModels>);
 
-      const user = userEvent.setup();
       renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
 
-      // Error UI is hidden because stale data is still usable.
-      expect(
-        screen.queryByTestId("model-input-load-failed"),
-      ).not.toBeInTheDocument();
-
-      // The combobox is still interactive — open it and confirm providers render.
-      const combobox = screen.getByRole("combobox");
-      await user.click(combobox);
-      await waitFor(() => {
-        expect(screen.getByText("OpenAI")).toBeInTheDocument();
-      });
+      expect(screen.getByTestId("model-input-load-failed")).toBeInTheDocument();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+      expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
     });
 
-    it("hides the error UI while an error refetch is in flight", () => {
+    it("hides stale model options while an error refetch is in flight", () => {
       const mockedProviders = useGetModelProviders as jest.MockedFunction<
         typeof useGetModelProviders
       >;
@@ -1321,6 +1684,8 @@ describe("ModelInputComponent", () => {
       expect(
         screen.queryByTestId("model-input-load-failed"),
       ).not.toBeInTheDocument();
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     });
 
     it("renders the retry button when only the enabled-models query fails", () => {

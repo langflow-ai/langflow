@@ -53,7 +53,7 @@ describe("NodeUpdateComponent blocked copy", () => {
       screen.getByText(copy["node.updateBlockedByPolicyLabel"]),
     ).toBeInTheDocument();
     expect(
-      screen.getByTitle(copy["node.updateBlockedByPolicyMessage"]),
+      screen.getByText(copy["node.updateBlockedByPolicyMessage"]),
     ).toBeInTheDocument();
     expect(
       screen.queryByText(copy["node.updateBlockedLabel"]),
@@ -96,6 +96,7 @@ describe("NodeUpdateComponent blocked copy", () => {
 
     expect(screen.queryByTestId("update-button")).not.toBeInTheDocument();
     expect(screen.queryByTestId("review-button")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("dismiss-warning-bar")).not.toBeInTheDocument();
   });
 
   it("keeps the blocked label readable on a collapsed node", () => {
@@ -110,6 +111,9 @@ describe("NodeUpdateComponent blocked copy", () => {
     expect(
       screen.getByText(copy["node.updateBlockedByPolicyLabel"]),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(copy["node.updateBlockedByPolicyMessage"]),
+    ).toHaveClass("sr-only");
   });
 
   it("leaves an unblocked banner untouched", () => {

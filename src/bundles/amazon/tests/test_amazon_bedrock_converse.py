@@ -65,20 +65,31 @@ def test_top_k_not_sent_to_providers_without_it(model_id):
     assert not model.additional_model_request_fields
 
 
+# Every geography prefix langchain-aws strips before resolving the provider
+# (MODEL_ID_GEO_PREFIXES in langchain_aws/utils.py). ChatBedrockConverse resolves
+# provider="anthropic" for all of them, so the component must not disagree.
+_GEO_PREFIXES = ("us", "eu", "apac", "global", "us-gov", "sa", "amer", "jp", "au")
+
+
 @pytest.mark.parametrize(
     "model_id",
     [
         "anthropic.claude-3-5-sonnet-20241022-v2:0",
-        # Cross-region and worldwide inference profiles prefix the provider segment.
-        "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
-        "eu.anthropic.claude-3-5-sonnet-20240620-v1:0",
-        "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        *(f"{prefix}.anthropic.claude-3-5-sonnet-20240620-v1:0" for prefix in _GEO_PREFIXES),
     ],
 )
 def test_top_k_sent_to_providers_that_support_it(model_id):
     model = _component(model_id=model_id, top_k=42).build_model()
 
     assert model.additional_model_request_fields == {"top_k": 42}
+
+
+@pytest.mark.parametrize("prefix", _GEO_PREFIXES)
+def test_top_k_still_gated_behind_the_provider_for_prefixed_ids(prefix):
+    """Stripping the geography must not turn the gate into a pass-through."""
+    model = _component(model_id=f"{prefix}.meta.llama3-1-70b-instruct-v1:0", top_k=250).build_model()
+
+    assert not model.additional_model_request_fields
 
 
 def test_additional_model_fields_still_reach_unsupported_providers():

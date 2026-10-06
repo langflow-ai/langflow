@@ -496,6 +496,17 @@ class TestBackwardsCompatibility:
         error_contents = [c for c in error_blocks[0].contents if isinstance(c, ErrorContent)]
         assert len(error_contents) == 1
 
+    def test_error_message_renders_complete_os_error(self):
+        """OS errors must show their message and path instead of only the numeric errno."""
+        exc = PermissionError(13, "Permission denied", "tmp_toolguard")
+
+        err_msg = ErrorMessage(exception=exc)
+
+        assert err_msg.text == "[Errno 13] Permission denied: 'tmp_toolguard'\n"
+        [error_block] = [block for block in err_msg.content_blocks if isinstance(block, ContentBlock)]
+        [error_content] = [content for content in error_block.contents if isinstance(content, ErrorContent)]
+        assert "[Errno 13] Permission denied: 'tmp_toolguard'" in error_content.reason
+
     def test_error_message_renders_reason_coded_exception_message(self):
         """A reason-coded error shows its human message, not just the class name and code."""
         from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
@@ -519,6 +530,55 @@ class TestBackwardsCompatibility:
         [error_block] = [block for block in err_msg.content_blocks if isinstance(block, ContentBlock)]
         [error_content] = [content for content in error_block.contents if isinstance(content, ErrorContent)]
         assert error_content.reason == "**CodedError**\n - **Code: rate_limited**\n"
+
+    def test_error_message_shows_the_text_of_a_driver_exception_that_carries_a_code(self):
+        """LE-2352: a coded DRIVER error must not collapse to its numeric code.
+
+        ``_coded_exception_message`` only looked at ``args[0]``, which reason-coded
+        Langflow errors populate. A database or SDK exception carries a protocol status
+        on ``.code`` with ``args`` EMPTY and the human text on ``__str__``, so the
+        ``hasattr(exception, "code")`` branch short-circuited past the ``.message`` and
+        ``.detail`` fallbacks below it and rendered a bare code.
+
+        Reproduced against a real Astra database: a Table Name containing ``-`` is
+        invalid CQL, the driver raises ``SyntaxException`` (0x2000 = 8192), and the UI
+        showed only ``Code: 8192`` while the parser message sat in the logs.
+        """
+
+        class DriverError(Exception):
+            """Shaped like cassandra.protocol.SyntaxException: coded, no args."""
+
+            code = 8192
+
+            def __str__(self):
+                return "<Error from server: code=2000 [Syntax error in CQL query] message=\"mismatched input '-'\">"
+
+        exc = DriverError()
+        assert exc.args == (), "the fixture must reproduce the empty-args shape"
+
+        err_msg = ErrorMessage(exception=exc)
+
+        assert "Code: 8192" not in err_msg.text, "the numeric code replaced the message"
+        assert "Syntax error in CQL query" in err_msg.text
+        [error_block] = [block for block in err_msg.content_blocks if isinstance(block, ContentBlock)]
+        [error_content] = [content for content in error_block.contents if isinstance(content, ErrorContent)]
+        assert "Syntax error in CQL query" in error_content.reason
+        assert "Code: 8192" in error_content.reason, "the code is still useful context alongside the message"
+
+    def test_error_message_prefers_an_explicit_message_attribute_over_repr(self):
+        """SDKs that expose ``.message`` should surface it rather than their __str__ noise."""
+
+        class CodedWithMessageError(Exception):
+            code = "invalid_request"
+            message = "Table name must not contain a hyphen."
+
+            def __str__(self):
+                return "<CodedWithMessageError object at 0xdeadbeef>"
+
+        err_msg = ErrorMessage(exception=CodedWithMessageError())
+
+        assert "Table name must not contain a hyphen." in err_msg.text
+        assert "0xdeadbeef" not in err_msg.text
 
     def test_error_message_can_omit_active_exception_traceback(self):
         """Public/delegated errors keep a generic reason without the caught traceback."""

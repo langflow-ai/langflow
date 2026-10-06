@@ -79,6 +79,20 @@ You can declare additional variables in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONM
 For example, `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=WATSONX_PROJECT_ID,WATSONX_API_KEY` creates global variables named `WATSONX_PROJECT_ID` and `WATSONX_API_KEY` in Langflow's database.
 Then, you can use these variables wherever they are needed in your component settings.
 
+With the default database variable store (`LANGFLOW_VARIABLE_STORE=db`) and `LANGFLOW_STORE_ENVIRONMENT_VARIABLES=True`, server startup attempts to import configured environment variables for all existing users, including SSO users.
+A successful Gunicorn master import is inherited by its workers. Import failures are logged and do not block server startup; other users' imports continue after an individual user fails.
+Service initialization for commands such as `langflow migration --test` does not run this all-user import.
+Account creation and password sign-in also import variables for that user.
+
+Imports use nonblank environment values with surrounding whitespace removed. Model-provider policy can exclude provider variables, and provider secret values equal to `dummy` (case-insensitive) are skipped.
+Environment-managed credentials follow subsequent environment value changes. Unchanged values do not rewrite stored credentials.
+Saving a value yourself, renaming the variable, or changing its type makes it user-owned; changing only **Apply to fields** retains environment management.
+
+After upgrading, a legacy credential is adopted for environment management only when its stored value already matches the environment.
+Matching legacy values can include an earlier user override that happens to equal the environment; future rotations update adopted values.
+Differing legacy values are preserved. Explicit user overrides saved after upgrading are never automatically adopted, even if their value matches the environment.
+To rotate a differing legacy value, its owner can update it in **Settings** > **Global Variables**.
+
 <Tabs>
 <TabItem value="local" label="Local" default>
 

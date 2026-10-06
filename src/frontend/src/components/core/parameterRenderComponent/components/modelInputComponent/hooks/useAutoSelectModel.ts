@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
 import { matchesModelIdentity } from "../helpers/model-option-identity";
+import { providerNamesMatch } from "../helpers/provider-identity";
 import { isSavedModelUnavailable } from "../helpers/saved-model-availability";
 import type { ModelOption } from "../types";
 
@@ -60,7 +61,10 @@ export function useAutoSelectModel({
       // disconnected or the model deactivated; an unknown one we cannot judge.
       if (!inOptions && saved.provider) {
         isSavedValueStale =
-          (providers?.some((p) => p.provider === saved.provider) ?? false) &&
+          (providers?.some((p) =>
+            providerNamesMatch(p.provider, saved.provider),
+          ) ??
+            false) &&
           !isSavedModelUnavailable({
             savedValue: saved,
             providers,

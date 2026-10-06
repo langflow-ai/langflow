@@ -6,6 +6,15 @@ import { AssistantInput } from "../assistant-input";
 
 // --- Mocks ---
 
+let mockIsModelEnabled = true;
+
+jest.mock("../../hooks/use-enabled-models", () => ({
+  useEnabledModels: () => ({
+    isCatalogReady: mockIsModelEnabled,
+    isModelEnabled: (model: unknown) => mockIsModelEnabled && model !== null,
+  }),
+}));
+
 jest.mock("@/components/common/genericIconComponent", () => {
   return function MockIcon({ name }: { name: string }) {
     return <span data-testid={`icon-${name}`} />;
@@ -32,10 +41,36 @@ describe("AssistantInput", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsModelEnabled = true;
     localStorage.clear();
     useUtilityStore
       .getState()
       .setAssistantMaxMessageLength(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH);
+  });
+
+  it("blocks send when the saved model is absent from the latest authorized catalog", async () => {
+    localStorage.setItem(
+      "langflow-assistant-selected-model",
+      JSON.stringify({
+        id: "OpenAI-gpt-4o",
+        name: "gpt-4o",
+        provider: "OpenAI",
+        displayName: "gpt-4o",
+      }),
+    );
+    mockIsModelEnabled = false;
+    const onSend = jest.fn();
+    const user = userEvent.setup();
+
+    render(<AssistantInput {...defaultProps} onSend={onSend} />);
+    await user.type(screen.getByTestId("assistant-input-textarea"), "hello");
+
+    expect(screen.getByTestId("assistant-send-button")).toBeDisabled();
+    fireEvent.keyDown(screen.getByTestId("assistant-input-textarea"), {
+      key: "Enter",
+      shiftKey: false,
+    });
+    expect(onSend).not.toHaveBeenCalled();
   });
 
   describe("rendering", () => {
@@ -195,13 +230,23 @@ describe("AssistantInput", () => {
   describe("keyboard interactions", () => {
     it("should send message on Enter key", async () => {
       const onSend = jest.fn();
+      const model = {
+        id: "OpenAI-gpt-4o",
+        name: "gpt-4o",
+        provider: "OpenAI",
+        displayName: "gpt-4o",
+      };
+      localStorage.setItem(
+        "langflow-assistant-selected-model",
+        JSON.stringify(model),
+      );
       render(<AssistantInput {...defaultProps} onSend={onSend} />);
 
       const textarea = screen.getByRole("textbox");
       await userEvent.type(textarea, "hello{enter}");
 
       expect(onSend).toHaveBeenCalledTimes(1);
-      expect(onSend).toHaveBeenCalledWith("hello", null);
+      expect(onSend).toHaveBeenCalledWith("hello", model);
     });
 
     it("should not send on Shift+Enter", async () => {
@@ -325,6 +370,15 @@ describe("AssistantInput", () => {
 
     it("should_clear_draft_on_send", async () => {
       const onDraftChange = jest.fn();
+      localStorage.setItem(
+        "langflow-assistant-selected-model",
+        JSON.stringify({
+          id: "OpenAI-gpt-4o",
+          name: "gpt-4o",
+          provider: "OpenAI",
+          displayName: "gpt-4o",
+        }),
+      );
       render(
         <AssistantInput
           {...defaultProps}
@@ -341,6 +395,15 @@ describe("AssistantInput", () => {
 
   describe("message clearing", () => {
     it("should clear textarea after sending", async () => {
+      localStorage.setItem(
+        "langflow-assistant-selected-model",
+        JSON.stringify({
+          id: "OpenAI-gpt-4o",
+          name: "gpt-4o",
+          provider: "OpenAI",
+          displayName: "gpt-4o",
+        }),
+      );
       render(<AssistantInput {...defaultProps} />);
 
       const textarea = screen.getByRole("textbox");

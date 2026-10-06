@@ -16,7 +16,7 @@ import contextlib
 import json
 import uuid
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import numpy as np
 import pytest
@@ -265,6 +265,135 @@ class TestBuildWhereClause:
 # ---------------------------------------------------------------------------
 
 MR_MODULE = "lfx.components.files_and_knowledge.memory_retrieval"
+
+
+class TestMemoryBaseProviderPolicyPreflight:
+    async def test_db_provider_denial_precedes_owner_credentials_and_uses_actor_scope(self, monkeypatch):
+        """Raw MB selection resolves owner metadata but authorizes the current runtime actor."""
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyContext,
+            ModelProviderPolicyError,
+            ModelProviderPolicyPurpose,
+            current_model_provider_policy_context,
+            reset_current_model_provider_policy_context,
+            set_current_model_provider_policy_context,
+        )
+
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        actor_id = uuid.uuid4()
+        component = _make_component(
+            flow_id=flow_id,
+            session_id="s1",
+            invoker_user_id=owner_id,
+        )
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        db = _exec_owner_scoped(mb_row)
+        selection_lookup = AsyncMock(return_value=("OpenAI", "text-embedding-3-small"))
+        owner_embedding_build = AsyncMock(side_effect=AssertionError("owner credential read before actor denial"))
+        denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.USE)
+        snapshot = SimpleNamespace(require=MagicMock(side_effect=denial))
+        observed_contexts = []
+
+        async def resolve_policy(**_kwargs):
+            observed_contexts.append(current_model_provider_policy_context())
+            return snapshot
+
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        token = set_current_model_provider_policy_context(
+            user_id=actor_id,
+            attributes={"project_id": "project-current", "workspace_id": "workspace-current"},
+        )
+        try:
+            with (
+                _patched_session_scope(db),
+                patch(f"{MR_MODULE}.resolve_embedding_selection", selection_lookup),
+                patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", owner_embedding_build),
+                pytest.raises(ModelProviderPolicyError),
+            ):
+                await component.arequire_model_provider_policy(
+                    ModelProviderPolicyPurpose.USE,
+                    user_id=actor_id,
+                    parameters={"memory_base": "mb-one"},
+                )
+        finally:
+            reset_current_model_provider_policy_context(token)
+
+        selection_lookup.assert_awaited_once_with(user_id=owner_id, kb_name=mb_row.kb_name)
+        assert observed_contexts == [
+            ModelProviderPolicyContext(
+                user_id=actor_id,
+                attributes={"project_id": "project-current", "workspace_id": "workspace-current"},
+            )
+        ]
+        owner_embedding_build.assert_not_awaited()
+        stmt_params = db.exec.await_args.args[0].compile().params
+        assert owner_id in stmt_params.values()
+        assert actor_id not in stmt_params.values()
+
+    async def test_backend_recheck_uses_actor_policy_snapshot_with_owner_credentials(self, monkeypatch):
+        """A fresh actor decision is passed through while model credentials remain owner-scoped."""
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyPurpose,
+            reset_current_model_provider_policy_context,
+            set_current_model_provider_policy_context,
+        )
+
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        actor_id = uuid.uuid4()
+        owner = SimpleNamespace(id=owner_id, username="owner")
+        component = _make_component(
+            flow_id=flow_id,
+            session_id="s1",
+            invoker_user_id=owner_id,
+        )
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        snapshot = SimpleNamespace(require=MagicMock())
+        resolve_policy = AsyncMock(return_value=snapshot)
+        selection_lookup = AsyncMock(return_value=("OpenAI", "text-embedding-3-small"))
+        owner_embedding_build = AsyncMock(side_effect=AssertionError("owner policy was re-evaluated"))
+        embedding = MagicMock()
+        get_embeddings = MagicMock(return_value=embedding)
+        backend = AsyncMock()
+
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        token = set_current_model_provider_policy_context(
+            user_id=actor_id,
+            attributes={"project_id": "project-current", "workspace_id": "workspace-current"},
+        )
+        try:
+            with (
+                _patched_session_scope(_exec_owner_scoped(mb_row)),
+                patch(f"{MR_MODULE}.resolve_embedding_selection", selection_lookup),
+                patch(f"{MR_MODULE}.resolve_backend_selection", new=AsyncMock(return_value=("chroma", {}))),
+                patch(f"{MR_MODULE}.resolve_local_store_path", return_value=None),
+                patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", owner_embedding_build),
+                patch("lfx.base.models.unified_models.get_embeddings", get_embeddings),
+                patch(f"{MR_MODULE}.create_backend", return_value=backend),
+            ):
+                await component.arequire_model_provider_policy(
+                    ModelProviderPolicyPurpose.USE,
+                    user_id=actor_id,
+                    parameters={"memory_base": "mb-one"},
+                )
+                built_backend = await component._build_backend(owner, owner.username, mb_row.kb_name)
+        finally:
+            reset_current_model_provider_policy_context(token)
+
+        assert built_backend is backend
+        assert resolve_policy.await_count == 2
+        assert all(call.kwargs["user_id"] == actor_id for call in resolve_policy.await_args_list)
+        selection_lookup.assert_has_awaits(
+            [
+                call(user_id=owner_id, kb_name=mb_row.kb_name),
+                call(user_id=owner_id, kb_name=mb_row.kb_name),
+            ]
+        )
+        owner_embedding_build.assert_not_awaited()
+        assert get_embeddings.call_args.kwargs["user_id"] == owner_id
+        assert get_embeddings.call_args.kwargs["provider_policy"] is snapshot
+        backend.ensure_ready.assert_awaited_once()
 
 
 class TestServingFailClosed:
@@ -555,10 +684,7 @@ class TestMemoryBaseRetrievalBehavior:
                 "lfx.components.files_and_knowledge.memory_retrieval.resolve_embedding_selection",
                 new=AsyncMock(return_value=(provider, model)),
             ),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.KBIngestionHelper.build_embeddings",
-                new=AsyncMock(return_value=MagicMock()),
-            ),
+            patch("lfx.base.models.unified_models.get_embeddings", return_value=MagicMock()),
             patch(
                 "lfx.components.files_and_knowledge.memory_retrieval.resolve_backend_selection",
                 new=AsyncMock(return_value=("chroma", {})),

@@ -27,8 +27,13 @@ export const useStopRecording = (
     analyserRef.current = null;
   }
   if (wsRef.current) {
-    wsRef.current.close();
+    const socket = wsRef.current;
     wsRef.current = null;
+    socket.onopen = null;
+    socket.onmessage = null;
+    socket.onerror = null;
+    socket.onclose = null;
+    socket.close();
   }
   setIsRecording(false);
 };

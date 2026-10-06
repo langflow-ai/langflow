@@ -12,7 +12,7 @@ The component supports **Generate** activity, which runs ToolGuard’s buildtime
 ## Use the component in a flow
 
 When `enabled` is `true`, you must supply at least one policy before generating guards.
-Generated guard code is written under `tmp_toolguard/{user}/{flow}/{component}/{project}/`, with **Step 1** producing guard specifications from policies in `Step_1/`, and **Step 2** turning those specifications into executable guard code in `Step_2/`.
+Generated guard code is written under `{system temp directory}/tmp_toolguard/{user}/{flow}/{component}/{project}/` by default. Set `TOOLGUARD_WORK_DIR` to use a different root directory. **Step 1** produces guard specifications in `Step_1/`, and **Step 2** turns those specifications into executable guard code in `Step_2/`.
 These namespaces prevent different users, flows, or Policies components with the same project name from sharing generated guards.
 When no flow context is available, the component uses the stable `standalone` flow namespace; when no user is available, it uses `anonymous`.
 The generated code is also stored in the Policies node. After switching to **Guard**, the component loads that stored code, so the local `tmp_toolguard` directory is not required. If the node does not contain complete generated code, run **Generate** again. The component handles module caching and cleanup automatically.

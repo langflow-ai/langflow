@@ -1,5 +1,6 @@
 import type { TraceListItem } from "@/controllers/API/queries/traces/types";
 import type { PendingHumanRequest } from "@/controllers/API/queries/workflows/use-get-pending-workflows";
+import { uiLocale } from "@/utils/format-date";
 import type { Span, SpanType, StatusIconProps } from "./types";
 
 /**
@@ -277,11 +278,13 @@ export const endOfDay = (date: Date) => {
   return d;
 };
 
-const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+// Built per call rather than once at module load: a formatter captured at
+// import time keeps the language the app started in, not the one it is showing.
+const DATE_FORMAT: Intl.DateTimeFormatOptions = {
   month: "short",
   day: "numeric",
   year: "numeric",
-});
+};
 
 export const formatDateLabel = (value: string): string => {
   if (!value) return "";
@@ -290,7 +293,7 @@ export const formatDateLabel = (value: string): string => {
     ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
     : new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return DATE_FORMATTER.format(parsed);
+  return parsed.toLocaleDateString(uiLocale(), DATE_FORMAT);
 };
 
 export const toUtcIsoForDate = (

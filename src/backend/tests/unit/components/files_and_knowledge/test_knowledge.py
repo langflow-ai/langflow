@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from lfx.components.files_and_knowledge.ingestion import KnowledgeIngestionComponent
@@ -97,6 +97,17 @@ class TestKnowledgeComponentShape:
         assert set(component.default_keys) <= all_input_names
         assert "mode" in component.default_keys
         assert "knowledge_base" in component.default_keys
+
+    @pytest.mark.parametrize("name", ["docs.v2", "a" * 100, "a" * 512, "topology+collection"])
+    def test_collection_name_validation_accepts_shared_contract(self, name: str) -> None:
+        assert KnowledgeComponent().is_valid_collection_name(name)
+
+    @pytest.mark.parametrize(
+        "name",
+        ["Q&A docs", "trailing_", "catálogo", "a" * 513, "docs..v2", "127.0.0.1"],
+    )
+    def test_collection_name_validation_rejects_chroma_incompatible_names(self, name: str) -> None:
+        assert not KnowledgeComponent().is_valid_collection_name(name)
 
 
 # ---------------------------------------------------------------------------
@@ -465,6 +476,113 @@ class TestBackendResolution:
             await component._resolve_backend_config()
 
 
+class TestKnowledgeProviderPolicyPreflight:
+    """Embedding policy is resolved from raw dialog values or stored KB metadata."""
+
+    USER_ID = "3f1c9c1e-6d2a-4a53-8a4e-9c0b1d2e3f40"
+
+    async def test_create_dialog_selection_is_denied_before_dynamic_hook_work(self, monkeypatch) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(_user_id=self.USER_ID)
+        denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
+        snapshot = SimpleNamespace(require=Mock(side_effect=denial))
+        resolve_policy = AsyncMock(return_value=snapshot)
+        metadata_lookup = AsyncMock(side_effect=AssertionError("stored KB metadata read for create dialog"))
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(component, "_get_kb_metadata", metadata_lookup)
+
+        parameters = {
+            "knowledge_base": {
+                "01_new_kb_name": "support_docs",
+                "02_embedding_model": [{"name": "text-embedding-3-small", "provider": "OpenAI"}],
+            }
+        }
+        with pytest.raises(ModelProviderPolicyError):
+            await component.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.CONFIGURE,
+                user_id="policy-actor",
+                parameters=parameters,
+            )
+
+        resolve_policy.assert_awaited_once_with(
+            user_id="policy-actor",
+            providers=["openai"],
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        metadata_lookup.assert_not_awaited()
+
+    @pytest.mark.parametrize("mode", [MODE_INGEST, MODE_RETRIEVE])
+    async def test_saved_kb_provider_uses_owner_metadata_and_explicit_policy_actor(self, monkeypatch, mode) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(knowledge_base="support_docs", mode=mode, _user_id=self.USER_ID)
+        snapshot = SimpleNamespace(require=Mock())
+        resolve_policy = AsyncMock(return_value=snapshot)
+        metadata_lookup = AsyncMock(
+            return_value={
+                "model_selection": {"name": "text-embedding-3-small", "provider": "OpenAI"},
+                "embedding_provider": "OpenAI",
+            }
+        )
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(component, "_get_kb_metadata", metadata_lookup)
+
+        await component.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.USE,
+            user_id="policy-actor",
+            parameters={"knowledge_base": "support_docs", "mode": mode},
+        )
+
+        metadata_lookup.assert_awaited_once_with("support_docs")
+        resolve_policy.assert_awaited_once_with(
+            user_id="policy-actor",
+            providers=["openai"],
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+        snapshot.require.assert_called_once_with("openai")
+
+    async def test_saved_kb_with_unresolvable_provider_fails_closed(self, monkeypatch) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(knowledge_base="legacy_docs", _user_id=self.USER_ID)
+        resolve_policy = AsyncMock()
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(
+            component,
+            "_get_kb_metadata",
+            AsyncMock(return_value={"model_selection": {"name": "old-model"}, "embedding_provider": "Unknown"}),
+        )
+
+        with pytest.raises(ModelProviderPolicyError):
+            await component.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.USE,
+                user_id="policy-actor",
+                parameters={"knowledge_base": "legacy_docs"},
+            )
+
+        resolve_policy.assert_not_awaited()
+
+    async def test_missing_saved_kb_metadata_fails_closed_before_policy_resolution(self, monkeypatch) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(knowledge_base="missing_docs", _user_id=self.USER_ID)
+        resolve_policy = AsyncMock()
+        metadata_lookup = AsyncMock(return_value={})
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(component, "_get_kb_metadata", metadata_lookup)
+
+        with pytest.raises(ModelProviderPolicyError):
+            await component.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.USE,
+                user_id="policy-actor",
+                parameters={"knowledge_base": "missing_docs"},
+            )
+
+        metadata_lookup.assert_awaited_once_with("missing_docs")
+        resolve_policy.assert_not_awaited()
+
+
 # ---------------------------------------------------------------------------
 # Display name / dropdown UX (matches starter projects + frontend create dialog)
 # ---------------------------------------------------------------------------
@@ -643,3 +761,83 @@ class TestOutputHandleTypesMatchStarterEdges:
         component = KnowledgeComponent()
         ingest = component._outputs_map["dataframe_output"]
         assert ingest.types == ["JSON"]
+
+
+class TestUpdateFrontendNodeRestoresModeVisibility:
+    """A saved node must come back with the ``show`` flags of *its* mode.
+
+    ``update_frontend_node`` rebuilds the template from the class defaults, which
+    are ingest-shaped. Before the fix it re-synced only the outputs, so a saved
+    ``mode=Retrieve`` node returned with ``search_query`` hidden and the canvas
+    silently deleted the edge feeding it.
+    """
+
+    async def _updated_template(self, mode: str) -> dict:
+        component = KnowledgeComponent()
+        template = _build_config_from_inputs(component)
+        template["mode"]["value"] = mode
+        frontend_node = {"template": template, "outputs": []}
+        await component.update_frontend_node(frontend_node, {"template": dict(template)})
+        return frontend_node["template"]
+
+    async def test_saved_retrieve_node_keeps_retrieve_inputs_visible(self) -> None:
+        component = KnowledgeComponent()
+        template = await self._updated_template(MODE_RETRIEVE)
+
+        assert template["search_query"]["show"] is True
+        for fname in component.mode_config[MODE_RETRIEVE]:
+            assert template[fname]["show"] is True, f"{fname} must stay visible in retrieve mode"
+        for fname in component.mode_config[MODE_INGEST]:
+            assert template[fname]["show"] is False, f"{fname} must be hidden in retrieve mode"
+
+    async def test_saved_ingest_node_keeps_ingest_inputs_visible(self) -> None:
+        component = KnowledgeComponent()
+        template = await self._updated_template(MODE_INGEST)
+
+        for fname in component.mode_config[MODE_INGEST]:
+            assert template[fname]["show"] is True, f"{fname} must stay visible in ingest mode"
+        for fname in component.mode_config[MODE_RETRIEVE]:
+            assert template[fname]["show"] is False, f"{fname} must be hidden in ingest mode"
+
+    async def test_default_keys_stay_visible_in_both_modes(self) -> None:
+        component = KnowledgeComponent()
+        for mode in (MODE_INGEST, MODE_RETRIEVE):
+            template = await self._updated_template(mode)
+            for fname in component.default_keys:
+                assert template[fname]["show"] is True, f"{fname} must stay visible in {mode}"
+
+
+class TestKbPathsBackwardCompatibleSymbols:
+    """Frozen 1.11.x component code imports these at module scope.
+
+    A saved flow embeds the component code it was built with, so removing a name
+    from ``_kb_paths`` makes every flow holding that code fail to build with
+    ``ImportError`` — the node can no longer be opened, edited or updated.
+    """
+
+    def test_removed_symbols_are_still_importable(self) -> None:
+        from lfx.components.files_and_knowledge._kb_paths import (
+            KBKeyDecryptError,
+            load_kb_metadata,
+        )
+
+        assert issubclass(KBKeyDecryptError, Exception)
+        assert callable(load_kb_metadata)
+
+    def test_load_kb_metadata_returns_empty_when_sidecar_is_gone(self, tmp_path) -> None:
+        from lfx.components.files_and_knowledge._kb_paths import load_kb_metadata
+
+        assert load_kb_metadata(tmp_path, log_label="kb") == {}
+
+    def test_load_kb_metadata_never_returns_a_stored_api_key(self, tmp_path) -> None:
+        from lfx.components.files_and_knowledge._kb_paths import load_kb_metadata
+
+        (tmp_path / "embedding_metadata.json").write_text(
+            json.dumps({"model": "text-embedding-3-small", "api_key": "encrypted"}),
+            encoding="utf-8",
+        )
+
+        metadata = load_kb_metadata(tmp_path, log_label="kb")
+
+        assert metadata["model"] == "text-embedding-3-small"
+        assert metadata["api_key"] is None

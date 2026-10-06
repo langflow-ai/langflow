@@ -4,6 +4,7 @@ from langchain_community.chat_message_histories.redis import RedisChatMessageHis
 from lfx.base.memory.model import LCChatMemoryComponent
 from lfx.field_typing.constants import Memory
 from lfx.inputs.inputs import IntInput, MessageTextInput, SecretStrInput, StrInput
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 
 class RedisIndexChatMemory(LCChatMemoryComponent):
@@ -31,6 +32,9 @@ class RedisIndexChatMemory(LCChatMemoryComponent):
     ]
 
     def build_message_history(self) -> Memory:
+        # host/port are tenant-controlled: block SSRF to internal/cloud-metadata hosts.
+        validate_connector_url_for_ssrf(f"http://{self.host}:{int(self.port)}")
+
         kwargs = {}
         password: str | None = self.password
         if self.key_prefix:

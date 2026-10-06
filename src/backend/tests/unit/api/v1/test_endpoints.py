@@ -3,12 +3,14 @@ import hashlib
 import inspect
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
-from langflow.api.v1.schemas import CustomComponentRequest, UpdateCustomComponentRequest
+from langflow.api.v1.schemas import CustomComponentRequest, SimplifiedAPIRequest, UpdateCustomComponentRequest
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.custom.utils import build_custom_component_template
 from lfx.services.catalog_policy.base import CatalogPolicySnapshot
@@ -53,6 +55,106 @@ async def test_get_config_mirrors_assistant_message_length(client: AsyncClient, 
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["assistant_max_message_length"] == 6000
+
+
+@pytest.mark.parametrize(
+    ("project_id", "workspace_id"),
+    [(uuid4(), uuid4()), (None, None)],
+)
+async def test_simple_run_flow_binds_trusted_required_provider_scope(
+    monkeypatch,
+    project_id,
+    workspace_id,
+):
+    from langflow.api.v1 import endpoints
+
+    captured = []
+    token = object()
+
+    def _capture_context(*, user_id, attributes=None):
+        captured.append((user_id, attributes))
+        return token
+
+    monkeypatch.setattr(endpoints, "set_current_model_provider_policy_context", _capture_context)
+    monkeypatch.setattr(endpoints, "reset_current_model_provider_policy_context", lambda _token: None)
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    flow = SimpleNamespace(
+        id=uuid4(),
+        folder_id=project_id,
+        workspace_id=workspace_id,
+        data=None,
+    )
+
+    with pytest.raises(ValueError, match="has no data"):
+        await endpoints.simple_run_flow(flow, SimplifiedAPIRequest(), api_key_user=user)
+
+    expected_attributes = {
+        "is_superuser": False,
+        "provider_scope_required": True,
+    }
+    if project_id is not None:
+        expected_attributes["project_id"] = project_id
+    if workspace_id is not None:
+        expected_attributes["workspace_id"] = workspace_id
+    assert captured == [(user.id, expected_attributes)]
+
+
+async def test_build_driver_rebinds_scope_for_reused_graph_execution(monkeypatch):
+    """A warm/session graph never inherits the provider scope from an earlier run."""
+    from langflow.api import build
+    from lfx.services.model_provider_policy import current_model_provider_policy_context
+
+    observed = []
+
+    async def _reuse_graph(**_kwargs):
+        observed.append(current_model_provider_policy_context())
+
+    monkeypatch.setattr(build, "_generate_flow_events", _reuse_graph)
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    first_flow = SimpleNamespace(folder_id=uuid4(), workspace_id=uuid4())
+    second_flow = SimpleNamespace(folder_id=uuid4(), workspace_id=uuid4())
+
+    await build.generate_flow_events(provider_policy_flow=first_flow, current_user=user)
+    await build.generate_flow_events(provider_policy_flow=second_flow, current_user=user)
+
+    assert [context.user_id for context in observed] == [user.id, user.id]
+    assert [context.attributes for context in observed] == [
+        {
+            "is_superuser": False,
+            "project_id": first_flow.folder_id,
+            "workspace_id": first_flow.workspace_id,
+            "provider_scope_required": True,
+        },
+        {
+            "is_superuser": False,
+            "project_id": second_flow.folder_id,
+            "workspace_id": second_flow.workspace_id,
+            "provider_scope_required": True,
+        },
+    ]
+
+
+async def test_build_driver_marks_missing_provider_scope_as_required(monkeypatch):
+    """An internal caller that omits its stored flow cannot fall back to global policy."""
+    from langflow.api import build
+    from lfx.services.model_provider_policy import current_model_provider_policy_context
+
+    observed = []
+
+    async def _capture_context(**_kwargs):
+        observed.append(current_model_provider_policy_context())
+
+    monkeypatch.setattr(build, "_generate_flow_events", _capture_context)
+    user = SimpleNamespace(id=uuid4(), is_superuser=True)
+
+    await build.generate_flow_events(current_user=user)
+
+    assert len(observed) == 1
+    assert observed[0].user_id == user.id
+    assert observed[0].attributes == {
+        "is_superuser": True,
+        "provider_scope_required": True,
+    }
 
 
 @pytest.mark.parametrize("path", ["api/v1/custom_component", "api/v1/custom_component/update"])
@@ -385,7 +487,7 @@ async def test_custom_component_update_admin_only_allows_superuser(
     policy_contexts = []
     original_set_context = endpoints.set_current_model_provider_policy_context
     original_reset_context = endpoints.reset_current_model_provider_policy_context
-    original_require_policy = Component.require_model_provider_policy
+    original_require_policy = Component.arequire_model_provider_policy
 
     def capture_set_context(*, user_id, attributes=None):
         bound_contexts.append((user_id, attributes))
@@ -395,13 +497,13 @@ async def test_custom_component_update_admin_only_allows_superuser(
         reset_tokens.append(token)
         original_reset_context(token)
 
-    def capture_require_policy(self, purpose):
+    async def capture_require_policy(self, purpose, **kwargs):
         policy_contexts.append(current_model_provider_policy_context())
-        return original_require_policy(self, purpose)
+        return await original_require_policy(self, purpose, **kwargs)
 
     monkeypatch.setattr(endpoints, "set_current_model_provider_policy_context", capture_set_context)
     monkeypatch.setattr(endpoints, "reset_current_model_provider_policy_context", capture_reset_context)
-    monkeypatch.setattr(Component, "require_model_provider_policy", capture_require_policy)
+    monkeypatch.setattr(Component, "arequire_model_provider_policy", capture_require_policy)
 
     component_code = """
 from lfx.custom import Component
@@ -434,6 +536,183 @@ class SuperUserUpdateMetadataComponent(Component):
     assert policy_contexts[0] is not None
     assert policy_contexts[0].user_id == active_super_user.id
     assert policy_contexts[0].attributes["is_superuser"] is True
+
+
+async def test_custom_component_create_denies_provider_before_dynamic_update_hooks(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    from langflow.api.v1 import endpoints
+    from lfx.custom.custom_component.component import Component
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    provider_denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
+    component_instance = Component(_code="")
+    require_policy = AsyncMock(side_effect=provider_denial)
+    update_frontend_node = AsyncMock(return_value={"tool_mode": False})
+    run_update_outputs = AsyncMock()
+    monkeypatch.setattr(component_instance, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(component_instance, "update_frontend_node", update_frontend_node)
+    monkeypatch.setattr(component_instance, "run_and_validate_update_outputs", run_update_outputs)
+    monkeypatch.setattr(endpoints, "get_current_external_access_context", lambda: None)
+    monkeypatch.setattr(
+        endpoints,
+        "get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace()),
+    )
+    monkeypatch.setattr(
+        endpoints,
+        "get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=object()),
+    )
+    monkeypatch.setattr(
+        endpoints,
+        "resolve_component_code_for_action",
+        lambda code, **_kwargs: code,
+    )
+    monkeypatch.setattr(
+        endpoints,
+        "build_custom_component_template",
+        lambda *_args, **_kwargs: ({"tool_mode": False}, component_instance),
+    )
+    monkeypatch.setattr(endpoints, "get_instance_name", lambda _component: "DeniedModel")
+    monkeypatch.setattr(endpoints, "enforce_catalog_policy_for_component_type", lambda *_args, **_kwargs: None)
+
+    request = CustomComponentRequest(
+        code="class DeniedModel: pass",
+        frontend_node={
+            "template": {
+                "model": {
+                    "value": [{"provider": "OpenAI", "name": "gpt-test"}],
+                    "_input_type": "ModelInput",
+                }
+            }
+        },
+    )
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Model provider not found"}
+    assert require_policy.await_args.args == (ModelProviderPolicyPurpose.CONFIGURE,)
+    assert require_policy.await_args.kwargs["parameters"]["model"][0]["provider"] == "OpenAI"
+    update_frontend_node.assert_not_awaited()
+    run_update_outputs.assert_not_awaited()
+
+
+async def test_custom_component_update_denies_selected_provider_before_secret_hydration(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    from langflow.api.v1 import endpoints
+    from lfx.custom.custom_component.component import Component
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    component_instance = Component(_code="")
+    denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+    require_policy = AsyncMock(side_effect=denial)
+    hydrate = AsyncMock(side_effect=AssertionError("secret hydration reached after provider denial"))
+    monkeypatch.setattr(component_instance, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(endpoints, "update_params_with_load_from_db_fields", hydrate)
+    monkeypatch.setattr(endpoints, "get_current_external_access_context", lambda: None)
+    monkeypatch.setattr(endpoints, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace()))
+    monkeypatch.setattr(endpoints, "get_catalog_policy_service", lambda: SimpleNamespace(snapshot=object()))
+    monkeypatch.setattr(endpoints, "resolve_component_code_for_action", lambda code, **_kwargs: code)
+    monkeypatch.setattr(
+        endpoints,
+        "build_custom_component_template",
+        lambda *_args, **_kwargs: ({"template": {}, "outputs": []}, component_instance),
+    )
+    monkeypatch.setattr(endpoints, "get_instance_name", lambda _component: "SelectedModel")
+    monkeypatch.setattr(endpoints, "enforce_catalog_policy_for_component_type", lambda *_args, **_kwargs: None)
+
+    request = UpdateCustomComponentRequest(
+        code="class SelectedModel: pass",
+        frontend_node={"outputs": []},
+        field="model",
+        field_value=[{"provider": "Anthropic", "model_name": "claude-test"}],
+        template={
+            "model": {
+                "value": [{"provider": "Anthropic", "model_name": "claude-test"}],
+                "_input_type": "ModelInput",
+            },
+            "api_key": {
+                "value": "ANTHROPIC_API_KEY",
+                "_input_type": "SecretStrInput",
+                "load_from_db": True,
+            },
+        },
+    )
+    response = await client.post(
+        "api/v1/custom_component/update",
+        json=request.model_dump(),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Model provider not found"}
+    assert require_policy.await_args.args == (ModelProviderPolicyPurpose.CONFIGURE,)
+    assert require_policy.await_args.kwargs["parameters"]["model"][0]["provider"] == "Anthropic"
+    hydrate.assert_not_awaited()
+
+
+async def test_custom_component_update_keeps_realtime_value_out_of_component_attributes(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    from unittest.mock import MagicMock
+
+    from langflow.api.v1 import endpoints
+    from lfx.custom.custom_component.component import Component
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+    component_instance = Component(_code="")
+    require_policy = AsyncMock()
+    set_attributes = MagicMock()
+    run_update_outputs = AsyncMock()
+    monkeypatch.setattr(component_instance, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(component_instance, "set_attributes", set_attributes)
+    monkeypatch.setattr(component_instance, "run_and_validate_update_outputs", run_update_outputs)
+    monkeypatch.setattr(endpoints, "get_current_external_access_context", lambda: None)
+    monkeypatch.setattr(endpoints, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace()))
+    monkeypatch.setattr(endpoints, "get_catalog_policy_service", lambda: SimpleNamespace(snapshot=object()))
+    monkeypatch.setattr(endpoints, "resolve_component_code_for_action", lambda code, **_kwargs: code)
+    monkeypatch.setattr(
+        endpoints,
+        "build_custom_component_template",
+        lambda *_args, **_kwargs: ({"template": {}, "outputs": []}, component_instance),
+    )
+    monkeypatch.setattr(endpoints, "get_instance_name", lambda _component: "SelectedModel")
+    monkeypatch.setattr(endpoints, "enforce_catalog_policy_for_component_type", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(endpoints, "update_component_build_config", AsyncMock())
+
+    template_value = [{"provider": "OpenAI", "model_name": "gpt-test"}]
+    realtime_value = [{"provider": "Anthropic", "model_name": "claude-test"}]
+    request = UpdateCustomComponentRequest(
+        code="class SelectedModel: pass",
+        frontend_node={"outputs": []},
+        field="model",
+        field_value=realtime_value,
+        template={
+            "model": {
+                "value": template_value,
+                "_input_type": "ModelInput",
+            }
+        },
+    )
+
+    response = await client.post(
+        "api/v1/custom_component/update",
+        json=request.model_dump(),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert require_policy.await_args.args == (ModelProviderPolicyPurpose.CONFIGURE,)
+    assert require_policy.await_args.kwargs["parameters"]["model"] == realtime_value
+    assert set_attributes.call_args.args[0]["model"] == template_value
 
 
 async def test_custom_component_endpoint_returns_metadata(client: AsyncClient, logged_in_headers: dict):

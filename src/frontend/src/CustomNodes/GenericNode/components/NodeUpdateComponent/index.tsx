@@ -36,6 +36,29 @@ export default function NodeUpdateComponent({
     ? t("node.updateBlockedByPolicyLabel")
     : t("node.updateBlockedLabel");
 
+  if (blockedByCatalogPolicy) {
+    return (
+      <div
+        className="flex w-full items-start gap-3 rounded-t-[0.69rem] border-b bg-muted px-4 py-2"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-accent-amber" />
+        <div className="min-w-0 flex-1">
+          <p className="text-mmd font-medium">{blockedLabel}</p>
+          <p
+            className={cn(
+              "mt-0.5 text-xs leading-4 text-muted-foreground",
+              !showNode && "sr-only",
+            )}
+          >
+            {blockedMessage}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (dismissed && isRequired) {
     return (
       <div

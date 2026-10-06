@@ -165,7 +165,7 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
     assert "ChatOutput" in json_response["input_output"]
 
 
-def test_component_palette_policy_filters_models_without_mutating_shared_cache(monkeypatch):
+async def test_component_palette_policy_filters_models_without_mutating_shared_cache(monkeypatch):
     from langflow.api.v1 import endpoints
     from lfx.services.model_provider_policy import (
         ModelProviderPolicyContext,
@@ -181,8 +181,11 @@ def test_component_palette_policy_filters_models_without_mutating_shared_cache(m
         }
     }
 
-    def _openai_only(*, user_id, providers, purpose, attributes=None):
+    project_id = uuid4()
+
+    async def _openai_only(*, user_id, providers, purpose, attributes=None):
         assert purpose is ModelProviderPolicyPurpose.DISCOVER
+        assert attributes == {"project_id": project_id}
         candidates = frozenset(providers)
         return ModelProviderPolicySnapshot(
             context=ModelProviderPolicyContext(user_id=user_id, attributes=attributes or {}),
@@ -191,9 +194,18 @@ def test_component_palette_policy_filters_models_without_mutating_shared_cache(m
             allowed_provider_ids=frozenset({"openai"}),
         )
 
-    monkeypatch.setattr(endpoints, "resolve_model_provider_policy", _openai_only)
+    def _sync_resolver_must_not_run(**_kwargs):
+        msg = "scoped palette discovery must refresh hierarchy asynchronously"
+        raise AssertionError(msg)
 
-    filtered = endpoints._filter_component_palette_by_provider_policy(cached, user_id="user-1")
+    monkeypatch.setattr(endpoints, "resolve_model_provider_policy", _sync_resolver_must_not_run, raising=False)
+    monkeypatch.setattr(endpoints, "aresolve_model_provider_policy", _openai_only, raising=False)
+
+    filtered = await endpoints._filter_component_palette_by_provider_policy(
+        cached,
+        user_id="user-1",
+        attributes={"project_id": project_id},
+    )
 
     assert set(filtered["mixed"]) == {"AllowedModel", "Utility"}
     assert "DeniedModel" in cached["mixed"]
@@ -302,10 +314,14 @@ async def test_get_all_filters_catalog_policy_and_uses_current_snapshot(
 
     monkeypatch.setattr(components_module, "get_and_cache_all_types_dict", get_cached_types)
     monkeypatch.setattr(endpoints, "get_catalog_policy_service", lambda: service)
+
+    async def allow_all_providers(all_types, **_kwargs):
+        return {category: dict(components) for category, components in all_types.items()}
+
     monkeypatch.setattr(
         endpoints,
         "_filter_component_palette_by_provider_policy",
-        lambda all_types, **_kwargs: {category: dict(components) for category, components in all_types.items()},
+        allow_all_providers,
     )
 
     blocked_response = await client.get("api/v1/all", headers=logged_in_headers)
@@ -395,7 +411,7 @@ async def test_get_all_superuser_override_skips_only_catalog_filter_without_cach
         _ = settings_service
         return cached
 
-    def filter_provider_policy(all_types, *, user_id, attributes=None):
+    async def filter_provider_policy(all_types, *, user_id, attributes=None):
         nonlocal provider_filter_calls
         _ = user_id
         provider_filter_calls += 1

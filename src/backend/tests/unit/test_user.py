@@ -345,7 +345,7 @@ async def test_normal_user_cant_delete_user(client: AsyncClient, test_user, logg
     user_id = test_user["id"]
     response = await client.delete(f"/api/v1/users/{user_id}", headers=logged_in_headers)
     assert response.status_code == 403
-    assert response.json() == {"detail": "The user doesn't have enough privileges"}
+    assert response.json() == {"detail": "Permission denied"}
 
 
 # ==================== Profile Picture Tests ====================

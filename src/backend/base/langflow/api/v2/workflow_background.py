@@ -279,6 +279,7 @@ async def _buffer_background_run(
             StreamAdapterContext(
                 run_id=parsed.run_id or job_id,
                 thread_id=parsed.session_id or str(flow.id),
+                expose_graph_state=parsed.expose_graph_state,
             ),
         )
     except UnknownStreamProtocolError:
@@ -304,6 +305,7 @@ async def _buffer_background_run(
             background_tasks=fresh_background_tasks,
             parsed=parsed,
             current_user=current_user,
+            provider_policy_flow=flow,
             source_flow_owner_id=flow.user_id,
             expose_error_details=caller_owns_flow(flow, current_user),
             # Build under the job id so the run's vertex builds are persisted

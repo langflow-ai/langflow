@@ -1,6 +1,7 @@
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
 import type { ModelOption, SelectedModel } from "../types";
 import { matchesModelIdentity } from "./model-option-identity";
+import { providerNamesMatch } from "./provider-identity";
 import { recoverModelOption } from "./recover-model-option";
 import { isSavedModelUnavailable } from "./saved-model-availability";
 
@@ -94,7 +95,10 @@ export function deriveSelectedModel({
 
   if (saved) {
     const savedProviderConfigured = providerStatusIsReliable
-      ? providers?.some((p) => p.provider === saved.provider && p.is_configured)
+      ? providers?.some(
+          (p) =>
+            providerNamesMatch(p.provider, saved.provider) && p.is_configured,
+        )
       : undefined;
     if (!savedProviderConfigured) {
       return {
