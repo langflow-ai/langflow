@@ -510,51 +510,42 @@ async def test_should_attach_token_usage_handler_and_set_usage_on_result_propert
 
 
 @pytest.mark.asyncio
-async def test_should_update_stored_message_and_send_event_when_token_usage_and_result_has_id() -> None:
-    """Parity with legacy lines 304-308: only round-trip the DB when the message was stored.
+async def test_should_persist_usage_in_the_existing_final_message() -> None:
+    from lfx.schema.message import Message
+    from lfx.schema.properties import Usage
 
-    A message has an `id` only when emitted to a Chat Output (otherwise `_should_skip_message`
-    is True). Skipping this branch means the stored Message in the DB never gets the usage
-    field — observability sees an empty `usage` even when tokens were consumed.
-    """
-    fake_usage = {"input_tokens": 5, "output_tokens": 7, "total_tokens": 12}
-    handler_instance = MagicMock()
-    handler_instance.get_usage.return_value = fake_usage
-
-    fake_graph = MagicMock(spec=CompiledStateGraph)
-    fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
-
-    initial_result = MagicMock()
-    initial_result.get_id.return_value = "msg-stored-123"
-    initial_result.properties = MagicMock()
-    stored_result = MagicMock()
-    stored_result.get_id.return_value = "msg-stored-123"
-    stored_result.properties = MagicMock()
-
+    usage = Usage(input_tokens=5, output_tokens=7, total_tokens=12)
+    handler = MagicMock()
+    handler.get_usage.return_value = usage
+    graph = MagicMock(spec=CompiledStateGraph)
+    graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
     component = _build_component()
     component.set_attributes({"input_value": "hi", "chat_history": []})
+    persisted = []
 
-    update_stored = AsyncMock(return_value=stored_result)
-    send_event = AsyncMock()
+    async def store(*, message, **_kwargs):
+        message.id = "stored-id"
+        persisted.append(Message(**message.model_dump()))
+        return message
 
     with (
         patch.object(type(component), "_get_shared_callbacks", return_value=[]),
-        patch.object(type(component), "_update_stored_message", new=update_stored),
-        patch.object(type(component), "_send_message_event", new=send_event),
-        patch(
-            "lfx.components.models_and_agents.agent.TokenUsageCallbackHandler",
-            return_value=handler_instance,
-        ),
-        patch(
-            "lfx.components.models_and_agents.agent.process_agent_events",
-            new=AsyncMock(return_value=initial_result),
-        ),
+        patch.object(type(component), "send_message", side_effect=store),
+        patch.object(type(component), "_update_stored_message", new_callable=AsyncMock) as extra_update,
+        patch.object(type(component), "_send_message_event", new_callable=AsyncMock) as extra_event,
+        patch("lfx.components.models_and_agents.agent.TokenUsageCallbackHandler", return_value=handler),
     ):
-        result = await component.run_agent(fake_graph)
+        result = await component.run_agent(graph)
 
-    update_stored.assert_awaited_once_with(initial_result)
-    send_event.assert_awaited_once_with(stored_result)
-    assert result is stored_result
+    assert len(persisted) == 2
+    assert persisted[0].properties.state == "partial"
+    assert persisted[0].properties.usage is None
+    assert persisted[-1].properties.state == "complete"
+    assert persisted[-1].properties.usage == usage
+    assert result.properties.usage == usage
+    assert component._token_usage == usage
+    extra_update.assert_not_awaited()
+    extra_event.assert_not_awaited()
 
 
 @pytest.mark.asyncio
