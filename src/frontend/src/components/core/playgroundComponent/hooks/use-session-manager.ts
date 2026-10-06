@@ -1,6 +1,7 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { NEW_SESSION_NAME } from "@/constants/constants";
+import { getMessages } from "@/controllers/API/queries/messages";
 import { useBulkDeleteSessions } from "@/controllers/API/queries/messages/use-bulk-delete-sessions";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
@@ -12,6 +13,28 @@ import { clearSessionMessages } from "../chat-view/utils/message-utils";
 
 interface UseSessionManagerProps {
   flowId?: string;
+}
+
+const NO_SESSIONS: string[] = [];
+
+// The server returns at most this many sessions (newest first), so a full list
+// may be truncated.
+const SESSION_LIST_LIMIT = 100;
+
+// Candidates step by doubling (see createSession), so 21 checks reach names up
+// to 2^19 (524,288) above the first candidate before giving up.
+const MAX_SESSION_NAME_CHECKS = 21;
+
+const NEW_SESSION_PATTERN = new RegExp(`^${NEW_SESSION_NAME} (\\d+)$`);
+
+function nextNewSessionNumber(sessionIds: string[]): number {
+  const existingNumbers = sessionIds
+    .map((s) => {
+      const match = s.match(NEW_SESSION_PATTERN);
+      return match ? parseInt(match[1], 10) : -1;
+    })
+    .filter((n) => n >= 0);
+  return existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 0;
 }
 
 export function useSessionManager({ flowId }: UseSessionManagerProps) {
@@ -38,10 +61,17 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const { data: dbSessionsResponse } = useGetSessionsFromFlowQuery({
-    id: flowId,
-  });
-  const fetchedSessions = dbSessionsResponse?.sessions ?? [];
+  const sessionsQuery = useGetSessionsFromFlowQuery({ id: flowId });
+  const fetchedSessions = sessionsQuery.data?.sessions ?? NO_SESSIONS;
+  // A full list may be truncated by the server's cap, so only a shorter one is
+  // known to be complete.
+  const allSessionsLoaded =
+    sessionsQuery.isSuccess &&
+    !sessionsQuery.isPlaceholderData &&
+    fetchedSessions.length < SESSION_LIST_LIMIT;
+  // The flow whose new-session name is being checked, so a check for one flow
+  // never blocks or leaks into another.
+  const creatingSessionFor = useRef<string | null>(null);
 
   const { mutate: deleteSessionApi } = useDeleteSession({});
   const { mutate: bulkDeleteSessionsApi } = useBulkDeleteSessions();
@@ -68,24 +98,57 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
   const sessions = getOrderedSessionIds();
   const activeSessionId = activeSessionIdFromStore ?? flowId;
 
-  const createSession = useCallback(() => {
-    if (!flowId) return;
-    const newSessionPattern = new RegExp(`^${NEW_SESSION_NAME} (\\d+)$`);
-    const allSessions = getOrderedSessionIds();
-    const existingNumbers = allSessions
-      .map((s) => {
-        const match = s.match(newSessionPattern);
-        return match ? parseInt(match[1], 10) : -1;
-      })
-      .filter((n) => n >= 0);
-    const nextNumber =
-      existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 0;
-    const newId = `${NEW_SESSION_NAME} ${nextNumber}`;
+  // Names the session "New Session N" after the highest N in the list. While
+  // the list may be truncated, an unloaded session may already use that name,
+  // and reusing a session id reopens its conversation (and the model's memory),
+  // so candidates are checked on the server first: N, N+1, N+2, N+4, N+8, ...
+  // and the first free one wins (e.g. 0..29 taken: 0, 1, 2, 4, 8, 16, 32).
+  const createSession = useCallback(async () => {
+    if (!flowId || creatingSessionFor.current === flowId) return;
+    const isCurrentFlow = () =>
+      useSessionManagerStore.getState().flowId === flowId;
+    const startSession = (sessionId: string) => {
+      addSession({ id: sessionId, isLocal: true });
+      setActiveSessionId(sessionId);
+      clearSessionMessages(sessionId, flowId);
+    };
+    const firstNumber = nextNewSessionNumber(getOrderedSessionIds());
+    if (allSessionsLoaded) {
+      startSession(`${NEW_SESSION_NAME} ${firstNumber}`);
+      return;
+    }
 
-    addSession({ id: newId, isLocal: true });
-    setActiveSessionId(newId);
-    clearSessionMessages(newId, flowId);
-  }, [flowId, getOrderedSessionIds, addSession, setActiveSessionId]);
+    creatingSessionFor.current = flowId;
+    try {
+      for (let check = 0; check < MAX_SESSION_NAME_CHECKS; check++) {
+        const step = check === 0 ? 0 : 2 ** (check - 1);
+        const candidate = `${NEW_SESSION_NAME} ${firstNumber + step}`;
+        const { data } = await getMessages(flowId, {
+          session_id: candidate,
+          limit: 1,
+        });
+        if (data.length > 0) continue;
+        // The user may have switched flows while the check was in flight.
+        if (isCurrentFlow()) startSession(candidate);
+        return;
+      }
+      if (isCurrentFlow()) setErrorData({ title: t("errors.createSession") });
+    } catch {
+      if (isCurrentFlow()) setErrorData({ title: t("errors.createSession") });
+    } finally {
+      if (creatingSessionFor.current === flowId) {
+        creatingSessionFor.current = null;
+      }
+    }
+  }, [
+    flowId,
+    getOrderedSessionIds,
+    allSessionsLoaded,
+    addSession,
+    setActiveSessionId,
+    setErrorData,
+    t,
+  ]);
 
   const deleteSession = useCallback(
     (sessionId: string) => {

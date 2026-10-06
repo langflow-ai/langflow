@@ -232,14 +232,13 @@ export default function IOModal({
       window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
     }
     if (newChatOnPlayground && !sessionsLoading) {
+      // "New chat" sends under the generated `sessionId`. Select it by id: the
+      // refetched list is newest first and may not be complete.
+      const newSessionId = sessionId;
       const handleRefetchAndSetSession = async () => {
         try {
-          const result = await refetchSessions();
-          if (result.data?.sessions && result.data.sessions.length > 0) {
-            setvisibleSession(
-              result.data.sessions[result.data.sessions.length - 1],
-            );
-          }
+          await refetchSessions();
+          setvisibleSession(newSessionId);
         } catch (error) {
           console.error("Error refetching sessions:", error);
         }
