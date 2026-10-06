@@ -28,7 +28,7 @@ export const useMigrationQuery = (enabled = true) =>
 
 /**
  * Runs the source checks against `targetVersion` and hands over each line of the stream as it arrives.
- * Resolves with the refusal when the server won't start them, such as a version older than this instance.
+ * Resolves with the refusal when the server won't start them, or status 0 if the connection fails.
  * Aborting the controller stops the checks on the server too.
  */
 export async function runSourceChecks({
@@ -58,8 +58,11 @@ export async function runSourceChecks({
       onEvent(data as MigrationCheckEvent);
       return true;
     },
-    // A stop or a dropped connection shows as a stopped run once the record is read again.
-    onNetworkError: () => {},
+    // A request that never reached the server leaves the previous record intact.
+    // Return that failure so the page doesn't present the previous run as its outcome.
+    onNetworkError: () => {
+      if (!controller.signal.aborted) refused ??= { status: 0 };
+    },
   });
   return refused;
 }
