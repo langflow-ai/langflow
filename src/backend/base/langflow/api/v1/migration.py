@@ -266,14 +266,12 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
         raise HTTPException(status_code=422, detail={"code": "not_needed", "parts": unneeded})
     parts: dict[str, dict[str, Any]] = {}
     results: dict[str, dict[str, Any]] = {}
-    # The secrets of the parts that pass. This worker holds them only once every test is over: see below.
-    passed: dict[str, Any] = {}
+    # The secrets this request brought. This worker holds them only once every test is over: see below.
+    brought: dict[str, Any] = {}
     if request.database_url:
-        address = request.database_url.get_secret_value()
+        address = brought["database_url"] = request.database_url.get_secret_value()
         results["database"] = await asyncio.to_thread(probe_database, address, get_db_service().database_url)
         parts["database"] = {"location": location(address), "identity": database_identity(address)}
-        if results["database"]["ok"]:
-            passed["database_url"] = address
     if request.vectors:
         # Knowledge bases go into the destination database. An instance already on PostgreSQL keeps them in its own.
         own = instance["database"]["type"] == "postgresql"
@@ -281,7 +279,7 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
         # ponytail: sent alone, they are tested in the address held when the test starts. A database that
         # another save replaces while that test runs keeps their result. Compare identities at the write
         # if anything ever sends the two parts apart.
-        held = passed if request.database_url else _secrets
+        held = _secrets if not request.database_url else brought if results["database"]["ok"] else {}
         address = get_db_service().database_url if own else held.get("database_url")
         results["vectors"] = (
             await asyncio.to_thread(probe_vectors, address)
@@ -290,7 +288,7 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
         )
         parts["vectors"] = {"kind": request.vectors.kind}
     if files := request.files:
-        keys = {
+        keys = brought["files"] = {
             "access_key_id": files.access_key_id.get_secret_value(),
             "secret_access_key": files.secret_access_key.get_secret_value(),
             "endpoint_url": files.endpoint_url or None,
@@ -298,8 +296,6 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
         }
         results["files"] = await probe_files(bucket=files.bucket, prefix=files.prefix, **keys)
         parts["files"] = {"bucket": files.bucket, "prefix": files.prefix, "endpoint_url": keys["endpoint_url"]}
-        if results["files"]["ok"]:
-            passed["files"] = keys
     # A test can take seconds. The record is read only now, so that what other requests saved meanwhile is kept.
     record = _read_record()
     saved = record.setdefault("destinations", {})
@@ -316,14 +312,23 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
     # that waited on a test cannot leave the record naming one destination while this worker holds the
     # secret of another. A part that failed is forgotten.
     for part, name in (("database", "database_url"), ("files", "files")):
-        if name in passed:
-            _secrets[name], _secrets["for"][part] = passed[name], dict(parts[part])
-        elif part in parts:
-            _secrets.pop(name, None)
-            _secrets["for"].pop(part, None)
+        if part in parts:
+            _hold(name, brought[name], results[part])
+            if results[part]["ok"]:
+                _secrets["for"][part] = dict(parts[part])
+            else:
+                _secrets["for"].pop(part, None)
     tested = ", ".join(f"{part} {outcome.get('code', 'ok')}" for part, outcome in outcomes.items())
     await logger.ainfo(f"Migration: user_id={admin.id} tested the destination: {tested}")
     return {**await _state(record), "results": results}
+
+
+def _hold(name: str, secret: Any, result: dict[str, Any]) -> None:
+    """Keep a destination's secret while its test passes, and forget it when it does not."""
+    if result["ok"]:
+        _secrets[name] = secret
+    else:
+        _secrets.pop(name, None)
 
 
 async def _stream_checks(step: dict[str, Any]) -> AsyncIterator[bytes]:
