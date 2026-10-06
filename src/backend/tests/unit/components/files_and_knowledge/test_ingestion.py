@@ -329,8 +329,11 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_embedding_fn = MagicMock()
         mock_get_embeddings.return_value = mock_embedding_fn
 
-        # Mock vector store creation
-        with patch.object(component, "_create_vector_store"):
+        # Isolate metadata building from storage and its statistics refresh.
+        with (
+            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_refresh_kb_stats"),
+        ):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)
@@ -474,7 +477,10 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_embedding_fn = MagicMock()
         mock_get_embeddings.return_value = mock_embedding_fn
 
-        with patch.object(component, "_create_vector_store"):
+        with (
+            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_refresh_kb_stats"),
+        ):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)
@@ -501,7 +507,10 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         component = component_class(**default_kwargs)
         mock_get_embeddings.return_value = MagicMock()
 
-        with patch.object(component, "_create_vector_store"):
+        with (
+            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_refresh_kb_stats"),
+        ):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)

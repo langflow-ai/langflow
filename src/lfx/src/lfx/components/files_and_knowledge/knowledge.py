@@ -1212,15 +1212,15 @@ class KnowledgeComponent(Component):
                 # when projecting onto the DataFrame.
                 source_types = self._extract_source_types_from_input(input_value)
                 source_types |= self._extract_source_types_from_df(df_source)
-                if isinstance(backend, BaseVectorStoreBackend):
-                    await self._refresh_kb_stats(
-                        kb_record_id=kb_record_id,
-                        backend=backend,
-                        extensions=source_types,
-                    )
+                # Storage routing returns a guarded proxy with the backend's
+                # methods, so a concrete-class check would skip the refresh.
+                await self._refresh_kb_stats(
+                    kb_record_id=kb_record_id,
+                    backend=backend,
+                    extensions=source_types,
+                )
             finally:
-                if isinstance(backend, BaseVectorStoreBackend):
-                    await backend.teardown()
+                await backend.teardown()
 
             meta: dict[str, Any] = {
                 "kb_id": str(uuid.uuid4()),
