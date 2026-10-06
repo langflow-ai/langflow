@@ -59,9 +59,10 @@ test(
       await destinations.getByRole("button", { name: "Test and save" }).click();
 
       // Each destination is tested for real, and a refused one says why next to its own fields.
-      await expect(destinations.getByText("Ready.")).toBeVisible({
-        timeout: 60000,
-      });
+      // An instance with knowledge bases on its server gets a second "Ready.", so this one is the database's.
+      await expect(
+        destinations.locator("#migration-probe-database"),
+      ).toHaveText("Ready.", { timeout: 60000 });
       const refusal = destinations.getByRole("alert");
       await expect(refusal).toContainText("Can't find this bucket.");
       // The server's own words for what it ran into come with this answer.
@@ -76,11 +77,12 @@ test(
       await destinations.getByRole("button", { name: "Test and save" }).click();
 
       // Saved: the row says where the data goes, and no password or key is left on the page.
+      // With knowledge bases on its server, the row names where they go between these two.
       const { host, pathname } = new URL(DESTINATION.databaseUrl);
-      await expect(destinations).toContainText(
-        `Database: ${host}${pathname} · Files: ${DESTINATION.bucket}`,
-        { timeout: 60000 },
-      );
+      await expect(destinations).toContainText(`Database: ${host}${pathname}`, {
+        timeout: 60000,
+      });
+      await expect(destinations).toContainText(`Files: ${DESTINATION.bucket}`);
       await expect(destinations.locator("input")).toHaveCount(0);
       const key = page.getByTestId("migration-step-secret_key");
       await expect(

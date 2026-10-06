@@ -98,7 +98,15 @@ describe("Where your data goes", () => {
       screen.queryByLabelText("Connection address"),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/db\.internal:5432\/langflow/)).toBeInTheDocument();
-    expect(screen.getByText(/needs the pgvector extension/)).toBeVisible();
+    // Here the knowledge bases go to the store this server reads them from, which is no database of the new instance's.
+    expect(
+      screen.getByText(
+        "This instance already uses PostgreSQL. Its knowledge bases are copied to the store this server reads them from, the one PGVECTOR_CONNECTION_STRING names. That database needs the pgvector extension.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/the new instance's database/),
+    ).not.toBeInTheDocument();
     for (const label of [
       "Bucket",
       "Folder in the bucket",
@@ -220,6 +228,100 @@ describe("Where your data goes", () => {
       "aria-invalid",
       "false",
     );
+  });
+
+  it.each([
+    [
+      "pgvector_missing",
+      "Run CREATE EXTENSION vector; in this database, then test again.",
+      "The database needs the pgvector extension. Ask your database admin to turn it on.",
+    ],
+    [
+      "pgvector_package_missing",
+      "This server has no pgvector package. Install langflow[pgvector].",
+      "This Langflow server doesn't have the pgvector package. Install it, restart Langflow, then test again.",
+    ],
+  ])(
+    "says under Knowledge bases why they can't be copied there: %s",
+    (code, reason, line) => {
+      show(
+        <DestinationsStep
+          migration={migration(
+            { knowledge_bases: { local: true } },
+            {
+              destinations: {
+                database: { location: "db.internal:5432/target" },
+                vectors: { kind: "pgvector" },
+                results: {
+                  database: { ok: true },
+                  vectors: { ok: false, code, reason },
+                },
+                saved_by: "alice",
+                saved_at: "2026-10-06T12:00:00Z",
+              },
+            },
+          )}
+          state={step("connect_target", "blocked", code)}
+        />,
+      );
+
+      // On an instance with its own database file, the knowledge bases go into the new instance's database.
+      expect(
+        screen.getByText(
+          /^Knowledge bases are copied into the new instance's database/,
+        ),
+      ).toBeInTheDocument();
+      const section = screen
+        .getByRole("heading", { name: "Knowledge bases" })
+        .closest("section") as HTMLElement;
+      const refusal = within(section).getByRole("alert");
+      expect(refusal).toHaveTextContent(line);
+      // The server's own words name what is missing.
+      expect(within(refusal).getByText(reason)).toHaveAttribute("lang", "en");
+      // The database itself answered, so its field is not the one to look at.
+      expect(screen.getByLabelText("Connection address")).toHaveAttribute(
+        "aria-invalid",
+        "false",
+      );
+    },
+  );
+
+  it("tells an instance on PostgreSQL what its server needs before knowledge bases can be copied", () => {
+    show(
+      <DestinationsStep
+        migration={migration(
+          {
+            database: {
+              type: "postgresql",
+              location: "db.internal:5432/langflow",
+            },
+            knowledge_bases: { local: true },
+          },
+          {
+            destinations: {
+              vectors: { kind: "pgvector" },
+              results: {
+                vectors: {
+                  ok: false,
+                  code: "pgvector_env_missing",
+                  reason: "PGVECTOR_CONNECTION_STRING is not set",
+                },
+              },
+              saved_by: "alice",
+              saved_at: "2026-10-06T12:00:00Z",
+            },
+          },
+        )}
+        state={step("connect_target", "blocked", "pgvector_env_missing")}
+      />,
+    );
+
+    // The note above it says where the knowledge bases go, so the refusal is what to do, and no more.
+    const refusal = screen.getByRole("alert");
+    expect(refusal.firstElementChild).toHaveTextContent(
+      /^Set PGVECTOR_CONNECTION_STRING on this server to that database and restart Langflow, then test again\.$/,
+    );
+    expect(refusal).toHaveTextContent("PGVECTOR_CONNECTION_STRING is not set");
   });
 
   it("marks the bucket when it is the bucket that is missing, and gives the server's code when it has no line for it", () => {
@@ -676,6 +778,33 @@ describe("Pause changes", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Something changed before the pause. Review 'Check this instance'.",
     );
+  });
+
+  it("says to try again when changes under way had not finished, and does not ask twice", async () => {
+    const post = jest
+      .spyOn(api, "post")
+      .mockRejectedValue(refused(409, { code: "requests_active" }));
+    show(
+      <PauseStep migration={migration()} state={step("pause", "current")} />,
+    );
+
+    const pause = () => screen.getByRole("button", { name: "Pause changes" });
+    await userEvent.click(pause());
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Pause",
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Changes that were already under way haven't finished yet. Try again in a moment.",
+    );
+    expect(post).toHaveBeenCalledTimes(1);
+
+    // The admin already agreed to this pause, so trying again is one click.
+    await userEvent.click(pause());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
   });
 
   it("shows a pause that never reached the server", async () => {
@@ -1577,6 +1706,36 @@ describe("Copy knowledge bases and files", () => {
       />,
     );
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("says what an instance on PostgreSQL has to set before its knowledge bases are copied", async () => {
+    jest
+      .spyOn(api, "post")
+      .mockRejectedValue(refused(409, { code: "pgvector_env_missing" }));
+    show(
+      <CopyStep
+        migration={ended("copy_knowledge_bases", undefined, {
+          database: { type: "postgresql", location: "db:5432/langflow" },
+        })}
+        state={step("copy_knowledge_bases", "blocked", "pgvector_env_missing")}
+        step="copy_knowledge_bases"
+      />,
+    );
+    // No note stands above this one, so it says why as well, and what follows here is a copy.
+    const line =
+      "This instance already uses PostgreSQL, so its knowledge bases are copied to the store this server reads them from. Set PGVECTOR_CONNECTION_STRING on this server to that database and restart Langflow, then copy again.";
+
+    // Nothing ran, and the step says why it will not.
+    expect(screen.getByRole("alert")).toHaveTextContent(line);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Copy knowledge bases" }),
+    );
+
+    // A start is refused for the same reason, in the same words.
+    await waitFor(() => expect(screen.getAllByRole("alert")).toHaveLength(2));
+    for (const alert of screen.getAllByRole("alert"))
+      expect(alert).toHaveTextContent(line);
   });
 
   it("warns an instance on PostgreSQL that its own knowledge bases move too", () => {

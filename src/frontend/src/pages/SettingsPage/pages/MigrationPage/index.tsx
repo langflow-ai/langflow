@@ -101,7 +101,9 @@ export default function MigrationPage() {
   }
 
   return (
-    <div className="flex w-full flex-col gap-6 pb-8">
+    // Positioned, so what only a screen reader hears stays inside the settings scroll area.
+    // Left to place itself against the document, it made the document taller than the window.
+    <div className="relative flex w-full flex-col gap-6 pb-8">
       <div className="flex flex-col">
         <h2
           className="flex items-center text-lg font-semibold tracking-tight"

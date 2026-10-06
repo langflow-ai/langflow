@@ -60,10 +60,18 @@ test(
           .toString(),
       ).toBe("SQLite format 3");
       await expect(backup.getByText(/^Downloaded .+\.$/)).toBeVisible();
+      // With no place named, the browser's own message asks for one, and nothing is confirmed.
+      const location = backup.getByLabel("Where is the backup?");
+      await confirm.click();
+      await expect(location).toBeFocused();
+      expect(
+        await location.evaluate(
+          (field: HTMLInputElement) => field.validationMessage,
+        ),
+      ).not.toBe("");
+      await expect(confirm).toBeVisible();
       // Pasted with a space on each side, which the server drops.
-      await backup
-        .getByLabel("Where is the backup?")
-        .fill(" s3://backups/langflow ");
+      await location.fill(" s3://backups/langflow ");
       await confirm.click();
       await expect(backup).toContainText(
         /Backed up .+ to s3:\/\/backups\/langflow\./,
