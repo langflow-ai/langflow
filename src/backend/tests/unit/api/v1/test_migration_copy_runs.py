@@ -1305,6 +1305,28 @@ async def test_what_was_accepted_of_one_run_is_asked_again_by_the_next(
     assert made["run_id"] != kept["record"]["steps"]["copy_files"]["run_id"]
 
 
+async def test_an_item_is_accepted_only_from_a_report_that_lists_it(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers, user = logged_in_headers_super_user, active_super_user.id
+    await _three_copies_to_make(config_dir, user)
+    _ran(config_dir)
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    conflict = _failed("file_conflict", f"{user}/cat.txt", "keep_bucket_file")
+    # The files are being copied again. A page that has not caught up still shows what the copy before reported.
+    again = uuid4().hex
+    _ran(config_dir, "copy_files", run_id=again, status="running", finished_at=None, report=None)
+
+    kept = await _decide(client, headers, "copy_files", "keep_bucket_file", conflict["subject"])
+
+    # This run has reported nothing yet, so there is nothing of it to accept. The decision is kept, and is for no run.
+    assert [(made["kind"], made["run_id"]) for made in kept["record"]["decisions"]] == [("keep_bucket_file", None)]
+    # When it ends with that file refused, the admin has still to read its report.
+    report = {**UPLOADED, "ok": False, "counts": {"failed": 1}, "attention": [conflict]}
+    _ran(config_dir, "copy_files", run_id=again, report=report)
+    assert (await _steps(client, headers))["copy_files"] == ("blocked", "file_conflict")
+
+
 async def test_a_decision_that_does_not_answer_what_failed_is_kept_and_completes_nothing(
     client, logged_in_headers_super_user, active_super_user, config_dir
 ):
