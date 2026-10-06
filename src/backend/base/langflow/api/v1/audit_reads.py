@@ -229,7 +229,9 @@ def _newest(operation: AuditOperation) -> Any:
     )
 
 
-async def owner_visibility(user: User, owned_resource_ids: Any) -> ColumnElement[bool] | None:
+async def owner_visibility(
+    user: User, owned_resource_ids: Any, *, resource_id: UUID | None = None
+) -> ColumnElement[bool] | None:
     """The OSS floor: events the caller made, and events on what they own in its current life.
 
     Superusers read everything, and so does a caller a plugin authorized, because
@@ -261,8 +263,20 @@ async def owner_visibility(user: User, owned_resource_ids: Any) -> ColumnElement
     every caller, so a resource created at that id would otherwise read every
     other caller's failed create. Those rows reach their own author through the
     branch below, and nobody else.
+
+    ``resource_id`` keeps the same window over a plugin's decision when the read
+    names one resource. The plugin decides who may read that id, but it decides
+    against the resource holding it *now*, and the domain it resolves is the
+    Project the resource is in — one the caller can choose. So a caller with
+    ``flow:create`` and ``flow:audit_read`` scoped to their own Project could
+    re-create a deleted Flow id there and inherit the previous owner's whole
+    trail, which only a global grant is meant to read. The unfiltered feed keeps
+    its plugin decision untouched: it names no id a caller could claim, and that
+    is where a global grant still reads every life. A Project needs none of this
+    — ``?project_id=X`` resolves to ``project:X`` itself, so creating at an id
+    cannot bring a scope the caller did not already hold.
     """
-    if user.is_superuser or await plugin_decides_visibility():
+    if user.is_superuser:
         return None
     began, ended = _newest(AuditOperation.CREATE), _newest(AuditOperation.DELETE)
     current_life = or_(
@@ -270,6 +284,8 @@ async def owner_visibility(user: User, owned_resource_ids: Any) -> ColumnElement
         and_(began.isnot(None), or_(ended.is_(None), began > ended), col(AuditEvent.timestamp) >= began),
         and_(ended.isnot(None), or_(began.is_(None), ended >= began), col(AuditEvent.timestamp) > ended),
     )
+    if await plugin_decides_visibility():
+        return current_life if resource_id is not None else None
     owned = and_(
         col(AuditEvent.resource_id) != UNKNOWN_RESOURCE_ID,
         col(AuditEvent.resource_id).in_(owned_resource_ids),

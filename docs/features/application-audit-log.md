@@ -229,9 +229,13 @@ deleted row carried:
   gone, so the check falls back to `*`.
 * **A deleted Flow.** A Flow is scoped by the Project that held it, which the
   deleted row carried, so `?flow_id=X` falls back to `*`: only a global
-  `flow:audit_read` reads it.
+  `flow:audit_read` reads it. And because that id can be re-created in a Project
+  the caller chooses — which would make their own scoped grant apply — a read of
+  one `flow_id` stays bounded to that id's current life whoever authorized it,
+  plugin or not. Superusers are the exception; nothing scopes them.
 * **The unfiltered feed** names no id and so resolves to `*` either way — it
-  always needs a global `project:audit_read` or `flow:audit_read`.
+  always needs a global `project:audit_read` or `flow:audit_read`, and it is
+  where such a grant reads a previous life.
 
 Retaining event-time scope would mean storing it on every event; that is a
 schema change, not part of this delivery.

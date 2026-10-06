@@ -307,6 +307,63 @@ async def test_with_a_plugin_the_flow_audit_permission_decides(client, logged_in
     assert wrong_resource.status_code == status.HTTP_403_FORBIDDEN
 
 
+async def test_a_scoped_grant_cannot_reuse_a_deleted_flow_id_to_read_its_trail(client, logged_in_headers):
+    """Re-creating a freed id in your own Project must not hand over its old trail.
+
+    With a plugin, ``?flow_id=X`` resolves to the Project that holds X *now*, so
+    a caller who can create there makes their own scoped grant apply. Only a
+    global ``flow:audit_read`` is meant to read a previous life, and it still
+    does through the unfiltered feed.
+    """
+    from tests.unit.services.authorization._policy_double import assign_role, install_policy_authz
+
+    victim = await _flow(client, logged_in_headers)
+    victim_id = victim["id"]
+    secret_name = f"victim-secret-{uuid4().hex[:8]}"
+    await client.patch(f"api/v1/flows/{victim_id}", json={"name": secret_name}, headers=logged_in_headers)
+    await client.delete(f"api/v1/flows/{victim_id}", headers=logged_in_headers)
+
+    attacker_id, attacker_name = await make_user("reuser")
+    attacker_headers = await login(client, attacker_name)
+    their_project = (
+        await client.post("api/v1/projects/", json={"name": f"p-{uuid4().hex}"}, headers=attacker_headers)
+    ).json()
+    scoped_role = await _role("flow-auditor-scoped", ["flow:audit_read", "flow:create", "flow:read"])
+    global_auditor_id, global_auditor_name = await make_user("globalauditor")
+    global_role = await _role("flow-auditor-global", ["flow:audit_read"])
+    async with session_scope() as session:
+        await assign_role(
+            session,
+            user_id=attacker_id,
+            role_id=scoped_role,
+            domain_type="project",
+            domain_id=UUID(their_project["id"]),
+        )
+        await assign_role(session, user_id=global_auditor_id, role_id=global_role)
+    global_auditor_headers = await login(client, global_auditor_name)
+
+    with install_policy_authz(get_settings_service()):
+        refused = await client.get(f"api/v1/flows/audits?flow_id={victim_id}", headers=attacker_headers)
+        recreated = await client.put(
+            f"api/v1/flows/{victim_id}",
+            json={"name": f"taken-{uuid4().hex[:8]}", "data": GRAPH, "folder_id": their_project["id"]},
+            headers=attacker_headers,
+        )
+        after = await client.get(f"api/v1/flows/audits?flow_id={victim_id}", headers=attacker_headers)
+        feed = await client.get("api/v1/flows/audits?limit=200", headers=global_auditor_headers)
+
+    assert refused.status_code == status.HTTP_403_FORBIDDEN, refused.text
+    assert recreated.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, recreated.text
+    assert after.status_code == status.HTTP_200_OK, after.text
+    names = {item["flow_name"] for item in after.json()["items"]}
+    assert secret_name not in names, after.json()["items"]
+    assert [item["operation"] for item in after.json()["items"]] == ["create"]
+    # The previous life is not lost, only re-scoped: the unfiltered feed names no
+    # id a caller could claim, so a global grant still reads every life there.
+    assert feed.status_code == status.HTTP_200_OK, feed.text
+    assert secret_name in {item["flow_name"] for item in feed.json()["items"]}
+
+
 async def test_excluding_an_action_stops_new_events_but_keeps_the_stored_history_readable(client, logged_in_headers):
     settings = get_settings_service().settings
     flow = await _flow(client, logged_in_headers)

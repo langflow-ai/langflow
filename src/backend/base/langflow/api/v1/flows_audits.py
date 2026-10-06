@@ -61,7 +61,10 @@ async def read_flow_audits(
     """Flow audit events, newest first, filtered and keyset-paginated.
 
     Requires the ``flow:audit_read`` permission. Without an authorization plugin,
-    a non-superuser sees events on Flows they own and events they made.
+    a non-superuser sees events on Flows they own and events they made. A read of
+    one ``flow_id`` is bounded to that id's current life whoever authorized it,
+    because an id is freed by a delete and re-creatable in a Project the caller
+    chooses; the unfiltered feed names no such id and keeps every life.
     """
     query = parse_audit_query(
         request,
@@ -87,6 +90,8 @@ async def read_flow_audits(
         workspace_id=workspace_id,
         folder_id=folder_id,
     )
-    visibility = await owner_visibility(current_user, select(Flow.id).where(Flow.user_id == current_user.id))
+    visibility = await owner_visibility(
+        current_user, select(Flow.id).where(Flow.user_id == current_user.id), resource_id=flow_id
+    )
     page = await read_audit_page(session, query, visibility)
     return FlowAuditPage(items=[_flow_item(event) for event in page.items], next_cursor=page.next_cursor)
