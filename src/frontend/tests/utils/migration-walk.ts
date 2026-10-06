@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import type { Page } from "@playwright/test";
@@ -35,3 +36,10 @@ export async function startOver(page: Page) {
   });
   return read();
 }
+
+/** What the admin reads where the new instance's key is set: the first 12 characters of the key's SHA-256. */
+export const fingerprint = (keyFile: string) =>
+  createHash("sha256")
+    .update(fs.readFileSync(keyFile))
+    .digest("hex")
+    .slice(0, 12);
