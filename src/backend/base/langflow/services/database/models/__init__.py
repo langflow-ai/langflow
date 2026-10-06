@@ -33,8 +33,9 @@ from .flow_version import FlowVersion
 from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
 from .ingestion_run import IngestionRun, IngestionRunStatus
-from .jobs import ExecutionSignal, Job, JobCheckpoint, JobEvent, SignalType
+from .jobs import ExecutionSignal, Job, JobCheckpoint, JobEvent, JobMetricTotals, SignalType
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
+from .knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from .mcp_server import MCPServer
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
@@ -89,8 +90,10 @@ __all__ = [
     "Job",
     "JobCheckpoint",
     "JobEvent",
+    "JobMetricTotals",
     "KnowledgeBaseRecord",
     "KnowledgeBaseStatus",
+    "KnowledgeBaseStorageMigration",
     "MCPServer",
     "MemoryBase",
     "MemoryBaseSession",

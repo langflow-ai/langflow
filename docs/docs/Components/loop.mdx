@@ -53,7 +53,8 @@ print(done)                 # Send the aggregated results from the Done port to 
 
 In the follow example, the **Loop** component iterates over a CSV file until there are no rows left to process.
 In this case, the **Item** port passes each row to a **Type Convert** component to convert the row into a `Message` object, passes the `Message` to a **Structured Output** component to be processed into structured data that is then passed back to the **Loop** component's **Looping** port.
-After processing all rows, the **Loop** component loads the aggregated list of structured data into a Chroma DB database through the **Chroma DB** component connected to the **Done** port.
+After processing all rows, the **Loop** component loads the aggregated list of structured data into a vector database through a supported vector store component connected to the **Done** port.
+The screenshot shows the legacy Chroma component, which is retired in Langflow 1.13. Use a supported provider such as [Astra DB](/bundles-datastax) or [pgVector](/bundles-pgvector).
 
 ![Loop CSV parser](/img/component-loop-csv.png)
 

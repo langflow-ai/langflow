@@ -36,6 +36,7 @@ from langflow.api.utils import (
 )
 from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.utils.mcp.flow_secrets import (
+    MCPSecretTarget,
     extract_and_strip_mcp_secrets,
     mcp_server_names,
     persist_and_strip_mcp_secrets,
@@ -694,7 +695,8 @@ async def update_flow(
         # rollback while the staged rows do not, so re-extracting on attempt 2 would find
         # only the reference it wrote itself and stage nothing. actor.id rather than
         # current_user.id: the rollback expires the ORM User.
-        carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data)
+        masked_targets: list[MCPSecretTarget] = []
+        carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data, masked_targets=masked_targets)
 
         async def operation() -> FlowRead:
             # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
@@ -762,6 +764,7 @@ async def update_flow(
                 actor.id,
                 session,
                 rotatable_servers=mcp_server_names(db_flow_for_attempt.data),
+                masked_targets=masked_targets,
             )
             return await _patch_flow(
                 session=session,
@@ -841,7 +844,8 @@ async def upsert_flow(
     expected_version_token = parse_if_match(if_match)
     # Extract once: a rollback between retry attempts discards the staged rows but not the
     # in-place rewrite, so a second extraction would find only its own reference.
-    carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data)
+    masked_targets: list[MCPSecretTarget] = []
+    carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data, masked_targets=masked_targets)
 
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
@@ -969,7 +973,9 @@ async def upsert_flow(
                         raise deny_to_404(exc, detail="Flow not found") from exc
                 effective_flow_data = flow.data if flow.data is not None else existing_flow_for_attempt.data
                 _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
-                await stage_mcp_secrets(carried_secrets, secret_variables, writer_id, session)
+                await stage_mcp_secrets(
+                    carried_secrets, secret_variables, writer_id, session, masked_targets=masked_targets
+                )
                 await ensure_version_precondition(session, existing_flow_for_attempt, expected_version_token)
                 return await _update_existing_flow(
                     session=session,
@@ -1004,7 +1010,9 @@ async def upsert_flow(
                 operation=audit_vocab.AuditOperation.CREATE,
             )
             _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
-            await stage_mcp_secrets(carried_secrets, secret_variables, writer_id, session)
+            await stage_mcp_secrets(
+                carried_secrets, secret_variables, writer_id, session, masked_targets=masked_targets
+            )
             flow_read = await _new_flow(
                 session=session,
                 flow=flow,

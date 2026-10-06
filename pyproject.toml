@@ -18,6 +18,7 @@ maintainers = [
 # Define your main dependencies here
 dependencies = [
     "langflow-base~=1.13.0",
+    "oauthlib>=4.0.0,<5.0.0",  # CVE-2026-49264, CVE-2026-49265
     # langflow-extensions:bundle-deps-start
     # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
     # curated lfx-* package, never exact pins -- exact pins in reusable library
@@ -86,7 +87,7 @@ dev = [
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
     "mcp-server-fetch>=2025.1.17",
-    "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
+    "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10
     "onnxruntime>=1.26; python_version>='3.14'",
     "fakeredis>=2.0.0",
 ]
@@ -182,7 +183,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.34,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.36,<2.0",
     "lfx-arxiv>=0.1.5,<1.0.0",
     "lfx-confluent>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.1.5,<1.0.0",
@@ -255,6 +256,7 @@ opensearch = [
 [tool.uv]
 constraint-dependencies = [
     # Security floors for every workspace dependency path, including optional bundles.
+    "oauthlib>=4.0.0,<5.0.0",  # CVE-2026-49264, CVE-2026-49265
     "pymongo>=4.18.2,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
     "tornado>=6.5.10,<7.0.0",  # 6.5.8/6.5.9 security fixes plus Jupyter compatibility fix
 ]
@@ -273,16 +275,20 @@ override-dependencies = [
     "dynaconf>=3.2.13",
     "pillow>=12.3.0",  # Force Pillow 12.3.0+ to prevent CVE-vulnerable versions
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
-    # Keep the Python 3.14-compatible floor without overriding Opik's Python 3.10 cap.
-    "litellm>=1.93.0,<1.97; python_version < '3.11'",
-    "litellm>=1.93.0,<2.0.0; python_version >= '3.11'",
+    "authlib>=1.8.0,<2.0.0",  # Scanner reported authlib 1.7.2; use the latest compatible release.
+    "PyJWT>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
+    "virtualenv>=21.14.2,<22.0.0",  # Scanner reported virtualenv 21.7.0; use the latest compatible release.
+    "Werkzeug>=3.1.9,<4.0.0",  # Scanner reported Werkzeug 3.1.8; use the latest compatible release.
+    # GHSA-7hp6-4w63-5g45 is fixed in 1.103.1 and 1.104.0rc2.
+    # Opik 2.2.7 supports patched LiteLLM versions on every supported Python.
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1",
     # Temporary compatibility valve: langchain-litellm 0.6.1-0.7.0 cap
     # cryptography below 49; 0.5.1 is the newest release without that cap.
     "langchain-litellm==0.5.1",
     # Transitive dependency CVE fixes
     "lxml>=6.1.0,<7.0.0",  # CVE-2026-41066
     "mako>=1.3.12,<2.0.0",  # CVE-2026-44307
-    "urllib3>=2.7.0,<3.0.0",  # CVE-2026-44431, CVE-2026-44432
+    "urllib3>=2.8.0,<3.0.0",  # CVE-2026-97688
     "python-liquid>=2.2.0,<3.0.0",  # CVE-2026-45017
     "GitPython>=3.1.58",  # GHSA-wvpp-8hx9-p66j, GHSA-jm78-9fvv-mhgr, GHSA-hmq2-w58f-27jc, GHSA-4gmw-gg2m-w46p, GHSA-9rj7-rf2p-w77r, GHSA-hh9p-6wh2-4mfc
     "h2>=4.4.1",  # CVE-2026-71554
@@ -315,6 +321,7 @@ log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 markers = [
+    "full_database_init: Run the API client fixture with a fresh schema and real migrations",
     "async_test",
     "api_key_required",
     "no_blockbuster",

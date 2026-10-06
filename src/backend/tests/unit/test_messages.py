@@ -131,6 +131,47 @@ async def test_aadd_messagetables(async_session):
     assert added_messages[0].text == "New Test message"
 
 
+@pytest.mark.parametrize("expire_on_commit", [False, True])
+async def test_aadd_messagetables_reads_back_only_when_commit_expires(expire_on_commit):
+    """The rows are not read back unless the session dropped their values on commit.
+
+    The returned message matches the stored row either way, and a later commit
+    of the same session has nothing left to flush.
+    """
+    from sqlalchemy import event
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.pool import StaticPool
+    from sqlmodel import SQLModel
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    statements: list[str] = []
+    event.listen(engine.sync_engine, "before_cursor_execute", lambda _c, _cu, stmt, *_: statements.append(stmt))
+    try:
+        message = MessageTable.from_message(
+            Message(text="stored", sender="User", sender_name="User", session_id="s1"), flow_id=uuid4()
+        )
+        async with AsyncSession(engine, expire_on_commit=expire_on_commit) as session:
+            added = await aadd_messagetables([message], session)
+            assert not session.dirty
+            await session.commit()
+
+        verbs = [stmt.split(None, 1)[0].upper() for stmt in statements]
+        assert verbs == (["INSERT", "SELECT"] if expire_on_commit else ["INSERT"])
+
+        async with AsyncSession(engine) as session:
+            stored = await session.get(MessageTable, added[0].id)
+        assert added[0].id == stored.id
+        assert added[0].text == stored.text == "stored"
+        assert added[0].flow_id == stored.flow_id
+        assert added[0].properties == MessageRead.model_validate(stored, from_attributes=True).properties
+        assert added[0].timestamp.replace(tzinfo=None) == stored.timestamp.replace(tzinfo=None)
+    finally:
+        await engine.dispose()
+
+
 async def test_aadd_messagetables_propagates_cancelled_error_from_commit():
     cancellation = asyncio.CancelledError("commit cancelled")
     message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
@@ -313,7 +354,32 @@ def test_convert_to_langchain(method_name):
     assert len(list(iterator)) == expected_len
 
 
-def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
+@pytest.fixture
+def attachment_upload_dir(tmp_path, monkeypatch):
+    """Exercise attachment parsing inside an authorized local upload namespace."""
+    from langflow.services.deps import get_settings_service
+    from lfx.services.storage.local import LocalStorageService
+    from lfx.utils.file_path_security import file_access_scope
+    from lfx.utils.image import create_image_content_dict
+
+    storage_dir = tmp_path / "storage"
+    scope_id = str(uuid4())
+    upload_dir = storage_dir / scope_id
+    upload_dir.mkdir(parents=True)
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "storage_type", "local")
+    monkeypatch.setattr(settings_service.settings, "restrict_local_file_access", True)
+    monkeypatch.setattr(settings_service.settings, "config_dir", str(storage_dir))
+    storage = LocalStorageService(session_service=None, settings_service=settings_service)
+    monkeypatch.setattr("lfx.schema.image.get_storage_service", lambda: storage)
+    monkeypatch.setattr("lfx.utils.image.get_storage_service", lambda: storage)
+    create_image_content_dict.cache_clear()
+    with file_access_scope((scope_id,)):
+        yield upload_dir
+    create_image_content_dict.cache_clear()
+
+
+def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch, attachment_upload_dir):
     events: list[str] = []
 
     def record(event: str, **_kwargs):
@@ -324,12 +390,14 @@ def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
         SimpleNamespace(debug=record, warning=record, error=lambda *_args, **_kwargs: None),
     )
 
+    unsupported_path = attachment_upload_dir / "file.unsupported"
+    unsupported_path.write_bytes(b"\x00unsupported attachment canary")
     message = Message(
         text="Hello",
         sender="User",
         sender_name="User",
         session_id="session-id",
-        files=["nonexistent.unsupported"],
+        files=[str(unsupported_path)],
     )
 
     lc_message = message.to_lc_message()
@@ -339,8 +407,8 @@ def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
     assert any("Skipping attachment during message conversion" in event for event in events)
 
 
-def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
-    csv_path = tmp_path / "table.csv"
+def test_to_lc_message_keeps_supported_csv_attachments_as_text(attachment_upload_dir):
+    csv_path = attachment_upload_dir / "table.csv"
     csv_path.write_text("name,role\nAda,Engineer\n", encoding="utf-8")
 
     message = Message(
@@ -361,8 +429,8 @@ def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
     assert "name,role" in lc_message.content[1]["text"]
 
 
-def test_to_lc_message_keeps_supported_image_attachments(tmp_path):
-    image_path = tmp_path / "image.png"
+def test_to_lc_message_keeps_supported_image_attachments(attachment_upload_dir):
+    image_path = attachment_upload_dir / "image.png"
     image_content = base64.b64decode(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
     )
@@ -384,8 +452,8 @@ def test_to_lc_message_keeps_supported_image_attachments(tmp_path):
     assert lc_message.content[1]["type"] == "image_url"
 
 
-def test_to_lc_message_skips_oversized_file_attachments(tmp_path):
-    big_path = tmp_path / "big.txt"
+def test_to_lc_message_skips_oversized_file_attachments(attachment_upload_dir):
+    big_path = attachment_upload_dir / "big.txt"
 
     big_size = MAX_ATTACHMENT_SIZE_BYTES + 1
     with big_path.open("wb") as handle:

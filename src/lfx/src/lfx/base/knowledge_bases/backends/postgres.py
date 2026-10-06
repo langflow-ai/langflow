@@ -137,7 +137,7 @@ def _drop_table_sql(table: str) -> str:
 
 
 def _iter_documents_sql(table: str, *, include_embeddings: bool) -> str:
-    columns = "document, cmetadata" + (", embedding" if include_embeddings else "")
+    columns = "id, document, cmetadata" + (", embedding" if include_embeddings else "")
     return f"SELECT {columns} FROM {_validate_table_name(table)}"  # noqa: S608 — table name validated above
 
 
@@ -219,7 +219,7 @@ def postgres_env_configured() -> bool:
 
 def resolve_default_kb_backend() -> str:
     """Return the backend for a new KB when the client omits a selection."""
-    return BackendType.POSTGRES.value if postgres_env_configured() else BackendType.CHROMA.value
+    return BackendType.POSTGRES.value if postgres_env_configured() else BackendType.SQLITE.value
 
 
 def _coerce_embedding(raw: Any) -> list[float] | None:
@@ -237,22 +237,27 @@ class _PostgresVectorStore(VectorStore):
     """Async LangChain VectorStore facade over ``PostgresBackend``."""
 
     def __init__(self, backend: PostgresBackend) -> None:
+        """Capture the PostgreSQL backend exposed by this vector-store facade."""
         self._backend = backend
 
     @property
     def embeddings(self):
+        """Expose the configured embedding function."""
         return self._backend.embedding_function
 
     @classmethod
     def from_texts(cls, *args, **kwargs):
+        """Reject construction that bypasses the PostgreSQL backend configuration."""
         msg = "PostgresVectorStore must be constructed through PostgresBackend."
         raise NotImplementedError(msg)
 
     def similarity_search(self, *args, **kwargs):
+        """Reject synchronous search in the asynchronous PostgreSQL facade."""
         msg = "Use the async PostgresVectorStore search methods."
         raise NotImplementedError(msg)
 
     async def aadd_documents(self, documents: list[Document], **kwargs: Any) -> list[str]:
+        """Write documents through the PostgreSQL backend and return their IDs."""
         return await self._backend._add_documents(documents, ids=kwargs.get("ids"))  # noqa: SLF001
 
     async def asimilarity_search(
@@ -263,6 +268,7 @@ class _PostgresVectorStore(VectorStore):
         filter: dict[str, Any] | None = None,  # noqa: A002
         **kwargs: Any,  # noqa: ARG002
     ) -> list[Document]:
+        """Return matching documents from the native asynchronous query."""
         results = await self._backend._similarity_search(query, k=k, filter=filter)  # noqa: SLF001
         return [document for document, _score in results]
 
@@ -274,11 +280,14 @@ class _PostgresVectorStore(VectorStore):
         filter: dict[str, Any] | None = None,  # noqa: A002
         **kwargs: Any,  # noqa: ARG002
     ) -> list[tuple[Document, float]]:
+        """Return matching documents together with their native distances."""
         return await self._backend._similarity_search(query, k=k, filter=filter)  # noqa: SLF001
 
 
 class PostgresBackend(BaseVectorStoreBackend):
     """Postgres + pgvector as a Langflow KB backend (environment-driven)."""
+
+    distance_metric = "cosine"  # the HNSW index is built with vector_cosine_ops
 
     backend_type = BackendType.POSTGRES
 
@@ -288,6 +297,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         # Never honor a backend_config-provided environment-variable name here:
         # backend_config is tenant-controlled, while this credential belongs to
         # the deployment.
+        """Resolve the configured database URL using the backend credential policy."""
         connection_string = read_connection_string_from_env()
         if not connection_string:
             msg = (
@@ -298,6 +308,11 @@ class PostgresBackend(BaseVectorStoreBackend):
             )
             raise ValueError(msg)
         self._resolved_connection_string = _normalize_driver(connection_string)
+
+    @property
+    def store_location(self) -> tuple[Any, ...]:
+        """The resolved database and this KB's table."""
+        return (self._resolved_connection_string, self.table_name)
 
     @property
     def collection_name(self) -> str:
@@ -448,6 +463,7 @@ class PostgresBackend(BaseVectorStoreBackend):
                 )
 
     async def _table_exists(self, conn: AsyncConnection) -> bool:
+        """Check whether the configured PostgreSQL vector table exists."""
         from sqlalchemy import text
 
         return (await conn.scalar(text("SELECT to_regclass(:name)"), {"name": self.table_name})) is not None
@@ -499,6 +515,7 @@ class PostgresBackend(BaseVectorStoreBackend):
     # ---- the one required method ----------------------------------------
 
     def _build_vector_store(self) -> VectorStore:
+        """Create the asynchronous vector-store facade for this backend."""
         return _PostgresVectorStore(self)
 
     async def _add_documents(self, documents: list[Document], *, ids: Sequence[str] | None = None) -> list[str]:
@@ -513,6 +530,38 @@ class PostgresBackend(BaseVectorStoreBackend):
         if not vectors:
             return []
 
+        document_ids = (
+            list(ids)
+            if ids is not None
+            else [str(document.id) if document.id is not None else str(uuid.uuid4()) for document in documents]
+        )
+        if len(document_ids) != len(documents):
+            msg = "The number of document ids must match the number of documents."
+            raise ValueError(msg)
+        await self._upsert_rows(
+            document_ids,
+            [document.page_content for document in documents],
+            [document.metadata for document in documents],
+            vectors,
+        )
+        return document_ids
+
+    async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
+        await self._upsert_rows(
+            ids,
+            [doc.content for doc in docs],
+            [doc.metadata for doc in docs],
+            [doc.embedding for doc in docs],  # type: ignore[misc]  # validated non-empty by the caller
+        )
+
+    async def _upsert_rows(
+        self,
+        ids: list[str],
+        contents: list[str],
+        metadatas: list[dict[str, Any]],
+        vectors: list[list[float]],
+    ) -> None:
+        """Upsert rows keyed by id. Shared by the embedding and precomputed-vector writes."""
         # The embedding dimension is only knowable once we have real vectors, so
         # the typed, indexed table is provisioned lazily on first write. Memoize
         # per (backend instance, dimension): a large ingest batches through one
@@ -527,25 +576,11 @@ class PostgresBackend(BaseVectorStoreBackend):
         embedding = self._embedding_table()
         from sqlalchemy.dialects.postgresql import insert
 
-        document_ids = (
-            list(ids)
-            if ids is not None
-            else [str(document.id) if document.id is not None else str(uuid.uuid4()) for document in documents]
-        )
-        if len(document_ids) != len(documents):
-            msg = "The number of document ids must match the number of documents."
-            raise ValueError(msg)
-
         engine = self._ensure_async_engine()
         async with engine.begin() as conn:
             rows = [
-                {
-                    "id": document_id,
-                    "embedding": vector,
-                    "document": document.page_content,
-                    "cmetadata": document.metadata,
-                }
-                for document_id, document, vector in zip(document_ids, documents, vectors, strict=True)
+                {"id": row_id, "embedding": vector, "document": content, "cmetadata": metadata}
+                for row_id, content, metadata, vector in zip(ids, contents, metadatas, vectors, strict=True)
             ]
             statement = insert(embedding).values(rows)
             statement = statement.on_conflict_do_update(
@@ -557,7 +592,6 @@ class PostgresBackend(BaseVectorStoreBackend):
                 },
             )
             await conn.execute(statement)
-        return document_ids
 
     async def _similarity_search(
         self,
@@ -617,6 +651,7 @@ class PostgresBackend(BaseVectorStoreBackend):
     # ---- native metrics / lifecycle (override the base defaults) --------
 
     async def count(self) -> int:
+        """Count rows in the vector table, treating an unprovisioned table as empty."""
         await self.ensure_ready()
         from sqlalchemy import text
 
@@ -659,9 +694,10 @@ class PostgresBackend(BaseVectorStoreBackend):
             async for row in result:
                 batch.append(
                     IngestedDocument(
-                        content=row[0] or "",
-                        metadata=dict(row[1] or {}),
-                        embedding=_coerce_embedding(row[2]) if include_embeddings else None,
+                        content=row[1] or "",
+                        metadata=dict(row[2] or {}),
+                        embedding=_coerce_embedding(row[3]) if include_embeddings else None,
+                        id=row[0],
                     )
                 )
                 if len(batch) >= batch_size:
@@ -688,6 +724,7 @@ class PostgresBackend(BaseVectorStoreBackend):
             raise
 
     async def storage_size_bytes(self) -> int:
+        """Estimate PostgreSQL table storage size without calling the embedding provider."""
         await self.ensure_ready()
         from sqlalchemy import text
 
@@ -701,6 +738,7 @@ class PostgresBackend(BaseVectorStoreBackend):
             return 0
 
     async def delete_collection(self) -> None:
+        """Drop the configured vector table and its indexes."""
         await self.ensure_ready()
         from sqlalchemy import text
 
@@ -773,6 +811,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         )
 
     async def teardown(self) -> None:
+        """Dispose PostgreSQL resources and clear cached table provisioning state."""
         engine = getattr(self, "_pg_engine", None)
         if engine is not None:
             try:
