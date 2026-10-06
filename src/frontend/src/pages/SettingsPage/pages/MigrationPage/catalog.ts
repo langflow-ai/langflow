@@ -1,5 +1,7 @@
 import type {
   AcceptedFinding,
+  CopyEvent,
+  CopyStepId,
   DestinationsRequest,
   MigrationCheck,
   MigrationState,
@@ -162,4 +164,46 @@ function shellArgument(value: string) {
   return /^[A-Za-z0-9_.:/-]+$/.test(value)
     ? value
     : `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+/** The copy steps this page can run. Each slug names its copy under `settings.migration.*`. */
+export const COPIES: Partial<Record<CopyStepId, { slug: string }>> = {
+  copy_database: { slug: "copyDb" },
+};
+
+export const isCopy = (id: MigrationStepId): id is CopyStepId => id in COPIES;
+
+/**
+ * The page's line, under `settings.migration.*`, for each reason a copy does not start or does not count.
+ * Any other code reads as a failure, with the command's own words under it.
+ */
+export const COPY_CODES: Record<string, string> = {
+  secrets_missing: "error.enterAgain", // pragma: allowlist secret
+  run_active: "error.runningElsewhere",
+  cancelled: "error.interrupted",
+  interrupted: "error.interrupted",
+  crashed: "error.crashed",
+  destination_changed: "error.destinationChanged",
+  target_unreachable: "error.targetUnreachable",
+  target_not_empty: "error.dbTargetNotEmpty",
+  // The destination holds an earlier copy, and this instance lost a row since. Only a new, empty one takes a copy.
+  count_mismatch: "error.dbCountMismatch",
+  orphans_no_rule: "error.orphansNoRule",
+  value_rejected: "error.valueRejected",
+};
+
+/** How far a run has got: the key of its line under `settings.migration.*`, and the counts that fill it. */
+export function copyProgress(
+  step: CopyStepId,
+  event: CopyEvent,
+  language: string,
+): [string, Record<string, string>] {
+  if (event.phase === "checking") return ["copy.checking", {}];
+  if (event.phase === "preparing_target") return ["copy.preparing", {}];
+  const count = (value?: number | null) =>
+    (value ?? 0).toLocaleString(language);
+  return [
+    `${COPIES[step]?.slug}.progress`,
+    { done: count(event.done), total: count(event.total) },
+  ];
 }

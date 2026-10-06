@@ -26,6 +26,42 @@ export interface MigrationStep {
   error: string | null;
 }
 
+/** The steps that copy this instance's data. Each one runs a command of its own on the server. */
+export type CopyStepId =
+  | "copy_database"
+  | "copy_knowledge_bases"
+  | "copy_files";
+
+/** The latest run of a copy step, as the record keeps it. */
+export interface MigrationCopyRun {
+  run_id: string;
+  status: "running" | "done" | "failed" | "cancelled" | "interrupted";
+  /** A test run says what a copy would do and never completes its step. */
+  dry_run: boolean;
+  started_by: string;
+  started_at: string;
+  finished_at: string | null;
+  /** The command's last word on a run that ended. */
+  report: {
+    ok: boolean;
+    tables_copied?: number;
+    rows_copied?: number;
+    problems?: { code: string; message: string }[];
+  } | null;
+  /** Set when the run did not end done: the command's own code and message, or `crashed`, `cancelled` or `interrupted`. */
+  error: { code: string; message?: string } | null;
+}
+
+/** One line of a run's event stream. The server numbers each, so a page can ask for what came after one. */
+export interface CopyEvent {
+  event: "progress" | "item" | "report" | "error" | "decision_needed" | "end";
+  seq: number;
+  /** On `progress`: `checking`, `preparing_target` or `copying`. A line with none is copying. */
+  phase?: string;
+  done?: number;
+  total?: number | null;
+}
+
 export type MigrationStepId =
   | "check_source"
   | "connect_target"
@@ -58,7 +94,9 @@ export interface MigrationState {
   };
   record: {
     target: { version?: string; set_by?: string; set_at?: string };
-    steps: { check_source?: MigrationStep };
+    steps: { check_source?: MigrationStep } & Partial<
+      Record<CopyStepId, MigrationCopyRun>
+    >;
     accepted_findings: AcceptedFinding[];
     /** Where the new instance keeps its data. Each part is there only when this instance needs it, and none holds a secret. */
     destinations?: {
