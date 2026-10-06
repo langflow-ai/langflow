@@ -529,6 +529,8 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
     state = await _state(record)
     _require_unlocked(state, step_id)
     _require_reached(state, step_id)
+    if next(step for step in state["steps"] if step["id"] == step_id)["reason"] == "pgvector_env_missing":
+        raise HTTPException(status_code=409, detail={"code": "pgvector_env_missing"})
     let_in = _lets_in(record, step_id)
     held = _secrets.get("for") or {}
     # The knowledge base store has no secret of its own: it is the destination database.
@@ -933,6 +935,10 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
         "backup": ("done", None) if _during_pause(record, backup.get("confirmed_at")) else ("current", None),
         **{step: _copy_step(record, step) for step in COPY_COMMANDS},
     }
+    # On PostgreSQL the knowledge bases go into this instance's own database, and it keeps serving from it. It
+    # reads a knowledge base in pgvector only from the store its own environment names, so without one the
+    # copy would leave it unable to open any of them.
+    unreadable_here = postgresql and not postgres_env_configured()
     steps = [first]
     # The first step neither done nor skipped is the one to do now. A later step that has not started
     # waits for it, and one that has started keeps saying where it stands.
@@ -949,6 +955,8 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
             # Nothing can be done here yet, and nothing after it waits for it.
             steps.append({"id": step, "state": "locked", "reason": "not_available"})
             continue
+        elif step == "copy_knowledge_bases" and state != "done" and unreadable_here:
+            state, reason = "blocked", "pgvector_env_missing"
         steps.append({"id": step, "state": state, "reason": reason})
         frontier_open = frontier_open and state in {"done", "skipped"}
     return steps
