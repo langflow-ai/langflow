@@ -14,7 +14,7 @@ def test_cache_type_disk_is_rejected(monkeypatch):
         Settings()
 
 
-@pytest.mark.parametrize("cache_type", ["async", "memory", "redis"])
+@pytest.mark.parametrize("cache_type", ["async", "memory", "redis", "aerospike"])
 def test_supported_cache_types_validate(monkeypatch, cache_type):
     monkeypatch.setenv("LANGFLOW_CACHE_TYPE", cache_type)
     settings = Settings()

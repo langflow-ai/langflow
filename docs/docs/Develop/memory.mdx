@@ -150,17 +150,23 @@ If you want to use a non-default cache setting, you can use the following enviro
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `LANGFLOW_CACHE_TYPE` | String | `async` | Set the cache type for Langflow's internal caching system. Possible values: `async`, `redis`, `memory`. If you set the type to `redis`, then you must also set the `LANGFLOW_REDIS_*` environment variables. The `disk` backend was removed in 1.10 — switch to `async` for in-memory or `redis` for cross-worker. |
+| `LANGFLOW_CACHE_TYPE` | String | `async` | Set the cache type for Langflow's internal caching system. Possible values: `async`, `redis`, `aerospike`, `memory`. If you set the type to `redis`, then you must also set the `LANGFLOW_REDIS_*` environment variables; for `aerospike`, set the `LANGFLOW_AEROSPIKE_*` environment variables. The `disk` backend was removed in 1.10 — switch to `async` for in-memory, or `redis` or `aerospike` for cross-worker. |
 | `LANGFLOW_LANGCHAIN_CACHE` | String | `InMemoryCache` | Set the cache storage type for the LangChain caching system (a Langflow dependency), either `InMemoryCache` or `SQLiteCache`. |
 | `LANGFLOW_REDIS_HOST` | String | `localhost` | Redis server hostname if `LANGFLOW_CACHE_TYPE=redis`. |
 | `LANGFLOW_REDIS_PORT` | Integer | `6379` | Redis server port if `LANGFLOW_CACHE_TYPE=redis`. |
 | `LANGFLOW_REDIS_DB` | Integer | `0` | Redis database number if `LANGFLOW_CACHE_TYPE=redis`. |
 | `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` | Cache expiration time in seconds if `LANGFLOW_CACHE_TYPE=redis`. |
 | `LANGFLOW_REDIS_PASSWORD` | String | Not set | Optional password for Redis authentication if `LANGFLOW_CACHE_TYPE=redis`. |
-| `LANGFLOW_CACHE_SIGNING_KEY` | String | Not set | Shared secret used to sign Redis cache payloads. Set the **same value on every replica** that shares a Redis instance. When unset, each deployment derives a key from its own config directory, so separate replicas sign with different keys and cannot verify each other's entries — valid entries are then discarded as misses and the cache never hits across replicas. Workers of a single deployment share a config directory and agree on a key without this. |
+| `LANGFLOW_AEROSPIKE_HOSTS` | String | `localhost:3000` | Comma-separated Aerospike seed nodes (`host:port`) if `LANGFLOW_CACHE_TYPE=aerospike`. The port defaults to `3000`. Requires `langflow-base[aerospike]`. |
+| `LANGFLOW_AEROSPIKE_NAMESPACE` | String | `langflow` | Aerospike namespace for cache records if `LANGFLOW_CACHE_TYPE=aerospike`. The namespace must allow TTLs (`nsup-period` greater than `0`). |
+| `LANGFLOW_AEROSPIKE_SET` | String | `cache` | Aerospike set that holds Langflow's cache records. Clearing the cache truncates only this set, so the namespace can hold other data. |
+| `LANGFLOW_AEROSPIKE_USER` | String | Not set | Optional user for Aerospike clusters with security enabled. |
+| `LANGFLOW_AEROSPIKE_PASSWORD` | String | Not set | Optional password for `LANGFLOW_AEROSPIKE_USER`. |
+| `LANGFLOW_AEROSPIKE_CACHE_EXPIRE` | Integer | `3600` | Cache expiration time in seconds if `LANGFLOW_CACHE_TYPE=aerospike`. |
+| `LANGFLOW_CACHE_SIGNING_KEY` | String | Not set | Shared secret used to sign Redis and Aerospike cache payloads. Set the **same value on every replica** that shares a cache instance. When unset, each deployment derives a key from its own config directory, so separate replicas sign with different keys and cannot verify each other's entries — valid entries are then discarded as misses and the cache never hits across replicas. Workers of a single deployment share a config directory and agree on a key without this. |
 
 :::warning
-If you run more than one Langflow replica against one Redis instance, set `LANGFLOW_CACHE_SIGNING_KEY` to the same value on all of them.
+If you run more than one Langflow replica against one Redis or Aerospike instance, set `LANGFLOW_CACHE_SIGNING_KEY` to the same value on all of them.
 Cache entries carry an integrity tag, and a replica can only verify entries signed with its own key.
 Without a shared key each replica generates its own, so cross-replica reads are discarded as cache misses.
 :::

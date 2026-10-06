@@ -5,10 +5,10 @@ from pydantic import BaseModel, field_validator
 
 
 class CacheSettings(BaseModel):
-    """In-memory and Redis cache settings."""
+    """In-memory, Redis and Aerospike cache settings."""
 
-    cache_type: Literal["async", "redis", "memory"] = "async"
-    """The cache backend: 'async' (default in-memory), 'memory' (sync in-memory), or 'redis'."""
+    cache_type: Literal["async", "redis", "memory", "aerospike"] = "async"
+    """The cache backend: 'async' (default in-memory), 'memory' (sync in-memory), 'redis' or 'aerospike'."""
     cache_expire: int = 3600
     """The cache expire in seconds."""
     cache_dir: str | None = None
@@ -21,6 +21,15 @@ class CacheSettings(BaseModel):
     redis_db: int = 0
     redis_url: str | None = None
     redis_cache_expire: int = 3600
+
+    # Aerospike
+    aerospike_hosts: str = "localhost:3000"
+    """Comma-separated seed nodes, e.g. 'as1:3000,as2:3000'."""
+    aerospike_namespace: str = "langflow"
+    aerospike_set: str = "cache"
+    aerospike_user: str | None = None
+    aerospike_password: str | None = None
+    aerospike_cache_expire: int = 3600
 
     @field_validator("cache_dir", mode="before")
     @classmethod

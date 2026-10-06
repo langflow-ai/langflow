@@ -5,7 +5,13 @@ from typing import TYPE_CHECKING
 from lfx.log.logger import logger
 from typing_extensions import override
 
-from langflow.services.cache.service import AsyncInMemoryCache, CacheService, RedisCache, ThreadingInMemoryCache
+from langflow.services.cache.service import (
+    AerospikeCache,
+    AsyncInMemoryCache,
+    CacheService,
+    RedisCache,
+    ThreadingInMemoryCache,
+)
 from langflow.services.factory import ServiceFactory
 
 if TYPE_CHECKING:
@@ -29,6 +35,17 @@ class CacheServiceFactory(ServiceFactory):
                 db=settings_service.settings.redis_db,
                 url=settings_service.settings.redis_url,
                 expiration_time=settings_service.settings.redis_cache_expire,
+            )
+
+        if settings_service.settings.cache_type == "aerospike":
+            logger.debug("Creating Aerospike cache")
+            return AerospikeCache(
+                hosts=settings_service.settings.aerospike_hosts,
+                namespace=settings_service.settings.aerospike_namespace,
+                set_name=settings_service.settings.aerospike_set,
+                user=settings_service.settings.aerospike_user,
+                password=settings_service.settings.aerospike_password,
+                expiration_time=settings_service.settings.aerospike_cache_expire,
             )
 
         if settings_service.settings.cache_type == "memory":
