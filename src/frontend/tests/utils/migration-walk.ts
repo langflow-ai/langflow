@@ -102,3 +102,18 @@ export async function readyToCopy(
     data: { location: "a browser walk" },
   });
 }
+
+/** Makes a copy through the API, or a test run of one, and waits for its end. */
+export async function runCopy(page: Page, step: string, dryRun = false) {
+  const started = await page.request.post(
+    `/api/v1/migration/steps/${step}/runs`,
+    { data: { dry_run: dryRun } },
+  );
+  const { run_id } = await started.json();
+  // The events answer as a stream that ends when the run does.
+  const events = await page.request.get(
+    `/api/v1/migration/steps/${step}/runs/${run_id}/events`,
+    { timeout: 300000 },
+  );
+  await events.body();
+}
