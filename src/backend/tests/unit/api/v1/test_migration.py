@@ -7,28 +7,59 @@ against the test database, as the endpoint does in production.
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import langflow.api.router as api_router_module
 import pytest
+import structlog
 from anyio import Path as AsyncPath
 from fastapi import APIRouter
+from langflow.api.v1 import migration as migration_module
 from langflow.api.v1.migration import _source_env
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
-from langflow.services.deps import get_db_service, get_settings_service, get_storage_service, session_scope
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import (
+    get_db_service,
+    get_job_service,
+    get_settings_service,
+    get_storage_service,
+    session_scope,
+)
+from langflow.services.triggers.listeners import replicas
 from langflow.utils.version import get_version_info
+from lfx.log.logger import configure
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from pathlib import Path
 
 VERSION = get_version_info()["version"]
+PASSING = {"name": "version", "status": "ok", "summary": "same version"}
+FAILING = {"name": "source: credentials", "status": "fail", "summary": "2 values do not open"}
+# What the two steps before the pause leave in the record once they are done.
+PREPARED = {
+    "destinations": {
+        "database": {"location": "db.internal:5432/langflow"},
+        "results": {"database": {"ok": True}},
+        "saved_by": "alice",
+        "saved_at": "2026-09-30T00:10:00+00:00",
+    },
+    "secret_key": {"verified_by": "alice", "verified_at": "2026-09-30T00:20:00+00:00"},
+}
+# A pause that began before, and after, the check that _checked records.
+PAUSED_BEFORE_THE_CHECK = {"frozen_at": "2026-09-29T00:00:00+00:00", "frozen_by": "alice"}
+PAUSED_AFTER_THE_CHECK = {"frozen_at": "2026-10-01T00:00:00+00:00", "frozen_by": "alice"}
+PAUSE = "api/v1/migration/pause"
+NEW_FLOW = {"name": "saved around a pause", "data": {}}
 
 
 @pytest.fixture(autouse=True)
@@ -43,10 +74,26 @@ def migration_enabled(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture(autouse=True)
-def config_dir(client, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:  # noqa: ARG001
-    """The migration record is written under CONFIG_DIR, so keep it out of the real one."""
+def config_dir(migration_enabled, client, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:  # noqa: ARG001
+    """The migration record is written under CONFIG_DIR, so keep it out of the real one.
+
+    The feature is turned on first: the app registers the pause middleware when it is built.
+    """
     monkeypatch.setattr(get_settings_service().settings, "config_dir", str(tmp_path))
     return tmp_path
+
+
+@pytest.fixture
+def server_log(client, monkeypatch: pytest.MonkeyPatch):  # noqa: ARG001
+    """What the migration routes log, at the level an instance runs at to keep the audit lines.
+
+    A logger binds to the settings of the moment it is first used, so the routes get a fresh one.
+    """
+    lines = io.StringIO()
+    configure(log_level="DEBUG", output_file=lines, cache=False)
+    monkeypatch.setattr(migration_module, "logger", structlog.get_logger())
+    yield lines
+    configure()
 
 
 async def _run_checks(client, headers, target_version: str = VERSION) -> list[dict]:
@@ -61,9 +108,20 @@ async def _migration(client, headers) -> dict:
     return response.json()
 
 
+async def _steps(client, headers) -> dict[str, tuple[str, str | None]]:
+    migration = await _migration(client, headers)
+    return {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}
+
+
 def _write_record(config_dir: Path, record: dict) -> None:
     (config_dir / "migrations").mkdir(exist_ok=True)
     (config_dir / "migrations" / "migration.json").write_text(json.dumps(record))
+
+
+async def _add(*rows) -> None:
+    async with session_scope() as session:
+        session.add_all(rows)
+        await session.commit()
 
 
 async def _run_and_hang_up(client, headers, on_first_event: Callable[[], Awaitable[None]] | None = None) -> None:
@@ -122,9 +180,11 @@ async def test_only_a_superuser_can_open_the_migration(client, logged_in_headers
         await client.post("api/v1/migration/checks", json={"target_version": VERSION}, headers=logged_in_headers),
         await client.post("api/v1/migration/accepted-findings", json=finding, headers=logged_in_headers),
         await client.delete("api/v1/migration/accepted-findings", params=finding, headers=logged_in_headers),
+        await client.post(PAUSE, headers=logged_in_headers),
+        await client.delete(PAUSE, headers=logged_in_headers),
     ]
 
-    assert [response.status_code for response in refused] == [403, 403, 403, 403]
+    assert [response.status_code for response in refused] == [403] * len(refused)
 
 
 async def test_the_page_describes_this_instance_and_its_steps(client, logged_in_headers_super_user, config_dir):
@@ -150,9 +210,9 @@ async def test_the_page_describes_this_instance_and_its_steps(client, logged_in_
     ]
 
 
-def _checked(config_dir: Path, checks: list[dict]) -> None:
-    """A finished source check with these results."""
-    step = {"status": "done", "started_by": "alice", "started_at": "2026-09-30T00:00:00+00:00"}
+def _checked(config_dir: Path, checks: list[dict], status: str = "done", **later: dict) -> None:
+    """A source check that ended with these results, and what the steps after it recorded."""
+    step = {"status": status, "started_by": "alice", "started_at": "2026-09-30T00:00:00+00:00"}
     report = {"event": "report", "checks": checks}
     _write_record(
         config_dir,
@@ -160,6 +220,7 @@ def _checked(config_dir: Path, checks: list[dict]) -> None:
             "target": {"version": VERSION, "set_by": "alice", "set_at": step["started_at"]},
             "steps": {"check_source": {**step, "target_version": VERSION, "report": report}},
             "accepted_findings": [],
+            **later,
         },
     )
 
@@ -167,7 +228,7 @@ def _checked(config_dir: Path, checks: list[dict]) -> None:
 async def test_after_the_check_the_next_needed_step_is_current_and_the_rest_wait(
     client, logged_in_headers_super_user, config_dir
 ):
-    _checked(config_dir, [{"name": "version", "status": "ok", "summary": "same version"}])
+    _checked(config_dir, [PASSING])
 
     steps = (await _migration(client, logged_in_headers_super_user))["steps"]
 
@@ -203,7 +264,7 @@ async def test_a_skipped_step_is_passed_over_for_the_current_one(
 
 
 async def test_blocking_findings_keep_every_later_step_locked(client, logged_in_headers_super_user, config_dir):
-    _checked(config_dir, [{"name": "source: credentials", "status": "fail", "summary": "2 values do not open"}])
+    _checked(config_dir, [FAILING])
 
     migration = await _migration(client, logged_in_headers_super_user)
 
@@ -620,3 +681,284 @@ async def _add_file_without_bytes(user_id, name: str = "gone") -> None:
     async with session_scope() as session:
         session.add(File(user_id=user_id, name=name, path=f"{user_id}/{name}.txt", size=1))
         await session.commit()
+
+
+async def test_the_pause_waits_for_the_steps_before_it(client, logged_in_headers_super_user, config_dir):
+    _checked(config_dir, [PASSING])
+
+    refused = await client.post(PAUSE, headers=logged_in_headers_super_user)
+
+    assert refused.status_code == 409
+    assert refused.json()["detail"] == {"code": "locked", "reason": "earlier_step"}
+    assert "pause" not in (await _migration(client, logged_in_headers_super_user))["record"]
+
+
+async def test_a_pause_refuses_changes_until_the_admin_resumes(client, logged_in_headers_super_user, config_dir):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    before = datetime.now(timezone.utc)
+
+    paused = await client.post(PAUSE, headers=headers)
+
+    assert paused.status_code == 200, paused.text
+    pause = paused.json()["record"]["pause"]
+    assert pause["frozen_by"] == "activeuser"
+    assert datetime.fromisoformat(pause["frozen_at"]) >= before
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 503
+    # Pausing again keeps the moment that the re-check and the copies are measured against.
+    assert (await client.post(PAUSE, headers=headers)).json()["record"]["pause"] == pause
+
+    resumed = await client.delete(PAUSE, headers=headers)
+
+    assert resumed.status_code == 200, resumed.text
+    assert "pause" not in resumed.json()["record"]
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 201
+    # Nothing to resume is not an error.
+    assert (await client.delete(PAUSE, headers=headers)).status_code == 200
+
+
+async def test_each_pause_and_resume_is_logged(
+    client, logged_in_headers_super_user, active_super_user, config_dir, server_log
+):
+    _checked(config_dir, [PASSING], **PREPARED)
+
+    await client.post(PAUSE, headers=logged_in_headers_super_user)
+    await client.delete(PAUSE, headers=logged_in_headers_super_user)
+
+    assert f"Migration: user_id={active_super_user.id} paused changes to this instance" in server_log.getvalue()
+    assert f"Migration: user_id={active_super_user.id} resumed changes to this instance" in server_log.getvalue()
+
+
+@pytest.mark.parametrize(
+    ("pause", "check", "status", "expected"),
+    [
+        (None, PASSING, "done", ("current", None)),
+        # A check from before the pause says nothing about what the instance held when it stopped.
+        (PAUSED_AFTER_THE_CHECK, PASSING, "done", ("blocked", "recheck_pending")),
+        (PAUSED_BEFORE_THE_CHECK, PASSING, "done", ("done", None)),
+        (PAUSED_BEFORE_THE_CHECK, FAILING, "done", ("blocked", "recheck_failed")),
+        # The re-check is still running, or it stopped before it could report.
+        (PAUSED_BEFORE_THE_CHECK, PASSING, "cancelled", ("blocked", "recheck_pending")),
+    ],
+)
+async def test_the_pause_step_is_done_once_a_check_started_after_it_passes(
+    client, logged_in_headers_super_user, config_dir, pause, check, status, expected
+):
+    _checked(config_dir, [check], status, **PREPARED, **({"pause": pause} if pause else {}))
+
+    steps = await _steps(client, logged_in_headers_super_user)
+
+    assert steps["pause"] == expected
+
+
+async def test_a_re_check_that_fails_reopens_the_check_and_keeps_what_was_done(
+    client, logged_in_headers_super_user, config_dir
+):
+    _checked(config_dir, [FAILING], **PREPARED, pause=PAUSED_BEFORE_THE_CHECK)
+
+    steps = await _steps(client, logged_in_headers_super_user)
+
+    assert steps["check_source"] == ("blocked", "blocking_findings")
+    assert steps["connect_target"] == ("done", None)
+    assert steps["secret_key"] == ("done", None)
+    assert steps["pause"] == ("blocked", "recheck_failed")
+    assert steps["backup"] == ("locked", "earlier_step")
+
+
+async def test_a_check_that_passes_after_the_pause_completes_the_step(client, logged_in_headers_super_user, config_dir):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    assert (await client.post(PAUSE, headers=headers)).status_code == 200
+    assert (await _steps(client, headers))["pause"] == ("blocked", "recheck_pending")
+
+    # The page starts the re-check, and the pause lets the migration routes through.
+    await _run_checks(client, headers)
+
+    steps = await _steps(client, headers)
+    assert steps["pause"] == ("done", None)
+    assert steps["backup"] == ("current", "not_available")
+
+
+async def test_a_check_from_an_earlier_pause_does_not_count_for_the_next_one(
+    client, logged_in_headers_super_user, config_dir
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED, pause=PAUSED_BEFORE_THE_CHECK)
+    assert (await _steps(client, headers))["pause"] == ("done", None)
+
+    # Changes made between the two pauses are in none of the checks or copies made before the second.
+    await client.delete(PAUSE, headers=headers)
+    await client.post(PAUSE, headers=headers)
+
+    assert (await _steps(client, headers))["pause"] == ("blocked", "recheck_pending")
+
+
+@pytest.mark.parametrize("status", [JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED])
+async def test_the_pause_is_refused_while_a_job_is_still_writing(
+    client, logged_in_headers_super_user, active_super_user, config_dir, status
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    flow_id, job_id, started_at = uuid4(), uuid4(), datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+    await _add(
+        Flow(id=flow_id, name="nightly report", data={}, user_id=active_super_user.id),
+        Job(job_id=job_id, flow_id=flow_id, user_id=active_super_user.id, status=status, created_timestamp=started_at),
+    )
+
+    refused = await client.post(PAUSE, headers=headers)
+
+    assert refused.status_code == 409
+    assert refused.json()["detail"] == {
+        "code": "jobs_active",
+        "jobs": [
+            {
+                "id": str(job_id),
+                "flow_name": "nightly report",
+                "knowledge_base": None,
+                "owner": "activeuser",
+                "state": status.value,
+                "started_at": started_at.isoformat(),
+                "cancel": None,
+            }
+        ],
+        "listeners": [],
+    }
+    assert "pause" not in (await _migration(client, headers))["record"]
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 201
+
+    await get_job_service().update_job_status(job_id, JobStatus.COMPLETED)
+
+    assert (await client.post(PAUSE, headers=headers)).status_code == 200
+
+
+async def test_the_refusal_says_who_owns_each_job_and_how_to_cancel_it(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    _checked(config_dir, [PASSING], **PREPARED)
+    admin, bob, flow_id, kb_id, ingestion_id = active_super_user.id, uuid4(), uuid4(), uuid4(), uuid4()
+    background_id = uuid4()
+    background = {"status": JobStatus.SUSPENDED, "job_metadata": {"request": {"mode": "background"}}}
+    started = [datetime(2026, 10, 1, hour, tzinfo=timezone.utc) for hour in (9, 10, 11, 12)]
+    await _add(
+        User(id=bob, username="bob", password="never signs in"),  # noqa: S106  # pragma: allowlist secret
+        Flow(id=flow_id, name="weekly digest", data={}, user_id=admin),
+        # Marked by its own ingestion, which the job below already stands for.
+        KnowledgeBaseRecord(id=kb_id, user_id=admin, name="q&a_handbook", status="ingesting", backend_type="postgres"),
+        Job(job_id=background_id, flow_id=flow_id, user_id=admin, created_timestamp=started[0], **background),
+        Job(job_id=uuid4(), flow_id=flow_id, user_id=admin, status=JobStatus.IN_PROGRESS, created_timestamp=started[1]),
+        Job(
+            job_id=ingestion_id,
+            flow_id=ingestion_id,
+            user_id=admin,
+            status=JobStatus.QUEUED,
+            type=JobType.INGESTION,
+            asset_id=kb_id,
+            asset_type="knowledge_base",
+            created_timestamp=started[2],
+        ),
+        Job(job_id=uuid4(), flow_id=flow_id, user_id=bob, created_timestamp=started[3], **background),
+    )
+
+    refused = await client.post(PAUSE, headers=logged_in_headers_super_user)
+
+    assert refused.status_code == 409
+    # Each job comes with the whole request that cancels it, so the page sends it as it is.
+    stop = {"method": "POST", "url": "/api/v2/workflows/stop", "body": {"job_id": str(background_id)}}
+    cancel_ingestion = {"method": "POST", "url": "/api/v1/knowledge_bases/q%26a_handbook/cancel", "body": None}
+    shown = ("flow_name", "knowledge_base", "owner", "state", "cancel")
+    assert [tuple(job[key] for key in shown) for job in refused.json()["detail"]["jobs"]] == [
+        ("weekly digest", None, "activeuser", "suspended", stop),
+        # It ends with the request that started it, so there is no route to stop it.
+        ("weekly digest", None, "activeuser", "in_progress", None),
+        (None, "q&a_handbook", "activeuser", "queued", cancel_ingestion),
+        # A cancel route answers only the job's owner, so the admin is told whose job it is.
+        ("weekly digest", None, "bob", "suspended", None),
+    ]
+
+
+@pytest.mark.parametrize("kind", ["a background run", "an ingestion"])
+async def test_a_job_cancelled_with_the_request_it_came_with_no_longer_holds_the_pause(
+    client, logged_in_headers_super_user, active_super_user, config_dir, kind
+):
+    headers, owner = logged_in_headers_super_user, active_super_user.id
+    _checked(config_dir, [PASSING], **PREPARED)
+    flow_id, kb_id, job_id = uuid4(), uuid4(), uuid4()
+    waiting = {"status": JobStatus.SUSPENDED, "job_metadata": {"request": {"mode": "background"}}}
+    ingesting = {"status": JobStatus.IN_PROGRESS, "type": JobType.INGESTION, "asset_type": "knowledge_base"}
+    rows = {
+        "a background run": [
+            Flow(id=flow_id, name="waiting on a person", data={}, user_id=owner),
+            Job(job_id=job_id, flow_id=flow_id, user_id=owner, **waiting),
+        ],
+        "an ingestion": [
+            KnowledgeBaseRecord(id=kb_id, user_id=owner, name="handbook", backend_type="postgres"),
+            Job(job_id=job_id, flow_id=job_id, user_id=owner, asset_id=kb_id, **ingesting),
+        ],
+    }
+    await _add(*rows[kind])
+    [job] = (await client.post(PAUSE, headers=headers)).json()["detail"]["jobs"]
+
+    # Sent exactly as it came: the page knows nothing about either route.
+    cancel = job["cancel"]
+    cancelled = await client.request(cancel["method"], cancel["url"], json=cancel["body"], headers=headers)
+
+    assert cancelled.status_code == 200, cancelled.text
+    assert (await client.post(PAUSE, headers=headers)).status_code == 200
+
+
+async def test_the_pause_is_refused_while_a_knowledge_base_is_marked_as_ingesting(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    _checked(config_dir, [PASSING], **PREPARED)
+    kb_id, marked_at = uuid4(), datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+    # What an ingestion leaves when the server stops under it: the mark, and no job to cancel.
+    await _add(
+        KnowledgeBaseRecord(
+            id=kb_id,
+            user_id=active_super_user.id,
+            name="handbook",
+            status="ingesting",
+            backend_type="postgres",
+            updated_at=marked_at,
+        )
+    )
+
+    refused = await client.post(PAUSE, headers=logged_in_headers_super_user)
+
+    assert refused.status_code == 409
+    assert refused.json()["detail"]["jobs"] == [
+        {
+            "id": str(kb_id),
+            "flow_name": None,
+            "knowledge_base": "handbook",
+            "owner": "activeuser",
+            "state": "ingesting",
+            "started_at": marked_at.isoformat(),
+            "cancel": None,
+        }
+    ]
+
+
+async def test_the_pause_is_refused_while_a_trigger_listener_is_alive(client, logged_in_headers_super_user, config_dir):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    async with session_scope() as session:
+        # A listener that was killed leaves a lease that has run out. One that is running keeps renewing its own.
+        await replicas.announce(session, holder="listener:111:deadbeef", ttl_s=-1)
+        await replicas.announce(session, holder="listener:222:cafef00d", ttl_s=30)
+
+    refused = await client.post(PAUSE, headers=headers)
+
+    assert refused.status_code == 409
+    detail = refused.json()["detail"]
+    assert (detail["code"], detail["jobs"]) == ("jobs_active", [])
+    [listener] = detail["listeners"]
+    assert listener["holder"] == "listener:222:cafef00d"
+    assert datetime.fromisoformat(listener["heartbeat_at"]) <= datetime.now(timezone.utc)
+    assert "pause" not in (await _migration(client, headers))["record"]
+
+    async with session_scope() as session:
+        # What a listener does when it is stopped.
+        await replicas.withdraw(session, holder="listener:222:cafef00d")
+
+    assert (await client.post(PAUSE, headers=headers)).status_code == 200
