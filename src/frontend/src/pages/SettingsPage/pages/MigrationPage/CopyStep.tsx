@@ -1,15 +1,22 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import type { AxiosError } from "axios";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
+  type CopyDecision,
   type CopyEvent,
+  type CopyItem,
   type CopyStepId,
   followCopy,
   type MigrationCopyRun,
+  type MigrationError,
   type MigrationState,
   type MigrationStepState,
   migrationKeys,
+  useDecideMutation,
   useStartCopyMutation,
   useStopCopyMutation,
 } from "@/controllers/API/queries/migration";
@@ -20,6 +27,8 @@ import {
   COPY_CODES,
   copyCounts,
   copyProgress,
+  DECISIONS,
+  formatTime,
   ITEM_CODES,
   STEP_SLUGS,
 } from "./catalog";
@@ -42,6 +51,8 @@ export function CopyStep({
   const progress = useProgress(step, run);
   const start = useStartCopyMutation(step);
   const stop = useStopCopyMutation(step);
+  // One choice is sent at a time, and how it went is the step's to show: the list it was made on may be gone.
+  const decide = useDecideMutation();
   const [confirming, setConfirming] = useState(false);
   const { body, stopBody, testRun } = COPIES[step];
   // The step a refusal sends the admin back to.
@@ -89,6 +100,25 @@ export function CopyStep({
   const items = report?.attention ?? [];
   const counted = copyCounts(report?.counts);
   const count = (value: number) => value.toLocaleString(i18n.language);
+  // The record keeps the first of the failed items. With more than it keeps, the server offers no acceptance.
+  const cut = counted.failed > items.length;
+  // An item is accepted in the copy that left it. A test run left nothing.
+  const acceptable = !run?.dry_run;
+  // The decision that accepts an item, where the server offers one. One that names no item is an option, asked below.
+  const acceptance = (item: CopyItem) =>
+    acceptable && item.decision?.subject && DECISIONS[item.decision.kind]
+      ? item.decision
+      : undefined;
+  // What the copy asked before it would go on. A copy that is history asks nothing.
+  const asked = stale ? undefined : run?.decision_needed;
+  // An option holds for the whole copy, so the items that wait for one share a single question.
+  const options = new Map(
+    items.flatMap(({ decision }) =>
+      decision && decision.subject === null
+        ? [[decision.kind, decision] as const]
+        : [],
+    ),
+  );
 
   return (
     <div className="flex flex-col items-start gap-3">
@@ -180,10 +210,50 @@ export function CopyStep({
               {said && <Details text={said} />}
             </div>
           )}
+          {asked?.details?.orphans && (
+            <div className="flex flex-col gap-2 text-sm">
+              <p>{t("settings.migration.copyDb.orphans.body")}</p>
+              <ul className="list-disc pl-5">
+                {asked.details.orphans.map((orphan) => (
+                  <li key={`${orphan.table}.${orphan.column}`}>
+                    {t("settings.migration.copyDb.orphans.row", {
+                      table: orphan.table,
+                      parent: orphan.parent,
+                      rows: count(orphan.rows),
+                    })}
+                  </li>
+                ))}
+              </ul>
+              {asked.decision && (
+                <Decision
+                  step={step}
+                  decision={asked.decision}
+                  decide={decide}
+                />
+              )}
+            </div>
+          )}
+          {replaced(decide.error) && (
+            // The state is read again after a refusal, so what follows is the list of the copy that took its place.
+            <p role="alert" className="text-sm text-destructive">
+              {t("settings.migration.copy.reportChanged")}
+            </p>
+          )}
+          {items.some(acceptance) && (
+            // The check may have asked about the same loss, so the step says why this copy asks again.
+            <p className="text-sm text-muted-foreground">
+              {t("settings.migration.copy.acceptNote", {
+                step: t(
+                  `settings.migration.step.${STEP_SLUGS.check_source}.title`,
+                ),
+              })}
+            </p>
+          )}
           {items.length > 0 && (
             <ul className="flex w-full flex-col gap-2 text-sm">
               {items.map((item, index) => {
                 const name = item.kb_name ?? item.file_name;
+                const accept = acceptance(item);
                 return (
                   <li
                     // Two chat messages that miss the same file are two items with one subject.
@@ -203,18 +273,37 @@ export function CopyStep({
                       )}
                     </span>
                     {item.reason && <Details text={item.reason} title={name} />}
+                    {accept && (
+                      <Decision
+                        step={step}
+                        decision={accept}
+                        name={name}
+                        decide={decide}
+                      />
+                    )}
                   </li>
                 );
               })}
             </ul>
           )}
-          {counted.failed > items.length && (
-            <p className="text-xs text-muted-foreground">
-              {t("settings.migration.copy.attentionMore", {
-                shown: count(items.length),
-                count: count(counted.failed),
-              })}
-            </p>
+          {[...options.values()].map((decision) => (
+            <Decision
+              key={decision.kind}
+              step={step}
+              decision={decision}
+              decide={decide}
+            />
+          ))}
+          {cut && (
+            <div className="text-xs text-muted-foreground">
+              <p>
+                {t("settings.migration.copy.attentionMore", {
+                  shown: count(items.length),
+                  count: count(counted.failed),
+                })}
+              </p>
+              <p>{t("settings.migration.copy.tooManyToAccept")}</p>
+            </div>
           )}
           {start.isError && (
             <p role="alert" className="text-sm text-destructive">
@@ -229,7 +318,11 @@ export function CopyStep({
               // One start at a time: a second one while the first is on its way is refused as running elsewhere.
               disabled={start.isPending}
               loading={start.isPending && !start.variables}
-              onClick={() => start.mutate(false)}
+              onClick={() => {
+                // A new copy leaves the last choice, and how it went, behind.
+                decide.reset();
+                start.mutate(false);
+              }}
               ignoreTitleCase
             >
               {/* A test run copied nothing, so the copy after it is still the first. */}
@@ -244,7 +337,10 @@ export function CopyStep({
                 className="w-full sm:w-fit"
                 disabled={start.isPending}
                 loading={start.isPending && start.variables}
-                onClick={() => start.mutate(true)}
+                onClick={() => {
+                  decide.reset();
+                  start.mutate(true);
+                }}
                 ignoreTitleCase
               >
                 {t("settings.migration.copy.testRun")}
@@ -256,6 +352,82 @@ export function CopyStep({
     </div>
   );
 }
+
+/**
+ * One decision the server offers about a copy: ticked while the server holds it as made, and unticked to take it back.
+ * One that names an item accepts it as it was left. One that names none is an option the next copy takes.
+ */
+function Decision({
+  step,
+  decision: { kind, subject, run_id, made },
+  name,
+  decide,
+}: {
+  step: CopyStepId;
+  decision: CopyDecision;
+  /** Names the item for a screen reader, since every row has the same label. */
+  name?: string;
+  decide: ReturnType<typeof useDecideMutation>;
+}) {
+  const { t, i18n } = useTranslation();
+  const id = useId();
+  // A decision this page has no words for is not one it can ask the admin to make.
+  if (!DECISIONS[kind]) return null;
+  const label = t(`settings.migration.${DECISIONS[kind]}`);
+  // The last choice was this one, and it did not go through. One for a list that was replaced gets the step's own line.
+  const failed =
+    decide.isError &&
+    !replaced(decide.error) &&
+    decide.variables.kind === kind &&
+    decide.variables.subject === subject;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        {/* aria-disabled, since native disabled would drop the keyboard user's focus to <body>. */}
+        <Checkbox
+          id={id}
+          checked={Boolean(made)}
+          aria-disabled={decide.isPending}
+          aria-label={name && `${label}, ${name}`}
+          className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+          onCheckedChange={(value) => {
+            if (!decide.isPending)
+              decide.mutate({
+                step,
+                kind,
+                subject,
+                run_id,
+                made: value === true,
+              });
+          }}
+        />
+        <Label htmlFor={id} className="text-sm font-normal">
+          {label}
+        </Label>
+      </div>
+      {made && (
+        <div className="text-xs text-muted-foreground">
+          <p>
+            {t("settings.migration.check.acceptedBy", {
+              user: made.by,
+              time: formatTime(made.at, i18n.language),
+            })}
+          </p>
+          {subject === null && <p>{t("settings.migration.copy.applyNext")}</p>}
+        </div>
+      )}
+      {failed && (
+        <p role="alert" className="text-xs text-destructive">
+          {t("settings.migration.failed")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Whether the server refused a choice because the run it named is no longer the one on record. */
+const replaced = (error: AxiosError<{ detail?: MigrationError }> | null) =>
+  error?.response?.data?.detail?.code === "report_changed";
 
 /**
  * The last progress line of a run that is on. A run belongs to no page, so this one follows it from
