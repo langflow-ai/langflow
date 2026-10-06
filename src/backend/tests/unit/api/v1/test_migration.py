@@ -24,6 +24,7 @@ import structlog
 from anyio import Path as AsyncPath
 from fastapi import APIRouter
 from langflow.api.utils import migration_pause
+from langflow.api.utils.migration_probes import location
 from langflow.api.v1 import migration as migration_module
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.flow.model import Flow
@@ -93,7 +94,7 @@ def config_dir(migration_enabled, client, tmp_path: Path, monkeypatch: pytest.Mo
     """
     monkeypatch.setattr(get_settings_service().settings, "config_dir", str(tmp_path))
     # Destination passwords and keys are kept in the worker's memory, which outlives a test.
-    monkeypatch.setattr(migration_module, "_secrets", {})
+    monkeypatch.setattr(migration_module, "_secrets", {"for": {}})
     # A profile named in the developer's shell would decide how every S3 client here is built.
     monkeypatch.delenv("AWS_PROFILE", raising=False)
     return tmp_path
@@ -1330,7 +1331,7 @@ async def test_a_database_that_cannot_be_reached_blocks_the_step(client, logged_
     steps = {step["id"]: (step["state"], step["reason"]) for step in saved["steps"]}
     assert steps["connect_target"] == ("blocked", "db_unreachable")
     assert steps["secret_key"] == ("locked", "earlier_step")
-    assert migration_module._secrets == {}
+    assert migration_module._secrets == {"for": {}}
 
 
 @pytest.mark.parametrize("address", ["sqlite:///created-by-mistake.db", "not an address"])
@@ -1366,10 +1367,12 @@ async def test_an_empty_database_passes_and_its_address_stays_in_memory(
     saved = await _connect(client, logged_in_headers_super_user, database_url=address)
 
     assert saved["results"] == {"database": {"ok": True}}
-    assert saved["record"]["destinations"]["database"] == {"location": f"{url.host}:{url.port}/{url.database}"}
+    database = {"location": f"{url.host}:{url.port}/{url.database}"}
+    assert saved["record"]["destinations"]["database"] == database
     assert {step["id"]: step["state"] for step in saved["steps"]}["connect_target"] == "done"
-    # The copy needs the whole address, password included. It is kept where no file and no response holds it.
-    assert migration_module._secrets == {"database_url": address}
+    # The copy needs the whole address, password included. It is kept where no file and no response holds it,
+    # together with the saved part it belongs to.
+    assert migration_module._secrets == {"database_url": address, "for": {"database": database}}
     record = (config_dir / "migrations" / "migration.json").read_text()
     assert url.password not in record
     assert url.username not in record
@@ -1382,7 +1385,7 @@ async def test_an_empty_database_passes_and_its_address_stays_in_memory(
 
     # A destination that stops passing is no longer one the copy may use.
     await _connect(client, logged_in_headers_super_user, database_url=f"postgresql://{NOWHERE}/langflow")
-    assert migration_module._secrets == {}
+    assert migration_module._secrets == {"for": {}}
 
 
 async def test_only_an_empty_database_or_one_an_earlier_copy_filled_passes(
@@ -1519,7 +1522,10 @@ async def test_a_bucket_the_keys_can_write_to_passes_and_nothing_is_left_in_it(
         "endpoint_url": files["endpoint_url"],
     }
     kept = ("access_key_id", "secret_access_key", "endpoint_url", "ca_bundle")
-    assert migration_module._secrets == {"files": {key: files[key] or None for key in kept}}
+    assert migration_module._secrets == {
+        "files": {key: files[key] or None for key in kept},
+        "for": {"files": saved["record"]["destinations"]["files"]},
+    }
     monkeypatch.delenv("AWS_PROFILE")
     async with get_session().create_client("s3") as s3:
         assert "Contents" not in await s3.list_objects_v2(Bucket=bucket)
@@ -1527,7 +1533,7 @@ async def test_a_bucket_the_keys_can_write_to_passes_and_nothing_is_left_in_it(
     missing = await _connect(client, logged_in_headers_super_user, files=_files(f"lf-no-such-{uuid4().hex[:10]}"))
 
     assert missing["results"]["files"]["code"] == "bucket_missing"
-    assert migration_module._secrets == {}
+    assert migration_module._secrets == {"for": {}}
 
 
 @pytest.mark.api_key_required
@@ -1593,7 +1599,87 @@ async def test_a_slow_test_of_a_destination_keeps_what_was_saved_meanwhile(
     server.close()
 
     assert saved["results"]["files"]["ok"] is False
-    assert saved["record"]["destinations"]["database"] == {"location": f"{NOWHERE}/langflow"}
+    assert saved["record"]["destinations"]["database"]["location"] == f"{NOWHERE}/langflow"
+
+
+async def _bucket_that_keeps_waiting() -> tuple[str, asyncio.Event, asyncio.Event, asyncio.AbstractServer]:
+    """An S3 endpoint that takes a connection and says nothing, as a destination far away does for a while.
+
+    Returns its address, an event set when a bucket test connects (the tests before it in that save
+    are over by then), the event that lets the connection go, and the server for the caller to close.
+    """
+    arrived, answer = asyncio.Event(), asyncio.Event()
+
+    async def keep_waiting(_reader, writer) -> None:
+        arrived.set()
+        await answer.wait()
+        writer.close()
+
+    server = await asyncio.start_server(keep_waiting, "127.0.0.1", 0)
+    return f"http://127.0.0.1:{server.sockets[0].getsockname()[1]}", arrived, answer, server
+
+
+async def test_what_this_worker_holds_changes_only_when_the_destination_is_saved(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    await _add_file_without_bytes(active_super_user.id)
+    # What an earlier save left: a database that passed, named in the record and held in this worker.
+    earlier = f"postgresql://migrator:{DB_PASSWORD}@db-a.internal/langflow"
+    part = {"location": "db-a.internal/langflow"}
+    _checked(config_dir, [PASSING], destinations={"database": part, "results": {"database": {"ok": True}}})
+    monkeypatch.setitem(migration_module._secrets, "database_url", earlier)
+    monkeypatch.setitem(migration_module._secrets, "for", {"database": part})
+    endpoint, arrived, answer, server = await _bucket_that_keeps_waiting()
+    body = {"database_url": f"postgresql://{NOWHERE}/langflow", "files": {**FILES, "endpoint_url": endpoint}}
+    saving = asyncio.create_task(client.put("api/v1/migration/destinations", json=body, headers=headers))
+    await asyncio.wait_for(arrived.wait(), timeout=10)
+
+    # The database test of this save is over, and it failed. The save now waits on its bucket and has
+    # written nothing, so the record and this worker still name the earlier database.
+    assert (await _migration(client, headers))["record"]["destinations"]["database"] == part
+    assert migration_module._secrets.get("database_url") == earlier
+
+    answer.set()
+    saved = (await saving).json()
+    server.close()
+
+    # Saved and forgotten in one step.
+    assert saved["record"]["destinations"]["database"]["location"] == f"{NOWHERE}/langflow"
+    assert migration_module._secrets == {"for": {}}
+
+
+async def test_two_saves_that_overlap_leave_the_record_and_this_worker_naming_one_database(
+    client, logged_in_headers_super_user, active_super_user, scratch_database
+):
+    headers = logged_in_headers_super_user
+    await _add_file_without_bytes(active_super_user.id)
+    first = scratch_database
+    second = first.set(database=f"{first.database}_b")
+    _sql(first, f'CREATE DATABASE "{second.database}"')
+    endpoint, arrived, answer, server = await _bucket_that_keeps_waiting()
+    try:
+        # The first save passes its database test, then waits on its bucket.
+        body = {
+            "database_url": first.render_as_string(hide_password=False),
+            "files": {**FILES, "endpoint_url": endpoint},
+        }
+        slow = asyncio.create_task(client.put("api/v1/migration/destinations", json=body, headers=headers))
+        await asyncio.wait_for(arrived.wait(), timeout=10)
+        # It has saved nothing yet, so this worker holds nothing yet.
+        assert "database_url" not in migration_module._secrets
+        # Meanwhile a second save names another database, and ends.
+        await _connect(client, headers, database_url=second.render_as_string(hide_password=False))
+        answer.set()
+        await slow
+    finally:
+        server.close()
+        _sql(first, f'DROP DATABASE IF EXISTS "{second.database}" WITH (FORCE)')
+
+    saved = (await _migration(client, headers))["record"]["destinations"]["database"]
+    # Whichever save ended last, the address a copy would use is the one the record names.
+    assert location(migration_module._secrets["database_url"]) == saved["location"]
+    assert migration_module._secrets["for"]["database"] == saved
 
 
 def _nowhere(secrets: tuple[str, ...], responses: list, config_dir: Path, server_log, caplog, capfd) -> None:
