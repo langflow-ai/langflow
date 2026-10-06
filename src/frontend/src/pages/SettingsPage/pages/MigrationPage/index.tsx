@@ -292,6 +292,8 @@ function StepItem({
   }, [frontier]);
   const locked = state.state === "locked";
   const bodyId = `migration-step-${state.id}-body`;
+  // The admin has reached this step, and either the server or this page can't do it yet.
+  const comingSoon = frontier && !children;
   return (
     <li
       aria-current={frontier ? "step" : undefined}
@@ -333,7 +335,7 @@ function StepItem({
                 {t("settings.migration.notStarted")}
               </span>
             )}
-            {frontier && state.reason === "not_available" && (
+            {comingSoon && (
               <Badge
                 variant="secondaryStatic"
                 size="sm"
