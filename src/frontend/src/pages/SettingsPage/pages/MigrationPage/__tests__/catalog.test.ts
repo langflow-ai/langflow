@@ -209,4 +209,25 @@ describe("pgDumpCommand", () => {
       "pg_dump -h db.internal -d langflow -F c -f langflow-backup.dump",
     );
   });
+
+  it("keeps IPv6 hosts whole and reads a port only outside their brackets", () => {
+    expect(pgDumpCommand("[::1]/langflow")).toBe(
+      "pg_dump -h ::1 -d langflow -F c -f langflow-backup.dump",
+    );
+    expect(pgDumpCommand("[::1]:5432/langflow")).toBe(
+      "pg_dump -h ::1 -p 5432 -d langflow -F c -f langflow-backup.dump",
+    );
+    expect(pgDumpCommand("::1/langflow")).toBe(
+      "pg_dump -h ::1 -d langflow -F c -f langflow-backup.dump",
+    );
+  });
+
+  it("quotes database names that contain shell syntax", () => {
+    expect(pgDumpCommand("db.internal/team's data;archive")).toBe(
+      "pg_dump -h db.internal -d 'team'\\''s data;archive' -F c -f langflow-backup.dump",
+    );
+    expect(pgDumpCommand("db.internal/team/data")).toBe(
+      "pg_dump -h db.internal -d team/data -F c -f langflow-backup.dump",
+    );
+  });
 });
