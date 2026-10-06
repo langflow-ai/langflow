@@ -214,6 +214,7 @@ export const COPY_CODES: Record<string, string> = {
   target_not_empty: "error.dbTargetNotEmpty",
   // The destination holds an earlier copy, and this instance lost a row since. Only a new, empty one takes a copy.
   count_mismatch: "error.dbCountMismatch",
+  orphans_droppable: "copyDb.orphans.title",
   orphans_no_rule: "error.orphansNoRule",
   value_rejected: "error.valueRejected",
   bucket_error: "error.bucket",
@@ -274,3 +275,15 @@ export function copyProgress(
     },
   ];
 }
+
+/**
+ * The label of each decision the server can offer about a copy, as a key under `settings.migration.*`.
+ * Which item gets which decision is the server's to say.
+ */
+export const DECISIONS: Record<string, string> = {
+  drop_orphans: "copyDb.orphans.accept",
+  accept_ranking_change: "kb.ranking.accept",
+  leave_behind: "kb.leaveBehind",
+  keep_bucket_file: "files.keepBucket",
+  accept_missing_attachment: "files.acceptMissing",
+};

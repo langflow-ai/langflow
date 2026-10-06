@@ -3,6 +3,7 @@ import type { AxiosError, AxiosResponse } from "axios";
 import { api, performStreamingRequest } from "../../api";
 import { getURL } from "../../helpers/constants";
 import type {
+  CopyDecision,
   CopyEvent,
   CopyStepId,
   DestinationsRequest,
@@ -226,3 +227,24 @@ export async function followCopy({
   });
   return refused;
 }
+
+/**
+ * Records a decision the server offered about a copy, or takes it back when `made` is false.
+ * It is sent as it came: with a `subject` it accepts that one item, with none it is an option for the next run.
+ * An acceptance names the run whose report the item is in, and the server refuses it once another run took its place.
+ */
+export const useDecideMutation = () =>
+  useStepMutation(
+    ({
+      made,
+      ...decision
+    }: Pick<CopyDecision, "kind" | "subject" | "run_id"> & {
+      step: CopyStepId;
+      made: boolean;
+    }) =>
+      made
+        ? api.post(getURL("MIGRATION", { path: "decisions" }), decision)
+        : api.delete(getURL("MIGRATION", { path: "decisions" }), {
+            data: decision,
+          }),
+  );

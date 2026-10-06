@@ -61,6 +61,14 @@ export async function prepare(
     timeout: 120000,
   });
   await check.body();
+  // What the check found that an admin may accept is accepted, as on the page.
+  const { blocking_findings } = await (
+    await page.request.get("/api/v1/migration")
+  ).json();
+  for (const name of blocking_findings)
+    await page.request.post("/api/v1/migration/accepted-findings", {
+      data: { name },
+    });
   await page.request.put("/api/v1/migration/destinations", {
     data: {
       ...(instance.database.type === "sqlite" && {

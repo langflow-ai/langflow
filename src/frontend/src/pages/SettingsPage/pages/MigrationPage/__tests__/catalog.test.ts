@@ -9,6 +9,7 @@ import {
   COPY_CODES,
   copyCounts,
   copyProgress,
+  DECISIONS,
   destinationsRequest,
   groupChecks,
   ITEM_CODES,
@@ -246,6 +247,7 @@ describe("COPY_CODES", () => {
       "crashed",
       "destination_changed",
       "interrupted",
+      "orphans_droppable",
       "orphans_no_rule",
       "run_active",
       "secrets_missing",
@@ -344,5 +346,23 @@ describe("copyProgress", () => {
         "en",
       ),
     ).toEqual(["files.progress", { done: "1", total: "3", bytes: "2 KB" }]);
+  });
+});
+
+describe("DECISIONS", () => {
+  // The server says which decision an item offers. The page only has to have words for each.
+  it("has a label for every decision the server can offer", () => {
+    expect(Object.keys(DECISIONS).sort()).toEqual([
+      "accept_missing_attachment",
+      "accept_ranking_change",
+      "drop_orphans",
+      "keep_bucket_file",
+      "leave_behind",
+    ]);
+    expect(
+      Object.values(DECISIONS).filter(
+        (key) => !(`settings.migration.${key}` in en),
+      ),
+    ).toEqual([]);
   });
 });
