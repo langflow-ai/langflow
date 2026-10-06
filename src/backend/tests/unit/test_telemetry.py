@@ -24,10 +24,16 @@ async def test_run_completion_is_recorded_without_network_io(telemetry_service):
     assert pop_all() == [payload]
 
 
-@pytest.mark.parametrize("legacy_optout", [None, False])
+@pytest.mark.parametrize("legacy_optout", [None, False, True])
 async def test_run_and_lifecycle_issue_no_http_requests(monkeypatch, legacy_optout):
     requests = []
     pop_all()
+    payload = RunPayload(
+        run_seconds=1,
+        run_success=True,
+        run_id="legacy-optout",
+        run_completed_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
     settings = SimpleNamespace(prometheus_enabled=False)
     if legacy_optout is not None:
         settings.do_not_track = legacy_optout
@@ -41,8 +47,9 @@ async def test_run_and_lifecycle_issue_no_http_requests(monkeypatch, legacy_opto
 
     try:
         telemetry_service.start()
-        await telemetry_service.log_package_run(RunPayload(run_seconds=1, run_success=True))
+        await telemetry_service.log_package_run(payload)
         await telemetry_service.flush()
+        assert pop_all() == [payload]
     finally:
         await telemetry_service.teardown()
         pop_all()

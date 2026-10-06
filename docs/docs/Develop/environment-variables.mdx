@@ -445,7 +445,7 @@ For database environment variables, including PostgreSQL configuration, see [Mem
 ### Telemetry {#telemetry}
 
 Scarf product analytics has been removed. No opt-out is required.
-`DO_NOT_TRACK`, `LANGFLOW_DO_NOT_TRACK`, and `LANGFLOW_TELEMETRY_BASE_URL` remain accepted for compatibility but cannot enable analytics or disable Enterprise metering.
+`DO_NOT_TRACK` and `LANGFLOW_DO_NOT_TRACK` remain accepted as no-op compatibility flags. Their values have no current effect and are reserved for a future telemetry integration. `LANGFLOW_TELEMETRY_BASE_URL` remains accepted for configuration compatibility, but is obsolete and unused. None of these settings can enable analytics or disable Enterprise metering.
 See [Telemetry](/contributing-telemetry) for details.
 
 ### OpenTelemetry {#opentelemetry}

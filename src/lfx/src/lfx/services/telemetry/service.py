@@ -18,7 +18,12 @@ if TYPE_CHECKING:
 
 
 class TelemetryService(BaseTelemetryService):
-    """No-op implementation retained for the historical LFX service contract."""
+    """No-op implementation retained for the historical LFX service contract.
+
+    The legacy ``do_not_track`` value is accepted for compatibility. Both
+    ``True`` and ``False`` are currently ignored and reserved for a future
+    telemetry integration.
+    """
 
     def __init__(
         self,

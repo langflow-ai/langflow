@@ -8,9 +8,8 @@ No opt-out is required, and no supported setting can re-enable the removed integ
 
 ## Existing deployment settings
 
-`DO_NOT_TRACK`, `LANGFLOW_DO_NOT_TRACK`, and `LANGFLOW_TELEMETRY_BASE_URL` are obsolete for Scarf product analytics.
-Existing deployments can keep these settings without preventing startup, but they have no effect on the removed integration. You can remove them from your configuration.
-Setting an opt-out variable to `false` or supplying a telemetry URL does not enable analytics.
+`DO_NOT_TRACK` and `LANGFLOW_DO_NOT_TRACK` remain accepted as no-op compatibility flags. Their values have no current effect and are reserved for a future telemetry integration.
+`LANGFLOW_TELEMETRY_BASE_URL` remains accepted for configuration compatibility, but is obsolete and unused. None of these settings enables product analytics or changes Enterprise metering.
 
 Registration remains available for Langflow Desktop, and registered email addresses remain in the local registration file. Registration and subsequent startup no longer send an email telemetry event.
 

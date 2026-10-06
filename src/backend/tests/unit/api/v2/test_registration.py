@@ -210,7 +210,7 @@ class TestAPIEndpoints:
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         ("do_not_track", "langflow_do_not_track"),
-        [(None, None), ("false", None), (None, "false")],
+        [(None, None), ("false", None), (None, "false"), ("true", None), (None, "true")],
     )
     async def test_register_user_does_not_make_outbound_request(
         self, tmp_path, monkeypatch, do_not_track, langflow_do_not_track

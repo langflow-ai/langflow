@@ -14,7 +14,7 @@ class TelemetrySettings(BaseModel):
     # Product analytics compatibility settings. Product analytics are removed;
     # these fields remain accepted for existing deployments but are inert.
     do_not_track: bool = False
-    """Deprecated compatibility setting; product analytics are always disabled."""
+    """No-op compatibility flag reserved for a future telemetry integration."""
     telemetry_base_url: str | None = None
     """Deprecated compatibility setting; no product telemetry transport uses it."""
 
