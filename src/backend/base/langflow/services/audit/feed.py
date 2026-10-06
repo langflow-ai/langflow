@@ -394,32 +394,6 @@ async def _merged_window(
     return candidates[:size]
 
 
-async def iter_feed_batches(
-    session: AsyncSession,
-    filters: AuditFeedFilters,
-    *,
-    batch_size: int = 500,
-) -> AsyncIterator[list[AuditFeedRow]]:
-    """Every matching row, newest first, one keyset batch at a time.
-
-    The caller freezes ``until`` so the walk is a snapshot: a row written while it
-    runs is newer than every position still to be read. Each batch is released
-    from the session once handed over, so a long walk holds one batch at a time.
-    """
-    state: CursorState | None = None
-    fingerprint = filters.fingerprint()
-    cutoff = await _database_cutoff(session)
-    while True:
-        rows = await _merged_window(session, filters, state, cutoff, batch_size)
-        if rows:
-            yield rows
-        if len(rows) < batch_size:
-            return
-        timestamp, event_id = rows[-1].key
-        state = CursorState(fingerprint=fingerprint, cutoff=cutoff, timestamp=timestamp, event_id=event_id)
-        session.expunge_all()
-
-
 async def iter_feed_batches_per_session(
     filters: AuditFeedFilters,
     *,
@@ -453,18 +427,6 @@ async def iter_feed_batches_per_session(
         state = CursorState(fingerprint=fingerprint, cutoff=cutoff, timestamp=timestamp, event_id=event_id)
 
 
-async def iter_feed(
-    session: AsyncSession,
-    filters: AuditFeedFilters,
-    *,
-    batch_size: int = 500,
-) -> AsyncIterator[AuditFeedRow]:
-    """Every matching row, newest first; see :func:`iter_feed_batches`."""
-    async for batch in iter_feed_batches(session, filters, batch_size=batch_size):
-        for row in batch:
-            yield row
-
-
 async def frozen_until(session: AsyncSession, filters: AuditFeedFilters) -> AuditFeedFilters:
     """Pin an open-ended window at the database clock, which stamps the rows.
 
@@ -494,8 +456,6 @@ __all__ = [
     "AuditSource",
     "count_feed",
     "frozen_until",
-    "iter_feed",
-    "iter_feed_batches",
     "iter_feed_batches_per_session",
     "list_feed",
 ]

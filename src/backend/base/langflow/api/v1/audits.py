@@ -23,6 +23,8 @@ from pydantic import BaseModel, field_serializer
 
 from langflow.api.utils import DbSession
 from langflow.api.v1.audit_reads import (
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
     bad_request,
     group_query_params,
     parse_limit,
@@ -255,7 +257,65 @@ def feed_item(feed_row: AuditFeedRow) -> AuditFeedItem:
     )
 
 
-@router.get("", response_model=AuditFeedResponse)
+def _openapi_parameters(*, export: bool) -> list[dict[str, Any]]:
+    """Document the query string these two routes parse themselves.
+
+    They take only a ``Request``, so FastAPI has no signature to publish and
+    `app.openapi()` would list no parameters at all, while the per-resource audit
+    reads list every one of theirs.
+    """
+
+    def param(name: str, description: str, schema: dict[str, Any]) -> dict[str, Any]:
+        return {"name": name, "in": "query", "required": False, "description": description, "schema": schema}
+
+    def many(name: str, description: str, values: frozenset[str] | None = None) -> dict[str, Any]:
+        items: dict[str, Any] = {"enum": sorted(values)} if values else {"type": "string"}
+        return param(name, f"{description} Repeatable; values are ORed.", {"type": "array", "items": items})
+
+    uuid_schema = {"type": "string", "format": "uuid"}
+    timestamp_schema = {"type": "string", "format": "date-time"}
+    parameters = [
+        many("source", "The store the event came from.", _ENUM_LISTS["source"]),
+        many("kind", "What the event is about.", _ENUM_LISTS["kind"]),
+        many("resource_type", "Resource type slug."),
+        many("action", "Exact action."),
+        many("exclude_action", "Action to leave out."),
+        many("operation", "Shape of the mutation.", _ENUM_LISTS["operation"]),
+        many("result", "Outcome.", _ENUM_LISTS["result"]),
+        many("actor_type", "How the request authenticated."),
+        param("resource_id", "Exact resource.", uuid_schema),
+        param("user_id", "Exact Langflow account.", uuid_schema),
+        param("actor_id", "Exact authenticated principal or credential.", uuid_schema),
+        param("request_id", "Exact request correlation id.", uuid_schema),
+        param("since", "Inclusive RFC 3339 timestamp.", timestamp_schema),
+        param("until", "Exclusive RFC 3339 timestamp, later than since.", timestamp_schema),
+        param(
+            "q",
+            "Free text kept against action, operation, resource type or name, actor username and details.",
+            {"type": "string", "maxLength": MAX_SEARCH_LENGTH},
+        ),
+    ]
+    if export:
+        parameters.append(param("format", "csv (the default) or ndjson.", {"enum": sorted(_EXPORT_FORMATS)}))
+        return parameters
+    parameters += [
+        param("cursor", "Opaque cursor from the previous page.", {"type": "string"}),
+        param(
+            "limit",
+            "Page size.",
+            {"type": "integer", "minimum": 1, "maximum": MAX_PAGE_SIZE, "default": DEFAULT_PAGE_SIZE},
+        ),
+        param(
+            "offset",
+            "Jump to a page by position instead of a cursor; cannot be combined with one.",
+            {"type": "integer", "minimum": 0, "maximum": MAX_FEED_OFFSET},
+        ),
+        param("include_total", "Add a count of every match.", {"type": "boolean", "default": False}),
+    ]
+    return parameters
+
+
+@router.get("", response_model=AuditFeedResponse, openapi_extra={"parameters": _openapi_parameters(export=False)})
 @router.get("/", response_model=AuditFeedResponse, include_in_schema=False)
 async def read_audits(
     request: Request,
@@ -350,7 +410,7 @@ async def _export_chunks(filters: AuditFeedFilters, export_format: str) -> Async
             yield "".join(feed_item(feed_row).model_dump_json() + "\n" for feed_row in batch)
 
 
-@router.get("/export")
+@router.get("/export", openapi_extra={"parameters": _openapi_parameters(export=True)})
 async def export_audits(
     request: Request,
     _admin: Annotated[User, Depends(get_current_active_superuser)],

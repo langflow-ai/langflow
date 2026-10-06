@@ -38,6 +38,7 @@ from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES, GZipMiddle
 from langflow.api import log_router
 from langflow.api.health_check_router import health_check_router
 from langflow.api.router import router
+from langflow.api.v1.audit_reads import VERBATIM_QUERY_PARAMS
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.api.validation_errors import request_validation_exception_handler
 from langflow.api.warm_graph import is_warm_registry_enabled
@@ -1081,7 +1082,10 @@ def create_app():
     async def flatten_query_string_lists(request: Request, call_next):
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
-            flattened.extend((key, entry) for entry in value.split(","))
+            if key in VERBATIM_QUERY_PARAMS:
+                flattened.append((key, value))
+            else:
+                flattened.extend((key, entry) for entry in value.split(","))
 
         request.scope["query_string"] = urlencode(flattened, doseq=True).encode("utf-8")
 

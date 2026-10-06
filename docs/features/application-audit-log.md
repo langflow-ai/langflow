@@ -270,8 +270,10 @@ default 50), `include_total` (`true`/`false`, default `false`). Parsing is as st
 
 **Search.** `q` (1–200 characters) keeps rows whose action, resource type,
 actor username or details contain it, ignoring case; on `audit_events` it also
-matches `resource_name` and `operation`. `%` and `_` match themselves. It narrows
-every other filter, the total and the export, and a cursor is bound to it.
+matches `resource_name` and `operation`. `%` and `_` match themselves, and so
+does `,` — the repeatable filters above are sent as one comma-separated key, but
+`q` is one phrase and is read whole. It narrows every other filter, the total and
+the export, and a cursor is bound to it.
 
 **Every filter holds in both stores.** Where a filter cannot match a store, that
 store is left out of the read rather than the filter being ignored:

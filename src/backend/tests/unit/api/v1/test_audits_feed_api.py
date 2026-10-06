@@ -332,21 +332,28 @@ async def test_an_export_rejects_an_unknown_format(client, logged_in_headers_sup
 
 
 async def test_the_export_releases_its_connection_between_batches(client, logged_in_headers_super_user):  # noqa: ARG001
-    """A slow reader must not hold a pooled connection for the whole download."""
+    """A slow reader must not hold a pooled connection for the whole download.
+
+    Asserted on the pool, not on the rows: ``expunge_all()`` runs before the
+    scope closes either way, so detached rows prove nothing about whether the
+    connection went back. ``checkedout()`` is what a stalled download would
+    pin — move the ``yield`` inside the session scope and it is 1 here.
+    """
     from langflow.services.audit.feed import AuditFeedFilters, iter_feed_batches_per_session
-    from sqlalchemy import inspect as sa_inspect
+    from langflow.services.deps import get_db_service
 
     await seed(*(resource_event(minute) for minute in range(6)))
     filters = AuditFeedFilters(
         since=datetime(2021, 3, 4, tzinfo=timezone.utc), until=datetime(2021, 3, 5, tzinfo=timezone.utc)
     )
+    pool = get_db_service().engine.pool
+    # Measured relatively: whatever else the suite is holding, the walk adds none.
+    idle = pool.checkedout()
 
     batches = 0
     async for batch in iter_feed_batches_per_session(filters, batch_size=2):
         batches += 1
-        # Handed over detached: the session that read them is already closed, so
-        # the connection is back in the pool while the client consumes the chunk.
-        assert all(sa_inspect(feed_row.row).session is None for feed_row in batch)
+        assert pool.checkedout() <= idle, "the walk is holding a connection while the client reads"
         assert all(feed_row.row.action for feed_row in batch), "the rows are still readable"
 
     assert batches >= 3, "the walk should span several batches"
@@ -416,6 +423,54 @@ async def test_the_search_matches_names_actions_details_and_actors(client, logge
     assert await ids(client, logged_in_headers_super_user, "q=CATALOG:BLOCK") == [by_action]
     assert await ids(client, logged_in_headers_super_user, "q=qa%20operator") == [by_details]
     assert by_actor in await ids(client, logged_in_headers_super_user, f"q={me['username']}")
+
+
+async def test_a_search_phrase_with_a_comma_is_one_phrase(client, logged_in_headers_super_user):
+    """``q`` is free text, not a list.
+
+    ``flatten_query_string_lists`` splits every value on ``,`` so a repeatable
+    filter can be sent as one key; applied to ``q`` it reached the route as a
+    repeated key and answered 400, whether the comma was sent raw or encoded.
+    """
+    by_name, _other = await seed(
+        resource_event(1, resource_name="Invoice, Q3"),
+        resource_event(2, resource_name="Invoice Q4"),
+    )
+
+    assert await ids(client, logged_in_headers_super_user, "q=invoice,%20q3") == [by_name]
+    assert await ids(client, logged_in_headers_super_user, "q=invoice%2C%20q3") == [by_name]
+
+
+async def test_the_export_accepts_a_search_phrase_with_a_comma(client, logged_in_headers_super_user):
+    expected, _other = await seed(
+        resource_event(1, resource_name="Invoice, Q3"),
+        resource_event(2, resource_name="Invoice Q4"),
+    )
+
+    response = await client.get(
+        f"api/v1/audits/export?{WINDOW}&format=ndjson&q=invoice,%20q3", headers=logged_in_headers_super_user
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert [json.loads(line)["id"] for line in response.text.splitlines()] == [expected]
+
+
+async def test_both_feed_routes_publish_every_query_parameter_they_parse(client):
+    """These two read the query string themselves, so FastAPI has no signature to publish.
+
+    Without the explicit parameters the served spec listed none at all, while
+    ``/api/v1/flows/audits`` listed every one of its own.
+    """
+    from langflow.api.v1.audits import _FILTER_PARAMS, _PAGE_PARAMS
+
+    response = await client.get("openapi.json")
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    paths = response.json()["paths"]
+    feed_params = {item["name"] for item in paths["/api/v1/audits"]["get"]["parameters"]}
+    export_params = {item["name"] for item in paths["/api/v1/audits/export"]["get"]["parameters"]}
+    assert feed_params == set(_FILTER_PARAMS | _PAGE_PARAMS)
+    assert export_params == set(_FILTER_PARAMS) | {"format"}
 
 
 async def test_the_search_ignores_case_beyond_ascii(client, logged_in_headers_super_user):
