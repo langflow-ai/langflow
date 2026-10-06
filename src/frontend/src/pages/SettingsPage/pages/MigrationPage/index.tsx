@@ -21,6 +21,7 @@ import { cn } from "@/utils/utils";
 import { CheckStep } from "./CheckStep";
 import { formatTime, PARTS } from "./catalog";
 import { DestinationsStep } from "./DestinationsStep";
+import { SecretKeyStep } from "./SecretKeyStep";
 
 const MARKER_ICONS: Partial<Record<MigrationStepState["state"], string>> = {
   locked: "Lock",
@@ -254,11 +255,21 @@ function Migration({ migration }: { migration: MigrationState }) {
                   ]
                     .filter(Boolean)
                     .join(" · ");
+                } else if (step.id === "secret_key" && state.state === "done") {
+                  summary = t("settings.migration.key.done", {
+                    time: formatTime(
+                      record.secret_key?.verified_at,
+                      i18n.language,
+                    ),
+                    user: record.secret_key?.verified_by,
+                  });
                 }
                 // A step the admin has reached, and that this server can do.
                 const live =
                   state.reason !== "not_available" &&
                   ["current", "blocked", "done"].includes(state.state);
+                // Once done, a step with nothing left to change says all there is to say in its row.
+                const unfinished = live && state.state !== "done";
                 let body: ReactNode = null;
                 if (isCheck) {
                   body = <CheckStep migration={migration} />;
@@ -266,6 +277,8 @@ function Migration({ migration }: { migration: MigrationState }) {
                   body = (
                     <DestinationsStep migration={migration} state={state} />
                   );
+                } else if (unfinished && step.id === "secret_key") {
+                  body = <SecretKeyStep migration={migration} state={state} />;
                 }
                 return (
                   <StepItem

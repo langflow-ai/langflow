@@ -113,3 +113,11 @@ export const useSaveDestinationsMutation = () =>
   useStepMutation<DestinationsRequest, DestinationsSaved>((body) =>
     api.put(getURL("MIGRATION", { path: "destinations" }), body),
   );
+
+/** Asks whether the new instance's key is this instance's key, by its fingerprint. The key is never sent. */
+export const useVerifySecretKeyMutation = () =>
+  useStepMutation((fingerprint: string) =>
+    api.post(getURL("MIGRATION", { path: "secret-key/verify" }), {
+      fingerprint,
+    }),
+  );

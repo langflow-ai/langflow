@@ -2,12 +2,13 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   DESTINATION,
+  fingerprint,
   NO_DESTINATION,
   startOver,
 } from "../../utils/migration-walk";
 
 test(
-  "an admin says where this instance's data goes",
+  "an admin says where the data goes and proves the new instance holds this instance's key",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
     test.skip(Boolean(NO_DESTINATION), NO_DESTINATION);
@@ -81,6 +82,10 @@ test(
         { timeout: 60000 },
       );
       await expect(destinations.locator("input")).toHaveCount(0);
+      const key = page.getByTestId("migration-step-secret_key");
+      await expect(
+        key.getByRole("heading", { name: "Hand over the secret key" }),
+      ).toBeFocused();
 
       // The step can ask again, and it never got the passwords back.
       await destinations
@@ -111,6 +116,22 @@ test(
       await expect(destinations.locator("input")).toHaveCount(0, {
         timeout: 60000,
       });
+
+      // The key stays where it is. The admin pastes what one command prints where the new instance's key is set.
+      await expect(key).toContainText(instance.secret_key.path);
+      const pasted = key.getByLabel("What the command printed");
+      await pasted.fill("000000000000");
+      await key.getByRole("button", { name: "Verify" }).click();
+      await expect(key.getByRole("alert")).toContainText(
+        "This doesn't match this instance's key.",
+      );
+      await expect(pasted).toHaveAttribute("aria-invalid", "true");
+
+      // Typed out in capitals, as someone reading it off another screen might. The server reads it either way.
+      await pasted.fill(fingerprint(instance.secret_key.path).toUpperCase());
+      await key.getByRole("button", { name: "Verify" }).click();
+      await expect(key).toContainText(/Verified .+ by /);
+      await expect(key.locator("input")).toHaveCount(0);
     } finally {
       // The record this walk wrote would put the next one, or another spec, past the first steps.
       await startOver(page);

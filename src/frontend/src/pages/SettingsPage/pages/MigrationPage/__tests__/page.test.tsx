@@ -28,6 +28,7 @@ const state = (
     database: { type: "sqlite" },
     knowledge_bases: { local: false },
     files: { storage: "local", local: true },
+    secret_key: { source: "env" },
   },
   record: { target: {}, steps: {}, accepted_findings: [], ...record },
   steps: Object.entries(steps).map(([id, [state, reason]]) => ({
@@ -226,5 +227,29 @@ describe("the steps after the check", () => {
       ).toBeInTheDocument(),
     );
     expect(document.body).toHaveFocus();
+  });
+
+  it("sums up the key once it is verified, and leaves nothing to open", () => {
+    open(
+      state(
+        {
+          check_source: ["done"],
+          connect_target: ["done"],
+          secret_key: ["done"],
+          pause: ["current", "not_available"],
+        },
+        {
+          secret_key: {
+            verified_by: "alice",
+            verified_at: "2026-10-06T12:05:00Z",
+          },
+        },
+      ),
+    );
+
+    expect(
+      row("secret_key").getByText(/^Verified .* by alice\.$/),
+    ).toBeInTheDocument();
+    expect(row("secret_key").queryByRole("button")).not.toBeInTheDocument();
   });
 });
