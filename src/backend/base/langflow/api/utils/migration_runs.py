@@ -204,14 +204,11 @@ async def _read_child(status: dict[str, Any], process: asyncio.subprocess.Proces
     reported = False
     outcome = "failed"
     try:
-        while True:
+        async for line in _read_lines(process.stdout):
             try:
-                line = await process.stdout.readline()
-                if not line:
-                    break
                 event = json.loads(line)
             except ValueError:
-                # Not JSON, or longer than _LINE_LIMIT, which the stream drops before it goes on.
+                # Not JSON.
                 continue
             if not isinstance(event, dict):
                 continue
@@ -246,6 +243,27 @@ async def _read_child(status: dict[str, Any], process: asyncio.subprocess.Proces
             }
         )
         _append(log, {"event": "end", "status": outcome, "exit_code": process.returncode, "seq": seq + 1})
+
+
+async def _read_lines(stream: asyncio.StreamReader) -> AsyncIterator[bytes]:
+    """Yield bounded stdout lines, discarding an oversized line through its newline or EOF."""
+    discarding = False
+    while True:
+        try:
+            line = await stream.readuntil(b"\n")
+        except asyncio.LimitOverrunError as exc:
+            # readline() drops only the buffered prefix when the newline has not arrived yet.
+            # Keep discarding so a JSON-looking suffix cannot become a separate event.
+            await stream.readexactly(exc.consumed)
+            discarding = True
+            continue
+        except asyncio.IncompleteReadError as exc:
+            if not discarding and exc.partial:
+                yield exc.partial
+            return
+        if not discarding:
+            yield line
+        discarding = False
 
 
 async def _keep_tail(stream: asyncio.StreamReader, tail: bytearray) -> None:

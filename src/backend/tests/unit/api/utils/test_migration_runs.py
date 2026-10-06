@@ -15,7 +15,6 @@ import signal
 import subprocess
 import sys
 import textwrap
-import time
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -346,6 +345,37 @@ async def test_a_log_longer_than_one_read_arrives_whole_and_in_order():
     assert await _follow(run_id) == events
 
 
+@pytest.mark.parametrize("split", [False, True])
+@pytest.mark.parametrize("terminated", [False, True])
+async def test_an_oversized_lines_json_suffix_is_skipped(*, split: bool, terminated: bool):
+    # Feed the stream directly to control whether the overrun happens before its newline arrives.
+    stream = asyncio.StreamReader(limit=64)
+    stream.feed_data(b"x" * 65)
+
+    async def collect() -> list[bytes]:
+        return [line async for line in migration_runs._read_lines(stream)]
+
+    reader = asyncio.create_task(collect())
+    if split:
+        # Let the reader consume the oversized prefix and wait for the rest of this same line.
+        await asyncio.sleep(0)
+    suffix = b'{"event":"report","ok":true}'
+    following = b'{"event":"progress","done":1}\n'
+    stream.feed_data(suffix + (b"\n" + following if terminated else b""))
+    stream.feed_eof()
+
+    assert await asyncio.wait_for(reader, _TIMEOUT) == ([following] if terminated else [])
+
+
+async def test_a_stdout_line_without_a_final_newline_is_preserved():
+    stream = asyncio.StreamReader(limit=64)
+    report = b'{"event":"report","ok":true}'
+    stream.feed_data(report)
+    stream.feed_eof()
+
+    assert [line async for line in migration_runs._read_lines(stream)] == [report]
+
+
 async def test_a_line_still_being_written_is_read_once_it_is_whole(config_dir: Path, unreaped: subprocess.Popen):
     # One process stands in for a worker and its child, and this test does their writing, so the
     # log can stop halfway through a line.
@@ -638,8 +668,10 @@ async def test_a_pid_that_went_to_another_process_does_not_keep_a_run_live(gate:
     # of a second on the run's worker and child, so it can never share a tick with either of them.
     stranger = await asyncio.create_subprocess_exec(sys.executable, "-c", "import time; time.sleep(120)")
     try:
-        started = psutil.Process(stranger.pid).create_time()
-        await _until(lambda: time.time() - started > 0.1)
+        # Linux's reported creation time can look old already because its boot time is rounded.
+        loop = asyncio.get_running_loop()
+        started = loop.time()
+        await _until(lambda: loop.time() - started > 0.1)
         worker, run_id = await other_worker("wait_for_gate()", gate)
         worker.kill()
         await worker.wait()
