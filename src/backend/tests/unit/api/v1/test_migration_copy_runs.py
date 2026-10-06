@@ -590,6 +590,68 @@ async def test_the_same_destination_saved_again_keeps_the_copies_and_another_tak
     assert steps["copy_database"] == ("blocked", "destination_changed")
 
 
+@pytest.mark.parametrize(
+    ("location", "copied_to", "saved_now"),
+    [
+        # Another host in the options of the address: postgresql://ignored/langflow?host=one, then ?host=two.
+        ("ignored/langflow", "the identity of host=one", "the identity of host=two"),
+        # Another schema of the same database: ?options=-csearch_path=alpha, then beta.
+        ("db.internal:5432/langflow", "the identity of search_path=alpha", "the identity of search_path=beta"),
+    ],
+)
+async def test_the_same_location_reached_another_way_is_another_destination(
+    client, logged_in_headers_super_user, active_super_user, config_dir, location, copied_to, saved_now
+):
+    headers = logged_in_headers_super_user
+    # Both addresses read the same on the page. The identity saved next to the location tells them apart.
+    await _three_copies_to_make(config_dir, active_super_user.id)
+    record = config_dir / "migrations" / "migration.json"
+    saved = json.loads(record.read_text())
+    saved["destinations"]["database"] = {"location": location, "identity": copied_to}
+    record.write_text(json.dumps(saved))
+    _ran(config_dir)
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    _ran(config_dir, "copy_files", report=UPLOADED)
+    copies = ("copy_database", "copy_knowledge_bases", "copy_files")
+    steps = await _steps(client, headers)
+    assert [steps[step] for step in copies] == [("done", None)] * 3
+
+    saved = json.loads(record.read_text())
+    saved["destinations"]["database"] = {"location": location, "identity": saved_now}
+    record.write_text(json.dumps(saved))
+
+    # Nothing was copied to where the address leads now, and the two later copies change rows there.
+    steps = await _steps(client, headers)
+    assert [steps[step] for step in copies] == [("blocked", "destination_changed")] * 3
+
+
+async def test_a_file_the_admin_kept_in_one_bucket_is_asked_about_again_in_another(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers, user = logged_in_headers_super_user, active_super_user.id
+    await _three_copies_to_make(config_dir, user)
+    _ran(config_dir)
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    conflict = _failed("file_conflict", f"{user}/cat.txt", "keep_bucket_file")
+    report = {**UPLOADED, "ok": False, "counts": {"failed": 1}, "attention": [conflict]}
+    _ran(config_dir, "copy_files", report=report)
+    kept = await _decide(client, headers, "copy_files", "keep_bucket_file", conflict["subject"])
+    assert _states(kept)["copy_files"] == ("done", None)
+
+    # Another bucket is saved, and nothing was copied to it.
+    record = config_dir / "migrations" / "migration.json"
+    saved = json.loads(record.read_text())
+    saved["destinations"]["files"] = {"bucket": "another", "prefix": "files", "endpoint_url": None}
+    record.write_text(json.dumps(saved))
+    assert (await _steps(client, headers))["copy_files"] == ("blocked", "destination_changed")
+
+    # The files are copied to it, and it holds something else under that name too.
+    _ran(config_dir, "copy_files", report=report)
+
+    # What the admin accepted was the first bucket's file. This one is theirs to decide about.
+    assert (await _steps(client, headers))["copy_files"] == ("blocked", "file_conflict")
+
+
 async def test_a_run_whose_files_are_gone_reads_as_interrupted(client, logged_in_headers_super_user, config_dir):
     headers = logged_in_headers_super_user
     _ready_to_copy(config_dir)
