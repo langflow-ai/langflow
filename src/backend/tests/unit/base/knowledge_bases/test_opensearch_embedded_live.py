@@ -139,11 +139,11 @@ async def test_rejected_write_is_reported_without_the_documents(tmp_path: Path, 
             await writing
 
         message = str(rejected.value)
-        assert message.startswith("1 document(s) failed to index. mapper_parsing_exception: ")
-        assert "Vector dimension mismatch. Expected: 4, Given: 8" in message
+        assert message == "1 document(s) failed to index. Error type(s): mapper_parsing_exception."
         # Nor through the traceback a logger would print.
         for printed in (message, "".join(traceback.format_exception(rejected.value))):
-            assert "private" not in printed
+            assert text not in printed
+            assert metadata["note"] not in printed
             assert str(float(vector[0])) not in printed
     finally:
         await backend.delete_collection()

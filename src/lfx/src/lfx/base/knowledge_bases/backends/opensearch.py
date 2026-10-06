@@ -205,25 +205,25 @@ def _refused_documents_left_out() -> Iterator[None]:
 
     opensearch-py's ``BulkIndexError`` carries each refused document next to the
     reason, and its message prints all of it: chunk text, metadata and vector. What
-    is raised instead says how many were refused and, for each kind of error, what
-    OpenSearch said about the first one.
+    is raised instead says how many were refused and the distinct error types.
+    OpenSearch's reason and caused_by can also quote stored values, so omit them.
     """
     from opensearchpy.helpers import BulkIndexError
 
     try:
         yield
     except BulkIndexError as exc:
-        said: dict[str, str] = {}
+        error_types: dict[str, None] = {}
         for refused in exc.errors:
             error = next(iter(refused.values())).get("error")
             if not isinstance(error, dict):
                 continue
-            cause = error.get("caused_by") or {}
-            because = f" ({cause.get('type')}: {cause.get('reason')})" if cause else ""
-            said.setdefault(str(error.get("type")), f"{error.get('reason')}{because}")
-        detail = "; ".join(f"{kind}: {reason}" for kind, reason in said.items())
+            if kind := error.get("type"):
+                error_types.setdefault(str(kind), None)
+        detail = f" Error type(s): {', '.join(error_types)}." if error_types else ""
+        message = f"{len(exc.errors)} document(s) failed to index.{detail}"
         # ``from None``: the original would print the documents again in a traceback.
-        raise RuntimeError(f"{exc.args[0]} {detail}".rstrip()) from None
+        raise RuntimeError(message) from None
 
 
 class OpenSearchBackend(BaseVectorStoreBackend):

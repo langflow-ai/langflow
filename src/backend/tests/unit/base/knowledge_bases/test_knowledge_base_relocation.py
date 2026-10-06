@@ -1138,7 +1138,7 @@ class TestRelocationToPostgresLive:
             assert (result.status, result.code) == ("failed", "kb_failed")
             assert "private" not in result.reason
             assert "doc 0" not in result.reason
-            assert result.reason == "UntranslatableCharacter: unsupported Unicode escape sequence"
+            assert result.reason == "UntranslatableCharacter: database operation failed"
             assert (await knowledge_base_service.get_by_id(record.id)).backend_type == "sqlite"
         finally:
             with contextlib.suppress(Exception):
@@ -1314,8 +1314,7 @@ async def test_write_opensearch_rejects_is_reported_without_the_chunks(active_us
 
         result = next(r for r in results if r.kb_id == record.id)
         assert (result.status, result.code) == ("failed", "kb_failed")
-        assert result.reason.startswith("RuntimeError: 2 document(s) failed to index. mapper_parsing_exception: ")
-        assert "Vector dimension mismatch. Expected: 4, Given: 8" in result.reason
+        assert result.reason == "RuntimeError: 2 document(s) failed to index. Error type(s): mapper_parsing_exception."
         for doc in seeded:
             assert doc.content not in result.reason
             assert repr(doc.embedding[1]) not in result.reason

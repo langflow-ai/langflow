@@ -355,15 +355,13 @@ def _build_backend(
 def _describe(exc: Exception) -> str:
     """Name a failure without the chunks it was handling.
 
-    SQLAlchemy ends its message with the statement and its parameters, which for a
-    write are the chunks of the batch, and the driver's own message can go on to
-    quote a value, so only the first line of the driver's error is kept.
+    SQLAlchemy includes the statement and its parameters, and even the driver's
+    first line can quote a stored value. Keep only the driver's exception type.
     """
     if not isinstance(exc, SQLAlchemyError):
         return f"{type(exc).__name__}: {exc}"
     cause = getattr(exc, "orig", None) or exc
-    first_line = str(cause).partition("\n")[0]
-    return f"{type(cause).__name__}: {first_line}"
+    return f"{type(cause).__name__}: database operation failed"
 
 
 @contextmanager
