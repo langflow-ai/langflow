@@ -22,6 +22,7 @@ from langflow.services.deps import get_db_service
 
 from .test_migration import (
     DB_PASSWORD,
+    FAILING,
     NOWHERE,
     PASSING,
     PAUSE,
@@ -242,6 +243,26 @@ async def test_a_copy_waits_for_the_steps_before_it(client, logged_in_headers_su
     assert refused.status_code == 409
     assert refused.json()["detail"] == {"code": "locked", "reason": "earlier_step"}
     assert "copy_database" not in (await _migration(client, headers))["record"]["steps"]
+
+
+async def test_a_copy_that_was_made_waits_again_when_a_step_before_it_opens_again(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    # The copy was made. Then the check found something that blocks, so it and the pause are to be gone through again.
+    _checked(config_dir, [FAILING], **PREPARED, pause=PAUSED_BEFORE_THE_CHECK, backup=BACKED_UP)
+    _ran(config_dir)
+    _send_to(monkeypatch, NOWHERE)
+    steps = await _steps(client, headers)
+    assert (steps["check_source"], steps["pause"]) == (("blocked", "blocking_findings"), ("blocked", "recheck_failed"))
+    # The copy keeps saying where it stands, which is what a page draws it from.
+    assert steps["copy_database"] == ("done", None)
+
+    refused = await client.post(RUNS.format("copy_database"), json={}, headers=headers)
+
+    assert refused.status_code == 409
+    assert refused.json()["detail"] == {"code": "locked", "reason": "earlier_step"}
+    assert migration_runs.list_runs() == []
 
 
 async def test_a_copy_this_instance_does_not_need_is_refused(
