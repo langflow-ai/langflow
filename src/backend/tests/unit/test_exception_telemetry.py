@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from langflow.services.telemetry.schema import ExceptionPayload
 from langflow.services.telemetry.service import TelemetryService
+from lfx.services.telemetry.identity import get_hashed_user_id
 
 
 class TestExceptionTelemetry:
@@ -77,7 +78,9 @@ class TestExceptionTelemetry:
         """Test successful telemetry data sending."""
         # Create minimal service
         telemetry_service = TelemetryService.__new__(TelemetryService)
-        telemetry_service.base_url = "https://mock-telemetry.example.com"
+        telemetry_service.base_url = "https://api.segment.test/v1/track"
+        telemetry_service.segment_write_key = "segment-test-key"
+        telemetry_service.anonymous_id = "test-installation"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
         telemetry_service.common_telemetry_fields = {
@@ -90,7 +93,7 @@ class TestExceptionTelemetry:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_client = AsyncMock()
-        mock_client.get.return_value = mock_response
+        mock_client.post.return_value = mock_response
         telemetry_service.client = mock_client
 
         payload = ExceptionPayload(
@@ -101,26 +104,41 @@ class TestExceptionTelemetry:
         )
 
         # Send telemetry
-        await telemetry_service.send_telemetry_data(payload, "exception")
+        user_id = get_hashed_user_id("alice")
+        await telemetry_service.send_telemetry_data(payload, "exception", user_id)
 
         # Verify HTTP call was made
-        mock_client.get.assert_called_once()
-        call_args = mock_client.get.call_args
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args
 
         # Check URL
-        assert call_args[0][0] == "https://mock-telemetry.example.com/exception"
+        assert call_args[0][0] == "https://api.segment.test/v1/track"
+        assert call_args[1]["auth"] == ("segment-test-key", "")
 
-        # Check query parameters (should include common telemetry fields)
-        params = call_args[1]["params"]
-        assert params["exceptionType"] == "ValueError"
-        assert params["exceptionMessage"] == "Test error"
-        assert params["exceptionContext"] == "handler"
-        assert params["stackTraceHash"] == "abc123"
-        assert params["clientType"] == "oss"
-        assert params["langflow_version"] == "1.0.0"
-        assert params["platform"] == "python_package"
-        assert params["os"] == "linux"
-        assert "timestamp" in params
+        body = call_args[1]["json"]
+        assert body["anonymousId"] == "test-installation"
+        assert body["userId"] == user_id
+        assert body["event"] == "Ended Process"
+        assert body["messageId"]
+        assert body["properties"]["exceptionType"] == "ValueError"
+        assert body["properties"]["exceptionMessage"] == "Test error"
+        assert body["properties"]["exceptionContext"] == "handler"
+        assert body["properties"]["stackTraceHash"] == "abc123"
+        assert body["properties"]["clientType"] == "oss"
+        assert body["properties"]["langflow_version"] == "1.0.0"
+        assert body["properties"]["platform"] == "python_package"
+        assert body["properties"]["os"] == "linux"
+        assert body["properties"]["UT30"] == "30AS5"
+        assert body["properties"]["productCode"] == "WW3151"
+        assert body["properties"]["productCodeType"] == "WWPC"
+        assert body["properties"]["productPlanName"] == "opensource"
+        assert body["properties"]["productPlanType"] == "freemium"
+        assert body["properties"]["productTitle"] == "Langflow"
+        assert body["properties"]["instanceId"] == "test-installation"
+        assert body["properties"]["subscriptionId"] == "test-installation"
+        assert body["properties"]["object"] == "exception"
+        assert body["properties"]["processType"] == "Langflow Exception"
+        assert "timestamp" in body
 
     @pytest.mark.asyncio
     async def test_send_telemetry_data_respects_do_not_track(self):
@@ -151,7 +169,25 @@ class TestExceptionTelemetry:
         await telemetry_service.send_telemetry_data(payload, "exception")
 
         # Verify no HTTP call was made
-        mock_client.get.assert_not_called()
+        mock_client.post.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_send_telemetry_data_requires_segment_write_key(self):
+        telemetry_service = TelemetryService.__new__(TelemetryService)
+        telemetry_service.segment_write_key = None
+        telemetry_service.do_not_track = False
+        telemetry_service.client = AsyncMock()
+
+        payload = ExceptionPayload(
+            exception_type="ValueError",
+            exception_message="Test error",
+            exception_context="handler",
+            stack_trace_hash="abc123",
+        )
+
+        await telemetry_service.send_telemetry_data(payload, "exception")
+
+        telemetry_service.client.post.assert_not_called()
 
     def test_stack_trace_hash_consistency(self):
         """Test that same exceptions produce same hash."""
@@ -179,10 +215,11 @@ class TestExceptionTelemetry:
         assert hash1 == hash2
 
     @pytest.mark.asyncio
-    async def test_query_params_url_length_limit(self):
-        """Test that query parameters don't exceed URL length limits."""
+    async def test_large_message_is_sent_in_json_body(self):
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
+        telemetry_service.segment_write_key = "segment-test-key"
+        telemetry_service.anonymous_id = "test-installation"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
         telemetry_service.common_telemetry_fields = {
@@ -201,23 +238,23 @@ class TestExceptionTelemetry:
         )
 
         mock_client = AsyncMock()
+        mock_client.post.return_value.status_code = 200
         telemetry_service.client = mock_client
 
         await telemetry_service.send_telemetry_data(payload, "exception")
 
         # Verify HTTP call was made
-        mock_client.get.assert_called_once()
-        call_args = mock_client.get.call_args
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args
 
-        # Check that URL doesn't exceed reasonable length (typically 2048 chars)
-        full_url = call_args[0][0]
-        assert len(full_url) < 2048, f"URL too long: {len(full_url)} characters"
+        assert call_args[1]["json"]["properties"]["exceptionMessage"] == long_message
 
     @pytest.mark.asyncio
-    async def test_query_params_special_characters(self):
-        """Test that special characters in query parameters are properly encoded."""
+    async def test_special_characters_are_preserved_in_json_body(self):
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
+        telemetry_service.segment_write_key = "segment-test-key"
+        telemetry_service.anonymous_id = "test-installation"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
         telemetry_service.common_telemetry_fields = {
@@ -236,25 +273,23 @@ class TestExceptionTelemetry:
         )
 
         mock_client = AsyncMock()
+        mock_client.post.return_value.status_code = 200
         telemetry_service.client = mock_client
 
         await telemetry_service.send_telemetry_data(payload, "exception")
 
         # Verify HTTP call was made
-        mock_client.get.assert_called_once()
-        call_args = mock_client.get.call_args
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args
 
-        # Check that special characters are properly encoded
-        full_url = call_args[0][0]
-        assert "&" not in full_url or "%26" in full_url, "Ampersand not properly encoded"
-        assert "?" not in full_url or "%3F" in full_url, "Question mark not properly encoded"
-        assert "=" not in full_url or "%3D" in full_url, "Equals sign not properly encoded"
+        assert call_args[1]["json"]["properties"]["exceptionMessage"] == special_message
 
     @pytest.mark.asyncio
-    async def test_query_params_sensitive_data_exposure(self):
-        """Test that sensitive data is not exposed in query parameters."""
+    async def test_event_properties_are_not_exposed_in_url(self):
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
+        telemetry_service.segment_write_key = "segment-test-key"
+        telemetry_service.anonymous_id = "test-installation"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
         telemetry_service.common_telemetry_fields = {
@@ -273,13 +308,14 @@ class TestExceptionTelemetry:
         )
 
         mock_client = AsyncMock()
+        mock_client.post.return_value.status_code = 200
         telemetry_service.client = mock_client
 
         await telemetry_service.send_telemetry_data(payload, "exception")
 
         # Verify HTTP call was made
-        mock_client.get.assert_called_once()
-        call_args = mock_client.get.call_args
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args
 
         # Check that sensitive data is not in URL (should be in request body instead)
         full_url = call_args[0][0]
@@ -288,10 +324,11 @@ class TestExceptionTelemetry:
             assert pattern not in full_url, f"Sensitive data '{pattern}' found in URL"
 
     @pytest.mark.asyncio
-    async def test_query_params_unicode_characters(self):
-        """Test that unicode characters in query parameters are handled correctly."""
+    async def test_unicode_characters_are_preserved_in_json_body(self):
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
+        telemetry_service.segment_write_key = "segment-test-key"
+        telemetry_service.anonymous_id = "test-installation"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
         telemetry_service.common_telemetry_fields = {
@@ -310,17 +347,13 @@ class TestExceptionTelemetry:
         )
 
         mock_client = AsyncMock()
+        mock_client.post.return_value.status_code = 200
         telemetry_service.client = mock_client
 
         await telemetry_service.send_telemetry_data(payload, "exception")
 
         # Verify HTTP call was made
-        mock_client.get.assert_called_once()
-        call_args = mock_client.get.call_args
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args
 
-        # Check that unicode characters are properly handled
-        full_url = call_args[0][0]
-        # URL should be valid and not cause encoding issues
-        assert len(full_url) > 0, "URL should not be empty"
-        # Should not contain raw unicode characters that could cause issues
-        assert "世界" not in full_url or "%E4%B8%96%E7%95%8C" in full_url
+        assert call_args[1]["json"]["properties"]["exceptionMessage"] == unicode_message

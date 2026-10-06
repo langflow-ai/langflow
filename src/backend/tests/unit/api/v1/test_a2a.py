@@ -10,6 +10,7 @@ runs a real echo flow through the v2 surface.
 import json
 import uuid
 from pathlib import Path
+from unittest.mock import Mock
 
 import langflow
 import orjson
@@ -1810,14 +1811,17 @@ async def test_apikey_folder_rejects_invalid_key(client: AsyncClient, active_use
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_apikey_folder_accepts_owner_key(client: AsyncClient, active_user, echo_flow_data):
+async def test_apikey_folder_accepts_owner_key(client: AsyncClient, active_user, echo_flow_data, monkeypatch):
     """A valid key owned by the flow owner runs the flow."""
     flow_id = await _apikey_flow(active_user, echo_flow_data)
     key = await _create_api_key(active_user.id)
+    set_telemetry_user = Mock()
+    monkeypatch.setattr("langflow.api.v1.a2a.set_current_telemetry_user", set_telemetry_user)
 
     resp = await _jsonrpc(client, flow_id, "message/send", _text_message("hello a2a"), headers={"x-api-key": key})
 
     assert resp.status_code == 200
+    set_telemetry_user.assert_called_once_with(active_user.username)
     result = resp.json()["result"]
     assert result["status"]["state"] == "completed"
     assert result["artifacts"][0]["parts"][0]["text"] == "hello a2a"

@@ -90,6 +90,7 @@ from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
 from langflow.services.rate_limit.service import get_last_forwarded_for_hop
+from langflow.services.telemetry.context import set_current_telemetry_user
 
 # Constants
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
@@ -192,6 +193,7 @@ async def verify_project_auth(
         if project_user_id != user.id:
             raise HTTPException(status_code=404, detail="Project not found")
 
+        set_current_telemetry_user(user.username)
         authenticated_caller_ctx.set(user.id)
         return user
 

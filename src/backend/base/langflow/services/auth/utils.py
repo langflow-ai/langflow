@@ -22,6 +22,7 @@ from langflow.services.auth.exceptions import (
 )
 from langflow.services.auth.external import extract_external_token
 from langflow.services.deps import get_auth_service, get_settings_service
+from langflow.services.telemetry.context import set_current_telemetry_user
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -153,11 +154,16 @@ async def api_key_security(
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
 ) -> UserRead | None:
-    return await _auth_service().api_key_security(query_param, header_param)
+    user = await _auth_service().api_key_security(query_param, header_param)
+    if user is not None:
+        set_current_telemetry_user(user.username)
+    return user
 
 
 async def ws_api_key_security(api_key: str | None) -> UserRead:
-    return await _auth_service().ws_api_key_security(api_key)
+    user = await _auth_service().ws_api_key_security(api_key)
+    set_current_telemetry_user(user.username)
+    return user
 
 
 def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
@@ -195,11 +201,14 @@ async def get_current_user(
     # falls back to the external credential when it differs from the token.
     external_token = _get_external_token(request.headers, request.cookies)
     try:
-        return await _auth_service().get_current_user(
+        user = await _auth_service().get_current_user(
             token, query_param, header_param, db, external_token=external_token
         )
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
+    else:
+        set_current_telemetry_user(getattr(user, "username", None))
+        return user
 
 
 async def get_current_user_from_access_token(
@@ -307,7 +316,9 @@ async def get_current_user_for_workflow(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User account is inactive",
             )
-        return UserRead.model_validate(active_user, from_attributes=True)
+        user_read = UserRead.model_validate(active_user, from_attributes=True)
+        set_current_telemetry_user(user_read.username)
+        return user_read
 
 
 async def get_optional_user(
@@ -330,6 +341,7 @@ async def get_optional_user(
         return None
     else:
         if user and user.is_active:
+            set_current_telemetry_user(user.username)
             return user
         return None
 
@@ -350,7 +362,9 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     Raises:
         HTTPException: If authentication fails or user doesn't have permission
     """
-    return await _auth_service().get_webhook_user(flow_id, request)
+    user = await _auth_service().get_webhook_user(flow_id, request)
+    set_current_telemetry_user(user.username)
+    return user
 
 
 async def get_current_user_optional(
@@ -376,9 +390,12 @@ async def get_current_user_optional(
         return None
 
     try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
+        user = await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
     except (AuthenticationError, HTTPException):
         return None
+    else:
+        set_current_telemetry_user(user.username)
+        return user
 
 
 async def get_current_active_user(user: User = Depends(get_current_user)) -> User | UserRead:

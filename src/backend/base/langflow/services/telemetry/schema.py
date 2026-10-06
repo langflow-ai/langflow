@@ -2,8 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
 
-# Maximum URL length for telemetry GET requests (Scarf pixel tracking)
-# Scarf supports up to 2KB (2048 bytes) for query parameters
+# Preserve small component-input chunks to limit analytics event payload size.
 MAX_TELEMETRY_URL_SIZE = 2048
 
 
@@ -106,11 +105,11 @@ class ComponentInputsPayload(BasePayload):
     chunk_index: int | None = Field(None, serialization_alias="chunkIndex")
     total_chunks: int | None = Field(None, serialization_alias="totalChunks")
 
-    def _calculate_url_size(self, base_url: str = "https://api.scarf.sh/v1/pixel") -> int:
+    def _calculate_url_size(self, base_url: str = "https://api.segment.io/v1/track") -> int:
         """Calculate actual encoded URL size using httpx.
 
         Args:
-            base_url: Base URL for telemetry endpoint (default: Scarf pixel URL)
+            base_url: Base URL used to estimate the encoded telemetry payload size.
 
         Returns:
             Total character length of the encoded URL including all query parameters

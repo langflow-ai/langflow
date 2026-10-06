@@ -20,10 +20,12 @@ class TestExceptionTelemetryIntegration:
 
     @pytest.mark.asyncio
     async def test_telemetry_http_request_format(self):
-        """Integration test verifying the exact HTTP request sent to Scarf."""
+        """Integration test verifying the exact HTTP request sent to Segment."""
         # Create service
         telemetry_service = TelemetryService.__new__(TelemetryService)
-        telemetry_service.base_url = "https://mock-telemetry.example.com"
+        telemetry_service.base_url = "https://api.segment.test/v1/track"
+        telemetry_service.segment_write_key = "segment-test-key"
+        telemetry_service.anonymous_id = "test-installation"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
         telemetry_service.common_telemetry_fields = {
@@ -36,7 +38,7 @@ class TestExceptionTelemetryIntegration:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_client = AsyncMock()
-        mock_client.get.return_value = mock_response
+        mock_client.post.return_value = mock_response
         telemetry_service.client = mock_client
 
         # Create a real exception to get realistic stack trace
@@ -60,20 +62,24 @@ class TestExceptionTelemetryIntegration:
         # Test the full flow
         await telemetry_service.log_exception(real_exc, "lifespan")
 
-        # Verify the exact HTTP request that would be sent to Scarf
-        mock_client.get.assert_called_once()
-        call_args = mock_client.get.call_args
+        # Verify the exact HTTP request that would be sent to Segment
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args
 
         # Verify URL
-        assert call_args[0][0] == "https://mock-telemetry.example.com/exception"
+        assert call_args[0][0] == "https://api.segment.test/v1/track"
+        assert call_args[1]["auth"] == ("segment-test-key", "")
 
-        # Verify parameters match our schema
-        params = call_args[1]["params"]
-        assert params["exceptionType"] == "ValueError"
-        assert "Integration test exception" in params["exceptionMessage"]
-        assert params["exceptionContext"] == "lifespan"
-        assert "stackTraceHash" in params
-        assert len(params["stackTraceHash"]) == 16
+        # Verify the Segment envelope and properties match our schema
+        body = call_args[1]["json"]
+        assert body["anonymousId"] == "test-installation"
+        assert body["event"] == "Ended Process"
+        assert body["messageId"]
+        assert body["properties"]["exceptionType"] == "ValueError"
+        assert "Integration test exception" in body["properties"]["exceptionMessage"]
+        assert body["properties"]["exceptionContext"] == "lifespan"
+        assert len(body["properties"]["stackTraceHash"]) == 16
+        assert "timestamp" in body
 
     @pytest.mark.asyncio
     async def test_exception_telemetry_service_integration(self):

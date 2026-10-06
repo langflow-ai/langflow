@@ -111,11 +111,21 @@ jobs:
         run: |
           make sdk_build args="--wheel"
 
+      - name: Inject production Segment write key
+        env:
+          LANGFLOW_SEGMENT_WRITE_KEY: ${{ secrets.LANGFLOW_SEGMENT_WRITE_KEY }}
+        run: uv run --no-sync python scripts/ci/inject_segment_write_key.py
+
       - name: Build LFX for distribution
         run: |
           cd src/lfx
           rm -rf dist/
           uv build --wheel --out-dir dist
+
+      - name: Verify production Segment write key
+        env:
+          LANGFLOW_SEGMENT_WRITE_KEY: ${{ secrets.LANGFLOW_SEGMENT_WRITE_KEY }}
+        run: uv run --no-sync python scripts/ci/inject_segment_write_key.py --verify-wheel src/lfx/dist/*.whl
 
       - name: Test LFX CLI
         run: |

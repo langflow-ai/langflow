@@ -3,7 +3,7 @@ title: Telemetry
 slug: /contributing-telemetry
 ---
 
-Langflow uses anonymous telemetry to collect statistics about feature usage and performance.
+Langflow uses product-usage telemetry to collect statistics about feature usage and performance.
 The Langflow team uses this data to identify popular features and areas that need improvement based on actual usage patterns.
 This helps prioritize development efforts on the most impactful changes and popular features.
 
@@ -11,8 +11,31 @@ This helps prioritize development efforts on the most impactful changes and popu
 
 The Langflow team respects your privacy, and the team is committed to protecting your data.
 
-Langflow telemetry doesn't collect any personal information or sensitive data.
-All telemetry data is anonymized and used solely for improving Langflow.
+Langflow telemetry doesn't send raw operating-system or authenticated Langflow user names, or raw authenticated user IDs.
+Authenticated Langflow user names are represented by a one-way SHA256 hash and used solely for product analytics.
+The data collected by each event, including fields that can contain user-provided values, is documented below.
+
+Product-usage events are delivered through Segment. Langflow generates an anonymous identifier when the telemetry
+service starts and doesn't send operating-system user names or raw authenticated Langflow user IDs.
+
+## Configure Segment
+
+Official Langflow release artifacts send product-usage events to the approved production Segment source by default.
+The production write key is injected from a protected secret while building the release artifact and isn't stored in
+the source repository. Source checkouts don't send telemetry unless `LANGFLOW_SEGMENT_WRITE_KEY` is set. The same
+variable overrides the release default, such as when validating a development source. To use a compatible Segment
+endpoint, set `LANGFLOW_SEGMENT_API_URL`; it defaults to `https://api.segment.io/v1/track`.
+
+Use separate write keys for test and production sources.
+
+Every Segment event includes the IBM Common Schema product properties `UT30: 30AS5`, `productCode: WW3151`,
+`productCodeType: WWPC`, `productPlanName: opensource`, `productPlanType: freemium`, and `productTitle: Langflow`.
+The persistent installation identifier is used for `anonymousId`, `properties.instanceId`, and
+`properties.subscriptionId`.
+
+For authenticated requests, the top-level `userId` is `lf-` followed by the SHA256 hash of the Langflow username.
+Langflow captures this opaque ID before handing an event to the telemetry worker. Lifecycle events and standalone LFX
+events don't have a Langflow username, so they use `lf-` followed by the SHA256 hash of the installation identifier.
 
 ## Opt out of telemetry
 
@@ -21,6 +44,9 @@ To opt out of telemetry, set `DO_NOT_TRACK=True` in your [Langflow environment v
 ## Data that Langflow collects
 
 Langflow telemetry collects data on flow runs, your environment, and component usage.
+Events use the IBM Common Schema names `Started Process`, `Ended Process`, `Ran Process`, and `UI Interaction`.
+The original Langflow event category is included in the Common Schema `object` property. Process events also include
+the required `processType` property.
 
 ### Run
 

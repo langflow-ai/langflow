@@ -110,6 +110,7 @@ from langflow.services.database.models.flow.model import FlowType
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
+from langflow.services.telemetry.context import set_current_telemetry_user
 
 router = APIRouter(prefix="/a2a", tags=["a2a"])
 
@@ -170,6 +171,7 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> User | None:
     if api_key_result is None or api_key_result.user.id != flow.user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
     user = api_key_result.user
+    set_current_telemetry_user(user.username)
     set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
     try:
         await ensure_flow_permission(

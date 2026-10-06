@@ -62,9 +62,10 @@ async def test_version_event_carries_the_configured_dialect():
     settings_service = get_settings_service()
     service = TelemetryService(settings_service)
     service.do_not_track = False
+    service.segment_write_key = "segment-test-key"
 
     await service.log_package_version()
 
-    _, payload, _ = service.telemetry_queue.get_nowait()
+    _, payload, _, _ = service.telemetry_queue.get_nowait()
     assert payload.database_dialect == database_dialect(settings_service.settings.database_url)
     assert payload.database_dialect != "unknown"
