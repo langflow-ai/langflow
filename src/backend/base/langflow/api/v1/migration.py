@@ -38,9 +38,25 @@ from pydantic import BaseModel, SecretStr, StringConstraints, ValidationError
 from sqlalchemy.engine import make_url
 from sqlmodel import select
 
+from langflow.api.utils.migration_copies import (
+    COPY_COMMANDS,
+    KEPT_EVENTS,
+    blocking_code,
+    copy_command,
+    copy_environment,
+    copy_outcome,
+)
 from langflow.api.utils.migration_jobs import active_jobs, live_listeners
 from langflow.api.utils.migration_pause import drained, under_way
 from langflow.api.utils.migration_probes import database_identity, location, probe_database, probe_files, probe_vectors
+from langflow.api.utils.migration_runs import (
+    RunActiveError,
+    RunNotFoundError,
+    cancel_run,
+    follow_run,
+    read_run,
+    start_run,
+)
 from langflow.cli.migration_preflight import check_target_version
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.file.model import File
@@ -137,6 +153,10 @@ class FingerprintRequest(BaseModel):
 
 class BackupRequest(BaseModel):
     location: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class RunRequest(BaseModel):
+    dry_run: bool = False
 
 
 @router.get("")
@@ -465,6 +485,107 @@ async def confirm_backup(request: BackupRequest, admin: Superuser) -> dict[str, 
     return await _state(record)
 
 
+@router.post("/steps/{step_id}/runs", status_code=202)
+async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None = None) -> dict[str, str]:
+    """Start a copy. It is a process of its own, so it keeps going when this request and the page are gone."""
+    if step_id not in COPY_COMMANDS:
+        raise HTTPException(status_code=404, detail={"code": "unknown_step"})
+    if request and request.dry_run:
+        # convert-sqlite-to-postgres has no way to try a copy without making it.
+        raise HTTPException(status_code=422, detail={"code": "no_dry_run"})
+    _require_unlocked(await _state(_read_record()), step_id)
+    try:
+        env = copy_environment(_source_env(), _secrets)
+    except KeyError as exc:
+        # This worker was never given the destination, or it restarted since. The page asks for it again.
+        raise HTTPException(status_code=409, detail={"code": "secrets_missing"}) from exc
+    try:
+        run_id = await start_run(step_id, copy_command(step_id), env, started_by=admin.username)
+    except RunActiveError as exc:
+        raise HTTPException(status_code=409, detail={"code": "run_active"}) from exc
+    # Read again: another request may have saved the record while the command was started.
+    record = _read_record()
+    record["steps"][step_id] = {
+        "run_id": run_id,
+        "status": "running",
+        "dry_run": False,
+        "started_by": admin.username,
+        "started_at": read_run(run_id)["started_at"],
+        "finished_at": None,
+        "report": None,
+        "error": None,
+        "decision_needed": None,
+    }
+    _write_record(record)
+    await logger.ainfo(f"Migration: user_id={admin.id} started {_copy(step_id)} (run {run_id})")
+    return {"run_id": run_id}
+
+
+@router.get("/steps/{step_id}/runs/{run_id}/events")
+async def follow_copy(step_id: str, run_id: str, _admin: Superuser, after: int = 0) -> StreamingResponse:
+    """The events of a run that come after the one numbered `after`, each as it happens, down to its end.
+
+    A page that goes away stops nothing, and asks again from the last event it saw.
+    """
+    _find_run(step_id, run_id)
+    return StreamingResponse(
+        (_event(event) async for event in follow_run(run_id, after)), media_type="application/x-ndjson"
+    )
+
+
+@router.delete("/steps/{step_id}/runs/{run_id}", status_code=202)
+async def stop_copy(step_id: str, run_id: str, admin: Superuser) -> dict[str, str]:
+    """Stop a run. Every copy can be started again."""
+    if _find_run(step_id, run_id)["status"] == "running":
+        await logger.ainfo(f"Migration: user_id={admin.id} stopped {_copy(step_id)} (run {run_id})")
+        await cancel_run(run_id)
+    return {"run_id": run_id}
+
+
+def _copy(step_id: str) -> str:
+    """A copy step as an audit line names it, such as "the copy of the knowledge bases"."""
+    return f"the copy of the {step_id.removeprefix('copy_').replace('_', ' ')}"
+
+
+def _find_run(step_id: str, run_id: str) -> dict[str, Any]:
+    """The status of a run of this step. A step keeps its latest run only, so an earlier one is not found."""
+    try:
+        run = read_run(run_id)
+    except RunNotFoundError:
+        run = None
+    if not run or run["step_id"] != step_id:
+        raise HTTPException(status_code=404, detail={"code": "run_not_found"})
+    return run
+
+
+async def _settle_copies(record: dict[str, Any]) -> None:
+    """Write down how a copy ended, the first time anything reads the record after it did.
+
+    A run belongs to no request, so nothing waits for it to end. Its events are read
+    once, here, and the record keeps what a page needs to draw the step.
+    """
+    for step_id in COPY_COMMANDS:
+        step = record["steps"].get(step_id)
+        if not step or step["status"] != "running":
+            continue
+        try:
+            run = read_run(step["run_id"])
+            if run["status"] == "running":
+                continue
+            events = {
+                event["event"]: event async for event in follow_run(step["run_id"]) if event.get("event") in KEPT_EVENTS
+            }
+        except RunNotFoundError:
+            # Its files are gone, so all that can be said is that it did not finish.
+            run, events = {"status": "interrupted", "finished_at": None}, {}
+        step.update(copy_outcome(run, events))
+        # Saved into the record as it is now: a request that read it earlier may have saved a change since.
+        saved = _read_record()
+        if saved["steps"][step_id]["run_id"] == step["run_id"]:
+            saved["steps"][step_id] = step
+            _write_record(saved)
+
+
 def _hold(name: str, secret: Any, result: dict[str, Any]) -> None:
     """Keep a destination's secret while its test passes, and forget it when it does not."""
     if result["ok"]:
@@ -612,6 +733,7 @@ async def _state(record: dict[str, Any]) -> dict[str, Any]:
     if check and check["status"] == "running" and not _is_live(check):
         # The server restarted mid-run, or the run's request was dropped.
         check["status"] = "cancelled"
+    await _settle_copies(record)
     instance = await _instance()
     blocking = _blocking_findings(record)
     return {
@@ -723,17 +845,22 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
         "pause": _pause_step(record, blocking),
         # A backup made in an earlier pause lacks whatever changed since.
         "backup": ("done", None) if _during_pause(record, backup.get("confirmed_at")) else ("current", None),
+        **{step: _copy_step(record, step) for step in COPY_COMMANDS},
     }
     steps = [first]
     # The first step neither done nor skipped is the one to do now. A later step that has not started
     # waits for it, and one that has started keeps saying where it stands.
     frontier_open = first["state"] == "done"
     for step in _LATER_STEPS:
-        state, reason = own.get(step, ("current", "not_available"))
+        state, reason = own.get(step, ("current", None))
         if skipped.get(step):
             state, reason = "skipped", skipped[step]
         elif state == "current" and not frontier_open:
             state, reason = "locked", "earlier_step"
+        elif step not in own:
+            # Nothing can be done here yet, and nothing after it waits for it.
+            steps.append({"id": step, "state": "locked", "reason": "not_available"})
+            continue
         steps.append({"id": step, "state": state, "reason": reason})
         frontier_open = frontier_open and state in {"done", "skipped"}
     return steps
@@ -822,6 +949,16 @@ def _pause_step(record: dict[str, Any], blocking: list[str]) -> tuple[str, str |
     return ("blocked", "recheck_failed") if blocking else ("done", None)
 
 
+def _copy_step(record: dict[str, Any], step_id: str) -> tuple[str, str | None]:
+    """Where a copy stands. It is done once a run made during the pause that is on now copied everything."""
+    run = record["steps"].get(step_id)
+    # A copy made during an earlier pause lacks whatever changed since.
+    if not run or run["status"] == "running" or not _during_pause(record, run["started_at"]):
+        return "current", None
+    code = blocking_code(run)
+    return ("blocked", code) if code else ("done", None)
+
+
 def _during_pause(record: dict[str, Any], moment: str | None) -> bool:
     """Whether this moment falls in the pause that is on now. What an earlier pause saw no longer counts."""
     pause = record.get("pause")
@@ -829,10 +966,10 @@ def _during_pause(record: dict[str, Any], moment: str | None) -> bool:
 
 
 def _require_unlocked(state: dict[str, Any], step_id: str) -> None:
-    """Refuse to act on a step that still waits for an earlier one."""
+    """Refuse to act on a step that still waits for an earlier one, or that this instance has no use for."""
     step = next(step for step in state["steps"] if step["id"] == step_id)
-    if step["state"] == "locked":
-        raise HTTPException(status_code=409, detail={"code": "locked", "reason": step["reason"]})
+    if step["state"] in {"locked", "skipped"}:
+        raise HTTPException(status_code=409, detail={"code": step["state"], "reason": step["reason"]})
 
 
 def _failing_checks(record: dict[str, Any]) -> dict[str, dict[str, Any]]:
