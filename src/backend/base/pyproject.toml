@@ -36,6 +36,7 @@ dependencies = [
     "langchain-mongodb>=0.11.0",
     # langchain-mongodb always installs pymongo; publish the patched floor on this unconditional path.
     "pymongo>=4.18.2,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
+    "urllib3>=2.8.0,<3.0.0",  # CVE-2026-97688
     "langchain-perplexity>=1.0.0,<2.0.0",
     "langchain-qdrant>=1.0.0,<2.0.0",
     "langchain-weaviate>=0.0.6",
@@ -61,7 +62,7 @@ dependencies = [
     "croniter>=2.0.0,<7.0.0",
     "pillow>=12.3.0,<13.0.0",
     "docstring-parser>=0.16,<1.0.0",
-    "PyJWT>=2.12.1",
+    "PyJWT>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
     "pandas>=2.2.3",
     "multiprocess>=0.70.14,<1.0.0",
     "duckdb>=1.0.0,<2.0.0",
@@ -103,7 +104,7 @@ dependencies = [
     "networkx>=3.4.2,<4.0.0",
     "json-repair>=0.30.3,<1.0.0",
     "mcp>=1.28.0,<2.0.0",
-    "a2a-sdk>=1.1.0,<2.0.0",
+    "a2a-sdk>=1.2.1,<2.0.0",
     "ag-ui-protocol==0.1.18",
     "aiosqlite>=0.20.0,<1.0.0",
     "greenlet>=3.1.1,<4.0.0",
@@ -133,6 +134,9 @@ dependencies = [
     "arize-phoenix-otel>=0.6.1",
     "openinference-instrumentation-langchain>=0.1.29",
     "opik>=2.0.0,<3.0.0",
+    # Newer Opik releases cap LiteLLM below its security floor on Python 3.10.
+    # Publish the compatible version constraint so fresh wheel installs stay valid.
+    "opik==2.2.7; python_version < '3.11'",
     "traceloop-sdk>=0.43.1,<1.0.0",
     "openlayer>=0.9.0,<1.0.0",
     "kubernetes>=31.0.0,<33.0.0",
@@ -328,7 +332,7 @@ pgvector = [
     "psycopg[binary]>=3.1,<4.0",
 ]
 litellm = [
-    "litellm>=1.93.0,<2.0.0",
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
     # Pull in only the modules Langflow uses from litellm[proxy] rather than
@@ -412,6 +416,8 @@ cuga = [
     # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
     "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
     "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform != 'darwin' and python_version < '3.14'",
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
 ]
 mlx = [
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",

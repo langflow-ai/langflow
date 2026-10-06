@@ -715,6 +715,7 @@
   "errors.deleteKey": "删除键时出错",
   "errors.deleteKeys": "删除键时出错",
   "errors.deleteSession": "删除会话时发生错误。",
+  "errors.createSession": "创建会话时发生错误。",
   "errors.deleteUser": "删除用户时发生错误",
   "errors.deletingMessages": "删除消息时发生错误。",
   "errors.downloadFilesDefault": "下载文件时发生错误",
