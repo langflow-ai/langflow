@@ -715,6 +715,7 @@
   "errors.deleteKey": "Fehler beim Löschen des Schlüssels",
   "errors.deleteKeys": "Fehler beim Löschen von Schlüsseln",
   "errors.deleteSession": "Fehler beim Löschen der Sitzung.",
+  "errors.createSession": "Fehler beim Erstellen der Sitzung.",
   "errors.deleteUser": "Fehler beim Löschen eines Benutzers",
   "errors.deletingMessages": "Fehler beim Löschen von Nachrichten.",
   "errors.downloadFilesDefault": "Beim Herunterladen der Dateien ist ein Fehler aufgetreten",

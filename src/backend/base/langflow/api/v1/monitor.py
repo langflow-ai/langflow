@@ -1,9 +1,12 @@
+from pathlib import Path, PureWindowsPath
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access, enforce_storage_key_scope
+from sqlalchemy import func
 from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import col, delete, select
 
@@ -34,7 +37,7 @@ from langflow.services.database.models.vertex_builds.crud import (
     get_vertex_builds_by_flow_id,
 )
 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
-from langflow.services.deps import get_memory_base_service, get_tracing_service
+from langflow.services.deps import get_memory_base_service, get_settings_service, get_tracing_service
 from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
 from langflow.services.memory_base.ingestion import session_storage_operation
 from langflow.services.tracing.langfuse import (
@@ -47,6 +50,36 @@ from langflow.services.tracing.langfuse import (
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 MESSAGE_UPDATE_FAILED = "Could not update the message."
+
+
+def _validate_message_attachment_scopes(files: list[str] | None, scope_ids: tuple[object, ...]) -> None:
+    """Keep edited attachments inside the authenticated user's message storage namespaces."""
+    scopes = tuple(scope for scope in scope_ids if scope is not None)
+    try:
+        for attachment in files or ():
+            file = attachment
+            path = Path(file)
+            if ".." in file.replace("\\", "/").split("/"):
+                msg = "Message attachments cannot contain parent traversal."
+                raise LocalFileAccessError(msg)
+            if path.is_absolute():
+                settings = get_settings_service().settings
+                if settings.storage_type == "s3":
+                    msg = "Object-storage attachments must use uploaded-file keys."
+                    raise LocalFileAccessError(msg)
+                # Normal component execution stores resolved local paths. Retain those
+                # references on edits, but authorize them against trusted route scopes.
+                resolved = enforce_local_file_access(path, scope_ids=scopes)
+                file = resolved.relative_to(Path(settings.config_dir).resolve()).as_posix()
+            elif PureWindowsPath(file).drive:
+                msg = "Message attachments must use uploaded-file keys."
+                raise LocalFileAccessError(msg)
+            enforce_storage_key_scope(file, scopes)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(
+            status_code=400, detail="Message attachment is outside the permitted storage scope."
+        ) from exc
+
 
 # Message-history reads must never return an entire table: the editor polls
 # this endpoint every few seconds, so an unbounded default serializes the full
@@ -214,31 +247,31 @@ async def get_message_sessions(
     session: DbSession,
     current_user: Annotated[User, Depends(get_current_active_user)],
     flow_id: Annotated[UUID | None, Query()] = None,
+    limit: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[str]:
     try:
         # When a flow_id is provided, gate on flow READ permission so a viewer
         # without flow access cannot enumerate sessions. The bulk path
         # (flow_id is None) keeps the user-scoped JOIN — share-aware listing
         # across all visible flows is an plugin optimisation.
+        # Bound the list to the most recent sessions (default 100, max 200).
+        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
+        stmt = select(MessageTable.session_id, func.max(MessageTable.timestamp))
         if flow_id is not None:
             flow = await _ensure_flow_action_or_404(session, flow_id=flow_id, user=current_user, action=FlowAction.READ)
             if flow is None:
                 return []
-            stmt = select(MessageTable.session_id).distinct()
             stmt = stmt.where(MessageTable.flow_id == flow_id)
-            stmt = stmt.where(col(MessageTable.session_id).isnot(None))
-            stmt = stmt.where(~col(MessageTable.session_id).startswith("agentic_"))
-            session_ids = await session.exec(stmt)
-            return list(session_ids)
-
-        stmt = select(MessageTable.session_id).distinct()
-        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
+        else:
+            stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
+            stmt = stmt.where(Flow.user_id == current_user.id)
         stmt = stmt.where(col(MessageTable.session_id).isnot(None))
         stmt = stmt.where(~col(MessageTable.session_id).startswith("agentic_"))
-        stmt = stmt.where(Flow.user_id == current_user.id)
-
-        session_ids = await session.exec(stmt)
-        return list(session_ids)
+        stmt = stmt.group_by(MessageTable.session_id)
+        stmt = stmt.order_by(func.max(MessageTable.timestamp).desc(), col(MessageTable.session_id).desc())
+        stmt = stmt.limit(effective_limit)
+        rows = await session.exec(stmt)
+        return [row[0] for row in rows]
     except HTTPException:
         raise
     except Exception as e:
@@ -360,6 +393,7 @@ async def update_message(
     background_tasks: BackgroundTasks,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
+    """Update an owned message after authorizing its flow and attachment namespaces."""
     # Rollback expires ORM state, so keep the ownership key as a stable scalar
     # for the post-race lookup.
     current_user_id = current_user.id
@@ -384,6 +418,8 @@ async def update_message(
         )
         if db_flow is None:
             raise HTTPException(status_code=404, detail="Message not found")
+
+    _validate_message_attachment_scopes(message.files, (current_user.id, db_message.flow_id))
 
     try:
         previous_positive_feedback = _get_positive_feedback_value(db_message)
@@ -603,20 +639,26 @@ async def get_shared_message_sessions(
     session: DbSession,
     current_user: Annotated[User, Depends(get_current_active_user)],
     source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
+    limit: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[str]:
     """Get session IDs for a shared/public flow, scoped to the authenticated user.
 
     Uses a deterministic virtual flow_id derived from the user's ID and the
     original flow ID. Only messages stored under this virtual flow_id are returned.
+    Bounded to the most recent sessions (default 100, hard max 200).
     """
     try:
         virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
-        stmt = select(MessageTable.session_id).distinct()
+        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
+        stmt = select(MessageTable.session_id, func.max(MessageTable.timestamp))
         stmt = stmt.where(MessageTable.flow_id == virtual_flow_id)
         stmt = stmt.where(col(MessageTable.session_id).isnot(None))
+        stmt = stmt.group_by(MessageTable.session_id)
+        stmt = stmt.order_by(func.max(MessageTable.timestamp).desc(), col(MessageTable.session_id).desc())
+        stmt = stmt.limit(effective_limit)
 
-        session_ids = await session.exec(stmt)
-        return list(session_ids)
+        rows = await session.exec(stmt)
+        return [row[0] for row in rows]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -712,6 +754,8 @@ async def update_shared_message(
 
     if not db_message:
         raise HTTPException(status_code=404, detail="Message not found")
+
+    _validate_message_attachment_scopes(message.files, (current_user.id, virtual_flow_id, source_flow_id))
 
     try:
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
