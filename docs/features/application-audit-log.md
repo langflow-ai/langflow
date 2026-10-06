@@ -219,11 +219,22 @@ older than a delete along with it, so opening fully when no boundary survives
 cannot expose a previous life. A caller's own events are readable either way.
 
 A deleted resource's events stay readable by whoever acted on them. With a
-plugin, the resource's scope is gone once the row is deleted, so the check runs
-unscoped: only a global `project:audit_read` (or `flow:audit_read`) reads a
-deleted resource's history, not a grant scoped to its former Project or
-workspace. Retaining event-time scope would mean storing it on every event; that
-is a schema change, not part of this delivery.
+plugin, what survives the delete is the resource's own domain, and nothing the
+deleted row carried:
+
+* **A deleted Project.** `?project_id=X` resolves to `project:X` whether or not
+  the row still exists, and role assignments scoped to X outlive it. A grant
+  scoped to the former Project therefore keeps reading its history. One scoped
+  to the workspace that held it does not: the row that named the workspace is
+  gone, so the check falls back to `*`.
+* **A deleted Flow.** A Flow is scoped by the Project that held it, which the
+  deleted row carried, so `?flow_id=X` falls back to `*`: only a global
+  `flow:audit_read` reads it.
+* **The unfiltered feed** names no id and so resolves to `*` either way — it
+  always needs a global `project:audit_read` or `flow:audit_read`.
+
+Retaining event-time scope would mean storing it on every event; that is a
+schema change, not part of this delivery.
 
 ## Invariants
 

@@ -11,7 +11,7 @@ from langflow.services.database.models.auth import AuthzRole
 from langflow.services.deps import get_settings_service, session_scope
 from sqlmodel import select
 
-from .audit_helpers import authz_rows_for, enabled_audit, events_by_user, login, make_user
+from .audit_helpers import authz_rows_for, enabled_audit, events_by_user, login, make_user, record_event
 
 pytestmark = pytest.mark.usefixtures("audit_on")
 
@@ -117,39 +117,59 @@ async def test_without_a_plugin_a_user_sees_only_their_projects_and_their_own_ac
     assert probing["items"] == []
 
 
-async def test_a_superuser_reads_every_project(client, logged_in_headers, logged_in_headers_super_user):
+async def test_a_superuser_reads_every_project(client, logged_in_headers):
+    """A superuser is exempt from the floor, so another account's project opens to them."""
     theirs = await _project(client, logged_in_headers)
+    _admin_id, admin_name = await make_user("admin", superuser=True)
+    admin_headers = await login(client, admin_name)
 
-    feed = await _audits(client, logged_in_headers_super_user, f"?project_id={theirs['id']}")
+    feed = await _audits(client, admin_headers, f"?project_id={theirs['id']}")
 
     assert [item["operation"] for item in feed["items"]] == ["create"]
 
 
-async def test_an_owner_sees_another_actors_change_to_their_project(
-    client, logged_in_headers, logged_in_headers_super_user
-):
-    """The positive side of the floor: the window lets the owner see what others did."""
+async def test_an_owner_sees_another_actors_change_to_their_project(client, logged_in_headers):
+    """The positive side of the floor: the window lets the owner see what others did.
+
+    The event is inserted rather than driven through the API: without a plugin
+    ``authorized_or_owner_scoped`` scopes by owner, so no other account can
+    reach this project at all. Only the ownership branch can return this row —
+    the caller is not its actor.
+    """
     mine = await _project(client, logged_in_headers)
-    renamed = f"by-the-superuser-{uuid4().hex[:8]}"
-    patched = await client.patch(
-        f"api/v1/projects/{mine['id']}", json={"name": renamed}, headers=logged_in_headers_super_user
+    stranger_id, _stranger_name = await make_user("stranger")
+    renamed = f"by-a-stranger-{uuid4().hex[:8]}"
+    await record_event(
+        resource_type="project",
+        resource_id=UUID(mine["id"]),
+        resource_name=renamed,
+        action="project:write",
+        operation="patch",
+        user_id=stranger_id,
+        actor_id=stranger_id,
     )
-    assert patched.status_code == status.HTTP_200_OK, patched.text
 
     feed = await _audits(client, logged_in_headers, f"?project_id={mine['id']}&limit=200")
 
-    operations = [item["operation"] for item in feed["items"]]
-    assert operations.count("patch") == 1, operations
-    assert renamed in {item["project_name"] for item in feed["items"]}
+    [patch_item] = [item for item in feed["items"] if item["operation"] == "patch"]
+    assert patch_item["project_name"] == renamed
+    assert patch_item["actor"]["user_id"] == str(stranger_id)
 
 
-async def test_an_owner_keeps_the_history_after_retention_sweeps_the_create(
-    client, logged_in_headers, logged_in_headers_super_user
-):
+async def test_an_owner_keeps_the_history_after_retention_sweeps_the_create(client, logged_in_headers):
     """Retention deletes by age, so a long-lived project loses its create first."""
     mine = await _project(client, logged_in_headers)
+    stranger_id, _stranger_name = await make_user("sweeper")
     renamed = f"still-visible-{uuid4().hex[:8]}"
-    await client.patch(f"api/v1/projects/{mine['id']}", json={"name": renamed}, headers=logged_in_headers_super_user)
+    await record_event(
+        resource_type="project",
+        resource_id=UUID(mine["id"]),
+        resource_name=renamed,
+        action="project:write",
+        operation="patch",
+        user_id=stranger_id,
+        actor_id=stranger_id,
+    )
 
     async with session_scope() as session:
         create_row = (
@@ -172,6 +192,36 @@ async def test_a_deleted_project_stays_readable_by_whoever_acted_on_it(client, l
     feed = await _audits(client, logged_in_headers, f"?project_id={project['id']}&operation=delete")
 
     assert [(item["operation"], item["project_name"]) for item in feed["items"]] == [("delete", project["name"])]
+
+
+async def test_creating_a_project_at_the_nil_id_reads_no_other_callers_failures(client, logged_in_headers):
+    """A failure with no id to name is filed under the nil id, by everybody.
+
+    That id is claimable — ``PUT /projects/{id}`` creates where the caller asks —
+    so owning it must not open the id-less failures of every other account.
+    """
+    nil_id = UUID(int=0)
+    claimed = await client.put(
+        f"api/v1/projects/{nil_id}", json={"name": f"nil-{uuid4().hex[:8]}"}, headers=logged_in_headers
+    )
+    assert claimed.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, claimed.text
+    stranger_id, _stranger_name = await make_user("nil-stranger")
+    await record_event(
+        resource_type="project",
+        resource_id=nil_id,
+        resource_name="their-secret-project",
+        action="project:create",
+        operation="create",
+        result="failed",
+        error_code="INVALID_CONTENT",
+        user_id=stranger_id,
+        actor_id=stranger_id,
+    )
+
+    feed = await _audits(client, logged_in_headers, f"?project_id={nil_id}&limit=200")
+
+    assert all(item["actor"]["user_id"] != str(stranger_id) for item in feed["items"]), feed["items"]
+    assert "their-secret-project" not in {item["project_name"] for item in feed["items"]}
 
 
 async def test_recreating_a_deleted_id_does_not_hand_over_its_history(client, logged_in_headers):

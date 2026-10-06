@@ -45,14 +45,42 @@ async def events_by_user(user_id: UUID) -> list[AuditEvent]:
         return list((await session.exec(statement)).all())
 
 
-async def make_user(prefix: str) -> tuple[UUID, str]:
+async def make_user(prefix: str, *, superuser: bool = False) -> tuple[UUID, str]:
     username = f"{prefix}_{uuid4().hex}"
     async with session_scope() as session:
-        user = User(username=username, password=get_auth_service().get_password_hash(PASSWORD), is_active=True)
+        user = User(
+            username=username,
+            password=get_auth_service().get_password_hash(PASSWORD),
+            is_active=True,
+            is_superuser=superuser,
+        )
         session.add(user)
         await session.flush()
         user_id = user.id
     return user_id, username
+
+
+async def record_event(**fields) -> AuditEvent:
+    """Insert one event straight into the table.
+
+    What a caller other than the owner produces in a deployment that has an
+    authorization plugin. Without one the API refuses them a resource they do
+    not own, so the row cannot be made through a route.
+    """
+    defaults = {
+        "event_type": "action",
+        "result": "succeeded",
+        "actor_type": "user",
+        "request_id": uuid4(),
+        "details": {"schema_version": 1},
+    }
+    event = AuditEvent(**{**defaults, **fields})
+    async with session_scope() as session:
+        session.add(event)
+        await session.flush()
+        await session.refresh(event)
+        session.expunge(event)
+    return event
 
 
 async def login(client, username: str) -> dict[str, str]:

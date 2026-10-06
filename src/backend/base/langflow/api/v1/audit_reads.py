@@ -21,6 +21,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import aliased
 from sqlmodel import and_, col, or_, select
 
+from langflow.services.audit.operations import UNKNOWN_RESOURCE_ID
 from langflow.services.audit.query import MAX_PAGE_SIZE, AuditCursorError, AuditEventFilters, list_audit_events
 from langflow.services.audit.vocabulary import AuditActorType, AuditEventType, AuditOperation, AuditResult
 from langflow.services.database.models.audit_event.model import (
@@ -255,6 +256,11 @@ async def owner_visibility(user: User, owned_resource_ids: Any) -> ColumnElement
     projects never record one. Reuse always needs a delete, and retention sweeps
     the rows before a delete along with it, so opening fully when no boundary
     survives cannot expose a previous life.
+
+    The nil id is never owned. A failure with no id to name is filed under it, by
+    every caller, so a resource created at that id would otherwise read every
+    other caller's failed create. Those rows reach their own author through the
+    branch below, and nobody else.
     """
     if user.is_superuser or await plugin_decides_visibility():
         return None
@@ -264,9 +270,12 @@ async def owner_visibility(user: User, owned_resource_ids: Any) -> ColumnElement
         and_(began.isnot(None), or_(ended.is_(None), began > ended), col(AuditEvent.timestamp) >= began),
         and_(ended.isnot(None), or_(began.is_(None), ended >= began), col(AuditEvent.timestamp) > ended),
     )
-    return or_(
-        and_(col(AuditEvent.resource_id).in_(owned_resource_ids), current_life), col(AuditEvent.user_id) == user.id
+    owned = and_(
+        col(AuditEvent.resource_id) != UNKNOWN_RESOURCE_ID,
+        col(AuditEvent.resource_id).in_(owned_resource_ids),
+        current_life,
     )
+    return or_(owned, col(AuditEvent.user_id) == user.id)
 
 
 class AuditActorRead(BaseModel):
