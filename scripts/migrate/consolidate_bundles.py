@@ -49,7 +49,7 @@ MIGRATION_RELEASE = "1.11.0"
 # that introduced them (one ``bare_class_name`` row per component).  They stay in
 # ``PROVIDER_DEPS`` so re-running the script keeps their extras managed, but the
 # move + migration-discovery steps are skipped for them.
-PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "mrscraper"})
+PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "mrscraper", "sendhq"})
 
 # Shared spec for providers whose components go through langchain_community
 # wrappers (the wrapper itself; whatever SDK the wrapper lazy-imports at
@@ -105,6 +105,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "mrscraper": ["mrscraper-sdk>=0.2.1,<0.3.0"],
     "needle": ["needle-python>=0.4.0"],
     "scrapegraph": ["scrapegraph-py>=1.12.0"],
+    "sendhq": [],  # talks to the SendHQ REST API via httpx (an lfx core dep)
     "serpapi": ["google-search-results>=2.4.1,<3.0.0", _LC_COMMUNITY],
     "unstructured": ["langchain-unstructured~=1.0.0"],
     "youtube": ["pytube==15.0.0", "youtube-transcript-api>=1.0.0,<2.0.0", "google-api-python-client~=2.161"],

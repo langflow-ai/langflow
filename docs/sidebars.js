@@ -588,6 +588,7 @@ module.exports = {
             "Components/bundles-redis",
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
+            "Components/bundles-sendhq",
             "Components/bundles-serper",
             "Components/bundles-serpingapi",
             "Components/bundles-serply",
