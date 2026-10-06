@@ -108,6 +108,7 @@ def test_provider_resolution_progress(scenario, tmp_path):
 
 
 async def _scenario(scenario: str, directory: Path) -> dict:
+    from langchain_core.agents import AgentFinish
     from langchain_openai import ChatOpenAI
     from langflow.services.auth.service import AuthService
     from langflow.services.database.models.variable.model import Variable
@@ -117,6 +118,9 @@ async def _scenario(scenario: str, directory: Path) -> dict:
     from lfx.base.models import model_utils
     from lfx.base.models.unified_models import aget_llm, credentials
     from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import (
+        adapt_graph_events_to_executor_shape,
+    )
     from lfx.services import deps
     from lfx.services.authorization.service import AuthorizationService
     from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyService
@@ -292,13 +296,37 @@ async def _scenario(scenario: str, directory: Path) -> dict:
                 tasks.extend([asyncio.create_task(heartbeat()), asyncio.create_task(release())])
                 model, _history, _tools = await asyncio.wait_for(agent.get_agent_requirements(), 2)
                 graph = await agent._acreate_agent_runnable(model)
-                chunks = [
-                    event["data"]["chunk"].content
-                    async for event in graph.astream_events({"messages": [("user", "hello")]}, version="v2")
-                    if event["event"] == "on_chat_model_stream"
+                events = [
+                    event
+                    async for event in adapt_graph_events_to_executor_shape(
+                        graph.astream_events({"messages": [("user", "hello")]}, version="v2")
+                    )
                 ]
-                assert "".join(chunks) == "local answer"
-                assert [path for path, _key in requests] == ["/v1/models", "/v1/chat/completions"]
+                finishes = [
+                    event["data"]["output"]
+                    for event in events
+                    if event["event"] == "on_chain_end" and isinstance(event["data"]["output"], AgentFinish)
+                ]
+                assert finishes[-1].return_values["output"] == "local answer"
+                model_ends = [event["data"]["output"] for event in events if event["event"] == "on_chat_model_end"]
+                assert model_ends[-1].content == "local answer"
+                # LangGraph on Python 3.10 does not propagate child-model
+                # callbacks. The production adapter synthesizes model-end
+                # narration from graph updates; newer Python also has tokens.
+                if sys.version_info >= (3, 11):
+                    chunks = [
+                        event["data"]["chunk"].content for event in events if event["event"] == "on_chat_model_stream"
+                    ]
+                    assert "".join(chunks) == "local answer"
+                # Independently verify actual SSE token delivery on every
+                # supported interpreter, rather than relying on callbacks.
+                wire_chunks = [chunk.content async for chunk in model.astream("hello")]
+                assert "".join(wire_chunks) == "local answer"
+                assert [path for path, _key in requests] == [
+                    "/v1/models",
+                    "/v1/chat/completions",
+                    "/v1/chat/completions",
+                ]
                 assert all(key == "Bearer sk-owned-test" for _path, key in requests)
                 assert len(ticks) >= 3
                 assert releases == [True]
