@@ -11,7 +11,7 @@ from lfx.base.agents.default_system_prompt import (
     substitute_env_placeholders,
 )
 from lfx.base.models.model_utils import get_model_name
-from lfx.base.models.unified_models import get_language_model_options, get_llm, handle_model_input_update
+from lfx.base.models.unified_models import aget_llm, get_language_model_options, get_llm, handle_model_input_update
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 
 # IBM Granite-specific logic is in a separate file
@@ -29,6 +29,7 @@ from lfx.inputs.inputs import (
     StrInput,
 )
 from lfx.schema.data import Data
+from lfx.utils.async_helpers import async_call_method, delegates_to
 
 
 class ToolCallingAgentComponent(LCToolsAgentComponent):
@@ -84,9 +85,19 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         ),
     ]
 
+    @delegates_to("_aget_llm")
     def _get_llm(self):
         """Resolve the language model from dropdown selection or connected component."""
         return get_llm(
+            model=self.model,
+            user_id=self.user_id,
+            api_key=getattr(self, "api_key", None),
+            watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
+            watsonx_project_id=getattr(self, "project_id", None),
+        )
+
+    async def _aget_llm(self):
+        return await aget_llm(
             model=self.model,
             user_id=self.user_id,
             api_key=getattr(self, "api_key", None),
@@ -108,13 +119,22 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
     def get_chat_history_data(self) -> list[Data] | None:
         return self.chat_history
 
+    @delegates_to("acreate_agent_runnable")
     def create_agent_runnable(self):
+        return self._runnable_from_model(self._get_llm())
+
+    async def acreate_agent_runnable(self):
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
+        llm = await async_call_method(self, "_get_llm")
+        return self._runnable_from_model(llm)
+
+    def _runnable_from_model(self, llm):
         messages = []
 
         # Use local variable to avoid mutating component state on repeated calls
         effective_system_prompt = self.system_prompt or ""
-
-        llm = self._get_llm()
 
         # Backward-compat: serialized flows embed an older AgentComponent whose
         # _get_llm() does not pass stream=True to get_llm(), so the resolved

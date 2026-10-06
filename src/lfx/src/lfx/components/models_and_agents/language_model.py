@@ -1,15 +1,18 @@
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.unified_models import (
+    aget_language_model_options,
+    aget_llm,
     get_language_model_options,
     get_llm,
     handle_model_input_update,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
-from lfx.components.models_and_agents.model_selection import apply_model_overrides
+from lfx.components.models_and_agents.model_selection import aapply_model_overrides, apply_model_overrides
 from lfx.field_typing.constants import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, StrInput
 from lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput
+from lfx.utils.async_helpers import delegates_to
 
 
 class LanguageModelComponent(LCModelComponent):
@@ -115,6 +118,7 @@ class LanguageModelComponent(LCModelComponent):
         ),
     ]
 
+    @delegates_to("abuild_model")
     def build_model(self) -> LanguageModel:
         model = apply_model_overrides(
             self.model,
@@ -124,6 +128,32 @@ class LanguageModelComponent(LCModelComponent):
             get_options=get_language_model_options,
         )
         return get_llm(
+            model=model,
+            user_id=self.user_id,
+            api_key=self.api_key,
+            temperature=self.temperature,
+            stream=self.stream,
+            max_tokens=getattr(self, "max_tokens", None),
+            watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
+            watsonx_project_id=getattr(self, "project_id", None),
+            ollama_base_url=getattr(self, "ollama_base_url", None),
+        )
+
+    async def abuild_model(self) -> LanguageModel:
+        """Resolve runtime options and credentials natively on the caller loop."""
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        parameters = dict(getattr(self, "_parameters", {}) or {})
+        parameters.update(model=self.model, provider=getattr(self, "provider", None))
+        await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE, parameters=parameters)
+        model = await aapply_model_overrides(
+            self.model,
+            model_name=getattr(self, "model_name", None),
+            provider=getattr(self, "provider", None),
+            user_id=self.user_id,
+            get_options=aget_language_model_options,
+        )
+        return await aget_llm(
             model=model,
             user_id=self.user_id,
             api_key=self.api_key,

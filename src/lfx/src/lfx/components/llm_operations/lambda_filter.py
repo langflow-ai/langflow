@@ -6,7 +6,7 @@ from collections.abc import Callable  # noqa: TC003 - required at runtime for dy
 from typing import Any
 
 from lfx.base.models.unified_models import (
-    get_llm,
+    aget_llm,
     handle_model_input_update,
 )
 from lfx.custom.custom_component.component import Component
@@ -262,7 +262,7 @@ class LambdaFilterComponent(Component):
             data = self._extract_structured_data()
             prompt = self._build_data_prompt(data)
 
-        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
+        llm = await aget_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
         response = await llm.ainvoke(prompt)
         self._token_usage = extract_usage_from_message(response)
         response_text = response.content if hasattr(response, "content") else str(response)

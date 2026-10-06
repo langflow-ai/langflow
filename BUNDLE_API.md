@@ -224,6 +224,27 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-10-02 — Await model-provider policy during component builds
+
+`Component.build_results()` now awaits the existing
+`arequire_model_provider_policy()` hook before tracing or output execution.
+Custom synchronous `require_model_provider_policy()` overrides still run, in a
+context-preserving worker thread after the native async gate; their denials still
+abort the build. Policy waits leave the execution loop available to other tasks
+without skipping additional bundle restrictions. Existing synchronous hook signatures
+are unchanged, and `BUNDLE_API_VERSION` remains `1`.
+
+
+- **Knowledge storage provider defaults.** `DBProviderInput` defaults to the
+  application-provided SQLite backend. Its public name, fields and signature
+  remain unchanged, so `BUNDLE_API_VERSION` remains `1`. Recognized historical
+  Knowledge and Memory sources resolve to current implementations without
+  loading the retired Chroma SDKs. Custom component source remains untouched.
+  Extension backends that implement only `add_documents` retain their guarded
+  ingestion path. Writing precomputed embeddings remains optional for ordinary
+  ingestion and required for migration imports.
+
+
 - **Knowledge storage provider defaults.** `DBProviderInput` defaults to the
   application-provided SQLite backend. Its public name, fields and signature
   remain unchanged, so `BUNDLE_API_VERSION` remains `1`. Recognized historical
