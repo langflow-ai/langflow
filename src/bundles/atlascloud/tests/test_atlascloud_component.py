@@ -159,9 +159,7 @@ def test_build_model_exception_handling(mock_chat_openai):
 @patch("requests.get")
 def test_get_models_success(mock_get):
     mock_response = MagicMock()
-    mock_response.json.return_value = {
-        "data": [{"id": "deepseek-ai/deepseek-v4-flash"}, {"id": "zai-org/glm-5.3"}]
-    }
+    mock_response.json.return_value = {"data": [{"id": "deepseek-ai/deepseek-v4-flash"}, {"id": "zai-org/glm-5.3"}]}
     mock_response.raise_for_status.return_value = None
     mock_get.return_value = mock_response
 
