@@ -183,7 +183,8 @@ async def test_a_write_that_times_out_is_reported_as_unknown(monkeypatch):
 
     assert await record_audit_event_after_rollback(_failed_draft()) is False
 
-    assert logged and logged[0].startswith("unknown ")
+    assert len(logged) == 1
+    assert logged[0].startswith("unknown ")
     assert logged[0].endswith("TimeoutError")
 
 
@@ -213,7 +214,7 @@ async def test_waiting_for_a_slot_is_bounded_and_reported_as_not_persisted(monke
     queued = await record_audit_event_after_rollback(_failed_draft())
 
     assert queued is False
-    assert any(entry.startswith("not_persisted ") and entry.endswith("QueueTimeout") for entry in logged)
+    assert any(entry.startswith("not_persisted ") and entry.endswith("AuditWriteQueueTimeoutError") for entry in logged)
     for _ in holders:
         held.release()
     await asyncio.gather(*holders)

@@ -75,6 +75,7 @@ class AuditEvent(SQLModel, table=True):  # type: ignore[call-arg]
         # Ascending keys serve (timestamp DESC, id DESC) by backward scan; DESC keys churn autogenerate.
         Index("ix_audit_events_resource_timeline", "resource_type", "resource_id", "timestamp", "id"),
         Index("ix_audit_events_type_timeline", "resource_type", "timestamp", "id"),
+        Index("ix_audit_events_timeline", "timestamp", "id"),
         Index("ix_audit_events_user_timeline", "user_id", "timestamp"),
         Index("ix_audit_events_actor_timeline", "actor_type", "actor_id", "timestamp"),
         Index("ix_audit_events_acting_timeline", "acting_issuer", "acting_subject", "timestamp"),
