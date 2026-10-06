@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
@@ -9,6 +10,8 @@ import pytest
 from fastapi import BackgroundTasks, HTTPException, Request
 from langflow.api.v1 import openai_responses
 from langflow.schema import OpenAIResponsesRequest
+from langflow.services.telemetry.run_event_store import pop_all
+from langflow.services.telemetry.service import TelemetryService
 from lfx.exceptions.component import ComponentBuildError
 from lfx.integrations.errors import AuthExpiredError, ConnectionNotAuthorizedError, RateLimitedError
 
@@ -30,6 +33,18 @@ def _flow(*, owner_id):
 
 def _request(model: str, *, stream: bool = False) -> OpenAIResponsesRequest:
     return OpenAIResponsesRequest(model=model, input="hello", stream=stream)
+
+
+def _freeze_completion(monkeypatch):
+    completed_at = datetime(2026, 9, 14, 23, 59, 59, tzinfo=timezone.utc)
+
+    class CompletionClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return completed_at if tz is None else completed_at.astimezone(tz)
+
+    monkeypatch.setattr(openai_responses, "datetime", CompletionClock)
+    return completed_at
 
 
 async def test_openai_execute_denial_matches_missing_flow_response(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -100,6 +115,46 @@ async def test_openai_sync_error_depends_on_flow_ownership(
     if error_type is ValueError:
         assert response.error["code"] == "invalid_flow_request"
         assert response.error["type"] == "invalid_request_error"
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected_success"),
+    [(None, True), (RuntimeError("openai run failed"), False)],
+)
+async def test_openai_nonstream_completion_timestamp_for_success_and_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    failure: Exception | None,
+    *,
+    expected_success: bool,
+) -> None:
+    owner_id = uuid4()
+    flow = _flow(owner_id=owner_id)
+    telemetry_service = TelemetryService(SimpleNamespace(settings=SimpleNamespace(prometheus_enabled=False)))
+    background_tasks = BackgroundTasks()
+    completed_at = _freeze_completion(monkeypatch)
+    run = AsyncMock(return_value=SimpleNamespace()) if failure is None else AsyncMock(side_effect=failure)
+    monkeypatch.setattr(openai_responses, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
+    monkeypatch.setattr(openai_responses, "ensure_flow_permission", AsyncMock())
+    monkeypatch.setattr(openai_responses, "run_flow_for_openai_responses", run)
+    pop_all()
+
+    try:
+        await openai_responses.create_response(
+            request=_request(str(flow.id)),
+            background_tasks=background_tasks,
+            api_key_user=SimpleNamespace(id=owner_id),
+            telemetry_service=telemetry_service,
+            http_request=Request({"type": "http", "headers": []}),
+        )
+        await background_tasks()
+
+        events = pop_all()
+        assert len(events) == 1
+        assert events[0].run_success is expected_success
+        assert events[0].run_completed_at == completed_at
+    finally:
+        pop_all()
+        await telemetry_service.teardown()
 
 
 @pytest.mark.parametrize("wrapped", [False, True])

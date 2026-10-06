@@ -9,6 +9,7 @@ runs a real echo flow through the v2 surface.
 
 import json
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import langflow
@@ -1497,7 +1498,9 @@ async def test_resume_input_required_task_completes(client: AsyncClient, active_
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_resume_meters_the_completed_hitl_run(client: AsyncClient, active_user, human_input_flow_data):
+async def test_resume_meters_the_completed_hitl_run(
+    client: AsyncClient, active_user, human_input_flow_data, monkeypatch
+):
     """The resume that finishes a HITL run emits exactly one run event, keyed by the task id.
 
     The paused first segment emits nothing (``execute_sync_workflow`` skips a parked run), and
@@ -1507,9 +1510,18 @@ async def test_resume_meters_the_completed_hitl_run(client: AsyncClient, active_
     """
     from uuid import UUID
 
+    from langflow.api.v1 import a2a as a2a_module
     from langflow.services.telemetry.run_event_store import pop_all
 
     flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+    completed_at = datetime(2026, 9, 14, 23, 59, 59, tzinfo=timezone.utc)
+
+    class CompletionClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return completed_at if tz is None else completed_at.astimezone(tz)
+
+    monkeypatch.setattr(a2a_module, "datetime", CompletionClock)
 
     paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
     task_id, context_id = paused["id"], paused["contextId"]
@@ -1532,6 +1544,7 @@ async def test_resume_meters_the_completed_hitl_run(client: AsyncClient, active_
     assert len(events) == 1
     assert events[0].run_success is True
     assert events[0].run_is_webhook is False
+    assert events[0].run_completed_at == completed_at
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -1631,6 +1644,7 @@ async def test_resume_failure_is_metered_as_a_failed_run(active_user, echo_flow_
     from lfx.graph.checkpoint.schema import GraphCheckpoint
 
     flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    completed_at = datetime(2026, 9, 14, 23, 59, 59, tzinfo=timezone.utc)
     task_id = str(uuid.uuid4())
     principal = str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID)
     checkpoint = GraphCheckpoint(
@@ -1668,6 +1682,13 @@ async def test_resume_failure_is_metered_as_a_failed_run(active_user, echo_flow_
         return data
 
     monkeypatch.setattr(a2a_module, "A2ACheckpointStore", FakeStore)
+
+    class CompletionClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return completed_at if tz is None else completed_at.astimezone(tz)
+
+    monkeypatch.setattr(a2a_module, "datetime", CompletionClock)
     monkeypatch.setattr(a2a_module, "validate_public_flow_no_code_execution", lambda _data: None)
     monkeypatch.setattr(a2a_module, "prepare_public_flow_build", fake_prepare)
     monkeypatch.setattr(a2a_module, "resume_graph_with_decision", lambda *_args: FakeGraph())
@@ -1684,6 +1705,7 @@ async def test_resume_failure_is_metered_as_a_failed_run(active_user, echo_flow_
     assert len(events) == 1
     assert events[0].run_success is False
     assert "component blew up" in events[0].run_error_message
+    assert events[0].run_completed_at == completed_at
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
