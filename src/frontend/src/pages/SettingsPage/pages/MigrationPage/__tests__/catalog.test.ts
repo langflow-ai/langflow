@@ -7,9 +7,11 @@ import {
   acceptanceOf,
   CHECKS,
   COPY_CODES,
+  copyCounts,
   copyProgress,
   destinationsRequest,
   groupChecks,
+  ITEM_CODES,
   JOB_STATES,
   PROBES,
   pgDumpCommand,
@@ -238,6 +240,7 @@ describe("COPY_CODES", () => {
   // The page builds these keys from the server's code, so the i18n check can't see one that is missing.
   it("has a line for every reason the page words when a copy does not count", () => {
     expect(Object.keys(COPY_CODES).sort()).toEqual([
+      "bucket_error",
       "cancelled",
       "count_mismatch",
       "crashed",
@@ -255,6 +258,54 @@ describe("COPY_CODES", () => {
         (key) => !(`settings.migration.${key}` in en),
       ),
     ).toEqual([]);
+  });
+});
+
+describe("ITEM_CODES", () => {
+  it("has a line for every reason the page words when one knowledge base or file is not copied", () => {
+    expect(Object.keys(ITEM_CODES).sort()).toEqual([
+      "attachment_unmatched",
+      "bad_name",
+      "bucket_error",
+      "file_conflict",
+      "kb_backend_missing",
+      "kb_changed",
+      "kb_deleted",
+      "kb_ingesting",
+      "kb_metric_change",
+      "kb_routing_changed",
+      "kb_short",
+      "kb_target_more",
+      "kb_upgrade_pending",
+      "no_source_bytes",
+    ]);
+    expect(
+      Object.values(ITEM_CODES).filter(
+        (key) => !(`settings.migration.${key}` in en),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("copyCounts", () => {
+  it("counts what was copied, what was there already and what was not, whichever copy it was", () => {
+    expect(copyCounts({ relocated: 3, skipped: 1, failed: 2 })).toEqual({
+      copied: 3,
+      skipped: 1,
+      failed: 2,
+    });
+    // A test run counts what it would copy.
+    expect(copyCounts({ would_relocate: 2 })).toEqual({
+      copied: 2,
+      skipped: 0,
+      failed: 0,
+    });
+    // An attachment that was renamed in chat history is no file of its own.
+    expect(copyCounts({ copied: 5, repointed: 4, would_copy: 1 })).toEqual({
+      copied: 6,
+      skipped: 0,
+      failed: 0,
+    });
   });
 });
 
@@ -280,5 +331,18 @@ describe("copyProgress", () => {
     expect(
       copyProgress("copy_database", progress(undefined, 3, 9), "en"),
     ).toEqual(["copyDb.progress", { done: "3", total: "9" }]);
+  });
+
+  it("counts entries for knowledge bases, and files with how much of them was copied", () => {
+    expect(
+      copyProgress("copy_knowledge_bases", progress("copying", 12, 300), "en"),
+    ).toEqual(["kb.progress", { done: "12", total: "300" }]);
+    expect(
+      copyProgress(
+        "copy_files",
+        { ...progress("copying", 1, 3), bytes: 2048 },
+        "en",
+      ),
+    ).toEqual(["files.progress", { done: "1", total: "3", bytes: "2 KB" }]);
   });
 });
