@@ -24,7 +24,7 @@ import structlog
 from anyio import Path as AsyncPath
 from fastapi import APIRouter
 from langflow.api.utils import migration_pause
-from langflow.api.utils.migration_probes import location
+from langflow.api.utils.migration_probes import database_identity, location
 from langflow.api.v1 import migration as migration_module
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.flow.model import Flow
@@ -1324,7 +1324,8 @@ async def test_a_database_that_cannot_be_reached_blocks_the_step(client, logged_
     assert saved["results"]["database"]["ok"] is False
     assert saved["results"]["database"]["code"] == "db_unreachable"
     destinations = saved["record"]["destinations"]
-    assert destinations["database"] == {"location": f"{NOWHERE}/langflow"}
+    # Where it is, for the page, and a digest of everything that decides where a copy would land.
+    assert destinations["database"] == {"location": f"{NOWHERE}/langflow", "identity": database_identity(url)}
     # How the test ended is kept. The driver's own words are shown once and not saved.
     assert destinations["results"] == {"database": {"ok": False, "code": "db_unreachable"}}
     assert destinations["saved_by"] == "activeuser"
@@ -1367,7 +1368,7 @@ async def test_an_empty_database_passes_and_its_address_stays_in_memory(
     saved = await _connect(client, logged_in_headers_super_user, database_url=address)
 
     assert saved["results"] == {"database": {"ok": True}}
-    database = {"location": f"{url.host}:{url.port}/{url.database}"}
+    database = {"location": f"{url.host}:{url.port}/{url.database}", "identity": database_identity(address)}
     assert saved["record"]["destinations"]["database"] == database
     assert {step["id"]: step["state"] for step in saved["steps"]}["connect_target"] == "done"
     # The copy needs the whole address, password included. It is kept where no file and no response holds it,
@@ -1626,7 +1627,7 @@ async def test_what_this_worker_holds_changes_only_when_the_destination_is_saved
     await _add_file_without_bytes(active_super_user.id)
     # What an earlier save left: a database that passed, named in the record and held in this worker.
     earlier = f"postgresql://migrator:{DB_PASSWORD}@db-a.internal/langflow"
-    part = {"location": "db-a.internal/langflow"}
+    part = {"location": "db-a.internal/langflow", "identity": "of the database saved earlier"}
     _checked(config_dir, [PASSING], destinations={"database": part, "results": {"database": {"ok": True}}})
     monkeypatch.setitem(migration_module._secrets, "database_url", earlier)
     monkeypatch.setitem(migration_module._secrets, "for", {"database": part})
@@ -1680,6 +1681,114 @@ async def test_two_saves_that_overlap_leave_the_record_and_this_worker_naming_on
     # Whichever save ended last, the address a copy would use is the one the record names.
     assert location(migration_module._secrets["database_url"]) == saved["location"]
     assert migration_module._secrets["for"]["database"] == saved
+
+
+async def test_a_new_database_does_not_keep_what_knowledge_bases_found_in_the_old_one(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers = logged_in_headers_super_user
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    # What an earlier save left: a database, and knowledge bases that passed their test in it.
+    tested = {
+        "database": {"location": "db-a.internal/langflow", "identity": "of the database saved earlier"},
+        "vectors": {"kind": "pgvector"},
+        "results": {"database": {"ok": True}, "vectors": {"ok": True}},
+    }
+    _checked(config_dir, [PASSING], destinations=tested)
+
+    # Another database is saved alone. Nobody looked for the vector extension in it.
+    saved = await _connect(client, headers, database_url=f"postgresql://{NOWHERE}/langflow")
+
+    assert "vectors" not in saved["record"]["destinations"]
+    assert "vectors" not in saved["record"]["destinations"]["results"]
+
+
+async def test_the_same_database_saved_again_keeps_what_knowledge_bases_found_in_it(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers = logged_in_headers_super_user
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    address = f"postgresql://migrator:{DB_PASSWORD}@{NOWHERE}/langflow"
+    tested = {
+        "database": {"location": f"{NOWHERE}/langflow", "identity": database_identity(address)},
+        "vectors": {"kind": "pgvector"},
+        "results": {"database": {"ok": True}, "vectors": {"ok": True}},
+    }
+    _checked(config_dir, [PASSING], destinations=tested)
+
+    # As after a restart, when the address has to be entered again. Its driver and password may differ.
+    again = f"postgresql+psycopg://migrator:another-password@{NOWHERE}/langflow"  # pragma: allowlist secret
+    saved = await _connect(client, headers, database_url=again)
+
+    assert saved["record"]["destinations"]["vectors"] == {"kind": "pgvector"}
+    assert saved["record"]["destinations"]["results"]["vectors"] == {"ok": True}
+
+
+@pytest.mark.parametrize(
+    ("one", "other", "same"),
+    [
+        # The driver and the password are no part of where an address leads.
+        (
+            "postgresql://migrator:one@db.internal:5432/app",  # pragma: allowlist secret
+            "postgresql+psycopg://migrator:two@db.internal:5432/app",  # pragma: allowlist secret
+            True,
+        ),
+        (
+            "postgresql://db.internal/app?sslmode=require&application_name=copy",
+            "postgresql+asyncpg://db.internal/app?application_name=copy&sslmode=require&sslpassword=three",
+            True,
+        ),
+        # Each of these pairs has one location on the page, and leads to two databases.
+        ("postgresql://ignored/app?host=one", "postgresql://ignored/app?host=two", False),
+        (
+            "postgresql://db.internal/app?options=-csearch_path%3Dalpha",
+            "postgresql://db.internal/app?options=-csearch_path%3Dbeta",
+            False,
+        ),
+        ("postgresql://migrator@db.internal/app", "postgresql://reader@db.internal/app", False),
+    ],
+)
+def test_the_identity_of_a_database_is_where_its_address_leads(one: str, other: str, same: bool):  # noqa: FBT001
+    assert location(one) == location(other)
+    assert (database_identity(one) == database_identity(other)) is same
+    # A digest, short enough for the record, with nothing of the address left to read in it.
+    assert len(database_identity(one)) == 16
+    assert int(database_identity(one), 16) >= 0
+
+
+async def test_a_new_database_is_not_done_on_what_knowledge_bases_found_in_the_old_one(
+    client, logged_in_headers_super_user, active_super_user, config_dir, scratch_database
+):
+    pytest.importorskip("pgvector", reason="needs the pgvector extra")
+    headers = logged_in_headers_super_user
+    engine = sa.create_engine(scratch_database)
+    with engine.connect() as connection:
+        available = connection.scalar(sa.text("SELECT 1 FROM pg_available_extensions WHERE name = 'vector'"))
+    engine.dispose()
+    if not available:
+        pytest.skip("this PostgreSQL server has no pgvector to turn on")
+    _checked(config_dir, [PASSING])
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    first = scratch_database
+    second = first.set(database=f"{first.database}_b")
+    _sql(first, "CREATE EXTENSION vector", f'CREATE DATABASE "{second.database}"')
+    try:
+        both = await _connect(
+            client, headers, database_url=first.render_as_string(hide_password=False), vectors={"kind": "pgvector"}
+        )
+        assert {step["id"]: step["state"] for step in both["steps"]}["connect_target"] == "done"
+
+        # The second database is empty, so it passes. It has no vector extension, and nobody asked.
+        alone = await _connect(client, headers, database_url=second.render_as_string(hide_password=False))
+    finally:
+        _sql(first, f'DROP DATABASE IF EXISTS "{second.database}" WITH (FORCE)')
+
+    assert alone["results"] == {"database": {"ok": True}}
+    assert "vectors" not in alone["record"]["destinations"]
+    assert {step["id"]: (step["state"], step["reason"]) for step in alone["steps"]}["connect_target"] == (
+        "current",
+        None,
+    )
 
 
 def _nowhere(secrets: tuple[str, ...], responses: list, config_dir: Path, server_log, caplog, capfd) -> None:

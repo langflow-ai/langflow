@@ -32,7 +32,13 @@ from sqlmodel import select
 
 from langflow.api.utils.migration_jobs import active_jobs, live_listeners
 from langflow.api.utils.migration_pause import drained
-from langflow.api.utils.migration_probes import location, probe_database, probe_files, probe_vectors
+from langflow.api.utils.migration_probes import (
+    database_identity,
+    location,
+    probe_database,
+    probe_files,
+    probe_vectors,
+)
 from langflow.cli.migration_preflight import check_target_version
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.file.model import File
@@ -265,13 +271,16 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
     if request.database_url:
         address = request.database_url.get_secret_value()
         results["database"] = await asyncio.to_thread(probe_database, address, get_db_service().database_url)
-        parts["database"] = {"location": location(address)}
+        parts["database"] = {"location": location(address), "identity": database_identity(address)}
         if results["database"]["ok"]:
             passed["database_url"] = address
     if request.vectors:
         # Knowledge bases go into the destination database. An instance already on PostgreSQL keeps them in its own.
         own = instance["database"]["type"] == "postgresql"
         # The address sent with them if it passed, or else the one this worker holds from an earlier save.
+        # ponytail: sent alone, they are tested in the address held when the test starts. A database that
+        # another save replaces while that test runs keeps their result. Compare identities at the write
+        # if anything ever sends the two parts apart.
         held = passed if request.database_url else _secrets
         address = get_db_service().database_url if own else held.get("database_url")
         results["vectors"] = (
@@ -294,6 +303,11 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
     # A test can take seconds. The record is read only now, so that what other requests saved meanwhile is kept.
     record = _read_record()
     saved = record.setdefault("destinations", {})
+    before = (saved.get("database") or {}).get("identity")
+    if "database" in parts and "vectors" not in parts and parts["database"]["identity"] != before:
+        # What the knowledge bases' test found, it found in the database that this one replaces.
+        saved.pop("vectors", None)
+        saved.get("results", {}).pop("vectors", None)
     # How each test ended is kept, and the driver's own words are not: they can name the database user.
     outcomes = {part: {key: result[key] for key in result if key != "reason"} for part, result in results.items()}
     saved.update(parts, results={**saved.get("results", {}), **outcomes}, saved_by=admin.username, saved_at=_now())

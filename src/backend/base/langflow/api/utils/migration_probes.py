@@ -9,6 +9,7 @@ keys taken out. It can name the database user, so it is shown and never saved.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import importlib.util
 import os
 import re
@@ -33,6 +34,8 @@ if TYPE_CHECKING:
 _KNOWLEDGE_BASE_TABLE = re.compile(r"lf_[0-9a-f]{24}")
 # Seconds to wait for a destination, so an address that leads nowhere answers while the admin watches.
 _TIMEOUT = 10
+# The options of an address that carry a secret.
+_PASSWORD_OPTIONS = frozenset({"password", "sslpassword"})
 
 
 def location(address: str) -> str | None:
@@ -42,6 +45,23 @@ def location(address: str) -> str | None:
     except (sa.exc.ArgumentError, ValueError):
         return None
     return f"{url.host}:{url.port}/{url.database}" if url.port else f"{url.host}/{url.database}"
+
+
+def database_identity(address: str) -> str:
+    """Where an address leads and as whom, as a short digest that is safe to keep.
+
+    The location leaves out the options of an address, and a host or a search_path given
+    there changes which database a copy lands in. Everything that decides it goes in here:
+    the user, the host, the port, the database name and every option. The driver and the
+    password do not, so the same destination written two ways has one identity.
+    """
+    try:
+        url = sa.make_url(address)
+    except (sa.exc.ArgumentError, ValueError):
+        return ""
+    options = sorted((name, value) for name, value in url.query.items() if name not in _PASSWORD_OPTIONS)
+    target = (url.get_backend_name(), url.username, url.host, url.port, url.database, options)
+    return hashlib.sha256(repr(target).encode()).hexdigest()[:16]
 
 
 def probe_database(address: str, source_address: str) -> dict[str, Any]:
