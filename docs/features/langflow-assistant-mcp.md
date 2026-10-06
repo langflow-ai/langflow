@@ -140,7 +140,6 @@ Terms below extend the glossary in `langflow-assistant.md`. Where a term overlap
 | **Tail Updates** | Defensive buffer for `flow_update` events that arrive *after* a `set_flow` in the same run. Per prompt this shouldn't happen, but if it does they replay on Continue. | `PendingFlowProposal.tailUpdates` |
 | **MCP Server (lfx)** | The FastMCP-based server in `lfx/mcp/server.py` exposing REST-backed tools (create_flow, run_flow, build_flow, batch). Talks to the Langflow HTTP API. | `lfx/mcp/server.py`, `LangflowClient` |
 | **MCP Server (agentic)** | A second FastMCP server in `langflow/agentic/mcp/server.py` exposing template/component search and flow visualization tools directly against the database. | `langflow/agentic/mcp/server.py` |
-| **MCPToolPayload** | Telemetry event logged for every MCP tool invocation (tool name, success, duration, error type). | `_tracked` decorator in `lfx/mcp/server.py` |
 | **batch action** | An MCP tool that executes multiple actions sequentially, with `$N.field` reference resolution for chaining outputs to inputs. | `batch()` in `lfx/mcp/server.py` |
 | **manage_files intent** | TranslationFlow output that routes a request through the same `FlowBuilderAssistant` flow but signals the frontend to render the "Generating document..." thinking label instead of "Generating flow...". | `TRANSLATION_PROMPT` examples, `IntentResult.intent == "manage_files"` |
 | **FileSystemTool** | The sandboxed filesystem toolkit (`read_file`, `write_file`, `edit_file`, `glob_search`, `grep_search`) added to the FlowBuilderAssistant's toolkit. Every path is RELATIVE to the user's per-user sandbox root `<BASE_DIR>/users/<hash(user_id)>/`. **The agentic toolkit forces per-user isolation** (`_force_isolation=True`) regardless of the global `AUTO_LOGIN` setting, so the `/agentic/files` read endpoint and the agent's write tools always resolve to the same per-user root and a multi-user deployment under default AUTO_LOGIN cannot leak files cross-tenant. The shared `<BASE_DIR>/shared/` path is still used when `FileSystemToolComponent` is instantiated outside the agentic toolkit (e.g. embedded in a non-agentic flow under AUTO_LOGIN). | `FileSystemToolComponent` in `lfx/components/files_and_knowledge/filesystem.py`; agentic wiring in `agentic/api/files_router.py` + `agentic/flows/flow_builder_assistant.py` |
@@ -1425,7 +1424,7 @@ Before invoking the FlowBuilderAssistant graph, the streaming service calls `_ge
 
 ### ADR-MCP-009: Telemetry-Tracked MCP Tool Invocations
 
-**Status**: Accepted
+**Status**: Superseded by the removal of Scarf product analytics.
 
 #### Context
 
@@ -1433,19 +1432,15 @@ External MCP clients calling Langflow tools needed observability — without it,
 
 #### Decision
 
-The `_tracked` decorator in `lfx/mcp/server.py` wraps every public MCP tool. On each call it captures the tool name, success/failure, duration in ms, and error type, then pushes an `MCPToolPayload` event to the `TelemetryService` (started by `_telemetry_lifespan` when the FastMCP server boots).
+The original `_tracked` decorator in `lfx/mcp/server.py` captured each public tool's name, success/failure, duration, and error type as an `MCPToolPayload` event. This product-analytics collection and its `_telemetry_lifespan` startup/shutdown hooks have been removed. MCP tool dispatch preserves its normal results and errors without constructing or calling the analytics service.
 
 #### Consequences
 
-**Benefits:**
-- Per-tool latency and failure breakdowns available out of the box.
-- Tool authors don't need to add telemetry manually.
-
-**Trade-offs:**
-- Tool errors are caught and recorded — make sure the original exception is still surfaced to the caller (the decorator re-raises).
+MCP tool calls no longer produce Scarf events or the per-tool analytics described by the original decision. Customer-configured operational tracing and metrics remain available. `DO_NOT_TRACK` and `LANGFLOW_DO_NOT_TRACK` are retained as no-op compatibility flags for possible future telemetry use; neither value enables tracking or changes tool behavior.
 
 **Key Files:**
-- `src/lfx/src/lfx/mcp/server.py` — `_tracked` decorator and `MCPToolPayload`.
+- `src/lfx/src/lfx/mcp/server.py` — MCP tool dispatch without product-analytics hooks.
+- `src/lfx/tests/unit/mcp/test_server_telemetry_removed.py` — lifecycle and successful/failed dispatch regression coverage.
 
 ---
 
@@ -2683,7 +2678,7 @@ Three independent layers of defense:
 
 1. **Prompt** (`LangflowAssistant.json` system prompt): a new "Agent Tool Compatibility" section teaches the generator (a) action `verb_noun` method naming, (b) class-level `description` as LLM-facing tool description, (c) `tool_mode=True` discipline + clear `info=`, (d) NEVER use the reserved `component_as_tool`/`to_toolkit` names. With worked WRONG vs CORRECT examples.
 2. **Generator-time validator** (`agentic/helpers/validation.py`): `validate_component_code` returns `ValidationResult(is_valid=False, ...)` with an actionable error if the code declares `Output(name="component_as_tool", ...)` (`_RESERVED_OUTPUT_NAME`) or `method="to_toolkit"` (`_RESERVED_OUTPUT_METHOD`). The retry loop produces a correctly-named output instead of silently failing at runtime.
-3. **Toolkit runtime** (`lfx/base/tools/component_tool.py`): 
+3. **Toolkit runtime** (`lfx/base/tools/component_tool.py`):
    - `_GENERIC_OUTPUT_METHOD_NAMES = {"output", "process", "build_output", "run", "execute", "main", "handler", "build_result"}`.
    - `_class_name_to_tool_name(class_name)` — acronym-preserving CamelCase → snake_case (`HTTPClient` → `http_client`, `S3Bucket` → `s3_bucket`).
    - `_derive_tool_name(component, output_method, outputs)` — when there's exactly ONE tool-exposed output AND the method is generic, the tool name is the snake_cased class name. Multi-output components keep method-derived names so tools don't collapse.
@@ -2830,7 +2825,6 @@ Add `MAX_FLOW_VERIFICATION_ATTEMPTS = 3` to `flow_types.py`. The cap doubles as 
 | Library | `contextvars.ContextVar` | Per-request isolation for working flow, event queue, file event queue, **tool result cache**. |
 | Library | `collections.OrderedDict` / `collections.deque` | LRU dispatch for ToolCache; per-session ring buffer for ConversationBuffer. |
 | Library | `asyncio.Lock` | Concurrent-safe `push_async` in ConversationBuffer. |
-| Service | `TelemetryService` | Receives `MCPToolPayload` events from `_tracked`. |
 | Service | `FlowExecutor` | Runs the `FlowBuilderAssistant` Python graph. |
 | Service | `TranslationFlow` | Classifies intent including the new `"build_flow"` value. |
 | Service | **`ConversationBuffer`** (process-local singleton) | Per-session history injected into prompts via `inject_conversation_history()`. |
@@ -2868,7 +2862,7 @@ Event: `progress` with new step types
   "step": "generating_flow | flow_proposal_ready | searching_components | building_flow | flow_built | flow_build_failed",
   "attempt": 1,
   "max_attempts": 4,
-  "message": "Generating flow..." 
+  "message": "Generating flow..."
 }
 ```
 
@@ -3076,8 +3070,6 @@ Failure modes for the new subsystems:
 | `assistant_flow_update_events_total{action=...}` | Counter | Tool action emissions broken down by action type | Spike in `set_flow` on edit-mode runs warrants investigation |
 | `assistant_flow_orphan_rejection_total` | Counter | `BuildFlowFromSpec` rejections due to orphan nodes | High rate indicates a prompt or model regression |
 | `assistant_flow_tail_update_buffered_total` | Counter | Defensive tail-update buffering events | Any non-zero value indicates the agent ignored prompt rules |
-| `mcp_tool_invocations_total{tool=...,success=...}` | Counter | Per-tool MCP invocations via `_tracked` | N/A |
-| `mcp_tool_duration_ms{tool=...}` | Histogram | Per-tool latency from `_tracked` | P95 > 5s |
 | `assistant_flow_apply_duration_ms` | Histogram | Frontend wall-clock time from Continue click to `setNodes`/`setEdges` complete | P95 > 500ms with >50 nodes |
 | `assistant_plan_proposal_total` | Counter | `propose_plan` events delivered | N/A (baseline) |
 | `assistant_plan_continue_total` | Counter | Plan-gate Continue clicks | N/A |

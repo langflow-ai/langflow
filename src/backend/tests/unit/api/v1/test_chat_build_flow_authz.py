@@ -603,7 +603,6 @@ async def test_legacy_vertices_route_passes_only_sanitized_inline_data(monkeypat
 
     await chat_module.retrieve_vertices_order(
         flow_id=flow.id,
-        background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
         data=original,
         session=_FakeSession([[flow]]),
         current_user=owner,

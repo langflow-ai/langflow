@@ -203,7 +203,6 @@ async def _trusted_stored_graph(flow_data, *, is_superuser: bool) -> dict | None
 async def retrieve_vertices_order(
     *,
     flow_id: uuid.UUID,
-    background_tasks: BackgroundTasks,
     data: Annotated[FlowDataRequest | None, Body(embed=True)] | None = None,
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
@@ -214,7 +213,6 @@ async def retrieve_vertices_order(
 
     Args:
         flow_id (str): The ID of the flow.
-        background_tasks (BackgroundTasks): The background tasks.
         data (Optional[FlowDataRequest], optional): The flow data. Defaults to None.
         stop_component_id (str, optional): The ID of the stop component. Defaults to None.
         start_component_id (str, optional): The ID of the start component. Defaults to None.
@@ -229,8 +227,6 @@ async def retrieve_vertices_order(
     Raises:
         HTTPException: If there is an error checking the build status.
     """
-    del background_tasks
-
     # This deprecated editor route is owner-only. Supported full-flow routes
     # provide public execution without exposing the flow-keyed graph cache.
     stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == current_user.id)

@@ -26,6 +26,8 @@ async def test_startup_failure_does_not_mask_error_with_unbound_temp_dirs(monkey
     lifespan = main_module.get_lifespan()
 
     sentinel = RuntimeError("Error creating DB and tables")
+    cleanup_logger = AsyncMock()
+    monkeypatch.setattr(main_module.logger, "aexception", cleanup_logger)
 
     async def _failing_initialize_services(*_args, **_kwargs):
         raise sentinel
@@ -44,7 +46,11 @@ async def test_startup_failure_does_not_mask_error_with_unbound_temp_dirs(monkey
     # The real startup error propagates unchanged...
     assert exc_info.value is sentinel
 
-    # ...and the shutdown cleanup itself did not raise, proving temp_dirs was bound.
+    # ...and cleanup did not raise a secondary exception that the outer cleanup
+    # handler would report as an unhandled lifespan cleanup error.
+    assert not any(
+        call.args and "Unhandled error during cleanup" in str(call.args[0]) for call in cleanup_logger.await_args_list
+    )
 
 
 async def test_environment_import_failure_does_not_abort_worker_startup(monkeypatch):

@@ -12,7 +12,7 @@ from uuid import UUID, uuid4
 
 import orjson
 import sqlalchemy as sa
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, StreamingResponse
 from lfx.custom.custom_component.component import Component
@@ -973,7 +973,6 @@ async def get_webhook_auth(
 
 async def _run_flow_internal(
     *,
-    background_tasks: BackgroundTasks,
     flow: FlowRead | None,
     input_request: SimplifiedAPIRequest | None,
     stream: bool,
@@ -986,7 +985,6 @@ async def _run_flow_internal(
     This function is shared between session-based and API key-based authentication endpoints.
 
     Args:
-        background_tasks (BackgroundTasks): FastAPI background task manager
         flow (FlowRead | None): The flow to execute, loaded via dependency
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
@@ -1090,8 +1088,7 @@ async def _run_flow_internal(
             http_request=http_request,
         )
         end_time = time.perf_counter()
-        background_tasks.add_task(
-            telemetry_service.log_package_run,
+        await telemetry_service.log_package_run(
             RunPayload(
                 run_is_webhook=False,
                 run_seconds=int(end_time - start_time),
@@ -1103,8 +1100,7 @@ async def _run_flow_internal(
         )
 
     except ValueError as exc:
-        background_tasks.add_task(
-            telemetry_service.log_package_run,
+        await telemetry_service.log_package_run(
             RunPayload(
                 run_is_webhook=False,
                 run_seconds=int(time.perf_counter() - start_time),
@@ -1158,8 +1154,7 @@ async def _run_flow_internal(
         # one is the failure this whole path is here to prevent.
         raise
     except Exception as exc:
-        background_tasks.add_task(
-            telemetry_service.log_package_run,
+        await telemetry_service.log_package_run(
             RunPayload(
                 run_is_webhook=False,
                 run_seconds=int(time.perf_counter() - start_time),
@@ -1187,7 +1182,6 @@ async def _run_flow_internal(
 @router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
 async def simplified_run_flow(
     *,
-    background_tasks: BackgroundTasks,
     flow: Annotated[FlowRead, Depends(get_flow_for_api_key_user)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
@@ -1202,7 +1196,6 @@ async def simplified_run_flow(
     This endpoint uses API key authentication (Bearer token).
 
     Args:
-        background_tasks (BackgroundTasks): FastAPI background task manager
         flow (FlowRead | None): The flow to execute, loaded via dependency
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
@@ -1240,7 +1233,6 @@ async def simplified_run_flow(
         folder_id=flow.folder_id,
     )
     return await _run_flow_internal(
-        background_tasks=background_tasks,
         flow=flow,
         input_request=input_request,
         stream=stream,
@@ -1255,7 +1247,6 @@ async def simplified_run_flow(
 )
 async def simplified_run_flow_session(
     *,
-    background_tasks: BackgroundTasks,
     flow: Annotated[FlowRead, Depends(get_flow_for_current_user)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
@@ -1271,7 +1262,6 @@ async def simplified_run_flow_session(
     This endpoint uses session-based authentication (cookies).
 
     Args:
-        background_tasks (BackgroundTasks): FastAPI background task manager
         flow (FlowRead | None): The flow to execute, loaded via dependency
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
@@ -1328,7 +1318,6 @@ async def simplified_run_flow_session(
     await release_db_transaction(session)
 
     return await _run_flow_internal(
-        background_tasks=background_tasks,
         flow=flow,
         input_request=input_request,
         stream=stream,
