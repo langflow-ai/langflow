@@ -72,7 +72,7 @@ class AuditEventCleanupWorker(AuditLogCleanupWorker):
             await logger.adebug("%s cleanup worker not started: retention disabled", self.label)
             return
         self._interval = self._resolve_interval(settings_service.auth_settings)
-        self._stop_event.clear()
+        self._stop_event = asyncio.Event()
         self._task = asyncio.create_task(self._run(), name="audit-events-cleanup")
         await logger.adebug(
             "Started %s cleanup worker (interval=%ss, retention=%sd)",

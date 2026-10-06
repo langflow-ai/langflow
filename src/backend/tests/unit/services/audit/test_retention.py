@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 from langflow.services.audit.retention import AuditEventCleanupWorker, purge_expired_audit_events
@@ -78,5 +79,28 @@ async def test_the_sweep_runs_and_stops_cleanly_when_enabled(audit_enabled):  # 
         assert not worker._task.done()
     finally:
         await worker.stop()
+
+    assert worker._task is None
+
+
+def test_a_second_lifespan_starts_the_sweep_on_its_own_event_loop(audit_disabled):  # noqa: ARG001
+    """The worker is a module-level singleton and every lifespan brings a new loop.
+
+    An ``asyncio.Event`` binds to the loop that first awaits it, so one built in
+    ``__init__`` and merely cleared makes the second lifespan's sweep raise
+    ``bound to a different event loop``, which ``stop()`` then re-raises and the
+    worker reports "already running" from then on.
+    """
+    worker = AuditEventCleanupWorker(interval=300)
+
+    async def lifespan() -> None:
+        await worker.start()
+        # Long interval: the sweep parks in the wait, which is what binds the loop.
+        await asyncio.sleep(0.05)
+        assert worker._task is not None
+        await worker.stop()
+
+    for _ in range(2):
+        asyncio.run(lifespan())
 
     assert worker._task is None

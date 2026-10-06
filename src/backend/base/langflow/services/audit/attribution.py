@@ -15,7 +15,6 @@ from uuid import UUID, uuid4
 
 from langflow.services.audit.details import AuditContractError
 from langflow.services.audit.vocabulary import AuditActorType
-from langflow.services.auth.context import AUTH_METHOD_API_KEY, get_current_auth_context
 from langflow.services.database.models.audit_event.model import (
     ACTING_ISSUER_MAX_LENGTH,
     ACTING_SUBJECT_MAX_LENGTH,
@@ -57,15 +56,17 @@ SYSTEM_ACTOR = AuditActor(user_id=None, actor_type=AuditActorType.SYSTEM, actor_
 
 
 def resolve_audit_actor(user_id: UUID | None) -> AuditActor:
-    """Attribute to the authenticated credential of the current request."""
-    if user_id is None:
-        return AuditActor(user_id=None, actor_type=AuditActorType.UNKNOWN, actor_id=None)
-    context = get_current_auth_context()
-    if context is not None and context.method == AUTH_METHOD_API_KEY:
-        # An environment-sourced key authenticates without a key record, so the
-        # credential is still an API key and simply has no id to name.
-        return AuditActor(user_id=user_id, actor_type=AuditActorType.API_KEY, actor_id=context.api_key_id)
-    return AuditActor(user_id=user_id, actor_type=AuditActorType.USER, actor_id=user_id)
+    """Attribute to the authenticated credential of the current request.
+
+    Delegates to the rule ``authz_audit_log`` already applies, so an event and
+    the authorization decision of the same request can never name different
+    credentials, and a new auth method only has to be taught once.
+    """
+    # Imported here because ``authorization.audit`` reads this module's request id.
+    from langflow.services.authorization.audit import _resolve_actor
+
+    resolved_user_id, actor_type, actor_id = _resolve_actor(user_id)
+    return AuditActor(user_id=resolved_user_id, actor_type=AuditActorType(actor_type), actor_id=actor_id)
 
 
 def current_request_id() -> UUID:

@@ -153,6 +153,9 @@ def decode_cursor(cursor: str, filters: AuditEventFilters) -> _CursorState:
         json.JSONDecodeError,
         KeyError,
         OverflowError,
+        # A deeply nested cursor exhausts the parser's stack rather than failing
+        # its grammar, and that is still the caller handing us a bad cursor.
+        RecursionError,
         TypeError,
         ValueError,
     ) as exc:

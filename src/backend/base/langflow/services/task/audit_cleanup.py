@@ -59,6 +59,8 @@ class AuditLogCleanupWorker:
     def __init__(self, *, interval: float | None = None) -> None:
         self._interval_override = interval
         self._interval: float = float(interval) if interval is not None else DEFAULT_CLEANUP_INTERVAL_SECONDS
+        # Replaced on every start: an Event binds to the loop that first awaits
+        # it, and this worker is a module-level singleton that outlives a loop.
         self._stop_event = asyncio.Event()
         self._task: asyncio.Task | None = None
 
@@ -97,7 +99,7 @@ class AuditLogCleanupWorker:
             return
 
         self._interval = self._resolve_interval(auth_settings)
-        self._stop_event.clear()
+        self._stop_event = asyncio.Event()
         self._task = asyncio.create_task(self._run(), name="authz-audit-cleanup")
         await logger.adebug(
             "Started %s cleanup worker (interval=%ss, retention=%sd)",
@@ -115,9 +117,13 @@ class AuditLogCleanupWorker:
 
         await logger.adebug("Stopping %s cleanup worker...", self.label)
         self._stop_event.set()
-        with contextlib.suppress(asyncio.CancelledError):
-            await self._task
-        self._task = None
+        try:
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._task
+        finally:
+            # Always clear the handle: a task that died on its own would
+            # otherwise leave the singleton refusing every later start.
+            self._task = None
         await logger.adebug("%s cleanup worker stopped", self.label)
 
     async def _run(self) -> None:

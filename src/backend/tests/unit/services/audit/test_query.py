@@ -62,16 +62,20 @@ async def test_a_traversal_returns_every_event_once_newest_first_even_on_timesta
 
 
 async def test_rows_timestamped_after_the_traversal_started_are_never_returned(audit_session):
+    """Only the cutoff keeps this row out.
+
+    It is inserted before the first page and is newer than every row the walk
+    returns, so the keyset clause alone would hand it back as the newest event.
+    """
     for index in range(6):
         await _insert(audit_session, at=datetime.now(timezone.utc) - timedelta(minutes=10 - index))
+    ahead = await _insert(audit_session, at=datetime.now(timezone.utc) + timedelta(hours=1))
     filters = AuditEventFilters(resource_type=PROJECTS)
-    first = await list_audit_events(audit_session, filters, limit=3)
 
-    late = await _insert(audit_session, at=datetime.now(timezone.utc) + timedelta(seconds=1))
-    rest = await list_audit_events(audit_session, filters, limit=3, cursor=first.next_cursor)
+    walked = await _walk(audit_session, filters, limit=3)
 
-    assert late.id not in {event.id for event in [*first.items, *rest.items]}
-    assert len(first.items) + len(rest.items) == 6
+    assert ahead.id not in {event.id for event in walked}
+    assert len(walked) == 6
 
 
 async def test_values_within_a_field_are_ored_and_fields_are_anded(audit_session):
@@ -245,6 +249,14 @@ async def test_a_cursor_with_an_out_of_range_datetime_is_refused(audit_session):
         "i": str(uuid4()),
     }
     cursor = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+
+    with pytest.raises(AuditCursorError):
+        await list_audit_events(audit_session, AuditEventFilters(resource_type=PROJECTS), limit=1, cursor=cursor)
+
+
+async def test_a_deeply_nested_cursor_is_refused(audit_session):
+    """json.loads exhausts the stack before the grammar fails: still a 400, never a 500."""
+    cursor = base64.urlsafe_b64encode(b"[" * 100_000).decode().rstrip("=")
 
     with pytest.raises(AuditCursorError):
         await list_audit_events(audit_session, AuditEventFilters(resource_type=PROJECTS), limit=1, cursor=cursor)
