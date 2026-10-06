@@ -255,7 +255,7 @@ function Migration({ migration }: { migration: MigrationState }) {
 
       <Button
         variant="link"
-        className="w-fit px-0"
+        className="h-auto w-fit whitespace-normal px-0 text-left"
         onClick={() => downloadRecord(migration)}
         ignoreTitleCase
       >
