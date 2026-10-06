@@ -148,6 +148,11 @@ def capability_probe() -> Iterator[None]:
         _capability_probe.reset(token)
 
 
+def is_decision_audit_suppressed() -> bool:
+    """True while a check runs that must leave no decision row, for plugins that write their own."""
+    return _capability_probe.get()
+
+
 async def _audit_suppressed() -> None:
     """Awaitable no-op standing in for a suppressed decision row."""
     return
@@ -517,6 +522,7 @@ async def _ensure_typed(
     act_str: str,
     kwargs: dict[str, Any],
     domain_override: str | None,
+    allow_owner_override: bool = True,
 ) -> None:
     """Shared body for ``ensure_*_permission`` helpers.
 
@@ -564,10 +570,10 @@ async def _ensure_typed(
     container_owner_id = kwargs.get(spec.create_container_owner_kw) if spec.create_container_owner_kw else None
     if is_create and spec.create_container_owner_kw is not None:
         override_owner_id = container_owner_id
-        owner_override_allowed = True
+        owner_override_allowed = allow_owner_override
     else:
         override_owner_id = owner_id
-        owner_override_allowed = not is_create or spec.owner_override_on_create
+        owner_override_allowed = allow_owner_override and (not is_create or spec.owner_override_on_create)
 
     await _ensure_resource_permission(
         user,
@@ -618,6 +624,35 @@ async def ensure_flow_permission(
         },
         domain_override=domain,
     )
+
+
+async def ensure_flow_audit_read_permission(
+    user: User | UserRead,
+    *,
+    flow_id: UUID | None = None,
+    flow_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+    folder_id: UUID | None = None,
+) -> None:
+    """Require ``flow:audit_read`` without the ordinary resource-owner override.
+
+    Reading a trail must not add to it, so the decision is enforced but never recorded.
+    """
+    with capability_probe():
+        await _ensure_typed(
+            user,
+            spec_key="flow",
+            act_str=FlowAction.AUDIT_READ.value,
+            kwargs={
+                "flow_id": flow_id,
+                "flow_user_id": flow_user_id,
+                "workspace_id": workspace_id,
+                "folder_id": folder_id,
+                "folder_user_id": None,
+            },
+            domain_override=None,
+            allow_owner_override=False,
+        )
 
 
 async def _audit_flow_decision_batch(
@@ -901,6 +936,32 @@ async def ensure_project_permission(
         },
         domain_override=domain,
     )
+
+
+async def ensure_project_audit_read_permission(
+    user: User | UserRead,
+    *,
+    project_id: UUID | None = None,
+    project_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+) -> None:
+    """Require ``project:audit_read`` without the ordinary resource-owner override.
+
+    Reading a trail must not add to it, so the decision is enforced but never recorded.
+    """
+    with capability_probe():
+        await _ensure_typed(
+            user,
+            spec_key="project",
+            act_str=ProjectAction.AUDIT_READ.value,
+            kwargs={
+                "project_id": project_id,
+                "project_user_id": project_user_id,
+                "workspace_id": workspace_id,
+            },
+            domain_override=None,
+            allow_owner_override=False,
+        )
 
 
 async def ensure_knowledge_base_permission(
