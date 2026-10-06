@@ -610,3 +610,190 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         assert len(data_objects) == 2
         assert all(isinstance(obj, Data) for obj in data_objects)
+
+
+class _RemoteBackendStub:
+    """A backend that records how ingestion reads and writes it."""
+
+    def __init__(self, stored_ids: set[str] | None = None) -> None:
+        self.stored_ids = set(stored_ids or ())
+        self.lookups: list[set[str]] = []
+        self.written: list = []
+        self.scanned = False
+        self.size = 4096
+        # Hashes another run stores while this one is embedding.
+        self.stored_during_embedding: set[str] = set()
+
+    async def ensure_ready(self) -> None:
+        return None
+
+    async def existing_content_ids(self, content_ids) -> set[str]:
+        self.lookups.append(set(content_ids))
+        return self.stored_ids & set(content_ids)
+
+    async def iter_documents(self, **_kwargs):
+        self.scanned = True
+        if False:  # pragma: no cover — keeps this an async generator
+            yield []
+
+    async def add_embedded_documents(self, documents) -> None:
+        self.written.extend(documents)
+
+    async def storage_size_bytes(self) -> int:
+        return self.size
+
+    def embeddings(self) -> MagicMock:
+        async def embed(texts):
+            self.stored_ids |= self.stored_during_embedding
+            return [[0.1, 0.2] for _ in texts]
+
+        embedding_function = MagicMock()
+        embedding_function.aembed_documents = AsyncMock(side_effect=embed)
+        return embedding_function
+
+
+@pytest.mark.usefixtures("client")
+class TestIngestionReadsOnlyNewRows:
+    """Deduplication and stats must cost what one run writes, not what the KB holds."""
+
+    @pytest.fixture
+    def component_class(self):
+        return KnowledgeIngestionComponent
+
+    @pytest.fixture
+    async def default_kwargs(self, active_user):
+        from langflow.api.utils import knowledge_base_service
+
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="remote_kb",
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
+            backend_type="postgres",
+            backend_config={},
+        )
+        return {
+            "knowledge_base": "remote_kb",
+            "input_df": DataFrame({"text": ["alpha beta", "gamma", "delta epsilon zeta"]}),
+            "column_config": [{"column_name": "text", "vectorize": True, "identifier": False}],
+            "chunk_size": 1000,
+            "api_key": None,
+            "allow_duplicates": False,
+            "silent_errors": False,
+            "_user_id": active_user.id,
+            "_record_id": record.id,
+        }
+
+    def _component(self, component_class, kwargs):
+        kwargs = dict(kwargs)
+        kwargs.pop("_record_id")
+        return component_class(**kwargs)
+
+    async def _ingest(self, component, backend: _RemoteBackendStub):
+        df = component.input_df
+        config_list = component._validate_column_config(df)
+        with patch("langflow.api.utils.kb_helpers.backend_for_name", AsyncMock(return_value=backend)):
+            return await component._create_vector_store(df, config_list, embedding_function=backend.embeddings())
+
+    @staticmethod
+    def _hashes(*texts: str) -> set[str]:
+        return {hashlib.sha256(text.encode()).hexdigest() for text in texts}
+
+    async def test_skips_stored_rows_by_looking_up_only_their_hashes(self, component_class, default_kwargs):
+        backend = _RemoteBackendStub(stored_ids=self._hashes("gamma") | {"some-other-chunk"})
+        component = self._component(component_class, default_kwargs)
+
+        await self._ingest(component, backend)
+
+        # Once before embedding, then only the remaining rows again under the write lease.
+        assert backend.lookups == [
+            self._hashes("alpha beta", "gamma", "delta epsilon zeta"),
+            self._hashes("alpha beta", "delta epsilon zeta"),
+        ]
+        assert backend.scanned is False
+        assert [doc.content for doc in backend.written] == ["alpha beta", "delta epsilon zeta"]
+        assert component._written_totals.chunks == 2
+        assert component._written_totals.words == 5
+        assert component._written_totals.characters == len("alpha beta") + len("delta epsilon zeta")
+
+    async def test_skips_rows_another_run_stored_while_embedding(self, component_class, default_kwargs):
+        backend = _RemoteBackendStub()
+        backend.stored_during_embedding = self._hashes("gamma")
+        component = self._component(component_class, default_kwargs)
+
+        await self._ingest(component, backend)
+
+        assert backend.scanned is False
+        assert [doc.content for doc in backend.written] == ["alpha beta", "delta epsilon zeta"]
+        assert component._written_totals.chunks == 2
+
+    async def test_allow_duplicates_writes_every_row_without_a_lookup(self, component_class, default_kwargs):
+        default_kwargs["allow_duplicates"] = True
+        backend = _RemoteBackendStub(stored_ids=self._hashes("gamma"))
+        component = self._component(component_class, default_kwargs)
+
+        await self._ingest(component, backend)
+
+        assert backend.lookups == []
+        assert backend.scanned is False
+        assert len(backend.written) == 3
+        assert component._written_totals.chunks == 3
+
+    async def test_stats_add_this_runs_totals_without_reading_the_kb(self, component_class, default_kwargs):
+        from langflow.api.utils import knowledge_base_service
+        from lfx.components.files_and_knowledge.knowledge import _WrittenTotals
+
+        record_id = default_kwargs["_record_id"]
+        await knowledge_base_service.update_stats(record_id, chunks=10, words=40, characters=200, source_types=["pdf"])
+        component = self._component(component_class, default_kwargs)
+        backend = _RemoteBackendStub()
+
+        await component._refresh_kb_stats(
+            kb_record_id=record_id,
+            backend=backend,
+            extensions={"txt"},
+            written=_WrittenTotals(chunks=3, words=7, characters=30),
+        )
+        await component._refresh_kb_stats(
+            kb_record_id=record_id,
+            backend=backend,
+            extensions={"txt"},
+            written=_WrittenTotals(chunks=2, words=4, characters=11),
+        )
+
+        row = await knowledge_base_service.get_by_id(record_id)
+        assert (row.chunks, row.words, row.characters) == (15, 51, 241)
+        assert row.size_bytes == 4096
+        assert row.source_types == ["pdf", "txt"]
+        assert backend.scanned is False
+
+    async def test_concurrent_runs_do_not_overwrite_each_others_counts(self, default_kwargs):
+        import asyncio
+
+        from langflow.api.utils import knowledge_base_service
+
+        record_id = default_kwargs["_record_id"]
+        await asyncio.gather(
+            *(knowledge_base_service.increment_stats(record_id, chunks=1, words=2, characters=3) for _ in range(10))
+        )
+
+        row = await knowledge_base_service.get_by_id(record_id)
+        assert (row.chunks, row.words, row.characters) == (10, 20, 30)
+
+    async def test_stats_fall_back_to_a_recount_without_run_totals(self, component_class, default_kwargs):
+        from langflow.api.utils import knowledge_base_service
+        from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+        record_id = default_kwargs["_record_id"]
+        component = self._component(component_class, default_kwargs)
+        backend = _RemoteBackendStub()
+        backend.count = AsyncMock(return_value=2)
+
+        async def _iter(**_kwargs):
+            yield [IngestedDocument(content="one two"), IngestedDocument(content="three")]
+
+        backend.iter_documents = _iter
+
+        await component._refresh_kb_stats(kb_record_id=record_id, backend=backend, extensions=set())
+
+        row = await knowledge_base_service.get_by_id(record_id)
+        assert (row.chunks, row.words, row.characters) == (2, 3, len("one two") + len("three"))

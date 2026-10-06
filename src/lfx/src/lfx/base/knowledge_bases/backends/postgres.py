@@ -31,6 +31,7 @@ from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore
 
 from lfx.base.knowledge_bases.backends.base import (
+    METADATA_KEY_CONTENT_ID,
     BackendConfigurationError,
     BackendType,
     BaseVectorStoreBackend,
@@ -41,7 +42,7 @@ from lfx.base.knowledge_bases.backends.naming import owner_scoped_collection_nam
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Sequence
+    from collections.abc import AsyncIterator, Collection, Sequence
 
     from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -139,6 +140,20 @@ def _drop_table_sql(table: str) -> str:
 def _iter_documents_sql(table: str, *, include_embeddings: bool) -> str:
     columns = "id, document, cmetadata" + (", embedding" if include_embeddings else "")
     return f"SELECT {columns} FROM {_validate_table_name(table)}"  # noqa: S608 — table name validated above
+
+
+# Content ids looked up per query by ``existing_content_ids``.
+_CONTENT_ID_LOOKUP_BATCH = 1000
+
+
+def _existing_content_ids_sql(table: str) -> str:
+    # ``cmetadata @> ANY(...)`` is answered by the ``jsonb_path_ops`` GIN index
+    # (one index search per probe), so the cost follows the probes, not the table.
+    return (
+        f"SELECT DISTINCT cmetadata ->> '{METADATA_KEY_CONTENT_ID}' "  # noqa: S608 — constant key
+        f"FROM {_validate_table_name(table)} "
+        "WHERE cmetadata @> ANY(CAST(:probes AS jsonb[]))"
+    )
 
 
 def _parse_vector_dim(type_str: str | None) -> int | None:
@@ -705,6 +720,29 @@ class PostgresBackend(BaseVectorStoreBackend):
                     batch = []
             if batch:
                 yield batch
+
+    async def existing_content_ids(self, content_ids: Collection[str]) -> set[str]:
+        """Look up only the given content ids through the metadata GIN index."""
+        await self.ensure_ready()
+        wanted = sorted({str(content_id) for content_id in content_ids if content_id})
+        found: set[str] = set()
+        if not wanted:
+            return found
+        from sqlalchemy import text
+
+        query = text(_existing_content_ids_sql(self.table_name))
+        engine = self._ensure_async_engine()
+        async with engine.connect() as conn:
+            if not await self._table_exists(conn):
+                return found
+            for start in range(0, len(wanted), _CONTENT_ID_LOOKUP_BATCH):
+                probes = [
+                    json.dumps({METADATA_KEY_CONTENT_ID: content_id})
+                    for content_id in wanted[start : start + _CONTENT_ID_LOOKUP_BATCH]
+                ]
+                rows = await conn.execute(query, {"probes": probes})
+                found.update(row[0] for row in rows.all() if row[0] is not None)
+        return found
 
     async def delete_by(self, where: dict[str, Any]) -> None:
         """Delete chunks whose ``cmetadata`` contains ``where`` (JSONB @>)."""

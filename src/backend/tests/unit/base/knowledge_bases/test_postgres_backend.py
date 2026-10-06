@@ -282,3 +282,59 @@ class TestPostgresEmbeddedDocumentsLive:
                 with contextlib.suppress(Exception):
                     await backend.delete_collection()
                 await backend.teardown()
+
+
+class TestPostgresContentIdLookupLive:
+    """Deduplication looks up only the new rows' content hashes, through the GIN index."""
+
+    async def test_finds_stored_hashes_and_uses_the_metadata_index(self, tmp_path: Path, fake_embeddings) -> None:
+        _require_live_pgvector()
+        from langchain_core.documents import Document
+        from lfx.base.knowledge_bases.backends.postgres import _existing_content_ids_sql
+        from sqlalchemy import text
+
+        backend = create_backend(
+            "postgres",
+            kb_name=f"kb_dedup_{uuid.uuid4().hex[:8]}",
+            kb_path=tmp_path,
+            backend_config={},
+            embedding_function=fake_embeddings,
+            user_id=uuid.uuid4(),
+        )
+        try:
+            await backend.ensure_ready()
+            tc = await backend.test_connection()
+            if not tc.ok:
+                pytest.skip(f"pgvector not reachable: {tc.message}")
+
+            assert await backend.existing_content_ids({"h0"}) == set()  # no table yet
+
+            # Rows keep their random ids; the hash lives in the metadata, as the
+            # Knowledge component has always written it.
+            await backend.add_documents(
+                [Document(page_content=f"doc {i}", metadata={"_id": f"h{i}", "file_name": "f"}) for i in range(200)]
+                + [Document(page_content="no hash", metadata={"file_name": "f"})]
+            )
+
+            assert await backend.existing_content_ids({"h3", "h150", "missing"}) == {"h3", "h150"}
+            assert await backend.existing_content_ids({f"h{i}" for i in range(0, 200, 7)}) == {
+                f"h{i}" for i in range(0, 200, 7)
+            }
+
+            async with backend._ensure_async_engine().begin() as conn:
+                await conn.execute(text("SET LOCAL enable_seqscan = off"))
+                plan = "\n".join(
+                    (
+                        await conn.execute(
+                            text("EXPLAIN " + _existing_content_ids_sql(backend.table_name)),
+                            {"probes": ['{"_id": "h3"}', '{"_id": "h4"}']},
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+            assert f"{backend.table_name}_cmeta_gin" in plan, plan
+        finally:
+            with contextlib.suppress(Exception):
+                await backend.delete_collection()
+            await backend.teardown()

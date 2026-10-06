@@ -29,6 +29,7 @@ from uuid import UUID, uuid4
 
 from lfx.log.logger import logger
 from lfx.services.authorization.base import ResourceVisibilityScope
+from sqlalchemy import update
 from sqlmodel import select
 
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
@@ -423,6 +424,42 @@ async def update_stats(
             row.separator = separator
         row.updated_at = datetime.now(timezone.utc)
         session.add(row)
+        await session.commit()
+
+
+async def increment_stats(
+    record_id: UUID,
+    *,
+    chunks: int = 0,
+    words: int = 0,
+    characters: int = 0,
+    size_bytes: int | None = None,
+    source_types: list[str] | None = None,
+) -> None:
+    """Add one ingestion run's totals to the cached aggregates.
+
+    A single ``UPDATE ... SET chunks = chunks + :n`` keeps the counters right
+    when several runs write to the same knowledge base at once, and costs the
+    same however large the knowledge base is. Like ``update_stats`` it runs
+    under the knowledge base's storage lease, and silently returns when the
+    row is gone.
+    """
+    from langflow.services.knowledge_base_storage.runtime import operation
+
+    if await get_by_id(record_id) is None:
+        return
+    values: dict[str, Any] = {
+        "chunks": KnowledgeBaseRecord.chunks + int(chunks),
+        "words": KnowledgeBaseRecord.words + int(words),
+        "characters": KnowledgeBaseRecord.characters + int(characters),
+        "updated_at": datetime.now(timezone.utc),
+    }
+    if size_bytes is not None:
+        values["size_bytes"] = int(size_bytes)
+    if source_types is not None:
+        values["source_types"] = sorted(set(source_types))
+    async with operation(record_id), session_scope() as session:
+        await session.exec(update(KnowledgeBaseRecord).where(KnowledgeBaseRecord.id == record_id).values(**values))
         await session.commit()
 
 

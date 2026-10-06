@@ -28,7 +28,11 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 
 from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend
-from lfx.base.knowledge_bases.backends.base import BackendConfigurationError, IngestedDocument
+from lfx.base.knowledge_bases.backends.base import (
+    METADATA_KEY_CONTENT_ID,
+    BackendConfigurationError,
+    IngestedDocument,
+)
 from lfx.base.knowledge_bases.backends.naming import ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.ingestion_sources.base import (
     IngestionItemResult,
@@ -133,6 +137,24 @@ _DEFAULT_OPENSEARCH_CONFIG = {
     "vector_field": "vector_field",
     "text_field": "text",
 }
+
+
+@dataclass(frozen=True)
+class _WrittenTotals:
+    """Chunk, word and character totals of the rows one ingestion run wrote."""
+
+    chunks: int = 0
+    words: int = 0
+    characters: int = 0
+
+    @classmethod
+    def of(cls, documents: list[IngestedDocument]) -> _WrittenTotals:
+        """Total the rows about to be written, counted the same way as a recount."""
+        return cls(
+            chunks=len(documents),
+            words=sum(len(document.content.split()) for document in documents),
+            characters=sum(len(document.content) for document in documents),
+        )
 
 
 class KnowledgeComponent(Component):
@@ -767,14 +789,17 @@ class KnowledgeComponent(Component):
         kb_record_id: Any,
         backend: BaseVectorStoreBackend,
         extensions: set[str],
+        written: _WrittenTotals | None = None,
     ) -> None:
-        """Recount the KB from its vector store and write the totals onto the row.
+        """Update the KB row's chunk, word, character and size totals.
 
-        Backend-agnostic: counts come from ``count`` / ``iter_documents`` /
-        ``storage_size_bytes``, so a Chroma, OpenSearch, or pgVector KB all report
-        real numbers. ``extensions`` are merged into ``source_types`` so the KB
-        list renders the right file-type icon regardless of which ingestion route
-        produced the chunks.
+        ``written`` holds the totals of the rows this run wrote; they are added to
+        the row's counters in one atomic update, so the cost follows the run, not
+        the KB size, and concurrent runs into one KB don't overwrite each other.
+        Without it (or with an older Langflow) the KB is recounted from its
+        vector store through ``count`` / ``iter_documents``. ``extensions`` are
+        merged into ``source_types`` so the KB list renders the right file-type
+        icon regardless of which ingestion route produced the chunks.
 
         Best-effort: the chunks are already written and committed by the time this
         runs, so a stats refresh failure must not fail the ingestion.
@@ -787,6 +812,20 @@ class KnowledgeComponent(Component):
             return
 
         try:
+            increment_stats = getattr(knowledge_base_service, "increment_stats", None)
+            if written is not None and increment_stats is not None:
+                record = await knowledge_base_service.get_by_id(kb_record_id)
+                existing = set(record.source_types or []) if record is not None else set()
+                await increment_stats(
+                    kb_record_id,
+                    chunks=written.chunks,
+                    words=written.words,
+                    characters=written.characters,
+                    size_bytes=await backend.storage_size_bytes(),
+                    source_types=sorted(existing | extensions) if not extensions <= existing else None,
+                )
+                return
+
             chunks = await backend.count()
             characters = 0
             words = 0
@@ -919,17 +958,11 @@ class KnowledgeComponent(Component):
         from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
 
         record = await resolve_record(owner_id, self.knowledge_base)
-        async with operation(record, shared=True):
-            existing_ids = set()
-            if not self.allow_duplicates:
-                async with aclosing(backend.iter_documents()) as batches:
-                    async for batch in batches:
-                        for document in batch:
-                            doc_id = document.metadata.get("_id")
-                            if doc_id:
-                                existing_ids.add(doc_id)
-
-        data_objects = await self._convert_df_to_data_objects(df_source, config_list, existing_ids=existing_ids)
+        data_objects = await self._convert_df_to_data_objects(df_source, config_list)
+        if not self.allow_duplicates:
+            # Skip rows that are already stored before paying to embed them.
+            async with operation(record, shared=True):
+                data_objects = await self._skip_stored_rows(backend, data_objects)
 
         user_metadata_tag = self._resolve_user_metadata_tag()
 
@@ -940,6 +973,7 @@ class KnowledgeComponent(Component):
                 doc.metadata["source_metadata"] = user_metadata_tag
             documents.append(doc)
         if not documents:
+            self._written_totals = _WrittenTotals()
             return backend
 
         # No storage lease may surround the provider call. The write lease
@@ -954,13 +988,18 @@ class KnowledgeComponent(Component):
         ]
         async with operation(record):
             if not self.allow_duplicates:
-                current_ids = set()
-                async with aclosing(backend.iter_documents()) as batches:
-                    async for batch in batches:
-                        current_ids.update(doc.metadata["_id"] for doc in batch if doc.metadata.get("_id"))
+                # Another run may have stored some of these rows while this one
+                # was embedding. Look up only this batch's hashes again.
+                current_ids = await backend.existing_content_ids(
+                    {
+                        doc.metadata[METADATA_KEY_CONTENT_ID]
+                        for doc in embedded
+                        if doc.metadata.get(METADATA_KEY_CONTENT_ID)
+                    }
+                )
                 unique = []
                 for doc in embedded:
-                    doc_id = doc.metadata.get("_id")
+                    doc_id = doc.metadata.get(METADATA_KEY_CONTENT_ID)
                     if doc_id and doc_id in current_ids:
                         continue
                     if doc_id:
@@ -971,8 +1010,25 @@ class KnowledgeComponent(Component):
             if embedded:
                 await backend.add_embedded_documents(embedded)
                 self.log(f"Added {len(embedded)} documents to vector store '{self.knowledge_base}'")
+        self._written_totals = _WrittenTotals.of(embedded)
 
         return backend
+
+    async def _skip_stored_rows(self, backend: BaseVectorStoreBackend, data_objects: list[Data]) -> list[Data]:
+        """Drop rows whose content hash is already stored, looking up only these rows' hashes."""
+        stored = await backend.existing_content_ids(
+            {obj.data[METADATA_KEY_CONTENT_ID] for obj in data_objects if obj.data.get(METADATA_KEY_CONTENT_ID)}
+        )
+        if not stored:
+            return data_objects
+        kept = []
+        for obj in data_objects:
+            content_id = obj.data.get(METADATA_KEY_CONTENT_ID)
+            if content_id in stored:
+                self.log(f"Skipping duplicate row with hash {content_id}")
+                continue
+            kept.append(obj)
+        return kept
 
     async def _convert_df_to_data_objects(
         self,
@@ -1201,6 +1257,7 @@ class KnowledgeComponent(Component):
             if kb_record_id is not None:
                 await self._record_kb_status(kb_record_id, "ingesting")
 
+            self._written_totals = None
             backend = await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
 
             try:
@@ -1218,6 +1275,7 @@ class KnowledgeComponent(Component):
                     kb_record_id=kb_record_id,
                     backend=backend,
                     extensions=source_types,
+                    written=getattr(self, "_written_totals", None),
                 )
             finally:
                 await backend.teardown()
@@ -1243,7 +1301,7 @@ class KnowledgeComponent(Component):
                 )
 
             if kb_record_id is not None:
-                # Stats were already refreshed straight from the backend above.
+                # Stats were already updated above.
                 await self._record_kb_status(kb_record_id, "ready")
 
             self.status = f"✅ KB **{self.knowledge_base}** saved · {len(df_source)} chunks."
