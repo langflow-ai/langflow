@@ -31,6 +31,7 @@ from sqlalchemy.engine import make_url
 from sqlmodel import select
 
 from langflow.api.utils.migration_jobs import active_jobs, live_listeners
+from langflow.api.utils.migration_pause import drained
 from langflow.cli.migration_preflight import check_target_version
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.file.model import File
@@ -55,6 +56,8 @@ ACCEPTABLE_FINDINGS = frozenset(
 _KEY_CHECK = "target key"
 # How much of a failed command's stderr the record keeps.
 _STDERR_LINES = 40
+# Seconds a pause waits for the changes that were let in before it. Past that it is refused.
+_DRAIN_SECONDS = 5
 # The steps after the check, in page order.
 _LATER_STEPS = (
     "connect_target",
@@ -172,17 +175,29 @@ async def pause_changes(admin: Superuser) -> dict[str, Any]:
         # The moment the re-check and the copies are measured against stays the first one.
         return state
     _require_unlocked(state, "pause")
-    async with session_scope() as session:
-        jobs, listeners = await active_jobs(session, admin.id), await live_listeners(session)
-    if jobs or listeners:
-        raise HTTPException(status_code=409, detail={"code": "jobs_active", "jobs": jobs, "listeners": listeners})
-    # ponytail: a job that starts between the look above and the write below is not seen. One that is
-    # still queued then waits out the pause. Take the look inside the executor if one ever runs through.
-    # Read again, so that what another request saved while this one looked is kept.
+    # Written first, so that no worker lets a new change in. Read again, with nothing awaited
+    # before the write, so that what another request saved meanwhile is kept.
     record = _read_record()
-    record["pause"] = {"frozen_at": _now(), "frozen_by": admin.username}
+    if record.get("pause"):
+        return await _state(record)
+    pause = record["pause"] = {"frozen_at": _now(), "frozen_by": admin.username}
     _write_record(record)
-    await logger.ainfo(f"Migration: user_id={admin.id} paused changes to this instance")
+    try:
+        refusal = await _still_writing(admin)
+    except BaseException:
+        # A request that is cut off while it waits must not leave a pause that nobody checked.
+        _lift(pause)
+        raise
+    if refusal:
+        _lift(pause)
+        raise HTTPException(status_code=409, detail=refusal)
+    record = _read_record()
+    # Another request may have resumed, or paused for itself, while this one waited. Its word stands.
+    if record.get("pause") == pause:
+        # The instance is still from this moment. The re-check and the copies are measured against it.
+        record["pause"] = {**pause, "frozen_at": _now()}
+        _write_record(record)
+        await logger.ainfo(f"Migration: user_id={admin.id} paused changes to this instance")
     return await _state(record)
 
 
@@ -399,6 +414,25 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
         steps.append({"id": step, "state": state, "reason": reason})
         frontier_open = frontier_open and state in {"done", "skipped"}
     return steps
+
+
+async def _still_writing(admin: User) -> dict[str, Any] | None:
+    """What still writes now that no new change is let in: the refusal to answer with, or None."""
+    # The changes that were let in before the pause end first. Only then is it known what writes
+    # without a request: a job that one of those changes queued is in the table by now.
+    if not await drained(_DRAIN_SECONDS):
+        return {"code": "requests_active"}
+    async with session_scope() as session:
+        jobs, listeners = await active_jobs(session, admin.id), await live_listeners(session)
+    return {"code": "jobs_active", "jobs": jobs, "listeners": listeners} if jobs or listeners else None
+
+
+def _lift(pause: dict[str, Any]) -> None:
+    """Take a pause out again, unless another request has since resumed or paused for itself."""
+    record = _read_record()
+    if record.get("pause") == pause:
+        del record["pause"]
+        _write_record(record)
 
 
 def _pause_step(record: dict[str, Any], blocking: list[str]) -> tuple[str, str | None]:

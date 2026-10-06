@@ -18,6 +18,7 @@ from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from langflow.api.utils import migration_pause
 from langflow.api.utils.migration_pause import MigrationPauseMiddleware, is_paused
 from langflow.initial_setup.setup import sync_flows_from_fs
 from langflow.main import create_app
@@ -233,6 +234,65 @@ async def test_a_websocket_is_refused_while_paused(client, config_dir):
 
 
 @pytest.mark.usefixtures("background_service")
+async def test_a_change_is_refused_at_the_moment_a_pause_checks_that_none_is_going(
+    client, logged_in_headers, config_dir
+):
+    fcntl = pytest.importorskip("fcntl", reason="workers share the lock through flock")
+    _write_record(config_dir, RECORD)
+    lock = os.open(config_dir / "migrations" / "pause.lock", os.O_RDWR | os.O_CREAT)
+    try:
+        # What a pause holds for an instant, in whichever worker it runs, to learn that no change is going.
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        refused = await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)
+    finally:
+        os.close(lock)
+
+    assert refused.status_code == 503
+    assert refused.json() == REFUSAL
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
+
+
+async def test_a_change_takes_its_place_before_it_asks_about_the_pause(
+    client, logged_in_headers, config_dir, monkeypatch
+):
+    fcntl = pytest.importorskip("fcntl", reason="workers share the lock through flock")
+    _write_record(config_dir, RECORD)
+    place_held_when_asked = []
+    ask = migration_pause.is_paused
+
+    def ask_and_look() -> bool:
+        # What a pause would find at this very moment, from whichever worker it runs in.
+        lock = os.open(config_dir / "migrations" / "pause.lock", os.O_RDWR | os.O_CREAT)
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            place_held_when_asked.append(True)
+        else:
+            place_held_when_asked.append(False)
+        finally:
+            os.close(lock)
+        return ask()
+
+    monkeypatch.setattr(migration_pause, "is_paused", ask_and_look)
+
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
+    # Asked the other way round, a pause written between the two would count nothing and stop nothing.
+    assert place_held_when_asked == [True]
+
+
+async def test_a_lock_that_cannot_be_taken_stops_no_change(client, logged_in_headers, config_dir):
+    pytest.importorskip("fcntl", reason="workers share the lock through flock")
+    # A CONFIG_DIR this process cannot use for the lock, here because a folder sits where the lock goes.
+    (config_dir / "migrations" / "pause.lock").mkdir(parents=True)
+
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
+
+    _write_record(config_dir, PAUSED)
+
+    # The pause itself still holds: it is read from the record.
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 503
+
+
 async def test_a_schedule_that_comes_due_during_the_pause_fires_after_it_ends(active_user, config_dir):
     async with session_scope() as session:
         flow = Flow(name="scheduled", user_id=active_user.id, data={"nodes": [], "edges": []})
@@ -355,6 +415,8 @@ async def test_a_record_that_says_paused_changes_nothing_while_the_feature_is_of
     assert not is_paused()
     assert MigrationPauseMiddleware not in [middleware.cls for middleware in create_app().user_middleware]
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
+    # Nor does a change take the lock a pause waits on: this instance pays nothing.
+    assert not (config_dir / "migrations" / "pause.lock").exists()
 
 
 async def test_the_flow_sync_from_disk_waits_out_the_pause(active_user, config_dir, monkeypatch):
