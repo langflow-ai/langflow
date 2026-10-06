@@ -12,6 +12,8 @@ the database is what moves.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -81,6 +83,8 @@ _LATER_STEPS = (
 # A report line holds every check's problems, which can pass asyncio's 64 KiB default.
 _LINE_LIMIT = 16 * 1024 * 1024
 _ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+# How many hex characters of the key's SHA-256 the admin reads on the new instance.
+_FINGERPRINT_LENGTH = 12
 # ponytail: a destination's password and keys are held here, in this worker's memory, and nowhere else.
 # A restart or a second worker has none, and the page asks for them again. Move them to an encrypted
 # file or to Redis when a copy has to be able to start on any worker.
@@ -115,6 +119,10 @@ class DestinationsRequest(BaseModel):
     database_url: SecretStr | None = None
     vectors: VectorsDestination | None = None
     files: FilesDestination | None = None
+
+
+class FingerprintRequest(BaseModel):
+    fingerprint: str
 
 
 @router.get("")
@@ -339,6 +347,29 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
     return {**await _state(record), "results": results}
 
 
+@router.post("/secret-key/verify")
+async def verify_secret_key(request: FingerprintRequest, admin: Superuser) -> dict[str, Any]:
+    """Confirm that the new instance holds this instance's secret key, without the key leaving either one.
+
+    The admin reads the fingerprint on the new instance and pastes it here. An instance that
+    starts on another key cannot open any saved credential, and says nothing about it.
+    """
+    record = _read_record()
+    key = get_settings_service().auth_settings.SECRET_KEY.get_secret_value()
+    fingerprint = hashlib.sha256(key.encode()).hexdigest()[:_FINGERPRINT_LENGTH]
+    # In constant time, so a refusal says nothing about how much of a guess was right.
+    matches = hmac.compare_digest(request.fingerprint.strip().lower().encode(), fingerprint.encode())
+    # The last answer stands: a key that stopped matching reopens the step.
+    answer = "verified" if matches else "mismatch"
+    record["secret_key"] = {f"{answer}_by": admin.username, f"{answer}_at": _now()}
+    _write_record(record)
+    if not matches:
+        await logger.ainfo(f"Migration: user_id={admin.id} gave a secret key fingerprint that does not match")
+        raise HTTPException(status_code=400, detail={"code": "fingerprint_mismatch"})
+    await logger.ainfo(f"Migration: user_id={admin.id} confirmed the secret key on the new instance")
+    return await _state(record)
+
+
 def _hold(name: str, secret: Any, result: dict[str, Any]) -> None:
     """Keep a destination's secret while its test passes, and forget it when it does not."""
     if result["ok"]:
@@ -484,6 +515,11 @@ async def _instance() -> dict[str, Any]:
             "folder": str(settings.config_dir),
             "local": has_files or _has_uploads(Path(settings.config_dir), namespaces),
         }
+    # Where the key lives decides how the admin carries it over. Never the key, and never its
+    # fingerprint: one that is handed out would pass the check without anyone reading the new instance.
+    secret_key = {"source": "file", "path": str(Path(get_settings_service().auth_settings.CONFIG_DIR) / "secret_key")}
+    if os.environ.get("LANGFLOW_SECRET_KEY"):
+        secret_key = {"source": "env"}
     return {
         "version": get_version_info()["version"],
         "database": database,
@@ -492,6 +528,7 @@ async def _instance() -> dict[str, Any]:
             "local": any(is_local_backend(backend, config) for backend, config in knowledge_bases),
         },
         "files": files,
+        "secret_key": secret_key,
     }
 
 
@@ -542,8 +579,7 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
     # What each later step says for itself. A step with no entry is not built yet.
     own = {
         "connect_target": _connect_step(record, needed),
-        # The key gets its route next. Until then only the record can say that step is done.
-        "secret_key": ("done", None) if record.get("secret_key") else ("current", "not_available"),
+        "secret_key": _secret_key_step(record),
         "pause": _pause_step(record, blocking),
     }
     steps = [first]
@@ -588,6 +624,13 @@ def _connect_step(record: dict[str, Any], needed: list[str]) -> tuple[str, str |
     if failed:
         return "blocked", failed[0]
     return ("done", None) if all(part in saved for part in needed) else ("current", None)
+
+
+def _secret_key_step(record: dict[str, Any]) -> tuple[str, str | None]:
+    answer = record.get("secret_key") or {}
+    if answer.get("verified_at"):
+        return "done", None
+    return ("blocked", "fingerprint_mismatch") if answer.get("mismatch_at") else ("current", None)
 
 
 def _pause_step(record: dict[str, Any], blocking: list[str]) -> tuple[str, str | None]:
