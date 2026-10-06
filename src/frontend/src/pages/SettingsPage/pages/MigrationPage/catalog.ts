@@ -144,3 +144,16 @@ export const JOB_STATES: Record<string, string> = {
   suspended: "waiting",
   ingesting: "ingesting",
 };
+
+/**
+ * An example backup command for this instance's PostgreSQL database, with no user and no password.
+ * The server gives the location as `host:port/database`, or `host/database` on the default port.
+ */
+export function pgDumpCommand(location: string) {
+  const slash = location.lastIndexOf("/");
+  const address = location.slice(0, slash);
+  // ponytail: a bare IPv6 host on the default port reads as a host and a port. The command is an example the admin adapts.
+  const port = /:(\d+)$/.exec(address)?.[1];
+  const host = port ? address.slice(0, -port.length - 1) : address;
+  return `pg_dump -h ${host}${port ? ` -p ${port}` : ""} -d ${location.slice(slash + 1)} -F c -f langflow-backup.dump`;
+}

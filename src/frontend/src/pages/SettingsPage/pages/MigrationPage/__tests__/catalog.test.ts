@@ -10,6 +10,7 @@ import {
   groupChecks,
   JOB_STATES,
   PROBES,
+  pgDumpCommand,
 } from "../catalog";
 
 const check = (
@@ -196,5 +197,16 @@ describe("JOB_STATES", () => {
         (slug) => !(`settings.migration.job.${slug}` in en),
       ),
     ).toEqual([]);
+  });
+});
+
+describe("pgDumpCommand", () => {
+  it("fills in the host, the port and the database, and names no user", () => {
+    expect(pgDumpCommand("db.internal:5432/langflow")).toBe(
+      "pg_dump -h db.internal -p 5432 -d langflow -F c -f langflow-backup.dump",
+    );
+    expect(pgDumpCommand("db.internal/langflow")).toBe(
+      "pg_dump -h db.internal -d langflow -F c -f langflow-backup.dump",
+    );
   });
 });
