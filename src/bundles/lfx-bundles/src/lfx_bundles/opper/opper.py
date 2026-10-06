@@ -62,15 +62,15 @@ class OpperComponent(LCModelComponent):
                 timeout=10.0,
             )
             response.raise_for_status()
-            models = response.json().get("data", [])
-        except (httpx.RequestError, httpx.HTTPStatusError, ValueError) as e:
+            models = response.json().get("data") or []
+            return [
+                {"id": m["id"], "context": m.get("context_length") or 0}
+                for m in models
+                if isinstance(m, dict) and m.get("id") and (m.get("opper") or {}).get("type") != "embedding"
+            ]
+        except (httpx.RequestError, httpx.HTTPStatusError, ValueError, AttributeError, TypeError) as e:
             self.status = f"Error fetching models: {e}"
             return []
-        return [
-            {"id": m["id"], "context": m.get("context_length") or 0}
-            for m in models
-            if m.get("id") and (m.get("opper") or {}).get("type") != "embedding"
-        ]
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Update model options."""

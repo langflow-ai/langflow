@@ -82,6 +82,17 @@ def test_update_build_config_falls_back_to_pool_names_on_error() -> None:
 
 
 @respx.mock
+def test_update_build_config_falls_back_to_pool_names_on_a_malformed_payload() -> None:
+    respx.get(MODELS_URL).mock(return_value=httpx.Response(200, json=["not", "an", "object"]))
+    component = OpperComponent()
+
+    build_config = component.update_build_config(_build_config(), "test-key", "api_key")
+
+    assert build_config["model_name"]["options"] == OPPER_DEFAULT_MODELS
+    assert "Error fetching models" in component.status
+
+
+@respx.mock
 def test_update_build_config_without_a_key_skips_the_request() -> None:
     component = OpperComponent()
 
