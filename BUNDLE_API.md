@@ -233,6 +233,17 @@ the deserialize half is covered by
   ingestion path. Writing precomputed embeddings remains optional for ordinary
   ingestion and required for migration imports.
 
+### 2026-10-06 — Product analytics removal
+
+Scarf product analytics collection and transport were removed from LFX. The
+legacy `track_in_telemetry` input field remains accepted as inert metadata for
+saved-flow compatibility, while the internal `Component.get_telemetry_input_values`
+collector was removed; that helper was never part of the enumerated bundle
+contract. `integration_action()` retains its public signature and continues to
+create configured tracing spans, normalize errors, and write local component
+logs without exporting product analytics. The supported integration execution
+contract remains compatible, so `BUNDLE_API_VERSION` remains `1`.
+
 ### 2026-09-24 — Async file loader dispatch
 
 Graph outputs and the Read File tool now await `@delegates_to` coroutine methods

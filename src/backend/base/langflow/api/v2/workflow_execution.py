@@ -553,8 +553,7 @@ async def _stream_event_frames(
         with contextlib.suppress(asyncio.CancelledError):
             await run_task
         await queue.aclose()
-        # Emit a RunPayload so Enterprise metering (run_event_store) and the
-        # Local run-event consumers and OpenTelemetry both see every v2 workflow run.
+        # Record completed v2 workflow runs for local Enterprise metering consumers.
         # Mirrors the v1 endpoints.py instrumentation for the streaming path.
         # Skip on: pause (run is resumable), client disconnect (not a failure).
         if not stream_paused and not _stream_cancelled:
@@ -1019,8 +1018,7 @@ async def execute_sync_workflow(
             error_response.warnings = warnings
         return error_response
     finally:
-        # Emit a RunPayload so Enterprise metering (run_event_store) and the
-        # Local run-event consumers and OpenTelemetry both see every v2 sync workflow run.
+        # Record completed v2 sync workflow runs for local Enterprise metering consumers.
         # Mirrors the _stream_event_frames instrumentation for the SSE path.
         if not _sync_run_paused:
             try:

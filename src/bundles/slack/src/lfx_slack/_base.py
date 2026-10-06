@@ -61,7 +61,7 @@ class SlackIdentityMismatchError(ConnectionNotAuthorizedError):
     """A Slack connection whose token identity cannot run the requested action.
 
     Keeps the ``connection-not-authorized`` code so hosts, the frontend, and
-    configured tracing treat it exactly like any other connection authorization denial,
+    telemetry treat it exactly like any other connection authorization denial,
     while saying which identity the action needs.
     """
 
@@ -219,8 +219,8 @@ def require_identity(credential: ResolvedCredential, *, expected: str) -> None:
 class SlackBaseComponent(Component):
     """Base for every ``lfx-slack`` component.
 
-    Subclasses declare :attr:`capability_id` (the manifest capability id used
-    in observability spans) and :attr:`slack_identity`, then
+    Subclasses declare :attr:`capability_id` (the manifest capability id, which
+    is also the telemetry capability label) and :attr:`slack_identity`, then
     run their single Web API call through :meth:`run_action`.
     """
 
@@ -271,7 +271,7 @@ class SlackBaseComponent(Component):
         ):
             # The client checks the identity of the actual token before every
             # request, including after a proactive or reactive refresh. Keep
-            # those checks inside the span so denials remain visible to configured tracing.
+            # those checks inside the span so denials are counted in telemetry.
             body = await action(client)
         self.__dict__[_CACHE_KEY] = body
         return body
