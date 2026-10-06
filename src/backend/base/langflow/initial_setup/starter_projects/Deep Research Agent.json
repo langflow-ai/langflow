@@ -1223,7 +1223,7 @@
             "last_updated": "2026-06-25T16:34:58.102Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "f3adf53067b3",
+              "code_hash": "86c517b74235",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1966,7 +1966,7 @@
             "legacy": false,
             "lf_version": "1.10.1rc3",
             "metadata": {
-              "code_hash": "f3adf53067b3",
+              "code_hash": "86c517b74235",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2721,7 +2721,7 @@
             "legacy": false,
             "lf_version": "1.10.1rc3",
             "metadata": {
-              "code_hash": "f3adf53067b3",
+              "code_hash": "86c517b74235",
               "dependencies": {
                 "dependencies": [
                   {
