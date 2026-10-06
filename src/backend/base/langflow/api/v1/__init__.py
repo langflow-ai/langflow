@@ -1,5 +1,6 @@
 from langflow.api.v1.a2a import router as a2a_router
 from langflow.api.v1.api_key import router as api_key_router
+from langflow.api.v1.audits import router as audits_router
 from langflow.api.v1.authz_audit import router as authz_audit_router
 from langflow.api.v1.authz_capabilities import router as authz_capabilities_router
 from langflow.api.v1.authz_me import router as authz_me_router
@@ -17,6 +18,7 @@ from langflow.api.v1.flow_conflict_routes import router as flow_conflict_router
 from langflow.api.v1.flow_events import router as flow_events_router
 from langflow.api.v1.flow_version import router as flow_version_router
 from langflow.api.v1.flows import router as flows_router
+from langflow.api.v1.flows_audits import router as flows_audits_router
 from langflow.api.v1.folders import router as folders_router
 from langflow.api.v1.integrations import router as integrations_router
 from langflow.api.v1.knowledge_bases import router as knowledge_bases_router
@@ -45,6 +47,7 @@ from langflow.api.v1.voice_mode import router as voice_mode_router
 __all__ = [
     "a2a_router",
     "api_key_router",
+    "audits_router",
     "authz_audit_router",
     "authz_capabilities_router",
     "authz_me_router",
@@ -61,6 +64,7 @@ __all__ = [
     "flow_conflict_router",
     "flow_events_router",
     "flow_version_router",
+    "flows_audits_router",
     "flows_router",
     "folders_router",
     "integrations_router",

@@ -8,6 +8,7 @@ from lfx.workflow.router import create_workflow_router
 from langflow.api.v1 import (
     a2a_router,
     api_key_router,
+    audits_router,
     authz_audit_router,
     authz_capabilities_router,
     authz_me_router,
@@ -24,6 +25,7 @@ from langflow.api.v1 import (
     flow_conflict_router,
     flow_events_router,
     flow_version_router,
+    flows_audits_router,
     flows_router,
     folders_router,
     integrations_router,
@@ -81,6 +83,9 @@ router_v1.include_router(integrations_router)
 router_v1.include_router(endpoints_router)
 router_v1.include_router(validate_router)
 router_v1.include_router(store_router)
+router_v1.include_router(audits_router)
+# Before flows_router, whose /{flow_id} would otherwise capture /audits and answer 422.
+router_v1.include_router(flows_audits_router)
 router_v1.include_router(flows_router)
 router_v1.include_router(flow_events_router)
 router_v1.include_router(flow_version_router)
