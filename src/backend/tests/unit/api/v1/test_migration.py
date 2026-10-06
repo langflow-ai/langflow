@@ -1544,6 +1544,17 @@ async def test_knowledge_bases_cannot_be_tested_without_the_database_address(
 
     assert restarted["results"]["vectors"]["code"] == "secrets_missing"
 
+    # Sent with an address that fails its own test, they fail as the database did. Nothing asks for it again.
+    refused = await _connect(
+        client,
+        logged_in_headers_super_user,
+        database_url=f"postgresql://{NOWHERE}/langflow",
+        vectors={"kind": "pgvector"},
+    )
+
+    assert refused["results"]["vectors"]["code"] == "db_unreachable"
+    assert refused["results"]["vectors"] == refused["results"]["database"]
+
     # Without the package the copy cannot write to pgvector, wherever it is.
     monkeypatch.setitem(sys.modules, "pgvector", None)
     # A database that passed its test: named in the record, and held in this worker.
@@ -1943,7 +1954,7 @@ async def test_a_destination_that_fails_gives_no_password_or_key_away(
     results = responses[0].json()["results"]
     assert {part: result["code"] for part, result in results.items()} == {
         "database": "db_unreachable",
-        "vectors": "secrets_missing",
+        "vectors": "db_unreachable",
         "files": "bucket_unreachable",
     }
     assert "tested the destination" in server_log.getvalue()
