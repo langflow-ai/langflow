@@ -12,24 +12,29 @@ the database is what moves.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import hmac
 import json
 import os
 import re
+import shutil
+import sqlite3
 import sys
+import tempfile
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
+import anyio
 import psutil
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from lfx.base.knowledge_bases.backends import is_local_backend
 from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
 from lfx.log.logger import logger
-from pydantic import BaseModel, SecretStr, ValidationError
+from pydantic import BaseModel, SecretStr, StringConstraints, ValidationError
 from sqlalchemy.engine import make_url
 from sqlmodel import select
 
@@ -47,6 +52,8 @@ from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+    from typing import BinaryIO
+    from uuid import UUID
 
 router = APIRouter(prefix="/migration", tags=["Migration"], include_in_schema=False)
 
@@ -79,6 +86,8 @@ _LINE_LIMIT = 16 * 1024 * 1024
 _ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 # How many hex characters of the key's SHA-256 the admin reads on the new instance.
 _FINGERPRINT_LENGTH = 12
+# How much of the database backup goes out at a time.
+_CHUNK = 1024 * 1024
 # ponytail: a destination's password and keys are held here, in this worker's memory, and nowhere else.
 # A restart or a second worker has none, and the page asks for them again. Move them to an encrypted
 # file or to Redis when a copy has to be able to start on any worker.
@@ -124,6 +133,10 @@ class DestinationsRequest(BaseModel):
 
 class FingerprintRequest(BaseModel):
     fingerprint: str
+
+
+class BackupRequest(BaseModel):
+    location: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 @router.get("")
@@ -410,12 +423,90 @@ async def verify_secret_key(request: FingerprintRequest, admin: Superuser) -> di
     return await _state(record)
 
 
+@router.post("/backup/database")
+async def download_database(admin: Superuser) -> StreamingResponse:
+    """A consistent copy of this instance's SQLite database, for the admin to keep off this server."""
+    record = _read_record()
+    url = make_url(get_db_service().database_url)
+    if url.get_backend_name() != "sqlite":
+        raise HTTPException(status_code=409, detail={"code": "not_sqlite"})
+    if not record.get("pause"):
+        raise HTTPException(status_code=409, detail={"code": "not_paused"})
+    name = f"langflow-backup-{datetime.now(timezone.utc):%Y%m%d}.db"
+    return _Download(
+        _database_copy(url.database, admin.id),
+        media_type="application/vnd.sqlite3",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+
+@router.post("/steps/backup/confirm")
+async def confirm_backup(request: BackupRequest, admin: Superuser) -> dict[str, Any]:
+    """Record where the admin put the backup, which is the way back if the move goes wrong."""
+    state = await _state(_read_record())
+    _require_unlocked(state, "backup")
+    record = _read_record()
+    downloaded = (record.get("backup") or {}).get("database_downloaded_at")
+    # A SQLite database is backed up by the copy this server hands out, so without one from this pause
+    # there is nothing to confirm. PostgreSQL is backed up with its own tools.
+    if state["instance"]["database"]["type"] == "sqlite" and not _during_pause(record, downloaded):
+        raise HTTPException(status_code=409, detail={"code": "database_not_downloaded"})
+    record["backup"] = {
+        **record.get("backup", {}),
+        "location": request.location,
+        "confirmed_by": admin.username,
+        "confirmed_at": _now(),
+    }
+    _write_record(record)
+    await logger.ainfo(f"Migration: user_id={admin.id} confirmed the backup of this instance")
+    return await _state(record)
+
+
 def _hold(name: str, secret: Any, result: dict[str, Any]) -> None:
     """Keep a destination's secret while its test passes, and forget it when it does not."""
     if result["ok"]:
         _secrets[name] = secret
     else:
         _secrets.pop(name, None)
+
+
+class _Download(StreamingResponse):
+    """A streamed response that closes its source when it ends, however it ends.
+
+    A client that goes away leaves the source waiting to send, and what the source cleans
+    up would stay until the garbage collector found it.
+    """
+
+    async def __call__(self, scope, receive, send) -> None:
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            await self.body_iterator.aclose()
+
+
+async def _database_copy(database: str, user_id: UUID) -> AsyncIterator[bytes]:
+    """The bytes of a copy of the SQLite database. The copy is deleted whether or not all of it went out."""
+    # ponytail: the copy needs as much free space as the database, in the system's temporary folder.
+    folder = Path(tempfile.mkdtemp(prefix="langflow-backup-"))
+    try:
+        # Closed and deleted without waiting on anything, so that it also happens when the request is cancelled.
+        with await anyio.to_thread.run_sync(_copy_database, database, folder / "langflow.db") as copy:
+            while chunk := await anyio.to_thread.run_sync(copy.read, _CHUNK):
+                yield chunk
+        # Reached once every byte went out. A download that was cut short does not count.
+        record = _read_record()
+        record.setdefault("backup", {})["database_downloaded_at"] = _now()
+        _write_record(record)
+        await logger.ainfo(f"Migration: user_id={user_id} downloaded a backup of the database")
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def _copy_database(database: str, copy: Path) -> BinaryIO:
+    # Copying the file itself can miss what SQLite still holds in its write-ahead log.
+    with contextlib.closing(sqlite3.connect(database)) as connection:
+        connection.execute("VACUUM INTO ?", (str(copy),))
+    return copy.open("rb")
 
 
 async def _stream_checks(step: dict[str, Any]) -> AsyncIterator[bytes]:
@@ -619,10 +710,13 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
         "copy_files": "files_in_s3" if files["storage"] == "s3" else None if files["local"] else "no_local_files",
     }
     # What each later step says for itself. A step with no entry is not built yet.
+    backup = record.get("backup") or {}
     own = {
         "connect_target": _connect_step(record, needed),
         "secret_key": _secret_key_step(record),
         "pause": _pause_step(record, blocking),
+        # A backup made in an earlier pause lacks whatever changed since.
+        "backup": ("done", None) if _during_pause(record, backup.get("confirmed_at")) else ("current", None),
     }
     steps = [first]
     # The first step neither done nor skipped is the one to do now. A later step that has not started
