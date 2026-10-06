@@ -122,7 +122,7 @@ async def run_checks(request: CheckRequest, admin: Superuser) -> StreamingRespon
     }
     record["steps"]["check_source"] = step
     _write_record(record)
-    await logger.ainfo(f"Migration: {admin.username} started the source checks against Langflow {version}")
+    await logger.ainfo(f"Migration: user_id={admin.id} started the source checks against Langflow {version}")
     return StreamingResponse(_stream_checks(step), media_type="application/x-ndjson")
 
 
@@ -136,11 +136,17 @@ async def accept_finding(request: FindingRequest, admin: Superuser) -> dict[str,
         raise HTTPException(status_code=400, detail={"code": "not_failing"})
     record["accepted_findings"] = [
         *(finding for finding in record["accepted_findings"] if finding["name"] != request.name),
-        # The summary is kept so the acceptance lapses when the finding changes.
-        {"name": request.name, "summary": check["summary"], "accepted_by": admin.username, "accepted_at": _now()},
+        # Counts in a summary can stay the same while the affected resources change.
+        {
+            "name": request.name,
+            "summary": check["summary"],
+            "problems": check.get("problems", []),
+            "accepted_by": admin.username,
+            "accepted_at": _now(),
+        },
     ]
     _write_record(record)
-    await logger.ainfo(f"Migration: {admin.username} accepted '{request.name}': {check['summary']}")
+    await logger.ainfo(f"Migration: user_id={admin.id} accepted '{request.name}': {check['summary']}")
     return await _state(record)
 
 
@@ -149,7 +155,7 @@ async def withdraw_finding(name: str, admin: Superuser) -> dict[str, Any]:
     record = _read_record()
     record["accepted_findings"] = [finding for finding in record["accepted_findings"] if finding["name"] != name]
     _write_record(record)
-    await logger.ainfo(f"Migration: {admin.username} withdrew the acceptance of '{name}'")
+    await logger.ainfo(f"Migration: user_id={admin.id} withdrew the acceptance of '{name}'")
     return await _state(record)
 
 
@@ -354,8 +360,17 @@ def _failing_checks(record: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def _blocking_findings(record: dict[str, Any]) -> list[str]:
-    accepted = {(finding["name"], finding["summary"]) for finding in record["accepted_findings"]}
-    return [name for name, check in _failing_checks(record).items() if (name, check["summary"]) not in accepted]
+    # Older acceptances did not record the problems, so require the admin to accept them again.
+    accepted = {
+        (finding["name"], finding["summary"], tuple(finding["problems"]))
+        for finding in record["accepted_findings"]
+        if "problems" in finding
+    }
+    return [
+        name
+        for name, check in _failing_checks(record).items()
+        if (name, check["summary"], tuple(check.get("problems", []))) not in accepted
+    ]
 
 
 def _record_path() -> Path:
