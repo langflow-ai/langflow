@@ -687,6 +687,7 @@
   "errors.deleteKey": "Erreur lors de la suppression de la clé",
   "errors.deleteKeys": "Erreur lors de la suppression de clés",
   "errors.deleteSession": "Erreur lors de la suppression de la session.",
+  "errors.createSession": "Erreur lors de la création de la session.",
   "errors.deleteUser": "Erreur lors de la suppression d'un utilisateur",
   "errors.deletingMessages": "Erreur lors de la suppression des messages.",
   "errors.downloadFilesDefault": "Une erreur s'est produite lors du téléchargement des fichiers",
