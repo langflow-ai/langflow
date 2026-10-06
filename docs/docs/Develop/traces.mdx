@@ -50,6 +50,8 @@ To view traces in the Langflow UI, do the following:
 To programmatically query traces, use the `/monitor/traces` endpoints.
 For full parameter details and code examples in Python, TypeScript, and curl, see [Monitor endpoints: Get traces](/api-monitor#get-traces).
 
+If paginated trace queries time out on large flows, increase `LANGFLOW_TRACES_DB_TIMEOUT` (default: `5.0` seconds). See [Environment variables](/environment-variables).
+
 ## See also
 
 - [Logs](/logging)
