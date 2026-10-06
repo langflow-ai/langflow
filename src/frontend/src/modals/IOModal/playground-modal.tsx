@@ -232,8 +232,9 @@ export default function IOModal({
       window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
     }
     if (newChatOnPlayground && !sessionsLoading) {
-      // "New chat" sends under the generated `sessionId`. Select it by id: the
-      // refetched list is newest first and may not be complete.
+      // "New chat" sends under the generated `sessionId` (already namespaced
+      // on the playground page). Select it by id: the refetched list is
+      // newest first and may not be complete.
       const newSessionId = sessionId;
       const handleRefetchAndSetSession = async () => {
         try {
@@ -251,7 +252,11 @@ export default function IOModal({
 
   useEffect(() => {
     if (!visibleSession) {
-      setSessionId(createNewSessionName());
+      const name = createNewSessionName();
+      // The public playground stores sessions as `${virtualFlowId}:${name}` (the
+      // backend leaves an already-scoped id unchanged), so send under that id and
+      // the selection below matches what the server lists and filters on.
+      setSessionId(playgroundPage ? `${currentFlowId}:${name}` : name);
       setCurrentSessionId(currentFlowId);
     } else if (visibleSession) {
       setSessionId(visibleSession);

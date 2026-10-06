@@ -168,45 +168,58 @@ jest.mock("@/stores/utilityStore", () => ({
     selector(utilityState),
 }));
 
+function renderModal(playgroundPage: boolean) {
+  return render(
+    <TooltipProvider>
+      <IOModal
+        open
+        setOpen={jest.fn()}
+        isPlayground
+        playgroundPage={playgroundPage}
+        canvasOpen={false}
+      >
+        <div />
+      </IOModal>
+    </TooltipProvider>,
+  );
+}
+
+function sendFirstMessage(sessionId: string) {
+  flowState.newChatOnPlayground = true;
+  act(() => {
+    useMessagesStore.getState().setMessages([
+      {
+        id: "message-1",
+        flow_id: "test-flow-id",
+        session_id: sessionId,
+        text: "hello",
+        sender: "User",
+        sender_name: "User",
+        timestamp: new Date().toISOString(),
+        files: [],
+        edit: false,
+        background_color: "",
+        text_color: "",
+      } satisfies Message,
+    ]);
+  });
+}
+
 describe("IOModal (playground) new chat", () => {
+  afterEach(() => {
+    flowState.newChatOnPlayground = false;
+    act(() => useMessagesStore.getState().setMessages([]));
+    sessionsQueryResult.data.sessions = refetchedSessions;
+  });
+
   it("selects the session the new chat was sent under", async () => {
-    render(
-      <TooltipProvider>
-        <IOModal
-          open
-          setOpen={jest.fn()}
-          isPlayground
-          playgroundPage
-          canvasOpen={false}
-        >
-          <div />
-        </IOModal>
-      </TooltipProvider>,
-    );
+    renderModal(true);
 
     fireEvent.click(screen.getByRole("button", { name: "new chat" }));
     const newSessionId = screen.getByTestId("send-session").textContent;
     expect(refetchedSessions).not.toContain(newSessionId);
 
-    // The first message of the new chat arrives.
-    flowState.newChatOnPlayground = true;
-    act(() => {
-      useMessagesStore.getState().setMessages([
-        {
-          id: "message-1",
-          flow_id: "test-flow-id",
-          session_id: newSessionId ?? "",
-          text: "hello",
-          sender: "User",
-          sender_name: "User",
-          timestamp: new Date().toISOString(),
-          files: [],
-          edit: false,
-          background_color: "",
-          text_color: "",
-        } satisfies Message,
-      ]);
-    });
+    sendFirstMessage(newSessionId ?? "");
 
     await waitFor(() =>
       expect(screen.getByTestId("visible-session")).toHaveTextContent(
@@ -214,5 +227,33 @@ describe("IOModal (playground) new chat", () => {
       ),
     );
     expect(sessionsQueryResult.refetch).toHaveBeenCalled();
+  });
+
+  it("namespaces the new session under the virtual flow id on the playground page", async () => {
+    // The server lists the session as it stores it: scoped under the flow id.
+    renderModal(true);
+    fireEvent.click(screen.getByRole("button", { name: "new chat" }));
+    const newSessionId = screen.getByTestId("send-session").textContent ?? "";
+    expect(newSessionId).toMatch(/^test-flow-id:Session /);
+
+    sessionsQueryResult.data.sessions = [
+      "test-flow-id",
+      newSessionId,
+      "test-flow-id:older",
+    ];
+    sendFirstMessage(newSessionId);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("visible-session")).toHaveTextContent(
+        newSessionId,
+      ),
+    );
+  });
+
+  it("keeps the new session unprefixed outside the playground page", () => {
+    renderModal(false);
+    fireEvent.click(screen.getByRole("button", { name: "new chat" }));
+    const newSessionId = screen.getByTestId("send-session").textContent ?? "";
+    expect(newSessionId).toMatch(/^Session /);
   });
 });
