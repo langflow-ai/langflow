@@ -147,6 +147,7 @@ class _FakeConn:
         self._has_hnsw_index = table_exists if has_hnsw_index is None else has_hnsw_index
         self._fail_once_on = fail_once_on
         self.statements: list[str] = []
+        self.execution_option_calls: list[dict[str, Any]] = []
 
     def _record(self, statement: Any) -> str:
         sql = _render(statement)
@@ -196,6 +197,10 @@ class _FakeConn:
         if "count(*)" in sql:
             return self._row_count
         return None
+
+    async def execution_options(self, **options: Any) -> _FakeConn:
+        self.execution_option_calls.append(options)
+        return self
 
     async def stream(self, statement: Any, params: dict[str, Any] | None = None) -> _FakeStream:  # noqa: ARG002
         self._record(statement)
@@ -490,6 +495,53 @@ class TestEngineLifecycle:
         assert engine.disposed is True
         assert backend._pg_engine is None
         assert backend._vector_store is None
+
+    @pytest.fixture
+    def engine_factory(self, monkeypatch: pytest.MonkeyPatch) -> list:
+        # Build stand-in engines so these tests don't need the psycopg driver.
+        import sqlalchemy.ext.asyncio
+
+        created: list = []
+
+        def create_async_engine(url, **kwargs):
+            engine = _FakeEngine(_FakeConn())
+            created.append((url, kwargs, engine))
+            return engine
+
+        monkeypatch.setattr(sqlalchemy.ext.asyncio, "create_async_engine", create_async_engine)
+        return created
+
+    @pytest.mark.usefixtures("pgvector_env", "engine_factory")
+    async def test_engine_is_shared_across_instances_in_a_loop(self, tmp_path: Path) -> None:
+        first = create_backend("postgres", kb_name="a", kb_path=tmp_path, backend_config={}, user_id=uuid.uuid4())
+        second = create_backend("postgres", kb_name="b", kb_path=tmp_path, backend_config={}, user_id=uuid.uuid4())
+        await first.ensure_ready()
+        await second.ensure_ready()
+        engine = first._ensure_async_engine()
+        try:
+            assert second._ensure_async_engine() is engine
+
+            await first.teardown()  # a job's teardown must leave the shared pool alone
+
+            assert first._pg_engine is None
+            assert engine.disposed is False
+            assert second._ensure_async_engine() is engine
+            assert first._ensure_async_engine() is engine
+        finally:
+            pg_module._ENGINES.clear()
+            await engine.dispose()
+
+    @pytest.mark.usefixtures("pgvector_env", "engine_factory")
+    def test_engine_outside_a_loop_belongs_to_the_instance(self, tmp_path: Path) -> None:
+        import asyncio
+
+        backend = create_backend("postgres", kb_name="a", kb_path=tmp_path, backend_config={}, user_id=uuid.uuid4())
+        asyncio.run(backend.ensure_ready())
+        engine = backend._ensure_async_engine()
+        assert backend._pg_engine_shared is False
+        assert not any(engine in engines.values() for engines in pg_module._ENGINES.values())
+        asyncio.run(backend.teardown())
+        assert engine.disposed is True
 
     async def test_teardown_swallows_dispose_errors(self, tmp_path: Path) -> None:
         backend = create_backend("postgres", kb_name="kb", kb_path=tmp_path, backend_config={}, user_id=uuid.uuid4())
@@ -817,6 +869,15 @@ class TestAddDocuments:
         assert "ON CONFLICT (id) DO UPDATE" in insert_sql
         # collection_id belonged to the old shared-table layout and must be gone.
         assert "collection_id" not in insert_sql
+
+    async def test_insert_runs_as_one_autocommit_statement(self, make_backend, fake_embeddings) -> None:
+        conn = _FakeConn(existing_dim=8)
+        backend = make_backend(conn, embeddings=fake_embeddings)
+
+        await backend._add_documents([Document(page_content="a")])
+
+        assert conn.execution_option_calls == [{"isolation_level": "AUTOCOMMIT"}]
+        assert not any(sql.strip().upper() in {"BEGIN", "COMMIT"} for sql in conn.statements)
 
     async def test_later_writes_skip_the_bootstrap(self, make_backend, fake_embeddings) -> None:
         conn = _FakeConn(existing_dim=8)

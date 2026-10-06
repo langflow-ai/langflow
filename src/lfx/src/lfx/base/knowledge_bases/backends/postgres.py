@@ -22,10 +22,13 @@ preserving Langflow's security floor on the Python pgvector client; released
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
+import os
 import re
 import uuid
+import weakref
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -57,6 +60,31 @@ DEFAULT_CONNECTION_STRING_VARIABLE = "PGVECTOR_CONNECTION_STRING"
 # An entry is dropped when the table is dropped here, and when a write finds the
 # table missing or retyped (dropped or recreated by another process).
 _READY_TABLES: set[tuple[str, str, int]] = set()
+
+# One async engine (one connection pool) per event loop, process and connection
+# string, shared by every backend instance. Ingestion builds a backend per job,
+# and a per-instance engine opened, pre-pinged and disposed a pool on every job.
+# ``max_overflow=-1`` keeps concurrency unbounded as before; only up to
+# ``pool_size`` idle connections are kept for reuse.
+_ENGINES: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, dict[tuple[int, str], Any]] = weakref.WeakKeyDictionary()
+_ENGINE_POOL_SIZE = 5
+
+
+def _shared_engine(connection_string: str):
+    """Return this event loop's engine for ``connection_string``, creating it once."""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    loop = asyncio.get_running_loop()
+    engines = _ENGINES.setdefault(loop, {})
+    key = (os.getpid(), connection_string)  # a forked child must not reuse the parent's sockets
+    engine = engines.get(key)
+    if engine is None:
+        engine = create_async_engine(
+            connection_string, pool_pre_ping=True, pool_size=_ENGINE_POOL_SIZE, max_overflow=-1
+        )
+        engines[key] = engine
+    return engine
+
 
 # Collection tables are always ``lf_`` + 24 lowercase hex chars derived from a
 # sha256 of the owner id + KB name (see ``collection_name``). The value is never
@@ -381,7 +409,12 @@ class PostgresBackend(BaseVectorStoreBackend):
         return _validate_table_name(self.collection_name)
 
     def _ensure_async_engine(self):
-        """Lazily build the sidecar async engine used for count/scan/delete/ping."""
+        """Return the async engine used for writes, count/scan/delete and ping.
+
+        Inside a running event loop this is the process-wide engine for this
+        loop and connection string, so jobs reuse pooled connections instead of
+        building and disposing an engine each.
+        """
         engine = getattr(self, "_pg_engine", None)
         if engine is not None:
             return engine
@@ -394,9 +427,25 @@ class PostgresBackend(BaseVectorStoreBackend):
         except ImportError as exc:  # pragma: no cover
             msg = "PostgresBackend requires SQLAlchemy async support (install the pgvector extra)."
             raise RuntimeError(msg) from exc
-        engine = create_async_engine(connection_string, pool_pre_ping=True)
+        try:
+            engine = _shared_engine(connection_string)
+            self._pg_engine_shared = True
+        except RuntimeError:  # no running event loop: an engine of this instance's own
+            engine = create_async_engine(connection_string, pool_pre_ping=True)
+            self._pg_engine_shared = False
         self._pg_engine = engine
         return engine
+
+    async def _execute_write(self, statement: Any) -> None:
+        """Run one write statement on its own, without an explicit transaction.
+
+        A single statement is atomic in autocommit mode, and the database never
+        holds the connection idle in a transaction while the client is busy.
+        """
+        engine = self._ensure_async_engine()
+        async with engine.connect() as conn:
+            autocommit = await conn.execution_options(isolation_level="AUTOCOMMIT")
+            await autocommit.execute(statement)
 
     def _require_pgvector(self) -> None:
         """Raise a friendly RuntimeError when the optional pgvector extra is absent."""
@@ -668,10 +717,8 @@ class PostgresBackend(BaseVectorStoreBackend):
             },
         )
 
-        engine = self._ensure_async_engine()
         try:
-            async with engine.begin() as conn:
-                await conn.execute(statement)
+            await self._execute_write(statement)
         except Exception as exc:
             # The memo can be stale when another process dropped the table or
             # recreated it for another model. Re-verify (which recreates a
@@ -680,8 +727,7 @@ class PostgresBackend(BaseVectorStoreBackend):
                 raise
             self._forget_ready_table()
             await self._ensure_embedding_table(dim)
-            async with engine.begin() as conn:
-                await conn.execute(statement)
+            await self._execute_write(statement)
 
     async def _similarity_search(
         self,
@@ -904,10 +950,12 @@ class PostgresBackend(BaseVectorStoreBackend):
     async def teardown(self) -> None:
         """Dispose this backend's engine and drop its vector-store facade."""
         engine = getattr(self, "_pg_engine", None)
-        if engine is not None:
+        # The shared engine outlives this instance; only an engine of its own is disposed.
+        if engine is not None and not getattr(self, "_pg_engine_shared", False):
             try:
                 await engine.dispose()
             except Exception as exc:  # noqa: BLE001
                 await logger.awarning("Postgres engine.dispose failed for %s: %s", self.kb_name, exc)
         self._pg_engine = None
+        self._pg_engine_shared = False
         self._vector_store = None
