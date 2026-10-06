@@ -20,12 +20,12 @@ ATLASCLOUD_BASE_URL = "https://api.atlascloud.ai/v1"
 # Fallback list, used only when the live catalog cannot be reached. Every id
 # here was checked against the gateway.
 ATLASCLOUD_MODELS = [
-    "deepseek-ai/DeepSeek-V3.1-Terminus",
-    "deepseek-ai/DeepSeek-V3.1",
-    "zai-org/glm-4.7",
-    "zai-org/GLM-4.6",
+    "deepseek-ai/deepseek-v4-flash",
+    "deepseek-ai/deepseek-v4-pro",
+    "zai-org/glm-5.3-flash",
+    "zai-org/glm-5.3",
     "moonshotai/kimi-k2.6",
-    "Qwen/Qwen3-235B-A22B-Instruct-2507",
+    "qwen/qwen3.5-flash",
     "minimaxai/minimax-m2.5",
 ]
 MODEL_NAMES = ATLASCLOUD_MODELS  # reverse compatibility
