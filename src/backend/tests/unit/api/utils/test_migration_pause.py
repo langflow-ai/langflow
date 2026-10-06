@@ -19,6 +19,7 @@ from uuid import uuid4
 import pytest
 from httpx import ASGITransport, AsyncClient
 from langflow.api.utils import migration_pause
+from langflow.api.utils.migration_jobs import live_listeners
 from langflow.api.utils.migration_pause import MigrationPauseMiddleware, is_paused
 from langflow.initial_setup.setup import sync_flows_from_fs
 from langflow.main import create_app
@@ -38,6 +39,7 @@ from langflow.services.deps import (
 from langflow.services.task.audit_cleanup import AuditLogCleanupWorker
 from langflow.services.telemetry_writer.service import TelemetryWriterService
 from langflow.services.triggers.dispatcher import TriggerDispatcher
+from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlmodel import select
 
@@ -283,6 +285,26 @@ async def test_a_lock_that_cannot_be_taken_stops_no_change(client, logged_in_hea
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 503
 
 
+async def test_a_listener_that_starts_during_a_pause_claims_nothing_until_it_ends(client, config_dir):  # noqa: ARG001
+    async def announced() -> list[str]:
+        async with session_scope() as session:
+            return [listener["holder"] for listener in await live_listeners(session)]
+
+    _write_record(config_dir, PAUSED)
+    listener = ListenerSupervisor()
+    try:
+        await listener.reconcile()
+
+        assert await announced() == []
+
+        _write_record(config_dir, RECORD)
+        await listener.reconcile()
+
+        assert await announced() == [listener.holder]
+    finally:
+        await listener.stop()
+
+
 async def test_a_schedule_that_comes_due_during_the_pause_fires_after_it_ends(active_user, config_dir):
     async with session_scope() as session:
         flow = Flow(name="scheduled", user_id=active_user.id, data={"nodes": [], "edges": []})
@@ -395,7 +417,12 @@ async def test_a_record_that_says_paused_changes_nothing_while_the_feature_is_of
     assert not is_paused()
     assert MigrationPauseMiddleware not in [middleware.cls for middleware in create_app().user_middleware]
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
-    # Nor does a change take the lock a pause waits on: this instance pays nothing.
+    listener = ListenerSupervisor()
+    try:
+        await listener.reconcile()
+    finally:
+        await listener.stop()
+    # Neither a change nor a listener takes the lock a pause waits on: this instance pays nothing.
     assert not (config_dir / "migrations" / "pause.lock").exists()
 
 
