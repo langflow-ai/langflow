@@ -140,12 +140,16 @@ def _ran(config_dir: Path, step: str = "copy_database", **run: Any) -> None:
     path.write_text(json.dumps(record))
 
 
-def _send_to(monkeypatch: pytest.MonkeyPatch, address: str) -> None:
-    """Give this worker a destination database, as testing one that answers does."""
+def _send_to(monkeypatch: pytest.MonkeyPatch, address: str, files: dict | None = None) -> None:
+    """Give this worker a destination database, and the keys of a bucket if one is named, as testing them does."""
     url = f"postgresql://migrator:{DB_PASSWORD}@{address}/langflow"
     monkeypatch.setitem(migration_module._secrets, "database_url", url)
-    # The worker also keeps which saved destination it holds the password of.
-    monkeypatch.setitem(migration_module._secrets, "for", {"database": PREPARED["destinations"]["database"]})
+    # The worker also keeps which saved destination it holds the secrets of.
+    held = {"database": PREPARED["destinations"]["database"]}
+    if files:
+        monkeypatch.setitem(migration_module._secrets, "files", S3_KEYS)
+        held["files"] = files
+    monkeypatch.setitem(migration_module._secrets, "for", held)
 
 
 async def _start(client, headers, step: str = "copy_database", **body: Any) -> str:
@@ -870,6 +874,42 @@ async def _three_copies_to_make(config_dir: Path, user_id) -> None:
     _ready_to_copy(config_dir, destinations={**PREPARED["destinations"], **parts, "results": results})
 
 
+async def test_a_file_copy_needs_the_keys_of_the_bucket_that_is_saved(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    await _three_copies_to_make(config_dir, active_super_user.id)
+    _ran(config_dir)
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    # This worker tested another bucket than the one that is saved now, and its keys are for that one.
+    _send_to(monkeypatch, NOWHERE, files={"bucket": "earlier", "prefix": "files", "endpoint_url": None})
+
+    refused = await client.post(RUNS.format("copy_files"), json={}, headers=logged_in_headers_super_user)
+
+    assert refused.status_code == 409
+    assert refused.json()["detail"] == {"code": "secrets_missing"}
+    assert migration_runs.list_runs() == []
+
+
+async def test_a_copy_that_was_made_waits_again_when_the_copy_before_it_is_no_longer_done(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    await _three_copies_to_make(config_dir, active_super_user.id)
+    _ran(config_dir)
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    # The database was copied again, and that copy died.
+    _ran(config_dir, status="failed", report=None, error={"code": "crashed", "message": "Killed"})
+    _send_to(monkeypatch, NOWHERE)
+    steps = await _steps(client, headers)
+    assert (steps["copy_database"], steps["copy_knowledge_bases"]) == (("blocked", "crashed"), ("done", None))
+
+    refused = await client.post(RUNS.format("copy_knowledge_bases"), json={}, headers=headers)
+
+    assert refused.status_code == 409
+    assert refused.json()["detail"] == {"code": "locked", "reason": "earlier_step"}
+    assert migration_runs.list_runs() == []
+
+
 async def test_each_copy_waits_for_the_one_before_it_and_a_test_run_completes_nothing(
     client, logged_in_headers_super_user, active_super_user, config_dir
 ):
@@ -938,8 +978,7 @@ async def test_a_copy_that_dies_without_reporting_blocks_the_step_as_crashed(
     _ready_to_copy(config_dir, destinations={**PREPARED["destinations"], "files": files, "results": results})
     _ran(config_dir)
     # The database the files are filed in went away after it was copied to.
-    _send_to(monkeypatch, NOWHERE)
-    monkeypatch.setitem(migration_module._secrets, "files", S3_KEYS)
+    _send_to(monkeypatch, NOWHERE, files)
 
     started = await client.post(RUNS.format("copy_files"), json={}, headers=headers)
     run_id = started.json()["run_id"]
