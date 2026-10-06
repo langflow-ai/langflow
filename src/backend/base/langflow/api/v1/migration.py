@@ -434,7 +434,7 @@ async def download_database(admin: Superuser) -> StreamingResponse:
         raise HTTPException(status_code=409, detail={"code": "not_paused"})
     name = f"langflow-backup-{datetime.now(timezone.utc):%Y%m%d}.db"
     return _Download(
-        _database_copy(url.database, admin.id),
+        _database_copy(url.database, admin.id, record["pause"]["frozen_at"]),
         media_type="application/vnd.sqlite3",
         headers={"Content-Disposition": f'attachment; filename="{name}"'},
     )
@@ -484,7 +484,7 @@ class _Download(StreamingResponse):
             await self.body_iterator.aclose()
 
 
-async def _database_copy(database: str, user_id: UUID) -> AsyncIterator[bytes]:
+async def _database_copy(database: str, user_id: UUID, paused_at: str) -> AsyncIterator[bytes]:
     """The bytes of a copy of the SQLite database. The copy is deleted whether or not all of it went out."""
     # ponytail: the copy needs as much free space as the database, in the system's temporary folder.
     folder = Path(tempfile.mkdtemp(prefix="langflow-backup-"))
@@ -493,8 +493,11 @@ async def _database_copy(database: str, user_id: UUID) -> AsyncIterator[bytes]:
         with await anyio.to_thread.run_sync(_copy_database, database, folder / "langflow.db") as copy:
             while chunk := await anyio.to_thread.run_sync(copy.read, _CHUNK):
                 yield chunk
-        # Reached once every byte went out. A download that was cut short does not count.
+        # A download from an earlier pause lacks the changes made after it ended.
         record = _read_record()
+        if (record.get("pause") or {}).get("frozen_at") != paused_at:
+            return
+        # Reached once every byte went out during the same pause.
         record.setdefault("backup", {})["database_downloaded_at"] = _now()
         _write_record(record)
         await logger.ainfo(f"Migration: user_id={user_id} downloaded a backup of the database")
