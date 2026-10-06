@@ -10,8 +10,10 @@ migration validation workflow.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sqlite3
+import subprocess
 import sys
 import tracemalloc
 import uuid
@@ -82,6 +84,33 @@ def test_copy_order_puts_parents_first_and_sso_config_before_sso_settings():
     assert order.index("sso_config") < order.index("sso_settings")
 
 
+@pytest.fixture
+def run_cli(caplog):
+    """Run the command in this process and return what it wrote and how it exited.
+
+    Alembic logs every migration at INFO. The real process sends that to stderr, but
+    a pytest plugin's log handler prints it on stdout, so INFO is switched off here.
+    """
+    from langflow.__main__ import app
+    from typer.testing import CliRunner
+
+    def run(*args: str, env: dict[str, str] | None = None):
+        with caplog.at_level(logging.WARNING):
+            return CliRunner().invoke(app, ["convert-sqlite-to-postgres", *args], env=env)
+
+    return run
+
+
+def _events(result) -> list[dict]:
+    # Every line has to parse: a program reading --json cannot skip stray text.
+    return [json.loads(line) for line in result.stdout.splitlines()]
+
+
+# What a --json run says before the first table, so a slow start does not look like a hang.
+CHECKING = {"event": "progress", "phase": "checking", "done": 0, "total": None, "unit": "rows"}
+PREPARING_TARGET = {"event": "progress", "phase": "preparing_target", "done": 0, "total": None, "unit": "rows"}
+
+
 class TestSourceChecks:
     # The target is never reached, so these need no Postgres server.
     UNREACHABLE_TARGET = "postgresql://nobody@127.0.0.1:1/none"
@@ -93,6 +122,7 @@ class TestSourceChecks:
 
         assert not report.ok
         assert any("does not exist" in p for p in report.problems)
+        assert [p.code for p in report.problems] == ["source_missing"]
         assert not missing.exists()
 
     def test_source_without_langflow_schema_points_at_how_the_copy_was_made(self, tmp_path):
@@ -103,6 +133,78 @@ class TestSourceChecks:
 
         assert not report.ok
         assert any("no Langflow schema" in p and "VACUUM INTO" in p for p in report.problems)
+        assert [p.code for p in report.problems] == ["source_not_langflow"]
+
+    def test_source_at_another_revision_is_refused(self, sqlite_source):
+        engine = sa.create_engine(sqlite_source)
+        with engine.begin() as conn:
+            conn.execute(sa.text("UPDATE alembic_version SET version_num = 'older'"))
+        engine.dispose()
+
+        report = convert_sqlite_to_postgres(sqlite_source, self.UNREACHABLE_TARGET)
+
+        assert any("is at revision older" in p for p in report.problems)
+        assert [p.code for p in report.problems] == ["source_not_at_head"]
+
+    def test_source_url_that_does_not_parse_is_reported(self, run_cli):
+        result = run_cli("--json", "--source", "not a url", "--target", self.UNREACHABLE_TARGET)
+
+        assert result.exit_code == 1
+        # A traceback instead would leave a program reading --json without its report line.
+        assert isinstance(result.exception, SystemExit)
+        checking, error, report = _events(result)
+        assert checking == CHECKING
+        assert (error["event"], error["code"]) == ("error", "source_unreadable")
+        assert error["message"].startswith("could not read the source database: ")
+        assert report["problems"] == [{"code": "source_unreadable", "message": error["message"]}]
+
+    def test_source_url_with_a_port_that_is_not_a_number_is_reported(self, run_cli):
+        # SQLAlchemy raises a bare ValueError for this one, not its own ArgumentError.
+        source = "sqlite://user@localhost:not-a-port/db"
+
+        result = run_cli("--json", "--source", source, "--target", self.UNREACHABLE_TARGET)
+
+        assert result.exit_code == 1
+        assert isinstance(result.exception, SystemExit)
+        checking, error, report = _events(result)
+        assert checking == CHECKING
+        assert (error["event"], error["code"]) == ("error", "source_unreadable")
+        assert error["message"].startswith("could not read the source database: the URL could not be read")
+        assert (report["event"], report["ok"]) == ("report", False)
+        assert report["problems"] == [{"code": "source_unreadable", "message": error["message"]}]
+
+    @pytest.mark.parametrize(
+        "source",
+        [
+            "sqlite:///{path}?timeout=soon",  # a ValueError, from an option instead of the port
+            "sqlite+nope:///{path}",  # no such driver
+            "sqlite+pysqlcipher:///{path}",  # a driver that is not installed
+        ],
+    )
+    def test_source_url_refused_once_the_file_is_found_is_reported(self, tmp_path, monkeypatch, source):
+        # The file exists, so these get past the missing-file check and fail building the engine.
+        (tmp_path / "langflow.db").touch()
+        monkeypatch.setitem(sys.modules, "pysqlcipher3", None)
+        monkeypatch.setitem(sys.modules, "sqlcipher3", None)
+
+        report = convert_sqlite_to_postgres(source.format(path=tmp_path / "langflow.db"), self.UNREACHABLE_TARGET)
+
+        assert [p.code for p in report.problems] == ["source_unreadable"]
+
+    def test_source_file_that_is_not_a_database_is_reported(self, tmp_path, run_cli):
+        notes = tmp_path / "notes.db"
+        notes.write_text("Not a SQLite file, only text that is longer than the header SQLite reads first. " * 4)
+
+        result = run_cli("--json", "--source", f"sqlite:///{notes}", "--target", self.UNREACHABLE_TARGET)
+
+        assert result.exit_code == 1
+        assert isinstance(result.exception, SystemExit)
+        checking, error, report = _events(result)
+        assert checking == CHECKING
+        assert (error["event"], error["code"]) == ("error", "source_unreadable")
+        assert error["message"].startswith("could not read the source database: ")
+        assert "file is not a database" in error["message"]
+        assert report["problems"] == [{"code": "source_unreadable", "message": error["message"]}]
 
     def test_unreachable_target_is_reported_without_the_password(self, sqlite_source):
         from langflow.__main__ import app
@@ -128,6 +230,122 @@ class TestSourceChecks:
 
         assert not report.ok
         assert any("langflow[postgresql]" in problem for problem in report.problems)
+        assert [p.code for p in report.problems] == ["target_unreachable"]
+
+    def test_json_reports_an_unreachable_target_and_ends_with_the_report(self, sqlite_source, run_cli):
+        result = run_cli("--json", "--source", sqlite_source, "--target", self.UNREACHABLE_TARGET)
+
+        assert result.exit_code == 1
+        checking, error, report = _events(result)
+        assert checking == CHECKING
+        assert (error["event"], error["code"]) == ("error", "target_unreachable")
+        assert report == {
+            "event": "report",
+            "ok": False,
+            "revision": report["revision"],
+            "tables_copied": 0,
+            "rows_copied": 0,
+            "orphans": [],
+            "problems": [{"code": "target_unreachable", "message": error["message"]}],
+        }
+
+    def test_target_url_with_a_port_that_is_not_a_number_is_reported(self, sqlite_source, run_cli):
+        target = "postgresql://user@localhost:not-a-port/db"
+
+        result = run_cli("--json", "--source", sqlite_source, "--target", target)
+
+        assert result.exit_code == 1
+        assert isinstance(result.exception, SystemExit)
+        checking, error, report = _events(result)
+        assert checking == CHECKING
+        assert (error["event"], error["code"]) == ("error", "target_unreachable")
+        assert error["message"].startswith("could not use the target database: the URL could not be read")
+        assert (report["event"], report["ok"]) == ("report", False)
+        assert report["problems"] == [{"code": "target_unreachable", "message": error["message"]}]
+
+    def test_target_host_the_driver_cannot_encode_is_reported(self, sqlite_source, run_cli):
+        # An empty label fails before any lookup, with a UnicodeError the driver lets through.
+        target = "postgresql://user@db..example.com:5432/langflow"
+
+        result = run_cli("--json", "--source", sqlite_source, "--target", target)
+
+        assert result.exit_code == 1
+        assert isinstance(result.exception, SystemExit)
+        checking, error, report = _events(result)
+        assert checking == CHECKING
+        assert (error["event"], error["code"]) == ("error", "target_unreachable")
+        assert report["problems"] == [{"code": "target_unreachable", "message": error["message"]}]
+
+    def test_a_password_the_parser_took_for_the_port_is_not_printed(self, sqlite_source, run_cli):
+        # With the host left out, what follows the user's colon is read as the port, and
+        # the parser's error quotes it.
+        secret = "SuperSecretPw123"  # noqa: S105  # pragma: allowlist secret
+
+        result = run_cli("--source", sqlite_source, "--target", f"postgresql://postgres:{secret}/langflow")
+
+        assert result.exit_code == 1
+        assert isinstance(result.exception, SystemExit)
+        assert "Problem: could not use the target database: the URL could not be read" in result.output
+        assert secret not in result.output
+
+    def test_json_stdout_of_a_child_process_holds_only_events(self, sqlite_source):
+        # Run the way an admin UI runs it, with the logger at its noisiest and in the JSON
+        # format containers use, whose lines would pass for events if they reached stdout.
+        result = subprocess.run(  # noqa: S603 - the interpreter running the tests, fixed arguments
+            [
+                sys.executable,
+                "-m",
+                "langflow",
+                "convert-sqlite-to-postgres",
+                "--json",
+                "--log-level",
+                "debug",
+                "--source",
+                sqlite_source,
+                "--target",
+                self.UNREACHABLE_TARGET,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "LANGFLOW_LOG_ENV": "container"},
+        )
+
+        assert result.returncode == 1, result.stderr
+        assert [json.loads(line)["event"] for line in result.stdout.splitlines()] == ["progress", "error", "report"]
+        assert "Logger set up with log level" in result.stderr
+
+    def test_urls_are_read_from_the_environment(self, sqlite_source, run_cli):
+        # How a parent process passes them, so the target's password is never in argv.
+        env = {"LANGFLOW_MIGRATION_SOURCE_URL": sqlite_source, "LANGFLOW_MIGRATION_TARGET_URL": self.UNREACHABLE_TARGET}
+
+        result = run_cli("--json", env=env)
+
+        assert result.exit_code == 1, result.output
+        assert [problem["code"] for problem in _events(result)[-1]["problems"]] == ["target_unreachable"]
+
+    def test_flags_win_over_the_environment(self, sqlite_source, tmp_path, run_cli):
+        missing = f"sqlite:///{tmp_path / 'typo.db'}"
+        env = {"LANGFLOW_MIGRATION_SOURCE_URL": sqlite_source, "LANGFLOW_MIGRATION_TARGET_URL": "postgresql://unused"}
+
+        result = run_cli("--json", "--source", missing, "--target", self.UNREACHABLE_TARGET, env=env)
+
+        assert [problem["code"] for problem in _events(result)[-1]["problems"]] == ["source_missing"]
+
+    def test_help_names_the_environment_variables_and_never_shows_their_values(self, run_cli):
+        secret = "SuperSecretPw123"  # noqa: S105  # pragma: allowlist secret
+        env = {
+            "LANGFLOW_MIGRATION_SOURCE_URL": "sqlite:////data/private-name.db",
+            "LANGFLOW_MIGRATION_TARGET_URL": f"postgresql://postgres:{secret}@db/langflow",
+        }
+
+        result = run_cli("--help", env=env)
+
+        assert result.exit_code == 0
+        assert "LANGFLOW_MIGRATION_SOURCE_URL" in result.output
+        assert "LANGFLOW_MIGRATION_TARGET_URL" in result.output
+        assert secret not in result.output
+        assert "private-name" not in result.output
 
 
 # --------------------------------------------------------------------------
@@ -345,6 +563,7 @@ class TestConversionEndToEnd:
         assert not report.ok
         # The problem names the row, so the operator can go straight to it.
         assert any("flow.flow_type" in p and "FLOW" in p and FLOW.hex in p for p in report.problems)
+        assert [p.code for p in report.problems] == ["value_rejected"]
         # A refused run leaves the target exactly as it was: not even migrated.
         engine = sa.create_engine(postgres_database)
         with engine.connect() as conn:
@@ -362,7 +581,58 @@ class TestConversionEndToEnd:
 
         assert not report.ok
         assert any("flow.data" in p for p in report.problems), report.problems
+        assert [p.code for p in report.problems] == ["value_rejected"]
         assert _counts(postgres_database, ["flow"]) == {"flow": 0}
+
+    def test_a_value_postgres_rejects_during_the_copy_rolls_it_back(self, sqlite_source, postgres_database):
+        _seed(sqlite_source)
+        engine = sa.create_engine(sqlite_source)
+        with engine.begin() as conn:
+            # Postgres text cannot hold a NUL byte; SQLite text can.
+            conn.execute(sa.text("UPDATE flow SET name = 'a' || char(0) || 'b'"))
+        engine.dispose()
+
+        report = convert_sqlite_to_postgres(sqlite_source, postgres_database)
+
+        assert [p.code for p in report.problems] == ["copy_failed"]
+        assert report.problems[0].startswith("copy failed and was rolled back: ")
+        assert _counts(postgres_database, ["user", "flow"]) == {"user": 0, "flow": 0}
+
+    def test_rows_the_source_no_longer_has_fail_the_count_and_roll_back(self, sqlite_source, postgres_database):
+        _seed(sqlite_source)
+        assert convert_sqlite_to_postgres(sqlite_source, postgres_database).ok
+        engine = sa.create_engine(sqlite_source)
+        with engine.begin() as conn:
+            conn.execute(sa.text("DELETE FROM flow"))
+            conn.execute(sa.text("UPDATE \"user\" SET username = 'renamed' WHERE username = 'alice'"))
+        engine.dispose()
+
+        report = convert_sqlite_to_postgres(sqlite_source, postgres_database)
+
+        assert list(report.problems) == ["flow: source has 0 rows, target has 1 after copy"]
+        assert [p.code for p in report.problems] == ["count_mismatch"]
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            assert conn.execute(sa.text("SELECT count(*) FROM \"user\" WHERE username = 'renamed'")).scalar_one() == 0
+        engine.dispose()
+
+    def test_an_error_reading_the_source_during_the_checks_names_the_source(self, sqlite_source, postgres_database):
+        _seed(sqlite_source)
+        engine = sa.create_engine(sqlite_source)
+        with engine.begin() as conn:
+            # Still at the right revision, but a table the orphan check reads is gone.
+            conn.execute(sa.text('DROP TABLE "user"'))
+        engine.dispose()
+
+        report = convert_sqlite_to_postgres(sqlite_source, postgres_database)
+
+        assert [p.code for p in report.problems] == ["source_unreadable"]
+        assert report.problems[0].startswith("could not read the source database: ")
+        assert "no such table: user" in report.problems[0]
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            assert sa.inspect(conn).get_table_names() == []
+        engine.dispose()
 
     def test_sql_null_in_json_columns_stays_sql_null(self, sqlite_source, postgres_database):
         _seed(sqlite_source)
@@ -444,6 +714,7 @@ class TestConversionEndToEnd:
             "authz_role_assignment.assigned_by: 2 row(s)",
         ]:
             assert any(p.startswith(named) and "--drop-orphans" in p for p in report.problems), report.problems
+        assert {p.code for p in report.problems} == {"orphans_droppable"}
         engine = sa.create_engine(postgres_database)
         with engine.connect() as conn:
             assert sa.inspect(conn).get_table_names() == []
@@ -505,3 +776,185 @@ class TestConversionEndToEnd:
 
         assert not report.ok
         assert any("another instance" in p for p in report.problems)
+        assert [p.code for p in report.problems] == ["target_not_empty"]
+
+
+ORPHANS = {
+    ("span", "trace_id", "trace", "CASCADE", 2),
+    ("authz_role_assignment", "user_id", "user", "CASCADE", 1),
+    ("authz_role_assignment_grant", "assignment_id", "authz_role_assignment", "CASCADE", 1),
+    ("authz_role_assignment", "assigned_by", "user", "SET NULL", 2),
+}
+
+
+def _orphan_tuples(orphans: list[dict]) -> set[tuple]:
+    return {(o["table"], o["column"], o["parent"], o["ondelete"], o["rows"]) for o in orphans}
+
+
+class TestCommandOutput:
+    def test_text_output_is_one_line_per_table_then_the_summary(self, sqlite_source, postgres_database, run_cli):
+        _seed(sqlite_source)
+
+        result = run_cli("--source", sqlite_source, "--target", postgres_database)
+
+        assert result.exit_code == 0, result.output
+        engine = sa.create_engine(postgres_database)
+        metadata = sa.MetaData()
+        metadata.reflect(bind=engine)
+        with engine.connect() as conn:
+            revision = conn.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one()
+        engine.dispose()
+        names = [table.name for table in copy_order(metadata)]
+        counts = _counts(postgres_database, names)
+        assert counts["user"] == 2
+        assert result.stdout == (
+            "".join(f"{name}: {counts[name]} row(s)\n" for name in names)
+            + f"Converted {len(names)} table(s) at revision {revision}.\n"
+        )
+
+    def test_json_streams_progress_and_each_table_then_the_report(self, sqlite_source, postgres_database, run_cli):
+        _seed(sqlite_source)
+
+        result = run_cli("--json", "--source", sqlite_source, "--target", postgres_database, "--batch-size", "1")
+
+        assert result.exit_code == 0, result.output
+        *events, report = _events(result)
+        assert {event["event"] for event in events} == {"progress", "item"}
+        items = [event["item"] for event in events if event["event"] == "item"]
+        progress = [event for event in events if event["event"] == "progress"]
+
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            copied = sorted(set(sa.inspect(conn).get_table_names()) - {"alembic_version"})
+            revision = conn.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one()
+        engine.dispose()
+        # One item per table, holding the counts the target ends up with.
+        assert sorted(item["table"] for item in items) == copied
+        assert {item["table"]: item["target_rows"] for item in items} == _counts(postgres_database, copied)
+        assert all(item["source_rows"] == item["target_rows"] for item in items)
+
+        # The source checks and the target's migrations are announced before the first table.
+        assert events[:2] == [CHECKING, PREPARING_TARGET]
+        copying = progress[2:]
+        rows = sum(item["source_rows"] for item in items)
+        done = [event["done"] for event in copying]
+        assert done == sorted(done)
+        assert done[-1] == rows
+        assert all(
+            event["phase"] == "copying" and event["total"] == rows and event["unit"] == "rows" for event in copying
+        )
+        # Every table reports, empty ones included, and a table larger than a batch reports per batch.
+        assert {event["subject"] for event in copying} == set(copied)
+        user = [event["done"] for event in copying if event["subject"] == "user"]
+        assert [count - user[0] for count in user] == [0, 1, 2]
+
+        assert report == {
+            "event": "report",
+            "ok": True,
+            "revision": revision,
+            "tables_copied": len(copied),
+            "rows_copied": rows,
+            "orphans": [],
+            "problems": [],
+        }
+
+    def test_json_asks_for_a_decision_when_only_droppable_orphans_are_refused(
+        self, sqlite_source, postgres_database, run_cli
+    ):
+        _seed(sqlite_source)
+        _leave_orphans(sqlite_source)
+
+        result = run_cli("--json", "--source", sqlite_source, "--target", postgres_database)
+
+        assert result.exit_code == 1
+        checking, decision, report = _events(result)
+        assert checking == CHECKING
+        assert (decision["event"], decision["code"], decision["flag"]) == (
+            "decision_needed",
+            "orphans_droppable",
+            "--drop-orphans",
+        )
+        assert decision["message"]
+        assert _orphan_tuples(decision["details"]["orphans"]) == ORPHANS
+        assert report["ok"] is False
+        assert [problem["code"] for problem in report["problems"]] == ["orphans_droppable"] * len(ORPHANS)
+        assert (report["tables_copied"], report["rows_copied"], report["orphans"]) == (0, 0, [])
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            assert sa.inspect(conn).get_table_names() == []
+        engine.dispose()
+
+    def test_target_at_a_revision_this_langflow_does_not_know_is_refused(
+        self, sqlite_source, postgres_database, run_cli
+    ):
+        _seed(sqlite_source)
+        engine = sa.create_engine(postgres_database)
+        with engine.begin() as conn:
+            # What a newer Langflow leaves behind: a revision this one has no migration for.
+            conn.execute(sa.text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"))
+            conn.execute(sa.text("INSERT INTO alembic_version VALUES ('ffffffffffff')"))
+        engine.dispose()
+
+        result = run_cli("--json", "--source", sqlite_source, "--target", postgres_database)
+
+        assert result.exit_code == 1
+        # Alembic's own error escaping would leave a program reading --json without its report line.
+        assert isinstance(result.exception, SystemExit)
+        events = _events(result)
+        error, report = events[-2:]
+        assert events[:-2] == [CHECKING, PREPARING_TARGET]
+        assert error["code"] == "target_not_empty"
+        assert error["message"].startswith("target database is at revision ffffffffffff")
+        assert "another Langflow version" in error["message"]
+        assert "convert into an empty database" in error["message"]
+        assert report["problems"] == [{"code": "target_not_empty", "message": error["message"]}]
+
+        text = run_cli("--source", sqlite_source, "--target", postgres_database)
+
+        assert text.exit_code == 1
+        assert isinstance(text.exception, SystemExit)
+        assert text.stdout == ""
+        assert text.stderr == f"Problem: {error['message']}\n"
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            assert sa.inspect(conn).get_table_names() == ["alembic_version"]
+        engine.dispose()
+
+    def test_json_report_records_the_orphans_that_were_dropped(self, sqlite_source, postgres_database, run_cli):
+        _seed(sqlite_source)
+        _leave_orphans(sqlite_source)
+
+        result = run_cli("--json", "--drop-orphans", "--source", sqlite_source, "--target", postgres_database)
+
+        assert result.exit_code == 0, result.output
+        *events, report = _events(result)
+        assert report["ok"] is True
+        assert _orphan_tuples(report["orphans"]) == ORPHANS
+        # The total leaves out the rows that were dropped, so the copy still reaches it.
+        last = [event for event in events if event["event"] == "progress"][-1]
+        assert last["done"] == last["total"] == report["rows_copied"]
+
+    def test_json_reports_orphans_no_rule_covers_as_errors(self, sqlite_source, postgres_database, run_cli):
+        _seed(sqlite_source)
+        _leave_orphans(sqlite_source)
+        engine = sa.create_engine(sqlite_source)
+        with engine.begin() as conn:
+            # flow.user_id has no ON DELETE rule, so --drop-orphans cannot settle it.
+            conn.execute(sa.text("UPDATE flow SET user_id = :gone"), {"gone": uuid.uuid4().hex})
+        engine.dispose()
+
+        result = run_cli("--json", "--source", sqlite_source, "--target", postgres_database)
+
+        assert result.exit_code == 1
+        _, *errors, report = _events(result)
+        # Rerunning with --drop-orphans would not be enough, so no decision is offered.
+        assert {event["event"] for event in errors} == {"error"}
+        codes = [event["code"] for event in errors]
+        assert sorted(codes) == ["orphans_droppable"] * len(ORPHANS) + ["orphans_no_rule"]
+        no_rule = errors[codes.index("orphans_no_rule")]
+        assert no_rule["message"].startswith("flow.user_id: 1 row(s) point at user rows that are gone")
+        assert report["problems"] == [{"code": event["code"], "message": event["message"]} for event in errors]
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            assert sa.inspect(conn).get_table_names() == []
+        engine.dispose()

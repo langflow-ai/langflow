@@ -54,6 +54,8 @@ EXPECTED_FIELDS = {
     # PathSettings
     "config_dir",
     "knowledge_bases_dir",
+    "knowledge_base_auto_migrate",
+    "knowledge_base_storage_pool_size",
     # ServerSettings
     "deployment_profile",
     "host",
@@ -349,6 +351,7 @@ def test_critical_defaults_unchanged():
     assert settings.host == "localhost"
     assert settings.port == 7860
     assert settings.workers == 1
+    assert settings.knowledge_base_auto_migrate is True
     assert settings.cache_type == "async"
     assert settings.storage_type == "local"
     assert settings.event_delivery == "streaming"
@@ -379,6 +382,7 @@ def test_critical_defaults_unchanged():
     assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
     assert settings.dangerously_allow_multi_worker_without_shared_queue is False
+    assert settings.knowledge_base_storage_pool_size == 20
 
 
 def test_database_tls_files_dir_reads_operator_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -542,6 +546,7 @@ def test_yaml_round_trip():
         ("LANGFLOW_HOST", "0.0.0.0", "host", "0.0.0.0"),
         ("LANGFLOW_PORT", "8080", "port", 8080),
         ("LANGFLOW_WORKERS", "2", "workers", 2),
+        ("LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE", "false", "knowledge_base_auto_migrate", False),
         ("LANGFLOW_LOG_LEVEL", "info", "log_level", "info"),
         ("LANGFLOW_CACHE_TYPE", "memory", "cache_type", "memory"),
         ("LANGFLOW_STORAGE_TYPE", "s3", "storage_type", "s3"),

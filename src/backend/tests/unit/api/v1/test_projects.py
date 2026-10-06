@@ -19,7 +19,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
-from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.model import Folder, FolderCreate
 from langflow.services.deps import session_scope
 from lfx.services.adapters.deployment.schema import DeploymentType
 from sqlmodel import select
@@ -132,6 +132,28 @@ async def test_create_project(client: AsyncClient, logged_in_headers, basic_case
     assert "description" in result, "The dictionary must contain a key called 'description'"
     assert "id" in result, "The dictionary must contain a key called 'id'"
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
+
+
+async def test_new_project_in_caller_transaction_rolls_back_with_mcp_registration(active_user):
+    """A caller that owns the transaction can roll back the project and its MCP server together."""
+    from langflow.api.v1.projects import _new_project
+    from langflow.services.database.models.mcp_server import MCPServer
+    from langflow.services.database.models.user.model import User
+
+    async with session_scope() as session:
+        user = await session.get(User, active_user.id)
+        project = await _new_project(
+            session=session,
+            project=FolderCreate(name="caller_owned_project"),
+            current_user=user,
+            owns_transaction=False,
+        )
+        assert (await session.exec(select(MCPServer).where(MCPServer.user_id == user.id))).all()
+        await session.rollback()
+
+    async with session_scope() as session:
+        assert await session.get(Folder, project.id) is None
+        assert not (await session.exec(select(MCPServer).where(MCPServer.user_id == active_user.id))).all()
 
 
 async def test_create_project_duplicate_name_escapes_like_wildcards(client: AsyncClient, logged_in_headers):

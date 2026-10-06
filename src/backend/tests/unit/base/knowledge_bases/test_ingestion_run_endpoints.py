@@ -376,14 +376,12 @@ class TestChunksFilters:
             ("?job_id=deadbeef", {"file_upload"}),
         ],
     )
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.release_chroma_resources")
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.backend_for_record")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_single_metadata_filter_narrows_results(
         self,
         mock_root,
         mock_create_backend,
-        mock_release,  # noqa: ARG002
         query,
         expected_source_types,
         client: AsyncClient,
@@ -394,8 +392,6 @@ class TestChunksFilters:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "filter_kb"
         kb_dir.mkdir(parents=True)
-        # A dummy chroma.sqlite3 so the local-Chroma "has_data" guard passes.
-        (kb_dir / "chroma.sqlite3").write_bytes(b"")
         await _ensure_kb_record(user_id=active_user.id, kb_name="filter_kb")
 
         mock_create_backend.return_value = self._fake_backend(
@@ -413,14 +409,12 @@ class TestChunksFilters:
         body = response.json()
         assert {chunk["metadata"]["source_type"] for chunk in body["chunks"]} == expected_source_types
 
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.release_chroma_resources")
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.backend_for_record")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_multiple_filters_combine_with_and(
         self,
         mock_root,
         mock_create_backend,
-        mock_release,  # noqa: ARG002
         client: AsyncClient,
         logged_in_headers,
         active_user,
@@ -429,10 +423,7 @@ class TestChunksFilters:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "filter_multi"
         kb_dir.mkdir(parents=True)
-        # A dummy chroma.sqlite3 so the local-Chroma "has_data" guard passes.
-        (kb_dir / "chroma.sqlite3").write_bytes(b"")
         await _ensure_kb_record(user_id=active_user.id, kb_name="filter_multi")
-        (kb_dir / "chroma.sqlite3").write_bytes(b"")
 
         mock_create_backend.return_value = self._fake_backend(
             [

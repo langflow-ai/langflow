@@ -580,6 +580,7 @@ async def client_fixture(
             restored = template.restore(db_path) if template else False
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("LANGFLOW_KNOWLEDGE_BASES_DIR", str(db_path.parent / "knowledge"))
             monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
             monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
             monkeypatch.setenv("DO_NOT_TRACK", "true")
@@ -629,6 +630,11 @@ async def client_fixture(
                 if template:
                     startup_patch.setattr(service_utils, "initialize_database", initialize_test_database)
                 manager = await stack.enter_async_context(LifespanManager(app, startup_timeout=60, shutdown_timeout=60))
+                # Startup schedules storage discovery. Settle it before tests
+                # insert fenced records that the background migration could alter.
+                from langflow.services.knowledge_base_storage import coordinator
+
+                await coordinator.wait_for_upgrade(timeout=30)
             # Restore the real initializer before test code runs. Tests of
             # database initialization must still exercise production behavior.
             client = await stack.enter_async_context(

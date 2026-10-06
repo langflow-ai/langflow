@@ -273,7 +273,7 @@ class TestEnvDetection:
         monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
         assert postgres_env_configured() is False
         assert read_connection_string_from_env() is None
-        assert resolve_default_kb_backend() == BackendType.CHROMA.value
+        assert resolve_default_kb_backend() == BackendType.SQLITE.value
 
     def test_empty_env_is_treated_as_absent(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", "")

@@ -18,7 +18,9 @@ Use embedding model components anywhere you need to generate embeddings in a flo
 This example shows how to use an embedding model component in a flow to create a semantic search system.
 This flow loads a text file, splits the text into chunks, generates embeddings for each chunk, and then loads the chunks and embeddings into a vector store. The input and output components allow a user to query the vector store through a chat interface.
 
-![A semantic search flow that uses Embedding Model, File, Split Text, Chroma DB, Chat Input, and Chat Output components](/img/component-embedding-models-add-chat.png)
+![A semantic search flow that connects embedding and vector store components](/img/component-embedding-models-add-chat.png)
+
+This screenshot shows the legacy Chroma component. In Langflow 1.13, use a supported vector store such as Astra DB instead.
 
 1. Create a flow, add a **Read File** component, and then select a file containing text data, such as a PDF, that you can use to test the flow.
 
@@ -36,14 +38,14 @@ This flow loads a text file, splits the text into chunks, generates embeddings f
 4. Add a [**Split Text** component](/split-text) to your flow.
 This component splits text input into smaller chunks to be processed into embeddings.
 
-5. Add a vector store component, such as the **Chroma DB** component, to your flow, and then configure the component to connect to your vector database.
+5. Add a vector store component, such as the [**Astra DB** component](/bundles-datastax), to your flow, and then configure the component to connect to your vector database.
 This component stores the generated embeddings so they can be used for similarity search.
 
 6. Connect the components:
 
     * Connect the **Read File** component's **Loaded Files** output to the **Split Text** component's **JSON or Table** input.
     * Connect the **Split Text** component's **Chunks** output to the vector store component's **Ingest Data** input.
-    * Connect the **Embedding Model** component's **Embeddings** output to the vector store component's **Embedding** input.
+    * Connect the **Embedding Model** component's **Embeddings** output to the vector store component's embedding input (**Embedding Model** for Astra DB).
 
 7. To query the vector store, add [**Chat Input and Output** components](/chat-input-and-output):
 

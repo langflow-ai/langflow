@@ -268,7 +268,10 @@ class ServiceManager:
 
         # Create the actual service
         self.services[service_name] = self.factories[service_name].create(**dependent_services)
-        self.services[service_name].set_ready()
+        # Protocol-based caches have no readiness lifecycle to initialize.
+        set_ready = getattr(self.services[service_name], "set_ready", None)
+        if callable(set_ready):
+            set_ready()
 
     def _validate_service_creation(self, service_name: ServiceType, default: ServiceFactory | None = None) -> None:
         """Validate whether the service can be created."""

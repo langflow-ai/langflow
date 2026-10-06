@@ -15,7 +15,9 @@ guard.
 
 from __future__ import annotations
 
+import asyncio
 import re
+import threading
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
@@ -51,6 +53,169 @@ def _make_backend(
     backend._resolved_password = "secret"  # noqa: S105 — test fixture  # pragma: allowlist secret
     backend._secrets_resolved = True
     return backend
+
+
+class _OpenSearchReadError(Exception):
+    """The transport error fields exposed by opensearch-py."""
+
+    def __init__(self, status_code: int, error: str) -> None:
+        super().__init__(error)
+        self.status_code = status_code
+        self.error = error
+
+
+@pytest.mark.parametrize("operation", ["count", "iter_documents"])
+@pytest.mark.parametrize(
+    "error",
+    [
+        OSError("remote unavailable"),
+        _OpenSearchReadError(401, "security_exception"),
+        _OpenSearchReadError(403, "security_exception"),
+        _OpenSearchReadError(404, "Not Found"),
+        _OpenSearchReadError(404, "search_context_missing_exception"),
+    ],
+)
+async def test_remote_read_propagates_failure(tmp_path, operation, error):
+    backend = _make_backend(tmp_path)
+    backend._os_client = MagicMock()
+    backend._os_client.count.side_effect = error
+    backend._os_index = "test_index"
+    backend._os_vector_field = DEFAULT_VECTOR_FIELD
+    backend._os_text_field = DEFAULT_TEXT_FIELD
+    if operation == "count":
+        with pytest.raises(type(error), match=str(error)):
+            await backend.count()
+    else:
+        with patch("opensearchpy.helpers.scan", side_effect=error), pytest.raises(type(error), match=str(error)):
+            _ = [batch async for batch in backend.iter_documents()]
+
+
+async def test_missing_index_is_an_empty_store(tmp_path):
+    backend = _make_backend(tmp_path)
+    error = _OpenSearchReadError(404, "index_not_found_exception")
+    backend._os_client = MagicMock()
+    backend._os_client.count.side_effect = error
+    backend._os_index = "test_index"
+    backend._os_vector_field = DEFAULT_VECTOR_FIELD
+    backend._os_text_field = DEFAULT_TEXT_FIELD
+    assert await backend.count() == 0
+    with patch("opensearchpy.helpers.scan", side_effect=error):
+        assert [batch async for batch in backend.iter_documents()] == []
+
+
+@pytest.mark.parametrize("batch_size", [1, 2])
+async def test_scan_failure_after_a_hit_is_not_successful_completion(tmp_path, batch_size):
+    backend = _make_backend(tmp_path)
+    backend._os_client = MagicMock()
+    backend._os_index = "test_index"
+    backend._os_vector_field = DEFAULT_VECTOR_FIELD
+    backend._os_text_field = DEFAULT_TEXT_FIELD
+    closed = threading.Event()
+
+    def interrupted_scan(*_args, **_kwargs):
+        try:
+            yield {"_id": "first", "_source": {"text": "first chunk"}}
+            raise _OpenSearchReadError(404, "index_not_found_exception")
+        finally:
+            closed.set()
+
+    with (
+        patch("opensearchpy.helpers.scan", side_effect=interrupted_scan),
+        pytest.raises(_OpenSearchReadError, match="index_not_found_exception"),
+    ):
+        _ = [batch async for batch in backend.iter_documents(batch_size=batch_size)]
+    assert closed.is_set()
+
+
+async def test_count_rejects_partial_shard_failure(tmp_path):
+    backend = _make_backend(tmp_path)
+    backend._os_client = MagicMock()
+    backend._os_client.count.return_value = {"count": 0, "_shards": {"total": 2, "successful": 1, "failed": 1}}
+    backend._os_index = "test_index"
+    with pytest.raises(RuntimeError, match="did not complete"):
+        await backend.count()
+
+
+@pytest.mark.no_blockbuster
+@pytest.mark.parametrize("operation", ["delete_by", "delete_collection", "embedded_write"])
+async def test_cancelled_remote_mutation_drains_native_worker(tmp_path, operation):
+    from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+    backend = _make_backend(tmp_path)
+    started = threading.Event()
+    release = threading.Event()
+    completed = threading.Event()
+
+    def blocked_request(*_args, **_kwargs):
+        started.set()
+        assert release.wait(5)
+        completed.set()
+        return {"acknowledged": True, "deleted": 1, "failures": [], "timed_out": False}
+
+    client = MagicMock()
+    client.indices.delete.side_effect = blocked_request
+    client.delete_by_query.side_effect = blocked_request
+    backend._os_client = client
+    backend._os_index = "test_index"
+    backend._vector_store = MagicMock(bulk_size=500)
+    backend._vector_store.add_embeddings.side_effect = blocked_request
+    if operation == "embedded_write":
+        pending = backend._write_embedded(["id"], [IngestedDocument(id="id", content="text", embedding=[1.0])])
+    elif operation == "delete_by":
+        pending = backend.delete_by({"session_id": "session"})
+    else:
+        pending = backend.delete_collection()
+    task = asyncio.create_task(pending)
+    try:
+        assert await asyncio.to_thread(started.wait, 2)
+        task.cancel()
+        await asyncio.sleep(0.05)
+        assert not task.done(), "The native request must drain before the coroutine releases its fence"
+        assert not completed.is_set()
+    finally:
+        release.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert completed.is_set()
+
+
+@pytest.mark.parametrize("operation", ["delete_by", "delete_collection"])
+async def test_remote_delete_propagates_transport_failure(tmp_path, operation):
+    backend = _make_backend(tmp_path)
+    client = MagicMock()
+    client.indices.delete.side_effect = OSError("remote unavailable")
+    client.delete_by_query.side_effect = OSError("remote unavailable")
+    backend._os_client = client
+    backend._os_index = "test_index"
+    pending = backend.delete_by({"session_id": "session"}) if operation == "delete_by" else backend.delete_collection()
+    with pytest.raises(OSError, match="remote unavailable"):
+        await pending
+
+
+@pytest.mark.parametrize("result", [{"timed_out": True}, {"failures": [{}]}, {"version_conflicts": 1}])
+async def test_document_delete_rejects_partial_success(tmp_path, result):
+    backend = _make_backend(tmp_path)
+    backend._os_client = MagicMock()
+    backend._os_client.delete_by_query.return_value = result
+    backend._os_index = "test_index"
+    with pytest.raises(RuntimeError, match="did not complete"):
+        await backend.delete_by({"session_id": "session"})
+
+
+async def test_collection_delete_initializes_fresh_client_and_requires_acknowledgement(tmp_path):
+    backend = OpenSearchBackend(kb_name="test", kb_path=tmp_path)
+    client = MagicMock()
+    client.indices.delete.return_value = {"acknowledged": False}
+
+    async def initialize():
+        backend._os_client = client
+        backend._os_index = "test_index"
+
+    backend.ensure_ready = AsyncMock(side_effect=initialize)
+    with pytest.raises(RuntimeError, match="did not acknowledge"):
+        await backend.delete_collection()
+    backend.ensure_ready.assert_awaited_once()
+    client.indices.delete.assert_called_once_with(index="test_index", ignore_unavailable=True)
 
 
 class TestOpenSearchBackendVectorFieldDefault:
@@ -108,6 +273,110 @@ class TestOpenSearchBackendVectorFieldDefault:
         kwargs = fake_wrapper.call_args.kwargs
         assert kwargs["vector_field"] == "embedding"
         assert backend._os_vector_field == "embedding"
+
+
+class TestOpenSearchDistanceMetric:
+    """Relocation must compare the actual index metric, including legacy indexes."""
+
+    @pytest.mark.parametrize(
+        ("field", "expected"),
+        [
+            ({"method": {"space_type": "l2"}}, "l2"),
+            ({"method": {"space_type": "cosinesimil"}}, "cosine"),
+            ({"space_type": "innerproduct", "method": {"name": "hnsw"}}, "inner_product"),
+            ({"space_type": "l1"}, "l1"),
+        ],
+    )
+    async def test_existing_mapping_overrides_config(self, tmp_path, field, expected):
+        backend = _make_backend(
+            tmp_path, {"index_name": "test_index", "space_type": "cosinesimil", "vector_field": "legacy_field"}
+        )
+        client = MagicMock()
+        client.indices.get_mapping.return_value = {
+            "test_index": {"mappings": {"properties": {"vector_field": {"type": "knn_vector", **field}}}}
+        }
+        with (
+            patch("opensearchpy.OpenSearch", return_value=client),
+            patch("langchain_community.vectorstores.OpenSearchVectorSearch", MagicMock()),
+        ):
+            assert await backend.get_distance_metric() == expected
+        client.indices.get_mapping.assert_called_once_with(index="test_index")
+
+    async def test_missing_index_uses_configured_metric(self, tmp_path):
+        from opensearchpy.exceptions import NotFoundError
+
+        backend = _make_backend(tmp_path, {"index_name": "test_index", "space_type": "innerproduct"})
+        backend._os_client = MagicMock()
+        backend._os_index = "test_index"
+        backend._os_client.indices.get_mapping.side_effect = NotFoundError(404, "index_not_found_exception", {})
+        assert await backend.get_distance_metric() == "inner_product"
+
+    @pytest.mark.parametrize("error", ["Not Found", "search_context_missing_exception"])
+    async def test_unrelated_404_does_not_use_configured_metric(self, tmp_path, error):
+        from opensearchpy.exceptions import NotFoundError
+
+        backend = _make_backend(tmp_path, {"index_name": "test_index", "space_type": "innerproduct"})
+        backend._os_client = MagicMock()
+        backend._os_index = "test_index"
+        backend._os_client.indices.get_mapping.side_effect = NotFoundError(404, error, {})
+        with pytest.raises(NotFoundError, match=error):
+            await backend.get_distance_metric()
+
+    @pytest.mark.parametrize(
+        "mapping",
+        [
+            {},
+            {"mappings": {"properties": {"vector_field": {"type": "float"}}}},
+            {"mappings": {"properties": {"vector_field": {"type": "knn_vector", "model_id": "trained"}}}},
+            {
+                "mappings": {
+                    "properties": {
+                        "vector_field": {
+                            "type": "knn_vector",
+                            "space_type": "l2",
+                            "method": {"space_type": "cosinesimil"},
+                        }
+                    }
+                }
+            },
+        ],
+    )
+    async def test_indeterminate_existing_mapping_is_rejected(self, tmp_path, mapping):
+        backend = _make_backend(tmp_path)
+        backend._os_client = MagicMock()
+        backend._os_index = "test_index"
+        backend._os_client.indices.get_mapping.return_value = {"test_index": mapping}
+        with pytest.raises(ValueError, match="Cannot determine"):
+            await backend.get_distance_metric()
+
+    async def test_mapping_transport_error_is_not_a_missing_index(self, tmp_path):
+        backend = _make_backend(tmp_path)
+        backend._os_client = MagicMock()
+        backend._os_index = "test_index"
+        backend._os_client.indices.get_mapping.side_effect = OSError("remote unavailable")
+        with pytest.raises(OSError, match="remote unavailable"):
+            await backend.get_distance_metric()
+
+
+@pytest.mark.parametrize("write", ["ingest", "copy"])
+async def test_writes_pass_configured_metric_even_after_store_was_built(tmp_path, write):
+    from langchain_core.documents import Document
+    from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+    backend = _make_backend(tmp_path, {"index_name": "test_index", "space_type": "cosinesimil"})
+    store = MagicMock(bulk_size=500)
+    store.aadd_documents = AsyncMock()
+    backend._vector_store = store
+    if write == "ingest":
+        docs = [Document(page_content="doc")]
+        await backend.add_documents(docs)
+        store.aadd_documents.assert_awaited_once_with(docs, space_type="cosinesimil")
+    else:
+        docs = [IngestedDocument(id="chunk", content="doc", embedding=[1.0, 0.0])]
+        await backend.add_embedded_documents(docs)
+        store.add_embeddings.assert_called_once_with(
+            [("doc", [1.0, 0.0])], metadatas=[{}], ids=["chunk"], space_type="cosinesimil"
+        )
 
 
 # OpenSearch index names: lowercase, none of ``\\ / * ? " < > | , # :`` or

@@ -90,7 +90,24 @@ const BuildStatusDisplay = ({
   }
 
   if (buildStatus === BuildStatus.INACTIVE) {
-    return <StatusMessage>{t("flow.statusInactive")}</StatusMessage>;
+    // A blocked node may still hold its last build; show it as history.
+    const lastDuration = validationStatus?.data?.duration;
+    return (
+      <div className="flex flex-col gap-1">
+        <StatusMessage>{t("flow.statusInactive")}</StatusMessage>
+        {lastDuration && (
+          <>
+            {validationStatus.timestamp && (
+              <TimeStamp
+                prefix={t("flow.runTimestampPrefix")}
+                time={new Date(validationStatus.timestamp).toLocaleString()}
+              />
+            )}
+            <Duration duration={lastDuration} />
+          </>
+        )}
+      </div>
+    );
   }
 
   if (buildStatus === BuildStatus.ERROR && !validationStatus) {
