@@ -1754,7 +1754,14 @@ class MCPSessionManager:
                         ) as (read, write, _):
                             session = ClientSession(read, write)
                             async with session:
-                                await asyncio.wait_for(session.initialize(), timeout=2.0)
+                                # Same budget as the outer wait on `session_future` below, and as
+                                # the SSE branch, which has no inner cap at all. A hardcoded 2 s here
+                                # meant a healthy remote server that needs longer to initialize could
+                                # never connect: the TimeoutError it raises counts as transient, so
+                                # there is no SSE fallback either, and no value of
+                                # LANGFLOW_MCP_SERVER_TIMEOUT could lift it. The outer wait still
+                                # bounds the whole attempt sequence.
+                                await asyncio.wait_for(session.initialize(), timeout=get_session_init_timeout())
                                 used_transport.append("streamable_http")
                                 await logger.ainfo(f"Session {session_id} connected via Streamable HTTP")
                                 session_future.set_result(session)
@@ -2189,7 +2196,7 @@ class MCPStdioClient(_PooledSessionClient):
         """Connect to MCP server using stdio transport (SDK style)."""
         return await asyncio.wait_for(
             self._connect_to_server(command_str, env, current_user_id=current_user_id, headers=headers),
-            timeout=get_settings_service().settings.mcp_server_timeout,
+            timeout=get_session_init_timeout(),
         )
 
     def _get_session_manager(self) -> MCPSessionManager:
@@ -2500,7 +2507,7 @@ class MCPStreamableHttpClient(_PooledSessionClient):
                 verify_ssl=verify_ssl,
                 preferred_transport=preferred_transport,
             ),
-            timeout=get_settings_service().settings.mcp_server_timeout,
+            timeout=get_session_init_timeout(),
         )
 
     async def _get_or_create_session(self) -> ClientSession:
