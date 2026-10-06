@@ -86,6 +86,18 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     that name is resolved from os.environ or global variables so imported flows
     can reference credentials without storing the raw key.
     """
+    return run_until_complete(aget_api_key_for_provider(user_id, provider, api_key))
+
+
+async def aget_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
+    """Get API key from component input or global variables.
+
+    When api_key is set to an environment variable name (e.g. ANTHROPIC_API_KEY),
+    that name is resolved from os.environ or global variables so imported flows
+    can reference credentials without storing the raw key.
+    """
+    # These parsing and fallback rules come from the original synchronous
+    # resolver. Only the database calls are changed to direct awaits.
     # SecretStrInput-backed fields arrive as SecretStr to prevent leakage through
     # stringification. Unwrap here because provider clients need the raw value.
     api_key = secret_value_to_str(api_key, strip=True)
@@ -97,7 +109,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     # a stale/revoked .env key silently shadows the key the user configured in
     # the UI (and, in multi-tenant deploys, every user shares a server-wide env
     # key). Env is the fallback for the no-user (lfx run) / no-DB-value case.
-    def _resolve_var_name(var_name: str) -> str | None:
+    async def _resolve_var_name(var_name: str) -> str | None:
         if user_id and not (isinstance(user_id, str) and user_id == "None"):
 
             async def _get_by_var_name():
@@ -115,7 +127,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                     except VariableNotFoundError:
                         return None
 
-            value = run_until_complete(_get_by_var_name())
+            value = await _get_by_var_name()
             value = secret_value_to_str(value, strip=True)
             if value:
                 return value
@@ -132,6 +144,9 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
 
     if api_key and api_key.strip():
         var_name = api_key.strip()
+        # This input can hold a variable name as well as a literal key. For
+        # example, OPENAI_BASE_URL names a non-secret setting, not a bearer key.
+        # The comparison below checks that possible reference by name.
         # A malformed or legacy component can point its api_key field at any
         # global variable name. Never reinterpret declared non-secret provider
         # configuration (for example, a base URL) as bearer credentials.
@@ -142,7 +157,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
             return None
         # Names that look like env/global variables (e.g. MY_OPENAI_API_KEY): resolve from env/DB
         if var_name.replace("_", "").isalnum() and var_name[0].isalpha():
-            resolved = _resolve_var_name(var_name)
+            resolved = await _resolve_var_name(var_name)
             if resolved:
                 return resolved
             # Unresolved variable name: don't use as literal key
@@ -178,7 +193,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                 except VariableNotFoundError:
                     return None
 
-        api_key = run_until_complete(_get_variable())
+        api_key = await _get_variable()
 
     api_key = secret_value_to_str(api_key, strip=True)
     if api_key:
@@ -216,6 +231,11 @@ def provider_variable_from_env(var_key: str) -> str | None:
 
 
 def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
+    """Get all configured variables for a provider from database or environment."""
+    return run_until_complete(aget_all_variables_for_provider(user_id, provider))
+
+
+async def aget_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
     """Get all configured variables for a provider from database or environment."""
     result: dict[str, str] = {}
 
@@ -275,7 +295,7 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
 
             return values
 
-    db_values = run_until_complete(_get_all_variables())
+    db_values = await _get_all_variables()
 
     # decrypt_api_key swallows Fernet InvalidToken silently and returns "",
     # so a SECRET_KEY rotation leaves required keys missing from db_values

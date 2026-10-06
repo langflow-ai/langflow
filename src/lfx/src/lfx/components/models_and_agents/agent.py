@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Mapping
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, cast
 
@@ -45,6 +46,8 @@ from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.constants import STREAM_INFO_TEXT
 from lfx.base.models.unified_models import (
+    aget_language_model_options,
+    aget_llm,
     get_language_model_options,
     get_llm,
     handle_model_input_update,
@@ -64,7 +67,10 @@ from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
+from lfx.utils.async_helpers import async_call_method, delegates_to
 from lfx.utils.constants import MESSAGE_SENDER_AI
+
+_resolved_agent_model: ContextVar[tuple[object, Any] | None] = ContextVar("resolved_agent_model", default=None)
 
 
 def set_advanced_true(component_input):
@@ -371,6 +377,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if isinstance(metadata, list) and len(metadata) == len(options):
             provider_field["options_metadata"] = [metadata[index] for index in keep_indexes]
 
+    @delegates_to("_aresolve_selected_model")
     def _resolve_selected_model(self):
         """Resolve the selected model, including legacy agent_llm/model_name inputs."""
         try:
@@ -402,6 +409,37 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             }
         ]
 
+    async def _aresolve_selected_model(self):
+        """Resolve the selected model, including legacy agent_llm/model_name inputs."""
+        try:
+            from langchain_core.language_models import BaseLanguageModel
+
+            if isinstance(self.model, BaseLanguageModel):
+                return self.model
+        except ImportError:
+            pass
+
+        if isinstance(self.model, list) and self.model:
+            return self.model
+
+        legacy_provider = getattr(self, "agent_llm", None)
+        legacy_model_name = getattr(self, "model_name", None)
+        if not legacy_provider or not legacy_model_name:
+            return self.model
+
+        options = await aget_language_model_options(user_id=self.user_id)
+        for option in options:
+            if option.get("provider") == legacy_provider and option.get("name") == legacy_model_name:
+                return [option]
+
+        return [
+            {
+                "name": legacy_model_name,
+                "provider": legacy_provider,
+                "metadata": {},
+            }
+        ]
+
     def _get_max_tokens_value(self):
         """Return the user-supplied max_tokens or None when unset/zero."""
         val = getattr(self, "max_tokens", None)
@@ -409,6 +447,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             return None
         return val
 
+    @delegates_to("_aget_llm")
     def _get_llm(self):
         """Override parent to include max_tokens from the Agent's input field.
 
@@ -432,6 +471,19 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             overrides=getattr(self, "_model_overrides", None),
         )
 
+    async def _aget_llm(self):
+        """Await model setup using the streaming contract documented in ``_get_llm``."""
+        return await aget_llm(
+            model=self.model,
+            user_id=self.user_id,
+            api_key=getattr(self, "api_key", None),
+            stream=True,
+            max_tokens=self._get_max_tokens_value(),
+            watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
+            watsonx_project_id=getattr(self, "project_id", None),
+            overrides=getattr(self, "_model_overrides", None),
+        )
+
     async def get_agent_requirements(self):
         """Get the agent requirements for the agent."""
         from langchain_core.tools import StructuredTool
@@ -440,7 +492,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
 
-        selected_model = self._resolve_selected_model()
+        selected_model = await async_call_method(self, "_resolve_selected_model")
         try:
             from langchain_core.language_models import BaseLanguageModel
 
@@ -453,7 +505,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         # Ensure _get_llm() uses the resolved model (e.g. from legacy agent_llm/model_name)
         self.model = selected_model
-        llm_model = self._get_llm()
+        llm_model = await async_call_method(self, "_get_llm")
         if llm_model is None:
             msg = "No language model selected. Please choose a model to proceed."
             raise ValueError(msg)
@@ -546,8 +598,11 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             prompt = prompt.replace(placeholder, value)
         return prompt
 
-    def create_agent_runnable(self, *, allow_interrupts: bool = True):
+    def create_agent_runnable(self, *, allow_interrupts: bool = True, llm: Any | None = None):
         """Build the LangGraph `CompiledStateGraph` via `langchain.agents.create_agent`.
+
+        Callers may supply the model already resolved for this execution attempt.
+        Direct calls without a model resolve one as before.
 
         Replaces the legacy `AgentExecutor` runnable inherited from
         `ToolCallingAgentComponent`. Other agent components (tool_calling, csv, json,
@@ -568,7 +623,9 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
           catches Pydantic ValidationErrors from bad args and feeds the error back
           to the LLM as a retry signal, so the agent recovers gracefully.
         """
-        llm = self._get_llm()
+        if llm is None:
+            resolved = _resolved_agent_model.get()
+            llm = resolved[1] if resolved is not None and resolved[0] is self else self._get_llm()
         tools = self.tools or []
 
         # Eager bind_tools validation. `create_agent(...)` is lazy — without this,
@@ -800,10 +857,26 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             session_id=session_id or uuid.uuid4(),
         )
 
+    @delegates_to("_aselected_model_remediation_context")
     def _selected_model_remediation_context(self) -> tuple[str | None, str | None, Any | None]:
         """Return provider/name plus a connected model target, when present."""
         try:
             selected = self._resolve_selected_model()
+        except (AttributeError, TypeError, ValueError, KeyError, ImportError):
+            return None, None, None
+        return self._model_remediation_context(selected)
+
+    async def _aselected_model_remediation_context(self) -> tuple[str | None, str | None, Any | None]:
+        """Await the selected model before applying the existing identity checks."""
+        try:
+            selected = await async_call_method(self, "_resolve_selected_model")
+        except (AttributeError, TypeError, ValueError, KeyError, ImportError):
+            return None, None, None
+        return self._model_remediation_context(selected)
+
+    def _model_remediation_context(self, selected) -> tuple[str | None, str | None, Any | None]:
+        """Return provider/name plus a connected model target, when present."""
+        try:
             if isinstance(selected, list) and selected and isinstance(selected[0], dict):
                 return selected[0].get("provider"), selected[0].get("name"), None
 
@@ -873,8 +946,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         side effects.
         """
         from lfx.base.models.model_remediation import apply_overrides_to_model, find_remediation, remember
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
-        provider, model_name, connected_model = self._selected_model_remediation_context()
+        await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
+        provider, model_name, connected_model = await async_call_method(self, "_selected_model_remediation_context")
         applied: set[str] = set()
         while True:
             try:
@@ -917,6 +992,20 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                     remember(provider, model_name, self._model_overrides)
                 return result
 
+    async def _acreate_agent_runnable(self, llm, *, allow_interrupts: bool = True):
+        """Reuse this attempt's model without changing existing override signatures.
+
+        A custom method can call super() with the original arguments and still
+        use the awaited model. Context-local binding prevents retries, nested
+        Agents and concurrent builds from reusing another attempt's model.
+        """
+        token = _resolved_agent_model.set((self, llm))
+        try:
+            kwargs = {} if allow_interrupts else {"allow_interrupts": False}
+            return await async_call_method(self, "create_agent_runnable", **kwargs)
+        finally:
+            _resolved_agent_model.reset(token)
+
     async def message_response(self) -> Message:
         async def _run_once() -> Message:
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
@@ -927,7 +1016,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 input_value=self.input_value,
                 system_prompt=self._inject_dynamic_prompt_values(self.system_prompt),
             )
-            agent = self.create_agent_runnable()
+            # Reuse this attempt's awaited model. Resolving again here would
+            # re-enter the synchronous credential bridge; retries call _run_once
+            # again and therefore receive fresh credentials and configuration.
+            agent = await self._acreate_agent_runnable(llm_model)
             return await self.run_agent(agent)
 
         result = await self._run_agent_with_model_remediation(_run_once)
@@ -973,7 +1065,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                     system_prompt=augmented_prompt,
                 )
                 # Structured output cannot suspend mid-parse: disable tool-approval interrupts.
-                agent_runnable = self.create_agent_runnable(allow_interrupts=False)
+                agent_runnable = await self._acreate_agent_runnable(llm_model, allow_interrupts=False)
                 return await self.run_agent(agent_runnable)
 
             with _suppress_send_message(self):

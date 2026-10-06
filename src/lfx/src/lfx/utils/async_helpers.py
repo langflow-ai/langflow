@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import threading
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -8,6 +9,7 @@ _F = TypeVar("_F", bound=Callable[..., Any])
 
 # Dunder-named so ``unittest.mock`` objects report it missing instead of inventing a value.
 _ASYNC_DELEGATE_ATTR = "__lfx_async_delegate__"
+_ASYNC_DELEGATE_OWNER_ATTR = "__lfx_async_delegate_owner__"
 
 if hasattr(asyncio, "timeout"):
 
@@ -57,22 +59,24 @@ def run_until_complete(coro):
 
 
 def delegates_to(async_name: str) -> Callable[[_F], _F]:
-    """Mark a sync method as a thin wrapper around the coroutine method ``async_name``.
+    """Mark a synchronous method as having an equivalent async implementation.
 
-    The wrapper body should be ``return run_until_complete(self.<async_name>(...))``. Callers
-    that already run on an event loop look the marker up with ``async_delegate_target`` and
-    await the coroutine directly, instead of pushing the wrapper to a worker thread where
-    ``run_until_complete`` has to start yet another event loop.
+    The decorator only attaches metadata; it does not wrap or call the method.
+    A marked method may bridge to its async counterpart or keep a parallel
+    synchronous implementation. Async callers use ``async_delegate_target``
+    to await the counterpart directly, avoiding a blocking sync-to-async bridge.
 
-    A subclass that overrides the sync method does not inherit the marker, so async callers
-    fall back to running that override in a thread. The class that owns the coroutine must
-    implement it natively: a marked wrapper whose coroutine calls back into the wrapper would
-    recurse forever. File-loader sync wrappers should run from plain threads; a coroutine
-    should await the corresponding async method to avoid blocking its event loop.
+    An unmarked subclass/instance override must still execute its own behavior,
+    so callers run it in a worker thread. Mark only equivalent implementations:
+    bypassing custom validation or calling back into the sync method from its
+    async counterpart can respectively skip behavior or recurse forever.
     """
 
     def decorator(func: _F) -> _F:
         setattr(func, _ASYNC_DELEGATE_ATTR, async_name)
+        # functools.wraps copies function attributes. A wrapper must retain its
+        # own behavior rather than inherit permission to skip straight to async.
+        setattr(func, _ASYNC_DELEGATE_OWNER_ATTR, func)
         return func
 
     return decorator
@@ -82,13 +86,39 @@ def async_delegate_target(obj: object, method_name: str) -> Callable[..., Awaita
     """Return the bound coroutine method behind ``obj.<method_name>``, if it is a marked wrapper.
 
     Returns ``None`` when the method is missing, unmarked, or overridden (on the class or the
-    instance) by something that is not itself a ``delegates_to`` wrapper.
+    instance) by something that is not itself a ``delegates_to`` wrapper. Copied
+    attributes from ``functools.wraps`` do not authorize skipping the wrapper.
     """
     method = getattr(obj, method_name, None)
     async_name = getattr(method, _ASYNC_DELEGATE_ATTR, None)
     if not isinstance(async_name, str):
         return None
+    receiver = getattr(method, "__self__", None)
+    if receiver is not None and receiver is not obj:
+        # A supplied bound method must keep its original receiver/configuration.
+        return None
+    function = getattr(method, "__func__", method)
+    if getattr(function, _ASYNC_DELEGATE_OWNER_ATTR, None) is not function:
+        return None
     return getattr(obj, async_name)
+
+
+async def async_call_method(obj: object, method_name: str, *args, **kwargs) -> Any:
+    """Call a component method without bypassing a synchronous customization.
+
+    Prefer a verified delegate, then a coroutine override. Otherwise use
+    ``to_thread``, which copies request context variables (including credential
+    fallback settings). Thread fallback protects loop progress; cancelling it
+    cannot stop an already running sync extension. Native lookups remain fully
+    cancellable on the caller loop.
+    """
+    method = async_delegate_target(obj, method_name)
+    if method is not None:
+        return await method(*args, **kwargs)
+    method = getattr(obj, method_name)
+    if inspect.iscoroutinefunction(method):
+        return await method(*args, **kwargs)
+    return await asyncio.to_thread(method, *args, **kwargs)
 
 
 async def acquire_thread_lock(lock: threading.Lock) -> None:

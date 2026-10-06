@@ -4,12 +4,20 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from functools import wraps
+from types import MethodType
 from unittest.mock import MagicMock
 
 import pytest
 from lfx.custom.custom_component.component import Component
 from lfx.template.field.base import Output
-from lfx.utils.async_helpers import acquire_thread_lock, async_delegate_target, delegates_to, run_until_complete
+from lfx.utils.async_helpers import (
+    acquire_thread_lock,
+    async_call_method,
+    async_delegate_target,
+    delegates_to,
+    run_until_complete,
+)
 
 
 class _Loader:
@@ -47,6 +55,19 @@ class TestAsyncDelegateTarget:
         assert target is not None
         assert await target() == "async override"
 
+    async def test_decorated_async_delegate_preserves_the_callers_running_loop(self):
+        caller_loop = asyncio.get_running_loop()
+
+        class InstrumentedLoader(_Loader):
+            @wraps(_Loader.aload)
+            def aload(self):
+                # Synchronous instrumentation around a coroutine must still
+                # run on the caller loop when reached through a native delegate.
+                assert asyncio.get_running_loop() is caller_loop
+                return super().aload()
+
+        assert await async_call_method(InstrumentedLoader(), "load") == "async"
+
     def test_sync_override_on_subclass_is_not_a_wrapper(self):
         assert async_delegate_target(_SyncOverride(), "load") is None
 
@@ -55,6 +76,35 @@ class TestAsyncDelegateTarget:
         loader.load = lambda: "instance override"
 
         assert async_delegate_target(loader, "load") is None
+
+    def test_copied_marker_on_decorated_subclass_is_not_a_wrapper(self):
+        class Decorated(_Loader):
+            @wraps(_Loader.load)
+            def load(self):
+                return "decorated override"
+
+        loader = Decorated()
+        assert async_delegate_target(loader, "load") is None
+        assert loader.load() == "decorated override"
+
+    def test_copied_marker_on_bound_instance_override_is_not_a_wrapper(self):
+        loader = _Loader()
+
+        @wraps(_Loader.load)
+        def load(_self):
+            return "decorated instance override"
+
+        loader.load = MethodType(load, loader)
+        assert async_delegate_target(loader, "load") is None
+        assert loader.load() == "decorated instance override"
+
+    def test_borrowed_marked_method_keeps_its_original_receiver(self):
+        first = _Loader()
+        second = _AsyncOverride()
+        first.load = second.load
+
+        assert async_delegate_target(first, "load") is None
+        assert first.load() == "async override"
 
     def test_mock_override_is_not_mistaken_for_a_wrapper(self):
         loader = _Loader()

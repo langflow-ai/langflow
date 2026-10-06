@@ -1,6 +1,6 @@
 import os
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -278,7 +278,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component.api_key = "test-api-key"
 
         # Mock get_llm to capture the arguments
-        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+        with patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock) as mock_get_llm:
             mock_get_llm.return_value = MockLanguageModel()
 
             # Mock other required methods
@@ -289,13 +289,13 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             await component.get_agent_requirements()
 
             # Verify get_llm was called with WatsonX parameters
-            mock_get_llm.assert_called_once()
+            mock_get_llm.assert_awaited_once()
             call_kwargs = mock_get_llm.call_args.kwargs
             assert call_kwargs.get("watsonx_url") == "https://us-south.ml.cloud.ibm.com"
             assert call_kwargs.get("watsonx_project_id") == "test-project-id"
 
-    @patch("lfx.components.models_and_agents.agent.get_language_model_options")
-    @patch("lfx.components.models_and_agents.agent.get_llm")
+    @patch("lfx.components.models_and_agents.agent.aget_language_model_options", new_callable=AsyncMock)
+    @patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock)
     async def test_get_agent_requirements_supports_legacy_agent_llm_model_name(
         self, mock_get_llm, mock_get_options, component_class, default_kwargs
     ):
@@ -326,7 +326,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         assert mock_get_llm.call_args.kwargs["model"] == [mock_get_options.return_value[0]]
 
-    @patch("lfx.components.models_and_agents.agent.get_llm")
+    @patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock)
     async def test_get_agent_requirements_accepts_connected_model_instance(
         self, mock_get_llm, component_class, default_kwargs
     ):
@@ -347,7 +347,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert mock_get_llm.call_args.kwargs["model"] is connected_model
 
     @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
-    @patch("lfx.components.models_and_agents.agent.get_llm")
+    @patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock)
     async def test_agent_passes_max_tokens_to_get_llm(
         self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
     ):
@@ -372,14 +372,14 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         await component.get_agent_requirements()
 
         # Verify get_llm was called with max_tokens
-        mock_get_llm.assert_called_once()
+        mock_get_llm.assert_awaited_once()
         call_kwargs = mock_get_llm.call_args.kwargs
 
         assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm"
         assert call_kwargs["max_tokens"] == 500
 
     @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
-    @patch("lfx.components.models_and_agents.agent.get_llm")
+    @patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock)
     async def test_agent_passes_none_max_tokens_when_not_set(
         self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
     ):
@@ -405,7 +405,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         await component.get_agent_requirements()
 
         # Verify get_llm was called
-        mock_get_llm.assert_called_once()
+        mock_get_llm.assert_awaited_once()
 
         # Access kwargs using the .kwargs attribute (more reliable than indexing)
         call_kwargs = mock_get_llm.call_args.kwargs
@@ -415,7 +415,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["max_tokens"] is None
 
     @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
-    @patch("lfx.components.models_and_agents.agent.get_llm")
+    @patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock)
     async def test_agent_max_tokens_with_provider_specific_field_name(
         self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
     ):
@@ -440,7 +440,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         await component.get_agent_requirements()
 
         # Verify get_llm was called with max_tokens
-        mock_get_llm.assert_called_once()
+        mock_get_llm.assert_awaited_once()
         call_kwargs = mock_get_llm.call_args.kwargs
 
         assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm"
@@ -484,7 +484,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         )
 
     @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
-    @patch("lfx.components.models_and_agents.agent.get_llm")
+    @patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock)
     async def test_should_force_stream_true_to_get_llm_even_when_toggle_is_false(
         self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
     ):
@@ -507,7 +507,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         await component.get_agent_requirements()
 
-        mock_get_llm.assert_called_once()
+        mock_get_llm.assert_awaited_once()
         call_kwargs = mock_get_llm.call_args.kwargs
         assert call_kwargs.get("stream") is True, (
             "Agent must call get_llm with stream=True regardless of the BoolInput value. "
@@ -515,7 +515,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         )
 
     @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
-    @patch("lfx.components.models_and_agents.agent.get_llm")
+    @patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock)
     async def test_should_pass_stream_value_to_get_llm_when_stream_input_is_enabled(
         self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
     ):
@@ -537,7 +537,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         await component.get_agent_requirements()
 
-        mock_get_llm.assert_called_once()
+        mock_get_llm.assert_awaited_once()
         call_kwargs = mock_get_llm.call_args.kwargs
         assert "stream" in call_kwargs, "stream should be passed to get_llm"
         assert call_kwargs["stream"] is True
@@ -562,7 +562,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component._get_shared_callbacks = list
         component.set_tools_callbacks = lambda *_: None
 
-        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+        with patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock) as mock_get_llm:
             mock_get_llm.return_value = MockLanguageModel()
             _, _, tools = await component.get_agent_requirements()
 
@@ -588,7 +588,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component._get_shared_callbacks = list
         component.set_tools_callbacks = lambda *_: None
 
-        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+        with patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock) as mock_get_llm:
             mock_get_llm.return_value = MockLanguageModel()
             _, _, tools = await component.get_agent_requirements()
 
@@ -626,7 +626,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component._get_shared_callbacks = list
         component.set_tools_callbacks = lambda *_: None
 
-        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+        with patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock) as mock_get_llm:
             mock_get_llm.return_value = MockLanguageModel()
             _, _, tools = await component.get_agent_requirements()
 
@@ -689,7 +689,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component.create_agent_runnable = MagicMock(return_value=MagicMock())
         component.run_agent = AsyncMock(return_value=MagicMock())
 
-        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+        with patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock) as mock_get_llm:
             mock_get_llm.return_value = MockLanguageModel()
             await component.message_response()
 
@@ -741,7 +741,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component.create_agent_runnable = MagicMock(return_value=MagicMock())
         component.run_agent = AsyncMock(return_value=MagicMock(content='{"answer": "42"}'))
 
-        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+        with patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock) as mock_get_llm:
             mock_get_llm.return_value = MockLanguageModel()
             await component.json_response()
 
@@ -801,7 +801,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         component.run_agent = fake_run_agent
 
-        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+        with patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock) as mock_get_llm:
             mock_get_llm.return_value = MockLanguageModel()
             await component.json_response()
 
@@ -854,7 +854,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         component.run_agent = exploding_run_agent
 
-        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+        with patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock) as mock_get_llm:
             mock_get_llm.return_value = MockLanguageModel()
             # json_response handles the exception internally and returns an error Data,
             # so the exception is swallowed gracefully — but the swap must already be undone.
@@ -874,7 +874,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         """update_build_config's default_keys validation must include add_calculator_tool."""
         from lfx.schema.dotdict import dotdict
 
-        with patch("lfx.components.models_and_agents.agent.get_language_model_options") as mock_opts:
+        with patch(
+            "lfx.components.models_and_agents.agent.aget_language_model_options", new_callable=AsyncMock
+        ) as mock_opts:
             mock_opts.return_value = [
                 {
                     "name": "gpt-4o",
@@ -977,7 +979,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         """
         from lfx.schema.dotdict import dotdict
 
-        with patch("lfx.components.models_and_agents.agent.get_language_model_options") as mock_opts:
+        with patch(
+            "lfx.components.models_and_agents.agent.aget_language_model_options", new_callable=AsyncMock
+        ) as mock_opts:
             mock_opts.return_value = [
                 {
                     "name": "gpt-4o",
