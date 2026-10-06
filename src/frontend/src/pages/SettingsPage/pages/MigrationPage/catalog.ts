@@ -109,6 +109,8 @@ export const PROBES: Record<string, string> = {
   db_not_empty: "probe.dbNotEmpty",
   no_create: "probe.noCreate",
   pgvector_missing: "probe.pgvector",
+  pgvector_package_missing: "probe.pgvectorPackage",
+  pgvector_env_missing: "probe.pgvectorEnv",
   bucket_missing: "probe.bucketMissing",
   bucket_unreachable: "probe.bucketUnreachable",
   bucket_denied: "probe.denied",
@@ -207,6 +209,9 @@ export const COPY_CODES: Record<string, string> = {
   interrupted: "error.interrupted",
   crashed: "error.crashed",
   destination_changed: "error.destinationChanged",
+  // The knowledge bases test of "Where your data goes" refuses for the same reason. Its line follows a note
+  // that says where they go, and this one stands alone.
+  pgvector_env_missing: "kb.postgresEnv",
   target_unreachable: "error.targetUnreachable",
   target_not_empty: "error.dbTargetNotEmpty",
   // The destination holds an earlier copy, and this instance lost a row since. Only a new, empty one takes a copy.
