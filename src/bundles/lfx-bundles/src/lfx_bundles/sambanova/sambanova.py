@@ -93,10 +93,13 @@ class SambaNovaComponent(LCModelComponent):
         ensure_credential_endpoint_allowed(
             api_key, sambanova_url, default_url=DEFAULT_SAMBANOVA_API_BASE, sdk_env_fallback="SAMBANOVA_API_KEY"
         )
-        # SambaNova also loads a separate x-api-key from the environment, even when
-        # the tenant supplies the bearer key explicitly.
+        # SambaNova loads a separate x-api-key and arbitrary operator-defined headers
+        # from the environment, even when the tenant supplies the bearer key explicitly.
         ensure_credential_endpoint_allowed(
-            None, sambanova_url, default_url=DEFAULT_SAMBANOVA_API_BASE, sdk_env_fallback="SAMBANOVA_API_KEY"
+            None,
+            sambanova_url,
+            default_url=DEFAULT_SAMBANOVA_API_BASE,
+            sdk_env_fallback=("SAMBANOVA_API_KEY", "SAMBA_NOVA_CUSTOM_HEADERS"),
         )
 
         return ChatSambaNova(

@@ -6,6 +6,7 @@ from unittest.mock import patch
 import httpx
 import pytest
 
+TENANT_KEY = "tenant-provider-test-key"  # pragma: allowlist secret
 SERVER_KEY = "server-provider-test-key"
 CUSTOM_URL = "https://provider-proxy.example"
 PROVIDERS = [
@@ -59,6 +60,7 @@ PROVIDERS = [
 
 @pytest.fixture(autouse=True)
 def operator_environment(monkeypatch):
+    monkeypatch.delenv("SAMBA_NOVA_CUSTOM_HEADERS", raising=False)
     monkeypatch.setenv("PROVIDER_TEST_KEY", SERVER_KEY)
     monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "trusted.example")
     monkeypatch.setattr("lfx.utils.ssrf_protection.resolve_hostname", lambda _host: ["93.184.216.34"])
@@ -241,3 +243,90 @@ async def test_sambanova_custom_completion_request_path(url_source, endpoint_suf
         await model.async_client._client.close()
 
     assert requests == [f"{base_url}/chat/completions"] * 2
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        "Authorization: operator-header",
+        "X-Api-Key: operator-header",
+        "authorization: operator-header",
+        "  x-api-key : operator:header",
+        "X-Proxy-Token: operator-header",
+    ],
+)
+@pytest.mark.parametrize("url_source", ["base_url", "SAMBANOVA_API_BASE", "SAMBA_NOVA_BASE_URL"])
+def test_sambanova_custom_sdk_headers_rejected_before_request(headers, url_source, monkeypatch):
+    from lfx_bundles.sambanova.sambanova import SambaNovaComponent
+
+    monkeypatch.delenv("SAMBANOVA_API_KEY", raising=False)
+    monkeypatch.delenv("SAMBANOVA_API_BASE", raising=False)
+    monkeypatch.delenv("SAMBA_NOVA_BASE_URL", raising=False)
+    monkeypatch.setenv("SAMBA_NOVA_CUSTOM_HEADERS", headers)
+    if url_source != "base_url":
+        monkeypatch.setenv(url_source, CUSTOM_URL)
+    component = SambaNovaComponent(
+        base_url=CUSTOM_URL if url_source == "base_url" else "",
+        api_key=TENANT_KEY,
+        model_name="test-model",
+    )
+    with (
+        patch("httpx.Client.send") as send,
+        pytest.raises(ValueError, match="server-provisioned API credential") as error,
+    ):
+        component.build_model()
+    send.assert_not_called()
+    assert headers.partition(":")[2].strip() not in str(error.value)
+
+
+@pytest.mark.parametrize("header", ["Authorization", "X-Api-Key"])
+@pytest.mark.parametrize("base_url", ["https://api.sambanova.ai/v1", CUSTOM_URL])
+@pytest.mark.asyncio
+async def test_sambanova_custom_sdk_headers_reach_approved_endpoints(header, base_url, monkeypatch):
+    from lfx_bundles.sambanova.sambanova import SambaNovaComponent
+
+    monkeypatch.delenv("SAMBANOVA_API_KEY", raising=False)
+    monkeypatch.setenv("SAMBA_NOVA_CUSTOM_HEADERS", f"{header}: operator-header")
+    monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "provider-proxy.example")
+    model = SambaNovaComponent(
+        base_url=base_url,
+        api_key=TENANT_KEY,
+        model_name="test-model",
+    ).build_model()
+    requests = []
+
+    def respond(request, **_kwargs):
+        requests.append(request)
+        return httpx.Response(
+            200,
+            request=request,
+            json={
+                "id": "test-completion",
+                "object": "chat.completion",
+                "created": 0,
+                "model": "test-model",
+                "choices": [{"index": 0, "message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}],
+            },
+        )
+
+    try:
+        with patch("httpx.Client.send", side_effect=respond), patch("httpx.AsyncClient.send", side_effect=respond):
+            assert model.invoke("hello").content == "ok"
+            assert (await model.ainvoke("hello")).content == "ok"
+    finally:
+        model.client._client.close()
+        await model.async_client._client.close()
+    assert [str(request.url) for request in requests] == [f"{base_url}/chat/completions"] * 2
+    assert all(request.headers[header] == "operator-header" for request in requests)
+
+
+@pytest.mark.parametrize("headers", ["", "  \n  "])
+def test_sambanova_empty_custom_sdk_headers_allow_tenant_endpoint(headers, monkeypatch):
+    from lfx_bundles.sambanova.sambanova import SambaNovaComponent
+
+    monkeypatch.delenv("SAMBANOVA_API_KEY", raising=False)
+    monkeypatch.setenv("SAMBA_NOVA_CUSTOM_HEADERS", headers)
+    component = SambaNovaComponent(base_url=CUSTOM_URL, api_key=TENANT_KEY, model_name="test-model")
+    with patch("lfx_bundles.sambanova.sambanova.ChatSambaNova") as client:
+        component.build_model()
+    client.assert_called_once()

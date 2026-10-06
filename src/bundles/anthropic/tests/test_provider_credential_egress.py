@@ -6,12 +6,14 @@ import pytest
 from lfx.base.models.anthropic_constants import DEFAULT_ANTHROPIC_API_URL
 from lfx_anthropic import AnthropicModelComponent
 
+TENANT_KEY = "tenant-anthropic-test-key"  # pragma: allowlist secret
 SERVER_KEY = "server-anthropic-test-key"
 CUSTOM_URL = "https://anthropic-proxy.example"
 
 
 @pytest.fixture(autouse=True)
 def operator_environment(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_CUSTOM_HEADERS", raising=False)
     monkeypatch.setenv("ANTHROPIC_API_KEY", SERVER_KEY)
     monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "trusted.example")
     monkeypatch.setattr("lfx.utils.ssrf_protection.resolve_hostname", lambda _host: ["93.184.216.34"])
@@ -107,3 +109,90 @@ def test_secondary_sdk_auth_token_is_guarded(method, monkeypatch):
         getattr(instance, method)()
     discovery.assert_not_called()
     client.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        "Authorization: operator-header",
+        "X-Api-Key: operator-header",
+        "authorization: operator-header",
+        "  x-api-key : operator:header",
+        "X-Proxy-Token: operator-header",
+    ],
+)
+def test_custom_sdk_headers_rejected_before_request(headers, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.setenv("ANTHROPIC_CUSTOM_HEADERS", headers)
+    with (
+        patch("httpx.Client.send") as send,
+        pytest.raises(ValueError, match="server-provisioned API credential") as error,
+    ):
+        component(api_key=TENANT_KEY).build_model()
+    send.assert_not_called()
+    assert headers.partition(":")[2].strip() not in str(error.value)
+
+
+@pytest.mark.parametrize("tool_model_enabled", [False, True])
+def test_custom_sdk_headers_reject_refresh_before_discovery(tool_model_enabled, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.setenv("ANTHROPIC_CUSTOM_HEADERS", "Authorization: operator-header")
+    with (
+        patch("anthropic.Anthropic") as discovery,
+        pytest.raises(ValueError, match="server-provisioned API credential"),
+    ):
+        component(api_key=TENANT_KEY).get_models(tool_model_enabled=tool_model_enabled)
+    discovery.assert_not_called()
+
+
+@pytest.mark.parametrize("header", ["Authorization", "X-Api-Key"])
+@pytest.mark.parametrize("base_url", [DEFAULT_ANTHROPIC_API_URL, CUSTOM_URL])
+@pytest.mark.asyncio
+async def test_custom_sdk_headers_reach_approved_endpoints(header, base_url, monkeypatch):
+    import httpx
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.setenv("ANTHROPIC_CUSTOM_HEADERS", f"{header}: operator-header")
+    monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "anthropic-proxy.example")
+    model = component(base_url=base_url, api_key=TENANT_KEY).build_model()
+    requests = []
+
+    def respond(request, **_kwargs):
+        requests.append(request)
+        return httpx.Response(
+            200,
+            request=request,
+            json={
+                "id": "msg_test",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-test",
+                "content": [{"type": "text", "text": "ok"}],
+                "stop_reason": "end_turn",
+                "stop_sequence": None,
+                "usage": {"input_tokens": 1, "output_tokens": 1},
+            },
+        )
+
+    try:
+        with patch("httpx.Client.send", side_effect=respond), patch("httpx.AsyncClient.send", side_effect=respond):
+            assert model.invoke("hello").content == "ok"
+            assert (await model.ainvoke("hello")).content == "ok"
+    finally:
+        model._client.close()
+        await model._async_client.close()
+    assert [str(request.url) for request in requests] == [f"{base_url.rstrip('/')}/v1/messages"] * 2
+    assert all(request.headers[header] == "operator-header" for request in requests)
+
+
+@pytest.mark.parametrize("headers", ["", "  \n  "])
+def test_empty_custom_sdk_headers_allow_tenant_endpoint(headers, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.setenv("ANTHROPIC_CUSTOM_HEADERS", headers)
+    with patch("lfx_anthropic.anthropic_chat_model.ChatAnthropicThinkingCompat") as client:
+        component(api_key=TENANT_KEY).build_model()
+    client.assert_called_once()

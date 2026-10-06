@@ -95,9 +95,12 @@ class AnthropicModelComponent(LCModelComponent):
         ensure_credential_endpoint_allowed(
             self.api_key, self.base_url, default_url=DEFAULT_ANTHROPIC_API_URL, sdk_env_fallback="ANTHROPIC_API_KEY"
         )
-        # Supported SDK versions can load the auth token independently of the API key.
+        # The SDK loads auth tokens and arbitrary operator-defined headers independently of the API key.
         ensure_credential_endpoint_allowed(
-            None, self.base_url, default_url=DEFAULT_ANTHROPIC_API_URL, sdk_env_fallback="ANTHROPIC_AUTH_TOKEN"
+            None,
+            self.base_url,
+            default_url=DEFAULT_ANTHROPIC_API_URL,
+            sdk_env_fallback=("ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_CUSTOM_HEADERS"),
         )
         ssrf_clients = provider_httpx_clients(self.base_url, default_url=DEFAULT_ANTHROPIC_API_URL)
         try:
@@ -126,9 +129,12 @@ class AnthropicModelComponent(LCModelComponent):
         ensure_credential_endpoint_allowed(
             self.api_key, self.base_url, default_url=DEFAULT_ANTHROPIC_API_URL, sdk_env_fallback="ANTHROPIC_API_KEY"
         )
-        # Supported SDK versions can load the auth token independently of the API key.
+        # The SDK loads auth tokens and arbitrary operator-defined headers independently of the API key.
         ensure_credential_endpoint_allowed(
-            None, self.base_url, default_url=DEFAULT_ANTHROPIC_API_URL, sdk_env_fallback="ANTHROPIC_AUTH_TOKEN"
+            None,
+            self.base_url,
+            default_url=DEFAULT_ANTHROPIC_API_URL,
+            sdk_env_fallback=("ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_CUSTOM_HEADERS"),
         )
         # Reject unsafe custom configuration before the capability probe constructs model objects.
         # The live model-list request below uses Anthropic's canonical endpoint, not base_url.
