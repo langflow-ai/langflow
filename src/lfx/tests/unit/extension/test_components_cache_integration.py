@@ -169,7 +169,7 @@ async def test_cancelled_initiating_caller_does_not_cancel_shared_initialization
         release_load.set()
         follower_result = await asyncio.wait_for(follower, timeout=2)
 
-    load.assert_awaited_once_with(settings_service, None)
+    load.assert_awaited_once_with(settings_service)
     assert follower_result is cache.all_types_dict
     assert cache.all_types_ready
     assert cache.initialization_future is None
