@@ -244,7 +244,7 @@
             "last_updated": "2026-06-25T19:55:06.184Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "f3adf53067b3",
+              "code_hash": "8527ed62b980",
               "dependencies": {
                 "dependencies": [
                   {
@@ -988,7 +988,7 @@
             "last_updated": "2026-06-25T19:55:06.189Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "f3adf53067b3",
+              "code_hash": "8527ed62b980",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2216,7 +2216,7 @@
             "last_updated": "2026-06-25T19:55:06.211Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "f3adf53067b3",
+              "code_hash": "8527ed62b980",
               "dependencies": {
                 "dependencies": [
                   {
@@ -3388,7 +3388,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "metadata": {
-              "code_hash": "0aab1c78e1dc",
+              "code_hash": "85d42883eb31",
               "dependencies": {
                 "dependencies": [
                   {
