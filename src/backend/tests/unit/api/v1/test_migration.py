@@ -3114,7 +3114,7 @@ async def test_a_confirmed_backup_counts_only_for_the_pause_it_was_made_in(
     assert (backup["location"], backup["confirmed_by"]) == ("s3://backups/langflow", "activeuser")
     steps = {step["id"]: (step["state"], step["reason"]) for step in confirmed.json()["steps"]}
     assert steps["backup"] == ("done", None)
-    assert steps["copy_database"] == ("current", "not_available")
+    assert steps["copy_database"] == ("current", None)
 
     # Whatever changes between the two pauses is in neither the copy nor the backup made during the first.
     await client.delete(PAUSE, headers=headers)
