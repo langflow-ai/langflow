@@ -77,8 +77,10 @@ class SambaNovaComponent(LCModelComponent):
         )
 
         # Saved flows may carry the full completion URL documented by the old SDK.
-        if sambanova_url.rstrip("/") == f"{DEFAULT_SAMBANOVA_API_BASE}/chat/completions":
-            sambanova_url = DEFAULT_SAMBANOVA_API_BASE
+        completion_suffix = "/chat/completions"
+        normalized_url = sambanova_url.rstrip("/")
+        if normalized_url.endswith(completion_suffix):
+            sambanova_url = normalized_url[: -len(completion_suffix)]
 
         sambanova_api_key = self.api_key
         model_name = self.model_name

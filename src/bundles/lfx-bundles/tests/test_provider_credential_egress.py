@@ -3,6 +3,7 @@
 from importlib import import_module
 from unittest.mock import patch
 
+import httpx
 import pytest
 
 SERVER_KEY = "server-provider-test-key"
@@ -193,3 +194,50 @@ def test_sambanova_preserves_legacy_canonical_endpoint(endpoint):
         component.build_model()
     assert client.call_args.kwargs["base_url"] == "https://api.sambanova.ai/v1"
     assert "http_client" not in client.call_args.kwargs
+
+
+@pytest.mark.parametrize("url_source", ["base_url", "SAMBANOVA_API_BASE", "SAMBA_NOVA_BASE_URL"])
+@pytest.mark.parametrize("endpoint_suffix", ["", "/chat/completions", "/chat/completions/"])
+@pytest.mark.parametrize("api_key", ["tenant-provider-test-key", SERVER_KEY])
+@pytest.mark.asyncio
+async def test_sambanova_custom_completion_request_path(url_source, endpoint_suffix, api_key, monkeypatch):
+    """Legacy completion URLs produce one completion path in both SDK clients."""
+    from lfx_bundles.sambanova.sambanova import SambaNovaComponent
+
+    monkeypatch.delenv("SAMBANOVA_API_BASE", raising=False)
+    monkeypatch.delenv("SAMBA_NOVA_BASE_URL", raising=False)
+    monkeypatch.delenv("SAMBANOVA_API_KEY", raising=False)
+    monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "provider-proxy.example")
+    base_url = f"{CUSTOM_URL}/tenant/v1"
+    endpoint = base_url + endpoint_suffix
+    if url_source != "base_url":
+        monkeypatch.setenv(url_source, endpoint)
+    component = SambaNovaComponent(
+        base_url=endpoint if url_source == "base_url" else "", api_key=api_key, model_name="test-model"
+    )
+    model = component.build_model()
+    requests = []
+
+    def respond(request: httpx.Request, **_kwargs) -> httpx.Response:
+        requests.append(str(request.url))
+        return httpx.Response(
+            200,
+            request=request,
+            json={
+                "id": "test-completion",
+                "object": "chat.completion",
+                "created": 0,
+                "model": "test-model",
+                "choices": [{"index": 0, "message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}],
+            },
+        )
+
+    try:
+        with patch("httpx.Client.send", side_effect=respond), patch("httpx.AsyncClient.send", side_effect=respond):
+            assert model.invoke("hello").content == "ok"
+            assert (await model.ainvoke("hello")).content == "ok"
+    finally:
+        model.client._client.close()
+        await model.async_client._client.close()
+
+    assert requests == [f"{base_url}/chat/completions"] * 2
