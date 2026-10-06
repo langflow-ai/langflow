@@ -4,7 +4,7 @@ from typing import Any
 from langchain_ibm import ChatWatsonx
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.model_utils import get_watsonx_llm_models
-from lfx.base.models.provider_ssrf import validate_provider_base_url
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, validate_provider_base_url
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
@@ -219,6 +219,20 @@ class WatsonxAIComponent(LCModelComponent):
         # host it names. The dropdown's canonical watsonx region endpoints are server-chosen;
         # block internal/cloud-metadata destinations for anything else before connecting.
         if self.base_url not in WatsonxAIComponent._urls:
+            ensure_credential_endpoint_allowed(
+                api_key_value, self.base_url, sdk_env_fallback=("WATSONX_API_KEY", "WATSONX_APIKEY")
+            )
+            # The SDK also loads tokens/passwords independently of the supplied API key.
+            ensure_credential_endpoint_allowed(
+                None,
+                self.base_url,
+                sdk_env_fallback=(
+                    "WATSONX_TOKEN",
+                    "WATSONX_PASSWORD",
+                    "USER_ACCESS_TOKEN",
+                    "RUNTIME_ENV_ACCESS_TOKEN_FILE",
+                ),
+            )
             validate_provider_base_url(self.base_url)
 
         return ChatWatsonx(
