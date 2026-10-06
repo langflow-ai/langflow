@@ -910,6 +910,39 @@ async def test_a_copy_that_was_made_waits_again_when_the_copy_before_it_is_no_lo
     assert migration_runs.list_runs() == []
 
 
+@pytest.mark.parametrize(
+    ("named", "step", "answer"),
+    [
+        # After the copy every knowledge base is in pgvector, and this server would have no way to open one.
+        (False, ("blocked", "pgvector_env_missing"), (409, {"detail": {"code": "pgvector_env_missing"}})),
+        (True, ("current", None), (202, None)),
+    ],
+)
+async def test_on_postgresql_the_knowledge_bases_are_copied_only_when_this_server_can_read_them_there(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch, named, step, answer
+):
+    headers = logged_in_headers_super_user
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    _ready_to_copy(config_dir, destinations={"vectors": {"kind": "pgvector"}, "results": {"vectors": {"ok": True}}})
+    # An instance already on PostgreSQL keeps its database. Its knowledge bases go into it, and it serves on from it.
+    own = f"postgresql://{NOWHERE}/langflow"
+    monkeypatch.setattr(get_db_service(), "database_url", own)
+    # The server reads pgvector knowledge bases from the store its own environment names, and from no other.
+    if named:
+        monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", own)
+    else:
+        monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+
+    steps = await _steps(client, headers)
+    started = await client.post(RUNS.format("copy_knowledge_bases"), json={}, headers=headers)
+
+    assert (steps["copy_database"], steps["copy_knowledge_bases"]) == (("skipped", "already_postgresql"), step)
+    status, refusal = answer
+    assert started.status_code == status
+    assert refusal is None or started.json() == refusal
+    assert len(migration_runs.list_runs()) == (1 if named else 0)
+
+
 async def test_each_copy_waits_for_the_one_before_it_and_a_test_run_completes_nothing(
     client, logged_in_headers_super_user, active_super_user, config_dir
 ):
