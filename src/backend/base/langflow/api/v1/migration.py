@@ -624,7 +624,10 @@ async def decide(request: DecisionRequest, admin: Superuser) -> dict[str, Any]:
     """Record what the admin decided about a copy: an option for its next run, or a failed item to accept as it is."""
     decision = _decision(request)
     record = _read_record()
-    record["decisions"] = [*_other_decisions(record, decision), {**decision, "by": admin.username, "at": _now()}]
+    # Accepting an item is consent to one report, the one the step's latest run left. An option is for every run.
+    run_id = (record["steps"].get(request.step) or {}).get("run_id") if decision["subject"] else None
+    made = {**decision, "run_id": run_id, "by": admin.username, "at": _now()}
+    record["decisions"] = [*_other_decisions(record, decision), made]
     _write_record(record)
     await logger.ainfo(f"Migration: user_id={admin.id} decided {_named(decision)}")
     return await _state(record)
@@ -642,11 +645,11 @@ async def withdraw_decision(request: DecisionRequest, admin: Superuser) -> dict[
 
 def _decision(request: DecisionRequest) -> dict[str, Any]:
     """What a request decides, or a refusal when its step has no such decision to make."""
-    kinds = DECISIONS.get(request.step, {})
-    if request.kind not in kinds:
+    kind = DECISIONS.get(request.kind)
+    if not kind or kind["step"] != request.step:
         raise HTTPException(status_code=400, detail={"code": "unknown_decision"})
     # An option holds for the whole step. An accepted item has to be named.
-    accepts_an_item = kinds[request.kind] is None
+    accepts_an_item = kind["option"] is None
     if accepts_an_item and not request.subject:
         raise HTTPException(status_code=400, detail={"code": "subject_missing"})
     return {"step": request.step, "kind": request.kind, "subject": request.subject if accepts_an_item else None}
@@ -707,7 +710,7 @@ async def _settle_copies(record: dict[str, Any]) -> None:
         except RunNotFoundError:
             # Its files are gone, so all that can be said is that it did not finish.
             run, events = {"status": "interrupted", "finished_at": None}, {}
-        step.update(copy_outcome(run, events))
+        step.update(copy_outcome(step_id, run, events))
 
         def settle(saved: dict[str, Any], step_id: str = step_id, step: dict[str, Any] = step) -> bool:
             # Saved into the record as it is now: a request that read it earlier may have saved a change since.
