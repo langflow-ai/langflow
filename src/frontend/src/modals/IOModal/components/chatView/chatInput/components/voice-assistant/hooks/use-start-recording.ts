@@ -10,7 +10,7 @@ export const useStartRecording = async (
   playNextAudioChunk: () => void,
   isPlayingRef: MutableRefObject<boolean>,
   audioQueueRef: MutableRefObject<AudioBuffer[]>,
-  workletCode: string,
+  workletUrl: string,
   processorRef: MutableRefObject<AudioWorkletNode | null>,
   setStatus: (status: string) => void,
 ) => {
@@ -40,9 +40,6 @@ export const useStartRecording = async (
     analyserRef.current = audioContextRef?.current?.createAnalyser();
     analyserRef.current.fftSize = 2048;
     microphoneRef.current.connect(analyserRef.current);
-
-    const blob = new Blob([workletCode], { type: "application/javascript" });
-    const workletUrl = URL.createObjectURL(blob);
 
     try {
       try {
@@ -97,8 +94,6 @@ export const useStartRecording = async (
     } catch (err) {
       console.error("AudioWorklet failed to load:", err);
       setStatus("Error initializing audio: " + (err as Error).message);
-    } finally {
-      URL.revokeObjectURL(workletUrl);
     }
   } catch (err) {
     console.error("Error accessing microphone:", err);
