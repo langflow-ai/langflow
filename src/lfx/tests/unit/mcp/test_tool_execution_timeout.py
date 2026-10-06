@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.base.mcp.util import (
+    ClosedResourceError,
     MCPSessionManager,
     MCPStdioClient,
     MCPStreamableHttpClient,
@@ -113,15 +114,33 @@ def test_mcp_streamable_http_client_uses_resolved_timeout():
     assert client._tool_execution_timeout == 240.0
 
 
-@pytest.mark.parametrize(
+CLIENTS = pytest.mark.parametrize(
     ("client_class", "connection_params"),
     [
         (MCPStdioClient, SimpleNamespace(command="python", args=["server.py"])),
         (MCPStreamableHttpClient, {"url": "http://127.0.0.1:9931/mcp"}),
     ],
 )
+
+
+class _SideEffectSession:
+    """Runs the tool's side effect at once, then answers the first call late."""
+
+    def __init__(self, first_response_delay: float) -> None:
+        self.calls = 0
+        self._first_response_delay = first_response_delay
+
+    async def call_tool(self, name: str, arguments: dict) -> SimpleNamespace:
+        del name, arguments
+        self.calls += 1
+        if self.calls == 1:
+            await asyncio.sleep(self._first_response_delay)
+        return SimpleNamespace(content=[], isError=False)
+
+
+@CLIENTS
 @pytest.mark.asyncio
-async def test_repeated_tool_timeout_preserves_the_root_error(client_class, connection_params):
+async def test_tool_timeout_preserves_the_root_error(client_class, connection_params):
     client = client_class(tool_execution_timeout=0.01)
     client._connected = True
     client._connection_params = connection_params
@@ -131,12 +150,57 @@ async def test_repeated_tool_timeout_preserves_the_root_error(client_class, conn
     with (
         patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)),
         patch("lfx.base.mcp.util.asyncio.sleep", new=AsyncMock()),
-        pytest.raises(ValueError, match="Maximum retries exceeded") as exc_info,
+        pytest.raises(ValueError, match="timed out") as exc_info,
     ):
         await client._run_tool("slow", {})
 
     assert isinstance(exc_info.value.__cause__, TimeoutError)
     assert _root_error_type(exc_info.value) == "TimeoutError"
+
+
+@CLIENTS
+@pytest.mark.asyncio
+async def test_should_run_tool_once_when_response_times_out(client_class, connection_params):
+    client = client_class(tool_execution_timeout=0.01)
+    client._connected = True
+    client._connection_params = connection_params
+    session = _SideEffectSession(first_response_delay=0.2)
+
+    with (
+        patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)),
+        pytest.raises(ValueError, match="create_record") as exc_info,
+    ):
+        await client._run_tool("create_record", {"value": "payment-1"})
+
+    assert session.calls == 1
+    assert "not retried" in str(exc_info.value)
+    # Python 3.10's wait_for raises asyncio.TimeoutError, not yet the builtin.
+    assert isinstance(exc_info.value.__cause__, asyncio.TimeoutError | TimeoutError)
+
+
+@CLIENTS
+@pytest.mark.asyncio
+async def test_should_still_retry_when_session_closed_before_the_call(client_class, connection_params):
+    client = client_class(tool_execution_timeout=1)
+    client._connected = True
+    client._connection_params = connection_params
+    client._session_context = "ctx"
+    result = SimpleNamespace(content=[], isError=False)
+    session = AsyncMock()
+    session.call_tool.side_effect = [ClosedResourceError(), result]
+    # A real manager would start its cleanup loop, which spins forever on the
+    # patched sleep below.
+    manager = MagicMock(_cleanup_session=AsyncMock(), discard_session=AsyncMock())
+
+    with (
+        patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)),
+        patch.object(client, "_get_session_manager", return_value=manager),
+        patch("lfx.base.mcp.util.asyncio.sleep", new=AsyncMock()),
+    ):
+        assert await client._run_tool("create_record", {}) is result
+
+    assert session.call_tool.await_count == 2
+    assert manager.discard_session.await_args.args[1] is session
 
 
 @pytest.mark.parametrize(
@@ -248,3 +312,20 @@ async def test_streamable_http_session_creation_waits_with_configured_budget():
 
 
 # Made with Bob
+
+
+@CLIENTS
+@pytest.mark.asyncio
+async def test_should_keep_client_usable_when_a_tool_call_times_out(client_class, connection_params):
+    client = client_class(tool_execution_timeout=0.01)
+    client._connected = True
+    client._connection_params = connection_params
+    session = _SideEffectSession(first_response_delay=0.2)
+
+    with patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)):
+        with pytest.raises(ValueError, match="timed out"):
+            await client._run_tool("create_record", {"value": "payment-1"})
+        result = await client._run_tool("create_record", {"value": "payment-2"})
+
+    assert result.isError is False
+    assert session.calls == 2

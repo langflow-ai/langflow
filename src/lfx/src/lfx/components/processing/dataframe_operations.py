@@ -1,3 +1,5 @@
+from typing import Any
+
 import pandas as pd
 
 from lfx.custom.custom_component.component import Component
@@ -320,6 +322,19 @@ class DataFrameOperationsComponent(Component):
         logger.error(msg)
         raise ValueError(msg)
 
+    @staticmethod
+    def _comparable_filter_value(column: pd.Series, filter_value: Any) -> Any:
+        """Return the Filter Value as a number when the column is numeric.
+
+        The value arrives as text, and ``30 == "30"`` never matches in pandas.
+        """
+        if pd.api.types.is_numeric_dtype(column) and not pd.api.types.is_bool_dtype(column):
+            try:
+                return pd.to_numeric(filter_value)
+            except (ValueError, TypeError):
+                return filter_value
+        return filter_value
+
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
         column = df[self.column_name]
         filter_value = self.filter_value
@@ -328,9 +343,9 @@ class DataFrameOperationsComponent(Component):
         operator = getattr(self, "filter_operator", "equals")  # Default to equals for backward compatibility
 
         if operator == "equals":
-            mask = column == filter_value
+            mask = column == self._comparable_filter_value(column, filter_value)
         elif operator == "not equals":
-            mask = column != filter_value
+            mask = column != self._comparable_filter_value(column, filter_value)
         elif operator == "contains":
             mask = column.astype(str).str.contains(str(filter_value), na=False)
         elif operator == "not contains":
@@ -356,7 +371,7 @@ class DataFrameOperationsComponent(Component):
                 # If conversion fails, compare as strings
                 mask = column.astype(str) < str(filter_value)
         else:
-            mask = column == filter_value  # Fallback to equals
+            mask = column == self._comparable_filter_value(column, filter_value)  # Fallback to equals
 
         return DataFrame(df[mask])
 
@@ -425,6 +440,19 @@ class DataFrameOperationsComponent(Component):
         merge_on = getattr(self, "merge_on_column", None)
         merge_how = getattr(self, "merge_how", "inner")
 
+        # Track only columns created by this merge, without colliding with input names.
+        right_columns = {}
+        used_columns = set(df_left.columns) | set(df_right.columns)
+        for col in df_left.columns.intersection(df_right.columns):
+            if merge_on and col == merge_on:
+                continue
+            right_col = f"{col}_right"
+            while right_col in used_columns:
+                right_col += "_right"
+            right_columns[col] = right_col
+            used_columns.add(right_col)
+        df_right = df_right.rename(columns=right_columns)
+
         if merge_on:
             if merge_on not in df_left.columns:
                 msg = f"Column '{merge_on}' not found in left DataFrame. Available: {list(df_left.columns)}"
@@ -433,18 +461,15 @@ class DataFrameOperationsComponent(Component):
                 msg = f"Column '{merge_on}' not found in right DataFrame. Available: {list(df_right.columns)}"
                 raise ValueError(msg)
 
-            merged = df_left.merge(df_right, on=merge_on, how=merge_how, suffixes=("", "_right"))
+            merged = df_left.merge(df_right, on=merge_on, how=merge_how)
         else:
-            merged = df_left.merge(df_right, left_index=True, right_index=True, how=merge_how, suffixes=("", "_right"))
+            merged = df_left.merge(df_right, left_index=True, right_index=True, how=merge_how)
 
         # Combine duplicate columns: use left value if exists, otherwise right value
         cols_to_drop = []
-        for col in merged.columns:
-            if col.endswith("_right"):
-                original_col = col[:-6]  # Remove "_right" suffix
-                if original_col in merged.columns:
-                    merged[original_col] = merged[original_col].combine_first(merged[col])
-                    cols_to_drop.append(col)
+        for col, right_col in right_columns.items():
+            merged[col] = merged[col].combine_first(merged[right_col])
+            cols_to_drop.append(right_col)
 
         if cols_to_drop:
             merged = merged.drop(columns=cols_to_drop)

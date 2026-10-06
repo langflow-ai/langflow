@@ -397,6 +397,7 @@
   "modal.io.builtWithLangflowTooltip": "Built with Langflow",
   "success.sessionDeleted": "Session deleted successfully.",
   "errors.deleteSession": "Error deleting session.",
+  "errors.createSession": "Error creating session.",
   "home.dragFlowsOrComponents": "Drop your flows or components here",
   "home.dragFlowType": "Drop your {{flowType}} here",
   "home.flowTypeNotSupported": "{{flowType}} not supported",
