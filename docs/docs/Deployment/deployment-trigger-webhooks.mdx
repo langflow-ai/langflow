@@ -7,6 +7,8 @@ A trigger fires a flow when something happens somewhere else. Providers deliver 
 
 That needs your Langflow to be reachable over HTTPS from the public internet. If it isn't, use the trigger listener process instead: Langflow dials out and holds the connection, and needs no inbound address at all.
 
+For sizing, shared rate limits, and replica behavior, see [Trigger capacity and replica behavior](./deployment-trigger-capacity.mdx).
+
 ## The ingress endpoints
 
 Two routes accept provider deliveries. Most providers address one trigger per URL:

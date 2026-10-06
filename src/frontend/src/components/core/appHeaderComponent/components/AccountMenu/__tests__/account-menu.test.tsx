@@ -18,6 +18,15 @@ jest.mock("@/controllers/API/queries/auth", () => ({
   useLogout: () => ({ mutate: jest.fn() }),
 }));
 
+jest.mock(
+  "@/customization/components/custom-account-menu-community-links",
+  () => ({
+    CustomAccountMenuCommunityLinks: () => (
+      <div data-testid="custom-account-menu-community-links" />
+    ),
+  }),
+);
+
 jest.mock("@/customization/components/custom-profile-icon", () => ({
   CustomProfileIcon: () => <div data-testid="custom-profile-icon" />,
 }));
@@ -96,5 +105,14 @@ describe("AccountMenu", () => {
     expect(
       screen.queryByRole("button", { name: /logout/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders the community links through the customization seam", () => {
+    render(<AccountMenu />);
+
+    expect(
+      screen.getByTestId("custom-account-menu-community-links"),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("menu_github_button")).not.toBeInTheDocument();
   });
 });

@@ -24,7 +24,7 @@ ML/AI components and GPU acceleration are Apple Silicon only.
 ## Python version support
 
 All supported Python versions work on Apple Silicon.
-On Intel Macs, Python 3.13 and later lose PyTorch-dependent features like ALTK, HuggingFace, EasyOCR, and Docling.
+On Intel Macs, Python 3.13 and later lose PyTorch-dependent features like HuggingFace, EasyOCR, and Docling.
 
 | Python version | Apple Silicon | Intel Mac |
 |---------------|---------------|-----------|
@@ -56,7 +56,6 @@ The following features work on **both Apple Silicon and Intel Macs**:
 The following features require **Apple Silicon (ARM64)** and are **not available on Intel Macs**:
 
 
-- **ALTK (Agent Lifecycle Toolkit)** - Requires PyTorch
 - **HuggingFace Transformers** - Requires PyTorch
 - **Sentence Transformers** - Requires PyTorch
 - **EasyOCR** - Requires PyTorch
@@ -87,7 +86,7 @@ pip install langflow
 Or with specific ML extras:
 
 ```bash
-pip install langflow[altk,langchain-huggingface,easyocr]
+pip install langflow[langchain-huggingface,easyocr]
 ```
 
 For Intel Mac users, install the base package for core functionality.

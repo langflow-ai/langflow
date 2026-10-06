@@ -45,6 +45,28 @@ const keepBuiltOnGraph = (
 // Opt-out for callers that recover from a save failure themselves.
 export type SaveFlowOptions = { suppressErrorToast?: boolean };
 
+/**
+ * Applies a save's persisted settings to an editor whose graph moved on while
+ * the save was in flight. The live graph stays, since the response predates
+ * it. Every other field is taken from the response unless the user changed it
+ * after the save started — dropping them all left a persisted lock showing as
+ * unlocked, and the next canvas edit then unlocked the flow on the server.
+ */
+const adoptSavedSettings = (
+  live: FlowType,
+  atSaveStart: FlowType | undefined,
+  saved: FlowType,
+): FlowType => {
+  const savedSettings = Object.fromEntries(
+    Object.entries(saved).filter(
+      ([key]) =>
+        key !== "data" &&
+        live[key as keyof FlowType] === atSaveStart?.[key as keyof FlowType],
+    ),
+  );
+  return { ...live, ...savedSettings };
+};
+
 const useSaveFlow = () => {
   const { t } = useTranslation();
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
@@ -226,18 +248,28 @@ const useSaveFlow = () => {
                   // setting this would leave stale unprocessed flow data in the store,
                   // causing a crash when the user later navigates to the flow page.
                   //
-                  // And only when the canvas still holds the graph this request
-                  // carried. `currentFlow` is the baseline the next autosave
-                  // diffs against, so adopting the response of a save that
-                  // started before an edit makes that edit look persisted and
-                  // the follow-up save is skipped — the edit is lost. The
-                  // store swaps these arrays on every change, so identity is
-                  // an exact "nothing moved while we were away" check.
+                  // The graph is adopted only when the canvas still holds the
+                  // one this request carried. `currentFlow` is the baseline the
+                  // next autosave diffs against, so adopting the response of a
+                  // save that started before an edit makes that edit look
+                  // persisted and the follow-up save is skipped — the edit is
+                  // lost. The store swaps these arrays on every change, so
+                  // identity is an exact "nothing moved while we were away"
+                  // check.
                   const liveState = useFlowStore.getState();
+                  const liveFlow = liveState.currentFlow;
                   const graphUnchanged =
                     liveState.nodes === nodes && liveState.edges === edges;
                   if (liveState.onFlowPage && graphUnchanged) {
                     setCurrentFlow(updatedFlow);
+                  } else if (
+                    liveState.onFlowPage &&
+                    liveFlow &&
+                    liveFlow.id === updatedFlow.id
+                  ) {
+                    setCurrentFlow(
+                      adoptSavedSettings(liveFlow, currentFlow, updatedFlow),
+                    );
                   }
                   resolve();
                 } else {

@@ -330,8 +330,10 @@ async def test_an_expired_subscription_stops_consuming_renewal_attempts(make_sub
 # --------------------------------------------------------------------------- #
 
 
-async def test_reauthorization_required_moves_the_trigger_to_needs_reconnect(make_subscription) -> None:
-    trigger_id, _connection_id, _subscription_id, provider_subscription_id = await make_subscription()
+async def test_reauthorization_required_queues_renewal_without_stopping_trigger(
+    make_subscription, fake_renewer
+) -> None:
+    trigger_id, _connection_id, subscription_id, provider_subscription_id = await make_subscription()
 
     async with session_scope() as session:
         changed = await subscriptions.apply_lifecycle(
@@ -342,12 +344,14 @@ async def test_reauthorization_required_moves_the_trigger_to_needs_reconnect(mak
         )
 
     assert changed is True
-    row = await _trigger(trigger_id)
-    assert row.state == TriggerState.NEEDS_RECONNECT.value
-    assert "re-authorized" in (row.last_error or "")
+    assert (await _trigger(trigger_id)).state == TriggerState.ACTIVE.value
+    row = await _subscription(subscription_id)
+    assert row.renew_after.replace(tzinfo=timezone.utc) <= _now()
+    assert await subscriptions.run_renewal_pass(owner="replica-a") == 1
+    assert fake_renewer == [provider_subscription_id]
 
 
-async def test_subscription_removed_retires_the_row_and_asks_for_a_reconnect(make_subscription) -> None:
+async def test_subscription_removed_keeps_trigger_ready_for_resubscribe(make_subscription) -> None:
     trigger_id, _connection_id, subscription_id, provider_subscription_id = await make_subscription()
 
     async with session_scope() as session:
@@ -359,7 +363,7 @@ async def test_subscription_removed_retires_the_row_and_asks_for_a_reconnect(mak
         )
 
     assert (await _subscription(subscription_id)).state == TriggerSubscriptionState.EXPIRED.value
-    assert (await _trigger(trigger_id)).state == TriggerState.NEEDS_RECONNECT.value
+    assert (await _trigger(trigger_id)).state == TriggerState.ACTIVE.value
 
 
 async def test_a_missed_notification_is_recorded_without_disarming_the_trigger(make_subscription) -> None:
@@ -472,22 +476,19 @@ async def test_no_active_subscription_yields_no_secret_rather_than_a_stale_one(m
     assert secrets.client_state_digest is None
 
 
-async def test_a_registered_revoker_is_called_before_the_row_is_retired(make_subscription) -> None:
-    """TRG-6 registers the provider call; TRG-4 owns when it happens."""
-    called: list[str] = []
+async def test_source_revocation_is_durable_before_the_row_is_retired(make_subscription) -> None:
+    """Remote source cleanup survives provider outages and local deletion."""
+    from langflow.services.database.models.trigger.model import TriggerCleanup
 
-    async def _revoke(_session, subscription):
-        called.append(subscription.provider_subscription_id)
-
-    subscriptions.register_revoker(PROVIDER, _revoke)
-    try:
-        trigger_id, _connection_id, _subscription_id, provider_subscription_id = await make_subscription()
-        async with session_scope() as session:
-            await subscriptions.revoke_for_trigger(session, trigger_id=trigger_id)
-    finally:
-        subscriptions.unregister_revoker(PROVIDER)
-
-    assert called == [provider_subscription_id]
+    trigger_id, connection_id, subscription_id, external_id = await make_subscription()
+    async with session_scope() as session:
+        assert await subscriptions.revoke_for_trigger(session, trigger_id=trigger_id) == 1
+    async with session_scope() as session:
+        task = await session.get(TriggerCleanup, subscription_id)
+        assert task.trigger_id == trigger_id
+        assert task.connection_id == connection_id
+        assert task.provider_subscription_id == external_id
+    assert (await _subscription(subscription_id)).state == TriggerSubscriptionState.EXPIRED.value
 
 
 async def test_a_failing_revoker_still_retires_the_local_row(make_subscription) -> None:
@@ -587,22 +588,26 @@ async def test_a_row_whose_lease_was_taken_over_is_not_renewed(make_subscription
 
 
 async def test_a_pass_that_loses_the_renewal_lease_stops(make_subscription, fake_renewer, monkeypatch) -> None:
-    """The pass lease is heartbeated per row, so a long pass cannot outlive it unnoticed."""
+    """A real lease takeover after one renewal stops later provider calls."""
+    from langflow.services.database.models.trigger.model import TriggerLease
+    from langflow.services.triggers.constants import SUBSCRIPTION_LEASE_NAME
+    from sqlmodel import update
+
     for _ in range(3):
         _trigger_id, _connection_id, subscription_id, _external = await make_subscription()
         await _make_due(subscription_id)
 
-    real_acquire = leases.acquire
-    calls = 0
+    original = subscriptions._RENEWERS[PROVIDER]
 
-    async def _lose_after_first_row(session, *, name, owner, ttl_s):
-        nonlocal calls
-        calls += 1
-        if calls > 2:  # the pass's own acquire, then one heartbeat
-            return False
-        return await real_acquire(session, name=name, owner=owner, ttl_s=ttl_s)
+    async def lose_after_first_row(session, subscription):
+        expiry = await original(session, subscription)
+        async with session_scope() as other:
+            await other.exec(
+                update(TriggerLease).where(TriggerLease.name == SUBSCRIPTION_LEASE_NAME).values(owner="replica-b")
+            )
+        return expiry
 
-    monkeypatch.setattr(subscriptions.leases, "acquire", _lose_after_first_row)
+    monkeypatch.setitem(subscriptions._RENEWERS, PROVIDER, lose_after_first_row)
 
     renewed = await subscriptions.run_renewal_pass(owner="replica-a")
 

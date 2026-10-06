@@ -171,8 +171,12 @@ const useAutoSaveFlow = () => {
       debouncedAutoSave.flush?.();
       await saveQueueTailRef.current;
     };
+    queuedAutoSave.enqueue = (flow: FlowType): Promise<void> => {
+      debouncedAutoSave.flush?.();
+      return enqueueSave(flow);
+    };
     return queuedAutoSave;
-  }, [debouncedAutoSave]);
+  }, [debouncedAutoSave, enqueueSave]);
 
   useEffect(() => {
     const pendingAutoSave = pendingAutoSaveRef.current;

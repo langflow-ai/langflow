@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import AwareDatetime, BaseModel, EmailStr, Field
 
 # Preserve small component-input chunks to limit analytics event payload size.
 MAX_TELEMETRY_URL_SIZE = 2048
@@ -16,6 +16,8 @@ class RunPayload(BasePayload):
     run_success: bool = Field(serialization_alias="runSuccess")
     run_error_message: str = Field("", serialization_alias="runErrorMessage")
     run_id: str | None = Field(None, serialization_alias="runId")
+    # Set at the run-event boundary for local consumers; never exported as telemetry.
+    run_completed_at: AwareDatetime | None = Field(default=None, exclude=True)
 
 
 class DeploymentPayload(BasePayload):

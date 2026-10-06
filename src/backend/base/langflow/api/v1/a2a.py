@@ -62,7 +62,11 @@ from lfx.schema.workflow import (
     WorkflowRunRequest,
 )
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
-from lfx.utils.flow_validation import prepare_public_flow_build, validate_public_flow_no_code_execution
+from lfx.utils.flow_validation import (
+    prepare_flow_build_for_user_from_cache,
+    prepare_public_flow_build,
+    validate_public_flow_no_code_execution,
+)
 from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
 from sqlalchemy import case, delete, false
@@ -243,7 +247,7 @@ async def _prepare_a2a_resume_checkpoint(
     request_host: str | None = None,
     admitted_user_id: str | None = None,
 ) -> tuple[GraphCheckpoint, Flow, User | UserRead]:
-    """Reauthorize and re-apply public policy before restoring a HITL graph."""
+    """Reauthorize and re-apply caller-specific policy before restoring a HITL graph."""
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
     is_public_now = await _is_public_a2a_flow(flow)
     current_principal_id = _require_admitted_a2a_principal(
@@ -255,6 +259,12 @@ async def _prepare_a2a_resume_checkpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
     if not is_public_now:
         user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+        prepared_data = prepare_flow_build_for_user_from_cache(
+            checkpoint.flow_payload,
+            is_superuser=user.is_superuser,
+        )
+        if prepared_data is not None:
+            checkpoint = checkpoint.model_copy(update={"flow_payload": prepared_data}, deep=True)
         return checkpoint, flow, user
 
     await authorize_public_flow_access(
@@ -294,7 +304,7 @@ async def _run_flow(
     """
     # Lazy import: langflow.api.v2.workflow pulls in the execution stack and this
     # module is imported during router assembly.
-    from langflow.api.v2.workflow import execute_sync_workflow_with_timeout
+    from langflow.api.v2.workflow import _apply_execution_gates, execute_sync_workflow_with_timeout
 
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
     is_public_now = await _is_public_a2a_flow(flow)
@@ -330,6 +340,11 @@ async def _run_flow(
     parsed = parse_workflow_run_request(
         WorkflowRunRequest(flow_id=str(flow_id), input_value=text, mode="sync", session_id=session_id)
     )
+    if not is_public_now:
+        # Authenticated A2A bypasses the REST host, so apply its caller-aware gates
+        # here and carry the trusted payload into the shared executor. Graph-level
+        # validation cannot enforce the administrator-only policy without the caller.
+        parsed = _apply_execution_gates(parsed, flow, user)
     try:
         job_id = UUID(task_id)
     except ValueError:

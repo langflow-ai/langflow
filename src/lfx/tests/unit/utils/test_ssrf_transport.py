@@ -1,5 +1,6 @@
 """Tests for the DNS-pinning httpx transports (IDN pin-key normalization + fail-closed)."""
 
+import httpcore
 import pytest
 from lfx.utils.ssrf_transport import (
     DNSPinningNetworkBackend,
@@ -42,6 +43,30 @@ class _RecordingSyncBackend:
         return None
 
 
+class _FailFirstAsyncBackend(_RecordingAsyncBackend):
+    def __init__(self, error):
+        super().__init__()
+        self.error = error
+
+    async def connect_tcp(self, host, port, **_kwargs):
+        self.connections.append((host, port))
+        if len(self.connections) == 1:
+            raise self.error
+        return object()
+
+
+class _FailFirstSyncBackend(_RecordingSyncBackend):
+    def __init__(self, error):
+        super().__init__()
+        self.error = error
+
+    def connect_tcp(self, host, port, **_kwargs):
+        self.connections.append((host, port))
+        if len(self.connections) == 1:
+            raise self.error
+        return object()
+
+
 class TestPinHostForUrl:
     def test_idn_url_returns_punycode_host(self):
         # httpx/httpcore connect to the IDNA form; the pin map must key on it.
@@ -59,6 +84,17 @@ class TestAsyncDNSPinningBackend:
         await backend.connect_tcp(IDN_PUNYCODE_HOST, 80)
 
         assert inner.connections == [(PINNED_IP, 80)]
+
+    @pytest.mark.parametrize("error_type", [httpcore.ConnectError, httpcore.ConnectTimeout])
+    async def test_connect_tries_next_pinned_ip_after_httpcore_failure(self, error_type):
+        inner = _FailFirstAsyncBackend(error_type("first address unavailable"))
+        backend = DNSPinningNetworkBackend(
+            pinned_ips={"example.com": ["2606:4700:4700::1111", "1.1.1.1"]}, backend=inner
+        )
+
+        await backend.connect_tcp("example.com", 80)
+
+        assert inner.connections == [("2606:4700:4700::1111", 80), ("1.1.1.1", 80)]
 
     async def test_miss_with_non_empty_map_fails_closed(self):
         inner = _RecordingAsyncBackend()
@@ -105,6 +141,17 @@ class TestSyncDNSPinningBackend:
         backend.connect_tcp(IDN_PUNYCODE_HOST, 80)
 
         assert inner.connections == [(PINNED_IP, 80)]
+
+    @pytest.mark.parametrize("error_type", [httpcore.ConnectError, httpcore.ConnectTimeout])
+    def test_connect_tries_next_pinned_ip_after_httpcore_failure(self, error_type):
+        inner = _FailFirstSyncBackend(error_type("first address unavailable"))
+        backend = DNSPinningSyncNetworkBackend(
+            pinned_ips={"example.com": ["2606:4700:4700::1111", "1.1.1.1"]}, backend=inner
+        )
+
+        backend.connect_tcp("example.com", 80)
+
+        assert inner.connections == [("2606:4700:4700::1111", 80), ("1.1.1.1", 80)]
 
     def test_miss_with_non_empty_map_fails_closed(self):
         inner = _RecordingSyncBackend()

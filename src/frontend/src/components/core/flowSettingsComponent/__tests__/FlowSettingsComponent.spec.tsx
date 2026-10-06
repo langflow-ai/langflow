@@ -59,6 +59,8 @@ jest.mock("@/stores/alertStore", () => {
 
 let mockSetCurrentFlow = jest.fn();
 const mockAutoSaveFlush = jest.fn();
+const mockAutoSaveEnqueue = jest.fn();
+let mockHasEditorAutoSave = true;
 jest.mock("@/stores/flowStore", () => {
   const useFlowStore = (sel) =>
     sel({
@@ -69,7 +71,12 @@ jest.mock("@/stores/flowStore", () => {
         locked: false,
       },
       setCurrentFlow: (...args) => mockSetCurrentFlow(...args),
-      autoSaveFlow: { flush: (...args) => mockAutoSaveFlush(...args) },
+      autoSaveFlow: mockHasEditorAutoSave
+        ? {
+            flush: (...args) => mockAutoSaveFlush(...args),
+            enqueue: (...args) => mockAutoSaveEnqueue(...args),
+          }
+        : undefined,
     });
   return {
     __esModule: true,
@@ -144,6 +151,8 @@ describe("FlowSettingsComponent", () => {
     mockSetSuccessData = jest.fn();
     mockSetCurrentFlow = jest.fn();
     mockAutoSaveFlush.mockResolvedValue(undefined);
+    mockAutoSaveEnqueue.mockResolvedValue(undefined);
+    mockHasEditorAutoSave = true;
   });
 
   it("renders and disables save when no changes", () => {
@@ -152,12 +161,11 @@ describe("FlowSettingsComponent", () => {
     expect(saveBtn).toBeDisabled();
   });
 
-  it("enables save when name changes and autoSaving true triggers saveFlow and success", async () => {
+  it("enables save when name changes and autoSaving true queues the save and reports success", async () => {
     mockAutoSaving = true;
-    mockSave.mockResolvedValueOnce(undefined);
     const onClose = jest.fn();
 
-    render(<FlowSettingsComponent flowData={baseFlow} open close={onClose} />);
+    render(<FlowSettingsComponent open close={onClose} />);
 
     fireEvent.click(screen.getByTestId("set-name-new"));
     const saveBtn = screen.getByTestId("save-flow-settings");
@@ -166,8 +174,7 @@ describe("FlowSettingsComponent", () => {
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
-      expect(mockAutoSaveFlush).toHaveBeenCalled();
-      expect(mockSave).toHaveBeenCalledWith(
+      expect(mockAutoSaveEnqueue).toHaveBeenCalledWith(
         expect.objectContaining({ name: "New Name" }),
       );
       expect(mockSetSuccessData).toHaveBeenCalledWith({
@@ -175,38 +182,92 @@ describe("FlowSettingsComponent", () => {
       });
       expect(onClose).toHaveBeenCalled();
     });
+    expect(mockSave).not.toHaveBeenCalled();
   });
 
-  it("flushes a pending canvas autosave before saving settings", async () => {
+  it("saves the lock through the editor's save queue", async () => {
+    // A canvas autosave queued while the lock save is in flight must run after
+    // it; run alongside, it carries locked:false and the server rejects it.
     mockAutoSaving = true;
-    mockAutoSaveFlush.mockReset();
-    mockSave.mockReset();
-    let releaseAutoSave: () => void = () => {};
-    mockAutoSaveFlush.mockReturnValueOnce(
+    let releaseSettingsSave: () => void = () => {};
+    mockAutoSaveEnqueue.mockReturnValueOnce(
       new Promise<void>((resolve) => {
-        releaseAutoSave = resolve;
+        releaseSettingsSave = resolve;
       }),
     );
-    mockSave.mockResolvedValueOnce(undefined);
+    const onClose = jest.fn();
 
-    render(<FlowSettingsComponent flowData={baseFlow} open close={() => {}} />);
+    render(<FlowSettingsComponent open close={onClose} />);
 
     fireEvent.click(screen.getByTestId("toggle-lock"));
     fireEvent.click(screen.getByTestId("save-flow-settings"));
 
-    await waitFor(() => expect(mockAutoSaveFlush).toHaveBeenCalled());
-    expect(mockSave).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mockAutoSaveEnqueue).toHaveBeenCalledWith(
+        expect.objectContaining({ locked: true }),
+      ),
+    );
+    expect(onClose).not.toHaveBeenCalled();
 
-    releaseAutoSave();
+    releaseSettingsSave();
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(mockSave).not.toHaveBeenCalled();
+  });
+
+  it("saves directly when no editor autosave is registered", async () => {
+    mockAutoSaving = true;
+    mockHasEditorAutoSave = false;
+    mockSave.mockResolvedValueOnce(undefined);
+    const onClose = jest.fn();
+
+    render(<FlowSettingsComponent flowData={baseFlow} open close={onClose} />);
+
+    fireEvent.click(screen.getByTestId("toggle-lock"));
+    fireEvent.click(screen.getByTestId("save-flow-settings"));
 
     await waitFor(() => {
       expect(mockSave).toHaveBeenCalledWith(
         expect.objectContaining({ locked: true }),
       );
+      expect(onClose).toHaveBeenCalled();
     });
-    expect(mockAutoSaveFlush.mock.invocationCallOrder[0]).toBeLessThan(
-      mockSave.mock.invocationCallOrder[0],
-    );
+  });
+
+  it("saves a flow card directly even when an editor autosave is registered", async () => {
+    // The registered autosave may belong to an editor that has unmounted; its
+    // save never settles, which left the home page modal spinning.
+    mockAutoSaving = true;
+    mockSave.mockResolvedValueOnce(undefined);
+    const onClose = jest.fn();
+
+    render(<FlowSettingsComponent flowData={baseFlow} open close={onClose} />);
+
+    fireEvent.click(screen.getByTestId("set-name-new"));
+    fireEvent.click(screen.getByTestId("save-flow-settings"));
+
+    await waitFor(() => {
+      expect(mockSave).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "New Name" }),
+      );
+      expect(onClose).toHaveBeenCalled();
+    });
+    expect(mockAutoSaveEnqueue).not.toHaveBeenCalled();
+  });
+
+  it("keeps the modal open when the queued save fails", async () => {
+    mockAutoSaving = true;
+    mockAutoSaveEnqueue.mockRejectedValueOnce(new Error("boom"));
+    const onClose = jest.fn();
+
+    render(<FlowSettingsComponent open close={onClose} />);
+
+    fireEvent.click(screen.getByTestId("toggle-lock"));
+    fireEvent.click(screen.getByTestId("save-flow-settings"));
+
+    await waitFor(() => expect(mockAutoSaveEnqueue).toHaveBeenCalled());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(mockSetSuccessData).not.toHaveBeenCalled();
   });
 
   it("non-autoSaving path sets current flow and closes", () => {

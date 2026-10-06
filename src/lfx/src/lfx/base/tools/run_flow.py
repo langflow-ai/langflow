@@ -588,6 +588,17 @@ class RunFlowBaseComponent(Component):
                 flow_id_selected=self.flow_id_selected,
                 updated_at=self._cached_flow_updated_at,
             )  # may or may not want to create a deepcopy of the graph here
+            if graph is None:
+                msg = "Flow not found"
+                raise ValueError(msg)
+
+            # A cached child graph is rebuilt without the current serving run's
+            # identity. Bind that context only when executing it, so its messages
+            # have the same owner and persistence policy as the parent run.
+            parent_graph = getattr(getattr(self, "_vertex", None), "graph", None)
+            if parent_graph is not None:
+                graph.end_user_id = getattr(parent_graph, "end_user_id", None)
+                graph.persist_messages = getattr(parent_graph, "persist_messages", True)
 
             if tweaks := self._build_flow_tweak_data():
                 from lfx.processing.process import process_tweaks_on_graph

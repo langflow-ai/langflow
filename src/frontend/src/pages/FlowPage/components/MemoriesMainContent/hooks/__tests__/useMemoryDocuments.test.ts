@@ -7,6 +7,7 @@ import { useMemoryDocuments } from "../useMemoryDocuments";
 
 const mockFetchNextPage = jest.fn();
 const mockRefetch = jest.fn();
+const mockQueryOptions = jest.fn();
 
 type MessagePageFixture = Partial<GetMemoryMessagesApiResponse> & {
   items: Partial<MemoryMessageApiItem>[];
@@ -15,14 +16,17 @@ type MessagePageFixture = Partial<GetMemoryMessagesApiResponse> & {
 let mockPages: MessagePageFixture[] = [];
 
 jest.mock("@/controllers/API/queries/memories/use-get-memory-messages", () => ({
-  useGetMemoryMessages: () => ({
-    data: { pages: mockPages, pageParams: [1] },
-    isLoading: false,
-    fetchNextPage: mockFetchNextPage,
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    refetch: mockRefetch,
-  }),
+  useGetMemoryMessages: (_params: unknown, options: { enabled: boolean }) => {
+    mockQueryOptions(options);
+    return {
+      data: { pages: mockPages, pageParams: [1] },
+      isLoading: false,
+      fetchNextPage: mockFetchNextPage,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      refetch: mockRefetch,
+    };
+  },
 }));
 
 const memorySessions = [
@@ -47,6 +51,20 @@ const memorySessions = [
 ];
 
 describe("useMemoryDocuments", () => {
+  it.each(["migrating", "needs_attention", "detached"])(
+    "loads relational history while storage is %s",
+    (storageState) => {
+      renderHook(() =>
+        useMemoryDocuments({
+          memoryId: "m1",
+          storageState,
+          sessionId: "s1",
+          memorySessions,
+        }),
+      );
+      expect(mockQueryOptions).toHaveBeenCalledWith({ enabled: true });
+    },
+  );
   beforeEach(() => {
     jest.clearAllMocks();
     mockPages = [

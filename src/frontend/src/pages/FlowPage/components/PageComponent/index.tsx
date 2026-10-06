@@ -436,6 +436,13 @@ export default function Page({
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
+    return () => {
+      // Once unmounted, its save never settles (no mutation observer). Leave
+      // an autosave the version sidebar or a newer editor registered.
+      if (useFlowStore.getState().autoSaveFlow === autoSaveFlow) {
+        useFlowStore.setState({ autoSaveFlow: undefined });
+      }
+    };
   }, [autoSaveFlow]);
 
   function handleUndo(e: KeyboardEvent) {
@@ -809,7 +816,7 @@ export default function Page({
         });
       }
     },
-    [takeSnapshot, addComponent],
+    [effectiveLocked, takeSnapshot, addComponent],
   );
 
   const onEdgeUpdateStart = useCallback(() => {

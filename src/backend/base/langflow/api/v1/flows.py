@@ -36,6 +36,7 @@ from langflow.api.utils import (
 )
 from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.utils.mcp.flow_secrets import (
+    MCPSecretTarget,
     extract_and_strip_mcp_secrets,
     mcp_server_names,
     persist_and_strip_mcp_secrets,
@@ -290,6 +291,14 @@ FLOW_DELETE_FAILED = "Could not delete the flow."
 FLOW_DELETE_BUSY = "The database is busy. Please retry the request."
 
 
+def _flow_read_for_caller(flow: Flow | FlowRead, caller_id: UUID) -> FlowRead:
+    """Keep persisted credentials visible only to the flow owner."""
+    flow_read = FlowRead.model_validate(flow, from_attributes=True)
+    if flow.user_id != caller_id:
+        flow_read.data = strip_secret_field_values(flow_read.data)
+    return flow_read
+
+
 @router.post("/", response_model=FlowRead, status_code=201)
 async def create_flow(
     *,
@@ -351,7 +360,11 @@ async def create_flow(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=FLOW_CREATE_FAILED) from e
 
 
-@router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
+@router.get(
+    "/",
+    response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader] | Page[FlowHeader],
+    status_code=200,
+)
 async def read_flows(
     *,
     current_user: CurrentActiveUser,
@@ -452,11 +465,16 @@ async def read_flows(
                 )
             if header_flows:
                 # Convert to FlowHeader objects
-                flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
+                flow_headers = []
+                for flow in flows:
+                    header = FlowHeader.model_validate(flow, from_attributes=True)
+                    if flow.user_id != current_user.id:
+                        header.data = strip_secret_field_values(header.data)
+                    flow_headers.append(header)
                 return JSONResponse(content=jsonable_encoder(flow_headers))
 
             # Convert to FlowRead while session is still active to avoid detached instance errors
-            flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows]
+            flow_reads = [_flow_read_for_caller(flow, current_user.id) for flow in flows]
             return JSONResponse(content=jsonable_encoder(flow_reads))
 
         stmt = stmt.where(Flow.folder_id == folder_id)
@@ -482,7 +500,24 @@ async def read_flows(
                 owner_extractor=lambda flow: flow.user_id,
                 act=FlowAction.READ,
             )
-        return page  # noqa: TRY300 — final return inside try matches the existing style of this handler
+        if header_flows:
+            # Same page of rows, header shape: one data-less listing that still
+            # carries ``total`` (the flow count) and each row's change hint.
+            flow_headers = []
+            for flow in page.items:
+                header = FlowHeader.model_validate(flow, from_attributes=True)
+                if flow.user_id != current_user.id:
+                    header.data = strip_secret_field_values(header.data)
+                flow_headers.append(header)
+            return Page[FlowHeader].create(flow_headers, params, total=page.total)
+
+        # An explicit Page[FlowRead] keeps the response-model union from
+        # serializing these rows under the Page[FlowHeader] shape.
+        return Page[FlowRead].create(
+            [_flow_read_for_caller(flow, current_user.id) for flow in page.items],
+            params,
+            total=page.total,
+        )
 
     except Exception as e:
         import logging as _logging
@@ -496,9 +531,10 @@ async def read_flow(
     *,
     flow_id: UUID,  # noqa: ARG001
     flow: AuthorizedReadFlow,
+    current_user: CurrentActiveUser,
 ):
     """Read a flow."""
-    return FlowRead.model_validate(flow, from_attributes=True)
+    return _flow_read_for_caller(flow, current_user.id)
 
 
 @router.get("/{flow_id}/note_translations", status_code=200)
@@ -626,7 +662,8 @@ async def update_flow(
         # rollback while the staged rows do not, so re-extracting on attempt 2 would find
         # only the reference it wrote itself and stage nothing. actor.id rather than
         # current_user.id: the rollback expires the ORM User.
-        carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data)
+        masked_targets: list[MCPSecretTarget] = []
+        carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data, masked_targets=masked_targets)
 
         async def operation() -> FlowRead:
             # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
@@ -690,6 +727,7 @@ async def update_flow(
                 actor.id,
                 session,
                 rotatable_servers=mcp_server_names(db_flow_for_attempt.data),
+                masked_targets=masked_targets,
             )
             return await _patch_flow(
                 session=session,
@@ -709,11 +747,12 @@ async def update_flow(
                 )
             return await operation()
 
-        return await run_with_lock_retry(
+        flow_read = await run_with_lock_retry(
             update_attempt,
             session=session,
             description=f"update_flow {flow_id}",
         )
+        return _flow_read_for_caller(flow_read, actor.id)
     except HTTPException:
         raise
     except Exception as e:
@@ -758,7 +797,8 @@ async def upsert_flow(
     expected_version_token = parse_if_match(if_match)
     # Extract once: a rollback between retry attempts discards the staged rows but not the
     # in-place rewrite, so a second extraction would find only its own reference.
-    carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data)
+    masked_targets: list[MCPSecretTarget] = []
+    carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data, masked_targets=masked_targets)
 
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
@@ -875,7 +915,9 @@ async def upsert_flow(
                         raise deny_to_404(exc, detail="Flow not found") from exc
                 effective_flow_data = flow.data if flow.data is not None else existing_flow_for_attempt.data
                 _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
-                await stage_mcp_secrets(carried_secrets, secret_variables, writer_id, session)
+                await stage_mcp_secrets(
+                    carried_secrets, secret_variables, writer_id, session, masked_targets=masked_targets
+                )
                 await ensure_version_precondition(session, existing_flow_for_attempt, expected_version_token)
                 return await _update_existing_flow(
                     session=session,
@@ -906,7 +948,9 @@ async def upsert_flow(
                 folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
             )
             _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
-            await stage_mcp_secrets(carried_secrets, secret_variables, writer_id, session)
+            await stage_mcp_secrets(
+                carried_secrets, secret_variables, writer_id, session, masked_targets=masked_targets
+            )
             flow_read = await _new_flow(
                 session=session,
                 flow=flow,
@@ -918,7 +962,10 @@ async def upsert_flow(
             )
             status_code = 201
 
-        return JSONResponse(status_code=status_code, content=jsonable_encoder(flow_read))
+        return JSONResponse(
+            status_code=status_code,
+            content=jsonable_encoder(_flow_read_for_caller(flow_read, writer_id)),
+        )
 
     except HTTPException:
         raise
@@ -1366,7 +1413,7 @@ async def download_multiple_file(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="No flows found.") from exc
 
-    return await _build_flows_download_response(db, flows)
+    return await _build_flows_download_response(db, flows, caller_id=user.id)
 
 
 # 5 minutes

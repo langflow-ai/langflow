@@ -114,6 +114,44 @@ async def append_event(
     return event, True
 
 
+async def append_events(session: AsyncSession, *, trigger_id: UUID, events: list[tuple[str, dict[str, Any]]]) -> int:
+    """Insert a source batch atomically, deduplicating at the database boundary."""
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    dialect = session.get_bind().dialect.name
+    if dialect not in {"sqlite", "postgresql"}:
+        created = 0
+        for key, payload in events:
+            _, inserted = await append_event(session, trigger_id=trigger_id, dedupe_key=key, payload=payload)
+            created += int(inserted)
+        return created
+    insert = sqlite_insert if dialect == "sqlite" else pg_insert
+    created = 0
+    now = _now()
+    # Bound SQL parameter counts independently of source size.
+    for offset in range(0, len(events), 100):
+        rows = [
+            {
+                "id": uuid4(),
+                "trigger_id": trigger_id,
+                "dedupe_key": key,
+                "payload": payload,
+                "state": TriggerEventState.PENDING.value,
+                "attempt": 0,
+                "available_at": now,
+            }
+            for key, payload in events[offset : offset + 100]
+        ]
+        statement = (
+            insert(TriggerEvent)
+            .values(rows)
+            .on_conflict_do_nothing(index_elements=["trigger_id", "dedupe_key"])
+            .returning(TriggerEvent.id)
+        )
+        created += len((await session.execute(statement)).scalars().all())
+    return created
+
+
 async def get_event_by_dedupe_key(session: AsyncSession, *, trigger_id: UUID, dedupe_key: str) -> TriggerEvent | None:
     statement = select(TriggerEvent).where(
         TriggerEvent.trigger_id == trigger_id,
