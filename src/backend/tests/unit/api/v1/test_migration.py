@@ -46,11 +46,13 @@ if TYPE_CHECKING:
 VERSION = get_version_info()["version"]
 PASSING = {"name": "version", "status": "ok", "summary": "same version"}
 FAILING = {"name": "source: credentials", "status": "fail", "summary": "2 values do not open"}
-# What the two steps before the pause leave in the record once they are done.
+# What the two steps before the pause leave in the record once they are done. The bucket is for the
+# tests that upload a file: an instance that keeps files on its own disk has to name one.
 PREPARED = {
     "destinations": {
         "database": {"location": "db.internal:5432/langflow"},
-        "results": {"database": {"ok": True}},
+        "files": {"bucket": "langflow-files", "prefix": "files", "endpoint_url": None},
+        "results": {"database": {"ok": True}, "files": {"ok": True}},
         "saved_by": "alice",
         "saved_at": "2026-09-30T00:10:00+00:00",
     },
