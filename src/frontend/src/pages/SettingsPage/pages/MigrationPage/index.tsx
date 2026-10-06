@@ -287,6 +287,10 @@ function Migration({ migration }: { migration: MigrationState }) {
                   step.id === "copy_database" &&
                   state.state === "done"
                 ) {
+                  const left = (copy?.report?.orphans ?? []).reduce(
+                    (total, orphan) => total + orphan.rows,
+                    0,
+                  );
                   summary = t("settings.migration.copyDb.done", {
                     tables: copy?.report?.tables_copied?.toLocaleString(
                       i18n.language,
@@ -295,6 +299,8 @@ function Migration({ migration }: { migration: MigrationState }) {
                       i18n.language,
                     ),
                   });
+                  if (left)
+                    summary += ` ${t("settings.migration.copyDb.left", { count: left.toLocaleString(i18n.language) })}`;
                 } else if (copy?.report?.counts && state.state === "done") {
                   const { copied, skipped, failed } = copyCounts(
                     copy.report.counts,

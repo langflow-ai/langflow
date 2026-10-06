@@ -32,6 +32,27 @@ export type CopyStepId =
   | "copy_knowledge_bases"
   | "copy_files";
 
+/** Rows of one table that point at a row of another that is gone. */
+export interface OrphanRows {
+  table: string;
+  column?: string;
+  parent: string;
+  rows: number;
+}
+
+/**
+ * A decision the server offers about a copy, to send back as it came. With a `subject` it accepts that one
+ * item at once. With none it is an option for the whole step, which the next copy takes.
+ */
+export interface CopyDecision {
+  kind: string;
+  subject: string | null;
+  /** The run whose report the item is in. An acceptance is for that report only. An option has none. */
+  run_id?: string | null;
+  /** Who made it and when, while the server holds it as made: an option for the step, an acceptance for the run on record. */
+  made?: { by: string; at: string } | null;
+}
+
 /** A knowledge base or a file that a copy did not make, as the command reported it. */
 export interface CopyItem {
   /** The name a decision about this item uses: a knowledge base's id, or a file's owner and name. */
@@ -42,6 +63,8 @@ export interface CopyItem {
   code: string | null;
   /** The command's own words for what happened. */
   reason: string | null;
+  /** The decision that answers this item's code, when the server has one. */
+  decision?: CopyDecision | null;
 }
 
 /** The latest run of a copy step, as the record keeps it. */
@@ -59,6 +82,8 @@ export interface MigrationCopyRun {
     tables_copied?: number;
     rows_copied?: number;
     problems?: { code: string; message: string }[];
+    /** The database copy: the rows it left out on the admin's word. */
+    orphans?: OrphanRows[];
     /** Knowledge bases and files: how many ended in each status, a test run's `would_` ones included. */
     counts?: Record<string, number>;
     /** The first hundred that failed. `counts.failed` says how many did. */
@@ -66,6 +91,12 @@ export interface MigrationCopyRun {
   } | null;
   /** Set when the run did not end done: the command's own code and message, or `crashed`, `cancelled` or `interrupted`. */
   error: { code: string; message?: string } | null;
+  /** What the command asked before it would copy: the rows that point at nothing, and the decision that leaves them out. */
+  decision_needed?: {
+    code: string;
+    details?: { orphans?: OrphanRows[] };
+    decision?: CopyDecision | null;
+  } | null;
 }
 
 /** One line of a run's event stream. The server numbers each, so a page can ask for what came after one. */

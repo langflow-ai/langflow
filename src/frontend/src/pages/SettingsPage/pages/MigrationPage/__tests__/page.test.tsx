@@ -515,4 +515,162 @@ describe("the steps after the check", () => {
       row("start_target").queryByText("Finish the steps above first."),
     ).not.toBeInTheDocument();
   });
+
+  describe("an acceptance for a list that another copy replaced", () => {
+    // The file copy as the record holds it: one file with nothing to copy, which the server offers to accept.
+    const left = (id: string, name: string, made = false) =>
+      state(
+        {
+          ...copied,
+          copy_database: ["done"],
+          copy_knowledge_bases: ["skipped", "no_local_knowledge_bases"],
+          copy_files: made ? ["done"] : ["blocked", "no_source_bytes"],
+        },
+        {
+          steps: {
+            copy_database: run("done"),
+            copy_files: {
+              ...run("done"),
+              run_id: id,
+              report: {
+                ok: false,
+                counts: { copied: 1, failed: 1 },
+                attention: [
+                  {
+                    subject: `u-1/${name}`,
+                    file_name: name,
+                    owner: "u-1",
+                    code: "no_source_bytes",
+                    reason: null,
+                    decision: {
+                      kind: "accept_missing_attachment",
+                      subject: `u-1/${name}`,
+                      run_id: id,
+                      made: made
+                        ? { by: "alice", at: "2026-10-06T12:30:00Z" }
+                        : null,
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      );
+    const line =
+      "This copy was made again in the meantime, so your choice was not recorded. The list now shows what the new copy left.";
+    const box = (name: string) => ({
+      name: `Move without this file, ${name}`,
+    });
+    /** Opens a page that is one copy behind, accepts the file it shows, and waits for the list the server holds now. */
+    const behind = async (now = "new.txt") => {
+      const post = jest.spyOn(api, "post").mockRejectedValueOnce(
+        Object.assign(new AxiosError("Request failed"), {
+          response: {
+            status: 409,
+            data: { detail: { code: "report_changed" } },
+          },
+        }),
+      );
+      // What the server holds by now: another copy, which left another file.
+      jest.spyOn(api, "get").mockResolvedValue({ data: left("run-9", now) });
+      open(left("run-1", "old.txt"));
+      await userEvent.click(
+        row("copy_files").getByRole("checkbox", box("old.txt")),
+      );
+      await row("copy_files").findByText(line);
+      const current = row("copy_files").getByRole("checkbox", box(now));
+      return { post, current };
+    };
+
+    it("says the copy was made again, and shows the list of the copy on record", async () => {
+      const { post } = await behind();
+
+      // The acceptance named the list this page had drawn, so the server could tell it was behind.
+      expect(post).toHaveBeenCalledWith(expect.stringContaining("decisions"), {
+        step: "copy_files",
+        kind: "accept_missing_attachment",
+        subject: "u-1/old.txt",
+        run_id: "run-1",
+      });
+      expect(row("copy_files").getByText(line)).toBeInTheDocument();
+      // One line says it, where the list is.
+      expect(
+        row("copy_files").queryByText("Something went wrong. Try again."),
+      ).not.toBeInTheDocument();
+    });
+
+    it("says it once when the new copy left the same file", async () => {
+      await behind("old.txt");
+
+      // The box the admin ticked is still there. The line above the list is the answer, with no other under the box.
+      expect(row("copy_files").getAllByRole("alert")).toHaveLength(2);
+      expect(
+        row("copy_files").queryByText("Something went wrong. Try again."),
+      ).not.toBeInTheDocument();
+    });
+
+    it("drops that line once the admin decides on the list that is there now", async () => {
+      const { post, current } = await behind();
+      post.mockResolvedValueOnce({ data: left("run-9", "new.txt", true) });
+
+      await userEvent.click(current);
+
+      await waitFor(() =>
+        expect(row("copy_files").queryByText(line)).not.toBeInTheDocument(),
+      );
+      expect(post).toHaveBeenLastCalledWith(
+        expect.stringContaining("decisions"),
+        {
+          step: "copy_files",
+          kind: "accept_missing_attachment",
+          subject: "u-1/new.txt",
+          run_id: "run-9",
+        },
+      );
+    });
+
+    it("drops that line once the admin copies again", async () => {
+      const { post } = await behind();
+      post.mockResolvedValueOnce({ data: { run_id: "run-10" } });
+
+      await userEvent.click(
+        row("copy_files").getByRole("button", { name: "Copy again" }),
+      );
+
+      await waitFor(() =>
+        expect(row("copy_files").queryByText(line)).not.toBeInTheDocument(),
+      );
+    });
+  });
+
+  it("says how many rows a database copy left out on the admin's word", () => {
+    open(
+      state(
+        { ...copied, copy_database: ["done"] },
+        {
+          steps: {
+            copy_database: {
+              ...run("done"),
+              report: {
+                ok: true,
+                tables_copied: 59,
+                rows_copied: 57,
+                orphans: [
+                  { table: "span", parent: "trace", rows: 2 },
+                  { table: "message", parent: "flow", rows: 1200 },
+                ],
+              },
+            },
+          },
+        },
+      ),
+    );
+
+    expect(
+      row("copy_database").getByText(
+        "Tables: 59. Rows: 57. Rows left out: 1,202",
+      ),
+    ).toBeInTheDocument();
+  });
 });
