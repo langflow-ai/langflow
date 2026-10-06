@@ -49,7 +49,7 @@ def wait_for_gate():
 # A second server process: it starts one run, then keeps reading it as a worker would.
 # It logs down to DEBUG, so nothing it sends to the application log stays hidden.
 _WORKER = """
-import asyncio, contextlib, os, sys
+import asyncio, contextlib, os, signal, sys
 from langflow.api.utils import migration_runs
 from lfx.log.logger import configure, logger
 
@@ -57,6 +57,8 @@ async def main():
     await migration_runs.start_run("copy_files", sys.argv[1:], dict(os.environ), started_by="bob")
     await asyncio.Event().wait()
 
+# A process started in the background of a shell script is born ignoring Ctrl-C. A server is not.
+signal.signal(signal.SIGINT, signal.default_int_handler)
 configure(log_level="DEBUG")
 logger.debug("The worker logs at DEBUG")
 with contextlib.suppress(KeyboardInterrupt):
@@ -181,6 +183,17 @@ async def test_events_arrive_in_order_and_the_run_ends_done_with_its_report(conf
     assert [json.loads(line) for line in (runs / f"{run_id}.ndjson").read_text().splitlines()] == events
     recorded = {"run_id", "step_id", "status", "started_by", "started_at", "finished_at", "exit_code", "stderr"}
     assert set(run) == recorded | {"child", "worker"}
+
+
+async def test_the_child_runs_with_the_environment_it_was_given_and_no_other(monkeypatch: pytest.MonkeyPatch):
+    # The commands read where to copy to from their environment, and the server's own must not leak in.
+    given = {**os.environ, "TARGET_URL": "postgresql://target"}
+    monkeypatch.setenv("ONLY_THE_SERVER_HAS_THIS", "1")
+    child = _child('emit(target=os.environ["TARGET_URL"], server=os.environ.get("ONLY_THE_SERVER_HAS_THIS"))')
+
+    run_id = await migration_runs.start_run("copy_database", child, given, started_by="alice")
+
+    assert (await _follow(run_id))[0] == {"target": "postgresql://target", "server": None, "seq": 1}
 
 
 async def test_a_follower_that_starts_late_gets_only_the_later_events(gate: Path):
@@ -379,7 +392,9 @@ async def test_cancel_ends_the_run_cancelled(gate: Path):
 
 
 async def test_cancel_kills_a_child_that_ignores_sigterm(gate: Path, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(migration_runs, "_GRACE_S", 1.0)
+    # A grace period as long as any wait here: however slow the machine, the child is not killed
+    # before this test has seen what it did with SIGTERM.
+    monkeypatch.setattr(migration_runs, "_GRACE_S", _TIMEOUT)
     run_id = await _start(
         """
         import signal
@@ -393,11 +408,14 @@ async def test_cancel_kills_a_child_that_ignores_sigterm(gate: Path, monkeypatch
     # Its first event says the handler is in place.
     await _until(lambda: seen)
 
-    await migration_runs.cancel_run(run_id)
-    await asyncio.wait_for(follower, _TIMEOUT)
+    cancel = asyncio.create_task(migration_runs.cancel_run(run_id))
+    await _until(lambda: len(seen) > 1)
+    # It was asked first, it went on, and the grace period is still running.
+    assert (seen[1].get("note"), cancel.done()) == ("asked to stop", False)
+    # The rest of the grace period goes by a thousand times faster. Then the child is killed.
+    monkeypatch.setattr(migration_runs, "_POLL_S", migration_runs._POLL_S / 1000)
+    await asyncio.wait_for(asyncio.gather(cancel, follower), _TIMEOUT)
 
-    # It was asked first, and killed only because it went on.
-    assert [event.get("note") for event in seen] == ["ready", "asked to stop", None]
     assert seen[-1] == {"event": "end", "status": "cancelled", "exit_code": -signal.SIGKILL, "seq": 3}
 
 
@@ -607,6 +625,8 @@ async def test_a_run_whose_worker_dies_reads_as_interrupted_and_its_follower_end
 
     assert seen[-1] == {"event": "end", "status": "interrupted", "exit_code": None, "seq": 2}
     assert migration_runs.read_run(run_id)["status"] == "interrupted"
+    # A follower that already has that end is not given it again.
+    assert await _follow(run_id, after=2) == []
     # Every command is safe to rerun, so the next start goes through.
     again = await _start('emit(event="report", ok=True)')
     assert (await _follow(again))[-1]["status"] == "done"
@@ -649,7 +669,7 @@ async def test_a_worker_that_stops_records_the_run_as_interrupted_and_stops_its_
 
     # Ctrl-C makes asyncio cancel whatever is still running, as a server that stops does.
     worker.send_signal(signal.SIGINT)
-    await worker.wait()
+    await asyncio.wait_for(worker.wait(), _TIMEOUT)
     await asyncio.wait_for(follower, _TIMEOUT)
 
     run = migration_runs.read_run(run_id)
@@ -676,7 +696,7 @@ async def test_the_environment_and_the_arguments_are_never_written(
     await _follow(run_id)
     # Stopped, so everything it had to log is written.
     worker.send_signal(signal.SIGINT)
-    await worker.wait()
+    await asyncio.wait_for(worker.wait(), _TIMEOUT)
 
     written = b"".join(path.read_bytes() for path in config_dir.rglob("*") if path.is_file())
     logged = "".join(capfd.readouterr())

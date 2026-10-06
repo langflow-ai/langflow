@@ -178,7 +178,7 @@ async def cancel_run(run_id: str) -> None:
     """Stop a run from any worker: SIGTERM to its child, then SIGKILL if it is still there after the grace period.
 
     The run ends as cancelled, unless the child had already printed its report. A run
-    that is over is left alone. Raises RunNotFoundError.
+    that is over, or whose child has already exited, is left alone. Raises RunNotFoundError.
     """
     run = read_run(run_id)
     child = _process(run["child"])
