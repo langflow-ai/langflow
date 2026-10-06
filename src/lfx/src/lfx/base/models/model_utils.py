@@ -2,6 +2,9 @@ import asyncio
 import hashlib
 import re
 import time
+from collections.abc import Mapping
+from contextvars import ContextVar
+from types import MappingProxyType
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 from uuid import UUID
@@ -38,6 +41,26 @@ HTTP_STATUS_MULTIPLE_CHOICES = 300
 HTTP_STATUS_UNAUTHORIZED = 401
 HTTP_STATUS_FORBIDDEN = 403
 MIN_DEFAULT_MODELS = 5
+
+# A discovery worker receives only the caller's already-resolved inputs. Bundle
+# callbacks keep their existing synchronous variable-reader API, without opening
+# a database session on a second event loop. Context-local state isolates owners
+# and simultaneous catalogs, including callbacks imported by provider bundles.
+_discovery_variables: ContextVar[tuple[str, Mapping[str, str | None]] | None] = ContextVar(
+    "live_model_variables", default=None
+)
+
+_LIVE_DISCOVERY_VARIABLES = {
+    "Ollama": ("OLLAMA_BASE_URL",),
+    "OpenAI": ("OPENAI_BASE_URL", "OPENAI_API_KEY"),
+    "IBM WatsonX": ("WATSONX_URL",),
+    "OpenRouter": ("OPENROUTER_API_KEY",),
+    "Azure AI Foundry": (
+        "AZURE_AI_FOUNDRY_ENDPOINT",
+        "AZURE_AI_FOUNDRY_API_KEY",
+        "AZURE_AI_FOUNDRY_API_VERSION",
+    ),
+}
 
 # Ollama model lists are cached in-process for a short window so that:
 # (1) overlapping ``/api/v1/models`` requests don't all serialize through
@@ -474,6 +497,18 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
         guard. Without this, every embedding-model-options call from a
         non-Ollama user crashed retrieval (Knowledge component BUG-01).
     """
+    snapshot = _discovery_variables.get()
+    if snapshot is not None:
+        owner, variables = snapshot
+        if owner != str(user_id) or variable_key not in variables:
+            msg = "Live discovery requested a variable outside its resolved owner/provider inputs"
+            raise ValueError(msg)
+        return variables[variable_key]
+    return run_until_complete(aget_provider_variable_value(user_id, variable_key))
+
+
+async def aget_provider_variable_value(user_id: UUID | str | None, variable_key: str) -> str | None:
+    """Resolve discovery inputs on the caller loop with the existing fallback rules."""
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
         return _environment_variable_value(variable_key)
 
@@ -494,7 +529,20 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
                 # treat absence as "no value" rather than propagating.
                 return None
 
-    return _to_str(run_until_complete(_get_variable())) or _environment_variable_value(variable_key)
+    return _to_str(await _get_variable()) or _environment_variable_value(variable_key)
+
+
+async def aget_live_model_variables(user_id, enabled_providers, provider_metadata) -> dict[str, str | None]:
+    """Read declared live-discovery variables before entering network/SDK workers."""
+    keys = set()
+    for provider in (*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS):
+        if provider not in enabled_providers:
+            continue
+        keys.update(_LIVE_DISCOVERY_VARIABLES.get(provider, ()))
+        for variable in provider_metadata.get(provider, {}).get("variables", []):
+            if key := variable.get("variable_key"):
+                keys.add(key)
+    return {key: await aget_provider_variable_value(user_id, key) for key in sorted(keys)}
 
 
 def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -1292,6 +1340,8 @@ def replace_with_live_models(
     enabled_providers: set[str] | list[str],
     model_type: str | None = None,
     provider_metadata: dict | None = None,
+    *,
+    provider_variables: dict[str, str | None] | None = None,
 ) -> list[dict]:
     """Replace static model entries with live models for providers in LIVE_MODEL_PROVIDERS.
 
@@ -1305,10 +1355,21 @@ def replace_with_live_models(
         enabled_providers: Set/list of provider names that are currently enabled/configured.
         model_type: ``"llm"``, ``"embeddings"``, or ``None`` (fetch both and concatenate).
         provider_metadata: Optional dict of extra provider metadata to merge into the entry.
+        provider_variables: Optional caller-resolved inputs for database-free discovery workers.
 
     Returns:
         The (possibly modified) provider_models list.
     """
+    if provider_variables is None:
+        return _replace_with_live_models(provider_models, user_id, enabled_providers, model_type, provider_metadata)
+    token = _discovery_variables.set((str(user_id), MappingProxyType(dict(provider_variables))))
+    try:
+        return _replace_with_live_models(provider_models, user_id, enabled_providers, model_type, provider_metadata)
+    finally:
+        _discovery_variables.reset(token)
+
+
+def _replace_with_live_models(provider_models, user_id, enabled_providers, model_type, provider_metadata):
     if not user_id or not enabled_providers:
         return provider_models
 

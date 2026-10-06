@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS, get_provider_param_mapping
-from lfx.base.models.model_utils import apply_metadata_filters, inject_custom_enabled_models, replace_with_live_models
+from lfx.base.models.model_utils import (
+    aget_live_model_variables,
+    apply_metadata_filters,
+    inject_custom_enabled_models,
+    replace_with_live_models,
+)
 from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
@@ -193,10 +199,108 @@ def get_language_model_options(
             )
     enabled_providers = {provider for provider in enabled_providers if provider_policy.allows(provider)}
 
-    # Replace static defaults with actual available models from configured instances
-    suppressed: dict[str, set[tuple[str, str]]] = {}
     if enabled_providers:
         replace_with_live_models(all_models, user_id, enabled_providers, "llm", model_provider_metadata)
+    return _language_model_options_from_models(
+        all_models,
+        user_id,
+        metadata_filters,
+        provider_policy,
+        disabled_models,
+        explicitly_enabled_models,
+        enabled_providers,
+    )
+
+
+async def aget_language_model_options(
+    user_id: UUID | str | None = None,
+    *,
+    tool_calling: bool | None = None,
+    filters: dict[str, Any] | None = None,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+) -> list[dict[str, Any]]:
+    """Return available language model providers with their configuration.
+
+    ``filters`` is a dict of metadata key/value constraints forwarded to
+    ``get_unified_models_detailed`` (e.g. ``{"tool_calling": True}``,
+    ``{"reasoning": True}``). It is the declarative path used by
+    ``ModelInput(filters=...)``. The legacy ``tool_calling`` kwarg is kept
+    for back-compat and merged into ``filters`` when present.
+    """
+    # Get all LLM models (excluding embeddings, deprecated, and unsupported by default)
+    metadata_filters: dict[str, Any] = dict(filters or {})
+    if tool_calling is not None:
+        metadata_filters.setdefault("tool_calling", tool_calling)
+
+    all_models = get_unified_models_detailed(
+        model_type="llm",
+        include_deprecated=False,
+        include_unsupported=False,
+        **metadata_filters,
+    )
+
+    if provider_policy is None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
+
+        provider_policy = await aresolve_model_provider_policy(
+            user_id=user_id,
+            providers=get_model_providers(),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    all_models = [provider_data for provider_data in all_models if provider_policy.allows(provider_data["provider"])]
+
+    # Get disabled and explicitly enabled models for this user if user_id is provided
+    disabled_models: set[str] = set()
+    explicitly_enabled_models: set[str] = set()
+    if user_id:
+        with contextlib.suppress(Exception):
+            disabled_models, explicitly_enabled_models = await _get_model_status(user_id)
+
+    # Get enabled providers (those with credentials configured and validated)
+    enabled_providers = set()
+    if user_id:
+        with contextlib.suppress(Exception):
+            enabled_providers = await _fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy)
+    enabled_providers = {provider for provider in enabled_providers if provider_policy.allows(provider)}
+
+    if enabled_providers:
+        # Resolve saved connection settings and credentials on this loop. The
+        # existing discovery callbacks can then run network/SDK work in a thread
+        # without sharing the database pool across event loops.
+        variables = await aget_live_model_variables(user_id, enabled_providers, model_provider_metadata)
+        await asyncio.to_thread(
+            replace_with_live_models,
+            all_models,
+            user_id,
+            enabled_providers,
+            "llm",
+            model_provider_metadata,
+            provider_variables=variables,
+        )
+    return _language_model_options_from_models(
+        all_models,
+        user_id,
+        metadata_filters,
+        provider_policy,
+        disabled_models,
+        explicitly_enabled_models,
+        enabled_providers,
+    )
+
+
+def _language_model_options_from_models(
+    all_models,
+    user_id,
+    metadata_filters,
+    provider_policy,
+    disabled_models,
+    explicitly_enabled_models,
+    enabled_providers,
+):
+    # Replace static defaults with actual available models from configured instances
+    # The existing filtering/formatting below is shared by both lookup entry points.
+    suppressed: dict[str, set[tuple[str, str]]] = {}
+    if enabled_providers:
         # Live rows replace the statically filtered catalog wholesale — re-apply the
         # metadata filters so e.g. the Agent picker can't see no-tool live models.
         suppressed = apply_metadata_filters(all_models, metadata_filters)

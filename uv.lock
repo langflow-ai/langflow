@@ -8991,6 +8991,7 @@ toolguard = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "aiosqlite" },
     { name = "asgi-lifespan" },
     { name = "blockbuster" },
     { name = "coverage" },
@@ -9087,6 +9088,7 @@ provides-extras = ["sqlite", "sandbox", "cassandra", "toolguard", "otel", "bundl
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "aiosqlite", specifier = ">=0.21.0" },
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "blockbuster", specifier = ">=1.5.25" },
     { name = "coverage", specifier = ">=7.9.2" },

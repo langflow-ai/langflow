@@ -26,6 +26,7 @@ from .credentials import (
 )
 from .instantiation import get_embeddings, get_llm
 from .model_catalog import (
+    aget_language_model_options,
     get_embedding_model_options,
     get_language_model_options,
     get_unified_models_detailed,
@@ -55,6 +56,7 @@ __all__ = [
     "_MODEL_CLASS_IMPORTS",
     "_MODEL_OPTIONS_CACHE_TTL_SECONDS",
     "_get_all_provider_mapped_fields",
+    "aget_language_model_options",
     "apply_provider_variable_config_to_build_config",
     "get_all_variables_for_provider",
     "get_api_key_for_provider",
