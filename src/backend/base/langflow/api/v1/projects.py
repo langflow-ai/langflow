@@ -443,6 +443,10 @@ async def create_project(
             session=session,
             project=project,
             current_user=current_user,
+            # The flow moves and the audit event are staged in this transaction
+            # after the project row, so the MCP registration must not commit it:
+            # a guard that refuses a move has to take the project back with it.
+            owns_transaction=False,
         )
     except HTTPException:
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
@@ -2167,6 +2171,7 @@ async def upsert_project(
                 current_user=current_user,
                 project_id=project_id,
                 fail_on_name_conflict=True,
+                owns_transaction=False,
             )
             status_code = 201
 
