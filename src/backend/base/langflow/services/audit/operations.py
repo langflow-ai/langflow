@@ -219,7 +219,8 @@ def describe_project_body(param: str) -> Callable[[dict[str, Any]], dict[str, An
     def describe(kwargs: dict[str, Any]) -> dict[str, Any]:
         body = kwargs.get(param)
         fields = _fields_set(body)
-        requested = [*(getattr(body, "flows_list", None) or []), *(getattr(body, "components_list", None) or [])]
+        # FolderCreate names them *_list, FolderUpdate names them flows/components.
+        requested = [value for name in _PROJECT_MEMBERSHIP_FIELDS for value in (getattr(body, name, None) or [])]
         return {
             "resource_name": getattr(body, "name", None),
             "attempted_fields": {("flows" if name in _PROJECT_MEMBERSHIP_FIELDS else name) for name in fields},

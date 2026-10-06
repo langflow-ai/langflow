@@ -866,7 +866,10 @@ async def upsert_flow(
                         flow_user_id=existing_flow.user_id,
                         workspace_id=existing_flow.workspace_id,
                         folder_id=existing_flow.folder_id,
-                    )
+                    ),
+                    # An upsert over an existing Flow is a replace, so a failure
+                    # names the Flow that is there and not the name the body asked for.
+                    resource_name=existing_flow.name,
                 )
             except HTTPException as exc:
                 raise deny_to_404(exc, detail="Flow not found") from exc

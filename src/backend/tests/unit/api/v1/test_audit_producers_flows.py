@@ -257,6 +257,27 @@ async def test_a_put_create_that_conflicts_keeps_the_requested_identity(client, 
     assert (failed.action, failed.operation, failed.result) == ("flow:create", "create", "failed")
 
 
+async def test_a_failed_replace_names_the_flow_that_is_there(client, logged_in_headers):
+    """A replace that fails names the Flow at that id, not the one the body asked for.
+
+    The event's ``resource_id`` is the existing Flow's, so taking the name from
+    the body would file another Flow's name under it and make the trail unreadable.
+    """
+    taken = await _create_flow(client, logged_in_headers, endpoint_name=f"ep-{uuid4().hex[:8]}")
+    target = await _create_flow(client, logged_in_headers)
+
+    response = await client.put(
+        f"api/v1/flows/{target['id']}",
+        json={"name": taken["name"], "data": GRAPH, "endpoint_name": taken["endpoint_name"]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT, response.text
+    _create, failed = await events_for(target["id"])
+    assert (failed.action, failed.operation, failed.result) == ("flow:write", "replace", "failed")
+    assert failed.resource_name == target["name"]
+
+
 async def test_a_request_for_someone_elses_flow_records_nothing(client, logged_in_headers):
     _owner_id, owner_name = await make_user("owner")
     owner_headers = await login(client, owner_name)

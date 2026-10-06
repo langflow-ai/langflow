@@ -2,6 +2,7 @@ import asyncio
 import random
 import re
 import warnings
+from collections.abc import Sequence
 from typing import Annotated, Any, cast
 from uuid import UUID, uuid4
 
@@ -160,6 +161,24 @@ REPLACEMENT_RECEIPT_EXPIRED_DETAIL = "Replacement receipt has expired"
 # Backwards-compatible local alias; the implementation now lives in lfx.utils.util_strings so the
 # same LIKE-escaping is shared across the API endpoints + the tracing repository.
 _escape_like = escape_like_pattern
+
+
+def _record_flow_moves(
+    moved: dict[UUID, tuple[UUID | None, UUID]],
+    rows: Sequence[tuple[UUID, UUID | None]],
+    after_id: UUID,
+) -> None:
+    """Note where each Flow is being moved to, keeping the folder it started in.
+
+    One request can write the same Flow twice — a component is both excluded
+    from ``flows`` and listed in ``components`` — and the second pass reads a
+    ``folder_id`` the first UPDATE already changed. Keeping the first ``before``
+    is what stops a Flow that ends up where it started from being recorded as
+    moved, and a Flow that really moved from reporting the wrong origin.
+    """
+    for flow_id, folder_id in rows:
+        before_id = moved[flow_id][0] if flow_id in moved else folder_id
+        moved[flow_id] = (before_id, after_id)
 
 
 async def _stage_flow_moves(session: DbSession, moved: dict[UUID, tuple[UUID | None, UUID]]) -> None:
@@ -326,7 +345,7 @@ async def _new_project(
                 )
             ).all()
             authorized_flow_owner_ids.update((flow_id, current_user.id) for flow_id, _folder_id in component_flows)
-            moved_flows.update((flow_id, (folder_id, new_project.id)) for flow_id, folder_id in component_flows)
+            _record_flow_moves(moved_flows, component_flows, new_project.id)
             await ensure_flow_moves_allowed(
                 session,
                 flow_folder_pairs=list(component_flows),
@@ -349,7 +368,7 @@ async def _new_project(
                 )
             ).all()
             authorized_flow_owner_ids.update((flow_id, current_user.id) for flow_id, _folder_id in project_flows)
-            moved_flows.update((flow_id, (folder_id, new_project.id)) for flow_id, folder_id in project_flows)
+            _record_flow_moves(moved_flows, project_flows, new_project.id)
             await ensure_flow_moves_allowed(
                 session,
                 flow_folder_pairs=list(project_flows),
@@ -1855,9 +1874,7 @@ async def _apply_project_update(
                 )
             ).all()
             authorized_flow_owner_ids.update((flow_id, project_owner_id) for flow_id, _folder_id in excluded_flow_rows)
-            moved_flows.update(
-                (flow_id, (folder_id, my_collection_project.id)) for flow_id, folder_id in excluded_flow_rows
-            )
+            _record_flow_moves(moved_flows, excluded_flow_rows, my_collection_project.id)
             await ensure_flow_moves_allowed(
                 session,
                 flow_folder_pairs=list(excluded_flow_rows),
@@ -1883,9 +1900,7 @@ async def _apply_project_update(
                 )
             ).all()
             authorized_flow_owner_ids.update((flow_id, project_owner_id) for flow_id, _folder_id in component_flow_rows)
-            moved_flows.update(
-                (flow_id, (folder_id, existing_project.id)) for flow_id, folder_id in component_flow_rows
-            )
+            _record_flow_moves(moved_flows, component_flow_rows, existing_project.id)
             await ensure_flow_moves_allowed(
                 session,
                 flow_folder_pairs=list(component_flow_rows),

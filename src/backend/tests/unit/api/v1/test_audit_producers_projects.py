@@ -125,9 +125,16 @@ async def test_a_project_update_cannot_change_membership_so_records_none(client,
     PATCH recomputes flows/components from the project itself, so a body naming
     other Flows moves nothing: no Flow records a move and the Project event
     claims no membership write.
+
+    A component is the case that proves it. The recompute puts it in
+    ``components`` and not in ``flows``, so the same request writes it twice —
+    out to the default project, then back — and it ends up exactly where it
+    started. Reading its folder after the first write would record a move that
+    never happened, on the component and in the Project's summary.
     """
     kept = await _create_flow(client, logged_in_headers)
     project = await _create_project(client, logged_in_headers, flows_list=[kept["id"]])
+    component = await _create_flow(client, logged_in_headers, folder_id=project["id"], is_component=True)
     outsider = await _create_flow(client, logged_in_headers)
 
     updated = await client.patch(
@@ -142,8 +149,27 @@ async def test_a_project_update_cannot_change_membership_so_records_none(client,
     ]
     assert "flows" not in patch_event.details
     assert await _moves_for(outsider["id"]) == []
+    assert await _moves_for(component["id"]) == []
     # The one move on `kept` is the create that took it into the project.
     assert len(await _moves_for(kept["id"])) == 1
+
+
+async def test_a_project_create_records_the_move_of_a_flow_listed_twice(client, logged_in_headers):
+    """A Flow named in both lists is written twice and still moved exactly once.
+
+    The second write reads a folder the first one already set, so keeping that
+    as the move's origin would report the destination as the origin and drop
+    the event the Flow's own history needs.
+    """
+    source = await _create_project(client, logged_in_headers)
+    flow = await _create_flow(client, logged_in_headers, folder_id=source["id"])
+
+    destination = await _create_project(
+        client, logged_in_headers, flows_list=[flow["id"]], components_list=[flow["id"]]
+    )
+
+    [move] = await _moves_for(flow["id"])
+    assert move.details["project"] == {"before_id": source["id"], "after_id": destination["id"]}
 
 
 async def test_mcp_settings_record_the_flow_fields_they_write(client, logged_in_headers):
@@ -190,6 +216,30 @@ async def test_a_rename_collision_records_a_failure_under_the_known_name(client,
     assert (failed.event_type, failed.result, failed.error_code) == ("action", "failed", "PROJECT_NAME_CONFLICT")
     assert failed.details == {"schema_version": 1, "attempted_fields": ["name"]}
     assert failed.resource_name == project["name"]
+
+
+async def test_a_failed_patch_counts_the_flows_its_body_asked_for(client, logged_in_headers):
+    """PATCH takes a FolderUpdate, whose membership fields are ``flows`` and ``components``.
+
+    Counting only the ``*_list`` pair a create sends recorded ``flows`` among the
+    attempted fields with a count of zero, which reads as a membership write of
+    nothing rather than one of two Flows.
+    """
+    taken = await _create_project(client, logged_in_headers)
+    project = await _create_project(client, logged_in_headers)
+    flows = [await _create_flow(client, logged_in_headers) for _ in range(2)]
+
+    response = await client.patch(
+        f"api/v1/projects/{project['id']}",
+        json={"name": taken["name"], "flows": [flow["id"] for flow in flows]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT, response.text
+    _create, failed = await events_for(project["id"])
+    assert (failed.result, failed.error_code) == ("failed", "PROJECT_NAME_CONFLICT")
+    assert failed.details["requested_flow_count"] == 2
+    assert "flows" in failed.details["attempted_fields"]
 
 
 async def test_put_creates_at_the_requested_id_and_patches_an_existing_one(client, logged_in_headers):
