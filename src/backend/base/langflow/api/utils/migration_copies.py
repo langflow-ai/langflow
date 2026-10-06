@@ -20,12 +20,28 @@ COPY_COMMANDS = {
     "copy_knowledge_bases": ("relocate-kb", "--to", "postgres", "--json"),
     "copy_files": ("relocate-files", "--json"),
 }
-# What an admin may decide about a copy, by step. A decision that names an option of the command adds it to
-# every later run of the step. The others accept one failed item as it is, so it no longer blocks the step.
-DECISIONS: dict[str, dict[str, str | None]] = {
-    "copy_database": {"drop_orphans": "--drop-orphans"},
-    "copy_knowledge_bases": {"accept_ranking_change": "--allow-metric-change", "leave_behind": None},
-    "copy_files": {"keep_bucket_file": None, "accept_missing_attachment": None},
+# What an admin may decide about a copy. Each decision belongs to one step and answers some codes of its command.
+# One that stands for an option of the command adds it to every later run of the step. One without an option
+# accepts a failed item of one run as it is, so the item no longer blocks the step. An item can be accepted only
+# when running the copy again cannot get past its code and accepting it loses nothing a copy would have saved.
+# What can be put right and copied again, such as an ingestion that is still running, has no decision.
+DECISIONS: dict[str, dict[str, Any]] = {
+    "drop_orphans": {"step": "copy_database", "option": "--drop-orphans", "codes": ("orphans_droppable",)},
+    "accept_ranking_change": {
+        "step": "copy_knowledge_bases",
+        "option": "--allow-metric-change",
+        "codes": ("kb_metric_change",),
+    },
+    # This version has no backend for the store, or the store holds fewer chunks than its row says and someone
+    # has to look at it. This instance keeps the knowledge base either way.
+    "leave_behind": {"step": "copy_knowledge_bases", "option": None, "codes": ("kb_backend_missing", "kb_short")},
+    "keep_bucket_file": {"step": "copy_files", "option": None, "codes": ("file_conflict",)},
+    # The database names a file that this instance's storage holds no bytes for.
+    "accept_missing_attachment": {
+        "step": "copy_files",
+        "option": None,
+        "codes": ("no_source_bytes", "attachment_unmatched"),
+    },
 }
 # The events of a run that say how it went. The others say how far it has got.
 KEPT_EVENTS = ("report", "error", "decision_needed")
@@ -49,8 +65,8 @@ def copy_command(
     argv = [sys.executable, "-m", "langflow", *COPY_COMMANDS[step_id]]
     if step_id == "copy_files":
         argv += ["--bucket", destinations["files"]["bucket"], "--prefix", destinations["files"]["prefix"]]
-    options = DECISIONS[step_id]
-    argv += [options[made["kind"]] for made in decisions if made["step"] == step_id and options[made["kind"]]]
+    options = [DECISIONS[made["kind"]]["option"] for made in decisions if made["step"] == step_id]
+    argv += [option for option in options if option]
     return [*argv, "--dry-run"] if dry_run else argv
 
 
@@ -96,7 +112,7 @@ def copy_environment(step_id: str, source_env: dict[str, str], secrets: dict[str
     return env
 
 
-def copy_outcome(run: dict[str, Any], events: dict[str, dict[str, Any]]) -> dict[str, Any]:
+def copy_outcome(step_id: str, run: dict[str, Any], events: dict[str, dict[str, Any]]) -> dict[str, Any]:
     """What the record keeps of a run that has ended.
 
     run is its status from migration_runs, and events the last one of each of KEPT_EVENTS
@@ -114,24 +130,25 @@ def copy_outcome(run: dict[str, Any], events: dict[str, dict[str, Any]]) -> dict
     if report and "attention" in report:
         # ponytail: a report can list every file of an instance, and the record is read on each request,
         # so it keeps the first of them. The report's counts still say how many failed.
-        # Each is given the name a decision about it uses: a knowledge base's id, or a file's owner and name.
-        report["attention"] = [
-            {**item, "subject": item.get("kb_id") or f"{item['owner']}/{item['file_name']}"}
-            for item in report["attention"][:_ATTENTION_KEPT]
-        ]
+        report["attention"] = [_to_decide(step_id, item) for item in report["attention"][:_ATTENTION_KEPT]]
+    asked = _as_printed(events.get("decision_needed"))
+    if asked:
+        asked["decision"] = _answer(step_id, asked["code"], None)
     return {
         "status": run["status"],
         "finished_at": run["finished_at"],
         "report": report,
         "error": error,
-        "decision_needed": _as_printed(events.get("decision_needed")),
+        "decision_needed": asked,
     }
 
 
 def blocking_code(step_id: str, run: dict[str, Any], decisions: list[dict[str, Any]]) -> str | None:
     """Why a run that has ended does not complete its step, or None when it does.
 
-    A knowledge base or a file that was not copied blocks the step until the admin accepts it.
+    A knowledge base or a file that was not copied blocks the step until the admin accepts it, with the
+    decision the record gave it. A decision that answers another code is on record and accepts nothing.
+    Nor does one that was made about the report of an earlier run: each run asks again.
     """
     if run["error"]:
         return run["error"]["code"]
@@ -142,12 +159,35 @@ def blocking_code(step_id: str, run: dict[str, Any], decisions: list[dict[str, A
         failed = report["attention"]
         # The record may hold fewer items than failed. The ones it does not hold cannot have been accepted.
         if report["counts"]["failed"] <= len(failed):
-            accepted = {decision["subject"] for decision in decisions if decision["step"] == step_id}
-            failed = [item for item in failed if item["subject"] not in accepted]
+            # An option names no item, so it accepts none: it changes the next run.
+            accepted = [
+                {"kind": made["kind"], "subject": made["subject"]}
+                for made in decisions
+                if made["step"] == step_id and made["subject"] and made.get("run_id") == run["run_id"]
+            ]
+            failed = [item for item in failed if item["decision"] not in accepted]
         return failed[0]["code"] if failed else None
     codes = [problem["code"] for problem in report["problems"]]
     # Rows that point at nothing can be left out on the admin's word, once nothing else stands in the way.
     return next((code for code in codes if code != "orphans_droppable"), codes[0])
+
+
+def _to_decide(step_id: str, item: dict[str, Any]) -> dict[str, Any]:
+    """A failed item as the record keeps it: named, and with the decision that answers its code.
+
+    Its name is a knowledge base's id, or a file's owner and name.
+    """
+    subject = item.get("kb_id") or f"{item['owner']}/{item['file_name']}"
+    return {**item, "subject": subject, "decision": _answer(step_id, item["code"], subject)}
+
+
+def _answer(step_id: str, code: str, subject: str | None) -> dict[str, str | None] | None:
+    """The decision that answers a code, as a request to decide names it, or None when none does."""
+    for kind, decision in DECISIONS.items():
+        if decision["step"] == step_id and code in decision["codes"]:
+            # An option is for the whole step. Only accepting an item names one.
+            return {"kind": kind, "subject": None if decision["option"] else subject}
+    return None
 
 
 def _as_printed(event: dict[str, Any] | None) -> dict[str, Any] | None:
