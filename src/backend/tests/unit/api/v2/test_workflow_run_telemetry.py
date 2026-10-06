@@ -262,3 +262,4 @@ async def test_sync_success_emits_successful_run_telemetry(monkeypatch):
 
     payload = telemetry.log_package_run.await_args.args[0]
     assert payload.run_success is True
+    assert payload.run_completed_at is not None

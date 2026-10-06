@@ -1,13 +1,15 @@
-"""Telemetry payload schemas.
+"""Compatibility payload schemas for the removed product analytics service.
 
-All payloads are sent as URL query parameters via GET requests (Scarf pixel
-tracking), so keep fields small. Max URL size is ~2KB.
+The schemas remain importable for hosts and extensions that still construct
+historical payloads. LFX does not transport or export these payloads.
 """
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+# Retained for callers that used this historical size constant when shaping
+# payloads. There is no longer an outbound URL transport in LFX.
 MAX_TELEMETRY_URL_SIZE = 2048
 
 
@@ -49,7 +51,7 @@ class ExceptionPayload(BasePayload):
 
 
 class MCPToolPayload(BasePayload):
-    """Tracks an MCP tool invocation. Kept small for URL query params."""
+    """Historical MCP tool payload retained for compatibility."""
 
     tool: str
     success: bool

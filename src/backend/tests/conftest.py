@@ -583,7 +583,6 @@ async def client_fixture(
             monkeypatch.setenv("LANGFLOW_KNOWLEDGE_BASES_DIR", str(db_path.parent / "knowledge"))
             monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
             monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
-            monkeypatch.setenv("DO_NOT_TRACK", "true")
             # Triggers: keep the leased dispatcher out of the test app. It is a
             # background loop that polls the database, so leaving it on would
             # race any test that drives the dispatcher directly and would add a

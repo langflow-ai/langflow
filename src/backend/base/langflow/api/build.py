@@ -51,16 +51,10 @@ from langflow.services.deps import (
     get_job_service,
     get_memory_base_service,
     get_task_service,
-    get_telemetry_service,
     session_scope,
 )
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
 from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
-from langflow.services.telemetry.schema import (
-    ComponentInputsPayload,
-    ComponentPayload,
-    PlaygroundPayload,
-)
 
 # Interval (seconds) at which the streaming response's heartbeat refreshes
 # the polling-watchdog activity key. Exposed at module scope so tests can
@@ -171,28 +165,6 @@ def _rerun_non_input_predecessors(graph: Graph, vertex_id: str) -> None:
             pred.built = False
         if will_run:
             stack.extend(graph.predecessor_map.get(pred_id, []))
-
-
-def _log_component_input_telemetry(
-    vertex,
-    vertex_id: str,
-    component_run_id: str,
-    background_tasks: BackgroundTasks,
-    telemetry_service,
-) -> None:
-    """Log component input telemetry if available."""
-    if hasattr(vertex, "custom_component") and vertex.custom_component:
-        inputs_dict = vertex.custom_component.get_telemetry_input_values()
-        if inputs_dict:
-            background_tasks.add_task(
-                telemetry_service.log_package_component_inputs,
-                ComponentInputsPayload(
-                    component_run_id=component_run_id,
-                    component_id=vertex_id,
-                    component_name=vertex_id.split("-")[0],
-                    component_inputs=inputs_dict,
-                ),
-            )
 
 
 async def start_flow_build(
@@ -507,7 +479,6 @@ async def _generate_flow_events(
     builds by that id. Defaults to a fresh uuid for the live build path.
     """
     chat_service = get_chat_service()
-    telemetry_service = get_telemetry_service()
     if not inputs:
         inputs = InputValueRequest(session=str(flow_id))
 
@@ -594,8 +565,6 @@ async def _generate_flow_events(
     async def build_graph_and_get_order() -> tuple[list[str], list[str], Graph]:
         if resume is not None and job_id is not None:
             return await build_resumed_graph_and_get_order()
-        start_time = time.perf_counter()
-        components_count = 0
         graph = None
         # The durable HITL path keys the checkpoint by job_id, so run_id MUST equal job_id when set;
         # otherwise honor an explicit run_id (background path) or mint a fresh uuid (foreground).
@@ -635,11 +604,9 @@ async def _generate_flow_events(
             # Now vertices is a list of lists
             # We need to get the id of each vertex
             # and return the same structure but only with the ids
-            components_count = len(graph.vertices)
             vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
 
             await chat_service.set_cache(flow_id_str, graph)
-            await log_telemetry(start_time, components_count, run_id=build_run_id, success=True)
 
         except TweakRefusedError:
             # A refused tweak is a caller error, not a build failure, so it must
@@ -652,38 +619,11 @@ async def _generate_flow_events(
             # Enforcement still holds: the tweak is never applied.
             raise
         except Exception as exc:
-            await log_telemetry(
-                start_time,
-                components_count,
-                run_id=build_run_id,
-                success=False,
-                error_message=str(exc),
-            )
-
             if isinstance(exc, LocalFileAccessError) or "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             await logger.aexception("Error checking build status: " + str(exc))
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return first_layer, vertices_to_run, graph
-
-    async def log_telemetry(
-        start_time: float,
-        components_count: int,
-        *,
-        run_id: str | None = None,
-        success: bool,
-        error_message: str | None = None,
-    ):
-        background_tasks.add_task(
-            telemetry_service.log_package_playground,
-            PlaygroundPayload(
-                playground_seconds=int(time.perf_counter() - start_time),
-                playground_component_count=components_count,
-                playground_success=success,
-                playground_error_message=str(error_message) if error_message else "",
-                playground_run_id=run_id,
-            ),
-        )
 
     async def create_graph(fresh_session, flow_id_str: str, flow_name: str | None) -> Graph:
         if inputs is not None and getattr(inputs, "session", None) is not None:
@@ -750,7 +690,6 @@ async def _generate_flow_events(
         next_runnable_vertices = []
         top_level_vertices = []
         start_time = time.perf_counter()
-        error_message = None
 
         try:
             vertex = graph.get_vertex(vertex_id)
@@ -789,7 +728,6 @@ async def _generate_flow_events(
                     tb = traceback.format_exc()
                     await logger.aexception("Error building Component")
                     params = format_exception_message(exc)
-                error_message = params
                 client_error = error_details_for_client(
                     exc,
                     expose_details=expose_error_details,
@@ -872,40 +810,9 @@ async def _generate_flow_events(
                 data=result_data_response,
             )
 
-            # Extract and send component input telemetry (separate payload)
-            _log_component_input_telemetry(vertex, vertex_id, graph.run_id, background_tasks, telemetry_service)
-
-            # Send component execution telemetry
-            background_tasks.add_task(
-                telemetry_service.log_package_component,
-                ComponentPayload(
-                    component_name=vertex_id.split("-")[0],
-                    component_id=vertex_id,
-                    component_seconds=int(time.perf_counter() - start_time),
-                    component_success=valid,
-                    component_error_message=error_message,
-                    component_run_id=graph.run_id,
-                ),
-            )
         except GraphPausedException:
             raise
         except Exception as exc:
-            if "vertex" in locals():
-                # Extract and send component input telemetry even on error (separate payload)
-                _log_component_input_telemetry(vertex, vertex_id, graph.run_id, background_tasks, telemetry_service)
-
-            # Send component execution telemetry (error case)
-            background_tasks.add_task(
-                telemetry_service.log_package_component,
-                ComponentPayload(
-                    component_name=vertex_id.split("-")[0],
-                    component_id=vertex_id,
-                    component_seconds=int(time.perf_counter() - start_time),
-                    component_success=False,
-                    component_error_message=str(exc),
-                    component_run_id=graph.run_id,
-                ),
-            )
             await logger.aexception("Error building Component")
             message = parse_exception(exc)
             raise HTTPException(status_code=500, detail=message) from exc

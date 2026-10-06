@@ -164,13 +164,12 @@ These checks abort boot when they fail:
 
 ### Degraded checks
 
-These checks report reduced capability. Telemetry and MCP only `warn`. Cache and the shared job queue abort boot if you selected an external backend that is unreachable.
+These checks report reduced capability. MCP only warns. Cache and the shared job queue abort boot if you selected an external backend that is unreachable.
 
 | Check | `ok` | `warn` | `fail` (aborts) |
 |-------|------|--------|-----------------|
 | Cache | `LANGFLOW_CACHE_TYPE=redis` and Redis is reachable | In-memory default (`async` or `memory`). Caches are not shared across replicas. | Redis selected but unreachable. Unset `LANGFLOW_CACHE_TYPE` to boot with the in-memory fallback. |
 | Shared queue | `LANGFLOW_JOB_QUEUE_TYPE=redis` and Redis is reachable | In-process default (`asyncio`). Jobs stay on a single pod. | Redis selected but unreachable. Unset `LANGFLOW_JOB_QUEUE_TYPE` to boot with the in-process fallback. |
-| Telemetry | Product telemetry is enabled | `LANGFLOW_DO_NOT_TRACK` is set | Never fails |
 | MCP serving posture | MCP is disabled, or the serving knobs below match the multi-tenant values | One or more knobs are still at a single-tenant default | Never fails |
 
 If this plane does not serve MCP, set `LANGFLOW_MCP_SERVER_ENABLED=false`. Otherwise, production preflight expects these values when MCP is enabled:

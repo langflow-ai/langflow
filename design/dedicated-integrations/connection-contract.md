@@ -395,19 +395,18 @@ model-provider policy); JSON-schema only (the resolver and the picker need the s
 
 ## 9. Telemetry hooks
 
-**Decision: reuse tracing spans for latency and add one small telemetry payload for the error class, with no
-identifiers.**
+**Current behavior: customer-configured tracing records latency and the normalized error class, with no
+connection identifiers. Scarf product analytics has been removed.**
 
-- `IntegrationActionPayload(BasePayload)` in `src/lfx/src/lfx/services/telemetry/schema.py` (mirrored in
-  langflow-base): `provider`, `capability`, `ms`, `success`, `error_code` (from `INTEGRATION_ERROR_CODES` or
-  `other`), `owner_kind`, `principal_kind`. Fits the 2 KB Scarf GET budget like `MCPToolPayload`. Never: connection
-  id, account, handle, token.
+- Integration operations do not schedule or send product-analytics payloads. Customer-configured tracing
+  retains the closed-vocabulary provider, capability and error attributes. Never include connection ids,
+  accounts, handles or tokens.
 - `lfx/integrations/telemetry.py: integration_action(component, *, provider, capability, owner_kind)` is an async
-  context manager that measures latency, normalizes and re-raises via section 7, emits the payload, opens a child
+  context manager that measures latency, normalizes and re-raises via section 7, opens a child
   OTel span under tracer `APPLICATION_TRACER_NAME` (`observability.py:78`, so it passes the export allowlist) with
   closed-vocabulary attributes `integration.provider`, `integration.capability`, `integration.error_code`,
   `integration.owner_kind`, and appends a redacted log to the current component trace via `add_log` so LangSmith and
-  Langfuse users see it. `track_in_telemetry` gating (`component.py:705`) already excludes the input by type.
+  Langfuse users see it. The legacy `track_in_telemetry` input metadata no longer triggers analytics collection.
 
 ## 10. Bundle API impact
 

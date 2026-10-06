@@ -68,7 +68,6 @@ assert module.mcp.settings is not None
         [*(str(path) for path in source_paths), environment.get("PYTHONPATH", "")]
     )
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
-    environment["DO_NOT_TRACK"] = "true"
 
     completed = subprocess.run(  # noqa: S603
         [sys.executable, "-c", script, module_name],

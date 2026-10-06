@@ -2167,9 +2167,6 @@ async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
     mock_chat.get_cache = AsyncMock(return_value=None)
     mock_chat.set_cache = AsyncMock()
 
-    mock_telemetry = MagicMock()
-    mock_telemetry.log_package_playground = MagicMock()
-
     @asynccontextmanager
     async def _fake_session_scope():
         yield MagicMock()
@@ -2180,7 +2177,6 @@ async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
     mock_job_svc.create_job = AsyncMock(side_effect=Exception("skip in test"))
 
     monkeypatch.setattr("langflow.api.build.get_chat_service", lambda: mock_chat)
-    monkeypatch.setattr("langflow.api.build.get_telemetry_service", lambda: mock_telemetry)
     monkeypatch.setattr("langflow.api.build.session_scope", _fake_session_scope)
     monkeypatch.setattr(
         "langflow.api.build.build_graph_from_db",

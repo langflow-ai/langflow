@@ -1,4 +1,4 @@
-"""Abstract base class for telemetry services."""
+"""Compatibility interface for the removed LFX product analytics service."""
 
 from __future__ import annotations
 
@@ -12,10 +12,10 @@ if TYPE_CHECKING:
 
 
 class BaseTelemetryService(Service, ABC):
-    """Abstract base class for telemetry services.
+    """Historical telemetry interface retained for host and extension compatibility.
 
-    Defines the minimal interface that all telemetry service implementations
-    must provide, whether minimal (LFX) or full-featured (Langflow).
+    LFX no longer collects or transports product analytics. Operational tracing
+    and metrics use the OpenTelemetry APIs in :mod:`lfx.observability`.
     """
 
     @abstractmethod
@@ -25,11 +25,11 @@ class BaseTelemetryService(Service, ABC):
 
     @abstractmethod
     async def send_telemetry_data(self, payload: BaseModel, path: str | None = None) -> None:
-        """Send telemetry data to the telemetry backend.
+        """Handle a historical telemetry payload without requiring a transport.
 
         Args:
-            payload: The telemetry payload to send
-            path: Optional path to append to the base URL
+            payload: Historical payload accepted for compatibility
+            path: Historical path argument accepted for compatibility
         """
 
     @abstractmethod
@@ -41,7 +41,7 @@ class BaseTelemetryService(Service, ABC):
         """
 
     async def log_integration_action(self, payload: BaseModel) -> None:
-        """Enqueue an integration event; older host implementations safely omit it."""
+        """Accept a historical integration event without collecting it."""
 
     @abstractmethod
     async def log_package_shutdown(self) -> None:

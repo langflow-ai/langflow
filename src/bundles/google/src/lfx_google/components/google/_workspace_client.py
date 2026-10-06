@@ -16,7 +16,7 @@ components share one behaviour for four things the SDK does not give us:
   :mod:`lfx.integrations.errors` codes through a provider normalizer registered
   once at import time, so the client sees ``scope-missing`` rather than a Google
   payload that may echo request content.
-* **Telemetry.** Actions run inside ``integration_action`` with the resolved
+* **Observability.** Actions run inside ``integration_action`` with the resolved
   credential's ``owner_kind``, which is why the credential is resolved before the
   span opens rather than lazily inside it.
 
@@ -328,7 +328,7 @@ async def workspace_action(
     version: str,
     field: str = "connection",
 ) -> AsyncIterator[WorkspaceService]:
-    """Resolve the component's connection and yield a telemetry-wrapped client.
+    """Resolve the component's connection and yield an observability-wrapped client.
 
     The credential is resolved *before* the telemetry span opens because the span
     records ``owner_kind``, which only exists once the resolver has answered.

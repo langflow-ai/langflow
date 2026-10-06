@@ -2,7 +2,7 @@
 
 Each component declares one manifest capability. The base turns that into a
 credential lease, checks the active capability requirements,
-and wraps the provider call in the integration telemetry boundary.
+and wraps the provider call in the configured integration observability boundary.
 
 This module is also the bundle's import facade for the ``lfx`` field types.
 ``lfx.custom.custom_component.component`` must be imported before ``lfx.io``

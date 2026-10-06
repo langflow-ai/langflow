@@ -31,11 +31,6 @@ async def test_generate_flow_events_sanitizes_cooperative_and_queue_fallback_err
     monkeypatch.setattr(build, "get_chat_service", lambda: SimpleNamespace())
     monkeypatch.setattr(
         build,
-        "get_telemetry_service",
-        lambda: SimpleNamespace(log_package_playground=AsyncMock()),
-    )
-    monkeypatch.setattr(
-        build,
         "build_graph_from_data",
         AsyncMock(side_effect=RuntimeError(sensitive_detail)),
     )

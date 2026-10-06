@@ -76,7 +76,6 @@ from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
     get_settings_service,
-    get_telemetry_service,
     session_scope,
 )
 from langflow.services.job_queue.service import (
@@ -86,7 +85,6 @@ from langflow.services.job_queue.service import (
 )
 from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.rate_limit import check_rate_limit
-from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 from langflow.utils.flow_secrets import HiddenFieldMetadataError, restore_redacted_flow_values
 
 if TYPE_CHECKING:
@@ -231,6 +229,8 @@ async def retrieve_vertices_order(
     Raises:
         HTTPException: If there is an error checking the build status.
     """
+    del background_tasks
+
     # This deprecated editor route is owner-only. Supported full-flow routes
     # provide public execution without exposing the flow-keyed graph cache.
     stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == current_user.id)
@@ -247,9 +247,6 @@ async def retrieve_vertices_order(
     )
 
     chat_service = get_chat_service()
-    telemetry_service = get_telemetry_service()
-    start_time = time.perf_counter()
-    components_count = None
     run_id = str(uuid.uuid4())
     execution_principal = execution_principal_for(
         FAMILY_INTERACTIVE_CHAT, user=current_user, flow_owner_id=flow.user_id
@@ -295,32 +292,12 @@ async def retrieve_vertices_order(
         # Now vertices is a list of lists
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
-        components_count = len(graph.vertices)
         vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
         await chat_service.set_cache(str(flow_id), graph)
-        background_tasks.add_task(
-            telemetry_service.log_package_playground,
-            PlaygroundPayload(
-                playground_seconds=int(time.perf_counter() - start_time),
-                playground_component_count=components_count,
-                playground_success=True,
-                playground_run_id=run_id,
-            ),
-        )
         return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
     except Exception as exc:
-        background_tasks.add_task(
-            telemetry_service.log_package_playground,
-            PlaygroundPayload(
-                playground_seconds=int(time.perf_counter() - start_time),
-                playground_component_count=components_count,
-                playground_success=False,
-                playground_error_message=str(exc),
-                playground_run_id=run_id,
-            ),
-        )
         # A policy refusal already carries its status; re-wrapping it as 500 would report
-        # an authorization decision as a server fault. Telemetry above still records it.
+        # an authorization decision as a server fault.
         if isinstance(exc, HTTPException):
             raise
         if "stream or streaming set to True" in str(exc):
@@ -678,13 +655,11 @@ async def build_vertex(
     sanitized_data = await _trusted_stored_graph(flow.data, is_superuser=current_user.is_superuser)
 
     chat_service = get_chat_service()
-    telemetry_service = get_telemetry_service()
     flow_id_str = str(flow_id)
 
     next_runnable_vertices = []
     top_level_vertices = []
     start_time = time.perf_counter()
-    error_message = None
     run_id = None
     execution_principal = execution_principal_for(
         FAMILY_INTERACTIVE_CHAT, user=current_user, flow_owner_id=flow.user_id
@@ -793,7 +768,6 @@ async def build_vertex(
                 params = format_exception_message(exc)
             message = {"errorMessage": params, "stackTrace": tb}
             valid = False
-            error_message = params
             output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
             outputs = {output_label: OutputValue(message=message, type="error")}
             result_data_response = ResultDataResponse(results={}, outputs=outputs)
@@ -848,31 +822,9 @@ async def build_vertex(
             id=vertex.id,
             data=result_data_response,
         )
-        background_tasks.add_task(
-            telemetry_service.log_package_component,
-            ComponentPayload(
-                component_name=vertex_id.split("-")[0],
-                component_id=vertex_id,
-                component_seconds=int(time.perf_counter() - start_time),
-                component_success=valid,
-                component_error_message=error_message,
-                component_run_id=run_id,
-            ),
-        )
     except HTTPException:
         raise
     except Exception as exc:
-        background_tasks.add_task(
-            telemetry_service.log_package_component,
-            ComponentPayload(
-                component_name=vertex_id.split("-")[0],
-                component_id=vertex_id,
-                component_seconds=int(time.perf_counter() - start_time),
-                component_success=False,
-                component_error_message=str(exc),
-                component_run_id=run_id if "run_id" in locals() else None,
-            ),
-        )
         if isinstance(exc, CustomComponentValidationError):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         await logger.aexception("Error building Component")

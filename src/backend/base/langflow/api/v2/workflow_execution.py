@@ -23,6 +23,7 @@ import json
 import time
 from collections.abc import AsyncIterator
 from copy import deepcopy
+from datetime import datetime, timezone
 from typing import Final
 from uuid import UUID, uuid4
 
@@ -553,7 +554,7 @@ async def _stream_event_frames(
             await run_task
         await queue.aclose()
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
-        # Scarf telemetry pipeline both see every v2 workflow run.
+        # Local run-event consumers and OpenTelemetry both see every v2 workflow run.
         # Mirrors the v1 endpoints.py instrumentation for the streaming path.
         # Skip on: pause (run is resumable), client disconnect (not a failure).
         if not stream_paused and not _stream_cancelled:
@@ -571,6 +572,7 @@ async def _stream_event_frames(
                             run_success=_run_success,
                             run_error_message="" if _run_success else str(drive_error or "workflow error"),
                             run_id=run_id,
+                            run_completed_at=datetime.now(timezone.utc),
                         )
                     )
             except Exception:  # noqa: BLE001
@@ -1018,7 +1020,7 @@ async def execute_sync_workflow(
         return error_response
     finally:
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
-        # Scarf telemetry pipeline both see every v2 sync workflow run.
+        # Local run-event consumers and OpenTelemetry both see every v2 sync workflow run.
         # Mirrors the _stream_event_frames instrumentation for the SSE path.
         if not _sync_run_paused:
             try:
@@ -1034,6 +1036,7 @@ async def execute_sync_workflow(
                             run_success=_sync_run_success,
                             run_error_message="" if _sync_run_success else (_sync_run_error or "workflow error"),
                             run_id=str(job_id),
+                            run_completed_at=datetime.now(timezone.utc),
                         )
                     )
             except Exception:  # noqa: BLE001

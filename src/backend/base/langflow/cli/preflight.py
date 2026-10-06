@@ -7,8 +7,8 @@ infrastructure checks in the CLI parent process *before* any worker is spawned:
 - **Required** checks (database, file storage, encryption secret key, pgVector)
   abort the boot when they fail — the process exits non-zero and no worker
   starts, so a misconfigured production deployment never comes up "half working".
-- **Degraded** checks (telemetry, cache, shared queue) surface reduced
-  capabilities. Telemetry only ever warns. Cache and shared queue warn when they
+- **Degraded** checks (cache, shared queue) surface reduced capabilities. Cache
+  and shared queue warn when they
   fall back to their in-process default, but *abort* when an external backend is
   explicitly selected (e.g. LANGFLOW_CACHE_TYPE=redis) yet is unreachable — a
   deployment that asked for a shared backend and did not get one is misconfigured,
@@ -408,16 +408,6 @@ async def probe_mcp_posture(settings_service: SettingsService) -> CheckResult:
     )
 
 
-async def probe_telemetry(settings_service: SettingsService) -> CheckResult:
-    """Config-only telemetry check (no outbound network call at boot)."""
-    if settings_service.settings.do_not_track:
-        return CheckResult(
-            "warn",
-            "disabled (LANGFLOW_DO_NOT_TRACK) — usage analytics will not be reported",
-        )
-    return CheckResult("ok", "enabled")
-
-
 async def probe_cache(settings_service: SettingsService) -> CheckResult:
     """Cache reachability.
 
@@ -520,7 +510,6 @@ REQUIRED_CHECKS: list[PreflightCheck] = [
 
 DEGRADED_CHECKS: list[PreflightCheck] = [
     PreflightCheck("mcp_posture", "MCP serving posture", "degraded", probe_mcp_posture),
-    PreflightCheck("telemetry", "Telemetry", "degraded", probe_telemetry),
     PreflightCheck("cache", "Cache service", "degraded", probe_cache),
     PreflightCheck("shared_queue", "Shared queue (Redis)", "degraded", probe_shared_queue),
 ]

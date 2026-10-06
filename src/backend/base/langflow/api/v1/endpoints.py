@@ -5,6 +5,7 @@ import json
 import time
 from collections.abc import AsyncGenerator, Collection, Mapping
 from copy import deepcopy
+from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID, uuid4
@@ -735,6 +736,7 @@ async def simple_run_flow_task(
                     run_success=True,
                     run_error_message="",
                     run_id=run_id,
+                    run_completed_at=datetime.now(timezone.utc),
                 )
             )
         return result  # noqa: TRY300
@@ -753,6 +755,7 @@ async def simple_run_flow_task(
                     run_success=False,
                     run_error_message=str(exc),
                     run_id=run_id,
+                    run_completed_at=datetime.now(timezone.utc),
                 )
             )
         return None
@@ -1095,6 +1098,7 @@ async def _run_flow_internal(
                 run_success=True,
                 run_error_message="",
                 run_id=run_id,
+                run_completed_at=datetime.now(timezone.utc),
             ),
         )
 
@@ -1107,6 +1111,7 @@ async def _run_flow_internal(
                 run_success=False,
                 run_error_message=str(exc),
                 run_id=run_id,
+                run_completed_at=datetime.now(timezone.utc),
             ),
         )
         if "badly formed hexadecimal UUID string" in str(exc):
@@ -1161,6 +1166,7 @@ async def _run_flow_internal(
                 run_success=False,
                 run_error_message=str(exc),
                 run_id=run_id,
+                run_completed_at=datetime.now(timezone.utc),
             ),
         )
         # A connection the caller may not use is not a server fault: keep the

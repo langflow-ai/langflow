@@ -3,6 +3,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
 from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
@@ -942,6 +943,7 @@ async def create_response(
                 run_success=False,
                 run_error_message=str(exc),
                 run_id=None,  # OpenAI endpoint doesn't use simple_run_flow
+                run_completed_at=datetime.now(timezone.utc),
             ),
         )
 
@@ -969,6 +971,7 @@ async def create_response(
                 run_success=True,
                 run_error_message="",
                 run_id=None,  # OpenAI endpoint doesn't use simple_run_flow
+                run_completed_at=datetime.now(timezone.utc),
             ),
         )
 

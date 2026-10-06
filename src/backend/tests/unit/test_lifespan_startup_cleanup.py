@@ -30,15 +30,8 @@ async def test_startup_failure_does_not_mask_error_with_unbound_temp_dirs(monkey
     async def _failing_initialize_services(*_args, **_kwargs):
         raise sentinel
 
-    telemetry_calls: list[tuple[str, str]] = []
-
-    async def _record_telemetry(exc, context):
-        telemetry_calls.append((context, type(exc).__name__))
-
     # Force an early startup failure (before bundle loading binds temp_dirs).
     monkeypatch.setattr(main_module, "initialize_services", _failing_initialize_services)
-    # Capture both the primary failure and any secondary cleanup failure.
-    monkeypatch.setattr(main_module, "log_exception_to_telemetry", _record_telemetry)
     # Replace destructive/heavy shutdown calls so the finally block runs in
     # isolation without tearing down services shared by the wider test session.
     monkeypatch.setattr(main_module, "teardown_services", AsyncMock())
@@ -51,12 +44,7 @@ async def test_startup_failure_does_not_mask_error_with_unbound_temp_dirs(monkey
     # The real startup error propagates unchanged...
     assert exc_info.value is sentinel
 
-    # ...and the shutdown cleanup itself did not raise. A crash inside the
-    # ``finally`` block is reported via ``log_exception_to_telemetry`` under the
-    # "lifespan_cleanup" context, so its absence proves temp_dirs was bound.
-    cleanup_failures = [context for context, _ in telemetry_calls if context == "lifespan_cleanup"]
-    assert cleanup_failures == [], f"shutdown cleanup raised during startup failure: {telemetry_calls}"
-    assert ("lifespan_cleanup", "UnboundLocalError") not in telemetry_calls
+    # ...and the shutdown cleanup itself did not raise, proving temp_dirs was bound.
 
 
 async def test_environment_import_failure_does_not_abort_worker_startup(monkeypatch):
@@ -78,7 +66,6 @@ async def test_environment_import_failure_does_not_abort_worker_startup(monkeypa
     logger.exception = MagicMock()
     logger.adebug.side_effect = stop_after_services
     monkeypatch.setattr(main_module, "logger", logger)
-    monkeypatch.setattr(main_module, "log_exception_to_telemetry", AsyncMock())
     monkeypatch.setattr(main_module, "teardown_services", AsyncMock())
     monkeypatch.setattr(main_module, "cleanup_mcp_sessions", AsyncMock())
     with pytest.raises(RuntimeError, match="reached next startup step") as exc:
@@ -98,7 +85,6 @@ async def test_storage_shutdown_failure_does_not_skip_later_cleanup(monkeypatch,
     monkeypatch.setattr(main_module, "logger", warning_logger)
     sentinel = RuntimeError("startup failed before bundle loading")
     monkeypatch.setattr(main_module, "initialize_services", AsyncMock(side_effect=sentinel))
-    monkeypatch.setattr(main_module, "log_exception_to_telemetry", AsyncMock())
     monkeypatch.setattr(main_module, "cleanup_mcp_sessions", AsyncMock())
     teardown = AsyncMock()
     lag_monitor = AsyncMock()

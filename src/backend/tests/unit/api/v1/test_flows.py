@@ -1702,8 +1702,8 @@ async def test_upload_flow_rejects_endpoint_name_with_dots(client: AsyncClient, 
     """Regression: endpoint_name containing dots must return 422, not 500.
 
     Previously a ValidationError from the Pydantic model escaped the handler
-    and hit the global exception_handler, producing a 500 and a Scarf telemetry
-    event.  The import path now wraps FlowCreate construction in a try/except
+    and hit the global exception_handler, producing a 500.  The import path
+    now wraps FlowCreate construction in a try/except
     and re-raises as HTTPException(422).
     """
     import json

@@ -7,7 +7,6 @@ import json
 import os
 import pkgutil
 import threading
-import time
 from concurrent.futures import Future
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
@@ -298,52 +297,6 @@ def _save_generated_index(modules_dict: dict) -> None:
         logger.debug(f"Saved generated component index to cache: {cache_path}")
     except Exception as e:  # noqa: BLE001
         logger.debug(f"Failed to save generated index to cache: {e}")
-
-
-async def _send_telemetry(
-    telemetry_service: Any,
-    index_source: str,
-    modules_dict: dict,
-    dev_mode: bool,  # noqa: FBT001
-    target_modules: list[str] | None,
-    start_time_ms: int,
-) -> None:
-    """Send telemetry about component index loading.
-
-    Args:
-        telemetry_service: Telemetry service instance (optional)
-        index_source: Source of the index ("builtin", "cache", or "dynamic")
-        modules_dict: Dictionary of loaded components
-        dev_mode: Whether dev mode is enabled
-        target_modules: List of filtered modules if any
-        start_time_ms: Start time in milliseconds
-    """
-    if not telemetry_service:
-        return
-
-    try:
-        # Calculate metrics
-        num_modules = len(modules_dict)
-        num_components = sum(len(components) for components in modules_dict.values())
-        load_time_ms = int(time.time() * 1000) - start_time_ms
-        filtered_modules = ",".join(target_modules) if target_modules else None
-
-        # Import the payload class dynamically to avoid circular imports
-        from langflow.services.telemetry.schema import ComponentIndexPayload
-
-        payload = ComponentIndexPayload(
-            index_source=index_source,
-            num_modules=num_modules,
-            num_components=num_components,
-            dev_mode=dev_mode,
-            filtered_modules=filtered_modules,
-            load_time_ms=load_time_ms,
-        )
-
-        await telemetry_service.log_component_index(payload)
-    except Exception as e:  # noqa: BLE001
-        # Don't fail component loading if telemetry fails
-        await logger.adebug(f"Failed to send component index telemetry: {e}")
 
 
 async def _load_from_index_or_cache(
@@ -654,7 +607,6 @@ async def _load_production_mode(
 
 async def import_langflow_components(
     settings_service: Optional["SettingsService"] = None,
-    telemetry_service: Any | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Asynchronously discovers and loads all built-in Langflow components.
 
@@ -665,26 +617,19 @@ async def import_langflow_components(
 
     Args:
         settings_service: Optional settings service to get custom index path
-        telemetry_service: Optional telemetry service to log component loading metrics
 
     Returns:
         A dictionary with a "components" key mapping top-level package names to their component templates.
     """
-    start_time_ms: int = int(time.time() * 1000)
     dev_mode_enabled, target_modules = _parse_dev_mode()
 
     # Strategy pattern: map dev mode state to loading function
     if dev_mode_enabled and not target_modules:
-        modules_dict, index_source = await _load_full_dev_mode()
+        modules_dict, _ = await _load_full_dev_mode()
     elif dev_mode_enabled and target_modules:
-        modules_dict, index_source = await _load_selective_dev_mode(settings_service, target_modules)
+        modules_dict, _ = await _load_selective_dev_mode(settings_service, target_modules)
     else:
-        modules_dict, index_source = await _load_production_mode(settings_service)
-
-    # Send telemetry
-    await _send_telemetry(
-        telemetry_service, index_source, modules_dict, dev_mode_enabled, target_modules, start_time_ms
-    )
+        modules_dict, _ = await _load_production_mode(settings_service)
 
     return {"components": modules_dict}
 
@@ -1513,14 +1458,13 @@ def _merge_component_sources(
 async def _initialize_component_cache(
     cache: ComponentCache,
     settings_service: "SettingsService",
-    telemetry_service: Any | None,
     initialization_future: Future[dict[str, Any]],
 ) -> None:
     """Build and atomically publish component state independently of any caller."""
     try:
         await logger.adebug("Building components cache")
 
-        langflow_components = await import_langflow_components(settings_service, telemetry_service)
+        langflow_components = await import_langflow_components(settings_service)
         custom_components_dict = await _determine_loading_strategy(settings_service)
         try:
             extension_components = await import_extension_components(settings_service)
@@ -1583,7 +1527,6 @@ async def _initialize_component_cache(
 
 async def get_and_cache_all_types_dict(
     settings_service: "SettingsService",
-    telemetry_service: Any | None = None,
 ) -> dict[str, Any]:
     """Retrieves and caches the complete dictionary of component types and templates.
 
@@ -1594,7 +1537,6 @@ async def get_and_cache_all_types_dict(
 
     Args:
         settings_service: Settings service instance
-        telemetry_service: Optional telemetry service for tracking component loading metrics
     """
     cache = component_cache
     with cache.state_lock:
@@ -1615,7 +1557,7 @@ async def get_and_cache_all_types_dict(
             cache.type_to_code = None
             cache.component_identity_index = None
             initialization_task = asyncio.create_task(
-                _initialize_component_cache(cache, settings_service, telemetry_service, initialization_future),
+                _initialize_component_cache(cache, settings_service, initialization_future),
                 name="lfx-component-cache-initialization",
             )
             cache.initialization_task = initialization_task
