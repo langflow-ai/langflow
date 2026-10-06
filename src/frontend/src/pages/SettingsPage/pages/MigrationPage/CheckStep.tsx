@@ -424,7 +424,7 @@ function CheckRow({
 }
 
 /** The backend's own words for a check, or a command's output, in English. */
-function Details({
+export function Details({
   text,
   title,
   open,

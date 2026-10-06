@@ -6,6 +6,8 @@ import en from "@/locales/en.json";
 import {
   acceptanceOf,
   CHECKS,
+  COPY_CODES,
+  copyProgress,
   destinationsRequest,
   groupChecks,
   JOB_STATES,
@@ -229,5 +231,54 @@ describe("pgDumpCommand", () => {
     expect(pgDumpCommand("db.internal/team/data")).toBe(
       "pg_dump -h db.internal -d team/data -F c -f langflow-backup.dump",
     );
+  });
+});
+
+describe("COPY_CODES", () => {
+  // The page builds these keys from the server's code, so the i18n check can't see one that is missing.
+  it("has a line for every reason the page words when a copy does not count", () => {
+    expect(Object.keys(COPY_CODES).sort()).toEqual([
+      "cancelled",
+      "count_mismatch",
+      "crashed",
+      "destination_changed",
+      "interrupted",
+      "orphans_no_rule",
+      "run_active",
+      "secrets_missing",
+      "target_not_empty",
+      "target_unreachable",
+      "value_rejected",
+    ]);
+    expect(
+      Object.values(COPY_CODES).filter(
+        (key) => !(`settings.migration.${key}` in en),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("copyProgress", () => {
+  const progress = (phase?: string, done = 0, total: number | null = null) =>
+    ({ event: "progress", seq: 1, phase, done, total }) as const;
+
+  it("says what a run is doing, and counts in the reader's language once it copies", () => {
+    expect(copyProgress("copy_database", progress("checking"), "en")).toEqual([
+      "copy.checking",
+      {},
+    ]);
+    expect(
+      copyProgress("copy_database", progress("preparing_target"), "en"),
+    ).toEqual(["copy.preparing", {}]);
+    expect(
+      copyProgress("copy_database", progress("copying", 1200, 57000), "en"),
+    ).toEqual(["copyDb.progress", { done: "1,200", total: "57,000" }]);
+    expect(
+      copyProgress("copy_database", progress("copying", 1200, 57000), "de"),
+    ).toEqual(["copyDb.progress", { done: "1.200", total: "57.000" }]);
+    // A line with no phase is one of the copy itself.
+    expect(
+      copyProgress("copy_database", progress(undefined, 3, 9), "en"),
+    ).toEqual(["copyDb.progress", { done: "3", total: "9" }]);
   });
 });
