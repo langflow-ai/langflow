@@ -624,9 +624,7 @@ async def decide(request: DecisionRequest, admin: Superuser) -> dict[str, Any]:
     """Record what the admin decided about a copy: an option for its next run, or a failed item to accept as it is."""
     decision = _decision(request)
     record = _read_record()
-    # Accepting an item is consent to one report, the one the step's latest run left. An option is for every run.
-    run_id = (record["steps"].get(request.step) or {}).get("run_id") if decision["subject"] else None
-    made = {**decision, "run_id": run_id, "by": admin.username, "at": _now()}
+    made = {**decision, "run_id": _reported_by(record, decision), "by": admin.username, "at": _now()}
     record["decisions"] = [*_other_decisions(record, decision), made]
     _write_record(record)
     await logger.ainfo(f"Migration: user_id={admin.id} decided {_named(decision)}")
@@ -653,6 +651,20 @@ def _decision(request: DecisionRequest) -> dict[str, Any]:
     if accepts_an_item and not request.subject:
         raise HTTPException(status_code=400, detail={"code": "subject_missing"})
     return {"step": request.step, "kind": request.kind, "subject": request.subject if accepts_an_item else None}
+
+
+def _reported_by(record: dict[str, Any], decision: dict[str, Any]) -> str | None:
+    """The run whose report an acceptance is consent to: the step's latest, when its report lists the item.
+
+    An option is for every run, so it names none. Nor does the acceptance of something the latest report
+    does not say, such as an item of a run that is still going: it is kept, and accepts nothing.
+    """
+    if not decision["subject"]:
+        return None
+    run = record["steps"].get(decision["step"]) or {}
+    listed = (run.get("report") or {}).get("attention") or []
+    answer = {"kind": decision["kind"], "subject": decision["subject"]}
+    return run["run_id"] if any(item["decision"] == answer for item in listed) else None
 
 
 def _other_decisions(record: dict[str, Any], decision: dict[str, Any]) -> list[dict[str, Any]]:
