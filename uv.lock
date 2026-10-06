@@ -33,6 +33,7 @@ members = [
     "lfx-amazon",
     "lfx-anthropic",
     "lfx-arxiv",
+    "lfx-atlascloud",
     "lfx-azure",
     "lfx-bundles",
     "lfx-cohere",
@@ -7677,6 +7678,7 @@ audio = [
 ]
 bundles = [
     { name = "lfx-arxiv" },
+    { name = "lfx-atlascloud" },
     { name = "lfx-bundles", extra = ["all-no-torch"] },
     { name = "lfx-confluent" },
     { name = "lfx-duckduckgo" },
@@ -7785,6 +7787,7 @@ requires-dist = [
     { name = "lfx-amazon", editable = "src/bundles/amazon" },
     { name = "lfx-anthropic", editable = "src/bundles/anthropic" },
     { name = "lfx-arxiv", marker = "extra == 'bundles'", editable = "src/bundles/arxiv" },
+    { name = "lfx-atlascloud", marker = "extra == 'bundles'", editable = "src/bundles/atlascloud" },
     { name = "lfx-azure", editable = "src/bundles/azure" },
     { name = "lfx-bundles", extras = ["all-no-torch"], marker = "extra == 'bundles'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-cohere", editable = "src/bundles/cohere" },
@@ -9142,6 +9145,23 @@ dependencies = [
 requires-dist = [
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-atlascloud"
+version = "0.1.0"
+source = { editable = "src/bundles/atlascloud" }
+dependencies = [
+    { name = "langchain-openai" },
+    { name = "lfx" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-openai", specifier = ">=1.1.6" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "requests", specifier = ">=2.32.0" },
 ]
 
 [[package]]
