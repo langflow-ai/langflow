@@ -55,10 +55,10 @@ def create_model_metadata(
     )
 
 
-LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
+LIVE_MODEL_PROVIDERS: set[str] = {"Ollama", "IBM WatsonX", "OpenRouter"}
 
 # Live only with a custom endpoint configured; empty live fetch keeps the static catalog.
-CONDITIONAL_LIVE_MODEL_PROVIDERS: list[str] = ["OpenAI", "Azure AI Foundry"]
+CONDITIONAL_LIVE_MODEL_PROVIDERS: set[str] = {"OpenAI", "Azure AI Foundry"}
 
 # Catalog defaults are suggestions only; users must explicitly enable deployment names.
 EXPLICIT_ENABLE_ONLY_PROVIDERS: frozenset[str] = frozenset({"Azure AI Foundry"})

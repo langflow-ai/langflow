@@ -278,7 +278,7 @@ def build_live_only_provider_entries(
     instead of hiding the provider.
     """
     entries: list[dict] = []
-    for provider in LIVE_MODEL_PROVIDERS:
+    for provider in sorted(LIVE_MODEL_PROVIDERS):
         if provider not in enabled_providers or provider in existing_provider_names:
             continue
         installed = list_installed_tool_calling_models(provider, user_id)

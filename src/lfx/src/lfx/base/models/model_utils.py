@@ -34,6 +34,7 @@ from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import unwrap_secret_value
 from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
+from lfx.utils.user_id import has_user_id, to_user_uuid
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
@@ -49,18 +50,6 @@ MIN_DEFAULT_MODELS = 5
 _discovery_variables: ContextVar[tuple[str, Mapping[str, str | None]] | None] = ContextVar(
     "live_model_variables", default=None
 )
-
-_LIVE_DISCOVERY_VARIABLES = {
-    "Ollama": ("OLLAMA_BASE_URL",),
-    "OpenAI": ("OPENAI_BASE_URL", "OPENAI_API_KEY"),
-    "IBM WatsonX": ("WATSONX_URL",),
-    "OpenRouter": ("OPENROUTER_API_KEY",),
-    "Azure AI Foundry": (
-        "AZURE_AI_FOUNDRY_ENDPOINT",
-        "AZURE_AI_FOUNDRY_API_KEY",
-        "AZURE_AI_FOUNDRY_API_VERSION",
-    ),
-}
 
 # Ollama model lists are cached in-process for a short window so that:
 # (1) overlapping ``/api/v1/models`` requests don't all serialize through
@@ -509,40 +498,53 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
 
 async def aget_provider_variable_value(user_id: UUID | str | None, variable_key: str) -> str | None:
     """Resolve discovery inputs on the caller loop with the existing fallback rules."""
-    if user_id is None or (isinstance(user_id, str) and user_id == "None"):
+    if not has_user_id(user_id):
         return _environment_variable_value(variable_key)
 
-    async def _get_variable():
-        async with session_scope() as session:
-            variable_service = get_variable_service()
-            if variable_service is None:
-                return None
+    value = None
+    async with session_scope() as session:
+        variable_service = get_variable_service()
+        if variable_service is not None:
             try:
-                return await variable_service.get_variable(
-                    user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                value = await variable_service.get_variable(
+                    user_id=to_user_uuid(user_id),
                     name=variable_key,
                     field="",
                     session=session,
                 )
             except ValueError:
-                # ``get_variable_object`` raises ValueError on missing var;
-                # treat absence as "no value" rather than propagating.
-                return None
-
-    return _to_str(await _get_variable()) or _environment_variable_value(variable_key)
+                # Missing or unreadable variables are unavailable for discovery.
+                value = None
+    return _to_str(value) or _environment_variable_value(variable_key)
 
 
-async def aget_live_model_variables(user_id, enabled_providers, provider_metadata) -> dict[str, str | None]:
+async def aget_live_model_variables(
+    user_id: UUID | str | None,
+    enabled_providers: set[str],
+    provider_metadata: dict[str, Any],
+) -> dict[str, str | None]:
     """Read declared live-discovery variables before entering network/SDK workers."""
-    keys = set()
-    for provider in (*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS):
-        if provider not in enabled_providers:
-            continue
-        keys.update(_LIVE_DISCOVERY_VARIABLES.get(provider, ()))
-        for variable in provider_metadata.get(provider, {}).get("variables", []):
-            if key := variable.get("variable_key"):
-                keys.add(key)
-    return {key: await aget_provider_variable_value(user_id, key) for key in sorted(keys)}
+    keys: set[str] = set()
+    for provider in enabled_providers & (LIVE_MODEL_PROVIDERS | CONDITIONAL_LIVE_MODEL_PROVIDERS):
+        keys.update(
+            variable["variable_key"]
+            for variable in provider_metadata.get(provider, {}).get("variables", [])
+            if variable.get("variable_key")
+        )
+    if not keys:
+        return {}
+    values = {}
+    if has_user_id(user_id):
+        async with session_scope() as session:
+            variable_service = get_variable_service()
+            if variable_service is not None:
+                values = await variable_service.get_variables(
+                    user_id=to_user_uuid(user_id),
+                    names=keys,
+                    field="",
+                    session=session,
+                )
+    return {key: _to_str(values.get(key)) or _environment_variable_value(key) for key in sorted(keys)}
 
 
 def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -1373,10 +1375,7 @@ def _replace_with_live_models(provider_models, user_id, enabled_providers, model
     if not user_id or not enabled_providers:
         return provider_models
 
-    for provider in (*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS):
-        if provider not in enabled_providers:
-            continue
-
+    for provider in sorted(set(enabled_providers) & (LIVE_MODEL_PROVIDERS | CONDITIONAL_LIVE_MODEL_PROVIDERS)):
         if model_type is None:
             live_llm = get_live_models_for_provider(user_id, provider, "llm")
             live_emb = get_live_models_for_provider(user_id, provider, "embeddings")
