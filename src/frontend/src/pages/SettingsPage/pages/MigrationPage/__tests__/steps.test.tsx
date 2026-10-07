@@ -1215,6 +1215,47 @@ describe("Back up this instance", () => {
     expect(screen.getByRole("status")).toHaveTextContent(/^Downloaded .+\.$/);
   });
 
+  it.each([
+    ["while the step is on the page", false],
+    // Another step opened, or the admin went to another page. The server counts the copy as made either way.
+    ["after the step has left the page", true],
+  ])("hands the browser the copy that arrives %s", async (_when, gone) => {
+    let arrive: (response: object) => void = () => {};
+    jest.spyOn(api, "post").mockReturnValue(
+      new Promise((resolve) => {
+        arrive = resolve;
+      }) as never,
+    );
+    // jsdom has neither.
+    URL.createObjectURL = jest.fn(() => "blob:copy");
+    URL.revokeObjectURL = jest.fn();
+    const saved: string[] = [];
+    jest
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        saved.push(this.download);
+      });
+    const { unmount } = show(
+      <BackupStep migration={migration(sqlite, { pause: paused })} />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Download the database" }),
+    );
+    if (gone) unmount();
+    await act(async () =>
+      arrive({
+        data: new Blob(["copy"]),
+        headers: {
+          "content-disposition":
+            'attachment; filename="langflow-backup-20261006.db"',
+        },
+      }),
+    );
+
+    await waitFor(() => expect(saved).toEqual(["langflow-backup-20261006.db"]));
+  });
+
   it("shows a download that did not finish, and keeps waiting for one", async () => {
     jest.spyOn(api, "post").mockRejectedValue(unreachable());
     show(<BackupStep migration={migration(sqlite, { pause: paused })} />);

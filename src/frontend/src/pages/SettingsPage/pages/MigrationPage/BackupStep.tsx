@@ -16,7 +16,7 @@ const FIELD = "migration-backup-location";
 /** The body of "Back up this instance": a copy of the database, the folders to copy by hand, and where the admin keeps it all. */
 export function BackupStep({ migration }: { migration: MigrationState }) {
   const { t, i18n } = useTranslation();
-  const download = useDownloadDatabaseMutation();
+  const download = useDownloadDatabaseMutation(save);
   const confirm = useConfirmBackupMutation();
   const { instance, record } = migration;
   const sqlite = instance.database.type === "sqlite";
@@ -63,7 +63,7 @@ export function BackupStep({ migration }: { migration: MigrationState }) {
             variant="outline"
             className="w-full sm:w-fit"
             loading={download.isPending}
-            onClick={() => download.mutate(undefined, { onSuccess: save })}
+            onClick={() => download.mutate()}
             ignoreTitleCase
           >
             {t("settings.migration.backup.downloadDb")}
