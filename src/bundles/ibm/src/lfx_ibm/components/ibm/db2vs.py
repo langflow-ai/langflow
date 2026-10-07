@@ -985,21 +985,18 @@ class DB2VS(VectorStore):
         """Delete by vector IDs.
 
         Args:
-            ids: List of IDs to delete
+            ids: List of ids to delete, as returned by add_texts.
             **kwargs: Additional keyword arguments (unused)
-
-        Args:
-          self: An instance of the class
-          ids: List of ids to delete (already hashed from add_texts).
-          **kwargs
         """
         if ids is None:
             msg = "No ids provided to delete."
             raise ValueError(msg)
 
-        # IDs are already hashed and truncated from add_texts, use them directly
-        # Normalize to uppercase to match the format used in add_texts
-        normalized_ids = [_id.upper()[:16] for _id in ids]
+        # Use the ids exactly as add_texts stored them. add_texts only hashes and
+        # uppercases when it generates ids itself; caller-supplied ids (and ids taken
+        # from metadata) are stored verbatim after a `[:100]` truncation, so uppercasing
+        # and truncating to 16 here would build a predicate that matches no stored row.
+        normalized_ids = [str(_id)[:100] for _id in ids]
 
         # Constructing the SQL statement with individual placeholders
         placeholders = ", ".join(["?" for _ in range(len(normalized_ids))])
