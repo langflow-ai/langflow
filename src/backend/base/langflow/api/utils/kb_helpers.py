@@ -1019,4 +1019,6 @@ class KBIngestionHelper:
             api_base=None,
             _user_id=current_user.id,
         )
-        return embedding_model.build_embeddings()
+        # ``build_embeddings`` reads credentials from the database synchronously,
+        # so it runs in a worker thread to keep the event loop free.
+        return await asyncio.to_thread(embedding_model.build_embeddings)

@@ -564,7 +564,9 @@ class KnowledgeComponent(Component):
                 .get("template", {})
             )
             if "02_embedding_model" in dialog_template:
-                embedding_options = get_embedding_model_options(user_id=self.user_id)
+                # The catalog reads the user's provider settings from the database
+                # synchronously, so it runs in a worker thread.
+                embedding_options = await asyncio.to_thread(get_embedding_model_options, user_id=self.user_id)
                 dialog_template["02_embedding_model"]["options"] = embedding_options
         except Exception:  # noqa: BLE001
             self.log("Failed to populate embedding model options in dialog")
@@ -601,7 +603,10 @@ class KnowledgeComponent(Component):
                 if rejection:
                     raise ValueError(rejection)
 
-                embed_model = get_embeddings(
+                # ``get_embeddings`` is synchronous and reads credentials from the
+                # database, so it runs in a worker thread to keep this loop free.
+                embed_model = await asyncio.to_thread(
+                    get_embeddings,
                     model=model_selection,
                     user_id=self.user_id,
                 )
@@ -1146,7 +1151,8 @@ class KnowledgeComponent(Component):
                 embedding_provider = stored_metadata.get("embedding_provider", "Unknown")
                 if embedding_model_name:
                     try:
-                        all_options = get_embedding_model_options(user_id=self.user_id)
+                        # Synchronous database reads: run them off the event loop.
+                        all_options = await asyncio.to_thread(get_embedding_model_options, user_id=self.user_id)
                         match = next(
                             (o for o in all_options if o.get("name") == embedding_model_name),
                             None,
@@ -1187,8 +1193,10 @@ class KnowledgeComponent(Component):
             # ``api_key=None`` falls through to the user's variables table and
             # then the environment inside ``get_embeddings`` — the same
             # resolution the server-side ingestion path uses. The component input
-            # only overrides it.
-            embedding_function = get_embeddings(
+            # only overrides it. Those lookups are synchronous database reads, so
+            # ``get_embeddings`` runs in a worker thread to keep this loop free.
+            embedding_function = await asyncio.to_thread(
+                get_embeddings,
                 model=model_selection,
                 user_id=self.user_id,
                 api_key=self.api_key if getattr(self, "api_key", None) else None,
@@ -1584,7 +1592,8 @@ class KnowledgeComponent(Component):
             msg = f"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed."
             raise ValueError(msg)
 
-        model_selection = self._resolve_model_selection(metadata)
+        # The catalog lookup behind the selection reads the database synchronously.
+        model_selection = await asyncio.to_thread(self._resolve_model_selection, metadata)
         chunk_size = metadata.get("chunk_size")
 
         # Resolve where this KB lives before instantiating embeddings: path
@@ -1595,8 +1604,10 @@ class KnowledgeComponent(Component):
         # ``api_key=None`` is not "no credential": ``get_embeddings`` resolves the
         # provider's key from the user's variables table and then the environment,
         # exactly as the server-side ingestion path does. The component input just
-        # takes precedence when supplied.
-        embedding_function = get_embeddings(
+        # takes precedence when supplied. ``get_embeddings`` runs in a worker thread
+        # because those lookups are synchronous database reads.
+        embedding_function = await asyncio.to_thread(
+            get_embeddings,
             model=model_selection,
             user_id=self.user_id,
             api_key=self.api_key if getattr(self, "api_key", None) else None,
