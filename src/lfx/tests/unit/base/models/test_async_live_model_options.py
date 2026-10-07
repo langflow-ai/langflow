@@ -191,3 +191,20 @@ async def test_discovery_batches_only_enabled_live_provider_variables(pooled_var
     assert values["OPENAI_API_KEY"] == "environment-key"  # pragma: allowlist secret
     assert state.observed == [asyncio.get_running_loop()]
     assert state.engine.pool.checkedout() == 0
+
+
+@pytest.mark.asyncio
+async def test_discovery_skips_database_without_live_providers(pooled_variables):
+    assert await model_utils.aget_live_model_variables(OWNER, {"Anthropic"}, {}) == {}
+    assert pooled_variables.observed == []
+
+
+@pytest.mark.asyncio
+async def test_discovery_without_owner_uses_required_environment_only(pooled_variables, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "environment-key")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://optional-must-not-fall-back.invalid")
+    assert await model_utils.aget_live_model_variables(None, {"OpenAI"}, {}) == {
+        "OPENAI_API_KEY": "environment-key",  # pragma: allowlist secret
+        "OPENAI_BASE_URL": None,
+    }
+    assert pooled_variables.observed == []

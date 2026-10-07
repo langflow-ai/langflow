@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.services.variable.constants import CREDENTIAL_TYPE
@@ -41,3 +41,20 @@ def test_resolve_variable_returns_credential_variable() -> None:
         credential_name,
         "credential-value",
     )
+
+
+async def test_batch_fallback_preserves_values_and_warns_once() -> None:
+    service = _service_with_secret({"VALUE": "test-value"})
+    with patch("langflow.services.variable.base.logger.warning") as warning:
+        assert await service.get_variables("user-1", [], "", None) == {}
+        warning.assert_not_called()
+        for _ in range(2):
+            assert await service.get_variables("user-1", ["VALUE", "MISSING"], "", None) == {
+                "VALUE": "test-value",
+                "MISSING": None,
+            }
+    warning.assert_called_once()
+    message = warning.call_args.args[0]
+    assert "KubernetesSecretService" in message
+    assert "VALUE" not in message
+    assert "test-value" not in message

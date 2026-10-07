@@ -1,6 +1,8 @@
 import abc
+from collections.abc import Iterable
 from uuid import UUID
 
+from lfx.log.logger import logger
 from pydantic import SecretStr
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -51,6 +53,24 @@ class VariableService(Service):
         Returns:
             The value of the variable.
         """
+
+    async def get_variables(
+        self, user_id: UUID | str, names: Iterable[str], field: str, session: AsyncSession
+    ) -> dict[str, str | SecretStr | None]:
+        """Resolve a batch; external stores may override this compatibility implementation."""
+        names = set(names)
+        if names and not getattr(self, "_batch_lookup_warning_logged", False):
+            logger.warning(
+                f"{type(self).__name__} uses individual variable reads because batch lookup is not implemented"
+            )
+            self._batch_lookup_warning_logged = True
+        values = {}
+        for name in names:
+            try:
+                values[name] = await self.get_variable(user_id, name, field, session)
+            except ValueError:
+                values[name] = None
+        return values
 
     @abc.abstractmethod
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:

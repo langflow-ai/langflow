@@ -299,39 +299,7 @@ class DatabaseVariableService(VariableService, Service):
             # must never broaden administrative get/update/delete lookups. An
             # owned variable wins on name collisions; otherwise require one
             # unambiguous READ-visible row from the authorization plugin.
-            from langflow.services.deps import get_authorization_service
-
-            authz = get_authorization_service()
-            if not await authz.is_enabled() or not await authz.supports_cross_user_fetch():
-                raise
-            get_visibility = getattr(authz, "get_resource_visibility", None)
-            if get_visibility is None:
-                # Compatibility for duck-typed authorization services that
-                # predate ResourceVisibilityScope.
-                visible_ids = await authz.list_visible_resource_ids(
-                    user_id=UUID(str(user_id)),
-                    resource_type="variable",
-                    domain="*",
-                    act="read",
-                )
-                visibility = None if visible_ids is None else ResourceVisibilityScope(resource_ids=tuple(visible_ids))
-            else:
-                visibility = await get_visibility(
-                    user_id=UUID(str(user_id)),
-                    resource_type="variable",
-                    domain="*",
-                    act="read",
-                )
-            if visibility is None or not (visibility.all_resources or visibility.resource_ids):
-                raise
-
-            shared_clauses = [
-                Variable.name == name,
-                Variable.user_id != user_id,
-            ]
-            if not visibility.all_resources:
-                shared_clauses.append(col(Variable.id).in_(visibility.resource_ids))
-            shared_variables = list((await session.exec(select(Variable).where(*shared_clauses))).all())
+            shared_variables = await self._get_shared_variables(user_id, {name}, session)
             if not shared_variables:
                 raise
             if len(shared_variables) > 1:
@@ -341,24 +309,83 @@ class DatabaseVariableService(VariableService, Service):
 
         return self._variable_value(variable, field)
 
+    async def _get_shared_variables(
+        self, user_id: UUID | str, names: set[str], session: AsyncSession
+    ) -> list[Variable]:
+        """Fetch READ-visible variables for unresolved names without widening owner reads."""
+        from langflow.services.deps import get_authorization_service
+
+        authz = get_authorization_service()
+        if not await authz.is_enabled() or not await authz.supports_cross_user_fetch():
+            return []
+        get_visibility = getattr(authz, "get_resource_visibility", None)
+        if get_visibility is None:
+            # Compatibility for duck-typed authorization services that
+            # predate ResourceVisibilityScope.
+            visible_ids = await authz.list_visible_resource_ids(
+                user_id=UUID(str(user_id)),
+                resource_type="variable",
+                domain="*",
+                act="read",
+            )
+            visibility = None if visible_ids is None else ResourceVisibilityScope(resource_ids=tuple(visible_ids))
+        else:
+            visibility = await get_visibility(
+                user_id=UUID(str(user_id)),
+                resource_type="variable",
+                domain="*",
+                act="read",
+            )
+        if visibility is None or not (visibility.all_resources or visibility.resource_ids):
+            return []
+
+        shared_clauses = [
+            col(Variable.name).in_(names),
+            Variable.user_id != user_id,
+        ]
+        if not visibility.all_resources:
+            shared_clauses.append(col(Variable.id).in_(visibility.resource_ids))
+        return list((await session.exec(select(Variable).where(*shared_clauses))).all())
+
     async def get_variables(
         self, user_id: UUID | str, names: Iterable[str], field: str, session: AsyncSession
-    ) -> dict[str, str | SecretStr]:
-        """Fetch this user's named variables in one query; omit missing or unreadable values."""
+    ) -> dict[str, str | SecretStr | None]:
+        """Resolve requested names in one owner query and, when needed, one shared query.
+
+        Owned values win. Missing, ambiguous, or unreadable values resolve to None,
+        matching independent discovery reads without fetching unrelated secrets.
+        """
+        names = set(names)
+        if not names:
+            return {}
         user_id = UUID(user_id) if isinstance(user_id, str) else user_id
-        stmt = select(Variable).where(Variable.user_id == user_id, col(Variable.name).in_(names))
-        variables = (await session.exec(stmt)).all()
-        values = {}
-        for variable in variables:
+        rows = (
+            await session.exec(select(Variable).where(Variable.user_id == user_id, col(Variable.name).in_(names)))
+        ).all()
+        variables = {row.name: row for row in rows if row.value}
+        missing = names - variables.keys()
+        if missing:
+            shared = await self._get_shared_variables(user_id, missing, session)
+            ambiguous = set()
+            for variable in shared:
+                if variable.name in variables:
+                    ambiguous.add(variable.name)
+                else:
+                    variables[variable.name] = variable
+            for name in ambiguous:
+                del variables[name]
+        values: dict[str, str | SecretStr | None] = dict.fromkeys(names)
+        for name, variable in variables.items():
             try:
-                values[variable.name] = self._variable_value(variable, field)
+                values[name] = self._variable_value(variable, field)
             except ValueError:
+                # Discovery treats unreadable credentials as unavailable.
                 continue
         return values
 
     @staticmethod
     def _variable_value(variable: Variable, field: str) -> str | SecretStr:
-        """Use the same value conversion for single and batch reads."""
+        """Apply field restrictions and unwrap storage using the single-read rules."""
         if variable.type == CREDENTIAL_TYPE and field == "session_id":
             msg = (
                 f"variable {variable.name} of type 'Credential' cannot be used in a Session ID field "
