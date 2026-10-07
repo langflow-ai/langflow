@@ -62,7 +62,7 @@ export default function AppHeader(): JSX.Element {
         <Button
           unstyled
           onClick={() => navigate("/")}
-          className="mr-1 flex h-8 w-8 items-center"
+          className="mr-1 flex h-8 w-8 items-center justify-center"
           data-testid="icon-ChevronLeft"
           aria-label={t("header.home")}
         >
