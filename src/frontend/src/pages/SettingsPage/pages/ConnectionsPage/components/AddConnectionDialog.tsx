@@ -132,6 +132,9 @@ export function AddConnectionDialog({
       ),
     [registrations.data, providerId, identity],
   );
+  // Policy can leave a user with no provider at all; that is not a missing
+  // OAuth registration, so it gets its own explanation instead of the form.
+  const noProviders = !reauthorize && providers.length === 0;
   const resolvedRegistration = resolveRegistrationId({
     provider: providerId,
     identity,
@@ -139,7 +142,11 @@ export function AddConnectionDialog({
     preferredId: registrationId,
   });
   // A listed backend that offers nothing for this provider cannot start consent.
+  // Keyed on providerId, not provider: re-authorizing a connection whose
+  // provider policy has since removed must still report the missing
+  // registration up front.
   const noRegistration =
+    providerId !== "" &&
     registrations.data !== null &&
     registrations.isSuccess &&
     resolvedRegistration === null;
@@ -213,6 +220,9 @@ export function AddConnectionDialog({
     if (authorize?.kind !== "waiting") return;
     if (hasConsentLanded(poll.data, baseline)) {
       const row = poll.data as ConnectionRead;
+      // Polling stops on failure. Retain that outcome so a retry's baseline
+      // cannot mistake the cached failed callback for the new attempt.
+      setPendingRow(row);
       if (row.status_reason?.startsWith("oauth-")) {
         const message =
           row.status_reason === "oauth-denied"
@@ -429,7 +439,23 @@ export function AddConnectionDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {step === "details" && (
+        {step === "details" && noProviders && (
+          <div
+            className="flex flex-col gap-4"
+            data-testid="connection-no-providers"
+          >
+            <p className="text-sm text-muted-foreground">
+              {t("connections.noProviders")}
+            </p>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => close(false)}>
+                {t("connections.add.cancel")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "details" && !noProviders && (
           <div className="flex min-h-0 flex-col gap-4">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
               <div className="flex flex-col gap-1.5">
@@ -582,7 +608,7 @@ export function AddConnectionDialog({
                     onToggle={toggleScope}
                   />
                   {unavailable.length > 0 && (
-                    <span className="text-xs text-warning-foreground">
+                    <span className="text-xs text-accent-amber-foreground">
                       {t("connections.add.scopesOutsideCeiling", {
                         scopes: unavailable.map(shortScope).join(", "),
                       })}
@@ -638,7 +664,7 @@ export function AddConnectionDialog({
                   granted={grantedOptions}
                 />
                 {notRequestable.length > 0 && (
-                  <span className="text-xs text-warning-foreground">
+                  <span className="text-xs text-accent-amber-foreground">
                     {t("connections.add.scopesOutsideCeiling", {
                       scopes: notRequestable.map(shortScope).join(", "),
                     })}

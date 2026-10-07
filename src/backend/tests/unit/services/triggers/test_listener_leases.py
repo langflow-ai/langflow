@@ -9,6 +9,7 @@ cannot both hold it".
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
@@ -16,8 +17,11 @@ from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.trigger.model import TriggerListenerLease
 from langflow.services.deps import session_scope
 from langflow.services.triggers.listeners import connection_leases
-from sqlalchemy import literal
+from sqlalchemy import Select, literal, text
 from sqlmodel import select
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -134,6 +138,58 @@ async def test_twenty_connections_two_replicas_exactly_one_holder_each(make_conn
     held = {row.connection_id: row.holder for row in rows}
     assert len(held) == 20
     assert set(held.values()) <= {"alpha", "beta"}
+
+
+async def test_simultaneous_empty_claims_do_not_deadlock(make_connection, monkeypatch) -> None:
+    """Overlap any lease reads so two contenders cannot rely on staggered snapshots."""
+    connection_id = await make_connection()
+    both_read = asyncio.Event()
+    readers: set[str] = set()
+
+    async def contend(holder: str) -> datetime | None:
+        """Claim through a real session, delaying reads until both contenders have read."""
+        async with session_scope() as session:
+            if session.get_bind().dialect.name == "sqlite":
+                await session.exec(text("PRAGMA busy_timeout = 200"))
+                # Exercise physical transactions even with legacy SQLite drivers
+                # that otherwise leave SELECT outside the database transaction.
+                await session.exec(text("BEGIN"))
+            execute = session.exec
+
+            async def overlap_reads(statement, *args, **kwargs):
+                """Preserve real queries while forcing competing reads to overlap."""
+                result = await execute(statement, *args, **kwargs)
+                if isinstance(statement, Select):
+                    readers.add(holder)
+                    if len(readers) == 2:
+                        both_read.set()
+                    await both_read.wait()
+                return result
+
+            monkeypatch.setattr(session, "exec", overlap_reads)
+            return await connection_leases.claim_generation(
+                session, connection_id=connection_id, holder=holder, ttl_s=60
+            )
+
+    generations = await asyncio.wait_for(asyncio.gather(contend("alpha"), contend("beta")), timeout=10)
+    if readers:
+        assert readers == {"alpha", "beta"}
+    assert sum(generation is not None for generation in generations) == 1
+    async with session_scope() as session:
+        assert await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=60) in {
+            "alpha",
+            "beta",
+        }
+
+
+async def test_deleted_connection_claim_keeps_the_transaction_usable(make_connection) -> None:
+    """A missing connection loses election without aborting a subsequent valid claim."""
+    connection_id = await make_connection()
+    async with session_scope() as session:
+        if session.get_bind().dialect.name == "sqlite":
+            await session.exec(text("PRAGMA foreign_keys = ON"))
+        assert await connection_leases.claim(session, connection_id=uuid4(), holder="alpha", ttl_s=60) is False
+        assert await connection_leases.claim(session, connection_id=connection_id, holder="alpha", ttl_s=60) is True
 
 
 async def test_failover_moves_a_dead_replicas_leases_within_two_ttls(make_connection) -> None:

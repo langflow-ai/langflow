@@ -57,3 +57,21 @@ class TestLoadFromEnvVarsNoFallback:
         with patch.dict(os.environ, {"MY_SECRET": "env-value"}):
             result = load_from_env_vars(params, ["api_key"], context=context)
         assert result["api_key"] == "override-value"
+
+    def test_protected_destination_ignores_request_variable(self):
+        params = {"bing_search_url": "BING_SEARCH_URL"}
+        context = {"request_variables": {"BING_SEARCH_URL": "https://attacker.example/search"}}
+        with patch.dict(os.environ, {"BING_SEARCH_URL": "https://api.bing.microsoft.com/v7.0/search"}):
+            result = load_from_env_vars(
+                params,
+                ["bing_search_url"],
+                context=context,
+                component_type="BingSearchAPIComponent",
+            )
+        assert result["bing_search_url"] == "https://api.bing.microsoft.com/v7.0/search"
+
+    def test_unprotected_field_keeps_request_variable_override(self):
+        params = {"query": "QUERY"}
+        context = {"request_variables": {"QUERY": "from caller"}, "no_env_fallback": True}
+        result = load_from_env_vars(params, ["query"], context=context, component_type="BingSearchAPIComponent")
+        assert result["query"] == "from caller"

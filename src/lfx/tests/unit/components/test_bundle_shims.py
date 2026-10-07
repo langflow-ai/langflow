@@ -39,6 +39,7 @@ import pytest
 # tests/unit/components/<this file> -> parents[3] = the src/lfx package root.
 COMPONENTS_DIR = Path(__file__).resolve().parents[3] / "src" / "lfx" / "components"
 SHIM_MARKER = "# lfx-bundles-shim"
+RETIRED_SHIMS = {"altk": "ALTKAgentComponent", "chroma": "LocalDBComponent", "vectorstores": "LocalDBComponent"}
 
 # The two install-message shapes the shims are allowed to emit.
 _METAPACKAGE_MSG = "Install it with: pip install lfx-bundles."
@@ -76,6 +77,8 @@ def test_shims_exist() -> None:
 @pytest.mark.parametrize("shim_dir", SHIM_DIRS, ids=lambda p: p.name)
 def test_shim_is_one_file_stub(shim_dir: Path) -> None:
     """Contract #2: a shim dir ships exactly one .py file and no subpackages."""
+    if shim_dir.name in RETIRED_SHIMS:
+        return  # Retirement implementations are covered separately below.
     py_files = list(shim_dir.rglob("*.py"))
     assert py_files == [shim_dir / "__init__.py"], (
         f"{shim_dir.name}: shim dir must contain exactly __init__.py, found {py_files}"
@@ -92,6 +95,8 @@ def test_shim_source_contract(shim_dir: Path) -> None:
     message must name the matching distribution.
     """
     provider = shim_dir.name
+    if provider in RETIRED_SHIMS:
+        return
     # Bundle names are lowercase (BUNDLE_NAME_RE), so a mixed-case in-tree dir
     # (e.g. FAISS, Notion) aliases to its lowercased bundle (faiss, notion).
     # A few dirs are cross-bundle shims: their lone component lives in a
@@ -361,3 +366,21 @@ def test_real_metapackage_shim_live() -> None:
         with pytest.raises(ModuleNotFoundError, match="pip install lfx-bundles"):
             importlib.import_module("lfx.components.tavily")
         sys.modules.pop("lfx.components.tavily", None)
+
+
+@pytest.mark.parametrize("provider", sorted(RETIRED_SHIMS))
+def test_retired_shim_remains_importable_without_provider_bundle(provider):
+    """Retired imports preserve saved class identities without installing their SDK."""
+    module = importlib.import_module(f"lfx.components.{provider}")
+    class_name = RETIRED_SHIMS[provider]
+    component = getattr(module, class_name)
+    assert component.legacy is True
+    assert component.__name__ == class_name
+    for path in (COMPONENTS_DIR / provider).glob("*.py"):
+        source = path.read_text()
+        assert SHIM_MARKER in (COMPONENTS_DIR / provider / "__init__.py").read_text()
+        assert "import chromadb" not in source
+        assert "import langchain_chroma" not in source
+        assert "from altk " not in source
+        assert "from altk." not in source
+        assert "import altk" not in source

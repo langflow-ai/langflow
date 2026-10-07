@@ -441,7 +441,7 @@ class FileSystemToolComponent(Component):
 
         auto_login = self._resolve_auto_login()
         user_id = self._resolve_user_id()
-        if auto_login:
+        if self._uses_shared_workspace():
             mode = "shared"
         elif user_id:
             mode = "isolated"
@@ -733,12 +733,31 @@ class FileSystemToolComponent(Component):
         except AttributeError:
             return True
 
+    def _uses_shared_workspace(self) -> bool:
+        """Keep standalone synthetic identities stable without relaxing user isolation."""
+        if getattr(self, "_force_isolation", False):
+            return False
+        if self._resolve_auto_login():
+            return True
+        graph = getattr(self, "graph", None)
+        principal = getattr(graph, "execution_principal", None)
+        generated_user = getattr(graph, "_headless_filesystem_user_id", None)
+        return bool(
+            generated_user
+            and principal is not None
+            and principal.kind == "headless_operator"
+            and principal.family == "lfx_headless"
+            and not getattr(graph, "end_user_id", None)
+            and generated_user == graph.user_id == self._resolve_user_id()
+        )
+
     def _validate_root(self) -> Path:
         """Resolve and authorize the effective sandbox root.
 
         Dispatch:
           - ``_force_isolation=True``    → <BASE>/users/<hash(user_id)>/<sub_path>
           - AUTO_LOGIN=True              → <BASE>/shared/<sub_path>
+          - standalone synthetic user    → <BASE>/shared/<sub_path>
           - AUTO_LOGIN=False + user_id   → <BASE>/users/<hash(user_id)>/<sub_path>
           - any mode with no user_id     → PermissionError (caught by callers)
 
@@ -757,7 +776,7 @@ class FileSystemToolComponent(Component):
                 raise PermissionError(msg)
             return self._isolated_user_root(config=config, user_id=user_id)
 
-        if self._resolve_auto_login():
+        if self._uses_shared_workspace():
             return self._shared_root(config=config)
 
         user_id = self._resolve_user_id()

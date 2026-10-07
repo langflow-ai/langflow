@@ -1,6 +1,7 @@
-import { usePostUploadFlowToFolder } from "@/controllers/API/queries/folders/use-post-upload-to-folder";
-import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useTranslation } from "react-i18next";
+import { usePostUploadFlowToFolder } from "@/controllers/API/queries/folders/use-post-upload-to-folder";
+import { handleBlockedSave } from "@/hooks/flows/handle-blocked-save";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
@@ -119,7 +120,7 @@ const useFileDrop = (folderId: string) => {
     setFolderDragging(false);
     setFolderIdDragging("");
 
-    saveFlow(updatedFlow);
+    saveFlow(updatedFlow).catch(handleBlockedSave);
   };
 
   const uploadFormData = (data, folderId) => {

@@ -1,5 +1,6 @@
 """Tests for base/data/storage_utils.py - storage-aware file utilities."""
 
+import threading
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -7,12 +8,20 @@ import pytest
 from lfx.base.data.storage_utils import (
     file_exists,
     get_file_size,
+    get_file_size_async,
     parse_storage_path,
     read_file_bytes,
     read_file_text,
     to_storage_path,
 )
-from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access
+from lfx.services.deps import get_settings_service
+from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access, file_access_scope
+
+
+@pytest.fixture(autouse=True)
+def unrestricted_standalone_reads(monkeypatch):
+    """Direct local-path controls opt out. Containment cases explicitly enable restriction."""
+    monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", False)
 
 
 class TestParseStoragePath:
@@ -97,6 +106,30 @@ class TestToStoragePath:
 @pytest.mark.asyncio
 class TestReadFileBytes:
     """Test read_file_bytes function."""
+
+    @pytest.mark.parametrize("storage_type", ["local", "s3"])
+    async def test_real_local_read_runs_off_the_event_loop(self, tmp_path, storage_type):
+        test_file = tmp_path / "test.txt"
+        test_file.write_bytes(b"payload")
+        mock_settings = Mock()
+        mock_settings.settings.storage_type = storage_type
+        mock_settings.settings.restrict_local_file_access = False
+        read_threads = []
+        original_read = Path.read_bytes
+
+        def record_read(path):
+            read_threads.append(threading.current_thread())
+            return original_read(path)
+
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
+            patch.object(Path, "read_bytes", record_read),
+        ):
+            assert await read_file_bytes(str(test_file)) == b"payload"
+
+        assert read_threads
+        assert all(thread is not threading.current_thread() for thread in read_threads)
 
     async def test_read_local_file(self, tmp_path):
         """Test reading a local file when storage_type is local."""
@@ -609,6 +642,27 @@ class TestRestrictedLocalFileAccessUnderS3:
     containment control, otherwise the documented hardening flag is a no-op whenever
     ``LANGFLOW_STORAGE_TYPE=s3``.
     """
+
+    @pytest.mark.parametrize(
+        ("scopes", "storage_path", "allowed"),
+        [
+            (("flow-id",), "flow-id/upload.csv", True),
+            (("flow-id",), "other-flow/upload.csv", False),
+            ((), "flow-id/upload.csv", False),
+        ],
+    )
+    async def test_async_size_checks_graph_storage_scope(self, restricted_layout, scopes, storage_path, allowed):
+        config_dir, _ = restricted_layout
+        storage = AsyncMock()
+        storage.get_file_size.return_value = 12
+        with _S3RestrictedEnv(config_dir), file_access_scope(scopes):
+            if allowed:
+                assert await get_file_size_async(storage_path, storage) == 12
+                storage.get_file_size.assert_awaited_once_with("flow-id", "upload.csv")
+            else:
+                with pytest.raises(LocalFileAccessError):
+                    await get_file_size_async(storage_path, storage)
+                storage.get_file_size.assert_not_awaited()
 
     async def test_read_file_bytes_denies_out_of_scope_path_with_resolver(self, restricted_layout):
         """A component-supplied resolver must be honored on the S3 local-read branch."""

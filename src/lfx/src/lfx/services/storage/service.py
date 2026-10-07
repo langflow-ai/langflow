@@ -165,6 +165,10 @@ class StorageService(Service):
         for i in range(0, len(content), chunk_size):
             yield content[i : i + chunk_size]
 
+    async def get_file_md5(self, flow_id: str, file_name: str) -> str | None:  # noqa: ARG002
+        """The file's MD5 when the backend already has it, or None when it would have to read the file."""
+        return None
+
     @abstractmethod
     async def list_files(self, flow_id: str) -> list[str]:
         """List all files in a flow's storage namespace.

@@ -691,7 +691,19 @@ async def ensure_flows_permission(
         )
         return
 
-    auth_context = _auth_context(user)
+    # Mirrors the extra_context ensure_flow_permission -> _ensure_typed builds
+    # for the "flow" resource spec (workspace_id, folder_id, flow_user_id,
+    # folder_user_id) so a plugin sees the same context fields whether a flow
+    # is authorized individually or as part of this batch. folder_user_id is
+    # always None here: it only carries the destination-project owner for
+    # CREATE, and CREATE has no existing flow owner to batch against.
+    extra_context: dict[str, Any] = {
+        "workspace_id": workspace_id,
+        "folder_id": folder_id,
+        "flow_user_id": flow_user_id,
+        "folder_user_id": None,
+    }
+    auth_context = {**extra_context, **_auth_context(user)}
     owner_override_enabled = await should_apply_owner_override()
     if owner_override_enabled and user_id is not None and flow_user_id == user_id:
         await _audit_flow_decision_batch(

@@ -119,7 +119,7 @@
       "subscription": {
         "required": true,
         "max_ttl_seconds": null,
-        "renewal": "Langflow creates the subscription with an expirationDateTime and a lifecycleNotificationUrl, then renews by PATCHing expirationDateTime ahead of the value Graph returned; the renewal job keys off the stored subscriptionExpirationDateTime rather than a constant, because the ceiling differs per resource (10,080 minutes for Outlook message, event and contact resources). subscriptionRemoved recreates the subscription, missed forces a delta resync, and reauthorizationRequired moves the trigger to needs_reconnect.",
+        "renewal": "Langflow creates the subscription with an expirationDateTime and a lifecycleNotificationUrl, then renews by PATCHing expirationDateTime ahead of the value Graph returned; the renewal job keys off the stored subscriptionExpirationDateTime rather than a constant, because the ceiling differs per resource (10,080 minutes for Outlook message, event and contact resources). subscriptionRemoved recreates the subscription, missed forces a delta resync, and reauthorizationRequired queues an immediate PATCH renewal that also reauthorizes the subscription. A confirmed unusable connection moves the trigger to needs_reconnect.",
         "source": "graph-subscription"
       },
       "payload": {

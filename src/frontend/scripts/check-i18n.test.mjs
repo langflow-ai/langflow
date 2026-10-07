@@ -6,13 +6,26 @@
  * than the current state of the real locale files.
  */
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { analyzeI18n, reportI18n } from "./check-i18n.mjs";
+import { analyzeI18n, DEFAULT_LOCALES, reportI18n } from "./check-i18n.mjs";
 
 const LOCALES = ["de", "fr"];
+
+test("validates every language enabled by the application", () => {
+  const config = readFileSync(
+    new URL("../src/i18n.ts", import.meta.url),
+    "utf8",
+  );
+  const languages = config.match(/SUPPORTED_LANGUAGES\s*=\s*\[([\s\S]*?)\]/);
+  assert.ok(languages, "The supported language configuration must be checked");
+  const enabled = [...languages[1].matchAll(/"([^"]+)"/g)]
+    .map((match) => match[1])
+    .filter((locale) => locale !== "en");
+  assert.deepEqual([...DEFAULT_LOCALES].sort(), enabled.sort());
+});
 
 /**
  * Materialize a frontend tree and return its root.

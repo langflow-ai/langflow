@@ -89,12 +89,15 @@ export default function NodeStatus({
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const conditionSuccess =
-    buildStatus === BuildStatus.BUILT ||
-    (buildStatus !== BuildStatus.TO_BUILD && validationStatus?.valid);
-
   const conditionError = buildStatus === BuildStatus.ERROR;
   const conditionInactive = buildStatus === BuildStatus.INACTIVE;
+
+  // A node on a branch that was not taken keeps its last build in flowPool,
+  // so INACTIVE has to win over that stale result.
+  const conditionSuccess =
+    !conditionInactive &&
+    (buildStatus === BuildStatus.BUILT ||
+      (buildStatus !== BuildStatus.TO_BUILD && validationStatus?.valid));
 
   const showNodeStatus =
     conditionSuccess || conditionError || conditionInactive;
@@ -309,6 +312,10 @@ export default function NodeStatus({
           };
         },
         false,
+        undefined,
+        // Finishing a build is not an edit. Saving here makes merely running a
+        // flow take the writer's turn, so a run with no edits could be refused.
+        { autoSave: false },
       );
     }
   }, [buildStatus, isBuilding, isReadOnly, nodeId, setNode, version]);

@@ -26,6 +26,9 @@ export interface KnowledgeBaseInfo {
     vectorize: boolean;
     identifier: boolean;
   }>;
+  storage_state?: string;
+  storage_generation?: number;
+  active_migration_id?: string | null;
   backend_type?: string;
   backend_config?: Record<string, unknown>;
 }

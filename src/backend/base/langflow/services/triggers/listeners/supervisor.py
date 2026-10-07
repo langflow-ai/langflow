@@ -46,6 +46,7 @@ from lfx.integrations.errors import (
     AuthExpiredError,
     ConnectionNotAuthorizedError,
     ConnectionUnresolvedError,
+    RateLimitedError,
     ScopeMissingError,
 )
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
@@ -696,6 +697,8 @@ class ListenerSupervisor:
             settings.listener_backoff_base_s * (2 ** (worker.consecutive_failures - 1)),
             settings.listener_backoff_cap_s,
         )
+        if isinstance(exc, RateLimitedError) and exc.retry_after is not None:
+            delay = max(delay, exc.retry_after)
         delay *= random.uniform(0.85, 1.15)  # noqa: S311 - jitter, not crypto
         worker.next_attempt_at = _now() + timedelta(seconds=delay)
         # A flapping provider is a warning, not an error - backing off and

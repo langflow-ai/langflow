@@ -32,11 +32,13 @@ from lfx.base.knowledge_bases.backends.naming import StorageRoutingNotAllowedErr
 from lfx.schema.legacy_render import render_v1_content_blocks
 from lfx.services.model_provider_policy import ModelProviderPolicyError
 from pydantic import BaseModel
+from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, knowledge_base_service
 from langflow.services.authorization import KnowledgeBaseAction, ensure_knowledge_base_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.listing import visible_scope_prefilter
+from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
     MemoryBaseCreate,
@@ -46,6 +48,7 @@ from langflow.services.database.models.memory_base.model import (
 )
 from langflow.services.deps import get_authorization_service, get_memory_base_service, session_scope
 from langflow.services.jobs import DuplicateJobError
+from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError, storage_unavailable_message
 from langflow.services.memory_base.kb_path_helpers import BackendProvisioningError
 from langflow.services.memory_base.provider_scope import MemoryBaseFlowNotFoundError
 from langflow.services.memory_base.service import EmbeddingProviderValidationError, PreprocessingValidationError
@@ -119,12 +122,45 @@ async def _get_memory_base_for_action(
         )
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Memory base not found") from exc
+    if action == KnowledgeBaseAction.INGEST:
+        from langflow.api.utils import knowledge_base_service
+
+        record = await knowledge_base_service.get_by_user_and_name(mb.user_id, mb.kb_name)
+        if record is not None and (record.storage_state != "ready" or record.backend_type == "chroma"):
+            raise HTTPException(
+                status_code=409,
+                detail=storage_unavailable_message(record.storage_state),
+            )
     return mb
 
 
 # ------------------------------------------------------------------ #
 #  CRUD                                                                #
 # ------------------------------------------------------------------ #
+
+
+async def _storage_availability(items: list[MemoryBaseRead]) -> None:
+    """Enrich availability in one owner-aware query for the entire response."""
+    if not items:
+        return
+    async with session_scope() as session:
+        rows = (
+            await session.exec(
+                select(KnowledgeBaseRecord).where(
+                    col(KnowledgeBaseRecord.name).in_([item.kb_name for item in items]),
+                    col(KnowledgeBaseRecord.user_id).in_([item.user_id for item in items]),
+                )
+            )
+        ).all()
+    lookup = {(row.user_id, row.name): row for row in rows}
+    for item in items:
+        row = lookup.get((item.user_id, item.kb_name))
+        if row is not None:
+            item.storage_state = row.storage_state
+            item.storage_kb_id = row.id
+            item.active_migration_id = row.active_migration_id
+        else:
+            item.storage_state = "needs_attention"
 
 
 @router.post("", status_code=HTTPStatus.CREATED)
@@ -179,6 +215,7 @@ async def create_memory_base(
     read = MemoryBaseRead.model_validate(mb)
     backends = await knowledge_base_service.get_backends_for_names([mb.kb_name])
     read.backend_type, read.backend_config = backends.get(mb.kb_name, ("chroma", {}))
+    await _storage_availability([read])
     return read
 
 
@@ -218,6 +255,7 @@ async def list_memory_bases(
     backends = await knowledge_base_service.get_backends_for_names(kb_names)
     for read in items:
         read.backend_type, read.backend_config = backends.get(read.kb_name, ("chroma", {}))
+    await _storage_availability(items)
     return raw_page.model_copy(update={"items": items})
 
 
@@ -240,6 +278,7 @@ async def get_memory_base(
     # Chroma Local vs Cloud).
     backends = await knowledge_base_service.get_backends_for_names([mb.kb_name])
     read.backend_type, read.backend_config = backends.get(mb.kb_name, ("chroma", {}))
+    await _storage_availability([read])
     return read
 
 
@@ -399,7 +438,9 @@ async def update_memory_base(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     if mb is None:
         raise HTTPException(status_code=404, detail="Memory base not found")
-    return MemoryBaseRead.model_validate(mb)
+    read = MemoryBaseRead.model_validate(mb)
+    await _storage_availability([read])
+    return read
 
 
 @router.delete("/{memory_base_id}", status_code=HTTPStatus.NO_CONTENT)
@@ -420,7 +461,10 @@ async def delete_memory_base(
             current_user=current_user,
             action=KnowledgeBaseAction.DELETE,
         )
-    deleted = await get_memory_base_service().delete(memory_base_id, user_id=mb.user_id)
+    try:
+        deleted = await get_memory_base_service().delete(memory_base_id, user_id=mb.user_id)
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not deleted:
         raise HTTPException(status_code=404, detail="Memory base not found")
 
@@ -488,6 +532,8 @@ async def check_mismatch(
         )
     try:
         detected = await get_memory_base_service().check_mismatch(memory_base_id, user_id=mb.user_id)
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return MismatchResponse(mismatch_detected=detected)
@@ -516,6 +562,8 @@ async def regenerate_memory_base(
             owner_user_id=mb.user_id,
             actor_user_id=current_user.id,
         )
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return RegenerateResponse(job_ids=job_ids)

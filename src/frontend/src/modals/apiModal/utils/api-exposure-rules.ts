@@ -72,6 +72,17 @@ export const PROTECTED_TWEAK_FIELDS_BY_COMPONENT: Readonly<
   Record<string, ReadonlySet<string>>
 > = {
   SQLComponent: new Set(["database_url", "query"]),
+  BingSearchAPI: new Set(["bing_search_url"]),
+  BingSearchAPIComponent: new Set(["bing_search_url"]),
+  "Bing Search API": new Set(["bing_search_url"]),
+  "ext:bing:BingSearchAPIComponent@official": new Set(["bing_search_url"]),
+  "ext:bing:BingSearchAPIComponent@official-pre-a": new Set([
+    "bing_search_url",
+  ]),
+  "lfx.components.bing.bing_search_api.BingSearchAPIComponent": new Set([
+    "bing_search_url",
+  ]),
+  "lfx.components.bing.BingSearchAPIComponent": new Set(["bing_search_url"]),
 };
 
 /**

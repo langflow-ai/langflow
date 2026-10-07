@@ -32,7 +32,7 @@ const baseProps = {
   chunkOverlap: 50,
   separator: "\\n",
   selectedEmbeddingModel: [],
-  backendType: "chroma" as const,
+  backendType: "sqlite" as const,
 };
 
 beforeEach(() => jest.clearAllMocks());

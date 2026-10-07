@@ -197,8 +197,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert "| John" in result.text
         assert "| Jane" in result.text
         assert "| Bob" in result.text
-        assert "| Good" in result.text
-        assert "| Person" in result.text
+        assert "| Good<br/>Person" in result.text
         assert "| Nice" in result.text
         # Verify data is cleaned
         assert "Jane\n" not in result.text

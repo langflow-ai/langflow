@@ -36,6 +36,8 @@ _TRIGGER_TABLES = {
         "1d28fd31a982",  # pragma: allowlist secret
         "386662af02e9",  # pragma: allowlist secret
         "e6f9a2b4c8d1",  # pragma: allowlist secret
+        "a7c9e4b681f2",  # pragma: allowlist secret
+        "d8f2c3a4b5e6",  # pragma: allowlist secret
     ],
 )
 def test_trigger_and_release_heads_upgrade_to_single_head(db_url, prior_revision):  # noqa: F811
@@ -59,6 +61,8 @@ def test_trigger_and_release_heads_upgrade_to_single_head(db_url, prior_revision
 
         with engine.connect() as connection:
             assert set(inspect(connection).get_table_names()) >= _TRIGGER_TABLES
+            assert inspect(connection).has_table("trigger_source_version")
+            assert "is_personal" in {column["name"] for column in inspect(connection).get_columns("folder")}
             assert connection.execute(text('SELECT COUNT(*) FROM "user" WHERE id = :id'), {"id": user_id}).scalar() == 1
             assert MigrationContext.configure(connection).get_current_heads() == (
                 ScriptDirectory.from_config(config).get_current_head(),

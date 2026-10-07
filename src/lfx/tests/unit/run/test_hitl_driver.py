@@ -10,12 +10,16 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
+from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
 from lfx.graph.checkpoint.store import InMemoryCheckpointStore
+from lfx.run._defaults import apply_run_defaults
 from lfx.run.hitl import run_graph_with_human_input
+from lfx.services.deps import get_settings_service
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "graph" / "checkpoint"))
 from _static_pauser import StaticPauser
@@ -279,3 +283,43 @@ async def test_two_sequential_hitl_nodes_finish_without_relooping() -> None:
     assert "final_out" in built  # the run finalizes after the last HITL
     # Each HITL is asked exactly once: approving human2 must NOT re-pause human1 (no ping-pong loop).
     assert asked == ["human1:job-1", "human2:job-1"]
+
+
+@pytest.mark.parametrize("explicit_user", [False, True], ids=["generated", "explicit"])
+async def test_files_remain_accessible_after_cli_pauses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, explicit_user: bool
+) -> None:
+    monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(tmp_path / "files"))
+    monkeypatch.setenv("LANGFLOW_FS_TOOL_PEPPER_PATH", str(tmp_path / "pepper"))
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTO_LOGIN", False)
+    store = InMemoryCheckpointStore()
+    graph = _two_hitl_graph(store)
+    writer = FileSystemToolComponent(root_path="", read_only=False)
+    graph.add_component(writer, "files")
+    session_id, user_id = apply_run_defaults(
+        graph, session_id="filesystem-session", user_id=uuid4().hex if explicit_user else None
+    )
+    assert writer._write_file("notes.md", "before pause")["status"] == "created"
+    asked: list[str] = []
+
+    def provider(request: dict) -> dict:
+        asked.append(request["request_id"])
+        return {"action_id": "approve", "values": {}}
+
+    results = await run_graph_with_human_input(graph, decision_provider=provider, store=store)
+
+    assert asked == ["human1:job-1", "human2:job-1"]
+    restored = next(result.vertex.graph for result in results if result.vertex.id == "final_out")
+    reader = restored.get_vertex("files").custom_component
+    result = reader._read_file("notes.md")
+    assert "error" not in result, result
+    assert "before pause" in result["content"]
+    assert reader.build_metadata().data["mode"] == ("isolated" if explicit_user else "shared")
+    assert restored.user_id == user_id
+    assert restored.session_id == session_id
+    if explicit_user:
+        assert not (tmp_path / "files/shared/notes.md").exists()
+        other_user = Graph(user_id=uuid4().hex)
+        other_reader = FileSystemToolComponent(root_path="", read_only=True)
+        other_user.add_component(other_reader)
+        assert "error" in other_reader._read_file("notes.md")

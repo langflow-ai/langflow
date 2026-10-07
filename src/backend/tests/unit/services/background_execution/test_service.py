@@ -190,3 +190,199 @@ async def test_stop_cancels_job(active_user):
         assert st["status"] == JobStatus.CANCELLED
     finally:
         await svc.stop()
+
+
+async def test_retention_sweep_is_opt_in(monkeypatch):
+    """No retention window configured means no sweep task at all.
+
+    Retention deletes run history, so it stays off until an operator sets a
+    window: a default deployment must spawn no purge loop.
+    """
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "background_retention_days", 0)
+
+    svc = BackgroundExecutionService(settings_service, frame_source_factory=lambda **_kw: _scripted_source)
+    await svc.start()
+    try:
+        assert svc._retention_task is None
+    finally:
+        await svc.stop()
+
+
+async def test_retention_sweep_starts_when_a_window_is_set(monkeypatch):
+    """A configured window starts the periodic purge, and stop() tears it down."""
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "background_retention_days", 30)
+
+    svc = BackgroundExecutionService(settings_service, frame_source_factory=lambda **_kw: _scripted_source)
+    await svc.start()
+    try:
+        assert svc._retention_task is not None
+        assert not svc._retention_task.done()
+    finally:
+        await svc.stop()
+    assert svc._retention_task is None
+
+
+class _TickCounter:
+    """Stands in for the service module's ``random``: counts ticks with fixed jitter.
+
+    The retention loop draws its jitter exactly once per tick, so counting draws tells
+    a batch purged inside one tick apart from one purged on the next tick.
+    """
+
+    def __init__(self) -> None:
+        self.ticks = 0
+
+    def uniform(self, _low: float, _high: float) -> float:
+        self.ticks += 1
+        return 1.0
+
+
+class _ScriptedPurges:
+    """A job service whose purge replays scripted outcomes, then parks until cancelled."""
+
+    def __init__(self, ticks: _TickCounter, outcomes: list[int | Exception]) -> None:
+        self._ticks = ticks
+        self._outcomes = iter(outcomes)
+        self.calls: list[tuple[int, int | str]] = []
+        self.exhausted = asyncio.Event()
+
+    async def purge_terminal_jobs(self, *, older_than_days: float, limit: int) -> int:  # noqa: ARG002
+        outcome = next(self._outcomes, None)
+        if outcome is None:
+            self.exhausted.set()
+            await asyncio.Event().wait()
+        if isinstance(outcome, Exception):
+            self.calls.append((self._ticks.ticks, "raised"))
+            raise outcome
+        self.calls.append((self._ticks.ticks, outcome))
+        return outcome
+
+
+class _RecordingLogger:
+    def __init__(self) -> None:
+        self.exceptions: list[str] = []
+        self.infos: list[tuple[str, dict]] = []
+
+    async def aexception(self, msg: str, *_args, **_kwargs) -> None:
+        self.exceptions.append(msg)
+
+    async def ainfo(self, msg: str, **kwargs) -> None:
+        self.infos.append((msg, kwargs))
+
+
+async def _run_scripted_sweep(
+    monkeypatch, outcomes: list[int | Exception]
+) -> tuple[_ScriptedPurges, _RecordingLogger, list[float]]:
+    from langflow.services.background_execution import service as service_module
+
+    ticks = _TickCounter()
+    purges = _ScriptedPurges(ticks, outcomes)
+    recording_logger = _RecordingLogger()
+    monkeypatch.setattr(service_module, "random", ticks)
+    monkeypatch.setattr(service_module, "get_job_service", lambda: purges)
+    monkeypatch.setattr(service_module, "logger", recording_logger)
+    monkeypatch.setattr(get_settings_service().settings, "background_retention_days", 7)
+
+    delays = []
+    original_sleep = asyncio.sleep
+
+    async def record_sleep(delay):
+        delays.append(delay)
+        await original_sleep(0)
+
+    svc = _make_service()
+    with monkeypatch.context() as clock_patch:
+        clock_patch.setattr(asyncio, "sleep", record_sleep)
+        svc._start_retention_sweep()
+        try:
+            await asyncio.wait_for(purges.exhausted.wait(), timeout=5)
+        finally:
+            await svc.stop()
+    return purges, recording_logger, delays
+
+
+async def test_retention_sweep_drains_a_backlog_within_one_tick(monkeypatch):
+    """Full batches keep the tick going; the first short batch ends it.
+
+    Enabling retention on an install with a large backlog must catch up in a few
+    ticks, not one batch an hour.
+    """
+    from langflow.services.background_execution.service import _RETENTION_BATCH_SIZE
+
+    purges, recording_logger, _ = await _run_scripted_sweep(
+        monkeypatch, [_RETENTION_BATCH_SIZE, _RETENTION_BATCH_SIZE, 3, 0]
+    )
+
+    assert purges.calls == [(1, _RETENTION_BATCH_SIZE), (1, _RETENTION_BATCH_SIZE), (1, 3), (2, 0)]
+    assert len(recording_logger.infos) == 1  # No noise for the empty tick.
+    message, summary = recording_logger.infos[0]
+    assert message == "Background job retention sweep completed"
+    assert summary["deleted_jobs"] == 2 * _RETENTION_BATCH_SIZE + 3
+    assert summary["batches"] == 3
+    assert summary["elapsed_s"] >= 0
+
+
+async def test_retention_sweep_logs_a_failed_pass_and_runs_the_next_tick(monkeypatch):
+    """A purge that raises is logged loudly, and the loop survives to try again."""
+    from langflow.services.background_execution.service import _RETENTION_BATCH_SIZE
+
+    purges, recording_logger, _ = await _run_scripted_sweep(
+        monkeypatch, [_RETENTION_BATCH_SIZE, RuntimeError("database unavailable"), 0]
+    )
+
+    assert purges.calls == [(1, _RETENTION_BATCH_SIZE), (1, "raised"), (2, 0)]
+    assert recording_logger.exceptions == ["Background job retention sweep failed"]
+    assert len(recording_logger.infos) == 1
+    assert recording_logger.infos[0][1]["deleted_jobs"] == _RETENTION_BATCH_SIZE
+    assert recording_logger.infos[0][1]["batches"] == 1
+
+
+async def test_retention_sweep_runs_soon_after_start_then_hourly(monkeypatch):
+    """Short-lived replicas get a first sweep without waiting an entire hour."""
+    _, _, delays = await _run_scripted_sweep(monkeypatch, [0, 0])
+
+    assert delays == [300.0, 3600.0, 3600.0]
+
+
+async def test_retention_sweep_purges_real_rows_and_spares_live_work(monkeypatch):
+    """End to end over the real job store: aged terminal rows go, live rows stay."""
+    from datetime import datetime, timedelta, timezone
+
+    from langflow.services.background_execution import service as service_module
+    from langflow.services.database.models.jobs.model import Job, JobType
+    from langflow.services.deps import get_job_service, session_scope
+    from sqlmodel import update
+
+    job_service = get_job_service()
+    aged = datetime.now(timezone.utc) - timedelta(days=90)
+
+    async def _aged_job(status: JobStatus):
+        job_id = uuid4()
+        await job_service.create_job(job_id=job_id, flow_id=uuid4(), job_type=JobType.WORKFLOW, user_id=uuid4())
+        async with session_scope() as session:
+            await session.exec(
+                update(Job).where(Job.job_id == job_id).values(status=status, created_timestamp=aged)  # type: ignore[call-overload]
+            )
+        return job_id
+
+    terminal = [await _aged_job(JobStatus.COMPLETED) for _ in range(3)]
+    suspended = await _aged_job(JobStatus.SUSPENDED)
+
+    monkeypatch.setattr(service_module, "_RETENTION_INITIAL_DELAY_S", 0.01)
+    monkeypatch.setattr(service_module, "_RETENTION_INTERVAL_S", 0.01)
+    monkeypatch.setattr(service_module, "_RETENTION_BATCH_SIZE", 2)
+    monkeypatch.setattr(get_settings_service().settings, "background_retention_days", 30)
+    svc = _make_service()
+    svc._start_retention_sweep()
+    try:
+        for _ in range(100):
+            if all([await job_service.get_job_by_job_id(job_id) is None for job_id in terminal]):
+                break
+            await asyncio.sleep(0.05)
+    finally:
+        await svc.stop()
+
+    assert [job_id for job_id in terminal if await job_service.get_job_by_job_id(job_id) is not None] == []
+    assert (await job_service.get_job_by_job_id(suspended)).status == JobStatus.SUSPENDED
