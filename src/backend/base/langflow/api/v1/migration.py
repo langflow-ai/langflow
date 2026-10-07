@@ -429,7 +429,9 @@ async def _still_writing(admin: User) -> dict[str, Any] | None:
     waited_for = None if await drained(_DRAIN_SECONDS) else under_way()
     if refusal := await _jobs_and_listeners(admin):
         # A change that outlasted the wait is a long one, such as an upload, and is told with them.
-        return {**refusal, "changes": waited_for["changes"] if waited_for else []}
+        # The task a job runs in is left out: the job says what it is, and who can cancel it.
+        still = waited_for["changes"] if waited_for else []
+        return {**refusal, "changes": [change for change in still if change["kind"] != "task"]}
     if waited_for:
         return {"code": "requests_active", "jobs": [], "listeners": [], **waited_for}
     return None

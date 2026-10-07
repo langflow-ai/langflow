@@ -26,6 +26,8 @@ from a2a.server.tasks import TaskUpdater
 from a2a.types import a2a_pb2 as pb
 from lfx.schema.workflow import JobStatus, OutputReason, WorkflowExecutionResponse
 
+from langflow.api.utils.migration_pause import writing
+
 logger = logging.getLogger(__name__)
 
 
@@ -93,6 +95,12 @@ class FlowAgentExecutor(AgentExecutor):
         self._resume_flow = resume_flow
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
+        # The SDK goes on with a run after the request that sent its message has answered. So the
+        # run holds a place of its own among the changes a migration pause waits for.
+        with writing("task", name="a2a_run"):
+            await self._execute(context, event_queue)
+
+    async def _execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         flow_id = context.call_context.state["flow_id"]
 
         # A follow-up message on an input-required task resumes the paused run with the

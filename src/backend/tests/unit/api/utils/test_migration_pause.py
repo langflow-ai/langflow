@@ -43,6 +43,7 @@ from langflow.services.database.models.trigger.schemas import TriggerEventState,
 from langflow.services.deps import (
     get_background_execution_service,
     get_job_service,
+    get_queue_service,
     get_settings_service,
     session_scope,
 )
@@ -376,6 +377,37 @@ async def test_a_pause_waits_for_a_listener_pass_that_began_before_it(client, co
         await listener.stop()
 
 
+@pytest.mark.parametrize("ending", ["returns", "raises", "is cancelled"])
+async def test_work_left_running_holds_a_place_until_it_ends_however_it_ends(client, config_dir, ending):  # noqa: ARG001
+    going, finish = asyncio.Event(), asyncio.Event()
+
+    async def work() -> None:
+        going.set()
+        await finish.wait()
+        if ending == "raises":
+            msg = "the work failed"
+            raise RuntimeError(msg)
+
+    def tasks_under_way() -> list[str | None]:
+        return [change["name"] for change in migration_pause.under_way()["changes"] if change["kind"] == "task"]
+
+    task = asyncio.create_task(work())
+    # Taken before the task has run at all, as a request does while it still holds its own place.
+    migration_pause.writing_on(task, name="webhook_run")
+    assert tasks_under_way() == ["webhook_run"]
+    await going.wait()
+    assert not await migration_pause.drained(0.2)
+
+    if ending == "is cancelled":
+        task.cancel()
+    else:
+        finish.set()
+    await asyncio.gather(task, return_exceptions=True)
+
+    assert await migration_pause.drained(5)
+    assert tasks_under_way() == []
+
+
 async def test_a_live_connection_is_named_by_the_path_it_was_routed_to(client, config_dir):  # noqa: ARG001
     opened, closing = asyncio.Event(), asyncio.Event()
 
@@ -535,16 +567,22 @@ async def test_a_record_that_says_paused_changes_nothing_while_the_feature_is_of
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
     listener = ListenerSupervisor()
     sync = asyncio.create_task(sync_flows_from_fs())
+    queue, job_id = get_queue_service(), str(uuid4())
+    queue.create_queue(job_id)
     try:
         await listener.reconcile()
+        queue.start_job(job_id, asyncio.sleep(0))
         # Long enough for the flow sync to begin a pass.
         await asyncio.sleep(0)
     finally:
         await listener.stop()
         sync.cancel()
         await asyncio.gather(sync, return_exceptions=True)
-    # Neither a change, a listener nor the flow sync takes the lock a pause waits on: this instance pays nothing.
+        await queue.cleanup_job(job_id)
+    # Neither a change, a listener, the flow sync nor work the job queue starts takes the lock a pause
+    # waits on: this instance pays nothing.
     assert not (config_dir / "migrations" / "pause.lock").exists()
+    assert migration_pause.under_way() == {"changes": [], "elsewhere": False}
 
 
 async def test_the_flow_sync_from_disk_waits_out_the_pause(active_user, config_dir, monkeypatch):

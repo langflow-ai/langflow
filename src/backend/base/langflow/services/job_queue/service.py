@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from collections.abc import Coroutine
 
 from lfx.log.logger import logger
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 
 from langflow.events.event_manager import EventManager
 from langflow.services.base import Service
@@ -324,6 +325,12 @@ class JobQueueService(Service):
         # Wrap the coroutine so that any crash emits on_error + sentinel before exit.
         task = asyncio.create_task(self._guarded_task(job_id, task_coro, event_manager, main_queue))
         self._queues[job_id] = (main_queue, event_manager, task, None)
+        if FEATURE_FLAGS.instance_migration:
+            # Loaded only where an instance can be paused. The task goes on after the request that started
+            # it has answered, so it holds a place of its own among the changes a migration pause waits for.
+            from langflow.api.utils.migration_pause import writing_on
+
+            writing_on(task, name="background_task")
         logger.debug(f"New task started for job_id {job_id}")
 
     @staticmethod

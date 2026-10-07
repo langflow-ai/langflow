@@ -30,8 +30,10 @@ from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
+    get_background_execution_service,
     get_db_service,
     get_job_service,
+    get_queue_service,
     get_settings_service,
     get_storage_service,
     session_scope,
@@ -953,6 +955,239 @@ async def test_a_job_is_named_together_with_a_change_that_outlasts_the_wait(
         ("request", "POST", "/api/v2/files/")
     ]
     assert await uploading == 201
+
+
+async def _held_before_it_is_a_job(
+    monkeypatch: pytest.MonkeyPatch, module: object, step: str
+) -> tuple[asyncio.Event, asyncio.Event]:
+    """Make a run wait at a step it takes before it writes its job, as one whose request has just answered."""
+    arrived, release = asyncio.Event(), asyncio.Event()
+    real = getattr(module, step)
+
+    async def waits(*args, **kwargs):
+        arrived.set()
+        await release.wait()
+        return await real(*args, **kwargs)
+
+    monkeypatch.setattr(module, step, waits)
+    return arrived, release
+
+
+async def _refused_over_work_left_running(client, headers, arrived: asyncio.Event, release: asyncio.Event) -> dict:
+    """Pause while a run is held before it is a job, and return what the refusal says. Then let the run end."""
+    await asyncio.wait_for(arrived.wait(), timeout=10)
+    try:
+        refused = await client.post(PAUSE, headers=headers)
+        # The run goes on to write its job, its messages and its results, so the instance is not still.
+        assert refused.status_code == 409, refused.text
+        assert "pause" not in (await _migration(client, headers))["record"]
+    finally:
+        release.set()
+    # Once the run has ended, nothing is under way for the next pause to wait for.
+    assert await migration_pause.drained(10)
+    return refused.json()["detail"]
+
+
+async def test_a_run_that_a_webhook_left_running_stops_the_pause(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    from langflow.api.v1 import endpoints
+
+    headers, flow_id = logged_in_headers_super_user, uuid4()
+    _checked(config_dir, [PASSING], **PREPARED)
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
+    await _add(Flow(id=flow_id, name="on a webhook", data={"nodes": [], "edges": []}, user_id=active_super_user.id))
+    # A webhook that asks for no key runs as the owner of its flow.
+    monkeypatch.setattr(get_settings_service().auth_settings, "WEBHOOK_AUTH_ENABLE", False)
+    arrived, release = await _held_before_it_is_a_job(monkeypatch, endpoints, "apply_global_variable_defaults")
+
+    # The webhook answers at once and leaves its run going in a task of its own.
+    answered = await client.post(f"api/v1/webhook/{flow_id}", json={"any": "payload"})
+    assert answered.status_code == 202, answered.text
+
+    detail = await _refused_over_work_left_running(client, headers, arrived, release)
+
+    assert detail["code"] == "requests_active"
+    assert [(change["kind"], change["name"]) for change in detail["changes"]] == [("task", "webhook_run")]
+
+
+async def test_a_playground_run_that_is_not_a_job_yet_stops_the_pause(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    from langflow.api import build
+
+    headers, flow_id = logged_in_headers_super_user, uuid4()
+    _checked(config_dir, [PASSING], **PREPARED)
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
+    await _add(Flow(id=flow_id, name="a playground run", data={"nodes": [], "edges": []}, user_id=active_super_user.id))
+    arrived, release = await _held_before_it_is_a_job(monkeypatch, build, "build_graph_from_db")
+
+    # The build answers with its id at once and runs in a task of the job queue.
+    started = await client.post(f"api/v1/build/{flow_id}/flow", json={}, headers=headers)
+    assert started.status_code == 200, started.text
+
+    detail = await _refused_over_work_left_running(client, headers, arrived, release)
+
+    assert detail["code"] == "requests_active"
+    assert [(change["kind"], change["name"]) for change in detail["changes"]] == [("task", "background_task")]
+
+
+async def test_any_work_the_job_queue_starts_stops_the_pause_until_it_ends(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers, queue, job_id = logged_in_headers_super_user, get_queue_service(), str(uuid4())
+    _checked(config_dir, [PASSING], **PREPARED)
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
+    arrived, release = asyncio.Event(), asyncio.Event()
+
+    async def work() -> None:
+        # What the memory capture after a run is: started by a request, never a job, and still writing.
+        arrived.set()
+        await release.wait()
+
+    queue.create_queue(job_id)
+    queue.start_job(job_id, work())
+    try:
+        detail = await _refused_over_work_left_running(client, headers, arrived, release)
+    finally:
+        await queue.cleanup_job(job_id)
+
+    assert detail["code"] == "requests_active"
+    assert [(change["kind"], change["name"]) for change in detail["changes"]] == [("task", "background_task")]
+    assert (await client.post(PAUSE, headers=headers)).status_code == 200
+
+
+async def test_a_background_run_that_was_cancelled_stops_the_pause_until_it_ends(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    headers, owner, flow_id, job_id = logged_in_headers_super_user, active_super_user.id, uuid4(), uuid4()
+    _checked(config_dir, [PASSING], **PREPARED)
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
+    running = {"status": JobStatus.IN_PROGRESS, "job_metadata": {"request": {"mode": "background"}}}
+    await _add(
+        Flow(id=flow_id, name="a long background run", data={}, user_id=owner),
+        Job(job_id=job_id, flow_id=flow_id, user_id=owner, **running),
+    )
+    arrived, release = asyncio.Event(), asyncio.Event()
+
+    async def run() -> None:
+        arrived.set()
+        try:
+            await release.wait()
+        except asyncio.CancelledError:
+            # What a run still does once it is told to stop: it ends its step, then writes how it ended.
+            await release.wait()
+            raise
+
+    executor = get_background_execution_service()._executor
+    await executor.start()
+    await executor.submit(str(job_id), run)
+    await asyncio.wait_for(arrived.wait(), timeout=10)
+    try:
+        [job] = (await client.post(PAUSE, headers=headers)).json()["detail"]["jobs"]
+        cancel = job["cancel"]
+        cancelled = await client.request(cancel["method"], cancel["url"], json=cancel["body"], headers=headers)
+        assert cancelled.status_code == 200, cancelled.text
+
+        # From here on the table says that the run is cancelled, and the run has not ended.
+        refused = await client.post(PAUSE, headers=headers)
+    finally:
+        release.set()
+
+    assert refused.status_code == 409, refused.text
+    detail = refused.json()["detail"]
+    assert detail["code"] == "requests_active"
+    assert [(change["kind"], change["name"]) for change in detail["changes"]] == [("task", "background_run")]
+    assert await migration_pause.drained(10)
+    assert (await client.post(PAUSE, headers=headers)).status_code == 200
+
+
+async def test_a_tool_call_that_an_mcp_stream_runs_stops_the_pause(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    from langflow.api.v1 import endpoints, mcp, mcp_utils
+
+    headers, flow_id = logged_in_headers_super_user, uuid4()
+    _checked(config_dir, [PASSING], **PREPARED)
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
+    monkeypatch.setattr(mcp_utils.get_mcp_config(), "enable_progress_notifications", False)
+    await _add(Flow(id=flow_id, name="lookup", data={"nodes": [], "edges": []}, user_id=active_super_user.id))
+    arrived, release = await _held_before_it_is_a_job(monkeypatch, endpoints, "apply_global_variable_defaults")
+
+    # Over the SSE transport the POST that carries a call answers 202 at once. The call then runs in
+    # the task of the stream that the client keeps open, and that stream is a GET.
+    caller = mcp_utils.current_user_ctx.set(active_super_user)
+    calling = asyncio.create_task(mcp_utils.handle_call_tool("lookup", {}, mcp.server))
+    mcp_utils.current_user_ctx.reset(caller)
+
+    detail = await _refused_over_work_left_running(client, headers, arrived, release)
+    await asyncio.gather(calling, return_exceptions=True)
+
+    assert detail["code"] == "requests_active"
+    assert [(change["kind"], change["name"]) for change in detail["changes"]] == [("task", "mcp_tool_call")]
+
+
+async def test_a_tool_call_that_reaches_an_mcp_stream_during_the_pause_is_refused(
+    client,  # noqa: ARG001
+    active_super_user,
+    config_dir,
+    monkeypatch,
+):
+    from langflow.api.v1 import endpoints, mcp, mcp_utils
+
+    _checked(config_dir, [PASSING], pause=PAUSED_AFTER_THE_CHECK, **PREPARED)
+    monkeypatch.setattr(mcp_utils.get_mcp_config(), "enable_progress_notifications", False)
+    await _add(Flow(id=uuid4(), name="lookup", data={"nodes": [], "edges": []}, user_id=active_super_user.id))
+    arrived, _ = await _held_before_it_is_a_job(monkeypatch, endpoints, "apply_global_variable_defaults")
+
+    # The POST that carried this call was let in just before the pause, and has answered.
+    caller = mcp_utils.current_user_ctx.set(active_super_user)
+    try:
+        with pytest.raises(RuntimeError, match="This instance is being migrated"):
+            await asyncio.wait_for(mcp_utils.handle_call_tool("lookup", {}, mcp.server), timeout=10)
+    finally:
+        mcp_utils.current_user_ctx.reset(caller)
+
+    # The run was never begun.
+    assert not arrived.is_set()
+    assert await migration_pause.drained(10)
+
+
+async def test_a_run_that_an_a2a_request_left_going_stops_the_pause(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    from a2a.server.agent_execution import RequestContext
+    from a2a.server.context import ServerCallContext
+    from a2a.server.events import EventQueue
+    from langflow.api.v1.a2a_executor import FlowAgentExecutor
+
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
+    arrived, release = asyncio.Event(), asyncio.Event()
+
+    async def run(*_args) -> None:
+        # Where the flow runs. A run writes its job only once its graph is built.
+        arrived.set()
+        await release.wait()
+        msg = "the run ends here"
+        raise RuntimeError(msg)
+
+    async def resume(*_args) -> None:
+        pytest.fail("a first message does not resume a run")
+
+    context = RequestContext(
+        call_context=ServerCallContext(state={"flow_id": str(uuid4())}), task_id=uuid4().hex, context_id="c"
+    )
+    # What the SDK does with a message that asks not to wait: the request answers with the task, and
+    # the run goes on in a task of the SDK's own.
+    running = asyncio.create_task(FlowAgentExecutor(run, resume).execute(context, EventQueue()))
+
+    detail = await _refused_over_work_left_running(client, headers, arrived, release)
+    await running
+
+    assert detail["code"] == "requests_active"
+    assert [(change["kind"], change["name"]) for change in detail["changes"]] == [("task", "a2a_run")]
 
 
 async def test_a_refused_pause_leaves_a_pause_that_another_request_made(

@@ -53,6 +53,8 @@ _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # What the admin still needs: a session, and the migration steps, which include ending the pause.
 _ALLOWED_PATHS = frozenset({"/api/v1/login", "/api/v1/refresh", "/api/v1/logout", "/api/v1/auto_login"})
 _ALLOWED_PREFIX = "/api/v1/migration/"
+# What a change is told while the pause is on.
+REFUSAL = "This instance is being migrated."
 
 # Which record file was last read, and what it said.
 _seen: tuple[str, int, int, int] | None = None
@@ -96,7 +98,9 @@ def is_paused() -> bool:
 
 # A request holds a place, and so does each pass of a loop that writes with no request around it: the
 # trigger listeners, the flow sync from disk, the trigger dispatcher, the audit cleanup and the telemetry
-# writer. The background executor holds none: what it starts is a job, and the pause looks for those.
+# writer. A run that goes on with no request around it holds one as well. A task that a request leaves
+# running, or that the background executor starts, holds it through writing_on(). A call that a protocol
+# runs in a task of its own, as MCP over SSE and A2A do, holds it through writing() where the call begins.
 @contextlib.contextmanager
 def writing(
     kind: str = "loop", *, method: str | None = None, path: str | None = None, name: str | None = None
@@ -108,7 +112,7 @@ def writing(
     here, and the change does not go ahead. Asking first would leave a gap between the two.
 
     The arguments say what holds the place: a "request" by its method and path, a "websocket"
-    by its path, a "loop" by its name. They are what under_way() tells.
+    by its path, a "loop" or a "task" by its name. They are what under_way() tells.
 
     With the feature off there is no pause to wait, so no place is taken and no lock.
     """
@@ -135,6 +139,26 @@ def writing(
         if place is not None:
             os.close(place)
         del _held[held]
+
+
+def writing_on(task: asyncio.Task, *, name: str) -> None:
+    """Keep a place for work that goes on after the request that started it has answered.
+
+    A request holds its place only until it answers. Work that it leaves running in a task of
+    its own would then be under way with nothing to show for it: no place, and no job until it
+    writes one. So the place is taken here, while the request still holds its own, and is let
+    go when the task ends, however it ends.
+
+    The task of a background run holds one in the same way. Its job says that the run is over
+    before the task is: a run that was told to stop still writes how it ended.
+
+    Whether a pause is on is not asked. The work belongs to a change that was already let in.
+    """
+    if not FEATURE_FLAGS.instance_migration:
+        return
+    place = contextlib.ExitStack()
+    place.enter_context(writing("task", name=name))
+    task.add_done_callback(lambda _ended: place.close())
 
 
 async def drained(seconds: float) -> bool:
@@ -216,7 +240,7 @@ class MigrationPauseMiddleware:
                 await self.app(scope, receive, send)
                 return
         # On a websocket scope the same response refuses the handshake.
-        response = JSONResponse({"detail": "This instance is being migrated."}, status_code=503)
+        response = JSONResponse({"detail": REFUSAL}, status_code=503)
         await response(scope, receive, send)
 
 
