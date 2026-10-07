@@ -92,7 +92,7 @@ def probe_database(address: str, source_address: str) -> dict[str, Any]:
 def probe_vectors(address: str) -> dict[str, Any]:
     """Whether the database at this address can take knowledge bases as pgvector tables."""
     if importlib.util.find_spec("pgvector") is None:
-        return _failed("pgvector_missing", "This server has no pgvector package. Install langflow[pgvector].")
+        return _failed("pgvector_package_missing", "This server has no pgvector package. Install langflow[pgvector].")
 
     def has_the_extension(target: sa.Connection) -> dict[str, Any] | None:
         if target.scalar(sa.text("SELECT 1 FROM pg_extension WHERE extname = 'vector'")):

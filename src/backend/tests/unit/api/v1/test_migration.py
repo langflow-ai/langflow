@@ -2354,7 +2354,8 @@ async def test_knowledge_bases_cannot_be_tested_without_the_database_address(
     monkeypatch.setitem(migration_module._secrets, "database_url", address)
     unable = await _connect(client, logged_in_headers_super_user, vectors={"kind": "pgvector"})
 
-    assert unable["results"]["vectors"]["code"] == "pgvector_missing"
+    # Its own code: this server's package is for whoever runs Langflow, the extension for the database's admin.
+    assert unable["results"]["vectors"]["code"] == "pgvector_package_missing"
     assert "langflow[pgvector]" in unable["results"]["vectors"]["reason"]
 
 
