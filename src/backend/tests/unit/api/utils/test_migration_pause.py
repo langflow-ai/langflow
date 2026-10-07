@@ -330,6 +330,27 @@ async def test_a_listener_that_starts_during_a_pause_claims_nothing_until_it_end
         await listener.stop()
 
 
+async def test_a_listener_that_is_running_renews_its_lease_while_a_pause_is_tried(client, config_dir):  # noqa: ARG001
+    async def lease_runs_out() -> datetime:
+        async with session_scope() as session:
+            lease = (await session.exec(select(TriggerLease).where(TriggerLease.owner == listener.holder))).one()
+            return lease.expires_at
+
+    listener = ListenerSupervisor()
+    try:
+        await listener.reconcile()
+        before = await lease_runs_out()
+
+        # A pause that is refused over a change still under way stays written while it waits, and an admin
+        # tries it again. The listener holds its connections all the while, and a pause finds it by this lease.
+        _write_record(config_dir, PAUSED)
+        await listener.reconcile()
+
+        assert await lease_runs_out() > before
+    finally:
+        await listener.stop()
+
+
 async def test_a_schedule_that_comes_due_during_the_pause_fires_after_it_ends(active_user, config_dir):
     async with session_scope() as session:
         flow = Flow(name="scheduled", user_id=active_user.id, data={"nodes": [], "edges": []})
