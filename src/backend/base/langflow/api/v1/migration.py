@@ -285,6 +285,8 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
     results: dict[str, dict[str, Any]] = {}
     # The secrets this request brought. This worker holds them only once every test is over: see below.
     brought: dict[str, Any] = {}
+    # The database that knowledge bases sent alone were tested in, to compare with the saved one at the end.
+    tested_in = None
     if request.database_url:
         address = brought["database_url"] = request.database_url.get_secret_value()
         results["database"] = await asyncio.to_thread(probe_database, address, get_db_service().database_url)
@@ -293,11 +295,10 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
         # Knowledge bases go into the destination database. An instance already on PostgreSQL keeps them in its own.
         own = instance["database"]["type"] == "postgresql"
         # The address sent with them if it passed, or else the one this worker holds from an earlier save.
-        # ponytail: sent alone, they are tested in the address held when the test starts. A database that
-        # another save replaces while that test runs keeps their result. Compare identities at the write
-        # if anything ever sends the two parts apart.
         held = _secrets if not request.database_url else brought if results["database"]["ok"] else {}
         address = get_db_service().database_url if own else held.get("database_url")
+        if address and not own and not request.database_url:
+            tested_in = database_identity(address)
         results["vectors"] = (
             await asyncio.to_thread(probe_vectors, address)
             if address
@@ -321,6 +322,10 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
         # What the knowledge bases' test found, it found in the database that this one replaces.
         saved.pop("vectors", None)
         saved.get("results", {}).pop("vectors", None)
+    if tested_in and tested_in != before:
+        # Another save replaced the database while the knowledge bases were tested in the one before it.
+        # What they found there is not kept, and what is saved for them stays as that save left it.
+        del parts["vectors"], results["vectors"]
     # How each test ended is kept, and the driver's own words are not: they can name the database user.
     outcomes = {part: {key: result[key] for key in result if key != "reason"} for part, result in results.items()}
     saved.update(parts, results={**saved.get("results", {}), **outcomes}, saved_by=admin.username, saved_at=_now())
