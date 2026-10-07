@@ -30,6 +30,7 @@ from lfx.observability import (
     start_event_loop_lag_monitor,
     stop_event_loop_lag_monitor,
 )
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -38,6 +39,7 @@ from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES, GZipMiddle
 from langflow.api import log_router
 from langflow.api.health_check_router import health_check_router
 from langflow.api.router import router
+from langflow.api.utils.migration_pause import MigrationPauseMiddleware
 from langflow.api.v1.audit_reads import VERBATIM_QUERY_PARAMS
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.api.validation_errors import request_validation_exception_handler
@@ -1029,6 +1031,9 @@ def create_app():
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
+    if FEATURE_FLAGS.instance_migration:
+        # Registered before CORS, which then wraps it: a browser on another origin can read the refusal.
+        app.add_middleware(MigrationPauseMiddleware)
 
     add_sentry_middleware(app)
 
