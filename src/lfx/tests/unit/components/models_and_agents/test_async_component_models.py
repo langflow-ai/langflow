@@ -98,6 +98,23 @@ async def test_legacy_tool_calling_response_awaits_model_and_preserves_executor(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("asynchronous", [False, True])
+async def test_tool_agent_builders_disambiguate_names_without_changing_shared_tools(monkeypatch, asynchronous):
+    from langchain_core.tools import StructuredTool
+    from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+
+    tools = [StructuredTool.from_function(lambda: "result", name="search", description="Search") for _ in range(2)]
+    component = ToolCallingAgentComponent(_user_id="runtime-owner", model=SELECTION, tools=tools)
+    executor = object()
+    monkeypatch.setattr(component, "create_agent_runnable", Mock(return_value=object()))
+    monkeypatch.setattr(component, "_executor_from_runnable", Mock(return_value=executor))
+    result = await component.abuild_agent() if asynchronous else component.build_agent()
+    assert result is executor
+    assert len({tool.name for tool in component.tools}) == 2
+    assert [tool.name for tool in tools] == ["search", "search"]
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("unavailable", [False, True])
 async def test_legacy_tool_calling_policy_stops_before_factory_and_output(monkeypatch, unavailable):
     from lfx.components.langchain_utilities import tool_calling

@@ -1332,7 +1332,8 @@ class AuthService(BaseAuthService):
         if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
             try:
                 flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
-                if flow_owner is None:
+                # A deactivated owner (including one whose erase is in progress) must not keep running flows.
+                if flow_owner is None or not flow_owner.is_active:
                     raise HTTPException(status_code=404, detail="Flow not found")
                 return flow_owner  # noqa: TRY300
             except HTTPException:

@@ -1,7 +1,9 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { AccountMenu } from "../index";
+
+const mockNavigate = jest.fn();
 
 jest.mock("react-icons/fa", () => ({
   FaDiscord: () => <span data-testid="discord-icon" />,
@@ -32,7 +34,7 @@ jest.mock("@/customization/components/custom-profile-icon", () => ({
 }));
 
 jest.mock("@/customization/hooks/use-custom-navigate", () => ({
-  useCustomNavigate: () => jest.fn(),
+  useCustomNavigate: () => mockNavigate,
 }));
 
 jest.mock("@/customization/feature-flags", () => ({
@@ -78,6 +80,7 @@ jest.mock("../../ThemeButtons/index", () => ({
 
 describe("AccountMenu", () => {
   beforeEach(() => {
+    mockNavigate.mockClear();
     act(() => {
       useUtilityStore.setState({ hideLogoutButton: false });
     });
@@ -105,6 +108,14 @@ describe("AccountMenu", () => {
     expect(
       screen.queryByRole("button", { name: /logout/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("keeps settings navigation in the OSS account menu", () => {
+    render(<AccountMenu />);
+
+    fireEvent.click(screen.getByRole("button", { name: /settings/i }));
+
+    expect(mockNavigate).toHaveBeenCalledWith("/settings");
   });
 
   it("renders the community links through the customization seam", () => {
