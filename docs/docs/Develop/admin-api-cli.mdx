@@ -27,7 +27,11 @@ To authenticate the CLI, do the following:
 
 1. Create a [Langflow API key](/api-keys-and-authentication#langflow-api-keys) for the account that will run the commands. A superuser can administer every resource. A non-superuser can administer a resource only when an authorization plugin grants that resource's permission.
 
-2. Save a profile as JSON in the platform-specific [Langflow configuration directory](/logging#log-storage). A profile stores the Langflow server URL and the name of the environment variable that contains the API key. It does not store the actual key. The default file is `admin-profiles.json`.
+2. Save a profile as JSON. A profile stores the Langflow server URL and the name of the environment variable that contains the API key. It does not store the actual key. The default file is `admin-profiles.json` in the Langflow user configuration directory:
+
+   - **macOS**: `~/Library/Application Support/langflow/admin-profiles.json`
+   - **Linux**: `~/.config/langflow/admin-profiles.json`
+   - **Windows**: `C:\Users\<username>\AppData\Local\langflow\admin-profiles.json`
 
    ```json
    {
@@ -145,10 +149,10 @@ Use an administration file when you want the same users, teams, roles, and assig
 
 To apply a saved administration file, do the following:
 
-1. Export the current administration state.
+1. Export the current administration state from the source server.
 The file can be YAML or JSON.
 By default, `export` writes a YAML file unless the command includes `--format json`.
-This example uses `admin-state.yaml`.
+This example uses `admin-state.yaml` and the `production` profile for the source server.
 
    ```bash
    langflow admin --profile production export --file admin-state.yaml
@@ -182,22 +186,24 @@ This example uses `admin-state.yaml`.
          type: global
    ```
 
-3. Optionally, to compare the administration file with the server's file, run:
-
-   ```bash
-   langflow admin --profile production diff admin-state.yaml
-   ```
-
-4. Set the environment variable named in `password_env` to the new user's password. In this file, that variable is `ALICE_INITIAL_PASSWORD`. It is read when the user is created.
+3. Set the environment variable named in `password_env` to the new user's password. In this file, that variable is `ALICE_INITIAL_PASSWORD`. `diff` and `apply` read it when the file creates a user.
 
    ```bash
    export ALICE_INITIAL_PASSWORD="<alice-password>"
    ```
 
-5. Apply the administration file.
+4. Save a profile for the destination server, as described in [Authenticate the CLI](#authenticate-the-cli). This example names that profile `staging`.
+
+   Optionally, to compare the administration file with the destination server, run:
 
    ```bash
-   langflow admin --profile production apply admin-state.yaml
+   langflow admin --profile staging diff admin-state.yaml
+   ```
+
+5. Apply the administration file to the destination server.
+
+   ```bash
+   langflow admin --profile staging apply admin-state.yaml
    ```
 
    `apply` checks the administration file before writing it.

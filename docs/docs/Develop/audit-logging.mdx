@@ -59,8 +59,9 @@ curl -sS "$LANGFLOW_URL/api/v1/flows/audits?flow_id=FLOW_UUID&limit=50" \
 ```
 
 A superuser can view every flow event.
-Other users can view events for flows they own and events they made themselves.
-If a flow is deleted, its events remain readable to the flow's owner.
+Another user can view events for flows they own and events they made themselves.
+After a flow is deleted, and no enforcement plugin is installed, a former owner can read only the events they performed.
+When an [enforcement plugin](./authorization) is enabled, reading a flow's history requires `flow:audit_read`. Owning the flow does not grant access.
 
 Events are newest first. `limit` is 1–200 and defaults to 50. When `next_cursor` is set, request the next page with that value:
 
@@ -108,6 +109,8 @@ To read a project's history, run:
 curl -sS "$LANGFLOW_URL/api/v1/projects/audits?project_id=PROJECT_UUID&limit=50" \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
+
+Visibility matches a flow's history. With an enforcement plugin, reading a project's history requires `project:audit_read`.
 
 ## What a change records
 
