@@ -24,7 +24,7 @@ import asyncio
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from lfx.log.logger import logger
@@ -35,6 +35,9 @@ from sqlmodel import select
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from langflow.services.deps import session_scope
 from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
 
 
 class _UnsetType:
@@ -434,15 +437,17 @@ async def increment_stats(
     words: int = 0,
     characters: int = 0,
     size_bytes: int | None = None,
-    source_types: list[str] | None = None,
+    source_types: Collection[str] = (),
 ) -> None:
-    """Add one ingestion run's totals to the cached aggregates.
+    """Add one ingestion run's totals and file types to the cached aggregates.
 
     A single ``UPDATE ... SET chunks = chunks + :n`` keeps the counters right
     when several runs write to the same knowledge base at once, and costs the
-    same however large the knowledge base is. Like ``update_stats`` it runs
-    under the knowledge base's storage lease, and silently returns when the
-    row is gone.
+    same however large the knowledge base is. ``source_types`` are merged into
+    the stored list. The merge reads the row inside the knowledge base's
+    exclusive storage lease, which every stats writer holds, so concurrent
+    runs keep each other's file types. Like ``update_stats`` it silently
+    returns when the row is gone.
     """
     from langflow.services.knowledge_base_storage.runtime import operation
 
@@ -456,9 +461,10 @@ async def increment_stats(
     }
     if size_bytes is not None:
         values["size_bytes"] = int(size_bytes)
-    if source_types is not None:
-        values["source_types"] = sorted(set(source_types))
-    async with operation(record_id), session_scope() as session:
+    async with operation(record_id) as current, session_scope() as session:
+        stored = set(current.source_types or [])
+        if not set(source_types) <= stored:
+            values["source_types"] = sorted(stored | set(source_types))
         await session.exec(update(KnowledgeBaseRecord).where(KnowledgeBaseRecord.id == record_id).values(**values))
         await session.commit()
 

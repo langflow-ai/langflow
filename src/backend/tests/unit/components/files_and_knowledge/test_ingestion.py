@@ -8,6 +8,7 @@ from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from lfx.base.knowledge_bases import get_knowledge_bases
 from lfx.components.files_and_knowledge import KnowledgeIngestionComponent
+from lfx.components.files_and_knowledge.knowledge import _WrittenTotals
 
 from tests.base import ComponentTestBaseWithClient
 
@@ -740,7 +741,6 @@ class TestIngestionReadsOnlyNewRows:
 
     async def test_stats_add_this_runs_totals_without_reading_the_kb(self, component_class, default_kwargs):
         from langflow.api.utils import knowledge_base_service
-        from lfx.components.files_and_knowledge.knowledge import _WrittenTotals
 
         record_id = default_kwargs["_record_id"]
         await knowledge_base_service.update_stats(record_id, chunks=10, words=40, characters=200, source_types=["pdf"])
@@ -797,3 +797,39 @@ class TestIngestionReadsOnlyNewRows:
 
         row = await knowledge_base_service.get_by_id(record_id)
         assert (row.chunks, row.words, row.characters) == (2, 3, len("one two") + len("three"))
+
+    async def test_concurrent_runs_keep_each_others_source_types(self, component_class, default_kwargs):
+        import asyncio
+
+        from langflow.api.utils import knowledge_base_service
+
+        record_id = default_kwargs["_record_id"]
+        extensions = [f"type{i}" for i in range(10)]
+        arrived = 0
+        all_arrived = asyncio.Event()
+
+        class _BackendThatWaits(_RemoteBackendStub):
+            async def storage_size_bytes(self) -> int:
+                # Hold every run here until all of them are about to write their stats.
+                nonlocal arrived
+                arrived += 1
+                if arrived == len(extensions):
+                    all_arrived.set()
+                await all_arrived.wait()
+                return self.size
+
+        await asyncio.gather(
+            *(
+                self._component(component_class, default_kwargs)._refresh_kb_stats(
+                    kb_record_id=record_id,
+                    backend=_BackendThatWaits(),
+                    extensions={extension},
+                    written=_WrittenTotals(chunks=1),
+                )
+                for extension in extensions
+            )
+        )
+
+        row = await knowledge_base_service.get_by_id(record_id)
+        assert row.chunks == len(extensions)
+        assert row.source_types == sorted(extensions)

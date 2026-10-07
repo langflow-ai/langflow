@@ -814,15 +814,13 @@ class KnowledgeComponent(Component):
         try:
             increment_stats = getattr(knowledge_base_service, "increment_stats", None)
             if written is not None and increment_stats is not None:
-                record = await knowledge_base_service.get_by_id(kb_record_id)
-                existing = set(record.source_types or []) if record is not None else set()
                 await increment_stats(
                     kb_record_id,
                     chunks=written.chunks,
                     words=written.words,
                     characters=written.characters,
                     size_bytes=await backend.storage_size_bytes(),
-                    source_types=sorted(existing | extensions) if not extensions <= existing else None,
+                    source_types=extensions,
                 )
                 return
 
