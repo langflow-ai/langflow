@@ -590,6 +590,7 @@ module.exports = {
             "Components/bundles-figranium",
             "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
+            "Components/bundles-flexai",
             "Components/bundles-glean",
             "Components/bundles-gitlab",
             "Components/bundles-google",

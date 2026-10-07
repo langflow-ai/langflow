@@ -5280,6 +5280,11 @@
       "bare_class_name": "KeenableSearchComponent",
       "target": "ext:keenable:KeenableSearchComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FlexAIModelComponent",
+      "target": "ext:flexai:FlexAIModelComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [
