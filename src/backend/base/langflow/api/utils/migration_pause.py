@@ -52,7 +52,7 @@ except ImportError:  # Windows
     fcntl = None
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterator
+    from collections.abc import AsyncIterator, Callable, Iterator
 
 _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # What the admin still needs: a session, and the migration steps, which include ending the pause.
@@ -106,7 +106,8 @@ def is_paused() -> bool:
 # trigger listeners, the flow sync from disk, the trigger dispatcher, the audit cleanup and the telemetry
 # writer. A run that goes on with no request around it holds one as well. A task that a request leaves
 # running, or that the background executor starts, holds it through writing_on(). A call that a protocol
-# runs in a task of its own, as MCP over SSE and A2A do, holds it through writing() where the call begins.
+# runs in a task of its own, as MCP over SSE does, holds it through writing() where the call begins. An
+# A2A run holds it through writing_until_told(), because the SDK saves what the run ended with afterwards.
 @contextlib.contextmanager
 def writing(
     kind: str = "loop", *, method: str | None = None, path: str | None = None, name: str | None = None
@@ -165,6 +166,18 @@ def writing_on(task: asyncio.Task, *, name: str) -> None:
     place = contextlib.ExitStack()
     place.enter_context(writing("task", name=name))
     task.add_done_callback(lambda _ended: place.close())
+
+
+def writing_until_told(name: str) -> Callable[[], None] | None:
+    """Hold a place for work whose end only its owner can tell, and return what lets the place go.
+
+    None with the feature off: there is no pause to wait, so no place is taken.
+    """
+    if not FEATURE_FLAGS.instance_migration:
+        return None
+    place = contextlib.ExitStack()
+    place.enter_context(writing("task", name=name))
+    return place.close
 
 
 async def drained(seconds: float) -> bool:

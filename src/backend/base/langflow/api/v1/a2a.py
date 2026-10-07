@@ -80,7 +80,7 @@ from langflow.api.utils.execution_principal import (
     stamp_execution_principal,
 )
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
-from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError
+from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError, run_saved
 from langflow.api.v1.a2a_utils import (
     A2A_APIKEY_HEADER,
     build_agent_card,
@@ -712,6 +712,11 @@ class A2ACheckpointStore(CheckpointStore):
 
 # MessageToDict serializes the enum by name, so a stored blob's state is e.g. "TASK_STATE_CANCELED".
 _TERMINAL_STATE_NAMES = {pb.TaskState.Name(state) for state in TERMINAL_TASK_STATES}
+# The states a run ends with. One that waits for a person or for a sign-in has stopped as well, until it is answered.
+_RUN_OVER_STATE_NAMES = _TERMINAL_STATE_NAMES | {
+    pb.TaskState.Name(pb.TaskState.TASK_STATE_INPUT_REQUIRED),
+    pb.TaskState.Name(pb.TaskState.TASK_STATE_AUTH_REQUIRED),
+}
 
 
 def _task_state(blob: dict[str, Any] | None) -> str | None:
@@ -772,9 +777,12 @@ class DurableTaskStore(TaskStore):
                 # different state must not transition it. Covers both race orders of a cancel against
                 # a completion (a forced CANCELED arriving after COMPLETED persisted, or a late
                 # completion arriving after CANCELED). The state that landed first wins.
-                return
+                pass
             else:
                 row.task = blob  # fresh dict reference flags the JSON column dirty
+        if _task_state(blob) in _RUN_OVER_STATE_NAMES:
+            # Written, so the run has nothing of this left to save. Its place in a migration pause can go.
+            run_saved(task.id)
 
     async def get(self, task_id: str, context: ServerCallContext) -> pb.Task | None:
         owner = _task_scope(context)

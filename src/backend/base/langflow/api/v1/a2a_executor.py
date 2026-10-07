@@ -17,6 +17,7 @@ import contextlib
 import json
 import logging
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from uuid import UUID
 
 from a2a.helpers.proto_helpers import get_data_parts, new_data_part, new_text_part
@@ -26,7 +27,7 @@ from a2a.server.tasks import TaskUpdater
 from a2a.types import a2a_pb2 as pb
 from lfx.schema.workflow import JobStatus, OutputReason, WorkflowExecutionResponse
 
-from langflow.api.utils.migration_pause import writing
+from langflow.api.utils.migration_pause import writing_until_told
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,38 @@ def _answer_parts(response: WorkflowExecutionResponse) -> list[pb.Part]:
     return parts
 
 
+# How long a run keeps its place for the SDK to save the state the run ended with.
+_SAVE_GRACE = 60.0
+
+
+@dataclass
+class _Place:
+    """A run's place among the changes a migration pause waits for."""
+
+    let_go: Callable[[], None]
+    returned: bool = False
+    saved: bool = False
+
+
+# The place of each run that holds one, by task id.
+_places: dict[str, _Place] = {}
+
+
+def run_saved(task_id: str) -> None:
+    """The task store has written a state that ends this run."""
+    if place := _places.get(task_id):
+        place.saved = True
+        _settle(task_id, place)
+
+
+def _settle(task_id: str, place: _Place, *, given_up: bool = False) -> None:
+    """Let a place go once its run has returned and what it ended with is saved, or the wait for that is given up."""
+    if given_up or (place.returned and place.saved):
+        if _places.get(task_id) is place:
+            del _places[task_id]
+        place.let_go()
+
+
 class FlowAgentExecutor(AgentExecutor):
     """Runs a Langflow flow for one A2A ``message/send`` and reports a terminal Task."""
 
@@ -95,10 +128,27 @@ class FlowAgentExecutor(AgentExecutor):
         self._resume_flow = resume_flow
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        # The SDK goes on with a run after the request that sent its message has answered. So the
-        # run holds a place of its own among the changes a migration pause waits for.
-        with writing("task", name="a2a_run"):
+        # The SDK goes on with a run after the request that sent its message has answered, and it saves
+        # the state the run ended with only after this method has returned. So the run holds a place of
+        # its own among the changes a migration pause waits for, until the task store has saved that state.
+        let_go = writing_until_told("a2a_run")
+        if let_go is None:
             await self._execute(context, event_queue)
+            return
+        place = _Place(let_go)
+        if earlier := _places.pop(context.task_id, None):
+            # A follow-up message on the same task: this run takes the place over.
+            earlier.let_go()
+        _places[context.task_id] = place
+        try:
+            await self._execute(context, event_queue)
+        finally:
+            place.returned = True
+            _settle(context.task_id, place)
+            # ponytail: a save that never comes, because the SDK's reader died, would hold every pause off.
+            # The place is given up after _SAVE_GRACE. Have the store take a place of its own if a save
+            # is ever slower than that.
+            asyncio.get_running_loop().call_later(_SAVE_GRACE, lambda: _settle(context.task_id, place, given_up=True))
 
     async def _execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         flow_id = context.call_context.state["flow_id"]
