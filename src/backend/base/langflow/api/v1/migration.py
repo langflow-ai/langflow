@@ -66,8 +66,13 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.utils.version import get_version_info
 
+try:
+    import fcntl
+except ImportError:  # Windows
+    fcntl = None
+
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable, Iterator
     from typing import BinaryIO
     from uuid import UUID
 
@@ -85,6 +90,8 @@ _KEY_CHECK = "target key"
 _STDERR_LINES = 40
 # Seconds a pause waits for the changes that were let in before it. Past that it is refused.
 _DRAIN_SECONDS = 5
+# How often a save that must not be lost is made again on a record another worker saved meanwhile.
+_SAVE_TRIES = 5
 # The steps after the check, in page order.
 _LATER_STEPS = (
     "connect_target",
@@ -260,14 +267,18 @@ async def pause_changes(request: Request, admin: Superuser) -> dict[str, Any]:
         _require_unlocked(state, "pause")
         # Written first, so that no worker lets a new change in. Read again, with nothing awaited
         # before the write, so that what another request saved meanwhile is kept.
-        record = _read_record()
-        if record.get("pause"):
-            return await _state(record)
-        if not record.get("pausing"):
+
+        def begin(record: dict[str, Any]) -> bool | None:
+            if record.get("pause") or record.get("pausing"):
+                return False
             # It is "pausing" until every change let in before it has ended. It refuses new changes
             # from now on and is a pause for nothing else, so no check or copy is measured against it.
             record["pausing"] = {"frozen_at": _now(), "frozen_by": admin.username}
-            _write_record(record)
+            return None
+
+        record = _save(begin)
+        if record.get("pause"):
+            return await _state(record)
     # One that another request still waits on, or that a stopped worker left behind, is waited on here as well.
     pausing = record["pausing"]
     # A server keeps a request going after its caller hangs up, so the wait listens for that itself.
@@ -289,13 +300,20 @@ async def pause_changes(request: Request, admin: Superuser) -> dict[str, Any]:
         # ponytail: the pause that waited is lifted when the wait ends, so it refuses changes for at most
         # _DRAIN_SECONDS after the caller left. Race the wait against the listener to lift it at once.
         _lift(pausing)
-    record = _read_record()
-    # Another request may have resumed, or finished this pause, while this one waited. Its word stands.
-    if record.get("pausing") == pausing:
-        # The instance is still from this moment. The re-check and the copies are measured against it.
-        del record["pausing"]
-        record["pause"] = {"frozen_at": _now(), "frozen_by": admin.username}
-        _write_record(record)
+    finished = False
+
+    def finish(record: dict[str, Any]) -> bool:
+        nonlocal finished
+        # Another request may have resumed, or finished this pause, while this one waited. Its word stands.
+        finished = record.get("pausing") == pausing
+        if finished:
+            # The instance is still from this moment. The re-check and the copies are measured against it.
+            del record["pausing"]
+            record["pause"] = {"frozen_at": _now(), "frozen_by": admin.username}
+        return finished
+
+    record = _save(finish)
+    if finished:
         await logger.ainfo(f"Migration: user_id={admin.id} paused changes to this instance")
     if not record.get("pause"):
         # It was ended while this request waited: changes were turned back on, or another request for
@@ -307,11 +325,18 @@ async def pause_changes(request: Request, admin: Superuser) -> dict[str, Any]:
 @router.delete("/pause")
 async def resume_changes(admin: Superuser) -> dict[str, Any]:
     """End the pause. What was checked or copied during it no longer counts, because later changes are in none of it."""
-    record = _read_record()
-    # A pause that still waited refuses changes as well, so it ends here too.
-    paused, pausing = record.pop("pause", None), record.pop("pausing", None)
-    if paused or pausing:
-        _write_record(record)
+    ended = False
+
+    def end(record: dict[str, Any]) -> bool:
+        nonlocal ended
+        # A pause that still waited refuses changes as well, so it ends here too.
+        paused, pausing = record.pop("pause", None), record.pop("pausing", None)
+        ended = bool(paused or pausing)
+        return ended
+
+    # Done again on what another worker saved in between: turning changes back on must not be lost.
+    record = _save(end)
+    if ended:
         await logger.ainfo(f"Migration: user_id={admin.id} resumed changes to this instance")
     return await _state(record)
 
@@ -518,28 +543,37 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
         run_id = await start_run(step_id, copy_command(step_id), env, started_by=admin.username)
     except RunActiveError as exc:
         raise HTTPException(status_code=409, detail={"code": "run_active"}) from exc
-    # Read again: another request may have saved the record while the command was started.
-    record = _read_record()
-    if _lets_in(record, step_id) != let_in:
+    still_let_in = False
+
+    def admit(record: dict[str, Any]) -> bool:
+        nonlocal still_let_in
+        # The record as it is now: another request may have saved it while the command was started. When
+        # another worker saves it between this look and the save below, the save is refused, and the look
+        # is taken again on what that worker saved.
+        still_let_in = _lets_in(record, step_id) == let_in
+        if still_let_in:
+            record["steps"][step_id] = {
+                "run_id": run_id,
+                "status": "running",
+                "dry_run": False,
+                "started_by": admin.username,
+                "started_at": read_run(run_id)["started_at"],
+                "finished_at": None,
+                "pause": let_in["pause"],
+                "report": None,
+                "error": None,
+                "decision_needed": None,
+            }
+        return still_let_in
+
+    _save(admit)
+    if not still_let_in:
         # Changes were turned back on, or another destination was saved, between the check above and the
-        # start of the command. A copy of what the record now asks for has to pass that check itself.
+        # save. A copy of what the record now asks for has to pass that check itself.
         await cancel_run(run_id)
         why = "what let it in had changed, so it was stopped"
         await logger.ainfo(f"Migration: user_id={admin.id} started {_copy(step_id)} after {why} (run {run_id})")
         raise HTTPException(status_code=409, detail={"code": "state_changed"})
-    record["steps"][step_id] = {
-        "run_id": run_id,
-        "status": "running",
-        "dry_run": False,
-        "started_by": admin.username,
-        "started_at": read_run(run_id)["started_at"],
-        "finished_at": None,
-        "pause": let_in["pause"],
-        "report": None,
-        "error": None,
-        "decision_needed": None,
-    }
-    _write_record(record)
     await logger.ainfo(f"Migration: user_id={admin.id} started {_copy(step_id)} (run {run_id})")
     return {"run_id": run_id}
 
@@ -611,11 +645,15 @@ async def _settle_copies(record: dict[str, Any]) -> None:
             # Its files are gone, so all that can be said is that it did not finish.
             run, events = {"status": "interrupted", "finished_at": None}, {}
         step.update(copy_outcome(run, events))
-        # Saved into the record as it is now: a request that read it earlier may have saved a change since.
-        saved = _read_record()
-        if saved["steps"][step_id]["run_id"] == step["run_id"]:
-            saved["steps"][step_id] = step
-            _write_record(saved)
+
+        def settle(saved: dict[str, Any], step_id: str = step_id, step: dict[str, Any] = step) -> bool:
+            # Saved into the record as it is now: a request that read it earlier may have saved a change since.
+            same_run = (saved["steps"].get(step_id) or {}).get("run_id") == step["run_id"]
+            if same_run:
+                saved["steps"][step_id] = step
+            return same_run
+
+        _save(settle)
 
 
 def _hold(name: str, secret: Any, result: dict[str, Any]) -> None:
@@ -649,14 +687,20 @@ async def _database_copy(database: str, user_id: UUID, paused_at: str) -> AsyncI
         with await anyio.to_thread.run_sync(_copy_database, database, folder / "langflow.db") as copy:
             while chunk := await anyio.to_thread.run_sync(copy.read, _CHUNK):
                 yield chunk
-        # A download from an earlier pause lacks the changes made after it ended.
-        record = _read_record()
-        if (record.get("pause") or {}).get("frozen_at") != paused_at:
-            return
-        # Reached once every byte went out during the same pause.
-        record.setdefault("backup", {})["database_downloaded_at"] = _now()
-        _write_record(record)
-        await logger.ainfo(f"Migration: user_id={user_id} downloaded a backup of the database")
+        same_pause = False
+
+        def stamp(record: dict[str, Any]) -> bool:
+            nonlocal same_pause
+            # A download from an earlier pause lacks the changes made after it ended.
+            same_pause = (record.get("pause") or {}).get("frozen_at") == paused_at
+            if same_pause:
+                # Reached once every byte went out during the same pause.
+                record.setdefault("backup", {})["database_downloaded_at"] = _now()
+            return same_pause
+
+        _save(stamp)
+        if same_pause:
+            await logger.ainfo(f"Migration: user_id={user_id} downloaded a backup of the database")
     finally:
         shutil.rmtree(folder, ignore_errors=True)
 
@@ -674,6 +718,10 @@ async def _stream_checks(step: dict[str, Any]) -> AsyncIterator[bytes]:
     env.pop("LANGFLOW_TARGET_SECRET_KEY_FILE", None)
     stderr: deque[str] = deque(maxlen=_STDERR_LINES)
     process = drain = None
+
+    def keep(record: dict[str, Any]) -> None:
+        record["steps"]["check_source"] = step
+
     try:
         process = await asyncio.create_subprocess_exec(
             sys.executable,
@@ -690,9 +738,7 @@ async def _stream_checks(step: dict[str, Any]) -> AsyncIterator[bytes]:
         )
         # The record names the child, so any worker can tell whether the run is still live.
         step["pid"] = process.pid
-        record = _read_record()
-        record["steps"]["check_source"] = step
-        _write_record(record)
+        _save(keep)
         drain = asyncio.create_task(_collect(process.stderr, stderr))
         async for line in process.stdout:
             try:
@@ -722,9 +768,7 @@ async def _stream_checks(step: dict[str, Any]) -> AsyncIterator[bytes]:
         if step["status"] == "running":
             step["status"] = "cancelled"
         step["finished_at"] = _now()
-        record = _read_record()
-        record["steps"]["check_source"] = step
-        _write_record(record)
+        _save(keep)
         if process:
             await process.wait()
 
@@ -947,10 +991,14 @@ async def _end(listener: asyncio.Task) -> None:
 
 def _lift(pausing: dict[str, Any]) -> None:
     """Take out a pause that still waited, unless another request has since finished it or taken it out."""
-    record = _read_record()
-    if record.get("pausing") == pausing:
+
+    def lift(record: dict[str, Any]) -> bool:
+        if record.get("pausing") != pausing:
+            return False
         del record["pausing"]
-        _write_record(record)
+        return True
+
+    _save(lift)
 
 
 def _connect_step(record: dict[str, Any], needed: list[str]) -> tuple[str, str | None]:
@@ -1038,6 +1086,13 @@ def _record_path() -> Path:
     return Path(get_settings_service().settings.config_dir) / "migrations" / "migration.json"
 
 
+class _RecordChangedError(HTTPException):
+    """Another worker saved the record after this request read it. What that worker saved stands."""
+
+    def __init__(self) -> None:
+        super().__init__(status_code=409, detail={"code": "record_changed"})
+
+
 def _read_record() -> dict[str, Any]:
     path = _record_path()
     if not path.exists():
@@ -1049,12 +1104,59 @@ def _read_record() -> dict[str, Any]:
 
 
 def _write_record(record: dict[str, Any]) -> None:
+    """Save the record, unless another worker saved it after this request read it.
+
+    A request reads the record, changes it and saves it. Two workers that do so at the same moment each
+    hold what they read, and the save that comes second would undo the first: a copy that starts would put
+    back a pause that was just ended. So every save counts the record's generation up, and a save of a
+    record that is behind is refused. The caller looks again at what is there, or answers 409.
+    """
     path = _record_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Named per process, so two workers writing at once never share a temp file.
-    partial = path.with_suffix(f".{os.getpid()}.partial")
-    partial.write_text(json.dumps(record, indent=2))
-    partial.replace(path)
+    with _alone_with(path):
+        if _read_record().get("generation", 0) != record.get("generation", 0):
+            raise _RecordChangedError
+        record["generation"] = record.get("generation", 0) + 1
+        # Named per process, so two workers writing at once never share a temp file.
+        partial = path.with_suffix(f".{os.getpid()}.partial")
+        partial.write_text(json.dumps(record, indent=2))
+        partial.replace(path)
+
+
+@contextlib.contextmanager
+def _alone_with(path: Path) -> Iterator[None]:
+    """Keep other workers from saving the record while one look at its generation and one save happen."""
+    if fcntl is None:
+        # ponytail: with no flock, two workers can still save between each other's look and save. Use
+        # msvcrt.locking if Langflow runs several workers on Windows.
+        yield
+        return
+    # ponytail: a blocking lock on the event loop, held for one small read and one rename.
+    descriptor = os.open(path.with_suffix(".lock"), os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(descriptor)
+
+
+def _save(change: Callable[[dict[str, Any]], bool | None]) -> dict[str, Any]:
+    """Make a change to the record as it is now and save it, and return the record.
+
+    The change is made again, on what is there by then, when another worker saved the record in between.
+    A change that answers False has nothing to save. This is for a save that must not be lost or refused:
+    the end of a pause, the outcome of a run, the last look before a copy counts.
+    """
+    for _ in range(_SAVE_TRIES):
+        record = _read_record()
+        if change(record) is False:
+            return record
+        try:
+            _write_record(record)
+        except _RecordChangedError:
+            continue
+        return record
+    raise _RecordChangedError
 
 
 def _now() -> str:
