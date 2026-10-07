@@ -201,10 +201,11 @@ async def test_discovery_skips_database_without_live_providers(pooled_variables)
 
 
 @pytest.mark.asyncio
-async def test_discovery_without_owner_uses_required_environment_only(pooled_variables, monkeypatch):
+@pytest.mark.parametrize("user_id", [None, "None"])
+async def test_discovery_without_owner_uses_required_environment_only(pooled_variables, monkeypatch, user_id):
     monkeypatch.setenv("OPENAI_API_KEY", "environment-key")
     monkeypatch.setenv("OPENAI_BASE_URL", "https://optional-must-not-fall-back.invalid")
-    assert await model_utils.aget_live_model_variables(None, {"OpenAI"}, model_catalog.model_provider_metadata) == {
+    assert await model_utils.aget_live_model_variables(user_id, {"OpenAI"}, model_catalog.model_provider_metadata) == {
         "OPENAI_API_KEY": "environment-key",  # pragma: allowlist secret
         "OPENAI_BASE_URL": None,
     }

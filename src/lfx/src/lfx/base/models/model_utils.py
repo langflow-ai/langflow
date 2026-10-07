@@ -34,6 +34,7 @@ from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import unwrap_secret_value
 from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
+from lfx.utils.user_id import has_user_id
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
@@ -497,7 +498,7 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
 
 async def aget_provider_variable_value(user_id: UUID | str | None, variable_key: str) -> str | None:
     """Resolve discovery inputs on the caller loop with the existing fallback rules."""
-    if user_id is None or (isinstance(user_id, str) and user_id == "None"):
+    if not has_user_id(user_id):
         return _environment_variable_value(variable_key)
 
     value = None
@@ -533,7 +534,7 @@ async def aget_live_model_variables(
     if not keys:
         return {}
     values = {}
-    if user_id is not None and str(user_id) != "None":
+    if has_user_id(user_id):
         async with session_scope() as session:
             variable_service = get_variable_service()
             if variable_service is not None:
