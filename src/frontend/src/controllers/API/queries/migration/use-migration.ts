@@ -32,7 +32,8 @@ export const useMigrationQuery = (enabled = true) =>
       const running = Object.values(record?.steps ?? {}).some(
         (step) => step?.status === "running",
       );
-      return record?.pause || running ? 5000 : false;
+      // A pause that still waits refuses changes as well, and another admin's request can end it either way.
+      return (record?.pause ?? record?.pausing) || running ? 5000 : false;
     },
   });
 

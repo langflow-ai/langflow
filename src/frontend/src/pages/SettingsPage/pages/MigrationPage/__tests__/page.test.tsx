@@ -745,6 +745,31 @@ describe("what another admin does meanwhile", () => {
     ).toBeInTheDocument();
   });
 
+  it("follows a pause that another admin's request still waits on", async () => {
+    jest.useFakeTimers();
+    const steps: Parameters<typeof state>[0] = {
+      ...copied,
+      pause: ["current"],
+      backup: ["locked", "earlier_step"],
+      copy_database: ["locked", "earlier_step"],
+    };
+    // Changes are refused from the moment the pause is asked for, so a banner is up.
+    const waiting =
+      "Changes are refused. A pause was asked for and has not begun.";
+    const get = jest.spyOn(api, "get").mockResolvedValue({
+      data: state(steps, { pausing: pause }),
+    });
+    openLive();
+    await act(() => jest.advanceTimersByTimeAsync(0));
+    expect(screen.getByText(waiting)).toBeInTheDocument();
+
+    // The request was refused, because a change was still under way. Nothing is paused.
+    get.mockResolvedValue({ data: state(steps) });
+    await act(() => jest.advanceTimersByTimeAsync(6000));
+
+    expect(screen.queryByText(waiting)).not.toBeInTheDocument();
+  });
+
   it("follows a copy that is still running after the pause is gone, until it ends", async () => {
     jest.useFakeTimers();
     const steps: Parameters<typeof state>[0] = {
