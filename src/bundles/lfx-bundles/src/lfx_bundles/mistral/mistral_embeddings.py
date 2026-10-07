@@ -1,7 +1,7 @@
 import httpx
 from langchain_mistralai import MistralAIEmbeddings
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.provider_ssrf import provider_httpx_client_kwargs
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, provider_httpx_client_kwargs
 from lfx.field_typing import Embeddings
 from lfx.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from pydantic.v1 import SecretStr
@@ -50,6 +50,7 @@ class MistralAIEmbeddingsComponent(LCModelComponent):
             raise ValueError(msg)
 
         api_key = SecretStr(self.mistral_api_key).get_secret_value()
+        ensure_credential_endpoint_allowed(api_key, self.endpoint, default_url=DEFAULT_MISTRAL_ENDPOINT)
 
         # endpoint is tenant-editable and the SDK sends the operator's API key to whatever
         # host it names. Route a custom endpoint through DNS-pinned, redirect-free clients

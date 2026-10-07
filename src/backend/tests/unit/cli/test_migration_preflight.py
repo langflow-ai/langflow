@@ -7,6 +7,7 @@ leave the database as it found it.
 
 from __future__ import annotations
 
+import sqlite3
 import uuid
 from typing import TYPE_CHECKING
 
@@ -14,7 +15,7 @@ import anyio
 import pytest
 import sqlalchemy as sa
 from cryptography.fernet import Fernet
-from langflow.cli.integrity import script_directory
+from langflow.cli.integrity import open_instance, script_directory
 from langflow.cli.migration_preflight import run_preflight
 from langflow.services.auth.utils import encrypt_api_key, ensure_fernet_key
 from langflow.services.database.models.auth.authz import AuthzRole, AuthzRoleAssignment
@@ -35,6 +36,8 @@ HEAD = script_directory().get_current_head()
 PARENT = "9d7e2a6c4b81"  # pragma: allowlist secret
 # The alembic head of Langflow 1.12.0, which the IBM Langflow 1.12.0-dev image runs.
 LANGFLOW_1_12_0 = "a3f8b1c9d7e2"  # pragma: allowlist secret
+# The revision that c3e1d5a7f902, which adds user.retired_at, revises: the last one that deletes the default superuser.
+BEFORE_RETIRED_AT = "f9d3b7a5c201"  # pragma: allowlist secret
 
 
 @pytest.fixture
@@ -65,6 +68,25 @@ async def safe_superuser(active_user, storage_dir, kb_root):  # noqa: ARG001
         )
         await session.commit()
     return active_user
+
+
+@pytest.fixture
+async def instance_on(client, monkeypatch):  # noqa: ARG001
+    """Start the services from nothing on a database the test names, as the command starts them."""
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    manager = get_service_manager()
+    with monkeypatch.context() as patch:
+        patch.setattr(manager, "services", {})
+
+        def start(database_url: str) -> None:
+            patch.setenv("LANGFLOW_DATABASE_URL", database_url)
+            open_instance()
+
+        yield start
+        if database := manager.services.get(ServiceType.DATABASE_SERVICE):
+            await database.engine.dispose()
 
 
 def _check(report, name):
@@ -138,6 +160,49 @@ class TestVersionDirection:
         assert check.status == "fail"
 
 
+class TestSourceThatCannotBeRead:
+    """With a target revision the version check reads the source first, and leaves reporting it to the schema check."""
+
+    async def test_a_malformed_revision_table_fails_the_schema_check(self, instance_on, tmp_path):
+        database = tmp_path / "malformed.db"
+        with sqlite3.connect(database) as connection:
+            connection.execute("CREATE TABLE alembic_version (unexpected_column TEXT)")
+        instance_on(f"sqlite:///{database}")
+
+        report = await run_preflight(target_revision=HEAD)
+
+        assert [(c.name, c.status) for c in report.checks] == [("version", "warn"), ("source: schema", "fail")]
+        assert "schema could not be read" in report.checks[0].summary
+        assert "schema could not be read" in report.checks[1].summary
+
+    async def test_revision_read_permissions_fail_the_schema_check(self, deny_revision_read):  # noqa: ARG002
+        report = await run_preflight(target_revision=HEAD)
+
+        assert [(c.name, c.status) for c in report.checks] == [("version", "warn"), ("source: schema", "fail")]
+        assert "schema could not be read" in report.checks[0].summary
+        assert "permission denied" in report.checks[1].summary
+
+    async def test_a_source_with_no_alembic_version_table_fails_the_schema_check(self, instance_on, tmp_path):
+        instance_on(f"sqlite:///{tmp_path}/empty.db")
+
+        report = await run_preflight(target_revision=HEAD)
+
+        assert [c.name for c in report.checks] == ["version", "source: schema"]
+        assert report.checks[1].status == "fail"
+        assert "no recorded revision" in report.checks[1].summary
+
+    async def test_a_source_that_cannot_be_reached_fails_the_schema_check(self, instance_on, tmp_path):
+        # A path under a regular file can be neither opened nor created, with any driver.
+        (tmp_path / "not-a-directory").write_text("")
+        instance_on(f"sqlite:///{tmp_path}/not-a-directory/langflow.db")
+
+        report = await run_preflight(target_revision=HEAD)
+
+        assert [(c.name, c.status) for c in report.checks] == [("version", "warn"), ("source: schema", "fail")]
+        assert "could not be reached" in report.checks[0].summary
+        assert "could not be reached" in report.checks[1].summary
+
+
 class TestDefaultSuperuser:
     async def test_a_never_signed_in_default_superuser_that_owns_work_is_refused(
         self,
@@ -163,6 +228,33 @@ class TestDefaultSuperuser:
         # On a target that deletes it, the workaround keeps it, and says what it leaves open.
         assert "last_login_at = now()" in deleted
         assert "API keys minted while AUTO_LOGIN was on keep working" in deleted
+
+    @pytest.fixture
+    async def owning_default_superuser(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        """The default superuser, never signed in and owning a flow."""
+        async with session_scope() as session:
+            default = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).one()
+            default.last_login_at = None
+            session.add(default)
+            session.add(Flow(name=f"owned-{uuid.uuid4().hex[:6]}", user_id=default.id, data={"nodes": []}))
+            await session.commit()
+
+    async def test_a_target_that_keeps_the_account_passes_and_says_what_to_set(self, owning_default_superuser):  # noqa: ARG002
+        # The head's migrations include the one that adds user.retired_at.
+        check = _check(await run_preflight(target_revision=HEAD), "default superuser")
+
+        assert check.status == "ok"
+        assert "the target keeps the account" in check.summary
+        assert f"LANGFLOW_SUPERUSER={DEFAULT_SUPERUSER}" in check.summary
+        assert "any other name deactivates it and its API keys" in check.summary
+
+    @pytest.mark.parametrize("target_revision", [BEFORE_RETIRED_AT, "0123456789ab"])
+    async def test_a_target_not_known_to_keep_the_account_is_refused(self, owning_default_superuser, target_revision):  # noqa: ARG002
+        # A schema from before user.retired_at, and a revision this Langflow does not know.
+        check = _check(await run_preflight(target_revision=target_revision), "default superuser")
+
+        assert check.status == "fail"
+        assert "last_login_at = now()" in check.problems[-1]
 
     async def test_a_default_superuser_that_signed_in_passes(self, safe_superuser):  # noqa: ARG002
         assert _check(await run_preflight(), "default superuser").status == "ok"
@@ -299,6 +391,16 @@ class TestEmbeddingModels:
 
         assert check.status == "warn"
         assert any("kb-nameless" in p for p in check.problems)
+
+    async def test_knowledge_bases_past_the_examples_are_counted_not_listed(self, safe_superuser):
+        await _add(*(KnowledgeBaseRecord(name=f"kb-{i}", user_id=safe_superuser.id, chunks=0) for i in range(7)))
+
+        check = _check(await run_preflight(), "embedding models")
+
+        assert check.status == "warn"
+        assert "7 record none" in check.summary
+        assert len(check.problems) == 6
+        assert check.problems[-1] == "... and 2 more"
 
     async def test_knowledge_bases_with_recorded_models_pass(self, safe_superuser):
         await _add(
