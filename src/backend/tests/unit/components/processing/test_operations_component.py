@@ -663,6 +663,66 @@ class TestDynamicOutputs:
         assert [o.name for o in result["outputs"]] == ["data_output"]
 
 
+class TestReplaceValueTableOperation:
+    """Test Replace Value table operation in unified OperationsComponent."""
+
+    def test_replace_value_integer_column(self):
+        """Test replacing integer values where input arrives as text strings."""
+        df = DataFrame(pd.DataFrame({"id": [1, 2, 3], "score": [20, 50, 20]}))
+        component = OperationsComponent(
+            df=df,
+            operation=[{"name": "Replace Value"}],
+            column_name="score",
+            replace_value="20",
+            replacement_value="99",
+        )
+        result = component.as_dataframe()
+        assert result["score"].tolist() == [99, 50, 99]
+        assert pd.api.types.is_integer_dtype(result["score"])
+
+    def test_replace_value_float_column(self):
+        """Test replacing float values where input arrives as text strings."""
+        df = DataFrame(pd.DataFrame({"ratio": [1.25, 2.5, 3.75]}))
+        component = OperationsComponent(
+            df=df,
+            operation=[{"name": "Replace Value"}],
+            column_name="ratio",
+            replace_value="2.5",
+            replacement_value="8.5",
+        )
+        result = component.as_dataframe()
+        assert result["ratio"].tolist() == [1.25, 8.5, 3.75]
+        assert pd.api.types.is_float_dtype(result["ratio"])
+
+    def test_replace_value_string_column(self):
+        """Test string/object column replacement remains unchanged."""
+        df = DataFrame(pd.DataFrame({"city": ["Paris", "London", "Paris"]}))
+        component = OperationsComponent(
+            df=df,
+            operation=[{"name": "Replace Value"}],
+            column_name="city",
+            replace_value="Paris",
+            replacement_value="Tokyo",
+        )
+        result = component.as_dataframe()
+        assert result["city"].tolist() == ["Tokyo", "London", "Tokyo"]
+        assert pd.api.types.is_object_dtype(result["city"]) or pd.api.types.is_string_dtype(result["city"])
+
+    def test_replace_value_non_numeric_fallback(self):
+        """Test replacing a number with a non-numeric string gracefully casts column."""
+        df = DataFrame(pd.DataFrame({"score": [10, 20, 30]}))
+        component = OperationsComponent(
+            df=df,
+            operation=[{"name": "Replace Value"}],
+            column_name="score",
+            replace_value="20",
+            replacement_value="N/A",
+        )
+        result = component.as_dataframe()
+        assert result["score"].tolist() == [10, "N/A", 30]
+        assert result["score"].dtype == object
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
 
