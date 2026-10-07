@@ -363,6 +363,14 @@ class ListenerSupervisor:
         with writing() as let_in:
             if let_in:
                 await self._reconcile()
+            elif self.last_reconcile_at is not None:
+                # A listener that was already running still holds its connections, and a pause finds it by
+                # its lease. A pause that is tried again and again stays written for longer than a lease
+                # lasts, so the lease is renewed here and nothing else is done.
+                async with session_scope() as session:
+                    await replicas.announce(
+                        session, holder=self.holder, ttl_s=get_settings_service().settings.listener_lease_ttl_s
+                    )
 
     async def _reconcile(self) -> None:
         settings = get_settings_service().settings
