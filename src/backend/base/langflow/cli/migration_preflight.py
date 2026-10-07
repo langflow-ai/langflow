@@ -31,6 +31,8 @@ from langflow.cli.integrity import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 # How to read the revision a target image runs, for --target-revision.
@@ -53,41 +55,67 @@ _SUPERUSER_WORKAROUND = (
 async def run_preflight(
     *,
     target_revision: str | None = None,
+    target_version: str | None = None,
     target_secret_key: str | None = None,
+    on_check: Callable[[CheckResult], None] | None = None,
 ) -> IntegrityReport:
-    """Run the migration checks, then the source's own integrity checks."""
+    """Run the migration checks, then the source's own integrity checks.
+
+    ``on_check`` is called with each result as its check finishes.
+    """
     from langflow.services.deps import session_scope
 
+    report = IntegrityReport([])
+
+    def add(check: CheckResult) -> None:
+        report.checks.append(check)
+        if on_check:
+            on_check(check)
+
     async with session_scope() as session:
-        checks = [await check_version_direction(session, target_revision)]
+        version = await check_version_direction(session, target_revision, target_version)
+        add(version)
         schema = await check_schema(session)
         if schema.status != "ok":
             # The remaining checks read through this Langflow's models, which on another
             # schema would misread rows. Nothing migrates the source to make them fit.
             await session.rollback()
-            return IntegrityReport([*checks, replace(schema, name="source: schema")])
-        checks += [
-            await check_default_superuser(session, target_revision),
-            await check_target_key(session, target_secret_key),
-            await check_embedding_models(session),
-            await check_role_assignments(session),
-        ]
+            add(replace(schema, name="source: schema"))
+            return report
+        if not target_revision and target_version and version.status == "ok":
+            # A target at this version or newer holds this Langflow's migrations, so this head stands for its own.
+            target_revision = script_directory().get_current_head()
+        add(await check_default_superuser(session, target_revision))
+        add(await check_target_key(session, target_secret_key))
+        add(await check_embedding_models(session))
+        add(await check_role_assignments(session))
         await session.rollback()
-    source = await check_instance()
-    checks += [replace(check, name=f"source: {check.name}") for check in source.checks]
-    return IntegrityReport(checks)
+    await check_instance(on_check=lambda check: add(replace(check, name=f"source: {check.name}")))
+    return report
 
 
-async def check_version_direction(session: AsyncSession, target_revision: str | None) -> CheckResult:
+async def check_version_direction(
+    session: AsyncSession, target_revision: str | None, target_version: str | None = None
+) -> CheckResult:
     """Attaching runs the target's migrations, which only move forward.
 
     So the source's revision has to be one the target's image already contains.
     A source ahead of the target would need migrations run backwards, which no
     Langflow supports.
+
+    Admins know the Langflow version their target runs, so that is enough. The
+    revision is exact, so it wins when both are given: two images built from
+    different commits can carry the same version.
     """
     name = "version"
+    if not target_revision and target_version:
+        return check_target_version(target_version)
     if not target_revision:
-        return CheckResult(name, "warn", f"not checked: pass --target-revision ({TARGET_REVISION_HINT})")
+        return CheckResult(
+            name,
+            "warn",
+            f"not checked: pass --target-version, or --target-revision ({TARGET_REVISION_HINT})",
+        )
 
     # get_heads() prints a list, such as ['<revision>']; pasted as is, it names that revision.
     target_revision = target_revision.strip("[]'\" ")
@@ -125,6 +153,40 @@ async def check_version_direction(session: AsyncSession, target_revision: str | 
         return CheckResult(name, "ok", f"source and target are both at {target_revision}; attaching runs no migration")
     return CheckResult(
         name, "ok", f"the target ({target_revision}) is ahead of the source; attaching migrates the schema forward"
+    )
+
+
+def check_target_version(target_version: str) -> CheckResult:
+    """Is the target's Langflow at least the version this instance runs?
+
+    This instance's database is at this Langflow's head, or the schema check stops
+    the preflight, so its version stands for its schema.
+    """
+    from packaging.version import InvalidVersion, Version
+
+    from langflow.utils.version import get_version_info
+
+    name = "version"
+    source = Version(get_version_info()["version"])
+    try:
+        target = Version(target_version.strip())
+    except InvalidVersion:
+        return CheckResult(
+            name, "warn", f"{target_version!r} is not a Langflow version, such as {source}; the version was not checked"
+        )
+    if target < source:
+        return CheckResult(
+            name,
+            "fail",
+            f"the target runs Langflow {target}, older than this instance's {source}; "
+            "attaching would need its migrations run backwards",
+        )
+    if target == source:
+        return CheckResult(name, "ok", f"source and target both run Langflow {source}")
+    return CheckResult(
+        name,
+        "ok",
+        f"the target runs Langflow {target}, newer than this instance's {source}; attaching migrates forward",
     )
 
 
