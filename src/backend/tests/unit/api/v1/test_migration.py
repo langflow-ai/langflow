@@ -837,7 +837,7 @@ async def test_the_pause_is_refused_while_a_change_let_in_before_it_is_still_goi
         "since": None,
     }
     assert datetime.fromisoformat(change["since"]) <= datetime.now(timezone.utc)
-    assert "pause" not in (await _migration(client, headers))["record"]
+    assert not {"pause", "pausing"} & (await _migration(client, headers))["record"].keys()
 
     release.set()
 
@@ -845,6 +845,29 @@ async def test_the_pause_is_refused_while_a_change_let_in_before_it_is_still_goi
     assert await uploading == 201
     assert (await _migration(client, headers))["instance"]["files"]["local"] is True
     assert (await client.post(PAUSE, headers=headers)).status_code == 200
+
+
+async def test_a_pause_that_was_ended_while_its_request_still_waited_is_not_answered_as_a_pause(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    written, _ = _tell_when_the_pause_is_written(monkeypatch)
+    arrived, release = asyncio.Event(), asyncio.Event()
+    uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
+    await arrived.wait()
+    pausing = asyncio.create_task(client.post(PAUSE, headers=headers))
+    await written.wait()
+
+    # Changes are turned back on while the request still waits for the upload. Then the upload ends.
+    assert (await client.delete(PAUSE, headers=headers)).status_code == 200
+    release.set()
+    assert await uploading == 201
+
+    ended = await pausing
+    assert ended.status_code == 409, ended.text
+    assert ended.json()["detail"] == {"code": "pause_ended"}
+    assert not {"pause", "pausing"} & (await _migration(client, headers))["record"].keys()
 
 
 async def test_the_pause_begins_once_the_last_change_let_in_before_it_has_ended(
@@ -1064,7 +1087,7 @@ async def _refused_over_work_left_running(client, headers, arrived: asyncio.Even
         refused = await client.post(PAUSE, headers=headers)
         # The run goes on to write its job, its messages and its results, so the instance is not still.
         assert refused.status_code == 409, refused.text
-        assert "pause" not in (await _migration(client, headers))["record"]
+        assert not {"pause", "pausing"} & (await _migration(client, headers))["record"].keys()
     finally:
         release.set()
     # Once the run has ended, nothing is under way for the next pause to wait for.
@@ -1478,7 +1501,7 @@ async def test_a_pause_request_that_is_cut_off_while_it_waits_leaves_no_pause_be
     with pytest.raises(asyncio.CancelledError):
         await pausing
 
-    assert "pause" not in (await _migration(client, headers))["record"]
+    assert not {"pause", "pausing"} & (await _migration(client, headers))["record"].keys()
     release.set()
     assert await uploading == 201
 
@@ -1515,7 +1538,7 @@ async def test_the_pause_is_refused_while_another_worker_has_a_change_going(
             "changes": [],
             "elsewhere": True,
         }
-        assert "pause" not in (await _migration(client, headers))["record"]
+        assert not {"pause", "pausing"} & (await _migration(client, headers))["record"].keys()
     finally:
         if worker.returncode is None:
             worker.stdin.write(b"\n")
@@ -1780,7 +1803,7 @@ async def test_the_pause_is_refused_while_a_trigger_listener_is_alive(client, lo
     [listener] = detail["listeners"]
     assert listener["holder"] == "listener:222:cafef00d"
     assert datetime.fromisoformat(listener["heartbeat_at"]) <= datetime.now(timezone.utc)
-    assert "pause" not in (await _migration(client, headers))["record"]
+    assert not {"pause", "pausing"} & (await _migration(client, headers))["record"].keys()
 
     async with session_scope() as session:
         # What a listener does when it is stopped.

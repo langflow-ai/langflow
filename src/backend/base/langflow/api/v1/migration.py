@@ -205,6 +205,10 @@ async def pause_changes(admin: Superuser) -> dict[str, Any]:
         record["pause"] = {"frozen_at": _now(), "frozen_by": admin.username}
         _write_record(record)
         await logger.ainfo(f"Migration: user_id={admin.id} paused changes to this instance")
+    if not record.get("pause"):
+        # It was ended while this request waited: changes were turned back on, or another request for
+        # the same pause was refused or cut off. Nothing is paused, and the answer must not read as if it were.
+        raise HTTPException(status_code=409, detail={"code": "pause_ended"})
     return await _state(record)
 
 
