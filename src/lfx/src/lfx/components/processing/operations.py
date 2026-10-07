@@ -1163,7 +1163,9 @@ class OperationsComponent(Component):
         return DataFrame(df.tail(self.num_rows))
 
     def replace_values(self, df: DataFrame) -> DataFrame:
-        df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
+        replace_val = self._comparable_filter_value(df[self.column_name], self.replace_value)
+        replacement_val = self._comparable_filter_value(df[self.column_name], self.replacement_value)
+        df[self.column_name] = df[self.column_name].replace(replace_val, replacement_val)
         return DataFrame(df)
 
     def drop_duplicates(self, df: DataFrame) -> DataFrame:
