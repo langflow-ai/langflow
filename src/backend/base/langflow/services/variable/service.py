@@ -10,7 +10,7 @@ from lfx.log.logger import logger
 from lfx.services.authorization.base import ResourceVisibilityScope
 from lfx.services.settings.constants import AGENTIC_VARIABLES
 from lfx.services.variable import VariableNotFoundError
-from lfx.utils.user_id import to_user_uuid
+from lfx.utils.util import to_uuid
 from sqlmodel import col, select, update
 
 from langflow.services.auth import utils as auth_utils
@@ -285,6 +285,13 @@ class DatabaseVariableService(VariableService, Service):
 
         return variable
 
+    async def get_variable_objects(
+        self, user_id: UUID | str, names: Iterable[str], session: AsyncSession
+    ) -> dict[str, Variable]:
+        """Fetch nonempty owned variable objects by name in one database query."""
+        stmt = select(Variable).where(Variable.user_id == to_uuid(user_id), col(Variable.name).in_(names))
+        return {variable.name: variable for variable in (await session.exec(stmt)).all() if variable.value}
+
     async def get_variable(
         self,
         user_id: UUID | str,
@@ -360,11 +367,8 @@ class DatabaseVariableService(VariableService, Service):
         names = set(names)
         if not names:
             return {}
-        user_id = to_user_uuid(user_id)
-        rows = (
-            await session.exec(select(Variable).where(Variable.user_id == user_id, col(Variable.name).in_(names)))
-        ).all()
-        variables = {row.name: row for row in rows if row.value}
+        user_id = to_uuid(user_id)
+        variables = await self.get_variable_objects(user_id, names, session)
         missing = names - variables.keys()
         if missing:
             shared = await self._get_shared_variables(user_id, missing, session)
@@ -503,7 +507,7 @@ class DatabaseVariableService(VariableService, Service):
             Dictionary mapping variable names to decrypted values
         """
         # Convert string to UUID if needed for SQLAlchemy query
-        user_id_uuid = to_user_uuid(user_id)
+        user_id_uuid = to_uuid(user_id)
         stmt = select(Variable).where(Variable.user_id == user_id_uuid)
         variables = (await session.exec(stmt)).all()
 

@@ -318,47 +318,61 @@ def _language_model_options_from_models(
             if not provider_policy.allows_model(provider, model_name, model_type=row_model_type):
                 continue
 
-            # Get parameter mapping for this provider
-            param_mapping = get_provider_param_mapping(provider)
-
-            # Build the option dict
-            # Get provider-level metadata for max_tokens field name
-            provider_meta = model_provider_metadata.get(provider, {})
-            option_metadata = {
-                "context_length": 128000,  # Default, can be overridden
-                "model_class": param_mapping.get("model_class", "ChatOpenAI"),
-                "model_name_param": param_mapping.get("model_param", "model"),
-                "api_key_param": param_mapping.get("api_key_param", "api_key"),
-            }
-            if "max_tokens_field_name" in provider_meta:
-                option_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
-
-            option = {
-                "name": model_name,
-                "icon": icon,
-                "category": provider,
-                "provider": provider,
-                "metadata": option_metadata,
-            }
-
-            # Propagate catalog ``reasoning`` for every provider (not just
-            # OpenAI) so get_llm can suppress unsupported sampling parameters
-            # consistently while preserving independently supported token caps.
-            if metadata.get("reasoning"):
-                option["metadata"]["reasoning"] = True
-                option["metadata"]["reasoning_models"] = [model_name]
-
-            # Add provider-specific params from mapping
-            if "base_url_param" in param_mapping:
-                option["metadata"]["base_url_param"] = param_mapping["base_url_param"]
-            if "url_param" in param_mapping:
-                option["metadata"]["url_param"] = param_mapping["url_param"]
-            if "project_id_param" in param_mapping:
-                option["metadata"]["project_id_param"] = param_mapping["project_id_param"]
-
-            options.append(option)
+            options.append(_format_language_model_option(provider, model_name, icon, metadata))
 
     return options
+
+
+def get_language_model_option(provider: str, model_name: str) -> dict[str, Any] | None:
+    """Return catalog metadata for one language model by provider and name."""
+    groups = get_unified_models_detailed(providers=[provider], model_name=model_name, model_type="llm")
+    if not groups or not groups[0]["models"]:
+        return None
+    group = groups[0]
+    return _format_language_model_option(provider, model_name, group.get("icon", "Bot"), group["models"][0]["metadata"])
+
+
+def _format_language_model_option(provider, model_name, icon, metadata) -> dict[str, Any]:
+    """Share model-option metadata between catalog lists and named lookup."""
+    # Get parameter mapping for this provider
+    param_mapping = get_provider_param_mapping(provider)
+
+    # Build the option dict
+    # Get provider-level metadata for max_tokens field name
+    provider_meta = model_provider_metadata.get(provider, {})
+    option_metadata = {
+        "context_length": 128000,  # Default, can be overridden
+        "model_class": param_mapping.get("model_class", "ChatOpenAI"),
+        "model_name_param": param_mapping.get("model_param", "model"),
+        "api_key_param": param_mapping.get("api_key_param", "api_key"),
+    }
+    if "max_tokens_field_name" in provider_meta:
+        option_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
+
+    option = {
+        "name": model_name,
+        "icon": icon,
+        "category": provider,
+        "provider": provider,
+        "metadata": option_metadata,
+    }
+
+    # Propagate catalog ``reasoning`` for every provider (not just
+    # OpenAI) so get_llm can suppress unsupported sampling parameters
+    # consistently while preserving independently supported token caps.
+    if metadata.get("reasoning"):
+        option["metadata"]["reasoning"] = True
+        option["metadata"]["reasoning_models"] = [model_name]
+
+    # Add provider-specific params from mapping
+    if "base_url_param" in param_mapping:
+        option["metadata"]["base_url_param"] = param_mapping["base_url_param"]
+    if "url_param" in param_mapping:
+        option["metadata"]["url_param"] = param_mapping["url_param"]
+    if "project_id_param" in param_mapping:
+        option["metadata"]["project_id_param"] = param_mapping["project_id_param"]
+
+    return option
 
 
 def get_embedding_model_options(
