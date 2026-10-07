@@ -15,7 +15,7 @@ from lfx.base.models import model_utils
 from lfx.base.models.unified_models import model_catalog
 from lfx.services import deps
 from lfx.services.variable.request_scope import activate_no_env_fallback, reset_no_env_fallback
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 OWNER = UUID("11111111-1111-1111-1111-111111111111")
@@ -80,17 +80,19 @@ async def pooled_variables(monkeypatch, tmp_path, discovery_server):
                 yield session
 
     class Variables:
-        async def get_variable(self, *, user_id, name, field, session):
+        async def get_variables(self, *, user_id, names, field, session):
             assert field == ""
             observed.append(asyncio.get_running_loop())
-            value = await session.scalar(
-                text("SELECT value FROM variables WHERE owner=:owner AND name=:name"),
-                {"owner": str(user_id), "name": name},
+            rows = await session.execute(
+                text("SELECT name, value FROM variables WHERE owner=:owner AND name IN :names").bindparams(
+                    bindparam("names", expanding=True)
+                ),
+                {"owner": str(user_id), "names": sorted(names)},
             )
             read.set()
             if pause.is_set():
                 await asyncio.Event().wait()
-            return value
+            return dict(rows.all())
 
     monkeypatch.setattr(deps, "get_db_service", lambda: Database())
     monkeypatch.setattr(model_utils, "get_variable_service", Variables)
@@ -169,3 +171,42 @@ def test_worker_snapshot_cannot_read_another_owner_or_undeclared_variable():
             model_utils.get_provider_variable_value(OWNER, "UNDECLARED")
     finally:
         model_utils._discovery_variables.reset(token)
+
+
+@pytest.mark.asyncio
+async def test_discovery_batches_only_enabled_live_provider_variables(pooled_variables, monkeypatch):
+    state = pooled_variables
+    monkeypatch.setenv("OPENAI_API_KEY", "environment-key")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://optional-must-not-fall-back.invalid")
+    metadata = {
+        "Ollama": {"variables": [{"variable_key": "BUNDLE_SETTING"}, {"variable_key": "OLLAMA_BASE_URL"}]},
+        "OpenAI": {"variables": [{"variable_key": "OPENAI_BASE_URL"}, {"variable_key": "OPENAI_API_KEY"}]},
+        "Anthropic": {"variables": [{"variable_key": "ANTHROPIC_API_KEY"}]},
+        "OpenRouter": {"variables": [{"variable_key": "DISABLED_PROVIDER_SETTING"}]},
+    }
+    values = await model_utils.aget_live_model_variables(OWNER, {"Ollama", "OpenAI", "Anthropic"}, metadata)
+    assert set(values) == {"OLLAMA_BASE_URL", "BUNDLE_SETTING", "OPENAI_BASE_URL", "OPENAI_API_KEY"}
+    assert values["OLLAMA_BASE_URL"].startswith("http://127.0.0.1:")
+    assert values["BUNDLE_SETTING"] is None
+    assert values["OPENAI_BASE_URL"] is None
+    assert values["OPENAI_API_KEY"] == "environment-key"  # pragma: allowlist secret
+    assert state.observed == [asyncio.get_running_loop()]
+    assert state.engine.pool.checkedout() == 0
+
+
+@pytest.mark.asyncio
+async def test_discovery_skips_database_without_live_providers(pooled_variables):
+    assert await model_utils.aget_live_model_variables(OWNER, {"Anthropic"}, {}) == {}
+    assert pooled_variables.observed == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("user_id", [None, "None"])
+async def test_discovery_without_owner_uses_required_environment_only(pooled_variables, monkeypatch, user_id):
+    monkeypatch.setenv("OPENAI_API_KEY", "environment-key")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://optional-must-not-fall-back.invalid")
+    assert await model_utils.aget_live_model_variables(user_id, {"OpenAI"}, model_catalog.model_provider_metadata) == {
+        "OPENAI_API_KEY": "environment-key",  # pragma: allowlist secret
+        "OPENAI_BASE_URL": None,
+    }
+    assert pooled_variables.observed == []

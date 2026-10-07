@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from cryptography.fernet import Fernet
 from langflow.services.auth.service import AuthService
-from langflow.services.auth.utils import encrypt_api_key, ensure_fernet_key
+from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key, ensure_fernet_key
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable, VariableUpdate
 from langflow.services.deps import get_settings_service
@@ -22,6 +22,7 @@ from lfx.services.model_provider_policy import (
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from lfx.services.variable import VariableNotFoundError
 from pydantic import SecretStr
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -558,6 +559,93 @@ async def test_get_variable(service, session: AsyncSession):
     assert isinstance(result, SecretStr)
     assert result.get_secret_value() == value
     assert str(result) == "**********"
+
+
+async def test_get_variables_batches_owned_names_and_only_decrypts_requested_credentials(service, session):
+    user_id = uuid4()
+    await service.create_variable(user_id, "URL", "https://owned.example", type_=GENERIC_TYPE, session=session)
+    await service.create_variable(user_id, "TOKEN", "owned-secret", session=session)
+    await service.create_variable(user_id, "UNRELATED", "unrelated-secret", session=session)
+    await service.create_variable(uuid4(), "URL", "https://other.example", type_=GENERIC_TYPE, session=session)
+    queries = []
+
+    def record_query(_conn, _cursor, statement, _parameters, _context, _executemany):
+        queries.append(statement)
+
+    event.listen(session.bind.sync_engine, "before_cursor_execute", record_query)
+    try:
+        with patch("langflow.services.variable.service.auth_utils.decrypt_api_key", wraps=decrypt_api_key) as decrypt:
+            values = await service.get_variables(str(user_id), {"URL", "TOKEN"}, "", session)
+        assert values["URL"] == "https://owned.example"
+        assert values["TOKEN"].get_secret_value() == "owned-secret"
+        assert str(values["TOKEN"]) == "**********"
+        assert set(values) == {"URL", "TOKEN"}
+        assert decrypt.call_count == 1
+        assert len(queries) == 1
+    finally:
+        event.remove(session.bind.sync_engine, "before_cursor_execute", record_query)
+
+
+@pytest.mark.parametrize("legacy_visibility", [False, True])
+async def test_get_variables_batches_shared_visibility_and_preserves_owner_precedence(
+    service, session, legacy_visibility
+):
+    actor = uuid4()
+    await service.create_variable(actor, "OWNED", "owned", type_=GENERIC_TYPE, session=session)
+    shared = []
+    for name, value in [("OWNED", "shadow"), ("SHARED", "shared"), ("AMBIGUOUS", "one"), ("AMBIGUOUS", "two")]:
+        shared.append(await service.create_variable(uuid4(), name, value, type_=GENERIC_TYPE, session=session))
+    await service.create_variable(uuid4(), "HIDDEN", "hidden", type_=GENERIC_TYPE, session=session)
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = (
+        None
+        if legacy_visibility
+        else AsyncMock(return_value=ResourceVisibilityScope(resource_ids=tuple(v.id for v in shared)))
+    )
+    authz.list_visible_resource_ids = AsyncMock(return_value=[v.id for v in shared])
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch.object(session, "exec", wraps=session.exec) as execute,
+    ):
+        values = await service.get_variables(actor, {"OWNED", "SHARED", "AMBIGUOUS", "HIDDEN", "MISSING"}, "", session)
+    assert values == {"OWNED": "owned", "SHARED": "shared", "AMBIGUOUS": None, "HIDDEN": None, "MISSING": None}
+    assert execute.await_count == 2
+    if legacy_visibility:
+        authz.list_visible_resource_ids.assert_awaited_once()
+    else:
+        authz.get_resource_visibility.assert_awaited_once()
+        authz.list_visible_resource_ids.assert_not_awaited()
+
+
+async def test_get_variables_handles_missing_and_unreadable_values_independently(service, session):
+    actor = uuid4()
+    await service.create_variable(actor, "GOOD", "good", type_=GENERIC_TYPE, session=session)
+    await service.create_variable(actor, "UNREADABLE", "secret", session=session)
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=False)
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.variable.service.auth_utils.decrypt_api_key", return_value=""),
+        patch.object(session, "exec", wraps=session.exec) as execute,
+    ):
+        assert await service.get_variables(actor, {"GOOD", "UNREADABLE", "MISSING"}, "", session) == {
+            "GOOD": "good",
+            "UNREADABLE": None,
+            "MISSING": None,
+        }
+    assert execute.await_count == 1
+
+
+async def test_get_variables_empty_batch_and_credential_field_restriction(service, session):
+    actor = uuid4()
+    with patch.object(session, "exec", wraps=session.exec) as execute:
+        assert await service.get_variables(actor, set(), "", session) == {}
+    execute.assert_not_awaited()
+    await service.create_variable(actor, "TOKEN", "secret", session=session)
+    with pytest.raises(TypeError, match="Session ID"):
+        await service.get_variables(actor, {"TOKEN"}, "session_id", session)
 
 
 async def test_get_variable__valueerror(service, session: AsyncSession):

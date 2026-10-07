@@ -133,6 +133,9 @@ EXPECTED_FIELDS = {
     "max_transactions_to_keep",
     "max_vertex_builds_to_keep",
     "max_vertex_builds_per_vertex",
+    "audit_enabled",
+    "audit_retention_days",
+    "audit_exclude_events",
     "max_flow_version_entries_per_flow",
     # SecuritySettings
     "cors_origins",
@@ -261,6 +264,8 @@ EXPECTED_FIELDS = {
     "background_watchdog_interval_s",
     "background_retention_days",
     "test_redis_url",
+    "data_subject_response_days",
+    "data_subject_auto_erase_on_expiry",
     # Triggers (TRG-2)
     "trigger_dispatcher_enabled",
     "trigger_dispatcher_poll_interval_s",
