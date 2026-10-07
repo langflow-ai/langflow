@@ -7,7 +7,9 @@ Langflow provides a command-line interface for administering user, team, role, a
 
 `langflow admin` is documented separately here from the [Langflow CLI](/configuration-cli) because Langflow CLI commands start the server or change the local installation, while `langflow admin` calls a Langflow server that is already running.
 
-The open-source authorization service is fail-closed for delegated administration. Superusers retain access. A non-superuser can administer a resource only when an installed authorization plugin implements the corresponding permission:
+A role assignment controls what a user can do, but requires an [authorization plugin](./authorization) to be installed and `LANGFLOW_AUTHZ_ENABLED` to be set to `true`.
+
+A non-superuser can administer a resource only when an installed authorization plugin implements the corresponding permission:
 
 | Permission | Allows | Does not allow |
 |---|---|---|
@@ -54,133 +56,209 @@ The CLI resolves the URL and API key in this order: `--url` and `--api-key`, the
 
 Use `--profile-file` to select a different profile document. Use `--output json` for stable automation output. Tables are the default for interactive use.
 
-## CLI command surface
+## Add a user
 
-```text
-langflow admin users list|get|create|update|disable|set-password|delete
-langflow admin teams list|get|create|update|disable|delete
-langflow admin teams members list|add|remove
-langflow admin roles list|get|create|update|delete
-langflow admin role-assignments list|grant|revoke
-langflow admin export|diff|apply
-langflow admin directory connection get|configure|validate|enable|disable
-langflow admin directory users list|get
-langflow admin directory groups list|get|members|link|unlink
-langflow admin directory role-mappings list|grant|revoke
-langflow admin directory reconcile preview|activate|status|retry
-langflow admin directory export|diff|apply
-```
-
-`groups` is an alias of `teams`. API paths, manifests, and JSON output always use `team` or `teams`.
-
-Passwords are accepted only from standard input or a manifest environment-variable reference. For example:
+To add a user, run:
 
 ```bash
 printf '%s\n' "$NEW_USER_PASSWORD" \
-  | langflow admin --profile production --output json users create alice --password-stdin
+  | langflow admin --profile production users create alice --password-stdin
 ```
 
-Normal deprovisioning disables a user:
+The password is read from standard input. A password typed on the command line is rejected.
+
+To change a password later, run:
+
+```bash
+printf '%s\n' "$NEW_USER_PASSWORD" \
+  | langflow admin --profile production users set-password alice --password-stdin
+```
+
+## Disable or delete a user
+
+To disable a user, run:
 
 ```bash
 langflow admin --profile production users disable alice
 ```
 
-Hard deletion requires both an explicit hard-delete flag and the exact username:
+The disabled account remains in the server, but the user can no longer authenticate.
+
+To re-enable a user, run:
+
+```bash
+langflow admin --profile production users update alice --active
+```
+
+To delete a user, run:
 
 ```bash
 langflow admin --profile production users delete alice --hard --confirm alice
 ```
 
-The CLI uses these exit codes:
+`--hard` is required to confirm the cascading deletion of the user's rows in the database, and `--confirm` must match the username.
 
-| Code | Meaning |
-|---|---|
-| `0` | Success, including a diff with no drift |
-| `1` | Authorization, transport, server, or partial-apply failure |
-| `2` | CLI usage or manifest validation failure |
-| `3` | `diff` found drift |
+## Add a user to a team
 
-## Declarative administration state
+To add a user to a team, do the following:
 
-`export`, `diff`, and `apply` use the stable `langflow.ai/v1` `AdminState` YAML or JSON contract.
+1. Create the team.
 
-```yaml
-apiVersion: langflow.ai/v1
-kind: AdminState
-users:
-  - username: alice
-    state: active
-    password_env: ALICE_INITIAL_PASSWORD
-teams:
-  - adom_name: operators
-    display_name: Operators
-    description: Production operators
-    state: active
-    members:
-      - alice
-roles:
-  - name: user-operator
-    description: Delegated user administrator
-    permissions:
-      - user:manage
-assignments:
-  - subject:
-      type: user
-      name: alice
-    role: user-operator
-    domain:
-      type: global
-```
+   ```bash
+   langflow admin --profile production teams create operators --display-name Operators
+   ```
 
-`password_env` is creation-only. The manifest is rejected if a plaintext `password` field is present. Optional IDs let a manifest rename users, teams, and custom roles; natural keys make manifests portable between deployments. System roles can be read and assigned but cannot be edited.
+2. Add the user.
 
-`apply` resolves and validates the entire manifest before it writes. It then applies changes in dependency order: roles, users, teams, memberships, and assignments. The default is create/update-only. `--prune` removes only absent **manual** memberships and assignments for subjects and teams named in the manifest. IdP-owned records are reported as skipped and are never removed. Non-interactive pruning also requires `--yes`.
+   ```bash
+   langflow admin --profile production teams members add operators alice
+   ```
 
-There is no server-side bulk transaction. If an operation fails, apply stops and reports applied, skipped, failed, and pending operations. Rerun the same manifest after correcting the failure; successful operations converge and are not repeated.
+In the CLI, `groups` and `teams` are interchangeable. `langflow admin groups members add` is the same command as `langflow admin teams members add`.
 
-## Declarative Enterprise directory state
+## Assign a role
 
-When an installed Enterprise authorization plugin advertises directory support, `langflow admin directory export|diff|apply` uses the credential-free `langflow.ai/v1` `DirectoryState` contract:
+To assign a role, do the following:
 
-```yaml
-apiVersion: langflow.ai/v1
-kind: DirectoryState
-connection:
-  tenant_id: tenant-a
-  issuer: https://issuer.example.com
-  audience: api://langflow-scim
-  jwks_url: https://issuer.example.com/jwks
-  allowed_client_id: langflow-scim
-teamLinks:
-  - group_id: 00000000-0000-0000-0000-000000000001
-    team_id: 00000000-0000-0000-0000-000000000002
-    origin: linked
-roleMappings:
-  - group_id: 00000000-0000-0000-0000-000000000001
-    role_id: 00000000-0000-0000-0000-000000000003
-    domain:
-      type: global
-```
+1. List the roles. Built-in roles are `viewer`, `developer`, and `admin`. In the list, `is_system` is `true` for built-in roles, which means they can be assigned to users, but they can't be edited or deleted.
 
-The document contains reviewed trust metadata and mapping intent only. It rejects credentials and provisioned user or group catalog data. `diff` is read-only. `apply` validates the complete plan before writing, and `--prune --yes` removes only absent directory-owned links and mappings. Reconciliation remains in preview until it is explicitly activated with `langflow admin directory reconcile activate RUN_ID --yes`.
+   ```bash
+   langflow admin --profile production roles list
+   ```
 
-## REST administration routes
+2. Optionally, create a custom role. Skip this step if you want to grant a built-in role.
 
-All routes authenticate with `X-API-Key`. Collection routes are deterministically ordered and accept pagination up to 200 rows per request; the CLI follows all pages automatically. Successful creates include a `Location` header.
+   ```bash
+   langflow admin --profile production roles create user-operator --permission user:manage
+   ```
 
-| Resource | Routes |
-|---|---|
-| Users | `/api/v1/users/`, `/api/v1/users/{user_id}` |
-| Teams | `/api/v1/authz/teams`, `/api/v1/authz/teams/{team_id}/members` |
-| Roles | `/api/v1/authz/roles` |
-| User role assignments | `/api/v1/authz/role-assignments` |
-| Capabilities | `/api/v1/authz/capabilities` |
+3. To grant the role, run:
 
-Exact collection filters include user `username`, user `role_name`, team `adom_name`, and role `exact_name`.
+   ```bash
+   langflow admin --profile production role-assignments grant --role user-operator --user alice
+   ```
 
-Manual membership and role-assignment mutations cannot remove IdP-only state. These conflicts return `409`, preserve the existing `detail` message, and add the stable `X-Langflow-Error-Code: externally_managed` response header. Administration denials use `403` and `X-Langflow-Error-Code: administration_denied`.
 
-Before a membership or effective role assignment changes, the installed authorization plugin can enforce its access ceiling. A rejected privilege escalation returns `409` with `X-Langflow-Error-Code: access_ceiling`.
+## Apply a saved administration file
 
-Administration auditing is opt-in. Set `LANGFLOW_AUTHZ_AUDIT_ENABLED=true` and restart Langflow to write administration decisions and mutations to `authz_audit_log`; the default is `false`, so a default installation does not retain this audit trail. When auditing is enabled, every administration mutation supplies its operation ID to the audit path. Audit details include the actor, target, action, source, and changed field names. Passwords, API keys, and secret values are never included.
+Use an administration file when you want the same users, teams, roles, and assignments on another Langflow server, or checked into source control.
+
+To apply a saved administration file, do the following:
+
+1. Export the current administration state.
+The file can be YAML or JSON.
+By default, `export` writes a YAML file unless the command includes `--format json`.
+This example uses `admin-state.yaml`.
+
+   ```bash
+   langflow admin --profile production export --file admin-state.yaml
+   ```
+
+2. Edit the file. Name a new user's password with `password_env`. The file is rejected if it contains a `password` field.
+
+   ```yaml
+   apiVersion: langflow.ai/v1
+   kind: AdminState
+   users:
+     - username: alice
+       state: active
+       password_env: ALICE_INITIAL_PASSWORD
+   teams:
+     - adom_name: operators
+       display_name: Operators
+       state: active
+       members:
+         - alice
+   roles:
+     - name: user-operator
+       permissions:
+         - user:manage
+   assignments:
+     - subject:
+         type: user
+         name: alice
+       role: user-operator
+       domain:
+         type: global
+   ```
+
+3. Optionally, to compare the administration file with the server's file, run:
+
+   ```bash
+   langflow admin --profile production diff admin-state.yaml
+   ```
+
+4. Set the environment variable named in `password_env` to the new user's password. In this file, that variable is `ALICE_INITIAL_PASSWORD`. It is read when the user is created.
+
+   ```bash
+   export ALICE_INITIAL_PASSWORD="<alice-password>"
+   ```
+
+5. Apply the administration file.
+
+   ```bash
+   langflow admin --profile production apply admin-state.yaml
+   ```
+
+   `apply` checks the administration file before writing it.
+   If a step fails, the command reports what was applied, skipped, or failed:
+
+   | Exit code | Meaning |
+   |---|---|
+   | `0` | Success. |
+   | `1` | Authorization, connection, server, or partial-apply failure. |
+   | `2` | CLI usage or file validation failure. |
+   | `3` | `diff` found differences. |
+
+   Fix any failures and apply the same administration file again.
+
+## Call the administration API
+
+A script can call the same routes the CLI calls.
+
+To call the administration API, do the following:
+
+1. Create a [Langflow API key](/api-keys-and-authentication#langflow-api-keys) for the account that will call the API. A superuser can administer every resource.
+Include the created key in the request's `x-api-key` header.
+
+2. Call the route for the action.
+
+   | Action | Route |
+   |---|---|
+   | Users | `/api/v1/users/` |
+   | Teams and members | `/api/v1/authz/teams` |
+   | Roles | `/api/v1/authz/roles` |
+   | Role assignments | `/api/v1/authz/role-assignments` |
+   | What this caller can administer | `GET /api/v1/authz/capabilities` |
+
+   For example, to list users, run:
+
+   ```bash
+   curl -sS "$LANGFLOW_URL/api/v1/users/?limit=50" \
+     -H "x-api-key: $LANGFLOW_API_KEY"
+   ```
+
+   A list returns at most 200 rows. To get the next page, repeat the request with `skip` set to the number of rows already returned. For example, to request the second page of 50 rows, run:
+
+   ```bash
+   curl -sS "$LANGFLOW_URL/api/v1/users/?limit=50&skip=50" \
+     -H "x-api-key: $LANGFLOW_API_KEY"
+   ```
+
+   Teams, roles, and role assignments use `offset` instead of `skip`. To request the second page of 50 teams, run:
+
+   ```bash
+   curl -sS "$LANGFLOW_URL/api/v1/authz/teams?limit=50&offset=50" \
+     -H "x-api-key: $LANGFLOW_API_KEY"
+   ```
+
+4. If the request is refused, read the status code and the `X-Langflow-Error-Code` header.
+
+   | Response | Header | When |
+   |---|---|---|
+   | `403` | `X-Langflow-Error-Code: administration_denied` | The caller is not allowed to administer that resource. |
+   | `409` | `X-Langflow-Error-Code: externally_managed` | The change would edit a membership or assignment owned by the identity provider. |
+   | `409` | `X-Langflow-Error-Code: access_ceiling` | The authorization plugin rejected the change as a privilege escalation. |
+
+To record user, team, role, and role-assignment changes in the [authorization audit log](./authorization#audit-log-api), set `LANGFLOW_AUTHZ_AUDIT_ENABLED=true` and restart Langflow to enable audit logging.
+The log stores who made the change and which fields changed. Passwords and API keys are omitted.
