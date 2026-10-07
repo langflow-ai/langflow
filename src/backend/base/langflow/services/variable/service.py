@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections import Counter
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -366,14 +367,8 @@ class DatabaseVariableService(VariableService, Service):
         missing = names - variables.keys()
         if missing:
             shared = await self._get_shared_variables(user_id, missing, session)
-            ambiguous = set()
-            for variable in shared:
-                if variable.name in variables:
-                    ambiguous.add(variable.name)
-                else:
-                    variables[variable.name] = variable
-            for name in ambiguous:
-                del variables[name]
+            counts = Counter(variable.name for variable in shared)
+            variables.update({variable.name: variable for variable in shared if counts[variable.name] == 1})
         values: dict[str, str | SecretStr | None] = dict.fromkeys(names)
         for name, variable in variables.items():
             try:
