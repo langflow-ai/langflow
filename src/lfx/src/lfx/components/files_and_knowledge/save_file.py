@@ -1,6 +1,5 @@
 import contextlib
 import json
-import re
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path, PurePath, PureWindowsPath
 from typing import Any
@@ -17,7 +16,7 @@ from lfx.io import BoolInput, DropdownInput, SecretStrInput, StrInput
 from lfx.schema import Data, DataFrame, Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.template.field.base import Output
-from lfx.utils.end_user_storage import record_end_user_folder
+from lfx.utils.end_user_storage import end_user_folder_segment, record_end_user_folder
 from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 from lfx.utils.validate_cloud import is_astra_cloud_environment
 
@@ -650,15 +649,14 @@ class SaveToFileComponent(Component):
 
         On the serving plane an identified end user owns the files they write during their
         session, so their id (``graph.end_user_id``) namespaces the save destination instead
-        of the shared service account. Sanitized to ``[A-Za-z0-9_.-]`` so a gateway-supplied
-        id can never traverse out of the storage root. ``None`` off / editor / anonymous, so
+        of the shared service account. Encode the complete identity so distinct ids never
+        share a folder, including on case-insensitive filesystems. ``None`` off / editor / anonymous, so
         the destination falls back to the SID scope exactly as before (strict BC).
         """
         end_user = self._serving_end_user_id()
         if not end_user:
             return None
-        safe = re.sub(r"[^A-Za-z0-9_.-]", "_", end_user).strip("._")
-        return safe or None
+        return end_user_folder_segment(end_user)
 
     def _serving_end_user_id(self) -> str:
         graph = getattr(getattr(self, "_vertex", None), "graph", None)
@@ -680,7 +678,7 @@ class SaveToFileComponent(Component):
         # Prepare file path. file_name is tenant-controlled and this writes to local disk.
         settings = get_settings_service().settings
         scope_ids = component_file_access_scopes(self)
-        # Serving plane: an identified end user owns their files, so their (sanitized) id
+        # Serving plane: an identified end user owns their files, so their encoded id
         # becomes the namespace folder AND an allowed access scope for enforce_local_file_access.
         # None off / editor / anonymous -> scope_ids unchanged -> SID namespace as before (BC).
         end_user_segment = self._serving_end_user_segment()
@@ -698,7 +696,9 @@ class SaveToFileComponent(Component):
         file_path = enforce_local_file_access(file_path, scope_ids=scope_ids)
         if in_end_user_folder:
             # Erasure deletes this folder only for the end users recorded as its owners.
-            record_end_user_folder(Path(settings.config_dir), end_user_segment, self._serving_end_user_id())
+            record_end_user_folder(
+                Path(settings.config_dir), end_user_segment, self._serving_end_user_id(), exclusive=True
+            )
         if not file_path.parent.exists():
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -830,7 +830,7 @@ class SaveToFileComponent(Component):
         path_segments = []
         if hasattr(self, "s3_prefix") and self.s3_prefix:
             path_segments.append(self.s3_prefix.rstrip("/"))
-        # Serving plane: an identified end user owns their files (sanitized id); else the SID.
+        # Serving plane: an identified end user owns their files (encoded id); else the SID.
         user_id = self._serving_end_user_segment() or self.user_id
         if user_id and str(user_id) != "None":
             path_segments.append(str(user_id))
