@@ -34,8 +34,7 @@ from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import unwrap_secret_value
 from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
-from lfx.utils.user_id import has_user_id, to_user_uuid
-from lfx.utils.util import transform_localhost_url
+from lfx.utils.util import is_uuid_set, to_uuid, transform_localhost_url
 
 HTTP_STATUS_OK = 200
 HTTP_STATUS_MULTIPLE_CHOICES = 300
@@ -498,7 +497,7 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
 
 async def aget_provider_variable_value(user_id: UUID | str | None, variable_key: str) -> str | None:
     """Resolve discovery inputs on the caller loop with the existing fallback rules."""
-    if not has_user_id(user_id):
+    if not is_uuid_set(user_id):
         return _environment_variable_value(variable_key)
 
     value = None
@@ -507,7 +506,7 @@ async def aget_provider_variable_value(user_id: UUID | str | None, variable_key:
         if variable_service is not None:
             try:
                 value = await variable_service.get_variable(
-                    user_id=to_user_uuid(user_id),
+                    user_id=to_uuid(user_id),
                     name=variable_key,
                     field="",
                     session=session,
@@ -534,17 +533,17 @@ async def aget_live_model_variables(
     if not keys:
         return {}
     values = {}
-    if has_user_id(user_id):
+    if is_uuid_set(user_id):
         async with session_scope() as session:
             variable_service = get_variable_service()
             if variable_service is not None:
                 values = await variable_service.get_variables(
-                    user_id=to_user_uuid(user_id),
+                    user_id=to_uuid(user_id),
                     names=keys,
                     field="",
                     session=session,
                 )
-    return {key: _to_str(values.get(key)) or _environment_variable_value(key) for key in sorted(keys)}
+    return {key: _to_str(values.get(key)) or _environment_variable_value(key) for key in keys}
 
 
 def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -1375,7 +1374,7 @@ def _replace_with_live_models(provider_models, user_id, enabled_providers, model
     if not user_id or not enabled_providers:
         return provider_models
 
-    for provider in sorted(set(enabled_providers) & (LIVE_MODEL_PROVIDERS | CONDITIONAL_LIVE_MODEL_PROVIDERS)):
+    for provider in set(enabled_providers) & (LIVE_MODEL_PROVIDERS | CONDITIONAL_LIVE_MODEL_PROVIDERS):
         if model_type is None:
             live_llm = get_live_models_for_provider(user_id, provider, "llm")
             live_emb = get_live_models_for_provider(user_id, provider, "embeddings")
