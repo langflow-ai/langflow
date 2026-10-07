@@ -1,0 +1,51 @@
+---
+title: Publora
+slug: /bundles-publora
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="publora" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Publora** bundle.
+
+[Publora](https://publora.com) publishes and schedules social media posts to LinkedIn, X, Instagram, Threads, TikTok, YouTube, Facebook, Bluesky, Mastodon and Telegram.
+Both components need a Publora API key, which you create on the API page of the Publora dashboard. Social accounts are connected in the Publora dashboard, and the components post only to accounts connected there. For details on the underlying API, see the [Publora API documentation](https://docs.publora.com).
+
+If a request fails, for example because the API key is missing or invalid, the output contains a single row or object with an `error` field that describes the problem.
+
+## Publora List Connections
+
+This component lists the social accounts connected to your Publora account.
+
+It outputs a [`Table`](/data-types#table) with `platformId`, `username`, `displayName`, `connectionStatus`, `tokenStatus`, and `tokenExpiresIn` columns. Use the `platformId` values in the **Publora Create Post** component.
+
+In [tool mode](/agents-tools), the component exposes a single tool named `publora_list_connections`.
+
+### Publora List Connections parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Publora API Key (`publora_api_key`) | SecretString | Input parameter. Your Publora API key. |
+
+## Publora Create Post
+
+This component creates a post for one or more connected social accounts.
+Without a scheduled time, the post is saved as a draft in Publora and is never published. With an ISO 8601 UTC time, the post is scheduled for that time.
+
+It outputs a [`JSON`](/data-types#json) object with `postGroupId`, `scheduledTime`, `status` (`draft` or `scheduled`), and `warnings`.
+
+In [tool mode](/agents-tools), the component exposes a single tool named `publora_create_post` that an [**Agent** component](/agents) can call with the post content, the target `platformId` values, and an optional scheduled time.
+
+### Publora Create Post parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Content (`content`) | String | Input parameter. The text of the post. |
+| Platforms (`platforms`) | String | Input parameter. Comma-separated `platformId` values to post to, from the **Publora List Connections** component. |
+| Scheduled Time (`scheduled_time`) | String | Input parameter. ISO 8601 UTC time to publish, for example `2026-10-14T09:00:00Z`. Leave empty to save a draft. Optional. |
+| Media URLs (`media_urls`) | String | Input parameter. Comma-separated public `https` URLs of images or videos to attach. Instagram, TikTok, and YouTube need media before a post can be scheduled. Optional. |
+| Publora API Key (`publora_api_key`) | SecretString | Input parameter. Your Publora API key. |
