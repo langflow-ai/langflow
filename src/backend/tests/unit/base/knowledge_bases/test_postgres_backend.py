@@ -309,8 +309,8 @@ class TestPostgresContentIdLookupLive:
 
             assert await backend.existing_content_ids({"h0"}) == set()  # no table yet
 
-            # Rows keep their random ids; the hash lives in the metadata, as the
-            # Knowledge component has always written it.
+            # Rows keep their random ids; the hash lives in the metadata, where
+            # the Knowledge component writes it.
             await backend.add_documents(
                 [Document(page_content=f"doc {i}", metadata={"_id": f"h{i}", "file_name": "f"}) for i in range(200)]
                 + [Document(page_content="no hash", metadata={"file_name": "f"})]
