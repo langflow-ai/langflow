@@ -110,10 +110,24 @@ async def check_schema(session: AsyncSession) -> CheckResult:
     """
     heads = set(script_directory().get_heads())
     try:
-        revisions = {row[0] for row in await session.exec(sa.text("SELECT version_num FROM alembic_version"))}
-    except sa.exc.SQLAlchemyError:
+        await session.connection()
+    except sa.exc.SQLAlchemyError as exc:
         await session.rollback()
-        revisions = set()
+        # The driver's first line names the host it tried, and never the URL or its password.
+        reason = _database_error_reason(exc)
+        return CheckResult(
+            "schema", "fail", f"the database could not be reached: {reason}. Check LANGFLOW_DATABASE_URL"
+        )
+    try:
+        revisions = await recorded_revisions(session)
+    except sa.exc.SQLAlchemyError as exc:
+        await session.rollback()
+        return CheckResult(
+            "schema",
+            "fail",
+            f"the database schema could not be read: {_database_error_reason(exc)}. "
+            "Check permissions and structure of alembic_version",
+        )
     if revisions == heads:
         return CheckResult("schema", "ok", f"database at revision {', '.join(sorted(revisions))}")
     found = ", ".join(sorted(revisions)) or "no recorded revision"
@@ -123,6 +137,24 @@ async def check_schema(session: AsyncSession) -> CheckResult:
         f"database is at {found} and this Langflow reads {', '.join(sorted(heads))}; run the check with "
         "the Langflow version that last ran against this database",
     )
+
+
+def _database_error_reason(exc: sa.exc.SQLAlchemyError) -> str:
+    """Report only the driver's first line, without SQLAlchemy's query parameters."""
+    return str(exc.orig).strip().partition("\n")[0] if isinstance(exc, sa.exc.DBAPIError) else type(exc).__name__
+
+
+async def recorded_revisions(session: AsyncSession) -> set[str]:
+    """The revisions the database records, which is none when it has no alembic_version table.
+
+    Inspection and reading can still fail on a malformed schema or missing permissions.
+    Alembic's own MigrationContext answers the same question and logs two INFO lines
+    each time, which would land in the command's output.
+    """
+    connection = await session.connection()
+    if not await connection.run_sync(lambda sync: sa.inspect(sync).has_table("alembic_version")):
+        return set()
+    return {row[0] for row in await session.exec(sa.text("SELECT version_num FROM alembic_version"))}
 
 
 def script_directory():
@@ -170,7 +202,7 @@ async def check_credentials(session: AsyncSession, settings_service: SettingsSer
         return CheckResult("credentials", "fail", f"the configured secret key is not usable: {str(exc).rstrip('.')}")
     counted = 0
     problems = []
-    for column, row_id, value in await _encrypted_values(session):
+    for column, row, value in await _encrypted_values(session):
         counted += 1
         try:
             if column == "sso_config.client_secret_encrypted":
@@ -180,7 +212,7 @@ async def check_credentials(session: AsyncSession, settings_service: SettingsSer
             else:
                 fernet.decrypt(value.encode())
         except (InvalidToken, ValueError, TypeError):
-            problems.append(f"{column} row {row_id}")
+            problems.append(f"{column} row {row}")
     return _result(
         "credentials",
         problems,
@@ -189,8 +221,14 @@ async def check_credentials(session: AsyncSession, settings_service: SettingsSer
     )
 
 
-async def _encrypted_values(session: AsyncSession) -> list[tuple[str, Any, str]]:
-    """Every encrypted value as (column, row id, ciphertext). Plaintext the app still reads is not counted."""
+def _row(row_id: Any, name: str | None, owner: str | None) -> str:
+    """A row as an operator can find it: its id, then the name and the owner's username it has."""
+    known = ", ".join(filter(None, (name, owner and f"owner {owner}")))
+    return f"{row_id} ({known})" if known else str(row_id)
+
+
+async def _encrypted_values(session: AsyncSession) -> list[tuple[str, str, str]]:
+    """Every encrypted value as (column, row, ciphertext). Plaintext the app still reads is not counted."""
     from langflow.services.auth.mcp_encryption import (
         MCP_SECRET_CONFIG_MAPS,
         SENSITIVE_FIELDS,
@@ -198,7 +236,7 @@ async def _encrypted_values(session: AsyncSession) -> list[tuple[str, Any, str]]
     )
     from langflow.services.database.models.api_key.model import ApiKey
     from langflow.services.database.models.auth.sso import SSOConfig
-    from langflow.services.database.models.connection.model import ConnectionSecret
+    from langflow.services.database.models.connection.model import Connection, ConnectionSecret
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.folder.model import Folder
     from langflow.services.database.models.mcp_server.model import MCPServer
@@ -207,53 +245,61 @@ async def _encrypted_values(session: AsyncSession) -> list[tuple[str, Any, str]]
     from langflow.services.database.models.variable.model import Variable
     from langflow.services.variable.constants import CREDENTIAL_TYPE
 
-    values: list[tuple[str, Any, str]] = []
+    values: list[tuple[str, str, str]] = []
 
-    def add(column: str, rows: Iterable[tuple[Any, Any]], *, always_encrypted: bool = False) -> None:
+    def add(column: str, rows: Iterable[tuple[Any, Any, Any, Any]], *, always_encrypted: bool = False) -> None:
         values.extend(
-            (column, row_id, value)
-            for row_id, value in rows
+            (column, _row(row_id, name, owner), value)
+            for row_id, name, owner, value in rows
             if isinstance(value, str) and (always_encrypted or (value and value.startswith(_FERNET_PREFIX)))
         )
 
+    def owned(model: Any, column: Any) -> Any:
+        # Still one query per table: the owner comes from a join, which keeps a row whose owner is gone.
+        return select(model.id, model.name, User.username, column).join(User, User.id == model.user_id, isouter=True)
+
     # Generic variables are stored as typed, so only credentials are encrypted.
-    add(
-        "variable.value",
-        await session.exec(select(Variable.id, Variable.value).where(Variable.type == CREDENTIAL_TYPE)),
-    )
-    add("apikey.api_key", await session.exec(select(ApiKey.id, ApiKey.api_key)))
-    add("user.store_api_key", await session.exec(select(User.id, User.store_api_key)))
+    add("variable.value", await session.exec(owned(Variable, Variable.value).where(Variable.type == CREDENTIAL_TYPE)))
+    add("apikey.api_key", await session.exec(owned(ApiKey, ApiKey.api_key)))
+    add("user.store_api_key", await session.exec(select(User.id, User.username, sa.null(), User.store_api_key)))
     add(
         "deployment_provider_account.api_key",
-        await session.exec(select(DeploymentProviderAccount.id, DeploymentProviderAccount.api_key)),
+        await session.exec(owned(DeploymentProviderAccount, DeploymentProviderAccount.api_key)),
     )
     # Nothing writes this payload in plaintext and its reader raises on one it cannot decode,
     # so every value is checked, including a token that lost its prefix.
     add(
         "connection_secret.encrypted_payload",
-        await session.exec(select(ConnectionSecret.connection_id, ConnectionSecret.encrypted_payload)),
+        await session.exec(
+            select(ConnectionSecret.connection_id, Connection.name, User.username, ConnectionSecret.encrypted_payload)
+            .select_from(ConnectionSecret)
+            .join(Connection, Connection.id == ConnectionSecret.connection_id, isouter=True)
+            .join(User, User.id == Connection.owner_id, isouter=True)
+        ),
         always_encrypted=True,
     )
-    add("trigger.signing_secret_encrypted", await session.exec(select(Trigger.id, Trigger.signing_secret_encrypted)))
+    add("trigger.signing_secret_encrypted", await session.exec(owned(Trigger, Trigger.signing_secret_encrypted)))
 
-    for folder_id, settings in await session.exec(select(Folder.id, Folder.auth_settings)):
+    for folder_id, name, owner, settings in await session.exec(owned(Folder, Folder.auth_settings)):
         if isinstance(settings, dict):
-            add("folder.auth_settings", ((folder_id, settings.get(key)) for key in SENSITIVE_FIELDS))
+            add("folder.auth_settings", ((folder_id, name, owner, settings.get(key)) for key in SENSITIVE_FIELDS))
 
-    for server_id, config in await session.exec(select(MCPServer.id, MCPServer.config)):
+    for server_id, name, owner, config in await session.exec(owned(MCPServer, MCPServer.config)):
         if not isinstance(config, dict):
             continue
         for map_name in MCP_SECRET_CONFIG_MAPS:
             secrets = config.get(map_name)
             if isinstance(secrets, dict):
-                add(f"mcp_server.config.{map_name}", ((server_id, value) for value in secrets.values()))
+                add(f"mcp_server.config.{map_name}", ((server_id, name, owner, value) for value in secrets.values()))
         args = config.get("args")
-        add("mcp_server.config.args", ((server_id, args[i]) for i in _argv_secret_positions(args)))
+        add("mcp_server.config.args", ((server_id, name, owner, args[i]) for i in _argv_secret_positions(args)))
 
     # SSO secrets are an AES-GCM envelope, not a Fernet token, so they are taken as stored.
     values.extend(
-        ("sso_config.client_secret_encrypted", row_id, value)
-        for row_id, value in await session.exec(select(SSOConfig.id, SSOConfig.client_secret_encrypted))
+        ("sso_config.client_secret_encrypted", _row(row_id, name, None), value)
+        for row_id, name, value in await session.exec(
+            select(SSOConfig.id, SSOConfig.display_name, SSOConfig.client_secret_encrypted)
+        )
         if value
     )
     return values
@@ -297,7 +343,7 @@ async def check_files(session: AsyncSession) -> CheckResult:
 async def _check_knowledge_bases(
     session: AsyncSession,
 ) -> tuple[list[CheckResult], dict[tuple[UUID, str], int | None]]:
-    """Two checks from one pass: can each backend be reached, and does its count match the row.
+    """Three checks from one pass: is each store upgraded, can it be reached, and does its count match.
 
     Returns the vector count per (owner, knowledge base) for the memory base check,
     with None where the store could not be read.
@@ -306,21 +352,44 @@ async def _check_knowledge_bases(
     from lfx.base.knowledge_bases.backends.sqlite import SQLiteStorageContext
 
     from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+    from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
     from langflow.services.database.models.user.model import User
     from langflow.services.knowledge_base_storage.runtime import storage_root
 
     rows = (
         await session.exec(
-            select(KnowledgeBaseRecord, User.username).join(User, User.id == KnowledgeBaseRecord.user_id)
+            select(KnowledgeBaseRecord, User.username, KnowledgeBaseStorageMigration.error_code)
+            .join(User, User.id == KnowledgeBaseRecord.user_id)
+            .join(
+                KnowledgeBaseStorageMigration,
+                KnowledgeBaseStorageMigration.id == KnowledgeBaseRecord.active_migration_id,
+                isouter=True,
+            )
         )
     ).all()
+    upgrading: list[str] = []
+    pending_cleanup: list[str] = []
+    detached = 0
     unreachable: list[str] = []
     mismatched: list[str] = []
     counts: dict[tuple[UUID, str], int | None] = {}
 
-    for record, owner in rows:
+    for record, owner, error_code in rows:
         label = f"{owner}/{record.name} ({record.backend_type})"
         counts[(record.user_id, record.name)] = None
+        if record.storage_state == "detached":
+            # Explicit retirement leaves a routing row and its recovery evidence.
+            detached += 1
+            continue
+        if record.storage_state in ("deleting", "deleted"):
+            pending_cleanup.append(f"{label}: storage state {record.storage_state}")
+            continue
+        if record.backend_type == "chroma" or record.storage_state != "ready":
+            # The app serves none of these until its storage upgrade finishes, so there is
+            # no store to reach or count yet. Listed here only, not again as unreachable.
+            error = f", upgrade error {error_code}" if error_code else ""
+            upgrading.append(f"{label}: storage state {record.storage_state}{error}")
+            continue
         try:
             context = (
                 SQLiteStorageContext(storage_root(), record.user_id, record.id, record.storage_generation)
@@ -354,13 +423,39 @@ async def _check_knowledge_bases(
         if count != record.chunks:
             mismatched.append(f"{label}: store holds {count}, row records {record.chunks}")
 
-    reachable = len(rows) - len(unreachable)
+    active = len(rows) - detached
+    checked = active - len(upgrading) - len(pending_cleanup)
+    reachable = checked - len(unreachable)
+    storage_summary = []
+    if upgrading:
+        storage_summary.append(
+            f"{len(upgrading)} of {active} knowledge bases have not finished the storage upgrade this Langflow "
+            "reads them through; start this Langflow version once with a single worker and wait for "
+            "/healthz?require_storage_ready=true, or retry them from /api/v1/knowledge-base-storage/status. "
+            "Chroma Cloud stores have no upgrade path: migrate them to a pgvector or OpenSearch store"
+        )
+    if pending_cleanup:
+        storage_summary.append(
+            f"{len(pending_cleanup)} of {active} knowledge bases have pending deletion cleanup. "
+            "List them at /api/v1/knowledge-base-storage/pending-cleanup and retry cleanup with their KB UUID "
+            "and expected storage generation. If a Memory Base still references the store, retry that "
+            "Memory Base's deletion instead"
+        )
+    storage_ok = f"{active} knowledge bases, none waiting on a storage upgrade or deletion cleanup"
+    if detached:
+        storage_ok += f". {detached} detached stores intentionally excluded"
     return [
+        _result(
+            "knowledge base storage",
+            [*upgrading, *pending_cleanup],
+            storage_ok,
+            ". ".join(storage_summary),
+        ),
         _result(
             "knowledge bases",
             unreachable,
-            f"{len(rows)} knowledge bases, every backend reachable",
-            f"{len(unreachable)} of {len(rows)} knowledge bases have a backend that cannot be built or reached",
+            f"{checked} knowledge bases, every backend reachable",
+            f"{len(unreachable)} of {checked} knowledge bases have a backend that cannot be built or reached",
         ),
         _result(
             "vector counts",

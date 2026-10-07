@@ -22,9 +22,11 @@ from sqlmodel import func, select
 from langflow.cli.integrity import (
     CheckResult,
     IntegrityReport,
+    _result,
     check_credentials,
     check_instance,
     check_schema,
+    recorded_revisions,
     script_directory,
 )
 
@@ -38,6 +40,10 @@ TARGET_REVISION_HINT = (
     "str(pathlib.Path(langflow.__file__).parent / 'alembic')); "
     'print(ScriptDirectory.from_config(c).get_current_head())"'
 )
+
+# The migration c3e1d5a7f902_add_user_retired_at, in langflow/alembic/versions. A Langflow that has it keeps a
+# never-signed-in default superuser that owns rows, where an older one deletes it.
+_KEEPS_DEFAULT_SUPERUSER = "c3e1d5a7f902"  # pragma: allowlist secret
 
 _SUPERUSER_WORKAROUND = (
     "UPDATE \"user\" SET last_login_at = now() WHERE username = 'langflow' AND last_login_at IS NULL;"
@@ -61,7 +67,7 @@ async def run_preflight(
             await session.rollback()
             return IntegrityReport([*checks, replace(schema, name="source: schema")])
         checks += [
-            await check_default_superuser(session),
+            await check_default_superuser(session, target_revision),
             await check_target_key(session, target_secret_key),
             await check_embedding_models(session),
             await check_role_assignments(session),
@@ -86,7 +92,17 @@ async def check_version_direction(session: AsyncSession, target_revision: str | 
     # get_heads() prints a list, such as ['<revision>']; pasted as is, it names that revision.
     target_revision = target_revision.strip("[]'\" ")
     script = script_directory()
-    source_revisions = [row[0] for row in await session.exec(sa.text("SELECT version_num FROM alembic_version"))]
+    try:
+        await session.connection()
+    except sa.exc.SQLAlchemyError:
+        await session.rollback()
+        return CheckResult(name, "warn", "not checked: the database could not be reached")
+    try:
+        # A source with no alembic_version table records no revision, which the schema check reports.
+        source_revisions = sorted(await recorded_revisions(session))
+    except sa.exc.SQLAlchemyError:
+        await session.rollback()
+        return CheckResult(name, "warn", "not checked: the database schema could not be read")
     try:
         target_ancestry = {revision.revision for revision in script.iterate_revisions(target_revision, "base")}
     except Exception:  # noqa: BLE001 - an unknown revision raises one of several alembic errors
@@ -112,14 +128,15 @@ async def check_version_direction(session: AsyncSession, target_revision: str | 
     )
 
 
-async def check_default_superuser(session: AsyncSession) -> CheckResult:
+async def check_default_superuser(session: AsyncSession, target_revision: str | None = None) -> CheckResult:
     """Will the default superuser survive the target's first boot?
 
     With AUTO_LOGIN off, which IBM Langflow requires, Langflow deletes the default
     superuser when it has never signed in, and on Postgres the delete takes
     everything that user owns with it. The fix keeps the user: it claims the account
     for LANGFLOW_SUPERUSER or deactivates it, and setting last_login_at skips both.
-    Nothing here tells which kind of target this is, so the advice covers both.
+    A target revision that includes the fix's migration passes. Without one, nothing
+    here tells which kind of target this is, so the advice covers both.
     """
     from lfx.services.settings.constants import DEFAULT_SUPERUSER
 
@@ -135,6 +152,14 @@ async def check_default_superuser(session: AsyncSession) -> CheckResult:
     owned = await _rows_owned_by(session, user.id)
     if not owned:
         return CheckResult(name, "ok", f"{DEFAULT_SUPERUSER!r} has never signed in but owns nothing")
+    if _keeps_default_superuser(target_revision):
+        return CheckResult(
+            name,
+            "ok",
+            f"{DEFAULT_SUPERUSER!r} has never signed in and owns rows, and the target keeps the account: "
+            f"LANGFLOW_SUPERUSER={DEFAULT_SUPERUSER} with a password claims it; "
+            "any other name deactivates it and its API keys",
+        )
     return CheckResult(
         name,
         "fail",
@@ -214,14 +239,13 @@ async def check_embedding_models(session: AsyncSession) -> CheckResult:
     ]
     copyable = len(rows) - len(unknown)
     plural = "" if copyable == 1 else "s"
-    if not unknown:
-        return CheckResult("embedding models", "ok", f"{copyable} knowledge base{plural} record their model")
-    return CheckResult(
-        "embedding models",
-        "warn",
-        f"{copyable} knowledge base{plural} record their model; {len(unknown)} record none and may need re-ingesting",
-        unknown,
+    recorded = f"{copyable} knowledge base{plural} record their model"
+    # Listed as the integrity checks list theirs, the first few and a count of the rest.
+    result = _result(
+        "embedding models", unknown, recorded, f"{recorded}; {len(unknown)} record none and may need re-ingesting"
     )
+    # A knowledge base that may need re-ingesting does not stop the migration.
+    return replace(result, status="warn") if unknown else result
 
 
 async def check_role_assignments(session: AsyncSession) -> CheckResult:
@@ -246,6 +270,17 @@ async def check_role_assignments(session: AsyncSession) -> CheckResult:
         "policy is compiled. After the first boot, sign in as a superuser, send POST /api/v1/authz/policy/sync, "
         "and check that casbin_rule has rows",
     )
+
+
+def _keeps_default_superuser(target_revision: str | None) -> bool:
+    """Do the target's migrations include the one that keeps the default superuser?"""
+    if not target_revision:
+        return False
+    try:
+        ancestry = script_directory().iterate_revisions(target_revision.strip("[]'\" "), "base")
+        return any(revision.revision == _KEEPS_DEFAULT_SUPERUSER for revision in ancestry)
+    except Exception:  # noqa: BLE001 - an unknown revision raises one of several alembic errors
+        return False
 
 
 async def _rows_owned_by(session: AsyncSession, user_id) -> dict[str, int]:
