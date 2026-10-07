@@ -3,6 +3,7 @@ import httpx
 API_BASE_URL = "https://api.publora.com/api/v1"
 USER_AGENT = "langflow-publora-bundle"
 TIMEOUT_SECONDS = 30
+ERROR_BODY_EXCERPT_CHARS = 200
 
 
 class PubloraAPIError(Exception):
@@ -26,11 +27,22 @@ def _error_message(error: httpx.HTTPStatusError) -> str:
                 detail = body_error.get("message") or body_error.get("code")
     except ValueError:
         detail = None
+    if not detail:
+        # Keep a bounded, single-line excerpt of a non-JSON body (for example a
+        # proxy's plain-text error page) so the failure can still be diagnosed.
+        excerpt = " ".join(response.text.split())[:ERROR_BODY_EXCERPT_CHARS]
+        detail = excerpt or None
     reason = detail or response.reason_phrase or "request failed"
     return f"Publora API error {response.status_code}: {reason}"
 
 
-def publora_request(method: str, path: str, api_key: str, json: dict | None = None) -> dict:
+def publora_request(
+    method: str,
+    path: str,
+    api_key: str,
+    json: dict | None = None,
+    extra_headers: dict[str, str] | None = None,
+) -> dict:
     """Call the Publora REST API and return the decoded JSON object.
 
     Raises ``PubloraAPIError`` for a missing key, an HTTP error, a transport
@@ -48,6 +60,8 @@ def publora_request(method: str, path: str, api_key: str, json: dict | None = No
     }
     if json is not None:
         headers["Content-Type"] = "application/json"
+    if extra_headers:
+        headers.update(extra_headers)
 
     try:
         response = httpx.request(method, f"{API_BASE_URL}{path}", headers=headers, json=json, timeout=TIMEOUT_SECONDS)

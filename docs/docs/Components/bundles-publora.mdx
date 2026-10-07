@@ -35,6 +35,7 @@ In [tool mode](/agents-tools), the component exposes a single tool named `publor
 
 This component creates a post for one or more connected social accounts.
 Without a scheduled time, the post is saved as a draft in Publora and is never published. With an ISO 8601 UTC time, the post is scheduled for that time.
+Re-running the component with the same inputs within 24 hours returns the first post instead of creating a duplicate.
 
 It outputs a [`JSON`](/data-types#json) object with `postGroupId`, `scheduledTime`, `status` (`draft` or `scheduled`), and `warnings`.
 
@@ -48,4 +49,5 @@ In [tool mode](/agents-tools), the component exposes a single tool named `publor
 | Platforms (`platforms`) | String | Input parameter. Comma-separated `platformId` values to post to, from the **Publora List Connections** component. |
 | Scheduled Time (`scheduled_time`) | String | Input parameter. ISO 8601 UTC time to publish, for example `2026-10-14T09:00:00Z`. Leave empty to save a draft. Optional. |
 | Media URLs (`media_urls`) | String | Input parameter. Comma-separated public `https` URLs of images or videos to attach. Instagram, TikTok, and YouTube need media before a post can be scheduled. Optional. |
+| Idempotency Key (`idempotency_key`) | String | Input parameter. Sent as the `Idempotency-Key` header. A repeated key with the same post replays the first result for 24 hours instead of creating a duplicate. Leave empty to derive it from the post's content, platforms, time, and media; set a new value to publish an identical post again on purpose. Optional. |
 | Publora API Key (`publora_api_key`) | SecretString | Input parameter. Your Publora API key. |

@@ -1,3 +1,6 @@
+import hashlib
+import json
+
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import MessageTextInput, MultilineInput, SecretStrInput
 from lfx.schema.data import Data
@@ -15,6 +18,17 @@ def _split_list(value: str | None) -> list[str]:
         if item and item not in items:
             items.append(item)
     return items
+
+
+def _derived_idempotency_key(body: dict) -> str:
+    """Return a key that is stable for one set of post inputs.
+
+    Publora replays the original response for a repeated key with an identical
+    body for 24 hours, so a retried or re-run create returns the first post
+    instead of creating a second one.
+    """
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "langflow-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:40]
 
 
 class PubloraCreatePostComponent(Component):
@@ -63,6 +77,17 @@ class PubloraCreatePostComponent(Component):
                 "Instagram, TikTok and YouTube need media before a post can be scheduled."
             ),
         ),
+        MessageTextInput(
+            name="idempotency_key",
+            display_name="Idempotency Key",
+            required=False,
+            advanced=True,
+            info=(
+                "Sent as the Idempotency-Key header. A repeated key with the same post replays the first result "
+                "for 24 hours instead of creating a duplicate. Leave empty to derive it from the post's content, "
+                "platforms, time and media; set a new value to publish an identical post again on purpose."
+            ),
+        ),
         SecretStrInput(
             name="publora_api_key",
             display_name="Publora API Key",
@@ -88,6 +113,11 @@ class PubloraCreatePostComponent(Component):
             body["mediaUrls"] = media_urls
         return body
 
+    def _idempotency_key(self, body: dict) -> str:
+        """Use the Idempotency Key input when set, otherwise derive one from the request body."""
+        custom = self.idempotency_key.strip() if isinstance(self.idempotency_key, str) else ""
+        return custom or _derived_idempotency_key(body)
+
     def _error_result(self, message: str) -> Data:
         error_data = Data(text=message, data={"error": message})
         self.status = error_data
@@ -100,7 +130,13 @@ class PubloraCreatePostComponent(Component):
             return self._error_result("At least one platformId is required in Platforms.")
 
         try:
-            payload = publora_request("POST", "/create-post", self.publora_api_key, json=body)
+            payload = publora_request(
+                "POST",
+                "/create-post",
+                self.publora_api_key,
+                json=body,
+                extra_headers={"Idempotency-Key": self._idempotency_key(body)},
+            )
         except PubloraAPIError as e:
             return self._error_result(str(e))
 

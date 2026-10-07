@@ -60,6 +60,7 @@ def create_post() -> PubloraCreatePostComponent:
     c.platforms = "linkedin-ABC123"
     c.scheduled_time = ""
     c.media_urls = ""
+    c.idempotency_key = ""
     return c
 
 
@@ -175,7 +176,39 @@ def test_create_post_http_error_without_json_body(create_post):
     mock_request = MagicMock(return_value=_response(502, method="POST", path="/create-post", text="upstream down"))
     with patch(REQUEST_PATCH_TARGET, mock_request):
         result = create_post.publora_create_post()
+    assert result.data["error"] == "Publora API error 502: upstream down"
+
+
+def test_create_post_http_error_with_empty_body_uses_reason_phrase(create_post):
+    mock_request = MagicMock(return_value=_response(502, method="POST", path="/create-post", text=""))
+    with patch(REQUEST_PATCH_TARGET, mock_request):
+        result = create_post.publora_create_post()
     assert result.data["error"] == "Publora API error 502: Bad Gateway"
+
+
+def test_create_post_sends_a_stable_derived_idempotency_key(create_post):
+    payload = {"success": True, "postGroupId": "pg1", "scheduledTime": None}
+    mock_request = MagicMock(return_value=_response(method="POST", path="/create-post", json=payload))
+    with patch(REQUEST_PATCH_TARGET, mock_request):
+        create_post.publora_create_post()
+        first = mock_request.call_args.kwargs["headers"]["Idempotency-Key"]
+        create_post.publora_create_post()
+        second = mock_request.call_args.kwargs["headers"]["Idempotency-Key"]
+        create_post.content = "A different post"
+        create_post.publora_create_post()
+        third = mock_request.call_args.kwargs["headers"]["Idempotency-Key"]
+    assert first == second
+    assert first.startswith("langflow-")
+    assert third != first
+
+
+def test_create_post_uses_a_custom_idempotency_key(create_post):
+    create_post.idempotency_key = " run-42 "
+    payload = {"success": True, "postGroupId": "pg1", "scheduledTime": None}
+    mock_request = MagicMock(return_value=_response(method="POST", path="/create-post", json=payload))
+    with patch(REQUEST_PATCH_TARGET, mock_request):
+        create_post.publora_create_post()
+    assert mock_request.call_args.kwargs["headers"]["Idempotency-Key"] == "run-42"
 
 
 def test_create_post_wraps_transport_error(create_post):

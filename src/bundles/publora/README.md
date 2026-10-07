@@ -13,6 +13,9 @@ only a user-supplied API key, so it carries no vendor SDK dependency:
 - `PubloraCreatePostComponent` creates a post for one or more `platformId`
   values. Without a scheduled time the post is saved as a draft and is never
   published; with an ISO 8601 UTC time it is scheduled.
+  Each create sends an `Idempotency-Key` derived from the post inputs, so a
+  retried or re-run create within 24 hours returns the first post instead of
+  creating a duplicate.
 
 ## Install
 
