@@ -223,6 +223,19 @@ export interface MigrationJob {
   cancel: { method: string; url: string; body: unknown } | null;
 }
 
+/** A change this worker process let in before the pause that has not ended. Each kind fills the parts it has. */
+export interface MigrationChange {
+  kind: "request" | "websocket" | "task" | "loop";
+  /** A request's method, such as `POST`. */
+  method: string | null;
+  /** A request's or a websocket's path, with no query string. */
+  path: string | null;
+  /** A task's name, such as `webhook_run`, or a loop's, such as `trigger_dispatcher`. */
+  name: string | null;
+  /** When it started, in UTC. */
+  since: string;
+}
+
 /** The `detail` of a request the server refused. */
 export interface MigrationError {
   code: string;
@@ -232,6 +245,10 @@ export interface MigrationError {
   jobs?: MigrationJob[];
   /** With `jobs_active`: each trigger listener process that is still running. */
   listeners?: { holder: string }[];
+  /** With `jobs_active` and `requests_active`: the changes that have not ended. */
+  changes?: MigrationChange[];
+  /** With `requests_active`: another worker process still handles a change that this one cannot name. */
+  elsewhere?: boolean;
 }
 
 /** One line of the `POST /api/v1/migration/checks` stream. */
