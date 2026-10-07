@@ -12,6 +12,7 @@ from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionDeployedError,
     FlowVersionNotFoundError,
     FlowVersionPinnedError,
+    FlowVersionRetainedError,
 )
 from langflow.services.database.models.flow_version.model import (
     FlowVersion,
@@ -121,6 +122,7 @@ async def create_flow_version_entry(
                     FlowVersion.flow_id == flow_id,
                     col(FlowVersion.id).not_in(deployed_version_ids),
                     col(FlowVersion.id).not_in(pinned_version_ids),
+                    col(FlowVersion.retained).is_(False),
                 )
                 .order_by(col(FlowVersion.version_number).desc())
                 .offset(max_entries)
@@ -139,7 +141,12 @@ async def create_flow_version_entry(
                     col(FlowVersionDeploymentAttachment.flow_version_id).in_(version_ids_to_prune)
                 )
             )
-            result = await session.exec(delete(FlowVersion).where(col(FlowVersion.id).in_(version_ids_to_prune)))
+            # Re-checked in the DELETE itself: a version retained after it was selected stays.
+            result = await session.exec(
+                delete(FlowVersion).where(
+                    col(FlowVersion.id).in_(version_ids_to_prune), col(FlowVersion.retained).is_(False)
+                )
+            )
             if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
                 await logger.adebug("Pruned %d old version entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
     except SQLAlchemyError:
@@ -393,9 +400,42 @@ async def delete_flow_version_entry(
         msg = f"Version entry {version_id} is pinned by a trigger and cannot be deleted. Unpin it first."
         raise FlowVersionPinnedError(msg)
 
+    row = (
+        await session.exec(
+            select(FlowVersion.retained, FlowVersion.retained_reason).where(FlowVersion.id == version_id)
+        )
+    ).first()
+    if row is not None and row.retained:
+        msg = f"Version entry {version_id} is retained and cannot be deleted."
+        if row.retained_reason:
+            msg += f" Reason: {row.retained_reason}."
+        raise FlowVersionRetainedError(msg)
+
     # The entry can disappear after the preflight reads under concurrent DELETEs.
     result = await session.exec(delete(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id))
     if result.rowcount == 0:
         msg = f"Version entry {version_id} not found"
         raise FlowVersionNotFoundError(msg)
     await session.flush()
+
+
+async def set_flow_version_retained(
+    session: AsyncSession,
+    version_id: UUID,
+    *,
+    retained: bool,
+    reason: str | None = None,
+) -> FlowVersion:
+    """Set or clear the retained flag; clearing also clears the reason.
+
+    Flushes but does NOT commit. Does NOT check ownership: callers authorize.
+    """
+    version = (await session.exec(select(FlowVersion).where(FlowVersion.id == version_id))).first()
+    if version is None:
+        msg = f"Version entry {version_id} not found"
+        raise FlowVersionNotFoundError(msg)
+    version.retained = retained
+    version.retained_reason = reason if retained else None
+    session.add(version)
+    await session.flush()
+    return version

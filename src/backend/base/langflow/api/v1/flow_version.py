@@ -33,6 +33,7 @@ from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionError,
     FlowVersionNotFoundError,
     FlowVersionPinnedError,
+    FlowVersionRetainedError,
     FlowVersionSerializationError,
 )
 from langflow.services.database.models.flow_version.model import (
@@ -98,7 +99,7 @@ def _translate_version_error(exc: FlowVersionError) -> HTTPException:
         return HTTPException(status_code=422, detail=str(exc))
     if isinstance(exc, FlowVersionConflictError):
         return HTTPException(status_code=409, detail=str(exc))
-    if isinstance(exc, FlowVersionDeployedError | FlowVersionPinnedError):
+    if isinstance(exc, FlowVersionDeployedError | FlowVersionPinnedError | FlowVersionRetainedError):
         return HTTPException(status_code=409, detail=str(exc))
     if isinstance(exc, FlowVersionNotFoundError):
         return HTTPException(status_code=404, detail=str(exc))
