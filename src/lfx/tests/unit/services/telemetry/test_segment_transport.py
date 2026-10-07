@@ -9,7 +9,7 @@ from lfx.services.telemetry.service import TelemetryService
 
 @pytest.mark.asyncio
 async def test_sends_segment_track_event() -> None:
-    service = TelemetryService(base_url="https://api.segment.test/v1/track", write_key="test-key")
+    service = TelemetryService(base_url="https://api.segment.test/v1/track", write_key="test-key", do_not_track=False)
     service.anonymous_id = "test-installation"
     service._client = AsyncMock()
     service._client.post.return_value.status_code = 200
@@ -61,7 +61,7 @@ def test_maps_langflow_events_to_ibm_common_schema(path, expected) -> None:
 
 @pytest.mark.asyncio
 async def test_adds_ui_interaction_properties() -> None:
-    service = TelemetryService(base_url="https://api.segment.test/v1/track", write_key="test-key")
+    service = TelemetryService(base_url="https://api.segment.test/v1/track", write_key="test-key", do_not_track=False)
     service.anonymous_id = "test-installation"
     service._client = AsyncMock()
     service._client.post.return_value.status_code = 200

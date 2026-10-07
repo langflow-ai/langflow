@@ -156,13 +156,13 @@ async def api_key_security(
 ) -> UserRead | None:
     user = await _auth_service().api_key_security(query_param, header_param)
     if user is not None:
-        set_current_telemetry_user(user.username)
+        set_current_telemetry_user(getattr(user, "username", None))
     return user
 
 
 async def ws_api_key_security(api_key: str | None) -> UserRead:
     user = await _auth_service().ws_api_key_security(api_key)
-    set_current_telemetry_user(user.username)
+    set_current_telemetry_user(getattr(user, "username", None))
     return user
 
 
