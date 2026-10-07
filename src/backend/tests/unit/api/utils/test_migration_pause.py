@@ -61,7 +61,6 @@ from tests.unit.api.v1 import test_connection_oauth as oauth
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
     from pathlib import Path
-    from uuid import UUID
 
 RECORD = {"target": {}, "steps": {}, "accepted_findings": []}
 PAUSED = {**RECORD, "pause": {"frozen_at": "2026-10-05T12:00:00+00:00", "frozen_by": "admin"}}
@@ -340,6 +339,38 @@ async def test_a_get_that_changes_the_instance_is_refused_while_paused(
     assert (await oauth.callback(client, query)).status_code == 200
     async with session_scope() as session:
         assert await session.get(ConnectionSecret, UUID(row["id"])) is not None
+
+
+@pytest.mark.parametrize(
+    ("path", "answer_after", "rows_after"),
+    [
+        ("api/v1/data-subjects/end-users?search=ab", 200, 1),
+        ("api/v1/users/me/data-export", 200, 1),
+        (f"api/v1/data-subjects/requests/{UUID(int=0)}/export", 404, 0),
+    ],
+)
+async def test_a_data_subject_read_that_records_who_read_is_refused_while_paused(
+    client, logged_in_headers_super_user, config_dir, monkeypatch, path, answer_after, rows_after
+):
+    monkeypatch.setattr(FEATURE_FLAGS, "data_subject_requests", True)
+
+    async def recorded() -> int:
+        async with session_scope() as session:
+            rows = (await session.exec(select(AuthzAuditLog))).all()
+            return len([row for row in rows if row.action.startswith("dsar:")])
+
+    _write_record(config_dir, PAUSED)
+
+    # Each of these answers a GET, which the middleware takes for a read, and adds a row to the audit log.
+    refused = await client.get(path, headers=logged_in_headers_super_user)
+
+    assert refused.status_code == 503
+    assert refused.json() == REFUSAL
+    assert await recorded() == 0
+
+    _write_record(config_dir, RECORD)
+    assert (await client.get(path, headers=logged_in_headers_super_user)).status_code == answer_after
+    assert await recorded() == rows_after
 
 
 async def test_a_lock_that_cannot_be_taken_stops_no_change(client, logged_in_headers, config_dir):
@@ -751,6 +782,18 @@ async def test_a_pause_waits_for_a_telemetry_write_that_began_before_it(
     finally:
         go_on.set()
         await writer.teardown()
+
+
+async def test_a_pause_waits_for_an_erase_pass_that_began_before_it(config_dir, monkeypatch):
+    await data_subject_erase_worker.stop()
+    worker = DataSubjectEraseWorker(interval=0.05)
+    began, go_on = _held_open(monkeypatch, worker, "run_once")
+    await worker.start()
+    try:
+        await _the_pause_waits_for_it(config_dir, began, go_on, "data_subject_eraser")
+    finally:
+        go_on.set()
+        await worker.stop()
 
 
 async def test_the_audit_log_cleanup_waits_out_the_pause(config_dir, monkeypatch):
