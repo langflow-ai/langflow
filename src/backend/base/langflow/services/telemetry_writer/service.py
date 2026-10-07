@@ -31,7 +31,7 @@ import socket
 import sqlite3
 import tempfile
 import time
-from contextlib import contextmanager, suppress
+from contextlib import ExitStack, contextmanager, suppress
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -42,7 +42,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import col
 
-from langflow.api.utils.migration_pause import is_paused
+from langflow.api.utils.migration_pause import is_paused, writing
 from langflow.services.base import Service
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
@@ -716,11 +716,14 @@ class TelemetryWriterService(Service):
         while True:
             should_stop = self._shutdown_event.is_set()
             # A paused instance flushes nothing. The rows wait in memory, and teardown spills them to disk.
-            paused = is_paused()
+            # A flush holds a place from here until it is over, so a pause waits for one that is under way.
+            place = ExitStack()
+            paused = not place.enter_context(writing())
             tx_batch = [] if paused else self._drain_batch("transactions", batch_size, batch_size_bytes)
             vb_batch = [] if paused else self._drain_batch("vertex_builds", batch_size, batch_size_bytes)
 
             if not tx_batch and not vb_batch:
+                place.close()
                 if should_stop:
                     return
                 await self._wait_or_shutdown(flush_interval, name="telemetry-writer-tick")
@@ -751,7 +754,11 @@ class TelemetryWriterService(Service):
                         f"telemetry_writer: {consecutive_failures} consecutive batch failures, "
                         f"buffer depth tx={len(self._tx_buffer)} vb={len(self._vb_buffer)}"
                     )
+                # Nothing is written while this backs off, so the place is let go before the wait.
+                place.close()
                 await self._wait_or_shutdown(backoff, name="telemetry-writer-backoff")
+            finally:
+                place.close()
 
     async def _flush(self, tx_batch: list[dict], vb_batch: list[dict]) -> None:
         if not tx_batch and not vb_batch:
@@ -784,7 +791,9 @@ class TelemetryWriterService(Service):
                 return
             self._heartbeat_owner_file()
             try:
-                await self._run_retention_pass()
+                with writing() as let_in:
+                    if let_in:
+                        await self._run_retention_pass()
             except Exception:  # noqa: BLE001
                 logger.exception("telemetry_writer: retention sweep failed")
             try:

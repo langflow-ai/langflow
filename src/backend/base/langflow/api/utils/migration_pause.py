@@ -88,10 +88,9 @@ def is_paused() -> bool:
     return _paused
 
 
-# ponytail: requests, trigger listeners and the flow sync from disk hold a place. The other loops of
-# this process (the trigger dispatcher, the telemetry writer, the audit cleanup) ask is_paused() and
-# do not, so one of their passes that began just before a pause can end a write just after it. Have
-# them hold writing() for a pass, as the flow sync does, if a write that late ever matters.
+# A request holds a place, and so does each pass of a loop that writes with no request around it: the
+# trigger listeners, the flow sync from disk, the trigger dispatcher, the audit cleanup and the telemetry
+# writer. The background executor holds none: what it starts is a job, and the pause looks for those.
 @contextlib.contextmanager
 def writing() -> Iterator[bool]:
     """Hold a place among the changes a pause waits for, and say whether this one may go ahead.
