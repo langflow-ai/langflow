@@ -2193,7 +2193,7 @@
   "settings.migration.files.acceptMissing": "不带此文件迁移",
   "settings.migration.copy.acceptNote": "在“{{step}}”中接受某项结果后，迁移即可继续。本次复制会逐项列出未复制的内容，因此每一项都在此处接受，且仅对本次复制有效。",
   "settings.migration.copy.reportChanged": "在此期间已重新进行了此次复制，因此未记录你的选择。列表现在显示的是新复制未复制的内容。",
-  "settings.migration.copy.applyNext": "请再次复制以使其生效。",
+  "settings.migration.copy.applyNext": "将在下次复制时生效。",
   "settings.migration.copy.tooManyToAccept": "未复制的项目多于此列表所显示的数量，因此无法逐项接受。",
   "settings.nav.modelProviders": "模型提供商",
   "settings.nav.shortcuts": "快捷方式",

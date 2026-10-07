@@ -2193,7 +2193,7 @@
   "settings.migration.files.acceptMissing": "Migrar sem este arquivo",
   "settings.migration.copy.acceptNote": "Aceitar um achado em '{{step}}' permite que a migração continue. Esta cópia nomeia cada item que deixou, então cada um é aceito aqui, só para esta cópia.",
   "settings.migration.copy.reportChanged": "Esta cópia foi feita de novo nesse meio-tempo, então sua escolha não foi registrada. A lista agora mostra o que a nova cópia deixou.",
-  "settings.migration.copy.applyNext": "Copie novamente para que isso valha.",
+  "settings.migration.copy.applyNext": "Isso vale para a próxima cópia.",
   "settings.migration.copy.tooManyToAccept": "Há mais itens não copiados do que esta lista mostra, então eles não podem ser aceitos um a um.",
   "settings.nav.modelProviders": "Provedores de modelos",
   "settings.nav.shortcuts": "Atalhos",
