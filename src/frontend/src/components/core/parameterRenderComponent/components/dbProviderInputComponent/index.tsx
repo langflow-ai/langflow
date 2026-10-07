@@ -13,7 +13,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  type AvailableDBProviderId,
   DB_PROVIDER_OPTIONS,
   type DBProviderConfigValue,
   type DBProviderId,
@@ -23,6 +22,7 @@ import {
   getDefaultDBProviderConfig,
   isDBProviderConfigured,
   resolveUIBackendType,
+  type StoredDBProviderId,
 } from "@/constants/dbProviderConstants";
 import { isSettledSuccessfulQuery } from "@/controllers/API/helpers/query-cache";
 import {
@@ -40,13 +40,13 @@ import {
 
 export type DBProviderSelection = {
   // Wire keys stay snake_case to match the backend payload format.
-  backend_type: AvailableDBProviderId;
+  backend_type: StoredDBProviderId;
   backend_config: Record<string, DBProviderConfigValue>;
 };
 
 interface DBProviderInputProps {
   id: string;
-  value: AvailableDBProviderId;
+  value: StoredDBProviderId;
   globalVariables: GlobalVariable[];
   disabled?: boolean;
   /** Accessible name for the combobox trigger (WCAG 4.1.2). */
@@ -62,7 +62,7 @@ interface DBProviderInputProps {
   /** Marks the combobox trigger invalid when the field failed validation. */
   ariaInvalid?: boolean;
   onValueChange: (
-    backendType: AvailableDBProviderId,
+    backendType: StoredDBProviderId,
     backendConfig: Record<string, DBProviderConfigValue>,
   ) => void;
 }
@@ -74,7 +74,7 @@ export default function DBProviderInputComponent({
   handleOnNewValue,
   ariaLabelledBy,
 }: BaseInputProps<
-  DBProviderSelection | AvailableDBProviderId | null | undefined
+  DBProviderSelection | StoredDBProviderId | null | undefined
 >) {
   const queryClient = useQueryClient();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -185,16 +185,16 @@ export function DBProviderInput({
   const selectableOptions = useMemo(
     () =>
       DB_PROVIDER_OPTIONS.filter(
-        // Local Chroma stores vectors on the serving box's own disk, which the
+        // Local SQLite stores vectors on the serving box's own disk, which the
         // production profile refuses. Hide it there rather than offering a
         // choice the create endpoint always rejects with 422.
-        (provider) => localVectorStoreAvailable || provider.id !== "chroma",
+        (provider) => localVectorStoreAvailable || provider.id !== "sqlite",
       ).map((provider) => ({
         provider,
         configured:
           provider.status === "available"
             ? isDBProviderConfigured(
-                provider.id as AvailableDBProviderId,
+                provider.id as StoredDBProviderId,
                 globalVariables,
                 localVectorStoreAvailable,
               )
@@ -206,7 +206,7 @@ export function DBProviderInput({
   const handleSelect = (provider: DBProviderOption) => {
     if (provider.status !== "available") return;
 
-    const backendType = provider.id as AvailableDBProviderId;
+    const backendType = provider.id as StoredDBProviderId;
     if (
       !isDBProviderConfigured(
         backendType,
@@ -393,19 +393,12 @@ function DBProviderOptionItem({
 }
 
 function normalizeDBProviderValue(
-  value: DBProviderSelection | AvailableDBProviderId | null | undefined,
+  value: DBProviderSelection | StoredDBProviderId | null | undefined,
   globalVariables: GlobalVariable[],
   localVectorStoreAvailable = true,
 ): DBProviderSelection {
   if (typeof value === "string") {
-    const backendType: AvailableDBProviderId =
-      value === "opensearch"
-        ? "opensearch"
-        : value === "chroma_cloud"
-          ? "chroma_cloud"
-          : value === "postgres"
-            ? "postgres"
-            : "chroma";
+    const backendType = resolveUIBackendType(value, undefined);
     return {
       backend_type: backendType,
       backend_config: getDBProviderConfig(backendType, globalVariables),
@@ -435,5 +428,5 @@ function normalizeDBProviderValue(
   };
 }
 
-export type ProviderValue = AvailableDBProviderId;
+export type ProviderValue = StoredDBProviderId;
 export type DBProviderValue = DBProviderId;

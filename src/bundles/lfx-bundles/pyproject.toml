@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.34"
+version = "1.1.37"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -30,14 +30,14 @@ dependencies = [
 # superset for slim/CPU images. Managed by scripts/migrate/consolidate_bundles.py.
 agentql = []
 aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
-altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+altk = []  # Retired in 1.13.0. Saved nodes retain migration guidance.
 apify = ["apify-client>=1.8.1"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
 azure = ["lfx-azure>=0.1.0,<1.0.0"]
 baidu = ["qianfan==0.3.5", "langchain-community>=0.4.1,<1.0.0"]
 bing = ["langchain-community>=0.4.1,<1.0.0"]
-# chromadb 1.5.9 is the newest release; CVE-2026-45829 is unpatched upstream. See .github/mend-scan-notes.md.
-chroma = ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6"]
+# Retired in 1.13. Saved component identities remain importable.
+chroma = []
 cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]
 clickhouse = ["clickhouse-connect==0.7.19", "langchain-community>=0.4.1,<1.0.0"]
 cloudflare = ["langchain-cloudflare~=0.3.9"]
@@ -46,7 +46,7 @@ cometapi = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 composio = ["composio==0.16.0", "composio-langchain==0.16.0"]
 confluence = ["atlassian-python-api==3.41.16", "langchain-community>=0.4.1,<1.0.0"]
 couchbase = ["couchbase>=4.2.1", "dnspython>=2.6,<3", "langchain-community>=0.4.1,<1.0.0"]
-cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'", "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'", "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'", "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'"]
+cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'", "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'", "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'", "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'", "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform != 'darwin' and python_version < '3.14'", "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'"]
 deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
 elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"]
 faiss = ["faiss-cpu==1.9.0.post1; python_version < '3.14'", "faiss-cpu>=1.13.2; python_version >= '3.14'", "langchain-community>=0.4.1,<1.0.0"]
@@ -54,7 +54,7 @@ figranium = []
 funasr = []
 git = ["GitPython>=3.1.58", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
-google = ["lfx-google>=0.1.0,<1.0.0"]
+google = ["lfx-google>=0.2.5,<1.0.0"]
 groq = ["langchain-groq~=1.1.1"]
 homeassistant = ["requests>=2.32.0"]
 huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'", "huggingface-hub>=1.0.0,<2.0.0", "langchain-community>=0.4.1,<1.0.0"]
@@ -112,7 +112,6 @@ all = [
     "lfx-bundles[assemblyai]",
     "lfx-bundles[baidu]",
     "lfx-bundles[bing]",
-    "lfx-bundles[chroma]",
     "lfx-bundles[cleanlab]",
     "lfx-bundles[clickhouse]",
     "lfx-bundles[cloudflare]",
@@ -186,7 +185,6 @@ all-no-torch = [
     "lfx-bundles[assemblyai]",
     "lfx-bundles[baidu]",
     "lfx-bundles[bing]",
-    "lfx-bundles[chroma]",
     "lfx-bundles[cleanlab]",
     "lfx-bundles[clickhouse]",
     "lfx-bundles[cloudflare]",

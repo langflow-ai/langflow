@@ -72,9 +72,11 @@ from __future__ import annotations
 import asyncio
 import queue as sync_queue
 import threading
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
+    BackendConfigurationError,
     BackendType,
     BaseVectorStoreBackend,
     IngestedDocument,
@@ -90,7 +92,34 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from uuid import UUID
 
+    from langchain_core.documents import Document
     from langchain_core.vectorstores import VectorStore
+
+
+async def _drained_worker(function, *args, **kwargs):
+    """Keep the storage fence until a synchronous SDK request has returned."""
+    task = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
+    cancelled = False
+    while not task.done():
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            cancelled = True
+        except Exception:
+            if not cancelled:
+                raise
+    if cancelled:
+        task.exception()
+        raise asyncio.CancelledError
+    return task.result()
+
+
+def _is_missing_index(exc: Exception) -> bool:
+    """Only an absent index means an empty store, not another endpoint's 404."""
+    return (
+        getattr(exc, "status_code", None) == HTTPStatus.NOT_FOUND
+        and getattr(exc, "error", None) == "index_not_found_exception"
+    )
 
 
 DEFAULT_URL_VARIABLE = "OPENSEARCH_URL"
@@ -177,6 +206,60 @@ class OpenSearchBackend(BaseVectorStoreBackend):
     def normalize_score(self, score: float) -> float:
         """Keep OpenSearch relevance scores, which are already higher-is-better."""
         return float(score)
+
+    @property
+    def store_location(self) -> tuple[Any, ...]:
+        """The resolved cluster URL and index."""
+        return (self._resolved_url, self._resolve_index_name())
+
+    @property
+    def distance_metric(self) -> str:
+        """The metric for a new index; existing indexes require ``get_distance_metric``."""
+        space_type = self._os_space_type
+        return {"cosinesimil": "cosine", "innerproduct": "inner_product"}.get(space_type, space_type)
+
+    async def get_distance_metric(self) -> str:
+        """Read the actual search field's immutable metric before relocating vectors."""
+        await self.ensure_ready()
+        client = getattr(self, "_os_client", None)
+        if client is None:
+            _ = self.vector_store
+            client = self._os_client
+        try:
+            mappings = await asyncio.to_thread(client.indices.get_mapping, index=self._os_index)
+        except Exception as exc:
+            if _is_missing_index(exc):
+                return self.distance_metric
+            raise
+
+        # Old writes ignored the configured space_type. The persisted mapping,
+        # including that of a partially copied target, is the only reliable value.
+        # Similarity search uses LangChain's default field even when config names
+        # a different field for iter_documents, so inspect the field it queries.
+        try:
+            if not isinstance(mappings, dict) or len(mappings) != 1:
+                raise ValueError
+            mapping = next(iter(mappings.values()))
+            field = mapping["mappings"]["properties"][LANGCHAIN_DEFAULT_VECTOR_FIELD]
+            if field.get("type") != "knn_vector":
+                raise ValueError
+            method_space = field.get("method", {}).get("space_type")
+            field_space = field.get("space_type")
+            if method_space and field_space and method_space != field_space:
+                raise ValueError
+            space_type = method_space or field_space
+            if not isinstance(space_type, str) or not space_type:
+                raise ValueError
+        except (AttributeError, KeyError, TypeError, ValueError) as exc:
+            msg = f"Cannot determine the search distance metric for OpenSearch index {self._os_index!r}"
+            raise BackendConfigurationError(msg) from exc
+        return {"cosinesimil": "cosine", "innerproduct": "inner_product"}.get(space_type, space_type)
+
+    @property
+    def _os_space_type(self) -> str:
+        # Read from the config on each write, not kept from building the vector
+        # store: a write must not depend on which code path built the store first.
+        return self.backend_config.get("space_type") or DEFAULT_SPACE_TYPE
 
     def _resolve_index_name(self) -> str:
         """Resolve the effective index for this KB.
@@ -344,21 +427,34 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             space_type=space_type,
         )
 
+    async def add_documents(self, docs: list[Document]) -> None:
+        # LangChain builds a new index's mapping from per-call kwargs and ignores the
+        # ``space_type`` handed to its constructor, so every write passes it. Without
+        # it the index ranks by l2 whatever the config (and ``distance_metric``) says.
+        if not docs:
+            return
+        await self.ensure_ready()
+        store = self.vector_store
+        await store.aadd_documents(docs, space_type=self._os_space_type)
+
     async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
         # Like ingestion, no per-call field override: LangChain writes vectors to
         # ``LANGCHAIN_DEFAULT_VECTOR_FIELD``, which is where ``iter_documents``
         # and similarity search already look. ``add_embeddings`` creates the index
-        # with the right dimension when it does not exist yet.
+        # with the right dimension when it does not exist yet, and with
+        # ``space_type`` only when it is passed here (see ``add_documents``).
         # ``add_embeddings`` refuses more than the store's ``bulk_size`` (500 by
         # default) per call, so split larger batches rather than fail the write.
+        """Write supplied vectors with stable document identities without invoking an embedder."""
         bulk_size = self.vector_store.bulk_size  # type: ignore[attr-defined]
         for start in range(0, len(docs), bulk_size):
             chunk = docs[start : start + bulk_size]
-            await asyncio.to_thread(
+            await _drained_worker(
                 self.vector_store.add_embeddings,  # type: ignore[attr-defined]
                 [(doc.content, doc.embedding) for doc in chunk],
                 metadatas=[doc.metadata for doc in chunk],
                 ids=ids[start : start + bulk_size],
+                space_type=self._os_space_type,
             )
 
     async def similarity_search(
@@ -408,13 +504,14 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             client = self._os_client
         try:
             result = await asyncio.to_thread(client.count, index=self._os_index)
-            return int(result.get("count") or 0)
-        except Exception as exc:  # noqa: BLE001
-            # ``warning`` (not ``debug``) so an unreachable cluster /
-            # missing index surfaces in default-level server logs and
-            # the user can correlate a 0-chunk count with the real cause.
-            logger.warning("OpenSearch count() failed for %s: %s", self.kb_name, exc)
-            return 0
+        except Exception as exc:
+            if _is_missing_index(exc):
+                return 0
+            raise
+        if result.get("_shards", {}).get("failed"):
+            msg = "OpenSearch count did not complete on all shards."
+            raise RuntimeError(msg)
+        return int(result["count"])
 
     async def test_connection(self) -> TestConnectionResult:
         """Validate auth + reachability via ``client.info()``.
@@ -625,6 +722,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
 
         def _stream_batches() -> None:
             scanner = None
+            saw_hit = False
             try:
                 scanner = os_helpers.scan(
                     client,
@@ -637,6 +735,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 for hit in scanner:
                     if cancel_event.is_set():
                         break
+                    saw_hit = True
                     source = hit.get("_source") if isinstance(hit, dict) else {}
                     if not isinstance(source, dict):
                         source = {}
@@ -668,7 +767,9 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 if buf and not cancel_event.is_set():
                     _put_cancelable(buf)
             except Exception as exc:  # noqa: BLE001
-                if not cancel_event.is_set():
+                # A never-created index is empty. If it disappears during a
+                # scan, the partial read must fail rather than look complete.
+                if not cancel_event.is_set() and (saw_hit or not _is_missing_index(exc)):
                     _put_cancelable(exc)
             finally:
                 # ``helpers.scan`` owns the scroll context and closes it
@@ -690,16 +791,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     sentinel_seen = True
                     break
                 if isinstance(item, Exception):
-                    # Bumped from ``debug`` to ``warning`` so cluster
-                    # auth / connection errors surface during ingestion
-                    # metric refresh instead of silently truncating the
-                    # iterator. Callers that need the exception to
-                    # propagate should rely on ``count`` / ``add_documents``
-                    # which let it bubble.
-                    logger.warning("OpenSearch iter_documents worker failed for %s: %s", self.kb_name, item)
-                    await asyncio.to_thread(batch_queue.get)
-                    sentinel_seen = True
-                    break
+                    raise item
                 yield item
         finally:
             cancel_event.set()
@@ -750,17 +842,23 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             return
         body = {"query": self._translate_where(where)}
         try:
-            await asyncio.to_thread(
+            result = await _drained_worker(
                 client.delete_by_query,
                 index=self._os_index,
                 body=body,
                 refresh=True,
             )
-        except Exception as exc:  # noqa: BLE001
-            # ``delete_by`` is the rollback path; a silent debug log
-            # would let stale chunks linger after a failed ingestion
-            # without the operator ever knowing.
+            if (
+                not isinstance(result, dict)
+                or result.get("timed_out")
+                or result.get("failures")
+                or result.get("version_conflicts")
+            ):
+                msg = "OpenSearch did not complete the requested document deletion"
+                raise RuntimeError(msg)
+        except Exception as exc:
             logger.warning("OpenSearch delete_by_query failed for %s: %s", self.kb_name, exc)
+            raise
 
     async def storage_size_bytes(self) -> int:
         await self.ensure_ready()
@@ -778,10 +876,11 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             return 0
 
     async def teardown(self) -> None:
+        """Close provider resources while draining outstanding OpenSearch cleanup."""
         client = getattr(self, "_os_client", None)
         if client is not None and hasattr(client, "close"):
             try:
-                await asyncio.to_thread(client.close)
+                await _drained_worker(client.close)
             except Exception as exc:  # noqa: BLE001
                 # ``teardown`` runs in ``finally`` blocks; a leaked
                 # connection during shutdown is worth a default-level
@@ -806,7 +905,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             wrapper_client = getattr(vector_store, "client", None)
             if wrapper_client is not None and hasattr(wrapper_client, "close"):
                 try:
-                    await asyncio.to_thread(wrapper_client.close)
+                    await _drained_worker(wrapper_client.close)
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("OpenSearch wrapper client.close failed: %s", exc)
         self._os_client = None
@@ -814,11 +913,16 @@ class OpenSearchBackend(BaseVectorStoreBackend):
 
     async def delete_collection(self) -> None:
         """Drop the configured index. Used by KB deletion."""
+        await self.ensure_ready()
         client = getattr(self, "_os_client", None)
         if client is None:
             _ = self.vector_store
             client = self._os_client
         try:
-            await asyncio.to_thread(client.indices.delete, index=self._os_index, ignore_unavailable=True)
-        except Exception as exc:  # noqa: BLE001
+            result = await _drained_worker(client.indices.delete, index=self._os_index, ignore_unavailable=True)
+            if not isinstance(result, dict) or result.get("acknowledged") is not True:
+                msg = "OpenSearch did not acknowledge index deletion"
+                raise RuntimeError(msg)
+        except Exception as exc:
             logger.warning("OpenSearch indices.delete failed for %s: %s", self.kb_name, exc)
+            raise

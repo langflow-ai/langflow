@@ -19,7 +19,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
-from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.model import Folder, FolderCreate
 from langflow.services.deps import session_scope
 from lfx.services.adapters.deployment.schema import DeploymentType
 from sqlmodel import select
@@ -132,6 +132,71 @@ async def test_create_project(client: AsyncClient, logged_in_headers, basic_case
     assert "description" in result, "The dictionary must contain a key called 'description'"
     assert "id" in result, "The dictionary must contain a key called 'id'"
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
+
+
+async def test_new_project_in_caller_transaction_rolls_back_with_mcp_registration(active_user):
+    """A caller that owns the transaction can roll back the project and its MCP server together."""
+    from langflow.api.v1.projects import _new_project
+    from langflow.services.database.models.mcp_server import MCPServer
+    from langflow.services.database.models.user.model import User
+
+    async with session_scope() as session:
+        user = await session.get(User, active_user.id)
+        project = await _new_project(
+            session=session,
+            project=FolderCreate(name="caller_owned_project"),
+            current_user=user,
+            owns_transaction=False,
+        )
+        assert (await session.exec(select(MCPServer).where(MCPServer.user_id == user.id))).all()
+        await session.rollback()
+
+    async with session_scope() as session:
+        assert await session.get(Folder, project.id) is None
+        assert not (await session.exec(select(MCPServer).where(MCPServer.user_id == active_user.id))).all()
+
+
+async def test_a_lost_mcp_name_race_leaves_the_caller_transaction_usable(active_user):
+    """A duplicate server name must not poison the transaction the project is created in.
+
+    On a borrowed transaction ``update_server`` re-raises the duplicate-name
+    ``IntegrityError`` instead of rolling back, and the registration treats the
+    failure as best effort. The failed flush leaves the session needing a rollback,
+    so without a savepoint to unwind into the next statement of the create raises
+    ``PendingRollbackError`` and the client gets a 500 instead of its project.
+    """
+    import langflow.api.v2.mcp as mcp_v2
+    from langflow.api.v1.projects import _new_project
+    from langflow.services.database.models.mcp_server import MCPServer
+    from langflow.services.database.models.user.model import User
+
+    real_persist = mcp_v2._persist
+    raced = []
+
+    async def lose_the_name(session, *, owns_transaction):
+        pending = next((obj for obj in session.new if isinstance(obj, MCPServer)), None)
+        if pending is not None and not raced:
+            # Stands in for the concurrent request that took the same server name
+            # between this one's lookup and its insert.
+            raced.append(pending.name)
+            session.add(MCPServer(user_id=pending.user_id, name=pending.name, config={}))
+        return await real_persist(session, owns_transaction=owns_transaction)
+
+    async with session_scope() as session:
+        user = await session.get(User, active_user.id)
+        with patch.object(mcp_v2, "_persist", lose_the_name):
+            project = await _new_project(
+                session=session,
+                project=FolderCreate(name="raced_project"),
+                current_user=user,
+                owns_transaction=False,
+            )
+        assert raced, "the registration never reached its insert"
+        assert (await session.exec(select(Folder).where(Folder.id == project.id))).first() is not None
+
+    async with session_scope() as session:
+        assert await session.get(Folder, project.id) is not None
+        assert not (await session.exec(select(MCPServer).where(MCPServer.name == raced[0]))).all()
 
 
 async def test_create_project_duplicate_name_escapes_like_wildcards(client: AsyncClient, logged_in_headers):

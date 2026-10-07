@@ -10,8 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  type AvailableDBProviderId,
   getDBProviderOption,
+  type StoredDBProviderId,
 } from "@/constants/dbProviderConstants";
 import { cn } from "@/utils/utils";
 import type { ChunkPreview } from "../types";
@@ -34,7 +34,7 @@ interface StepReviewProps {
   chunkOverlap: number;
   separator: string;
   selectedEmbeddingModel: ModelOption[];
-  backendType: AvailableDBProviderId;
+  backendType: StoredDBProviderId;
   metadataPairs?: MetadataPair[];
   perFileMetadata?: Record<string, MetadataPair[]>;
 }

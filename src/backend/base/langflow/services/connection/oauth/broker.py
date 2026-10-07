@@ -7,6 +7,7 @@ import json
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Literal
+from urllib.parse import urlencode, urlsplit
 from uuid import uuid4
 
 from sqlalchemy import update
@@ -14,10 +15,11 @@ from sqlmodel import col
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
+from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection.oauth import providers
 from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
 from langflow.services.connection.oauth.locking import lock_connection
-from langflow.services.database.models.connection import ConnectionSecret
+from langflow.services.database.models.connection import Connection, ConnectionSecret
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.connection.schemas import ConnectionStatusReason
 from langflow.services.database.models.user.model import User
@@ -28,11 +30,14 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    from langflow.services.database.models.connection import Connection
-
 
 def digest(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
+
+
+def _handoff_digest(value: str) -> str:
+    # A handoff nonce must never work as a callback cookie before redemption.
+    return digest("desktop-handoff:" + value)
 
 
 def _aware(value: datetime) -> datetime:
@@ -71,13 +76,73 @@ async def start(
     binding.registration_id = registration_id
     binding.config_digest = registration.fingerprint()
     binding.state_digest = digest(state)
-    binding.browser_digest = digest(browser)
+    binding.browser_digest = _handoff_digest(browser) if registration.context == "desktop" else digest(browser)
     binding.encrypted_verifier = auth_utils.encrypt_api_key(verifier)
     binding.scopes = scopes
     binding.expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     session.add(binding)
     await session.flush()
-    return providers.authorization_url(registration, state=state, verifier=verifier, scopes=scopes), state, browser
+    if registration.context == "desktop":
+        # Use the configured loopback origin, never a browser-supplied Host or
+        # redirect target. Desktop opens this URL in its separate cookie store.
+        url = (
+            urlsplit(registration.redirect_uri)
+            ._replace(
+                path=f"/api/v1/connections/oauth/{registration.provider}/browser",
+                query=urlencode({"state": state, "handoff": browser}),
+            )
+            .geturl()
+        )
+    else:
+        url = providers.authorization_url(registration, state=state, verifier=verifier, scopes=scopes)
+    return url, state, browser
+
+
+async def bind_desktop_browser(*, provider: str, state: str, handoff: str) -> tuple[str, str, bool]:
+    """Redeem a Desktop handoff once and bind consent to the system browser."""
+    browser = secrets.token_urlsafe(32)
+    async with session_scope() as session:
+        # An atomic rotation both reserves the SQLite write transaction and
+        # prevents a second worker or replay from obtaining a binding cookie.
+        consumed = await session.execute(
+            update(ConnectionOAuth)
+            .where(
+                col(ConnectionOAuth.state_digest) == digest(state),
+                col(ConnectionOAuth.browser_digest) == _handoff_digest(handoff),
+                col(ConnectionOAuth.expires_at) > datetime.now(timezone.utc),
+            )
+            .values(browser_digest=digest(browser))
+            .returning(ConnectionOAuth)
+        )
+        binding = consumed.scalar_one_or_none()
+        if binding is None:
+            msg = "OAuth browser handoff is invalid, expired, or already used."
+            raise OAuthError(msg)
+        registration = get_oauth_settings().registration(binding.registration_id)
+        if (
+            registration.context != "desktop"
+            or registration.provider != provider
+            or registration.fingerprint() != binding.config_digest
+        ):
+            msg = "OAuth registration changed or is not configured for this handoff."
+            raise OAuthError(msg)
+        # The callback rechecks and locks this row before storing credentials.
+        # Do not invert revoke's connection-then-binding lock order here.
+        row = await session.get(Connection, binding.connection_id)
+        user = await session.get(User, binding.user_id)
+        if row is None or user is None or not user.is_active:
+            msg = "OAuth initiating connection or user is no longer available."
+            raise OAuthError(msg)
+        async with audit_guard_in_transaction(session):
+            await ensure_connection_permission(
+                user, ConnectionAction.WRITE, connection_id=row.id, connection_owner_id=row.owner_id
+            )
+        verifier = auth_utils.decrypt_api_key(binding.encrypted_verifier)
+        if not verifier:
+            msg = "OAuth verifier is unavailable. Start again."
+            raise OAuthError(msg)
+        url = providers.authorization_url(registration, state=state, verifier=verifier, scopes=binding.scopes)
+    return url, browser, registration.redirect_uri.startswith("https:")
 
 
 async def complete(*, provider: str, state: str, browser: str, code: str | None, denied: bool) -> None:

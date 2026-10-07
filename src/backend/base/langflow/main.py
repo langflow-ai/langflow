@@ -38,6 +38,7 @@ from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES, GZipMiddle
 from langflow.api import log_router
 from langflow.api.health_check_router import health_check_router
 from langflow.api.router import router
+from langflow.api.v1.audit_reads import VERBATIM_QUERY_PARAMS
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.api.validation_errors import request_validation_exception_handler
 from langflow.api.warm_graph import is_warm_registry_enabled
@@ -51,6 +52,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
+from langflow.services.audit.attribution import AuditRequestContextMiddleware
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
@@ -106,6 +108,7 @@ _enterprise_lifespan_hooks: dict[str, list[Callable[[], Awaitable[None]]]] = {
 
 
 async def _run_enterprise_lifespan_hooks(phase: str) -> None:
+    """Run registered enterprise lifecycle hooks and isolate failures between hooks."""
     for hook in list(_enterprise_lifespan_hooks.get(phase, [])):
         try:
             await hook()
@@ -125,12 +128,15 @@ async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
     def __init__(self, app) -> None:
+        """Initialize middleware that tracks client disconnections."""
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Race request handling against a client-disconnection watcher."""
         sentinel = object()
 
         async def cancel_handler():
+            """Wait until the requesting client disconnects."""
             while True:
                 if await request.is_disconnected():
                     return sentinel
@@ -151,6 +157,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Convert serialization failures into an HTTP response."""
         try:
             response = await call_next(request)
         except Exception as exc:
@@ -172,6 +179,7 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
 
 
 async def load_bundles_with_error_handling():
+    """Load configured bundles and fall back to an empty result on network errors."""
     try:
         return await load_bundles_from_urls()
     except (httpx.TimeoutException, httpx.HTTPError, httpx.RequestError) as exc:
@@ -205,10 +213,12 @@ def warn_about_future_cors_changes(settings):
 
 
 def get_lifespan(*, fix_migration=False, version=None):
+    """Build the application startup and shutdown context for services and background workers."""
     initialize_settings_service()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        """Start application services and stop their owned background tasks on shutdown."""
         from lfx.interface.components import component_cache, get_and_cache_all_types_dict
 
         from langflow.preload import (
@@ -287,6 +297,9 @@ def get_lifespan(*, fix_migration=False, version=None):
             # so each worker rebuilds its own connection pool (idempotent otherwise).
             await initialize_services(fix_migration=fix_migration)
             await initialize_environment_variables()
+            from langflow.services.knowledge_base_storage.coordinator import fence_legacy_records, schedule_upgrade
+
+            await fence_legacy_records()
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
             # Surface the custom-component execution posture. Component code is exec()'d on
@@ -335,6 +348,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await audit_log_cleanup_worker.start()
             except Exception as exc:  # noqa: BLE001 — never block startup on cleanup scheduling
                 await logger.awarning(f"Failed to start authz audit-log cleanup worker: {exc}")
+            try:
+                from langflow.services.audit.retention import audit_event_cleanup_worker
+
+                await audit_event_cleanup_worker.start()
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning(f"Failed to start audit event cleanup worker: {exc}")
+            from langflow.services.audit.exclusions import warn_about_ignored_exclusions
+
+            await warn_about_ignored_exclusions()
 
             try:
                 from langflow.services.data_subjects.worker import data_subject_erase_worker
@@ -405,6 +427,11 @@ def get_lifespan(*, fix_migration=False, version=None):
                     await logger.adebug(f"Memory Base row reconciliation inserted {mb_inserted} rows")
             except Exception as exc:  # noqa: BLE001
                 await logger.awarning("Memory Base row reconciliation skipped after startup error: %s", exc)
+
+            # Include reconstructed Memory backing rows in the same automatic
+            # upgrade. No ingestion-status update can remove their storage fence.
+            await fence_legacy_records()
+            schedule_upgrade()
 
             prometheus_started = False
             if get_settings_service().settings.prometheus_enabled:
@@ -622,6 +649,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
             async def delayed_init_mcp_servers():
+                """Initialize project MCP servers after starter-project setup has had time to finish."""
                 await asyncio.sleep(10.0)  # Increased delay to allow starter projects to be created
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Loading MCP servers for projects")
@@ -778,6 +806,18 @@ def get_lifespan(*, fix_migration=False, version=None):
             # failed before the hooks ran — enterprise stop() paths must (and
             # do) tolerate never having started.
             await _run_enterprise_lifespan_hooks("shutdown")
+            from langflow.services.knowledge_base_storage.coordinator import stop_upgrade
+
+            try:
+                await stop_upgrade()
+            except Exception as exc:  # noqa: BLE001 -- storage shutdown must not skip other cleanup
+                await logger.awarning("Failed to stop storage upgrade: %s", type(exc).__name__)
+            from langflow.services.knowledge_base_storage.runtime import close_coordination_pools
+
+            try:
+                await close_coordination_pools()
+            except Exception as exc:  # noqa: BLE001 -- failed disposal must not skip service and sandbox cleanup
+                await logger.awarning("Failed to close storage coordination pools: %s", type(exc).__name__)
 
             # After the MCP cleanup above, deliberately: stopping the sampler awaits a
             # cancellation, and parking there first would both delay that guarantee and give
@@ -838,6 +878,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await audit_log_cleanup_worker.stop()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop authz audit-log cleanup worker: {e}")
+                    try:
+                        from langflow.services.audit.retention import audit_event_cleanup_worker
+
+                        await audit_event_cleanup_worker.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop audit event cleanup worker: {e}")
                     try:
                         from langflow.services.data_subjects.worker import data_subject_erase_worker
 
@@ -1018,6 +1064,7 @@ def create_app():
         allow_headers=settings.cors_allow_headers,
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
+    app.add_middleware(AuditRequestContextMiddleware)
 
     @app.middleware("http")
     async def bind_execution_client(request: Request, call_next):
@@ -1036,6 +1083,7 @@ def create_app():
 
     @app.middleware("http")
     async def check_boundary(request: Request, call_next):
+        """Require a multipart boundary for file-upload requests."""
         if "/api/v1/files/upload" in request.url.path:
             content_type = request.headers.get("Content-Type")
 
@@ -1093,9 +1141,13 @@ def create_app():
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
+        """Expand comma-separated query values into repeated query parameters."""
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
-            flattened.extend((key, entry) for entry in value.split(","))
+            if key in VERBATIM_QUERY_PARAMS:
+                flattened.append((key, value))
+            else:
+                flattened.extend((key, entry) for entry in value.split(","))
 
         request.scope["query_string"] = urlencode(flattened, doseq=True).encode("utf-8")
 
@@ -1156,6 +1208,7 @@ def create_app():
 
     @app.exception_handler(DeploymentGuardError)
     async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):
+        """Return a conflict response when a deployment guard rejects an operation."""
         return JSONResponse(
             status_code=HTTPStatus.CONFLICT,
             content={"detail": exc.detail},
@@ -1241,6 +1294,7 @@ def create_app():
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
+        """Convert uncaught application exceptions into API responses."""
         if isinstance(exc, HTTPException):
             await logger.aerror(f"HTTPException: {exc}", exc_info=exc)
             return JSONResponse(
@@ -1311,6 +1365,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
     # get a native 405, and real API routes are registered earlier so they win.
     @app.api_route("/api/{_path:path}", include_in_schema=False, methods=["GET", "HEAD"])
     async def api_not_found(_path: str):
+        """Reject unknown API routes before the frontend catch-all route."""
         raise HTTPException(status_code=404, detail="Not Found")
 
     # Serve the favicon from an explicit high-priority route instead of relying on
@@ -1325,6 +1380,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     @app.get("/favicon.ico", include_in_schema=False)
     async def favicon():
+        """Serve the frontend favicon when the asset exists."""
         if await anyio.Path(favicon_path).exists():
             return FileResponse(favicon_path, media_type="image/x-icon")
         raise HTTPException(status_code=404, detail="Not Found")
@@ -1339,6 +1395,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
         # Return JSON for all API endpoints to prevent HTML responses
+        """Return JSON for missing API routes and preserve frontend page handling."""
         if _request.url.path.startswith("/api"):
             # Extract detail from HTTPException if available
             detail = _exc.detail if isinstance(_exc, HTTPException) else "Not Found"

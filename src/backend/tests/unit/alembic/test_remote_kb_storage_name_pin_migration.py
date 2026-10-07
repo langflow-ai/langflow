@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import logging
 from uuid import UUID, uuid4
@@ -10,7 +11,6 @@ import pytest
 import sqlalchemy as sa
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-from lfx.base.knowledge_bases.backends import chroma as chroma_backend
 from lfx.base.knowledge_bases.backends import opensearch as opensearch_backend
 
 _MIGRATION = importlib.import_module("langflow.alembic.versions.386662af02e9_pin_legacy_remote_kb_storage_names")
@@ -78,16 +78,17 @@ def test_frozen_naming_matches_the_backends() -> None:
     owner = uuid4()
     scoped = _MIGRATION.owner_scoped_name(owner, "Team Docs")
     assert scoped == opensearch_backend.derive_index_name("Team Docs", owner)
-    cloud = chroma_backend.ChromaCloudBackend(kb_name="Team Docs", backend_config=dict(_CLOUD), user_id=owner)
-    assert scoped == cloud._resolve_collection_name()
+    # Chroma constructors now reject use. Keep its historical naming contract frozen.
+    payload = f"36:{owner}9:Team Docs"
+    assert scoped == "lf_" + hashlib.sha256(payload.encode()).hexdigest()[:24]
 
     assert _MIGRATION.OPENSEARCH.name_key == "index_name"
     assert _MIGRATION.OPENSEARCH.origin_key == opensearch_backend.INDEX_NAME_ORIGIN_KEY
     assert _MIGRATION.OPENSEARCH.shared_key == opensearch_backend.LEGACY_SHARED_INDEX_KEY
     assert _MIGRATION.LEGACY_KB_NAME_ORIGIN == opensearch_backend.LEGACY_KB_NAME_ORIGIN
-    assert _MIGRATION.CHROMA_CLOUD.name_key == chroma_backend.COLLECTION_NAME_KEY
-    assert _MIGRATION.CHROMA_CLOUD.origin_key == chroma_backend.COLLECTION_NAME_ORIGIN_KEY
-    assert _MIGRATION.CHROMA_CLOUD.shared_key == chroma_backend.LEGACY_SHARED_COLLECTION_KEY
+    assert _MIGRATION.CHROMA_CLOUD.name_key == "collection_name"
+    assert _MIGRATION.CHROMA_CLOUD.origin_key == "collection_name_origin"
+    assert _MIGRATION.CHROMA_CLOUD.shared_key == "legacy_shared_collection"
 
 
 def test_single_owner_legacy_index_is_pinned(connection) -> None:
