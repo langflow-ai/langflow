@@ -267,7 +267,8 @@ function JobRow({ job }: { job: MigrationJob }) {
 /** Stays in view while changes are paused, wherever the admin is on the page. */
 export function PausedBanner({ migration }: { migration: MigrationState }) {
   const { t, i18n } = useTranslation();
-  const pause = migration.record.pause;
+  // A pause that still waits refuses changes as well, and one that the server left behind stays.
+  const pause = migration.record.pause ?? migration.record.pausing;
   return (
     // Stays in the accessibility tree while empty, so the pause is announced when it starts.
     <div role="status" className="sticky top-0 z-10 empty:-mt-6">
@@ -292,6 +293,7 @@ export function PausedBanner({ migration }: { migration: MigrationState }) {
 /** "If something goes wrong": the way back from where the move stands now. */
 export function Recovery({ migration }: { migration: MigrationState }) {
   const { t } = useTranslation();
+  const refused = migration.record.pause ?? migration.record.pausing;
   return (
     <details className="rounded-lg border p-4">
       <summary className="cursor-pointer text-sm font-medium">
@@ -299,11 +301,11 @@ export function Recovery({ migration }: { migration: MigrationState }) {
       </summary>
       <div className="flex flex-col items-start gap-3 pt-3">
         <p className="text-sm text-muted-foreground">
-          {migration.record.pause
+          {refused
             ? t("settings.migration.recovery.paused")
             : t("settings.migration.recovery.none")}
         </p>
-        {migration.record.pause && <ResumeButton />}
+        {refused && <ResumeButton />}
       </div>
     </details>
   );

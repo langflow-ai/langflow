@@ -74,6 +74,11 @@ export interface MigrationState {
     secret_key?: { verified_by?: string; verified_at?: string };
     /** Set while changes to this instance are paused. */
     pause?: { frozen_at: string; frozen_by: string };
+    /**
+     * Set while a request for a pause still waits for changes to end. Changes are refused already.
+     * It stays when the server stopped during that wait.
+     */
+    pausing?: { frozen_at: string; frozen_by: string };
   };
   steps: MigrationStepState[];
   blocking_findings: string[];

@@ -770,6 +770,28 @@ describe("Pause changes", () => {
     expect(resume).toHaveBeenCalledTimes(1);
   });
 
+  it("offers the way back from a pause that still waits, or that the server left behind", () => {
+    // Changes are refused from the moment a pause is asked for. A server that stops then leaves it so.
+    const waiting = migration({}, { pausing: paused });
+
+    const { unmount } = show(<PausedBanner migration={waiting} />);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Changes are paused on this instance\. Paused .* by alice\./,
+    );
+    expect(
+      screen.getByRole("button", { name: "Turn changes back on" }),
+    ).toBeInTheDocument();
+    unmount();
+
+    show(<Recovery migration={waiting} />);
+    expect(
+      screen.getByText(/^Turn changes back on\. Nothing is lost here\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Turn changes back on" }),
+    ).toBeInTheDocument();
+  });
+
   it("says how to go back from where the move stands", () => {
     const { unmount } = show(<Recovery migration={migration()} />);
     expect(
