@@ -10,7 +10,14 @@ import os
 import sys
 
 import pytest
-from langflow.api.utils.migration_copies import DECISIONS, blocking_code, copy_command, copy_environment, copy_outcome
+from langflow.api.utils.migration_copies import (
+    DECISIONS,
+    blocking_code,
+    copy_command,
+    copy_environment,
+    copy_outcome,
+    shown,
+)
 
 DB_PASSWORD = "db-password-9f3a61c2"  # noqa: S105  # pragma: allowlist secret
 S3_SECRET = "s3-secret-key-7be04d15"  # noqa: S105  # pragma: allowlist secret
@@ -400,5 +407,64 @@ def test_the_record_keeps_the_first_hundred_failed_items_and_they_cannot_stand_f
     accepted = [_decided("copy_files", "accept_missing_attachment", item["subject"]) for item in kept]
     assert blocking_code("copy_files", run, accepted) == "no_source_bytes"
     # With all of them on record, the same decisions complete the step.
-    shown = {**run, "report": {**run["report"], "counts": {"failed": 100}}}
-    assert blocking_code("copy_files", shown, accepted) is None
+    whole = {**report, "counts": {"failed": 100}, "attention": failed[:100]}
+    assert (
+        blocking_code("copy_files", {**copy_outcome("copy_files", ENDED, {"report": whole}), "run_id": RUN}, accepted)
+        is None
+    )
+
+
+def test_a_list_the_record_cut_short_offers_only_what_is_for_the_whole_step():
+    def offered(step: str, items: list[dict]) -> list:
+        report = {"event": "report", "seq": 9, "ok": False, "counts": {"failed": len(items)}, "attention": items}
+        return [item["decision"] for item in copy_outcome(step, ENDED, {"report": report})["report"]["attention"]]
+
+    files = [{"owner": "alice", "file_name": f"{number}.txt", "code": "no_source_bytes"} for number in range(101)]
+    bases = [{"kb_id": f"kb-{number}", "code": "kb_metric_change"} for number in range(101)]
+
+    # No acceptance can clear a step whose list is cut, so none is offered.
+    assert offered("copy_files", files) == [None] * 100
+    assert offered("copy_files", files[:100]) == [
+        {"kind": "accept_missing_attachment", "subject": f"alice/{number}.txt"} for number in range(100)
+    ]
+    # An option answers every item of its code at the next run, however many there are.
+    assert offered("copy_knowledge_bases", bases) == [{"kind": "accept_ranking_change", "subject": None}] * 100
+
+
+def test_a_page_is_told_the_run_a_decision_is_for_and_who_made_it():
+    run = _not_copied(
+        "copy_knowledge_bases",
+        {"kb_id": "kb-1", "code": "kb_backend_missing"},
+        {"kb_id": "kb-2", "code": "kb_metric_change"},
+        {"kb_id": "kb-3", "code": "kb_ingesting"},
+    )
+
+    def told(*decisions: dict) -> list:
+        return [item["decision"] for item in shown("copy_knowledge_bases", run, list(decisions))["report"]["attention"]]
+
+    # Leaving one behind is said of this run's report. An option is for every run, and names none.
+    assert told() == [
+        {"kind": "leave_behind", "subject": "kb-1", "run_id": RUN, "made": None},
+        {"kind": "accept_ranking_change", "subject": None, "run_id": None, "made": None},
+        None,
+    ]
+    who = {"by": "alice", "at": "2026-10-01T00:10:00+00:00"}
+    left = _decided("copy_knowledge_bases", "leave_behind", "kb-1")
+    ranked = _decided("copy_knowledge_bases", "accept_ranking_change")
+    assert [decision and decision["made"] for decision in told(left, ranked)] == [who, who, None]
+    # What was accepted of another run's report, or for another step, is not made here.
+    earlier = _decided("copy_knowledge_bases", "leave_behind", "kb-1", run_id="another run")
+    assert told(earlier, _decided("copy_files", "keep_bucket_file", "kb-1"))[0]["made"] is None
+    # The run is left as the record keeps it.
+    assert run["report"]["attention"][0]["decision"] == {"kind": "leave_behind", "subject": "kb-1"}
+
+
+def test_a_page_is_told_who_answered_what_the_database_copy_asks():
+    asked = {"event": "decision_needed", "seq": 149, "code": "orphans_droppable", "flag": "--drop-orphans"}
+    run = {**copy_outcome("copy_database", ENDED, {"decision_needed": asked}), "run_id": RUN}
+
+    unanswered = shown("copy_database", run, [])["decision_needed"]["decision"]
+    answered = shown("copy_database", run, [_decided("copy_database", "drop_orphans")])["decision_needed"]["decision"]
+
+    assert unanswered == {"kind": "drop_orphans", "subject": None, "run_id": None, "made": None}
+    assert answered == {**unanswered, "made": {"by": "alice", "at": "2026-10-01T00:10:00+00:00"}}

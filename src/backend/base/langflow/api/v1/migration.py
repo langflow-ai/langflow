@@ -46,6 +46,7 @@ from langflow.api.utils.migration_copies import (
     copy_command,
     copy_environment,
     copy_outcome,
+    shown,
 )
 from langflow.api.utils.migration_jobs import active_jobs, live_listeners
 from langflow.api.utils.migration_pause import drained
@@ -169,6 +170,8 @@ class DecisionRequest(BaseModel):
     step: str
     kind: str
     subject: str | None = None
+    # The run whose report an acceptance was read from. A page sends back what the item's decision said.
+    run_id: str | None = None
 
 
 @router.get("")
@@ -543,6 +546,11 @@ async def decide(request: DecisionRequest, admin: Superuser) -> dict[str, Any]:
     """Record what the admin decided about a copy: an option for its next run, or a failed item to accept as it is."""
     decision = _decision(request)
     record = _read_record()
+    latest = (record["steps"].get(request.step) or {}).get("run_id")
+    if decision["subject"] and (not request.run_id or request.run_id != latest):
+        # The copy was made again since the report this acceptance was read from, so it is consent to
+        # something the admin has not seen. The page reads the state again.
+        raise HTTPException(status_code=409, detail={"code": "report_changed"})
     made = {**decision, "run_id": _reported_by(record, decision), "by": admin.username, "at": _now()}
     record["decisions"] = [*_other_decisions(record, decision), made]
     _write_record(record)
@@ -797,9 +805,12 @@ async def _state(record: dict[str, Any]) -> dict[str, Any]:
     await _settle_copies(record)
     instance = await _instance()
     blocking = _blocking_findings(record)
+    # A page is given each copy with what it may decide about it and what was decided. The record is not changed.
+    decisions = record.get("decisions", [])
+    copies = {step: shown(step, record["steps"][step], decisions) for step in COPY_COMMANDS if step in record["steps"]}
     return {
         "instance": instance,
-        "record": record,
+        "record": {**record, "steps": {**record["steps"], **copies}},
         "steps": _steps(instance, record, blocking),
         "blocking_findings": blocking,
         "acceptable_findings": sorted(ACCEPTABLE_FINDINGS),
