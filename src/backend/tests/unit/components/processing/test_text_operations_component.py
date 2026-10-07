@@ -491,6 +491,40 @@ class TestTextOperationsToDataFrame:
         assert isinstance(result, DataFrame)
         assert len(result) == 2
 
+    def test_dataframe_skips_markdown_delimiter_row(self):
+        """Test that the markdown delimiter row under the header is not read as data."""
+        component = TextOperations()
+        component.table_separator = "|"
+        component.has_header = True
+        component.log = lambda _: None
+
+        table = "| Name | Age |\n|------|:---:|\n| John | 25 |\n| Jane | 30 |"
+        result = component._text_to_dataframe(table)
+
+        assert list(result.columns) == ["Name", "Age"]
+        assert result["Name"].tolist() == ["John", "Jane"]
+        assert result["Age"].tolist() == [25, 30]
+
+    def test_dataframe_preserves_headerless_delimiter_like_rows(self):
+        component = TextOperations(
+            table_separator="|",
+            has_header=False,
+        )
+        component.log = lambda _: None
+
+        result = component._text_to_dataframe("John|25\n---|:--\nJane|30")
+
+        assert result.to_numpy().tolist() == [["John", "25"], ["---", ":--"], ["Jane", "30"]]
+
+    def test_dataframe_handles_empty_markdown_table(self):
+        component = TextOperations(table_separator="|", has_header=True)
+        component.log = lambda _: None
+
+        result = component._text_to_dataframe("| Name | Age |\n|---|---|")
+
+        assert result.empty
+        assert list(result.columns) == ["Name", "Age"]
+
 
 class TestTextOperationsUpdateBuildConfig:
     def test_update_build_config_word_count(self):

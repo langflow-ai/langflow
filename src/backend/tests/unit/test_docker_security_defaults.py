@@ -207,8 +207,8 @@ def test_published_images_pin_hardened_package_managers() -> None:
     assert 'if [ "$actual_npm_version" != "$NPM_VERSION" ]; then' in install_script
 
     for variable, version, package, validation_entry in (
-        ("IP_ADDRESS_VERSION", "10.3.1", "ip-address", '"ip-address": "10.3.1"'),
-        ("BRACE_EXPANSION_VERSION", "5.0.9", "brace-expansion", '"brace-expansion": "5.0.9"'),
+        ("IP_ADDRESS_VERSION", "10.7.1", "ip-address", '"ip-address": "10.7.1"'),
+        ("BRACE_EXPANSION_VERSION", "5.0.12", "brace-expansion", '"brace-expansion": "5.0.12"'),
         ("TAR_VERSION", "7.5.22", "tar", 'tar: "7.5.22"'),
         ("UNDICI_VERSION", "6.28.1", "undici", 'undici: "6.28.1"'),
     ):
