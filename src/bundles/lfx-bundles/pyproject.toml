@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.37"
+version = "1.1.38"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -51,6 +51,7 @@ deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.
 elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"]
 faiss = ["faiss-cpu==1.9.0.post1; python_version < '3.14'", "faiss-cpu>=1.13.2; python_version >= '3.14'", "langchain-community>=0.4.1,<1.0.0"]
 figranium = []
+flexai = ["langchain-openai>=1.1.6"]
 funasr = []
 git = ["GitPython>=3.1.58", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
@@ -125,6 +126,7 @@ all = [
     "lfx-bundles[elastic]",
     "lfx-bundles[faiss]",
     "lfx-bundles[figranium]",
+    "lfx-bundles[flexai]",
     "lfx-bundles[funasr]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
@@ -196,6 +198,7 @@ all-no-torch = [
     "lfx-bundles[elastic]",
     "lfx-bundles[faiss]",
     "lfx-bundles[figranium]",
+    "lfx-bundles[flexai]",
     "lfx-bundles[funasr]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
