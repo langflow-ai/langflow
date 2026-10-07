@@ -814,15 +814,17 @@ class KnowledgeComponent(Component):
     def _default_backend_selection() -> tuple[str, dict[str, Any]]:
         """Deployment default for a new KB with no explicit backend chosen.
 
-        pgVector is environment-driven: when ``PGVECTOR_CONNECTION_STRING`` is set
-        the deployment snap-configures to Postgres, so an unspecified selection
-        (headless flows, multi-replica) becomes ``postgres``. Otherwise SQLite.
+        Environment-driven: pgVector when ``PGVECTOR_CONNECTION_STRING`` is set,
+        else OpenSearch when ``OPENSEARCH_URL`` is set, else SQLite. An
+        unspecified selection (headless flows, multi-replica) therefore lands on
+        the deployment's shared store.
         """
-        from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
+        from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 
-        if postgres_env_configured():
-            return BackendType.POSTGRES.value, {}
-        return BackendType.SQLITE.value, {}
+        backend_type = resolve_default_kb_backend()
+        if backend_type == BackendType.OPENSEARCH.value:
+            return backend_type, dict(_DEFAULT_OPENSEARCH_CONFIG)
+        return backend_type, {}
 
     @classmethod
     def _normalize_backend_selection(cls, value: Any) -> tuple[str, dict[str, Any]]:

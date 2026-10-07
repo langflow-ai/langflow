@@ -126,6 +126,24 @@ def _is_missing_index(exc: Exception) -> bool:
 DEFAULT_URL_VARIABLE = "OPENSEARCH_URL"
 DEFAULT_USERNAME_VARIABLE = "OPENSEARCH_USERNAME"
 DEFAULT_PASSWORD_VARIABLE = "OPENSEARCH_PASSWORD"  # noqa: S105 — variable name, not a secret  # pragma: allowlist secret
+
+
+def read_opensearch_url_from_env() -> str | None:
+    """Read the deployment-level OpenSearch URL from the server environment.
+
+    The name is the backend's default URL variable. An unset or blank value
+    means OpenSearch is not provisioned for the deployment.
+    """
+    import os
+
+    return os.getenv(DEFAULT_URL_VARIABLE, "").strip() or None
+
+
+def opensearch_env_configured() -> bool:
+    """Return True when OpenSearch is provisioned via env (an auto-default trigger)."""
+    return bool(read_opensearch_url_from_env())
+
+
 # LangChain's ``OpenSearchVectorSearch`` resolves ``vector_field`` from
 # per-call kwargs (default ``"vector_field"``) and ignores the value passed to
 # its constructor. This backend never passes a per-call override, so ingestion
