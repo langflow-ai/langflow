@@ -820,7 +820,7 @@
   "settings.migration.files.acceptMissing": "Move without this file",
   "settings.migration.copy.acceptNote": "Accepting a finding in '{{step}}' lets the move go on. This copy names each one it left, so each is accepted here, for this copy only.",
   "settings.migration.copy.reportChanged": "This copy was made again in the meantime, so your choice was not recorded. The list now shows what the new copy left.",
-  "settings.migration.copy.applyNext": "Copy again for this to apply.",
+  "settings.migration.copy.applyNext": "This applies to the next copy.",
   "settings.migration.copy.tooManyToAccept": "More were not copied than this list holds, so they can't be accepted one by one.",
   "messages.title": "Messages",
   "messages.loadOlder": "Load older messages",

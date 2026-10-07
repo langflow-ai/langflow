@@ -2193,7 +2193,7 @@
   "settings.migration.files.acceptMissing": "Trasladar sin este archivo",
   "settings.migration.copy.acceptNote": "Aceptar un hallazgo en '{{step}}' permite que el traslado continúe. Esta copia nombra cada elemento que dejó, así que cada uno se acepta aquí, solo para esta copia.",
   "settings.migration.copy.reportChanged": "Esta copia se hizo de nuevo entretanto, así que tu elección no se guardó. La lista muestra ahora lo que dejó la nueva copia.",
-  "settings.migration.copy.applyNext": "Copia de nuevo para que se aplique.",
+  "settings.migration.copy.applyNext": "Se aplica a la próxima copia.",
   "settings.migration.copy.tooManyToAccept": "Hay más sin copiar de los que caben en esta lista, así que no se pueden aceptar uno por uno.",
   "settings.nav.modelProviders": "Proveedores de modelos",
   "settings.nav.shortcuts": "Atajos",

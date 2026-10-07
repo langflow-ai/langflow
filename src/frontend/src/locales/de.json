@@ -2193,7 +2193,7 @@
   "settings.migration.files.acceptMissing": "Ohne diese Datei umziehen",
   "settings.migration.copy.acceptNote": "Ein unter „{{step}}“ akzeptierter Befund lässt den Umzug weitergehen. Diese Kopie nennt jeden Eintrag, den sie ausgelassen hat, deshalb wird jeder hier akzeptiert, nur für diese Kopie.",
   "settings.migration.copy.reportChanged": "Diese Kopie wurde inzwischen erneut erstellt, daher wurde Ihre Auswahl nicht gespeichert. Die Liste zeigt jetzt, was die neue Kopie ausgelassen hat.",
-  "settings.migration.copy.applyNext": "Kopieren Sie erneut, damit das gilt.",
+  "settings.migration.copy.applyNext": "Das gilt für die nächste Kopie.",
   "settings.migration.copy.tooManyToAccept": "Es wurden mehr nicht kopiert, als diese Liste zeigt. Sie lassen sich daher nicht einzeln akzeptieren.",
   "settings.nav.modelProviders": "Modellanbieter",
   "settings.nav.shortcuts": "Tastenkürzel",

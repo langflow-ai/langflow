@@ -2193,7 +2193,7 @@
   "settings.migration.files.acceptMissing": "このファイルなしで移行する",
   "settings.migration.copy.acceptNote": "「{{step}}」で検出事項を承認すると、移行を先に進められます。このコピーは残した項目を1つずつ示すため、それぞれをここで、このコピーに限って承認します。",
   "settings.migration.copy.reportChanged": "その間にこのコピーがやり直されたため、選択は記録されませんでした。一覧には、新しいコピーで残された項目が表示されています。",
-  "settings.migration.copy.applyNext": "反映するには、もう一度コピーしてください。",
+  "settings.migration.copy.applyNext": "次のコピーに適用されます。",
   "settings.migration.copy.tooManyToAccept": "コピーされなかったものがこの一覧より多いため、1 件ずつ受け入れることはできません。",
   "settings.nav.modelProviders": "モデルプロバイダー",
   "settings.nav.shortcuts": "ショートカット",

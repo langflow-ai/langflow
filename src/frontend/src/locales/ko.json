@@ -820,7 +820,7 @@
   "settings.migration.files.acceptMissing": "이 파일 없이 마이그레이션",
   "settings.migration.copy.acceptNote": "'{{step}}' 단계에서 점검 결과를 수락하면 마이그레이션을 계속할 수 있습니다. 이 복사는 남겨 둔 항목을 하나씩 보여 주므로, 각 항목을 여기에서 이 복사에 한해 수락합니다.",
   "settings.migration.copy.reportChanged": "그 사이에 이 복사가 다시 실행되어 선택이 기록되지 않았습니다. 이제 목록에는 새 복사가 남겨 둔 항목이 표시됩니다.",
-  "settings.migration.copy.applyNext": "적용하려면 다시 복사하세요.",
+  "settings.migration.copy.applyNext": "다음 복사에 적용됩니다.",
   "settings.migration.copy.tooManyToAccept": "복사되지 않은 항목이 이 목록보다 많아 하나씩 동의할 수 없습니다.",
   "messages.title": "메시지",
   "messages.loadOlder": "이전 메시지 불러오기",
