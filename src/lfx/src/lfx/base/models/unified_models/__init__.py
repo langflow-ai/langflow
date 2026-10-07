@@ -28,6 +28,7 @@ from .instantiation import get_embeddings, get_llm
 from .model_catalog import (
     aget_language_model_options,
     get_embedding_model_options,
+    get_language_model_option,
     get_language_model_options,
     get_unified_models_detailed,
     normalize_model_names_to_dicts,
@@ -63,6 +64,7 @@ __all__ = [
     "get_embedding_class",
     "get_embedding_model_options",
     "get_embeddings",
+    "get_language_model_option",
     "get_language_model_options",
     "get_live_only_providers",
     "get_llm",
