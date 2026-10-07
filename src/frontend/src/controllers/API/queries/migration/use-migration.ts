@@ -147,14 +147,21 @@ export const useCancelJobMutation = () =>
       api.request({ method, url, data: body }),
   });
 
-/** Fetches a consistent copy of this instance's SQLite database. The server keeps no copy of its own. */
-export const useDownloadDatabaseMutation = () => {
+/**
+ * Fetches a consistent copy of this instance's SQLite database. The server keeps no copy of its own.
+ * `onSuccess` gets the copy even when the step that asked for it has left the page. The server counts the copy as made
+ * once it is sent, so it must always reach the browser.
+ */
+export const useDownloadDatabaseMutation = (
+  onSuccess: (response: AxiosResponse<Blob>) => void,
+) => {
   const client = useQueryClient();
   return useMutation<AxiosResponse<Blob>, AxiosError>({
     mutationFn: () =>
       api.post(getURL("MIGRATION", { path: "backup/database" }), undefined, {
         responseType: "blob",
       }),
+    onSuccess,
     // The record now says when the copy was made, or why there can't be one, such as a pause that ended.
     onSettled: () => client.invalidateQueries({ queryKey: migrationKeys.all }),
   });
