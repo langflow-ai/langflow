@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 def set_authenticated_telemetry_user(user: User | UserRead) -> None:
     """Attribute subsequent telemetry to a user resolved by authentication."""
-    set_current_telemetry_user(user.username)
+    set_current_telemetry_user(getattr(user, "username", None))
 
 
 class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
