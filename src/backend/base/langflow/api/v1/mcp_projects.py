@@ -73,7 +73,12 @@ from langflow.api.v1.schemas import (
     MCPSettings,
 )
 from langflow.services.audit import vocabulary as audit_vocab
-from langflow.services.audit.operations import audited_route, stage_flow_succeeded, stage_project_succeeded
+from langflow.services.audit.operations import (
+    audited_permission,
+    audited_route,
+    stage_flow_succeeded,
+    stage_project_succeeded,
+)
 from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
     AUTH_METHOD_AUTO_LOGIN,
@@ -622,12 +627,15 @@ async def update_project_mcp_settings(
             # WRITE: enforce so the external access ceiling (e.g. a "viewer")
             # cannot change MCP settings. The owner with no ceiling fast-paths via
             # owner-override; behavior is unchanged when the feature is off.
-            await ensure_project_permission(
-                current_user,
-                ProjectAction.WRITE,
-                project_id=project_id,
-                project_user_id=project.user_id,
-                workspace_id=project.workspace_id,
+            await audited_permission(
+                ensure_project_permission(
+                    current_user,
+                    ProjectAction.WRITE,
+                    project_id=project_id,
+                    project_user_id=project.user_id,
+                    workspace_id=project.workspace_id,
+                ),
+                resource_name=project.name,
             )
 
             # Track if MCP Composer needs to be started or stopped

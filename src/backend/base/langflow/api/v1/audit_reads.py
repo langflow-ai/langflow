@@ -229,13 +229,14 @@ _Incarnation = aliased(AuditEvent)
 
 
 def _newest(operation: AuditOperation) -> Any:
-    """When this resource last recorded that operation, correlated per row."""
+    """When this resource last completed that operation, correlated per row."""
     return (
         select(func.max(col(_Incarnation.timestamp)))
         .where(
             col(_Incarnation.resource_id) == col(AuditEvent.resource_id),
             col(_Incarnation.resource_type) == col(AuditEvent.resource_type),
             col(_Incarnation.operation) == operation.value,
+            col(_Incarnation.result) == AuditResult.SUCCEEDED.value,
         )
         .scalar_subquery()
     )

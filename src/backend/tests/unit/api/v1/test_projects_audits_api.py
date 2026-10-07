@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 import pytest
@@ -456,3 +457,49 @@ async def test_with_a_plugin_the_dedicated_permission_decides(client, logged_in_
     assert len(scoped_one.json()["items"]) == 1
     assert scoped_all.status_code == status.HTTP_403_FORBIDDEN
     assert viewer_feed.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize("resource_type", ["flow", "project"])
+@pytest.mark.parametrize("operation", ["create", "delete"])
+async def test_failed_lifecycle_operations_do_not_hide_an_owners_history(
+    client, logged_in_headers, resource_type, operation
+):
+    """A failed create or delete changes neither ownership nor the resource's life."""
+    route = "flows" if resource_type == "flow" else "projects"
+    body = {"name": f"lifecycle-{uuid4().hex}"}
+    if resource_type == "flow":
+        body["data"] = {"nodes": [], "edges": []}
+    response = await client.post(f"api/v1/{route}/", json=body, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    resource_id = UUID(response.json()["id"])
+    # Keep all three events strictly ordered, independent of SQLite clock precision.
+    now = datetime.now(timezone.utc)
+    async with session_scope() as session:
+        created = (await session.exec(select(AuditEvent).where(AuditEvent.resource_id == resource_id))).one()
+        created.timestamp = now - timedelta(minutes=3)
+    stranger_id, _stranger_name = await make_user("lifecycle-actor")
+    changed = await record_event(
+        resource_type=resource_type,
+        resource_id=resource_id,
+        action=f"{resource_type}:write",
+        operation="patch",
+        user_id=stranger_id,
+        actor_id=stranger_id,
+        timestamp=now - timedelta(minutes=2),
+    )
+    await record_event(
+        resource_type=resource_type,
+        resource_id=resource_id,
+        action=f"{resource_type}:{operation}",
+        operation=operation,
+        result="failed",
+        error_code="CONSTRAINT_VIOLATION",
+        user_id=stranger_id,
+        actor_id=stranger_id,
+        timestamp=now - timedelta(minutes=1),
+    )
+
+    page = await client.get(f"api/v1/{route}/audits?{resource_type}_id={resource_id}", headers=logged_in_headers)
+
+    assert page.status_code == status.HTTP_200_OK, page.text
+    assert str(changed.id) in {item["id"] for item in page.json()["items"]}

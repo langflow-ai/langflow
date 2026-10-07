@@ -379,3 +379,24 @@ async def test_a_plugin_denial_is_not_duplicated_into_action_audit_events(client
 
     assert response.status_code in {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND}
     assert await events_by_user(bob_id) == []
+
+
+async def test_a_failed_mcp_settings_write_records_one_failure_after_rollback(client, logged_in_headers, monkeypatch):
+    project = await _create_project(client, logged_in_headers)
+
+    def unavailable(*_args, **_kwargs):
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Service unavailable")
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.handle_auth_settings_update", unavailable)
+    response = await client.patch(
+        f"api/v1/mcp/project/{project['id']}",
+        json={"settings": [], "auth_settings": {"auth_type": "none"}},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE, response.text
+    patches = [
+        event for event in await events_for(project["id"], resource_type="project") if event.operation == "patch"
+    ]
+    assert [(event.result, event.error_code) for event in patches] == [("failed", "SERVICE_UNAVAILABLE")]
+    assert patches[0].resource_name == project["name"]
