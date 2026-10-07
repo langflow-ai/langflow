@@ -16,6 +16,7 @@ from uuid import uuid4
 import psutil
 import pytest
 import sqlalchemy as sa
+from fastapi import HTTPException
 from langflow.api.utils import migration_runs
 from langflow.api.v1 import migration as migration_module
 from langflow.services.deps import get_db_service
@@ -446,6 +447,84 @@ async def test_a_copy_is_stopped_as_it_starts_when_what_let_it_in_has_changed(
     assert "copy_database" not in migration["record"]["steps"]
     steps = {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}
     assert (steps["pause"], steps["copy_database"]) == (pause, copy)
+
+
+async def test_a_copy_start_does_not_put_back_a_pause_that_another_worker_ended_under_it(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _ready_to_copy(config_dir)
+    _send_to(monkeypatch, NOWHERE)
+    read_run, resumed = migration_module.read_run, []
+
+    def read_run_after_a_resume(run_id: str) -> dict:
+        # Another worker turns changes back on at this point: after this request read the record for
+        # the last time, and before it saves its run into it.
+        if not resumed:
+            theirs = migration_module._read_record()
+            resumed.append(theirs.pop("pause"))
+            migration_module._write_record(theirs)
+        return read_run(run_id)
+
+    monkeypatch.setattr(migration_module, "read_run", read_run_after_a_resume)
+
+    refused = await asyncio.wait_for(client.post(RUNS.format("copy_database"), json={}, headers=headers), _TIMEOUT)
+
+    assert resumed
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["detail"] == {"code": "state_changed"}
+    # The command had started, and was stopped.
+    [run] = migration_runs.list_runs()
+    assert run["status"] == "cancelled"
+    migration = await _migration(client, headers)
+    # The other worker's word stands: this request's save did not put the pause back.
+    assert "pause" not in migration["record"]
+    assert "copy_database" not in migration["record"]["steps"]
+
+
+def test_a_save_of_a_record_that_another_worker_saved_since_is_refused(client, config_dir):  # noqa: ARG001
+    _ready_to_copy(config_dir)
+    mine, theirs = migration_module._read_record(), migration_module._read_record()
+    del theirs["pause"]
+    migration_module._write_record(theirs)
+    mine["backup"]["location"] = "another place"
+
+    with pytest.raises(HTTPException) as refused:
+        migration_module._write_record(mine)
+
+    assert refused.value.status_code == 409
+    assert refused.value.detail == {"code": "record_changed"}
+    saved = migration_module._read_record()
+    assert "pause" not in saved
+    assert saved["backup"]["location"] != "another place"
+
+
+async def test_turning_changes_back_on_is_done_again_on_what_another_worker_saved_meanwhile(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _ready_to_copy(config_dir)
+    read_record, saved_meanwhile = migration_module._read_record, []
+
+    def read_and_let_another_worker_save() -> dict:
+        record = read_record()
+        if not saved_meanwhile:
+            # Another worker saves where the backup is, just after this request has read the record.
+            saved_meanwhile.append(True)
+            theirs = read_record()
+            theirs["backup"]["location"] = "another place"
+            migration_module._write_record(theirs)
+        return record
+
+    monkeypatch.setattr(migration_module, "_read_record", read_and_let_another_worker_save)
+
+    resumed = await client.delete(PAUSE, headers=headers)
+
+    assert resumed.status_code == 200, resumed.text
+    record = resumed.json()["record"]
+    # Both stand: the pause is over, and what the other worker saved is kept.
+    assert "pause" not in record
+    assert record["backup"]["location"] == "another place"
 
 
 async def test_a_run_whose_files_are_gone_reads_as_interrupted(client, logged_in_headers_super_user, config_dir):
