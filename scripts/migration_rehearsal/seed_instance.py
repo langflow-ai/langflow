@@ -17,7 +17,9 @@ from pathlib import Path
 from uuid import UUID
 
 DIM = 8  # vector width; the transport does not care what it is
-CHROMA_UPSERT_BATCH = 5000
+# A new knowledge base starts at storage generation 1 (the model default, which
+# create_record keeps). Only the Chroma-to-SQLite upgrade moves a row past it.
+GENERATION = 1
 LOGICAL_FILE_BYTES = b"fixture-bytes"  # the logical file row's size is taken from this
 
 
@@ -332,30 +334,33 @@ async def main() -> None:
 
         # --- knowledge bases, three awkward shapes plus a memory base's own ----
         kbs = (
-            # normal: local Chroma, model recorded. The copy path.
-            (KB_OK, "kb-ok", "chroma", EMBEDDING, args.chunks, []),
+            # normal: local SQLite, model recorded. The copy path.
+            (KB_OK, "kb-ok", "sqlite", EMBEDDING, args.chunks, []),
             # empty model_selection, with vectors that match its chunk count, so the
             # empty selection is the only thing wrong with it. Catches:
             # resolve_embedding_selection silently falling back to a default model,
             # so the row claims a model it may never have used.
-            (KB_NOMODEL, "kb-no-model", "chroma", {}, 5, []),
+            (KB_NOMODEL, "kb-no-model", "sqlite", {}, 5, []),
             # a backend that parses but cannot be instantiated. Catches: BackendType
             # still carries astra/mongodb while create_backend refuses them.
             (KB_STUB, "kb-stubbed-backend", "astra", {**EMBEDDING, "name": "x"}, 0, []),
             # the memory base's backing knowledge base, in the shape MemoryBaseService writes.
-            (KB_MEMORY, MB_KB_NAME, "chroma", EMBEDDING, MB_VECTORS, ["memory"]),
+            (KB_MEMORY, MB_KB_NAME, "sqlite", EMBEDDING, MB_VECTORS, ["memory"]),
         )
         for kid, nm, backend, sel, chunks, source_types in kbs:
             await ex(
+                # storage_generation and storage_state have no server default on a
+                # schema built from the models, only on one upgraded by alembic.
                 "insert into knowledge_base(id,name,user_id,model_selection,chunk_size,chunk_overlap,"
-                "column_config,backend_type,backend_config,chunks,words,characters,size_bytes,"
-                "source_types,status,created_at,updated_at)"
-                " values (:i,:n,:u,:sel,1000,200,'[]',:bt,'{}',:ch,0,0,0,:st,'ready',:c,:c)",
+                "column_config,backend_type,backend_config,storage_generation,storage_state,chunks,words,"
+                "characters,size_bytes,source_types,status,created_at,updated_at)"
+                " values (:i,:n,:u,:sel,1000,200,'[]',:bt,'{}',:g,'ready',:ch,0,0,0,:st,'ready',:c,:c)",
                 i=kid,
                 n=nm,
                 u=U_SUPER,
                 sel=json.dumps(sel),
                 bt=backend,
+                g=GENERATION,
                 ch=chunks,
                 st=json.dumps(source_types),
                 c=now,
@@ -530,30 +535,45 @@ async def main() -> None:
         # reconciliation compares backend count() against the row's cached
         # `chunks`, so an empty store under a row claiming N reports an N-row
         # shortfall, which is exactly the signature of a silently truncated read.
-        from langflow.api.utils.kb_helpers import KBStorageHelper
-        from lfx.base.knowledge_bases.backends import ChromaLocalBackend
+        from langflow.services.knowledge_base_storage.runtime import storage_root
+        from lfx.base.knowledge_bases.backends import IngestedDocument, SQLiteBackend, SQLiteStorageContext
 
-        kb_root = KBStorageHelper.get_root_path() / "langflow"
-        # Every local Chroma row gets as many vectors as it records.
-        for _, nm, backend_type, _, chunks, _ in kbs:
-            if backend_type != "chroma" or not chunks:
+        kb_root = storage_root()
+        vectors = {}
+        # Every SQLite row gets its store, holding as many vectors as it records.
+        for kid, nm, backend_type, _, chunks, _ in kbs:
+            if backend_type != "sqlite":
                 continue
-            kb_dir = kb_root / nm
-            kb_dir.mkdir(parents=True, exist_ok=True)
+            # The app's create path (create_record -> _raw_backend, create=True).
+            # It creates the store even for an empty KB: a ready row with no file
+            # reads as missing storage, not as zero chunks.
+            backend = SQLiteBackend(
+                nm,
+                user_id=U_SUPER,
+                storage_context=SQLiteStorageContext(kb_root, U_SUPER, kid, GENERATION),
+                create=True,
+            )
+            await backend.ensure_ready()
             # No embedding model is involved. The copy path moves opaque float
             # arrays, so deterministic values exercise it exactly as real ones do.
-            backend = ChromaLocalBackend(kb_name=nm, kb_path=kb_dir)
-            await backend.ensure_ready()
-            # Chroma rejects a single upsert above its max batch size (5461 locally).
-            for start in range(0, chunks, CHROMA_UPSERT_BATCH):
-                batch = range(start, min(start + CHROMA_UPSERT_BATCH, chunks))
-                backend.vector_store._collection.upsert(  # noqa: SLF001
-                    ids=[f"chunk-{i:05d}" for i in batch],
-                    embeddings=[[round(((i * 7 + j * 13) % 100) / 100, 4) for j in range(DIM)] for i in batch],
-                    documents=[f"fixture chunk {i}" for i in batch],
-                    metadatas=[{"source": "fixture.txt", "chunk_index": i} for i in batch],
-                )
-            await backend.teardown()
+            await backend.add_embedded_documents(
+                [
+                    IngestedDocument(
+                        f"fixture chunk {i}",
+                        {"source": "fixture.txt", "chunk_index": i},
+                        [round(((i * 7 + j * 13) % 100) / 100, 4) for j in range(DIM)],
+                        id=f"chunk-{i:05d}",
+                    )
+                    for i in range(chunks)
+                ]
+            )
+            vectors[nm] = {
+                "chunks": chunks,
+                "owner_id": str(U_SUPER),
+                "kb_id": str(kid),
+                "generation": GENERATION,
+                "path": str(backend.storage_context.database_path),
+            }
 
         # Bytes for the logical-path file row. The absolute-path row is left
         # dangling on purpose, so there is one passing case and one failing one.
@@ -579,7 +599,7 @@ async def main() -> None:
                 "stubbed_backend": str(KB_STUB),
                 "memory_base": str(KB_MEMORY),
             },
-            "vectors": {nm: chunks for _, nm, bt, _, chunks, _ in kbs if bt == "chroma"},
+            "vectors": vectors,
             "vector_store_root": str(kb_root),
             "memory_base": {"id": str(MB_ONE), "kb_name": MB_KB_NAME},
             "kb_ingestion": {"job": str(JOB_INGEST), "legacy_ingestion_run": str(RUN_INGEST)},
