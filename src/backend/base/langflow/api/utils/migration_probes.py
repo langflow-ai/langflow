@@ -11,6 +11,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import importlib.util
+import ipaddress
 import os
 import re
 from http import HTTPStatus
@@ -60,7 +61,11 @@ def database_identity(address: str) -> str:
     except (sa.exc.ArgumentError, ValueError):
         return ""
     options = sorted((name, value) for name, value in url.query.items() if name not in _PASSWORD_OPTIONS)
-    target = (url.get_backend_name(), url.username, url.host, url.port, url.database, options)
+    host = url.host
+    # An IPv6 host can be written in several ways that lead to one place, so it goes in by one of them.
+    with contextlib.suppress(ValueError):
+        host = str(ipaddress.ip_address(host or ""))
+    target = (url.get_backend_name(), url.username, host, url.port, url.database, options)
     return hashlib.sha256(repr(target).encode()).hexdigest()[:16]
 
 

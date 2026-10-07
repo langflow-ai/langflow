@@ -1833,6 +1833,25 @@ def test_the_identity_of_a_database_is_where_its_address_leads(one: str, other: 
     assert int(database_identity(one), 16) >= 0
 
 
+@pytest.mark.parametrize(
+    ("one", "other", "same"),
+    [
+        # One host, written three ways.
+        ("postgresql://[2001:db8::1]:5432/app", "postgresql+psycopg://[2001:DB8::1]:5432/app", True),
+        ("postgresql://[2001:db8::1]:5432/app", "postgresql://[2001:0db8:0:0:0:0:0:1]:5432/app", True),
+        # Another host, and the same host on another port.
+        ("postgresql://[2001:db8::1]:5432/app", "postgresql://[2001:db8::2]:5432/app", False),
+        ("postgresql://[::1]:5432/app", "postgresql://[::1]:5433/app", False),
+    ],
+)
+def test_the_identity_of_a_database_on_an_ipv6_host_is_the_same_however_the_host_is_written(
+    one: str,
+    other: str,
+    same: bool,  # noqa: FBT001
+):
+    assert (database_identity(one) == database_identity(other)) is same
+
+
 async def test_a_new_database_is_not_done_on_what_knowledge_bases_found_in_the_old_one(
     client, logged_in_headers_super_user, active_super_user, config_dir, scratch_database
 ):
