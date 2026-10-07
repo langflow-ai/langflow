@@ -543,6 +543,44 @@ class TestEngineLifecycle:
         asyncio.run(backend.teardown())
         assert engine.disposed is True
 
+    @pytest.mark.usefixtures("engine_factory")
+    def test_each_event_loop_gets_its_own_engine(self) -> None:
+        import asyncio
+
+        async def engines_of_this_loop():
+            return pg_module._shared_engine(_CONNECTION_STRING), pg_module._shared_engine(_CONNECTION_STRING)
+
+        try:
+            first, again = asyncio.run(engines_of_this_loop())
+            other, _ = asyncio.run(engines_of_this_loop())
+            assert first is again
+            assert other is not first
+        finally:
+            pg_module._ENGINES.clear()
+
+    def test_a_closed_loop_releases_its_engine(self, engine_factory: list) -> None:
+        import asyncio
+        import gc
+        import weakref
+
+        async def engine_of_this_loop():
+            return pg_module._shared_engine(_CONNECTION_STRING)
+
+        loop = asyncio.new_event_loop()
+        try:
+            engine = loop.run_until_complete(engine_of_this_loop())
+        finally:
+            loop.close()
+        assert engine in pg_module._ENGINES[loop].values()
+        loop_ref, engine_ref = weakref.ref(loop), weakref.ref(engine)
+
+        del loop, engine
+        engine_factory.clear()  # the stand-in factory's own record of the engine
+        gc.collect()
+
+        assert loop_ref() is None
+        assert engine_ref() is None
+
     async def test_teardown_swallows_dispose_errors(self, tmp_path: Path) -> None:
         backend = create_backend("postgres", kb_name="kb", kb_path=tmp_path, backend_config={}, user_id=uuid.uuid4())
         backend._pg_engine = _FakeEngine(_FakeConn(), dispose_error=_DatabaseError("already closed"))

@@ -484,3 +484,74 @@ class TestPostgresBootstrapLive:
                 await new_model.delete_collection()
             await old_model.teardown()
             await new_model.teardown()
+
+
+@pytest.mark.api_key_required
+class TestPostgresTemporaryLoopLive:
+    """A call from a temporary event loop does not keep its pool once that loop is gone."""
+
+    def test_temporary_loop_connections_close_once_the_loop_is_collected(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        conn = _require_live_pgvector()
+        import asyncio
+        import gc
+        import weakref
+
+        from langchain_core.documents import Document
+        from lfx.base.knowledge_bases.backends import postgres as pg_module
+        from sqlalchemy import text
+        from sqlalchemy.ext.asyncio import create_async_engine
+
+        # Tag this test's connections so they can be counted on the server.
+        application = f"kb_loop_{uuid.uuid4().hex[:8]}"
+        separator = "&" if "?" in conn else "?"
+        monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", f"{conn}{separator}application_name={application}")
+        kb_name, owner = f"kb_loop_{uuid.uuid4().hex[:8]}", uuid.uuid4()
+        loops: list[weakref.ref] = []
+
+        async def write_and_count() -> int:
+            loops.append(weakref.ref(asyncio.get_running_loop()))
+            backend = _live_backend(tmp_path, kb_name=kb_name, user_id=owner)
+            try:
+                await backend.ensure_ready()
+                if not (await backend.test_connection()).ok:
+                    pytest.skip("pgvector not reachable")
+                await backend.add_documents([Document(page_content="doc", metadata={})])
+                return await backend.count()
+            finally:
+                await backend.teardown()  # leaves the shared engine and its pooled connections open
+
+        async def open_connections() -> int:
+            probe = create_async_engine(pg_module._normalize_driver(conn))
+            try:
+                async with probe.connect() as connection:
+                    rows = await connection.execute(
+                        text("SELECT count(*) FROM pg_stat_activity WHERE application_name = :name"),
+                        {"name": application},
+                    )
+                    return rows.scalar_one()
+            finally:
+                await probe.dispose()
+
+        async def drop_collection() -> None:
+            backend = _live_backend(tmp_path, kb_name=kb_name, user_id=owner)
+            await backend.ensure_ready()
+            await backend.delete_collection()
+            await backend.teardown()
+            for engine in pg_module._ENGINES.pop(asyncio.get_running_loop(), {}).values():
+                await engine.dispose()
+
+        gc.disable()  # collect only when the test says so
+        try:
+            assert asyncio.run(write_and_count()) == 1
+            assert asyncio.run(write_and_count()) == 2
+            assert asyncio.run(open_connections()) > 0  # each temporary loop still holds a pooled connection
+
+            gc.collect()
+
+            assert [ref() for ref in loops] == [None, None]
+            assert asyncio.run(open_connections()) == 0
+        finally:
+            gc.enable()
+            asyncio.run(drop_collection())
