@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 import langflow.api.router as api_router_module
+import psutil
 import pytest
 import sqlalchemy as sa
 import structlog
@@ -579,6 +580,36 @@ async def test_a_client_that_disconnects_cancels_the_run(client, logged_in_heade
     step = (await _migration(client, logged_in_headers_super_user))["record"]["steps"]["check_source"]
     assert step["status"] == "cancelled"
     assert step["finished_at"] is not None
+
+
+async def test_a_client_that_disconnects_while_an_event_waits_to_be_sent_cancels_the_run(active_super_user, config_dir):
+    """The hang-up as the response itself meets it, with no middleware to take the event first.
+
+    Through the whole app a hang-up finds the run waiting for its child or waiting to send, as timing
+    has it. Only the second left the run going, so this test holds it there.
+    """
+    response = await migration_module.run_checks(
+        migration_module.CheckRequest(target_version=VERSION), active_super_user
+    )
+    gone = asyncio.Event()
+
+    async def receive():
+        await gone.wait()
+        return {"type": "http.disconnect"}
+
+    async def send(message):
+        if message["type"] == "http.response.body":
+            # Never taken: the client goes away with the first event on its way.
+            gone.set()
+            await asyncio.Event().wait()
+
+    await response({"type": "http", "asgi": {"version": "3.0"}}, receive, send)
+
+    # Read from the file, with nothing awaited since the response ended: no later task has had a turn.
+    step = json.loads((config_dir / "migrations" / "migration.json").read_text())["steps"]["check_source"]
+    assert step["status"] == "cancelled"
+    assert step["finished_at"] is not None
+    assert not psutil.pid_exists(step["pid"])
 
 
 async def test_a_run_reads_as_live_only_while_its_child_exists(client, logged_in_headers_super_user, config_dir):
