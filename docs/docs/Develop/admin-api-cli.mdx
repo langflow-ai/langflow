@@ -3,7 +3,9 @@ title: Administer users and teams with the API and CLI
 slug: /admin-api-cli
 ---
 
-Langflow provides matching REST and command-line surfaces for user, team, role, and role-assignment administration. Existing `/api/v1` routes remain canonical; the CLI calls those routes with a Langflow API key.
+Langflow provides a command-line interface for administering user, team, role, and role assignment. The CLI calls the existing `/api/v1` routes with a Langflow API key.
+
+`langflow admin` is documented separately here from the [Langflow CLI](/configuration-cli) because Langflow CLI commands start the server or change the local installation, while `langflow admin` calls a Langflow server that is already running.
 
 The open-source authorization service is fail-closed for delegated administration. Superusers retain access. A non-superuser can administer a resource only when an installed authorization plugin implements the corresponding permission:
 
@@ -17,33 +19,40 @@ Check the caller's permissions and optional Enterprise features with `GET /api/v
 
 ## Authenticate the CLI
 
-The administration CLI sends `X-API-Key` and a unique `X-Langflow-Operation-ID` on every API request. Connection settings use this precedence:
+The administration CLI sends `X-API-Key` and a unique `X-Langflow-Operation-ID` on every API request.
 
-1. `--url` and `--api-key` flags.
-2. A profile selected with `--profile`.
-3. `LANGFLOW_URL` and `LANGFLOW_API_KEY`.
+To authenticate the CLI, do the following:
 
-Profiles are JSON documents in the platform-specific Langflow configuration directory. A profile stores the URL and the **name** of the environment variable that contains the API key; it never stores the credential.
+1. Create a [Langflow API key](/api-keys-and-authentication#langflow-api-keys) for the account that will run the commands. A superuser can administer every resource. A non-superuser can administer a resource only when an authorization plugin grants that resource's permission.
 
-```json
-{
-  "profiles": {
-    "production": {
-      "url": "https://langflow.example.com",
-      "api_key_env": "LANGFLOW_PRODUCTION_API_KEY"
-    }
-  }
-}
-```
+2. Save a profile as JSON in the platform-specific [Langflow configuration directory](/logging#log-storage). A profile stores the Langflow server URL and the name of the environment variable that contains the API key. It does not store the actual key. The default file is `admin-profiles.json`.
 
-Use the profile after setting the referenced variable:
+   ```json
+   {
+     "profiles": {
+       "production": {
+         "url": "https://langflow.example.com",
+         "api_key_env": "LANGFLOW_PRODUCTION_API_KEY"
+       }
+     }
+   }
+   ```
 
-```bash
-export LANGFLOW_PRODUCTION_API_KEY="..."
-langflow admin --profile production users list
-```
+3. Set the environment variable named in `api_key_env`. In this example profile, the variable is named `LANGFLOW_PRODUCTION_API_KEY`.
 
-Use `--profile-file` to select a different profile document. Use `--output json` for stable automation output; tables are the default for interactive use.
+   ```bash
+   export LANGFLOW_PRODUCTION_API_KEY="..."
+   ```
+
+4. Run a command with the `--profile`.
+
+   ```bash
+   langflow admin --profile production users list
+   ```
+
+The CLI resolves the URL and API key in this order: `--url` and `--api-key`, then the selected `--profile`, then `LANGFLOW_URL` and `LANGFLOW_API_KEY`.
+
+Use `--profile-file` to select a different profile document. Use `--output json` for stable automation output. Tables are the default for interactive use.
 
 ## CLI command surface
 
