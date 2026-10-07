@@ -143,7 +143,8 @@ def copy_outcome(step_id: str, run: dict[str, Any], events: dict[str, dict[str, 
     if report and "attention" in report:
         # ponytail: a report can list every file of an instance, and the record is read on each request,
         # so it keeps the first of them. The report's counts still say how many failed.
-        report["attention"] = [_to_decide(step_id, item) for item in report["attention"][:_ATTENTION_KEPT]]
+        cut = len(report["attention"]) > _ATTENTION_KEPT
+        report["attention"] = [_to_decide(step_id, item, cut=cut) for item in report["attention"][:_ATTENTION_KEPT]]
     asked = _as_printed(events.get("decision_needed"))
     if asked:
         asked["decision"] = _answer(step_id, asked["code"], None)
@@ -173,25 +174,65 @@ def blocking_code(step_id: str, run: dict[str, Any], decisions: list[dict[str, A
         # The record may hold fewer items than failed. The ones it does not hold cannot have been accepted.
         if report["counts"]["failed"] <= len(failed):
             # An option names no item, so it accepts none: it changes the next run.
-            accepted = [
-                {"kind": made["kind"], "subject": made["subject"]}
-                for made in decisions
-                if made["step"] == step_id and made["subject"] and made.get("run_id") == run["run_id"]
+            failed = [
+                item
+                for item in failed
+                if not (item["decision"] and item["decision"]["subject"] and _made(step_id, run, item, decisions))
             ]
-            failed = [item for item in failed if item["decision"] not in accepted]
         return failed[0]["code"] if failed else None
     codes = [problem["code"] for problem in report["problems"]]
     # Rows that point at nothing can be left out on the admin's word, once nothing else stands in the way.
     return next((code for code in codes if code != "orphans_droppable"), codes[0])
 
 
-def _to_decide(step_id: str, item: dict[str, Any]) -> dict[str, Any]:
+def shown(step_id: str, run: dict[str, Any], decisions: list[dict[str, Any]]) -> dict[str, Any]:
+    """A step's run as a page is given it, so that the page keeps no rule of its own.
+
+    Each decision the record offers also says the run it is for, which an acceptance sends back and an option
+    does not have, and who made it and when, once one that is in effect is on record.
+    """
+
+    def told(asked: dict[str, Any]) -> dict[str, Any]:
+        decision = asked.get("decision")
+        if not decision:
+            return {**asked, "decision": None}
+        made = _made(step_id, run, asked, decisions)
+        by = made and {"by": made["by"], "at": made["at"]}
+        return {**asked, "decision": {**decision, "run_id": run["run_id"] if decision["subject"] else None, "made": by}}
+
+    report, asked = run["report"], run["decision_needed"]
+    if report and "attention" in report:
+        report = {**report, "attention": [told(item) for item in report["attention"]]}
+    return {**run, "report": report, "decision_needed": asked and told(asked)}
+
+
+def _made(
+    step_id: str, run: dict[str, Any], asked: dict[str, Any], decisions: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    """The recorded decision that is in effect for what an item or the command asks, or None.
+
+    An acceptance is in effect for the run whose report it was made about. An option is, once it is on record.
+    """
+    decision = asked["decision"]
+    for_run = run["run_id"] if decision["subject"] else None
+    wanted = (step_id, decision["kind"], decision["subject"], for_run)
+    return next(
+        (made for made in decisions if (made["step"], made["kind"], made["subject"], made.get("run_id")) == wanted),
+        None,
+    )
+
+
+def _to_decide(step_id: str, item: dict[str, Any], *, cut: bool) -> dict[str, Any]:
     """A failed item as the record keeps it: named, and with the decision that answers its code.
 
-    Its name is a knowledge base's id, or a file's owner and name.
+    Its name is a knowledge base's id, or a file's owner and name. An item of a list the record cut short
+    cannot be accepted, because the ones it left out cannot be. An option answers those as well, so it stays.
     """
     subject = item.get("kb_id") or f"{item['owner']}/{item['file_name']}"
-    return {**item, "subject": subject, "decision": _answer(step_id, item["code"], subject)}
+    decision = _answer(step_id, item["code"], subject)
+    if cut and decision and decision["subject"]:
+        decision = None
+    return {**item, "subject": subject, "decision": decision}
 
 
 def _answer(step_id: str, code: str, subject: str | None) -> dict[str, str | None] | None:
