@@ -71,7 +71,14 @@ PAUSED = {**RECORD, "pause": {"frozen_at": "2026-10-05T12:00:00+00:00", "frozen_
 REFUSAL = {"detail": "This instance is being migrated."}
 NEW_FLOW = {"name": "saved around a pause", "data": {}}
 # The routes that answer a GET and say that they change the instance, so that a pause refuses them.
-CHANGES = {"/api/v1/connections/oauth/{provider}/browser", "/api/v1/connections/oauth/{provider}/callback"}
+CHANGES = {
+    "/api/v1/connections/oauth/{provider}/browser",
+    "/api/v1/connections/oauth/{provider}/callback",
+    # Each adds a row to the audit log, which says who read a person's data.
+    "/api/v1/data-subjects/end-users",
+    "/api/v1/data-subjects/requests/{request_id}/export",
+    "/api/v1/users/me/data-export",
+}
 # Every other path that answers a GET or a HEAD. Each was read to its end, with what it depends on, and
 # leaves the instance as it is, so a pause lets it through. What some of them still write, and why it is
 # let through:
@@ -132,6 +139,9 @@ READS = frozenset(
         "/api/v1/config",
         "/api/v1/connections",
         "/api/v1/connections/oauth/registrations",
+        "/api/v1/data-subjects/requests",
+        "/api/v1/data-subjects/requests/{request_id}",
+        "/api/v1/data-subjects/requests/{request_id}/dry-run",
         "/api/v1/deployments",
         "/api/v1/deployments/configs",
         "/api/v1/deployments/llms",
@@ -234,6 +244,7 @@ READS = frozenset(
         "/api/v1/triggers/{trigger_id}/events",
         "/api/v1/triggers/{trigger_id}/ingress",
         "/api/v1/users/",
+        "/api/v1/users/me/deletion-request",
         "/api/v1/users/whoami",
         "/api/v1/users/{user_id}",
         "/api/v1/variables/",
