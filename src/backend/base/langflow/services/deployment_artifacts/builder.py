@@ -36,6 +36,12 @@ from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.deps import get_variable_service
 from langflow.utils.canonical_json import canonical_json_bytes
 from langflow.utils.flow_secrets import strip_secret_field_values_in_place
+from langflow.utils.mcp_config_secrets import (
+    MCP_SECRET_CONFIG_MAPS,
+    NON_SECRET_HEADERS,
+    project_id_from_mcp_url,
+    variable_reference_name,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Iterable, Iterator, Sequence
@@ -115,6 +121,25 @@ class ProjectArtifactFlow:
     # Model fields that name no resolvable provider: a selection left to run
     # time cannot be read here, and a count is the honest way to say so.
     unresolved_model_fields: int = 0
+    # What this flow's MCP servers need where it is deployed: variable names an
+    # external server's credential resolves from, and sibling projects an
+    # internal one calls, which have to already be deployed there.
+    required_mcp_variables: tuple[str, ...] = ()
+    required_mcp_projects: tuple[ProjectArtifactRequiredMcpProject, ...] = ()
+
+
+@dataclass(frozen=True, order=True, slots=True)
+class ProjectArtifactRequiredMcpProject:
+    """One sibling project a flow's MCP server calls, and the name it calls it by.
+
+    The name is carried rather than derived. An auto-created project server is named
+    after its project, but a server can be added under any name, and a rebuilt
+    connection stored under a name the flow does not use is a row the flow never
+    finds -- failing at the first tool call rather than at deploy.
+    """
+
+    server_name: str
+    project_id: str
 
 
 @dataclass(frozen=True, order=True, slots=True)
@@ -218,6 +243,11 @@ class ProjectDeploymentSnapshot:
     required_providers: tuple[str, ...] = ()
     required_models: tuple[ProjectArtifactRequiredModel, ...] = ()
     unresolved_model_fields: int = 0
+    # What the flows' MCP servers need from wherever this is deployed: global
+    # variable names only whoever runs that environment can supply, and sibling
+    # projects that have to already be deployed there for a connection to resolve.
+    required_mcp_variables: tuple[str, ...] = ()
+    required_mcp_projects: tuple[ProjectArtifactRequiredMcpProject, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.project_name or not self.project_name.strip():
@@ -279,6 +309,35 @@ class _ModelRequirements:
             models=tuple(sorted(models, key=_model_sort_key)),
             unresolved_fields=unresolved,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class _McpRequirements:
+    """What one flow's MCP servers ask of a deploy target.
+
+    Two lists because the target answers two different questions about them. A
+    variable it has to already hold, which only whoever runs that environment can
+    supply. A project that has to already be deployed there, which the deploy can
+    check for itself and then rebuild the connection against.
+
+    Nothing here counts secrets left embedded in a config, deliberately. A strict
+    snapshot already refuses to capture a flow whose MCP config is not provably
+    free of them, so by the time requirements are collected the only values left
+    are references. A count would record a state this path cannot reach.
+    """
+
+    variables: tuple[str, ...] = ()
+    projects: tuple[ProjectArtifactRequiredMcpProject, ...] = ()
+
+    @staticmethod
+    def merged(parts: Iterable[_McpRequirements]) -> _McpRequirements:
+        """Union several flows' requirements, deduplicating both lists."""
+        variables: set[str] = set()
+        projects: set[ProjectArtifactRequiredMcpProject] = set()
+        for part in parts:
+            variables.update(part.variables)
+            projects.update(part.projects)
+        return _McpRequirements(variables=tuple(sorted(variables)), projects=tuple(sorted(projects)))
 
 
 def _model_sort_key(model: ProjectArtifactRequiredModel) -> tuple[str, str, str]:
@@ -560,6 +619,94 @@ def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
     )
 
 
+def _mcp_config_requirements(
+    server_name: object, config: object
+) -> tuple[set[str], set[ProjectArtifactRequiredMcpProject]]:
+    """Read one server's config for the variables and the project it depends on.
+
+    Mirrors what ``strip_config_secrets`` touches, so the two cannot drift: the
+    credential-bearing maps it rewrites are the only places a reference survives,
+    because the top-level secret fields are deleted rather than replaced.
+
+    ``server_name`` travels with the project because that is what the flow resolves
+    by: the component looks its server up by name and prefers the stored row over
+    the config embedded here, so a deploy that rebuilds the connection under any
+    other name writes a row the flow never finds.
+    """
+    variables: set[str] = set()
+    projects: set[ProjectArtifactRequiredMcpProject] = set()
+    if not isinstance(config, dict) or not isinstance(server_name, str) or not server_name:
+        return variables, projects
+    for key in MCP_SECRET_CONFIG_MAPS:
+        entries = config.get(key)
+        if not isinstance(entries, dict):
+            continue
+        for entry_key, entry_value in entries.items():
+            if key == "headers" and str(entry_key).lower() in NON_SECRET_HEADERS:
+                continue
+            if name := variable_reference_name(entry_value):
+                variables.add(name)
+    if name := variable_reference_name(config.get("url")):
+        # A URL behind a variable names no project until it resolves, so it is
+        # reported as a variable and treated as external. Being wrong this way
+        # asks for something harmless; the other way mints a key for a stranger.
+        variables.add(name)
+    elif project_id := project_id_from_mcp_url(config.get("url")):
+        projects.add(ProjectArtifactRequiredMcpProject(server_name=server_name, project_id=project_id))
+    return variables, projects
+
+
+def _collect_mcp_requirements(flow_data: object) -> _McpRequirements:
+    """Collect what a flow's MCP servers need from regular and grouped nodes.
+
+    Walked without recursion, like the connection refs. A flow reaches an MCP
+    server through one field type, so unlike the model fields there is only one
+    shape to read.
+
+    The project ids collected here name a project but do not prove one is ours:
+    any host can serve that path shape. Confirming the origin belongs to the
+    deploy target is the caller's job, and skipping it would mint a key for this
+    plane and write it into a config pointing somewhere else.
+    """
+    if not isinstance(flow_data, dict):
+        return _McpRequirements()
+    nodes = flow_data.get("nodes")
+    if not isinstance(nodes, list):
+        return _McpRequirements()
+    variables: set[str] = set()
+    projects: set[ProjectArtifactRequiredMcpProject] = set()
+    node_frames = [iter(nodes)]
+    while node_frames:
+        try:
+            node = next(node_frames[-1])
+        except StopIteration:
+            node_frames.pop()
+            continue
+        if not isinstance(node, dict):
+            continue
+        node_inner = node.get("data", {}).get("node") if isinstance(node.get("data"), dict) else None
+        if not isinstance(node_inner, dict):
+            continue
+        template = node_inner.get("template")
+        if isinstance(template, dict):
+            for field_value in template.values():
+                if not isinstance(field_value, dict) or field_value.get("type") != "mcp":
+                    continue
+                value = field_value.get("value")
+                if not isinstance(value, dict):
+                    continue
+                field_variables, field_projects = _mcp_config_requirements(value.get("name"), value.get("config"))
+                variables.update(field_variables)
+                projects.update(field_projects)
+        nested_flow = node_inner.get("flow")
+        if isinstance(nested_flow, dict):
+            nested_data = nested_flow.get("data")
+            nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
+            if isinstance(nested_nodes, list):
+                node_frames.append(iter(nested_nodes))
+    return _McpRequirements(variables=tuple(sorted(variables)), projects=tuple(sorted(projects)))
+
+
 def _collect_required_connections(flow_data: object) -> tuple[ProjectArtifactRequiredConnection, ...]:
     """Collect connection refs from regular and grouped nodes without recursion."""
     if not isinstance(flow_data, dict):
@@ -639,7 +786,13 @@ def _normalized_flow_data(
     strict_secret_safety: bool = False,
     keep_mcp_config: bool = False,
     known_variable_names: Collection[str] | None = None,
-) -> tuple[dict[str, Any], tuple[str, ...], tuple[ProjectArtifactRequiredConnection, ...], _ModelRequirements]:
+) -> tuple[
+    dict[str, Any],
+    tuple[str, ...],
+    tuple[ProjectArtifactRequiredConnection, ...],
+    _ModelRequirements,
+    _McpRequirements,
+]:
     """Return the scrubbed flow envelope and the requirements read off it.
 
     The requirements are the flow's required variables, its connection refs,
@@ -671,6 +824,7 @@ def _normalized_flow_data(
     variable_references: set[str] = set()
     required_connections = _collect_required_connections(scrubbed.get("data"))
     model_requirements = _collect_model_requirements(scrubbed.get("data"))
+    mcp_requirements = _collect_mcp_requirements(scrubbed.get("data"))
     scrubbed["data"] = strip_secret_field_values_in_place(
         scrubbed.get("data"),
         variable_references=variable_references,
@@ -697,18 +851,30 @@ def _normalized_flow_data(
                 if isinstance(node, dict):
                     for key in _VOLATILE_NODE_FIELDS:
                         node.pop(key, None)
-    return scrubbed, tuple(sorted(variable_references)), required_connections, model_requirements
+    return scrubbed, tuple(sorted(variable_references)), required_connections, model_requirements, mcp_requirements
 
 
 def _normalized_flow_bytes(
     snapshot: _FlowSnapshot,
     *,
     strict_secret_safety: bool = False,
-) -> tuple[bytes, tuple[str, ...], tuple[ProjectArtifactRequiredConnection, ...], _ModelRequirements]:
-    scrubbed, variable_references, required_connections, model_requirements = _normalized_flow_data(
+) -> tuple[
+    bytes,
+    tuple[str, ...],
+    tuple[ProjectArtifactRequiredConnection, ...],
+    _ModelRequirements,
+    _McpRequirements,
+]:
+    scrubbed, variable_references, required_connections, model_requirements, mcp_requirements = _normalized_flow_data(
         snapshot, strict_secret_safety=strict_secret_safety
     )
-    return canonical_json_bytes(scrubbed), variable_references, required_connections, model_requirements
+    return (
+        canonical_json_bytes(scrubbed),
+        variable_references,
+        required_connections,
+        model_requirements,
+        mcp_requirements,
+    )
 
 
 def _json_string_size(value: str) -> int:
@@ -837,6 +1003,11 @@ def _model_entry(model: ProjectArtifactRequiredModel) -> dict[str, str]:
     return entry
 
 
+def _mcp_project_entry(project: ProjectArtifactRequiredMcpProject) -> dict[str, str]:
+    """One sibling project as the manifest carries it, name first for readability."""
+    return {"server_name": project.server_name, "project_id": project.project_id}
+
+
 def _build_archive(
     *,
     project_id: UUID,
@@ -858,7 +1029,13 @@ def _build_archive(
 
     for snapshot in snapshots:
         path = f"flows/{snapshot.flow_id}.json"
-        content, required_variables, required_connections, model_requirements = _normalized_flow_bytes(
+        (
+            content,
+            required_variables,
+            required_connections,
+            model_requirements,
+            mcp_requirements,
+        ) = _normalized_flow_bytes(
             snapshot,
             strict_secret_safety=strict_secret_safety,
         )
@@ -883,6 +1060,8 @@ def _build_archive(
                 required_providers=model_requirements.providers,
                 required_models=model_requirements.models,
                 unresolved_model_fields=model_requirements.unresolved_fields,
+                required_mcp_variables=mcp_requirements.variables,
+                required_mcp_projects=mcp_requirements.projects,
             )
         )
 
@@ -904,17 +1083,27 @@ def _build_archive(
         )
         for flow in flow_entries
     )
+    manifest_mcp = _McpRequirements.merged(
+        _McpRequirements(variables=flow.required_mcp_variables, projects=flow.required_mcp_projects)
+        for flow in flow_entries
+    )
     manifest: dict[str, Any] = {
         # v2 is already assigned to flows[].version_id. Dependencies use v3,
-        # connection requirements use v4, and model providers use v5, so an
-        # older reader refuses an artifact instead of deploying without
-        # provisioning required resources. Each level is claimed only when its
-        # field is populated, so a project that needs no provider still
-        # packages as a version older readers already accept. An unresolved
-        # count alone does not claim v5: it names nothing a target could
-        # provision or approve, so an older reader loses nothing by ignoring it.
+        # connection requirements use v4, model providers use v5, and MCP
+        # requirements use v6, so an older reader refuses an artifact instead of
+        # deploying without provisioning required resources. Each level is
+        # claimed only when its field is populated, so a project that needs no
+        # provider still packages as a version older readers already accept. An
+        # unresolved count alone does not claim v5: it names nothing a target
+        # could provision or approve, so an older reader loses nothing by
+        # ignoring it. v6 is claimed on either MCP list, because both name
+        # something the target must already have for the flow to run at all.
         "schema_version": (
-            5 if manifest_models.providers else (4 if manifest_required_connections else (3 if dependencies else 1))
+            6
+            if (manifest_mcp.variables or manifest_mcp.projects)
+            else (
+                5 if manifest_models.providers else (4 if manifest_required_connections else (3 if dependencies else 1))
+            )
         ),
         "project": {"id": str(project_id), "name": project_name},
         # Names of every load_from_db-bound global variable the packaged flows
@@ -933,6 +1122,17 @@ def _build_archive(
             if manifest_models.providers or manifest_models.unresolved_fields
             else {}
         ),
+        # What the packaged flows' MCP servers need from the deploy target.
+        # Omitted entirely when there is nothing to declare, so an artifact for
+        # a project with no MCP servers is byte-identical to one built before.
+        **(
+            {
+                "required_mcp_variables": list(manifest_mcp.variables),
+                "required_mcp_projects": [_mcp_project_entry(item) for item in manifest_mcp.projects],
+            }
+            if manifest_mcp.variables or manifest_mcp.projects
+            else {}
+        ),
         "flows": [
             {
                 "id": str(flow.flow_id),
@@ -948,6 +1148,14 @@ def _build_archive(
                     else {}
                 ),
                 **({"unresolved_model_fields": flow.unresolved_model_fields} if flow.unresolved_model_fields else {}),
+                **(
+                    {"required_mcp_variables": list(flow.required_mcp_variables)} if flow.required_mcp_variables else {}
+                ),
+                **(
+                    {"required_mcp_projects": [_mcp_project_entry(item) for item in flow.required_mcp_projects]}
+                    if flow.required_mcp_projects
+                    else {}
+                ),
                 **(
                     {
                         "required_connections": [
@@ -1608,6 +1816,7 @@ def _build_deployment_snapshot_flows(
     tuple[str, ...],
     tuple[ProjectArtifactRequiredConnection, ...],
     _ModelRequirements,
+    _McpRequirements,
 ]:
     """Scrub and bound each flow for a snapshot without ever encoding or reading back a zip.
 
@@ -1629,10 +1838,17 @@ def _build_deployment_snapshot_flows(
     required_variables: set[str] = set()
     required_connections_by_handle: dict[tuple[str, str], set[str]] = {}
     model_requirements: list[_ModelRequirements] = []
+    mcp_requirements: list[_McpRequirements] = []
     expanded_size = initial_expanded_bytes
     for snapshot in snapshots:
         _json_string_size(snapshot.name)
-        scrubbed, variable_references, required_connections, flow_model_requirements = _normalized_flow_data(
+        (
+            scrubbed,
+            variable_references,
+            required_connections,
+            flow_model_requirements,
+            flow_mcp_requirements,
+        ) = _normalized_flow_data(
             snapshot,
             strict_secret_safety=True,
             keep_mcp_config=True,
@@ -1682,6 +1898,7 @@ def _build_deployment_snapshot_flows(
         )
         required_variables.update(variable_references)
         model_requirements.append(flow_model_requirements)
+        mcp_requirements.append(flow_mcp_requirements)
         for connection in required_connections:
             required_connections_by_handle.setdefault((connection.provider, connection.name), set()).update(
                 connection.scopes
@@ -1696,6 +1913,7 @@ def _build_deployment_snapshot_flows(
         tuple(sorted(required_variables)),
         required_connections_out,
         _ModelRequirements.merged(model_requirements),
+        _McpRequirements.merged(mcp_requirements),
     )
 
 
@@ -1734,7 +1952,13 @@ async def build_project_deployment_snapshot(
         project_text_bytes += _json_string_size(prepared.project_description)
     known_variable_names = await _known_variable_names(session, prepared.project_user_id)
 
-    flows, required_variables, required_connections, model_requirements = await _run_sync_non_abandoning(
+    (
+        flows,
+        required_variables,
+        required_connections,
+        model_requirements,
+        mcp_requirements,
+    ) = await _run_sync_non_abandoning(
         partial(
             _build_deployment_snapshot_flows,
             prepared.snapshots,
@@ -1762,4 +1986,6 @@ async def build_project_deployment_snapshot(
         required_providers=model_requirements.providers,
         required_models=model_requirements.models,
         unresolved_model_fields=model_requirements.unresolved_fields,
+        required_mcp_variables=mcp_requirements.variables,
+        required_mcp_projects=mcp_requirements.projects,
     )

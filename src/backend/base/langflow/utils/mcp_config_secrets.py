@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import re
 from typing import Any
+from urllib.parse import urlparse
 
 SECRET_CONFIG_FIELDS = ("api_key", "apiKey", "authorization", "Authorization")
 
@@ -41,16 +42,73 @@ PLACEHOLDER_PATTERN = re.compile(r"^\{\{\s*[A-Za-z_][A-Za-z0-9_\-]*\s*\}\}$")
 # bearer tokens) and must be encrypted at rest in the mcp_server table.
 MCP_SECRET_CONFIG_MAPS = ("env", "headers")
 
+# A Langflow project's own MCP endpoint, as ``_build_project_url`` composes it in
+# ``langflow.api.utils.mcp.config_utils``. Anchored at the start and matched against the
+# parsed *path* only: searching the raw URL let a query string carry the shape, so
+# ``https://elsewhere.example/?next=/api/v1/mcp/project/<id>/x`` read as one of our own
+# projects and would have been rebuilt with a key minted for this plane. The id must be a
+# UUID so a path that merely contains the word cannot be read as a project reference.
+_PROJECT_MCP_PATH = re.compile(
+    r"^/api/v1/mcp/project/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:/|$)"
+)
+
+
+def variable_reference_name(value: object) -> str | None:
+    """The global variable a config value defers to, or None when it is not a reference.
+
+    Two shapes resolve at run time and so two shapes are read here: the names
+    ``variable_name_for`` generates, which carry the ``MCP_`` prefix, and the explicit
+    ``{{NAME}}`` placeholder a person can write by hand. The braces and any padding come
+    off, because what a deploy has to report is the name the target must supply, not the
+    syntax the flow happened to spell it in.
+
+    Recognising any capitalised token instead would fail open on the alphabet of the
+    secret: an AWS access key id, or any uppercase hex token, would read as a reference
+    and be copied into the flow verbatim.
+    """
+    if not isinstance(value, str):
+        return None
+    if PLACEHOLDER_PATTERN.match(value):
+        return value.strip("{} \t")
+    return value if value.startswith(VARIABLE_PREFIX) else None
+
 
 def _is_variable_reference(value: str) -> bool:
-    """Whether a value is already a reference, so a re-save does not wrap it twice.
+    """Whether a value is already a reference, so a re-save does not wrap it twice."""
+    return variable_reference_name(value) is not None
 
-    Recognising any capitalised token failed open on the alphabet of the secret: an AWS
-    access key id, or any uppercase hex token, reads as a reference and was copied into
-    the flow verbatim. Only the two shapes this system can actually resolve count — the
-    names generated below, and the explicit ``{{NAME}}`` placeholder.
+
+def project_id_from_mcp_url(url: object) -> str | None:
+    """The Langflow project a server URL points at, or None when it points elsewhere.
+
+    This is what separates the two kinds of MCP server a flow can call. An external one
+    belongs to somebody else, so its credential has to be supplied where the flow runs.
+    One of our own projects can be rebuilt at deploy instead, with a key minted on the
+    target and that target's own address.
+
+    Returns None rather than raising for anything it cannot read, including a URL held in
+    a variable: ``{{MCP_SERVER_URL}}`` resolves at run time and names no project now, so
+    the caller treats it as external and asks for the variable, which is the safe way to
+    be wrong about it.
+
+    **This answers a path question, not a trust question.** Any host can serve this path
+    shape, so a match means "names project X" and never "is one of ours". The caller has
+    to confirm the id names a project it actually holds before treating it as a sibling;
+    one that does not is an external server whose path happens to rhyme with ours.
+
+    The host it was served from is not that confirmation and is not worth checking. A
+    rebuilt connection carries the deploy target's own address, so the configured origin
+    is discarded rather than trusted, and comparing it would only add a way to stop
+    recognising a real sibling after an operator changes the advertised base URL.
     """
-    return bool(PLACEHOLDER_PATTERN.match(value)) or value.startswith(VARIABLE_PREFIX)
+    if not isinstance(url, str):
+        return None
+    try:
+        path = urlparse(url).path
+    except ValueError:  # malformed authority, e.g. a bad IPv6 literal
+        return None
+    match = _PROJECT_MCP_PATH.match(path)
+    return match.group(1).lower() if match else None
 
 
 def _strip_header_args(args: list[Any]) -> tuple[list[Any], bool]:
@@ -140,6 +198,8 @@ __all__ = [
     "PLACEHOLDER_PATTERN",
     "SECRET_CONFIG_FIELDS",
     "VARIABLE_PREFIX",
+    "project_id_from_mcp_url",
     "strip_config_secrets",
     "variable_name_for",
+    "variable_reference_name",
 ]

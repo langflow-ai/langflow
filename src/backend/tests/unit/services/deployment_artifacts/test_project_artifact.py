@@ -892,7 +892,7 @@ def test_normalized_flow_bytes_accepts_model_valid_sparse_data(data: object, exp
     )
     original_payload = deepcopy(snapshot.payload)
 
-    content, required_variables, required_connections, _ = builder._normalized_flow_bytes(snapshot)
+    content, required_variables, required_connections, *_ = builder._normalized_flow_bytes(snapshot)
     assert json.loads(content) == {"data": expected_data}
     assert required_variables == ()
     assert required_connections == ()
