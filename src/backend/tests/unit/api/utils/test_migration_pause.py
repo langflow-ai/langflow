@@ -18,10 +18,11 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest
+from fastapi.routing import iter_route_contexts
 from httpx import ASGITransport, AsyncClient
 from langflow.api.utils import migration_pause
 from langflow.api.utils.migration_jobs import live_listeners
-from langflow.api.utils.migration_pause import MigrationPauseMiddleware, is_paused
+from langflow.api.utils.migration_pause import MigrationPauseMiddleware, changes_the_instance, is_paused
 from langflow.initial_setup import setup as flow_sync
 from langflow.initial_setup.setup import sync_flows_from_fs
 from langflow.main import create_app
@@ -67,6 +68,186 @@ RECORD = {"target": {}, "steps": {}, "accepted_findings": []}
 PAUSED = {**RECORD, "pause": {"frozen_at": "2026-10-05T12:00:00+00:00", "frozen_by": "admin"}}
 REFUSAL = {"detail": "This instance is being migrated."}
 NEW_FLOW = {"name": "saved around a pause", "data": {}}
+# The routes that answer a GET and say that they change the instance, so that a pause refuses them.
+CHANGES = {"/api/v1/connections/oauth/{provider}/browser", "/api/v1/connections/oauth/{provider}/callback"}
+# Every other path that answers a GET or a HEAD. Each was read to its end, with what it depends on, and
+# leaves the instance as it is, so a pause lets it through. What some of them still write, and why it is
+# let through:
+#
+# - Signing in. A request with an API key counts the use of the key, and an automatic login moves the last
+#   login. With external sign-in, a person seen for the first time gets a user and a starter project. The
+#   new instance gives them the same at their first request there.
+# - The authorization audit log, when it is turned on: one row for each decision on a read. The row tells
+#   what happened on this instance after the copy.
+# - A value that is worked out again from what is kept: GET /api/v1/flows/ fills in is_component where a
+#   flow lacks it.
+# - What lives in this process or in a cache: the health checks, and the MCP composer of a project.
+# - The MCP streams. A tool call that a stream runs holds a place of its own, where the call begins.
+# - The deprecated stream of a vertex, which sends what an earlier build left to stream.
+# - The deployments routes, which only a feature flag mounts. Three of them bring their rows in line with
+#   the provider, and the same GET on the new instance does that again.
+READS = frozenset(
+    {
+        "/api/mcp/sse",
+        "/api/mcp/streamable",
+        "/api/mcp/streamable/",
+        "/api/v1/a2a/agents",
+        "/api/v1/a2a/{flow_id}/.well-known/agent-card.json",
+        "/api/v1/agentic/check-config",
+        "/api/v1/agentic/files",
+        "/api/v1/agentic/mcp",
+        "/api/v1/agentic/mcp/",
+        "/api/v1/all",
+        "/api/v1/api_key/",
+        "/api/v1/authz/audit",
+        "/api/v1/authz/audit/",
+        "/api/v1/authz/capabilities",
+        "/api/v1/authz/capabilities/",
+        "/api/v1/authz/role-assignments",
+        "/api/v1/authz/role-assignments/",
+        "/api/v1/authz/roles",
+        "/api/v1/authz/roles/",
+        "/api/v1/authz/roles/{role_id}",
+        "/api/v1/authz/shares",
+        "/api/v1/authz/shares/",
+        "/api/v1/authz/shares/{share_id}",
+        "/api/v1/authz/teams",
+        "/api/v1/authz/teams/",
+        "/api/v1/authz/teams/{team_id}",
+        "/api/v1/authz/teams/{team_id}/members",
+        "/api/v1/auto_login",
+        "/api/v1/build/{flow_id}/{vertex_id}/stream",
+        "/api/v1/build/{job_id}/events",
+        "/api/v1/build_public_tmp/{job_id}/events",
+        "/api/v1/catalog-policy/components",
+        "/api/v1/catalog-policy/templates",
+        "/api/v1/catalog-policy/usage",
+        "/api/v1/catalog-policy/usage/flows",
+        "/api/v1/config",
+        "/api/v1/connections",
+        "/api/v1/connections/oauth/registrations",
+        "/api/v1/deployments",
+        "/api/v1/deployments/configs",
+        "/api/v1/deployments/llms",
+        "/api/v1/deployments/providers",
+        "/api/v1/deployments/providers/{provider_id}",
+        "/api/v1/deployments/snapshots",
+        "/api/v1/deployments/types",
+        "/api/v1/deployments/{deployment_id}",
+        "/api/v1/deployments/{deployment_id}/flows",
+        "/api/v1/deployments/{deployment_id}/runs/{run_id}",
+        "/api/v1/extensions/events",
+        "/api/v1/files/download/{flow_id}/{file_name}",
+        "/api/v1/files/images/{flow_id}/{file_name}",
+        "/api/v1/files/list/{flow_id}",
+        "/api/v1/files/profile_pictures/list",
+        "/api/v1/files/profile_pictures/{folder_name}/{file_name}",
+        "/api/v1/flows/",
+        "/api/v1/flows/basic_examples/",
+        "/api/v1/flows/public_flow/{flow_id}",
+        "/api/v1/flows/{flow_id}",
+        "/api/v1/flows/{flow_id}/events",
+        "/api/v1/flows/{flow_id}/note_translations",
+        "/api/v1/flows/{flow_id}/version-state",
+        "/api/v1/flows/{flow_id}/versions/",
+        "/api/v1/flows/{flow_id}/versions/{version_id}",
+        "/api/v1/folders/",
+        "/api/v1/folders/download/{folder_id}",
+        "/api/v1/folders/{folder_id}",
+        "/api/v1/integrations",
+        "/api/v1/integrations/",
+        "/api/v1/integrations/policy/effective",
+        "/api/v1/knowledge-base-storage/inventory",
+        "/api/v1/knowledge-base-storage/migrations",
+        "/api/v1/knowledge-base-storage/pending-cleanup",
+        "/api/v1/knowledge-base-storage/status",
+        "/api/v1/knowledge_bases",
+        "/api/v1/knowledge_bases/",
+        "/api/v1/knowledge_bases/connectors",
+        "/api/v1/knowledge_bases/{kb_name}",
+        "/api/v1/knowledge_bases/{kb_name}/chunks",
+        "/api/v1/knowledge_bases/{kb_name}/metadata/keys",
+        "/api/v1/knowledge_bases/{kb_name}/runs",
+        "/api/v1/knowledge_bases/{kb_name}/runs/{run_id}",
+        "/api/v1/mcp/project/{project_id}",
+        "/api/v1/mcp/project/{project_id}/composer-url",
+        "/api/v1/mcp/project/{project_id}/installed",
+        "/api/v1/mcp/project/{project_id}/sse",
+        "/api/v1/mcp/project/{project_id}/streamable",
+        "/api/v1/mcp/project/{project_id}/streamable/",
+        "/api/v1/mcp/sse",
+        "/api/v1/mcp/streamable",
+        "/api/v1/mcp/streamable/",
+        "/api/v1/memories",
+        "/api/v1/memories/",
+        "/api/v1/memories/{memory_base_id}",
+        "/api/v1/memories/{memory_base_id}/messages",
+        "/api/v1/memories/{memory_base_id}/mismatch",
+        "/api/v1/memories/{memory_base_id}/sessions",
+        "/api/v1/model-provider-policy",
+        "/api/v1/model-provider-policy/",
+        "/api/v1/model_options/embedding",
+        "/api/v1/model_options/language",
+        "/api/v1/models",
+        "/api/v1/models/default_model",
+        "/api/v1/models/enabled_models",
+        "/api/v1/models/enabled_providers",
+        "/api/v1/models/provider-descriptors",
+        "/api/v1/models/provider-variable-mapping",
+        "/api/v1/models/providers",
+        "/api/v1/monitor/builds",
+        "/api/v1/monitor/job_queue",
+        "/api/v1/monitor/messages",
+        "/api/v1/monitor/messages/sessions",
+        "/api/v1/monitor/messages/shared",
+        "/api/v1/monitor/messages/shared/sessions",
+        "/api/v1/monitor/traces",
+        "/api/v1/monitor/traces/{trace_id}",
+        "/api/v1/monitor/transactions",
+        "/api/v1/policy-bundle",
+        "/api/v1/policy-bundle/",
+        "/api/v1/policy-bundle/history",
+        "/api/v1/projects/",
+        "/api/v1/projects/download/{project_id}",
+        "/api/v1/projects/{project_id}",
+        "/api/v1/projects/{project_id}/deployment-snapshot",
+        "/api/v1/projects/{project_id}/replacement-operations/{operation_id}",
+        "/api/v1/session",
+        "/api/v1/starter-projects/",
+        "/api/v1/store/check/",
+        "/api/v1/store/check/api_key",
+        "/api/v1/store/components/",
+        "/api/v1/store/components/{component_id}",
+        "/api/v1/store/tags",
+        "/api/v1/store/users/likes",
+        "/api/v1/task/{_task_id}",
+        "/api/v1/triggers",
+        "/api/v1/triggers/{trigger_id}",
+        "/api/v1/triggers/{trigger_id}/events",
+        "/api/v1/triggers/{trigger_id}/ingress",
+        "/api/v1/users/",
+        "/api/v1/users/whoami",
+        "/api/v1/users/{user_id}",
+        "/api/v1/variables/",
+        "/api/v1/version",
+        "/api/v1/voice/elevenlabs/voice_ids",
+        "/api/v1/webhook-events/{flow_id_or_name}",
+        "/api/v2/files",
+        "/api/v2/files/",
+        "/api/v2/files/{file_id}",
+        "/api/v2/mcp/servers",
+        "/api/v2/mcp/servers/{server_name}",
+        "/api/v2/registration/",
+        "/api/v2/workflows",
+        "/api/v2/workflows/pending",
+        "/api/v2/workflows/{job_id}/events",
+        "/health",
+        "/health_check",
+        "/healthz",
+        "/logs",
+        "/logs-stream",
+    }
+)
 # One process asks a second one, which keeps its own copy of what the record said.
 WORKER = """
 import sys
@@ -372,6 +553,29 @@ async def test_the_desktop_browser_handoff_is_refused_while_paused(client, logge
     assert bound.status_code == 303, bound.text
     assert "set-cookie" in bound.headers
     assert await browser_digest() != before
+
+
+def test_every_get_route_says_whether_it_changes_the_instance():
+    served: dict[str, bool] = {}
+    for route in iter_route_contexts(create_app().routes):
+        # Only what Langflow's own code serves is asked about. The API docs are FastAPI's, and a route that a
+        # plugin mounts is the plugin's to answer for.
+        ours = getattr(route.endpoint, "__module__", "").startswith(("langflow.", "lfx."))
+        if ours and (route.methods or set()) & {"GET", "HEAD"}:
+            depends_on = getattr(route, "dependencies", None) or []
+            says_so = any(depends.dependency is changes_the_instance for depends in depends_on)
+            served[route.path] = served.get(route.path, False) or says_so
+    changes = {path for path, says_so in served.items() if says_so}
+    # The migration's own routes are let through on purpose: they are the steps the pause is for.
+    unread = sorted(path for path in set(served) - changes - READS if not path.startswith("/api/v1/migration"))
+
+    assert unread == [], (
+        "A migration pause lets every GET through as a read, and these routes are new. Read each one to its "
+        "end, with what it depends on. A route that leaves the instance as it is goes in READS, in this file. "
+        "A route that changes it takes dependencies=[Depends(changes_the_instance)], which makes a pause "
+        "refuse it, and goes in CHANGES."
+    )
+    assert changes == CHANGES
 
 
 @pytest.mark.parametrize(
