@@ -1,3 +1,6 @@
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -116,6 +119,34 @@ def test_anonymous_id_persists_in_config_directory(tmp_path) -> None:
     second = get_or_create_anonymous_id(tmp_path)
 
     assert second == first
+
+
+def test_concurrent_services_share_one_installation_id(tmp_path, monkeypatch) -> None:
+    barrier = threading.Barrier(2)
+    original_mkdir = Path.mkdir
+
+    def synchronized_mkdir(path, *args, **kwargs):
+        original_mkdir(path, *args, **kwargs)
+        if path == tmp_path:
+            barrier.wait(timeout=5)
+
+    monkeypatch.setattr(Path, "mkdir", synchronized_mkdir)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(get_or_create_anonymous_id, tmp_path) for _ in range(2)]
+        identifiers = [future.result(timeout=10) for future in futures]
+
+    assert identifiers[0] == identifiers[1]
+    assert (tmp_path / "telemetry_id").read_text() == identifiers[0]
+
+
+def test_invalid_installation_id_is_replaced(tmp_path) -> None:
+    (tmp_path / "telemetry_id").write_text("invalid")
+
+    identifier = get_or_create_anonymous_id(tmp_path)
+
+    assert identifier != "invalid"
+    assert get_or_create_anonymous_id(tmp_path) == identifier
 
 
 def test_hashed_user_id_uses_langflow_realm_prefix() -> None:
