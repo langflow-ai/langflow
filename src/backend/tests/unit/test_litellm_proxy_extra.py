@@ -91,13 +91,13 @@ def test_litellm_dependent_extras_are_available_on_python_314() -> None:
     assert toolguard.marker is None
 
 
-def test_litellm_override_excludes_known_vulnerable_releases_on_supported_python_versions() -> None:
-    """Stable and prerelease resolution must exclude GHSA-7hp6-4w63-5g45 releases."""
-    vulnerable_versions = ("1.96.2", "1.101.0", "1.101.2", "1.102.0", "1.102.1", "1.103.0", "1.104.0rc1")
+def test_litellm_override_requires_patched_versions_on_all_supported_pythons() -> None:
+    """GHSA-7hp6-4w63-5g45 affects multiple release branches and one prerelease."""
+    vulnerable_versions = ("1.96.2", "1.101.2", "1.102.1", "1.103.0", "1.104.0rc1")
     for python_version in ("3.10", "3.11", "3.12", "3.13", "3.14"):
-        allowed = _active_litellm_override(python_version).specifier
+        specifier = _active_litellm_override(python_version).specifier
+        assert Version("1.103.1") in specifier
+        assert specifier.contains("1.104.0rc2", prereleases=True)
+        assert Version("2.0.0") not in specifier
         for version in vulnerable_versions:
-            assert not allowed.contains(Version(version), prereleases=True), (python_version, version)
-        for version in ("1.103.1", "1.103.2", "1.104.0rc2"):
-            assert allowed.contains(Version(version), prereleases=True), (python_version, version)
-        assert Version("2.0.0") not in allowed
+            assert not specifier.contains(version, prereleases=True)

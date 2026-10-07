@@ -287,6 +287,51 @@ class TestEnsureCodeExecutionEnabled:
         with pytest.raises(CodeExecutionDisabledError, match="block_code_interpreter_components"):
             ensure_code_execution_enabled()
 
+    @pytest.mark.parametrize("superuser", [None, False, "true", 1])
+    def test_admin_only_blocks_missing_or_non_admin_principal(self, monkeypatch, superuser):
+        """Missing identity and truthy non-boolean flags cannot grant administrator access."""
+        from types import SimpleNamespace
+
+        from lfx.services.model_provider_policy import (
+            reset_current_model_provider_policy_context,
+            set_current_model_provider_policy_context,
+        )
+        from lfx.utils.python_repl_security import CodeExecutionDisabledError, ensure_code_execution_enabled
+
+        settings = SimpleNamespace(allow_custom_components=True, custom_component_admin_only=True)
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: SimpleNamespace(settings=settings))
+        token = set_current_model_provider_policy_context(
+            user_id="local-user" if superuser is not None else None,
+            attributes={"is_superuser": superuser},
+        )
+        try:
+            with pytest.raises(CodeExecutionDisabledError, match="restricted to administrators"):
+                ensure_code_execution_enabled()
+        finally:
+            reset_current_model_provider_policy_context(token)
+
+    def test_admin_only_allows_bound_administrator(self, monkeypatch):
+        """An administrator can execute code without elevating the next unbound caller."""
+        from types import SimpleNamespace
+
+        from lfx.services.model_provider_policy import (
+            reset_current_model_provider_policy_context,
+            set_current_model_provider_policy_context,
+        )
+        from lfx.utils.python_repl_security import CodeExecutionDisabledError, ensure_code_execution_enabled
+
+        settings = SimpleNamespace(allow_custom_components=True, custom_component_admin_only=True)
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: SimpleNamespace(settings=settings))
+        token = set_current_model_provider_policy_context(user_id="local-admin", attributes={"is_superuser": True})
+        try:
+            ensure_code_execution_enabled()
+        finally:
+            reset_current_model_provider_policy_context(token)
+
+        # An administrator's completed run must not elevate the next unbound caller.
+        with pytest.raises(CodeExecutionDisabledError, match="restricted to administrators"):
+            ensure_code_execution_enabled()
+
     def test_allows_when_services_layer_absent(self, monkeypatch):
         """An absent services layer (ImportError) is a local/trusted context -> allowed."""
         from lfx.utils.python_repl_security import ensure_code_execution_enabled

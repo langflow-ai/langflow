@@ -178,11 +178,6 @@ SOURCED_BLOCKS = ("schema", "reach", "refresh", "revocation", "rate_limit", "ten
 SOURCED_SCALARS = ("consent_source", "substrate_source")
 
 
-def _today() -> date:
-    """Return today's UTC date; tests replace this private clock with a fixed date."""
-    return datetime.now(tz=UTC).date()
-
-
 def _parse_date(raw: Any) -> date | None:
     if not isinstance(raw, str):
         return None
@@ -195,7 +190,7 @@ def _parse_date(raw: Any) -> date | None:
 def _check_date(raw: Any, label: str, errors: list[str], *, evidence: bool = False) -> None:
     """Reject invalid/future dates and stale evidence without expiring historical signatures."""
     parsed = _parse_date(raw)
-    today = _today()
+    today = datetime.now(tz=UTC).date()
     if parsed is None:
         errors.append(f"{label} must be an ISO date (YYYY-MM-DD), got {raw!r}")
     elif parsed > today:

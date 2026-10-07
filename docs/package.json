@@ -70,7 +70,7 @@
     "lodash": "4.18.1",
     "fast-uri": "^3.1.8",
     "fast-xml-parser@^4": "^4.5.5",
-    "fast-xml-parser@^5": "^5.7.0",
+    "fast-xml-parser@^5": "^5.11.2",
     "js-yaml@^3": "^3.15.2",
     "js-yaml@^4": "^4.3.2",
     "svgo": "^3.3.5",
@@ -107,6 +107,12 @@
     "adm-zip": "^0.6.1",
     "sockjs": {
       "uuid": "^11.1.1"
+    },
+    "@babel/core": "^7.29.1",
+    "colord": "^2.9.4",
+    "styled-components": "^6.5.3",
+    "serve-handler": {
+      ".": "^6.1.7"
     }
   }
 }

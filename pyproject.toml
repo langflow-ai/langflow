@@ -29,20 +29,20 @@ dependencies = [
     # default langflow dependency.
     # The cross-bundle CI matrix verifies these ranges resolve together across
     # the supported lfx axis.
-    "lfx-ibm>=0.2.5,<1.0.0",
+    "lfx-ibm>=0.2.6,<1.0.0",
     "lfx-docling>=0.1.7,<1.0.0",
     "lfx-datastax>=0.1.9,<1.0.0",
     "lfx-toolguard>=0.1.2,<1.0.0",
     "lfx-openai>=0.1.5,<1.0.0",
-    "lfx-anthropic>=0.1.7,<1.0.0",
-    "lfx-azure>=0.1.0,<1.0.0",
+    "lfx-anthropic>=0.1.8,<1.0.0",
+    "lfx-azure>=0.1.1,<1.0.0",
     "lfx-ollama>=0.1.1,<1.0.0",
     "lfx-amazon>=0.2.0,<1.0.0",
     "lfx-cohere>=0.1.4,<1.0.0",
     "lfx-oracle>=0.1.4,<1.0.0",
     "lfx-vllm>=0.1.3,<1.0.0",
     "lfx-openai-compatible>=0.1.5,<1.0.0",
-    "lfx-google>=0.3.2,<1.0.0",
+    "lfx-google>=0.3.1,<1.0.0",
     "lfx-microsoft>=0.1.2,<1.0.0",
     "lfx-slack>=0.2.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
@@ -183,7 +183,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.36,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.37,<2.0",
     "lfx-arxiv>=0.1.5,<1.0.0",
     "lfx-confluent>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.1.5,<1.0.0",
@@ -275,7 +275,8 @@ override-dependencies = [
     "PyJWT>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
     "virtualenv>=21.14.2,<22.0.0",  # Scanner reported virtualenv 21.7.0; use the latest compatible release.
     "Werkzeug>=3.1.9,<4.0.0",  # Scanner reported Werkzeug 3.1.8; use the latest compatible release.
-    # GHSA-7hp6-4w63-5g45 affects older stable releases and 1.104.0rc1.
+    # GHSA-7hp6-4w63-5g45 is fixed in 1.103.1 and 1.104.0rc2.
+    # Opik 2.2.7 supports patched LiteLLM versions on every supported Python.
     "litellm>=1.103.1,<2.0.0,!=1.104.0rc1",
     # Temporary compatibility valve: langchain-litellm 0.6.1-0.7.0 cap
     # cryptography below 49; 0.5.1 is the newest release without that cap.

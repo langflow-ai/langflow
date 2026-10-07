@@ -49,6 +49,7 @@ from langflow.api.v1.schemas.deployment_snapshot import (
     DeploymentSnapshotFlow,
     DeploymentSnapshotProject,
     DeploymentSnapshotRequiredConnection,
+    DeploymentSnapshotRequiredModel,
 )
 from langflow.api.v1.schemas.replacement_operations import (
     ProjectReplacementRequest,
@@ -159,6 +160,7 @@ async def _new_project(
     current_user: User,
     project_id: UUID | None = None,
     fail_on_name_conflict: bool = False,
+    owns_transaction: bool = True,
 ) -> FolderRead:
     """Create a project (folder), optionally at a caller-specified id (PUT upsert).
 
@@ -172,6 +174,10 @@ async def _new_project(
     Runs the same MCP server auto-registration + AUTO_LOGIN apikey auth + flow-move side
     effects as ``POST /projects/``. Raises on unique-constraint / deployment-guard errors;
     callers map those to HTTP status.
+
+    ``owns_transaction=False`` is for callers that make further writes in the same transaction
+    and must be able to roll the project back with them: the MCP registration (this helper's
+    only commit) then flushes instead of committing.
 
     ``current_user`` (the full ``User``) is required because the MCP registration and flow-move
     side effects operate on the owning user, not just their id.
@@ -259,7 +265,9 @@ async def _new_project(
     # Auto-register MCP server for this project with configured default auth
     if get_settings_service().settings.add_projects_to_mcp_servers:
         try:
-            await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session)
+            await register_mcp_servers_for_project(
+                new_project, mcp_auth, current_user, session, owns_transaction=owns_transaction
+            )
         except ApiKeyIssuanceDeniedError as denial:
             if not auth_was_chosen_for_caller:
                 raise HTTPException(status_code=403, detail=str(denial)) from denial
@@ -542,6 +550,16 @@ async def read_project_deployment_snapshot(
             )
             for connection in snapshot.required_connections
         ],
+        required_providers=list(snapshot.required_providers),
+        required_models=[
+            DeploymentSnapshotRequiredModel(
+                provider=model.provider,
+                name=model.name,
+                model_type=model.model_type,
+            )
+            for model in snapshot.required_models
+        ],
+        unresolved_model_fields=snapshot.unresolved_model_fields,
     )
 
 

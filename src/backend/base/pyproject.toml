@@ -134,6 +134,9 @@ dependencies = [
     "arize-phoenix-otel>=0.6.1",
     "openinference-instrumentation-langchain>=0.1.29",
     "opik>=2.0.0,<3.0.0",
+    # Newer Opik releases cap LiteLLM below its security floor on Python 3.10.
+    # Publish the compatible version constraint so fresh wheel installs stay valid.
+    "opik==2.2.7; python_version < '3.11'",
     "traceloop-sdk>=0.43.1,<1.0.0",
     "openlayer>=0.9.0,<1.0.0",
     "kubernetes>=31.0.0,<33.0.0",
