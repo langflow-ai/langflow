@@ -50,18 +50,6 @@ _discovery_variables: ContextVar[tuple[str, Mapping[str, str | None]] | None] = 
     "live_model_variables", default=None
 )
 
-_LIVE_DISCOVERY_VARIABLES = {
-    "Ollama": ("OLLAMA_BASE_URL",),
-    "OpenAI": ("OPENAI_BASE_URL", "OPENAI_API_KEY"),
-    "IBM WatsonX": ("WATSONX_URL",),
-    "OpenRouter": ("OPENROUTER_API_KEY",),
-    "Azure AI Foundry": (
-        "AZURE_AI_FOUNDRY_ENDPOINT",
-        "AZURE_AI_FOUNDRY_API_KEY",
-        "AZURE_AI_FOUNDRY_API_VERSION",
-    ),
-}
-
 # Ollama model lists are cached in-process for a short window so that:
 # (1) overlapping ``/api/v1/models`` requests don't all serialize through
 #     Ollama's tags + per-model show endpoints, and
@@ -512,24 +500,21 @@ async def aget_provider_variable_value(user_id: UUID | str | None, variable_key:
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
         return _environment_variable_value(variable_key)
 
-    async def _get_variable():
-        async with session_scope() as session:
-            variable_service = get_variable_service()
-            if variable_service is None:
-                return None
+    value = None
+    async with session_scope() as session:
+        variable_service = get_variable_service()
+        if variable_service is not None:
             try:
-                return await variable_service.get_variable(
+                value = await variable_service.get_variable(
                     user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                     name=variable_key,
                     field="",
                     session=session,
                 )
             except ValueError:
-                # ``get_variable_object`` raises ValueError on missing var;
-                # treat absence as "no value" rather than propagating.
-                return None
-
-    return _to_str(await _get_variable()) or _environment_variable_value(variable_key)
+                # Missing or unreadable variables are unavailable for discovery.
+                value = None
+    return _to_str(value) or _environment_variable_value(variable_key)
 
 
 async def aget_live_model_variables(
@@ -540,7 +525,6 @@ async def aget_live_model_variables(
     """Read declared live-discovery variables before entering network/SDK workers."""
     keys: set[str] = set()
     for provider in enabled_providers & (LIVE_MODEL_PROVIDERS | CONDITIONAL_LIVE_MODEL_PROVIDERS):
-        keys.update(_LIVE_DISCOVERY_VARIABLES.get(provider, ()))
         for variable in provider_metadata.get(provider, {}).get("variables", []):
             if key := variable.get("variable_key"):
                 keys.add(key)

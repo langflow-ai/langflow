@@ -180,6 +180,7 @@ async def test_discovery_batches_only_enabled_live_provider_variables(pooled_var
     monkeypatch.setenv("OPENAI_BASE_URL", "https://optional-must-not-fall-back.invalid")
     metadata = {
         "Ollama": {"variables": [{"variable_key": "BUNDLE_SETTING"}, {"variable_key": "OLLAMA_BASE_URL"}]},
+        "OpenAI": {"variables": [{"variable_key": "OPENAI_BASE_URL"}, {"variable_key": "OPENAI_API_KEY"}]},
         "Anthropic": {"variables": [{"variable_key": "ANTHROPIC_API_KEY"}]},
         "OpenRouter": {"variables": [{"variable_key": "DISABLED_PROVIDER_SETTING"}]},
     }
@@ -203,7 +204,7 @@ async def test_discovery_skips_database_without_live_providers(pooled_variables)
 async def test_discovery_without_owner_uses_required_environment_only(pooled_variables, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "environment-key")
     monkeypatch.setenv("OPENAI_BASE_URL", "https://optional-must-not-fall-back.invalid")
-    assert await model_utils.aget_live_model_variables(None, {"OpenAI"}, {}) == {
+    assert await model_utils.aget_live_model_variables(None, {"OpenAI"}, model_catalog.model_provider_metadata) == {
         "OPENAI_API_KEY": "environment-key",  # pragma: allowlist secret
         "OPENAI_BASE_URL": None,
     }

@@ -60,7 +60,7 @@ class VariableService(Service):
         """Resolve a batch; external stores may override this compatibility implementation."""
         names = set(names)
         if names:
-            logger.warning(
+            await logger.awarning(
                 f"{type(self).__name__} uses individual variable reads because batch lookup is not implemented"
             )
         values = {}
