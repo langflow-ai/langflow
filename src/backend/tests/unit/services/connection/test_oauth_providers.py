@@ -39,7 +39,8 @@ def config(**kwargs):
         {"redirect_uri": "http://localhost.evil.example/api/v1/connections/oauth/google/callback"},
         {"redirect_uri": "http://localhost/api/v1/connections/oauth/google/callback?next=elsewhere"},
         {"redirect_uri": _INVALID_AUTH_ORIGIN + "/api/v1/connections/oauth/google/callback"},
-        {"client_secret": "should-not-be-embedded"},  # pragma: allowlist secret - deliberately invalid test fixture
+        {"context": "self_managed", "client_secret": "should-not-be-embedded"},  # pragma: allowlist secret
+        {"private_key": "should-not-be-embedded"},  # pragma: allowlist secret - deliberately invalid test fixture
         {"profile": "bot"},
         {"context": "self_managed", "owner": "langflow"},
         {"allowed_tenants": ["example.com"]},
@@ -98,6 +99,61 @@ def test_public_clients_use_s256_and_no_client_secret(provider):
     assert params["code_challenge"] == [providers.challenge("v" * 64)]
     assert "client_secret" not in providers.client_auth(registration)
     assert params["user_scope" if provider == "slack" else "scope"] == ["read"]
+
+
+@pytest.mark.parametrize("owner", ["customer", "langflow"])
+@pytest.mark.parametrize("refresh", [False, True])
+async def test_google_desktop_client_parameter_keeps_pkce_and_is_sent_only_to_token_endpoint(
+    monkeypatch, owner, refresh
+):
+    client_parameter = "desktop-client-parameter"
+    registration = config(owner=owner, client_secret=client_parameter)
+    assert registration.client_type == "public"
+    assert client_parameter not in repr(registration)
+    assert client_parameter not in registration.model_dump_json()
+    url = providers.authorization_url(registration, state="test-state", verifier="v" * 64, scopes=["read"])
+    params = parse_qs(urlsplit(url).query)
+    assert params["code_challenge_method"] == ["S256"]
+    assert params["code_challenge"] == [providers.challenge("v" * 64)]
+    assert "client_secret" not in params
+    assert client_parameter not in url
+    calls = []
+
+    async def request(url, data, **_kwargs):
+        calls.append(data)
+        assert url == "https://oauth2.googleapis.com/token"
+        assert data["client_secret"] == client_parameter
+        assert data["client_id"] == registration.client_id
+        if refresh:
+            assert data["grant_type"] == "refresh_token"
+        else:
+            assert data["code_verifier"] == "v" * 64
+        return {"access_token": "qa-access", "expires_in": 3600}
+
+    monkeypatch.setattr(providers, "_request", request)
+    await providers.exchange(
+        registration,
+        code="qa-code",
+        verifier="v" * 64,
+        refresh_token="qa-refresh" if refresh else None,
+        previous_scopes=["read"],
+    )
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("provider", "context"),
+    [("google", "self_managed"), ("google", "hosted"), ("microsoft", "desktop"), ("slack", "desktop")],
+)
+def test_google_desktop_exception_does_not_allow_other_public_client_secrets(provider, context):
+    with pytest.raises(ValidationError, match="Public clients cannot contain registration secrets"):
+        config(
+            provider=provider,
+            context=context,
+            tenant="12345678-1234-1234-1234-123456789abc" if provider == "microsoft" else None,
+            redirect_uri=f"http://localhost/api/v1/connections/oauth/{provider}/callback",
+            client_secret="qa-client-parameter",  # noqa: S106 - test fixture  # pragma: allowlist secret
+        )
 
 
 @pytest.mark.parametrize("profile", ["user", "bot"])

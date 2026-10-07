@@ -19,6 +19,7 @@ dependencies = [
     "google-api-python-client~=2.161",
     "google-auth>=2.38.0,<3.0.0",
     "google-auth-oauthlib>=1.2.0,<2.0.0",
+    "oauthlib>=4.0.0,<5.0.0",  # CVE-2026-49264, CVE-2026-49265
     "google-cloud-bigquery>=3.35,<4.0.0",
     "google-genai>=1.75.0,<2.0.0",
     "langchain-community>=0.4.1,<1.0.0",

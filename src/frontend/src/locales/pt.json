@@ -715,6 +715,7 @@
   "errors.deleteKey": "Erro ao excluir a chave",
   "errors.deleteKeys": "Erro ao excluir chaves",
   "errors.deleteSession": "Erro ao excluir a sessão.",
+  "errors.createSession": "Erro ao criar a sessão.",
   "errors.deleteUser": "Erro ao excluir usuário",
   "errors.deletingMessages": "Erro ao excluir mensagens.",
   "errors.downloadFilesDefault": "Ocorreu um erro ao baixar os arquivos",

@@ -1174,8 +1174,16 @@ async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> Non
 
 @app.command(name="convert-sqlite-to-postgres")
 def convert_sqlite_to_postgres(
-    source: str = typer.Option(..., help="SQLite database URL to read, e.g. sqlite:////data/langflow.db."),
-    target: str = typer.Option(..., help="Postgres database URL to write. It is upgraded to the latest schema first."),
+    source: str = typer.Option(
+        ...,
+        help="SQLite database URL to read, e.g. sqlite:////data/langflow.db.",
+        envvar="LANGFLOW_MIGRATION_SOURCE_URL",
+    ),
+    target: str = typer.Option(
+        ...,
+        help="Postgres database URL to write. It is upgraded to the latest schema first.",
+        envvar="LANGFLOW_MIGRATION_TARGET_URL",
+    ),
     batch_size: int = typer.Option(1000, help="Rows per insert batch."),
     drop_orphans: bool = typer.Option(  # noqa: FBT001
         default=False,
@@ -1183,6 +1191,12 @@ def convert_sqlite_to_postgres(
         "leave them out (ON DELETE CASCADE) or clear the key (ON DELETE SET NULL). Without it they are refused.",
     ),
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    json_output: bool = typer.Option(  # noqa: FBT001
+        False,  # noqa: FBT003
+        "--json",
+        help="Write progress, each copied table and a final report to stdout as one JSON object per line, "
+        "for a program that runs this command. Logs go to stderr.",
+    ),
 ) -> None:
     """Copy every row of a Langflow SQLite database into Postgres.
 
@@ -1193,11 +1207,29 @@ def convert_sqlite_to_postgres(
 
     SQLite never enforced Langflow's foreign keys, so deletes can leave rows that
     point at nothing. They are refused, naming each key, unless --drop-orphans.
+
+    A command line is visible to other users of the machine. Set the URLs in
+    LANGFLOW_MIGRATION_SOURCE_URL and LANGFLOW_MIGRATION_TARGET_URL instead of
+    the options to keep the target's password out of it.
+
+    Exits non-zero if anything was refused or failed. With --json every problem
+    carries a stable code, and the last line is the report.
     """
+    from langflow.cli import sqlite_to_postgres_events as events
     from langflow.services.database.sqlite_to_postgres import convert_sqlite_to_postgres as convert
 
-    configure(log_level=log_level)
-    report = convert(source, target, batch_size=batch_size, drop_orphans=drop_orphans)
+    configure(log_level=log_level, output_file=sys.stderr if json_output else None)
+    report = convert(
+        source,
+        target,
+        batch_size=batch_size,
+        drop_orphans=drop_orphans,
+        on_progress=events.emit_progress if json_output else None,
+        on_table=events.emit_table if json_output else None,
+    )
+    if json_output:
+        events.emit_report(report)
+        raise typer.Exit(0 if report.ok else 1)
     if not report.ok:
         # A failed copy is rolled back, so per-table counts would describe rows that are gone.
         for problem in report.problems:
@@ -1221,12 +1253,19 @@ def relocate_files(
     concurrency: int = typer.Option(
         4, min=1, help="Files copied at once. Each holds at most one 8 MiB part in memory."
     ),
+    as_json: bool = typer.Option(  # noqa: FBT001
+        False,  # noqa: FBT003
+        "--json",
+        help="Print one JSON object per line: progress and each result as it happens, then the report. "
+        "Logs go to stderr.",
+    ),
 ) -> None:
     """Copy stored file bytes into an S3 bucket, keeping each file's key.
 
     Run this with LANGFLOW_STORAGE_TYPE=local, the setting the instance had before
     the switch, so it reads the files on local disk. Credentials come from the
-    environment, the same way the S3 storage backend reads them.
+    environment, the same way the S3 storage backend reads them. The bucket is
+    checked first: if it is missing or out of reach, nothing is copied.
 
     A file counts as copied only once the bucket reports an object of the same
     size, and files already there are skipped, so a run can be repeated.
@@ -1242,24 +1281,24 @@ def relocate_files(
 
     Files stream across, so memory scales with --concurrency alone.
 
+    With --json, stdout carries one JSON object per line and logs go to stderr:
+    a "progress" at the start, another once the files are counted, a "progress"
+    and an "item" as each file finishes, an "error" when the run is refused, and
+    a closing "report" with the counts and the items that failed.
+
     Exits non-zero if any file could not be copied.
     """
-    from langflow.api.utils.file_relocation import NoSuchUserError, SourceNotLocalError
-
-    configure(log_level=log_level)
-    try:
-        failed = asyncio.run(
-            _relocate_files(
-                bucket=bucket,
-                prefix=prefix,
-                username=username or None,
-                dry_run=dry_run,
-                concurrency=concurrency,
-            )
+    configure(log_level=log_level, output_file=sys.stderr if as_json else None)
+    failed = asyncio.run(
+        _relocate_files(
+            bucket=bucket,
+            prefix=prefix,
+            username=username or None,
+            dry_run=dry_run,
+            concurrency=concurrency,
+            as_json=as_json,
         )
-    except (SourceNotLocalError, NoSuchUserError) as exc:
-        typer.echo(f"Cannot copy files: {exc}", err=True)
-        raise typer.Exit(2) from exc
+    )
     if failed:
         raise typer.Exit(1)
 
@@ -1328,37 +1367,80 @@ def relocate_kb(
         raise typer.Exit(1)
 
 
-async def _relocate_files(*, bucket: str, prefix: str, username: str | None, dry_run: bool, concurrency: int) -> int:
-    from langflow.api.utils.file_relocation import relocate_files
+async def _relocate_files(
+    *, bucket: str, prefix: str, username: str | None, dry_run: bool, concurrency: int, as_json: bool = False
+) -> int:
+    from dataclasses import asdict
+
+    from langflow.api.utils.file_relocation import (
+        NoSuchUserError,
+        SourceNotLocalError,
+        TargetBucketError,
+        relocate_files,
+    )
+    from langflow.cli.events import emit
     from langflow.services.utils import register_all_service_factories
 
+    if as_json:
+        # Before the checks and the listing, which on a large instance take a while: the
+        # caller learns the run is alive, and that the number of files is not known yet.
+        emit("progress", phase="checking", done=0, total=None, bytes=0, unit="files")
     # Not initialize_services(): that is the server's startup, which migrates the schema,
     # sets up the superuser and prunes history. Services are built on first use instead,
     # and building one writes nothing.
     register_all_service_factories()
-    await _refuse_a_database_not_at_this_versions_head()
-    results = await relocate_files(
-        target_bucket=bucket,
-        target_prefix=prefix,
-        username=username,
-        dry_run=dry_run,
-        concurrency=concurrency,
-    )
+    await _refuse_a_database_not_at_this_versions_head(as_json=as_json)
+    try:
+        results = await relocate_files(
+            target_bucket=bucket,
+            target_prefix=prefix,
+            username=username,
+            dry_run=dry_run,
+            concurrency=concurrency,
+            on_result=(lambda result: emit("item", item=asdict(result))) if as_json else None,
+            on_progress=(
+                (
+                    lambda done, total, copied: emit(
+                        "progress", phase="copying", done=done, total=total, bytes=copied, unit="files"
+                    )
+                )
+                if as_json
+                else None
+            ),
+        )
+    except (SourceNotLocalError, NoSuchUserError, TargetBucketError) as exc:
+        if as_json:
+            emit("error", code=exc.code, message=str(exc))
+        else:
+            typer.echo(f"Cannot copy files: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    counts: dict[str, int] = {}
+    for result in results:
+        counts[result.status] = counts.get(result.status, 0) + 1
+    scope = f"user '{username}'" if username else "all users"
+    if as_json:
+        # Only what failed is repeated: the report is what a caller keeps, and every item already went by.
+        emit(
+            "report",
+            ok="failed" not in counts,
+            dry_run=dry_run,
+            scope=scope,
+            counts=dict(sorted(counts.items())),
+            bytes=sum(result.size for result in results if result.status == "copied"),
+            attention=[asdict(result) for result in results if result.status == "failed"],
+        )
+        return counts.get("failed", 0)
     for result in results:
         # A repoint rewrites a path in message.files and moves no bytes.
         size = "" if result.status in ("repointed", "would_repoint") else f"  {result.size} bytes"
         line = f"{result.status:12} {result.owner}/{result.file_name}{size}  -> {result.key}"
         typer.echo(f"{line}  ({result.reason})" if result.reason else line)
-    counts: dict[str, int] = {}
-    for result in results:
-        counts[result.status] = counts.get(result.status, 0) + 1
-    scope = f"user '{username}'" if username else "all users"
     summary = ", ".join(f"{count} {status}" for status, count in sorted(counts.items())) or "no files found"
     typer.echo(f"File relocation complete for {scope}: {summary}.")
     return counts.get("failed", 0)
 
 
-async def _refuse_a_database_not_at_this_versions_head() -> None:
+async def _refuse_a_database_not_at_this_versions_head(*, as_json: bool = False) -> None:
     """Exit unless the database is at this Langflow's migration head.
 
     This version's queries need this version's schema, and migrating is the server's
@@ -1366,18 +1448,22 @@ async def _refuse_a_database_not_at_this_versions_head() -> None:
     """
     from alembic.script import ScriptDirectory
 
+    from langflow.cli.events import emit
     from langflow.services.database.migration import get_current_alembic_heads
 
     expected = set(ScriptDirectory(str(get_db_service().script_location)).get_heads())
     async with session_scope() as session:
         current = set(await get_current_alembic_heads(session))
     if current != expected:
-        typer.echo(
-            f"Cannot copy files: the database is at migration revision {', '.join(sorted(current)) or 'none'}, "
+        message = (
+            f"the database is at migration revision {', '.join(sorted(current)) or 'none'}, "
             f"and this Langflow expects {', '.join(sorted(expected))}. This command does not migrate the database. "
-            "Run it with the Langflow version that matches the database.",
-            err=True,
+            "Run it with the Langflow version that matches the database."
         )
+        if as_json:
+            emit("error", code="schema_mismatch", message=message)
+        else:
+            typer.echo(f"Cannot copy files: {message}", err=True)
         raise typer.Exit(2)
 
 
@@ -1448,6 +1534,81 @@ async def _relocate_kb(
     summary = ", ".join(f"{count} {status}" for status, count in sorted(by_status.items())) or "no knowledge bases"
     typer.echo(f"Knowledge base relocation {'dry run ' if dry_run else ''}complete: {summary}.")
     return by_status.get("failed", 0)
+
+
+@app.command(name="check-integrity")
+def check_integrity(
+    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+) -> None:
+    """Report where this instance's database disagrees with what lives outside it.
+
+    Checks that the secret key opens every encrypted value, that every file row has
+    bytes in storage, that every knowledge base's store can be reached and holds as
+    many vectors as its row records, that memory bases with ingested messages have
+    vectors behind them, and that role assignments resolve and match the compiled
+    policy.
+
+    Read-only: it reports and never repairs, so it is safe to run on production.
+    Exits non-zero if any check fails.
+    """
+    configure(log_level=log_level)
+    if not asyncio.run(_check_integrity()):
+        raise typer.Exit(1)
+
+
+async def _check_integrity() -> bool:
+    from langflow.cli.integrity import check_instance, open_instance
+
+    open_instance()
+    report = await check_instance()
+    for check in report.checks:
+        typer.echo(f"{check.status:5} {check.name:16} {check.summary}")
+        for problem in check.problems:
+            typer.echo(f"        - {problem}")
+    return report.ok
+
+
+@app.command(name="migration-preflight")
+def migration_preflight(
+    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    target_revision: str = typer.Option(
+        "", help="Alembic revision the target image runs. Refuses a target older than this database."
+    ),
+    target_secret_key_file: Path | None = typer.Option(
+        None,
+        help="File holding the LANGFLOW_SECRET_KEY the target will run with.",
+        envvar="LANGFLOW_TARGET_SECRET_KEY_FILE",
+        exists=True,
+        dir_okay=False,
+    ),
+) -> None:
+    """Refuse a migration from this instance that cannot succeed, before anything moves.
+
+    Checks that the target's schema is not older than this database's, that the
+    default superuser will survive a target with AUTO_LOGIN off, that the target's
+    key opens every stored credential, and which knowledge bases record the model
+    their vectors need. Then runs check-integrity against this instance.
+
+    Read-only. Exits non-zero if any check fails.
+    """
+    configure(log_level=log_level)
+    # Not stripped: a Secret made from this file with --from-file carries its whitespace, so the key is tested with it.
+    key = target_secret_key_file.read_text() if target_secret_key_file else None
+    if not asyncio.run(_migration_preflight(target_revision or None, key)):
+        raise typer.Exit(1)
+
+
+async def _migration_preflight(target_revision: str | None, target_secret_key: str | None) -> bool:
+    from langflow.cli.integrity import open_instance
+    from langflow.cli.migration_preflight import run_preflight
+
+    open_instance()
+    report = await run_preflight(target_revision=target_revision, target_secret_key=target_secret_key)
+    for check in report.checks:
+        typer.echo(f"{check.status:5} {check.name:24} {check.summary}")
+        for problem in check.problems:
+            typer.echo(f"        - {problem}")
+    return report.ok
 
 
 # command to copy the langflow database from the cache to the current directory

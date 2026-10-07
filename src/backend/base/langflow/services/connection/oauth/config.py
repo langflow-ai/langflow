@@ -77,7 +77,11 @@ class OAuthRegistration(BaseModel):
         if self.context == "self_managed" and self.owner != "customer":
             msg = "Self-managed OAuth uses customer-owned registrations"
             raise OAuthError(msg)
-        if self.client_type == "public" and (self.client_secret or self.private_key):
+        # Google Desktop credentials can require client_secret at the token
+        # endpoint even though installed apps cannot keep it confidential.
+        # This provider parameter does not replace public-client PKCE.
+        google_desktop = self.provider == "google" and self.context == "desktop"
+        if self.client_type == "public" and (self.private_key or (self.client_secret and not google_desktop)):
             msg = "Public clients cannot contain registration secrets"
             raise OAuthError(msg)
         if self.client_type == "confidential" and bool(self.client_secret) == bool(self.private_key):
