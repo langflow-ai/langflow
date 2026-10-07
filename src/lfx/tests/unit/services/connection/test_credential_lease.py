@@ -58,6 +58,18 @@ async def test_initial_resolution_is_single_flight() -> None:
     assert resolver.calls == 1
 
 
+async def test_concurrent_stale_rejections_share_one_refresh_but_fresh_rejections_fail() -> None:
+    resolver = Resolver([_credential("old"), _credential("new")])
+    lease = CredentialLease(resolver, _request())
+    stale = await lease.get_token()
+    error = AuthExpiredError(provider="google")
+    tokens = await asyncio.gather(*(lease.get_token_after_auth_error(error, rejected_token=stale) for _ in range(10)))
+    assert tokens == ["new"] * 10
+    with pytest.raises(AuthExpiredError):
+        await lease.get_token_after_auth_error(error, rejected_token=tokens[0])
+    assert resolver.calls == 2
+
+
 @pytest.mark.asyncio
 async def test_expiring_credential_is_refreshed() -> None:
     now = datetime.now(timezone.utc)
@@ -93,4 +105,6 @@ async def test_failed_reactive_refresh_is_not_retried() -> None:
         await lease.get_token_after_auth_error(error)
     with pytest.raises(AuthExpiredError):
         await lease.get_token_after_auth_error(error)
+    with pytest.raises(AuthExpiredError):
+        await lease.get_token_after_auth_error(error, rejected_token="another-stale-generation")  # noqa: S106
     assert resolver.calls == 2

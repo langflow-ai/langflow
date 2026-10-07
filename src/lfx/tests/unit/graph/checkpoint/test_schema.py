@@ -9,12 +9,14 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from lfx.graph.checkpoint.schema import (
     GraphCheckpoint,
     VertexCheckpointData,
     deserialize_value,
     serialize_value,
+    wire_has_opaque_drop,
 )
 from lfx.schema.message import Message
 
@@ -118,6 +120,9 @@ def test_serialize_value_degrades_model_with_unserializable_field():
 
     Reproduces the HITL-with-Agent crash: pausing serialized the agent's state and a
     nested model class blew up ``model_dump(mode="json")``.
+
+    Covers only the case where the dump itself raises. A dump that *succeeds* but cannot be
+    validated back is a separate failure mode -- see the round-trip test below.
     """
     from pydantic import BaseModel, ConfigDict
 
@@ -126,3 +131,57 @@ def test_serialize_value_degrades_model_with_unserializable_field():
         opaque: type = BaseModel
 
     assert serialize_value(Holder()) is None
+
+
+def test_serialize_value_drops_model_whose_dump_does_not_round_trip():
+    """A dump that succeeds is not proof the value round-trips.
+
+    langchain-core >= 1.6.1 serializes ``BaseTool.func``/``coroutine`` to their repr with no
+    warning, so an agent's tool checkpointed cleanly and then failed ``model_validate`` on every
+    resume ("Input should be callable"), stranding the paused run. serialize_value must drop it.
+    """
+    from collections.abc import Callable
+
+    from pydantic import BaseModel, ConfigDict, field_serializer
+
+    class LossyDump(BaseModel):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        fn: Callable[..., Any]
+
+        @field_serializer("fn")
+        def _serialize_fn(self, value: Callable[..., Any]) -> str:
+            return repr(value)
+
+    # serialize_value only encodes models declared under ``lfx.`` (importing arbitrary modules back
+    # would be injection), so the double has to claim one. Nothing imports it: the drop happens first.
+    LossyDump.__module__ = "lfx.graph.checkpoint._test_double"
+
+    value = LossyDump(fn=lambda: 1)
+    assert value.model_dump(mode="json") == {"fn": repr(value.fn)}  # the dump itself still succeeds
+    assert serialize_value(value) is None
+
+
+def test_serialize_value_drops_a_component_tool_on_every_langchain_version():
+    """A live agent tool must never reach the checkpoint.
+
+    Pinned langchain-core (1.5.1) drops it because the dump raises; 1.6.1+ drops it because the
+    dump no longer round-trips. Asserting the outcome keeps the guarantee version-independent.
+    """
+    from lfx.base.tools.component_tool import ComponentStructuredTool
+    from pydantic import BaseModel as PydanticBaseModel
+
+    class _Args(PydanticBaseModel):
+        x: str = ""
+
+    def _run(x: str) -> str:
+        return x
+
+    async def _arun(x: str) -> str:
+        return x
+
+    tool = ComponentStructuredTool(
+        name="probe_tool", description="probe", args_schema=_Args, func=_run, coroutine=_arun
+    )
+    assert serialize_value(tool) is None
+    # A vertex holding it must be recorded as a drop so resume re-derives it from the rebuilt node.
+    assert wire_has_opaque_drop(serialize_value([tool]))

@@ -1,4 +1,6 @@
-import type { AxiosRequestConfig, ResponseType } from "axios";
+import type { AxiosRequestConfig, AxiosResponse, ResponseType } from "axios";
+import type { AlertStoreType } from "@/types/zustand/alert";
+import { parseContentDispositionFilename } from "@/utils/parse-content-disposition-filename";
 import { track } from "./analytics";
 
 export const customGetDownloadTypeFolders = (): AxiosRequestConfig => {
@@ -11,10 +13,10 @@ export const customGetDownloadTypeFolders = (): AxiosRequestConfig => {
 };
 
 export const customGetDownloadFolderBlob = (
-  response: any,
+  response: AxiosResponse<Blob>,
   id: string,
   folderName?: string,
-  setSuccessData?: (data: any) => void,
+  setSuccessData?: AlertStoreType["setSuccessData"],
 ) => {
   // Create a blob from the response data
   const blob = new Blob([response.data], {
@@ -25,11 +27,12 @@ export const customGetDownloadFolderBlob = (
   const link = document.createElement("a");
   link.href = url;
 
-  // Get filename from header or use default
-  const filename =
-    response.headers?.["content-disposition"]
-      ?.split("filename=")[1]
-      ?.replace(/['"]/g, "") ?? `${folderName || "flows"}.zip`;
+  // Prefer the RFC 5987 filename* param so non-ASCII project names survive
+  const header = response.headers?.["content-disposition"];
+  const filename = parseContentDispositionFilename(
+    typeof header === "string" ? header : null,
+    `${folderName || "flows"}.zip`,
+  );
 
   link.setAttribute("download", filename);
   document.body.appendChild(link);

@@ -79,7 +79,11 @@ def _workflow_pull_request_paths() -> list[str]:
     assert workflow.count("    paths:\n") == 1, "expected exactly one pull-request paths block"
     assert "  workflow_dispatch:" in workflow, "expected workflow_dispatch to terminate the paths block"
     paths_block = workflow.split("    paths:\n", 1)[1].split("  workflow_dispatch:", 1)[0]
-    entries = [line.strip().removeprefix("- ") for line in paths_block.splitlines() if line.strip()]
+    entries = [
+        line.strip().removeprefix("- ")
+        for line in paths_block.splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
     for entry in entries:
         assert entry.startswith('"'), f"path filter must start with a double quote: {entry}"
         assert entry.endswith('"'), f"path filter must end with a double quote: {entry}"

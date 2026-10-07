@@ -6,12 +6,12 @@ from sqlalchemy.exc import SAWarning
 
 _KNOWN_SQLITE_EXPRESSION_INDEX_WARNING = (
     r"^Skipped unsupported reflection of expression-based index "
-    r"ix_message_session_metadata_(?:tenant|user)$"
+    r"(?:ix_message_session_metadata_(?:tenant|user)|ix_user_username_lower)$"
 )
 _KNOWN_SQLITE_AUTOGENERATE_EXPRESSION_INDEX_WARNING = (
     r"^autogenerate skipping metadata-specified expression-based index "
-    r"'ix_message_session_metadata_(?:tenant|user)'; dialect 'sqlite' under SQLAlchemy [^ ]+ "
-    r"can't reflect these indexes so they can't be compared$"
+    r"'(?:ix_message_session_metadata_(?:tenant|user)|ix_user_username_lower)'; "
+    r"dialect 'sqlite' under SQLAlchemy [^ ]+ can't reflect these indexes so they can't be compared$"
 )
 # SQLite reports composite foreign keys through PRAGMA foreign_key_list only, so
 # SQLAlchemy's SQL-parsed fallback cannot match them and warns on every reflect.

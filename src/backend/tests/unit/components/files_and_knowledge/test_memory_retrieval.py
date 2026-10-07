@@ -307,7 +307,7 @@ class TestMemoryBaseProviderPolicyPreflight:
         try:
             with (
                 _patched_session_scope(db),
-                patch(f"{MR_MODULE}.resolve_embedding_selection", selection_lookup),
+                patch("langflow.api.utils.kb_helpers.resolve_embedding_selection", selection_lookup),
                 patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", owner_embedding_build),
                 pytest.raises(ModelProviderPolicyError),
             ):
@@ -365,12 +365,10 @@ class TestMemoryBaseProviderPolicyPreflight:
         try:
             with (
                 _patched_session_scope(_exec_owner_scoped(mb_row)),
-                patch(f"{MR_MODULE}.resolve_embedding_selection", selection_lookup),
-                patch(f"{MR_MODULE}.resolve_backend_selection", new=AsyncMock(return_value=("chroma", {}))),
-                patch(f"{MR_MODULE}.resolve_local_store_path", return_value=None),
+                patch("langflow.api.utils.kb_helpers.resolve_embedding_selection", selection_lookup),
                 patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", owner_embedding_build),
                 patch("lfx.base.models.unified_models.get_embeddings", get_embeddings),
-                patch(f"{MR_MODULE}.create_backend", return_value=backend),
+                patch("langflow.api.utils.kb_helpers.backend_for_name", return_value=backend),
             ):
                 await component.arequire_model_provider_policy(
                     ModelProviderPolicyPurpose.USE,
@@ -595,7 +593,7 @@ class TestMemoryBaseRetrievalInvariants:
         with (
             _patched_session_scope(db),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.get_user_by_id",
+                "langflow.services.database.models.user.crud.get_user_by_id",
                 new=AsyncMock(return_value=None),
             ),
             pytest.raises(ValueError, match="owner account"),
@@ -633,30 +631,21 @@ class TestMemoryBaseRetrievalInvariants:
         assert len(result) == 0
         fake_backend.similarity_search.assert_awaited_once()
 
-    async def test_kb_path_traversal_raises(self):
+    async def test_storage_identity_uses_owner_uuid_not_username(self):
         flow_id = uuid.uuid4()
         owner_id = uuid.uuid4()
         component = _make_component(flow_id=flow_id, session_id="s1")
         mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
         owner = SimpleNamespace(id=owner_id, username="../escape")
-        db = _exec_returning(mb_row)
-        with (
-            _patched_session_scope(db),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.get_user_by_id",
-                new=AsyncMock(return_value=owner),
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.resolve_backend_selection",
-                new=AsyncMock(return_value=("chroma", {})),
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.resolve_local_store_path",
-                side_effect=ValueError("KB path escapes root directory"),
-            ),
-            pytest.raises(ValueError, match="not accessible"),
-        ):
+        backend = AsyncMock()
+        backend.similarity_search.return_value = []
+        with contextlib.ExitStack() as stack:
+            TestMemoryBaseRetrievalBehavior._enter_full_chain(
+                stack, db=_exec_returning(mb_row), fake_backend=backend, owner=owner, metadata={}
+            )
+            factory = stack.enter_context(patch("langflow.api.utils.kb_helpers.backend_for_name", return_value=backend))
             await component.retrieve_memory()
+        assert factory.call_args.args == (owner_id, mb_row.kb_name)
 
 
 class TestMemoryBaseRetrievalBehavior:
@@ -673,24 +662,16 @@ class TestMemoryBaseRetrievalBehavior:
         for cm in (
             _patched_session_scope(db),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.get_user_by_id",
+                "langflow.services.database.models.user.crud.get_user_by_id",
                 new=AsyncMock(return_value=owner),
             ),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.resolve_local_store_path",
-                return_value=None,
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.resolve_embedding_selection",
+                "langflow.api.utils.kb_helpers.resolve_embedding_selection",
                 new=AsyncMock(return_value=(provider, model)),
             ),
             patch("lfx.base.models.unified_models.get_embeddings", return_value=MagicMock()),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.resolve_backend_selection",
-                new=AsyncMock(return_value=("chroma", {})),
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.create_backend",
+                "langflow.api.utils.kb_helpers.backend_for_name",
                 return_value=fake_backend,
             ),
         ):

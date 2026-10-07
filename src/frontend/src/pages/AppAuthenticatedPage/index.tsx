@@ -1,4 +1,5 @@
 import { Outlet } from "react-router-dom";
+import { StorageUpgradeNotice } from "@/components/common/storageUpgradeNotice";
 import { ExtensionEventsListener } from "@/components/extensions/ExtensionEventsListener";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
 import { useCustomPostAuth } from "@/customization/hooks/use-custom-post-auth";
@@ -15,6 +16,7 @@ export function AppAuthenticatedPage() {
   return (
     <>
       {extensionsEnabled && <ExtensionEventsListener />}
+      <StorageUpgradeNotice />
       <Outlet />
     </>
   );

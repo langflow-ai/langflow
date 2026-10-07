@@ -1,0 +1,27 @@
+{
+  "api_app_id": "A0APP00001",
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "is_bot": true,
+      "is_enterprise_install": false,
+      "team_id": "T0TEAM0001",
+      "user_id": "U0BOT00001"
+    }
+  ],
+  "event": {
+    "channel": "C0PRIVATE1",
+    "channel_type": "group",
+    "event_ts": "1700000240.000500",
+    "team": "T0TEAM0001",
+    "text": "Private channel status update",
+    "ts": "1700000240.000500",
+    "type": "message",
+    "user": "U0ALICE001"
+  },
+  "event_id": "Ev0MSG00005",
+  "event_time": 1700000240,
+  "is_ext_shared_channel": false,
+  "team_id": "T0TEAM0001",
+  "type": "event_callback"
+}

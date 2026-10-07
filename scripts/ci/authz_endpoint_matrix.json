@@ -231,7 +231,10 @@
       "frontend": "project create, edit, export, import, and delete controls use effective project permissions",
       "personas": "canonical_v1",
       "test_references": [
-        "src/backend/tests/unit/api/v1/test_projects.py::test_shared_project_download_filters_flows_by_read_permission"
+        "src/backend/tests/unit/api/v1/test_projects.py::test_shared_project_download_filters_flows_by_read_permission",
+      "src/backend/tests/unit/api/v1/test_project_deployment_snapshot.py::test_deployment_snapshot_another_user_gets_404",
+      "src/backend/tests/unit/api/v1/test_project_replacement_operations.py::test_flow_level_authorization_denial_maps_to_404_and_leaves_content_unchanged",
+      "src/backend/tests/unit/api/v1/test_project_replacement_operations.py::test_replacement_receipts_are_owner_only_before_and_after_project_deletion"
       ],
       "routes": [
         "POST|/|create_project|create|authenticated",
@@ -241,6 +244,9 @@
         "PUT|/{project_id}|upsert_project|write|authenticated",
         "DELETE|/{project_id}|delete_project|delete|authenticated",
         "GET|/download/{project_id}|download_file|read|authenticated",
+    "GET|/{project_id}/deployment-snapshot|read_project_deployment_snapshot|read|authenticated",
+    "PUT|/{project_id}/replacement-operations/{operation_id}|replace_project_operation|write|authenticated",
+    "GET|/{project_id}/replacement-operations/{operation_id}|get_project_replacement_operation|read|authenticated",
         "POST|/upload/|upload_file|create|authenticated"
       ]
     },
@@ -442,7 +448,7 @@
       "source": "api/v1/connections.py",
       "resource": "connection",
       "domain": "caller-global owner or explicit share scope",
-      "privacy": "connection identifier denials are returned as 404; responses contain metadata and health only",
+      "privacy": "connection identifier denials are returned as 404; responses contain metadata and health only. /oauth/registrations returns operator-configured registration metadata filtered by the caller's integration policy and never a client secret, private key, or connection identifier",
       "side_effects": "authorize before credential decryption, health checks, metadata updates, revocation, or deletion; instance connections change only by superuser; only the owner enables non-interactive use",
       "frontend": "connection pickers list only owned, instance, or explicitly shared metadata and never receive token material",
       "personas": "canonical_v1",
@@ -452,7 +458,13 @@
         "src/backend/tests/unit/api/v1/test_connections.py::test_only_the_owner_may_enable_non_interactive_use",
         "src/backend/tests/unit/api/v1/test_connections.py::test_instance_connections_are_changed_only_by_superusers",
         "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_callback_pkce_storage_replay_and_revoke",
-        "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_browser_binding_and_pending_callback_revocation"
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_browser_binding_and_pending_callback_revocation",
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_desktop_handoff_binds_a_separate_browser",
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_desktop_handoff_is_single_use_before_callback",
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_desktop_handoff_rechecks_permission",
+        "src/backend/tests/unit/api/v1/test_connection_registrations.py::test_requires_authentication",
+        "src/backend/tests/unit/api/v1/test_connection_registrations.py::test_never_returns_client_credentials",
+        "src/backend/tests/unit/api/v1/test_connection_registrations.py::test_omits_providers_outside_the_integration_policy"
       ],
       "routes": [
         "GET||list_connections|read|authenticated",
@@ -463,6 +475,8 @@
         "POST|/{connection_id}/revoke|revoke_connection|write|authenticated",
         "DELETE|/{connection_id}|delete_connection|delete|authenticated",
         "POST|/{connection_id}/oauth/start|start_connection_oauth|write|authenticated",
+        "GET|/oauth/registrations|list_oauth_registrations|read|authenticated",
+        "GET|/oauth/{provider}/browser|bind_connection_oauth_browser|write|conditional",
         "GET|/oauth/{provider}/callback|complete_connection_oauth|write|conditional"
       ]
     },
@@ -503,6 +517,62 @@
       ],
       "routes": [
         "POST||execute_public_workflow|execute|conditional"
+      ]
+    },
+    {
+      "family": "triggers",
+      "source": "api/v1/triggers.py",
+      "resource": "flow",
+      "domain": "the workspace/project domain of the flow the trigger fires",
+      "privacy": "a trigger whose flow the caller cannot read is 404, never 403; ledger rows are addressed through their trigger, never by id alone",
+      "side_effects": "management mutates the trigger row; replay and test append ledger rows that the dispatcher will execute as the trigger owner",
+      "frontend": "the triggers surface lists only triggers on flows the caller can read and hides management controls without flow write",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_triggers.py::test_a_trigger_on_someone_elses_flow_is_invisible",
+        "src/backend/tests/unit/api/v1/test_triggers.py::test_owner_can_manage_a_trigger_end_to_end",
+        "src/backend/tests/unit/api/v1/test_triggers.py::test_pin_requires_a_version_of_the_same_flow",
+        "src/backend/tests/unit/api/v1/test_triggers.py::test_test_and_replay_write_linked_ledger_rows",
+        "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_only_the_flow_owner_can_mint_a_signing_secret"
+      ],
+      "routes": [
+        "GET||list_triggers|read|authenticated",
+        "POST||create_trigger|write|authenticated",
+        "GET|/{trigger_id}|get_trigger|read|authenticated",
+        "PATCH|/{trigger_id}|update_trigger|write|authenticated",
+        "DELETE|/{trigger_id}|delete_trigger|write|authenticated",
+        "POST|/{trigger_id}/enable|enable_trigger|write|authenticated",
+        "POST|/{trigger_id}/disable|disable_trigger|write|authenticated",
+        "POST|/{trigger_id}/pin|pin_trigger|write|authenticated",
+        "GET|/{trigger_id}/events|list_trigger_events|read|authenticated",
+        "POST|/{trigger_id}/replay|replay_trigger_event|execute|authenticated",
+        "POST|/{trigger_id}/test|test_trigger|execute|authenticated",
+        "GET|/{trigger_id}/ingress|get_trigger_ingress|read|authenticated",
+        "POST|/{trigger_id}/signing-secret|rotate_trigger_signing_secret|write|authenticated"
+      ]
+    },
+    {
+      "family": "trigger_ingress",
+      "source": "api/v1/trigger_ingress.py",
+      "resource": "trigger",
+      "domain": "none: the caller is a provider, not a Langflow principal, and no role grants access",
+      "privacy": "every outcome - unknown trigger or Slack app, wrong provider, bad signature, stale timestamp, paused trigger, oversized body, rate limited - answers 404 with one body, so the route is not an oracle for which trigger ids or registrations exist; the reason is recorded in the audit row instead. The Microsoft Graph subscription handshake is the one 200 without provider proof, and it is answered before the trigger is resolved so its response cannot depend on whether the public id exists. Slack's url_verification is signed and names no trigger, so it is answered only after the registration's signing secret verifies it",
+      "side_effects": "per-trigger route: appends at most one trigger_event ledger row per verified delivery. Slack app route: appends at most one row per matching armed trigger (active, Events API mechanism, an installation of that registration in the delivering workspace, on a connection its owner owns), all in one commit. Both answer only after the commit, inside the provider's acknowledgement deadline, never execute a flow and never fetch from the provider in the request",
+      "frontend": "no frontend surface: the URL is shown on the trigger, and the secret only when it is minted",
+      "personas": "public_or_conditional",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_a_signed_webhook_delivery_becomes_a_ledger_row",
+        "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_every_rejection_looks_identical_to_the_caller",
+        "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_an_unknown_public_id_is_indistinguishable_from_a_bad_signature",
+        "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_the_graph_handshake_does_not_reveal_whether_a_trigger_exists",
+        "src/backend/tests/unit/api/v1/test_trigger_ingress_slack.py::test_a_valid_slack_delivery_becomes_one_ledger_row",
+        "src/backend/tests/unit/api/v1/test_trigger_ingress_slack.py::test_one_delivery_reaches_every_matching_trigger_in_the_workspace",
+        "src/backend/tests/unit/api/v1/test_trigger_ingress_slack.py::test_triggers_that_must_not_hear_this_app_are_left_out",
+        "src/backend/tests/unit/api/v1/test_trigger_ingress_slack.py::test_every_refusal_looks_identical_to_the_caller"
+      ],
+      "routes": [
+        "POST|/{provider}/{public_id}|receive_provider_delivery|ingest|provider_signed",
+        "POST|/slack/apps/{registration_id}|receive_slack_app_delivery|ingest|provider_signed"
       ]
     }
   ]

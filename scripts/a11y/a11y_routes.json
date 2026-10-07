@@ -4,7 +4,8 @@
     "BASENAME is empty, so route paths start at /.",
     "ENABLE_CUSTOM_PARAM is false, so tenant/custom-prefix variants are not active.",
     "ENABLE_FILE_MANAGEMENT is true, so /assets routes are active.",
-    "ENABLE_KNOWLEDGE_BASES is true, so knowledge-base routes are active."
+    "ENABLE_KNOWLEDGE_BASES is true, so knowledge-base routes are active.",
+    "ENABLE_INTEGRATIONS is true, so the Connections surface is not kill-switched."
   ],
   "static": [
     {
@@ -112,6 +113,12 @@
           ]
         }
       ]
+    },
+    {
+      "id": "settings-connections",
+      "path": "/settings/connections",
+      "surface": "Connections settings page",
+      "ready": [{ "testId": "add-connection" }, { "testId": "connections-search" }]
     }
   ],
   "dynamic": [

@@ -27,7 +27,9 @@ from langflow.services.deployment_artifacts import (
     ProjectArtifactLimitError,
     ProjectArtifactLimits,
     ProjectArtifactNotFoundError,
+    ProjectArtifactRequiredConnection,
     build_project_artifact,
+    build_project_deployment_snapshot,
 )
 
 MODULE = "langflow.services.deployment_artifacts.builder"
@@ -82,6 +84,51 @@ async def _build_authorized(
             kwargs["flow_ids"] = flow_ids
         artifact = await build_project_artifact(session, user, project.id, **kwargs)
     return artifact, load_project, ensure_project, ensure_flows
+
+
+def _snapshot_session_for_flows(project: Folder, flows: list[Flow]) -> AsyncMock:
+    """A mocked session for a single page (<=4 flows) of ``build_project_deployment_snapshot``."""
+    ordered = sorted(flows, key=lambda flow: str(flow.id))
+    revision_result = MagicMock()
+    revision_result.all.return_value = [(flow.id, flow.user_id, flow.updated_at) for flow in ordered]
+    flow_result = MagicMock()
+    flow_result.all.return_value = ordered
+    final_revision_result = MagicMock()
+    final_revision_result.all.return_value = [(flow.id, flow.user_id, flow.updated_at) for flow in ordered]
+    project_result = MagicMock()
+    project_result.first.return_value = (project.id, project.name, project.description)
+    session = AsyncMock()
+    session.exec.side_effect = [revision_result, flow_result, final_revision_result, project_result]
+    return session
+
+
+async def _build_snapshot_authorized(
+    *,
+    session: AsyncMock,
+    user: SimpleNamespace,
+    project: Folder,
+    limits: ProjectArtifactLimits | None = None,
+    known_variable_names: frozenset[str] | None = None,
+):
+    """Also stubs the variable service so the owner-variable lookup never touches ``session``.
+
+    ``_snapshot_session_for_flows`` gives ``session.exec`` a fixed, ordered
+    ``side_effect`` list sized for exactly the queries the snapshot path itself
+    issues; a real variable-service call would consume one of those slots out
+    of order. ``known_variable_names`` lets a caller opt a flow's
+    ``load_from_db`` references into surviving the strict capture, the same way
+    a real owner variable would.
+    """
+    variable_service = AsyncMock()
+    variable_service.list_variables = AsyncMock(return_value=sorted(known_variable_names or []))
+    with (
+        patch(f"{MODULE}.authorized_or_owner_scoped", new_callable=AsyncMock, return_value=project),
+        patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock),
+        patch(f"{MODULE}.ensure_flows_permission", new_callable=AsyncMock),
+        patch(f"{MODULE}.get_variable_service", return_value=variable_service),
+    ):
+        kwargs = {"limits": limits} if limits is not None else {}
+        return await build_project_deployment_snapshot(session, user, project.id, **kwargs)
 
 
 def test_deployment_artifact_service_does_not_depend_on_api_or_fastapi() -> None:
@@ -446,6 +493,87 @@ async def test_build_project_artifact_scrubs_secret_fields_without_resolving_ref
 
 
 @pytest.mark.asyncio
+async def test_build_project_artifact_reduces_mcp_config_to_name_only() -> None:
+    """The zip/.lfpkg export path never keeps an MCP config, clean or not."""
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="MCP export", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    flow.data = {
+        "nodes": [
+            {
+                "data": {
+                    "node": {
+                        "template": {
+                            "mcp_server": {
+                                "name": "mcp_server",
+                                "type": "mcp",
+                                "value": {
+                                    "name": "billing-mcp",
+                                    "config": {
+                                        "url": "https://mcp.example.com",
+                                        "headers": {"Authorization": "MCP_BILLING_MCP_AUTHORIZATION_ABCD1234"},
+                                    },
+                                },
+                            },
+                        }
+                    }
+                }
+            }
+        ],
+        "edges": [],
+    }
+    session = _session_with_flows([flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    artifact, *_ = await _build_authorized(session=session, user=user, project=project)
+
+    with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
+        exported = json.loads(archive.read(f"flows/{flow.id}.json"))
+    template = exported["data"]["nodes"][0]["data"]["node"]["template"]
+    assert template["mcp_server"]["value"] == {"name": "billing-mcp"}
+
+
+@pytest.mark.asyncio
+async def test_strict_snapshot_refuses_graph_changes_from_secret_scrubbing() -> None:
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Strict snapshot", description="Captured", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    flow.data = {
+        "nodes": [
+            {
+                "data": {
+                    "node": {
+                        "template": {
+                            "password": {"name": "password", "password": True, "value": "literal-secret"},
+                        }
+                    }
+                }
+            }
+        ],
+        "edges": [],
+    }
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    ordinary, *_ = await _build_authorized(session=_session_with_flows([flow]), user=user, project=project)
+    assert b"literal-secret" not in ordinary.content
+
+    with (
+        patch(f"{MODULE}.authorized_or_owner_scoped", new_callable=AsyncMock, return_value=project),
+        patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock),
+        patch(f"{MODULE}.ensure_flows_permission", new_callable=AsyncMock),
+        pytest.raises(ProjectArtifactError, match="cannot be safely captured"),
+    ):
+        await build_project_artifact(
+            _session_with_flows([flow]),
+            user,
+            project_id,
+            strict_snapshot=True,
+        )
+
+
+@pytest.mark.asyncio
 async def test_build_project_artifact_preserves_variable_references_and_lists_required_variables() -> None:
     actor_id = uuid4()
     project_id = uuid4()
@@ -705,7 +833,7 @@ def test_secret_scrub_uses_bounded_memory_for_wide_deep_structured_value() -> No
 
     tracemalloc.start()
     try:
-        content, _, _ = builder._normalized_flow_bytes(snapshot)
+        content, *_ = builder._normalized_flow_bytes(snapshot)
         _, peak = tracemalloc.get_traced_memory()
     finally:
         tracemalloc.stop()
@@ -764,7 +892,7 @@ def test_normalized_flow_bytes_accepts_model_valid_sparse_data(data: object, exp
     )
     original_payload = deepcopy(snapshot.payload)
 
-    content, required_variables, required_connections = builder._normalized_flow_bytes(snapshot)
+    content, required_variables, required_connections, _ = builder._normalized_flow_bytes(snapshot)
     assert json.loads(content) == {"data": expected_data}
     assert required_variables == ()
     assert required_connections == ()
@@ -797,7 +925,7 @@ def test_normalized_flow_bytes_does_not_mutate_shared_flow_data() -> None:
         payload={"data": flow.data},
     )
 
-    content, _, _ = builder._normalized_flow_bytes(snapshot)
+    content, *_ = builder._normalized_flow_bytes(snapshot)
     exported = json.loads(content)
 
     assert exported["data"]["nodes"][0]["data"]["node"]["template"]["password"]["value"] is None
@@ -1007,3 +1135,341 @@ async def test_build_project_artifact_rejects_deep_data_before_recursive_scrubbi
 
     with pytest.raises(ProjectArtifactLimitError, match="nesting limit"):
         await _build_authorized(session=session, user=user, project=project)
+
+
+@pytest.mark.parametrize("declared", [None, "microsoft", "google", ""])
+def test_connection_artifact_accepts_implicit_provider_but_rejects_mismatches(declared):
+    from langflow.services.deployment_artifacts.builder import ProjectArtifactError, _collect_required_connections
+
+    field = {"type": "connection_ref", "value": "microsoft/work", "required_scopes": ["Mail.Read"]}
+    if declared is not None:
+        field["provider"] = declared
+    payload = {"nodes": [{"data": {"node": {"template": {"connection": field}}}}]}
+    if declared in {None, "microsoft"}:
+        connections = _collect_required_connections(payload)
+        assert [(connection.provider, connection.name) for connection in connections] == [("microsoft", "work")]
+    else:
+        with pytest.raises(ProjectArtifactError, match="declared provider"):
+            _collect_required_connections(payload)
+
+
+# --- deployment snapshot: required_connections, endpoint_name, no-zip refactor ---
+
+
+@pytest.mark.asyncio
+async def test_build_project_deployment_snapshot_rejects_lone_unicode_surrogate_in_project_description() -> None:
+    """A lone surrogate in the project description must fail closed, the same as one in the name."""
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Valid project", description="Invalid description \ud800", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    session = _snapshot_session_for_flows(project, [flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactError, match="Unicode surrogate"):
+        await _build_snapshot_authorized(session=session, user=user, project=project)
+
+
+@pytest.mark.asyncio
+async def test_build_project_deployment_snapshot_counts_project_description_toward_expanded_bytes() -> None:
+    """A large project description must count toward max_expanded_bytes, not evade it entirely."""
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Big description", description="d" * 200, user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    session = _snapshot_session_for_flows(project, [flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactLimitError, match="expanded size"):
+        await _build_snapshot_authorized(
+            session=session, user=user, project=project, limits=ProjectArtifactLimits(max_expanded_bytes=64)
+        )
+
+
+@pytest.mark.asyncio
+async def test_build_project_deployment_snapshot_includes_required_connections_and_endpoint_name() -> None:
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Snapshot connections", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id, name="Snapshot flow")
+    flow.endpoint_name = "snapshot-flow-endpoint"
+    flow.data = {
+        "nodes": [
+            {
+                "data": {
+                    "node": {
+                        "template": {
+                            "calendar": {
+                                "name": "calendar",
+                                "type": "connection_ref",
+                                "provider": "google_workspace",
+                                "value": "google_workspace/work",
+                                "required_scopes": ["calendar.readonly"],
+                            },
+                        }
+                    }
+                }
+            }
+        ],
+        "edges": [],
+    }
+    session = _snapshot_session_for_flows(project, [flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    snapshot = await _build_snapshot_authorized(session=session, user=user, project=project)
+
+    assert snapshot.flows[0].endpoint_name == "snapshot-flow-endpoint"
+    assert snapshot.flows[0].data == flow.data
+    assert snapshot.required_connections == (
+        ProjectArtifactRequiredConnection(provider="google_workspace", name="work", scopes=("calendar.readonly",)),
+    )
+
+
+@pytest.mark.asyncio
+async def test_build_project_deployment_snapshot_endpoint_name_defaults_to_none() -> None:
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="No endpoint", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    session = _snapshot_session_for_flows(project, [flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    snapshot = await _build_snapshot_authorized(session=session, user=user, project=project)
+
+    assert snapshot.flows[0].endpoint_name is None
+    assert snapshot.required_connections == ()
+
+
+@pytest.mark.asyncio
+async def test_build_project_deployment_snapshot_keeps_cleaned_mcp_config() -> None:
+    """A provably clean MCP config survives the strict snapshot capture, verbatim."""
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Snapshot MCP", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    flow.data = {
+        "nodes": [
+            {
+                "data": {
+                    "node": {
+                        "template": {
+                            "mcp_server": {
+                                "name": "mcp_server",
+                                "type": "mcp",
+                                "value": {
+                                    "name": "billing-mcp",
+                                    "config": {
+                                        "url": "https://mcp.example.com",
+                                        "headers": {"Authorization": "MCP_BILLING_MCP_AUTHORIZATION_ABCD1234"},
+                                    },
+                                },
+                            },
+                        }
+                    }
+                }
+            }
+        ],
+        "edges": [],
+    }
+    session = _snapshot_session_for_flows(project, [flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    # The header's MCP_* reference must name one of the owner's real global
+    # variables (LE-2717 review: _mcp_config_is_clean must not accept any
+    # MCP_*-shaped value without checking it against known_variable_names).
+    snapshot = await _build_snapshot_authorized(
+        session=session,
+        user=user,
+        project=project,
+        known_variable_names=frozenset({"MCP_BILLING_MCP_AUTHORIZATION_ABCD1234"}),
+    )
+
+    template = snapshot.flows[0].data["nodes"][0]["data"]["node"]["template"]
+    assert template["mcp_server"]["value"] == {
+        "name": "billing-mcp",
+        "config": {
+            "url": "https://mcp.example.com",
+            "headers": {"Authorization": "MCP_BILLING_MCP_AUTHORIZATION_ABCD1234"},
+        },
+    }
+
+
+@pytest.mark.asyncio
+async def test_build_project_deployment_snapshot_refuses_mcp_reference_naming_unknown_variable() -> None:
+    """An MCP_*-shaped header value that names none of the owner's variables must fail closed.
+
+    Same config as ``test_build_project_deployment_snapshot_keeps_cleaned_mcp_config``,
+    but the owner has no matching global variable: a literal secret shaped like
+    a generated MCP_* reference must not be mistaken for a legitimate one.
+    """
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Snapshot MCP unknown variable", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    flow.data = {
+        "nodes": [
+            {
+                "data": {
+                    "node": {
+                        "template": {
+                            "mcp_server": {
+                                "name": "mcp_server",
+                                "type": "mcp",
+                                "value": {
+                                    "name": "billing-mcp",
+                                    "config": {
+                                        "url": "https://mcp.example.com",
+                                        "headers": {"Authorization": "MCP_BILLING_MCP_AUTHORIZATION_ABCD1234"},
+                                    },
+                                },
+                            },
+                        }
+                    }
+                }
+            }
+        ],
+        "edges": [],
+    }
+    session = _snapshot_session_for_flows(project, [flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactError, match="cannot be safely captured"):
+        await _build_snapshot_authorized(session=session, user=user, project=project)
+
+
+@pytest.mark.asyncio
+async def test_build_project_deployment_snapshot_refuses_legacy_mcp_secret() -> None:
+    """A flow saved before save-time MCP stripping must fail the capture closed, not leak."""
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Legacy MCP secret", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    flow.data = {
+        "nodes": [
+            {
+                "data": {
+                    "node": {
+                        "template": {
+                            "mcp_server": {
+                                "name": "mcp_server",
+                                "type": "mcp",
+                                "value": {
+                                    "name": "billing-mcp",
+                                    "config": {
+                                        "url": "https://mcp.example.com",
+                                        "headers": {"Authorization": "Bearer sk-live-123"},
+                                    },
+                                },
+                            },
+                        }
+                    }
+                }
+            }
+        ],
+        "edges": [],
+    }
+    session = _snapshot_session_for_flows(project, [flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactError, match="cannot be safely captured"):
+        await _build_snapshot_authorized(session=session, user=user, project=project)
+
+
+def test_snapshot_flow_rejects_empty_name() -> None:
+    from langflow.services.deployment_artifacts import builder
+
+    with pytest.raises(ProjectArtifactError, match="empty name"):
+        builder.ProjectDeploymentSnapshotFlow(
+            flow_id=uuid4(), name="   ", endpoint_name=None, description=None, data={}
+        )
+
+
+def test_snapshot_rejects_empty_project_name() -> None:
+    from langflow.services.deployment_artifacts import builder
+
+    flow = builder.ProjectDeploymentSnapshotFlow(
+        flow_id=uuid4(), name="ok", endpoint_name=None, description=None, data={}
+    )
+    with pytest.raises(ProjectArtifactError, match="empty project name"):
+        builder.ProjectDeploymentSnapshot(
+            project_id=uuid4(),
+            project_name="   ",
+            project_description=None,
+            flows=(flow,),
+            dependencies={},
+            required_variables=(),
+        )
+
+
+@pytest.mark.asyncio
+async def test_build_project_deployment_snapshot_never_encodes_a_zip_archive() -> None:
+    """The snapshot path must scrub and bound flows directly, never via a zip round trip."""
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="No zip", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    session = _snapshot_session_for_flows(project, [flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with patch(f"{MODULE}.zipfile.ZipFile", side_effect=AssertionError("must not encode a zip archive")):
+        snapshot = await _build_snapshot_authorized(session=session, user=user, project=project)
+
+    assert snapshot.flows[0].flow_id == flow.id
+
+
+def test_build_deployment_snapshot_flows_enforces_max_flow_bytes() -> None:
+    from langflow.services.deployment_artifacts import builder
+
+    snapshot = builder._FlowSnapshot(
+        flow_id=uuid4(),
+        name="Flow",
+        payload={"data": {"nodes": [], "edges": []}, "padding": "x" * 200},
+    )
+
+    with pytest.raises(ProjectArtifactLimitError, match="flow file"):
+        builder._build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits(max_flow_bytes=32))
+
+
+def test_build_deployment_snapshot_flows_enforces_max_expanded_bytes() -> None:
+    from langflow.services.deployment_artifacts import builder
+
+    snapshots = tuple(
+        builder._FlowSnapshot(
+            flow_id=uuid4(),
+            name=f"Flow {index}",
+            payload={"data": {"nodes": [], "edges": []}, "padding": "x" * 50},
+        )
+        for index in range(3)
+    )
+
+    with pytest.raises(ProjectArtifactLimitError, match="expanded size"):
+        builder._build_deployment_snapshot_flows(
+            snapshots, limits=ProjectArtifactLimits(max_flow_bytes=1024 * 1024, max_expanded_bytes=64)
+        )
+
+
+def test_build_deployment_snapshot_flows_counts_initial_expanded_bytes_toward_the_limit() -> None:
+    """``initial_expanded_bytes`` (the project's own name/description) must count toward the bound.
+
+    Without it, an arbitrarily large project name or description could evade
+    ``max_expanded_bytes`` entirely: it is never part of any flow's content size.
+    """
+    from langflow.services.deployment_artifacts import builder
+
+    snapshot = builder._FlowSnapshot(flow_id=uuid4(), name="Flow", payload={"data": {"nodes": [], "edges": []}})
+
+    with pytest.raises(ProjectArtifactLimitError, match="expanded size"):
+        builder._build_deployment_snapshot_flows(
+            (snapshot,),
+            limits=ProjectArtifactLimits(max_expanded_bytes=64),
+            initial_expanded_bytes=128,
+        )
+
+
+def test_build_deployment_snapshot_flows_rejects_missing_graph_data() -> None:
+    from langflow.services.deployment_artifacts import builder
+
+    snapshot = builder._FlowSnapshot(flow_id=uuid4(), name="Flow", payload={"data": None})
+
+    with pytest.raises(ProjectArtifactError, match="no graph data"):
+        builder._build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())

@@ -466,6 +466,17 @@ input[type="search"]::-webkit-search-cancel-button {
     0 0 9px 1px rgba(99, 102, 241, 0.15) inset;
 }
 
+/* The conflict twin of .version-preview-overlay: same glow, amber instead of
+   indigo, so "this canvas is in a special state" reads the same either way.
+   Driven by the token rather than a literal, so it holds in both themes. */
+.flow-conflict-overlay {
+  border: 1px solid hsl(var(--accent-amber-foreground) / 0.35);
+  background: rgba(255, 255, 255, 0);
+  box-shadow:
+    0 0 18px 2px hsl(var(--accent-amber-foreground) / 0.25) inset,
+    0 0 9px 1px hsl(var(--accent-amber-foreground) / 0.15) inset;
+}
+
 @keyframes banner-slide-up {
   from {
     transform: translateX(-50%) translateY(calc(100% + 2.5rem));

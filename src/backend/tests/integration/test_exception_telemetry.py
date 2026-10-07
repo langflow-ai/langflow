@@ -307,6 +307,7 @@ class TestTelemetryPayloadValidation:
             auto_login=False,
             cache_type="redis",
             backend_only=True,
+            database_dialect="postgresql",
             client_type="oss",
         )
 
@@ -318,6 +319,7 @@ class TestTelemetryPayloadValidation:
         assert payload.auto_login is False
         assert payload.cache_type == "redis"
         assert payload.backend_only is True
+        assert payload.database_dialect == "postgresql"
 
         serialized = payload.model_dump(by_alias=True)
         expected = {
@@ -329,6 +331,7 @@ class TestTelemetryPayloadValidation:
             "autoLogin": False,
             "cacheType": "redis",
             "backendOnly": True,
+            "databaseDialect": "postgresql",
             "clientType": "oss",
         }
         assert serialized == expected

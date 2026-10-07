@@ -22,3 +22,42 @@ entries:
   resolved_in_version: 1.12.0
   fix_pr: https://github.com/langflow-ai/langflow/pull/14523
   workaround: Wait a few seconds after the page loads, then click again.
+
+- id: GH-14227
+  title: Backend fails to start in Kubernetes because the mem0 client is imported during startup
+  status: resolved
+  area: integrations
+  first_bad_version: 1.11.0
+  last_known_good_version: 1.10.3
+  resolved_in_version: 1.11.2
+  fix_pr: https://github.com/langflow-ai/langflow/pull/14247
+  workaround: none
+
+- id: GH-14455
+  title: Saved flows stop running when a built-in component they store drifted from the current one
+  status: resolved
+  area: components
+  first_bad_version: 1.11.1
+  last_known_good_version: 1.11.0
+  resolved_in_version: 1.12.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/14527
+  workaround: Open each affected flow and update the drifted component so its stored code matches the built-in one.
+
+- id: GH-14536
+  title: Upgrading breaks project MCP server auto-registration on every boot and leaves an unused API key behind each time
+  status: resolved
+  area: mcp
+  first_bad_version: 1.11.1
+  last_known_good_version: 1.11.0
+  resolved_in_version: 1.11.4
+  fix_pr: https://github.com/langflow-ai/langflow/pull/14545
+  workaround: none
+
+- id: GH-14791
+  title: RunFlow in tool mode loses the ChatInput value when the sub-flow graph is loaded
+  status: triage
+  area: components
+  first_bad_version: unknown
+  last_known_good_version: 1.8.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/14793
+  workaround: none

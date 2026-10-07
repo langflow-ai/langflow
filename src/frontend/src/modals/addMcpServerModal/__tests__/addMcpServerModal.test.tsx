@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
+import { McpServerNotFoundError } from "@/controllers/API/queries/mcp/mcp-server-not-found-error";
 import type { MCPServerType } from "@/types/mcp";
 import AddMcpServerModal from "..";
 
@@ -401,6 +402,32 @@ describe("AddMcpServerModal", () => {
     );
     // The create (add) flow must never fire during an edit — that is what
     // produced the duplicate server.
+    expect(mockAddMCPServer).not.toHaveBeenCalled();
+  });
+
+  it("tells the user the server no longer exists when it was deleted before saving", async () => {
+    const user = userEvent.setup();
+    const setOpen = jest.fn();
+    mockPatchMCPServer.mockRejectedValue(
+      new McpServerNotFoundError("my-server"),
+    );
+
+    render(
+      <AddMcpServerModal
+        open={true}
+        setOpen={setOpen}
+        initialData={{ name: "my-server", url: "http://host/sse" }}
+      />,
+    );
+
+    await user.click(screen.getByTestId("add-mcp-server-button"));
+
+    expect(
+      await screen.findByText(
+        "This MCP server no longer exists. It may have been deleted elsewhere.",
+      ),
+    ).toBeInTheDocument();
+    expect(setOpen).not.toHaveBeenCalledWith(false);
     expect(mockAddMCPServer).not.toHaveBeenCalled();
   });
 

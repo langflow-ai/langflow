@@ -1,5 +1,8 @@
 import { AxiosError, AxiosHeaders } from "axios";
-import { getAxiosErrorMessage } from "../get-axios-error-message";
+import {
+  getAxiosErrorDetail,
+  getAxiosErrorMessage,
+} from "../get-axios-error-message";
 
 function makeAxiosError(data: unknown, message = "Request failed"): AxiosError {
   const error = new AxiosError(message);
@@ -68,5 +71,38 @@ describe("getAxiosErrorMessage", () => {
   it("handles detail as an array of plain strings", () => {
     const err = makeAxiosError({ detail: ["error one", "error two"] });
     expect(getAxiosErrorMessage(err)).toBe("error one; error two");
+  });
+});
+
+describe("getAxiosErrorDetail", () => {
+  const fallback = "O servidor recusou a solicitação.";
+
+  it.each([
+    new AxiosError("Network Error"),
+    new AxiosError("timeout of 30000ms exceeded"),
+    makeAxiosError({}),
+    makeAxiosError({ detail: null }),
+    makeAxiosError({ detail: "" }),
+    makeAxiosError({ detail: [] }),
+    makeAxiosError({ detail: { unexpected: true } }),
+    new Error("Network Error"),
+    null,
+  ])(
+    "uses the translated fallback without usable server detail: %p",
+    (error) => {
+      expect(getAxiosErrorDetail(error, fallback)).toBe(fallback);
+    },
+  );
+
+  it.each([
+    ["Invalid handle", "Invalid handle"],
+    [
+      [{ msg: "Invalid handle" }, { msg: "Field required" }],
+      "Invalid handle; Field required",
+    ],
+  ])("preserves server detail: %p", (detail, expected) => {
+    expect(getAxiosErrorDetail(makeAxiosError({ detail }), fallback)).toBe(
+      expected,
+    );
   });
 });

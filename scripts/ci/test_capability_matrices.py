@@ -4,7 +4,7 @@ import json
 import re
 import shutil
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -24,6 +24,7 @@ from check_capability_matrices import (
 )
 
 CI_SCRIPTS_WORKFLOW = DESIGN_ROOT.parents[1] / ".github" / "workflows" / "ci-scripts-test.yml"
+pytestmark = pytest.mark.usefixtures("capability_reference_date")
 
 
 def _workflow_pull_request_paths() -> list[str]:
@@ -32,7 +33,11 @@ def _workflow_pull_request_paths() -> list[str]:
     assert workflow.count("    paths:\n") == 1, "expected exactly one pull-request paths block"
     assert "  workflow_dispatch:" in workflow, "expected workflow_dispatch to terminate the paths block"
     paths_block = workflow.split("    paths:\n", 1)[1].split("  workflow_dispatch:", 1)[0]
-    entries = [line.strip().removeprefix("- ") for line in paths_block.splitlines() if line.strip()]
+    entries = [
+        line.strip().removeprefix("- ")
+        for line in paths_block.splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
     return [json.loads(entry) for entry in entries]
 
 
@@ -80,6 +85,21 @@ def _save(root: Path, provider: str, matrix: dict) -> Path:
 
 def test_capability_matrices_are_complete() -> None:
     assert validate_all() == []
+
+
+def _committed_evidence_expiry_date() -> date:
+    """Derive expiry from matrix dates and all cited sources, including refreshed evidence."""
+    dates = []
+    for path in DEFAULT_MATRIX_DIR.glob("*.json"):
+        matrix = json.loads(path.read_text(encoding="utf-8"))
+        dates.extend(date.fromisoformat(item["verified_on"]) for item in [matrix, *matrix["sources"].values()])
+    return min(dates) + timedelta(days=31)
+
+
+@pytest.mark.parametrize("capability_reference_date", [_committed_evidence_expiry_date()], indirect=True)
+def test_committed_evidence_expires_after_the_reference_period() -> None:
+    """Committed evidence must expire thirty-one days after its oldest verification date."""
+    assert any("older than 30 days" in error for error in validate_all())
 
 
 def test_every_required_provider_has_a_matrix() -> None:
@@ -298,12 +318,14 @@ def test_checker_rejects_future_verified_on(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(("age", "message"), [(-1, "in the future"), (0, None), (30, None), (31, "older than 30 days")])
 @pytest.mark.parametrize("target", ["matrix", "source"])
-def test_evidence_freshness_boundary(tmp_path: Path, age: int, message: str | None, target: str) -> None:
+def test_evidence_freshness_boundary(
+    tmp_path: Path, age: int, message: str | None, target: str, capability_reference_date: date
+) -> None:
     """Both matrix reviews and individual sources expire; the thirtieth day is still valid."""
     root = _copy_design(tmp_path)
     matrix = _load(root, "google")
     evidence = matrix if target == "matrix" else next(iter(matrix["sources"].values()))
-    evidence["verified_on"] = (datetime.now(tz=UTC).date() - timedelta(days=age)).isoformat()
+    evidence["verified_on"] = (capability_reference_date - timedelta(days=age)).isoformat()
 
     errors = validate_matrix(_save(root, "google", matrix))
 
@@ -313,10 +335,12 @@ def test_evidence_freshness_boundary(tmp_path: Path, age: int, message: str | No
         assert any(message in error for error in errors)
 
 
-def test_checker_rejects_old_source_even_with_fresh_matrix_date(tmp_path: Path) -> None:
+def test_checker_rejects_old_source_even_with_fresh_matrix_date(
+    tmp_path: Path, capability_reference_date: date
+) -> None:
     root = _copy_design(tmp_path)
     matrix = _load(root, "slack")
-    matrix["verified_on"] = datetime.now(tz=UTC).date().isoformat()
+    matrix["verified_on"] = capability_reference_date.isoformat()
     matrix["sources"]["slack-scopes"]["verified_on"] = "2019-01-01"
 
     errors = validate_matrix(_save(root, "slack", matrix))

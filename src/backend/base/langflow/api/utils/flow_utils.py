@@ -29,8 +29,10 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.traces.model import SpanTable, TraceTable
 from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from langflow.services.triggers.cleanup import delete_triggers
 
 if TYPE_CHECKING:
     from lfx.services.authorization.base import ExecutionPrincipal
@@ -134,6 +136,7 @@ async def cascade_delete_flow(
     """
     # Imported lazily so this module (loaded early, via ``api.utils``) stays free
     # of the memory-base service import chain.
+    from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
     from langflow.services.memory_base.flow_cleanup import purge_flow_memory_bases
 
     try:
@@ -143,6 +146,10 @@ async def cascade_delete_flow(
         # cannot trip an FK constraint. Returns handles for the post-commit external
         # teardown of remote collections + local KB directories.
         flow_memory_base_cleanups = await purge_flow_memory_bases(session, flow_id)
+        # Remove trigger pins before versions, and payloads even when SQLite
+        # foreign-key enforcement is disabled.
+        trigger_ids = (await session.exec(select(Trigger.id).where(Trigger.flow_id == flow_id))).all()
+        await delete_triggers(session, trigger_ids=trigger_ids)
         # TODO: Verify if deleting messages is safe in terms of session id relevance
         # If we delete messages directly, rather than setting flow_id to null,
         # it might cause unexpected behaviors because the session id could still be
@@ -170,6 +177,8 @@ async def cascade_delete_flow(
             delete(AuthzShare).where(AuthzShare.resource_type == "flow").where(AuthzShare.resource_id == flow_id)
         )
         result = await session.exec(delete(Flow).where(Flow.id == flow_id))
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,

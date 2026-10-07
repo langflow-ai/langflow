@@ -4,6 +4,7 @@ This test class focuses on components that are compatible with S3 storage.
 """
 
 from contextlib import contextmanager
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -11,6 +12,15 @@ from lfx.components.files_and_knowledge.file import FileComponent
 from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
 from lfx.components.langchain_utilities.csv_agent import CSVAgentComponent
 from lfx.components.langchain_utilities.json_agent import JsonAgentComponent
+
+
+@pytest.fixture(autouse=True)
+def _unrestricted_file_access(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests exercise S3-vs-local dispatch mechanics, not containment; opt out of restriction."""
+    monkeypatch.setattr(
+        "lfx.utils.file_path_security.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+    )
 
 
 @contextmanager

@@ -976,7 +976,10 @@ class MCPToolsComponent(ComponentWithCache):
         """Collect tool kwargs from component inputs, omitting blank optional values."""
         kwargs: dict[str, Any] = {}
         for arg_name, model_field in args_schema.model_fields.items():
-            value = getattr(self, arg_name, None)
+            # MCP argument names come from the server and can match component methods or metadata.
+            value = self._attributes.get(arg_name)
+            if arg_name not in self._attributes and arg_name in self._inputs:
+                value = self._inputs[arg_name].value
             if isinstance(value, Message):
                 value = value.text
 

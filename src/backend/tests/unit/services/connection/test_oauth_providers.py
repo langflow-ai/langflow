@@ -1,6 +1,7 @@
 """Provider protocol differences, configuration restrictions, and redaction."""
 
 import json
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
@@ -38,7 +39,8 @@ def config(**kwargs):
         {"redirect_uri": "http://localhost.evil.example/api/v1/connections/oauth/google/callback"},
         {"redirect_uri": "http://localhost/api/v1/connections/oauth/google/callback?next=elsewhere"},
         {"redirect_uri": _INVALID_AUTH_ORIGIN + "/api/v1/connections/oauth/google/callback"},
-        {"client_secret": "should-not-be-embedded"},  # pragma: allowlist secret - deliberately invalid test fixture
+        {"context": "self_managed", "client_secret": "should-not-be-embedded"},  # pragma: allowlist secret
+        {"private_key": "should-not-be-embedded"},  # pragma: allowlist secret - deliberately invalid test fixture
         {"profile": "bot"},
         {"context": "self_managed", "owner": "langflow"},
         {"allowed_tenants": ["example.com"]},
@@ -97,6 +99,61 @@ def test_public_clients_use_s256_and_no_client_secret(provider):
     assert params["code_challenge"] == [providers.challenge("v" * 64)]
     assert "client_secret" not in providers.client_auth(registration)
     assert params["user_scope" if provider == "slack" else "scope"] == ["read"]
+
+
+@pytest.mark.parametrize("owner", ["customer", "langflow"])
+@pytest.mark.parametrize("refresh", [False, True])
+async def test_google_desktop_client_parameter_keeps_pkce_and_is_sent_only_to_token_endpoint(
+    monkeypatch, owner, refresh
+):
+    client_parameter = "desktop-client-parameter"
+    registration = config(owner=owner, client_secret=client_parameter)
+    assert registration.client_type == "public"
+    assert client_parameter not in repr(registration)
+    assert client_parameter not in registration.model_dump_json()
+    url = providers.authorization_url(registration, state="test-state", verifier="v" * 64, scopes=["read"])
+    params = parse_qs(urlsplit(url).query)
+    assert params["code_challenge_method"] == ["S256"]
+    assert params["code_challenge"] == [providers.challenge("v" * 64)]
+    assert "client_secret" not in params
+    assert client_parameter not in url
+    calls = []
+
+    async def request(url, data, **_kwargs):
+        calls.append(data)
+        assert url == "https://oauth2.googleapis.com/token"
+        assert data["client_secret"] == client_parameter
+        assert data["client_id"] == registration.client_id
+        if refresh:
+            assert data["grant_type"] == "refresh_token"
+        else:
+            assert data["code_verifier"] == "v" * 64
+        return {"access_token": "qa-access", "expires_in": 3600}
+
+    monkeypatch.setattr(providers, "_request", request)
+    await providers.exchange(
+        registration,
+        code="qa-code",
+        verifier="v" * 64,
+        refresh_token="qa-refresh" if refresh else None,
+        previous_scopes=["read"],
+    )
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("provider", "context"),
+    [("google", "self_managed"), ("google", "hosted"), ("microsoft", "desktop"), ("slack", "desktop")],
+)
+def test_google_desktop_exception_does_not_allow_other_public_client_secrets(provider, context):
+    with pytest.raises(ValidationError, match="Public clients cannot contain registration secrets"):
+        config(
+            provider=provider,
+            context=context,
+            tenant="12345678-1234-1234-1234-123456789abc" if provider == "microsoft" else None,
+            redirect_uri=f"http://localhost/api/v1/connections/oauth/{provider}/callback",
+            client_secret="qa-client-parameter",  # noqa: S106 - test fixture  # pragma: allowlist secret
+        )
 
 
 @pytest.mark.parametrize("profile", ["user", "bot"])
@@ -243,3 +300,115 @@ async def test_google_restriction_verifies_signed_tenant_and_audience(monkeypatc
     )
     with pytest.raises(OAuthError, match="tenant"):
         await providers._google_account(registration, wrong_audience)
+
+
+async def test_google_account_is_shown_without_a_tenant_restriction(monkeypatch):
+    import time
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_jwk = json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(key.public_key()))
+    public_jwk["kid"] = "google-key"
+    original_client = httpx.AsyncClient
+    transport = httpx.MockTransport(lambda _request: httpx.Response(200, json={"keys": [public_jwk]}))
+    monkeypatch.setattr(providers.httpx, "AsyncClient", lambda **kwargs: original_client(transport=transport, **kwargs))
+    registration = config(scopes=["openid", "email"])
+    token = jwt.encode(
+        {
+            "sub": "google-user",
+            "email": "google@example.com",
+            "aud": registration.client_id,
+            "iss": "https://accounts.google.com",
+            "iat": int(time.time()),
+            "exp": int(time.time()) + 300,
+        },
+        key,
+        algorithm="RS256",
+        headers={"kid": "google-key"},
+    )
+
+    async def request(_url, _data, **_kwargs):
+        return {"access_token": "secret-access", "scope": "openid email", "id_token": token}
+
+    monkeypatch.setattr(providers, "_request", request)
+    payload, _, account = await providers.exchange(registration, code="code", previous_scopes=registration.scopes)
+    assert account == {"id": "google-user", "tenant_id": None, "display": "google@example.com"}
+    assert "id_token" not in payload
+
+
+async def test_microsoft_account_is_verified_and_exposed_as_metadata(monkeypatch):
+    import time
+
+    tenant = "12345678-1234-1234-1234-123456789abc"
+    registration = config(
+        provider="microsoft",
+        tenant=tenant,
+        scopes=["openid", "email", "profile"],
+        redirect_uri="http://localhost/api/v1/connections/oauth/microsoft/callback",
+    )
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_jwk = json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(key.public_key()))
+    public_jwk.update(kid="microsoft-key", issuer=f"https://login.microsoftonline.com/{tenant}/v2.0")
+    original_client = httpx.AsyncClient
+    transport = httpx.MockTransport(lambda _request: httpx.Response(200, json={"keys": [public_jwk]}))
+    monkeypatch.setattr(providers.httpx, "AsyncClient", lambda **kwargs: original_client(transport=transport, **kwargs))
+    claims = {
+        "sub": "pairwise-user",
+        "oid": "user-object-id",
+        "tid": tenant,
+        "preferred_username": "user@example.com",
+        "aud": registration.client_id,
+        "iss": f"https://login.microsoftonline.com/{tenant}/v2.0",
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 300,
+    }
+
+    async def exchange_with(token):
+        async def request(_url, _data, **_kwargs):
+            return {"access_token": "secret-access", "scope": "openid email profile", "id_token": token}
+
+        monkeypatch.setattr(providers, "_request", request)
+        return await providers.exchange(registration, code="code", previous_scopes=registration.scopes)
+
+    token = jwt.encode(claims, key, algorithm="RS256", headers={"kid": "microsoft-key"})
+    payload, _, account = await exchange_with(token)
+    assert account == {"id": "user-object-id", "tenant_id": tenant, "display": "user@example.com"}
+    assert "id_token" not in payload
+    for changed in ({"aud": "other-client"}, {"tid": "other-tenant"}, {"iss": "https://evil.example"}):
+        invalid = jwt.encode({**claims, **changed}, key, algorithm="RS256", headers={"kid": "microsoft-key"})
+        with pytest.raises(OAuthError, match="invalid account identity"):
+            await exchange_with(invalid)
+    unsigned = jwt.encode(claims, key="", algorithm="none")
+    with pytest.raises(OAuthError, match="invalid account identity"):
+        await exchange_with(unsigned)
+
+
+def test_slack_bundle_manifest_pins_the_same_endpoints_as_the_broker():
+    """The lfx-slack auth profiles and the broker must not drift apart.
+
+    ``providers.endpoints`` hardcodes Slack's authorize and token URLs, while the
+    bundle manifest declares them for INT-8's connection picker. If either side
+    changes alone the picker sends a user to one authorization server and the
+    broker exchanges the code at another, so pin the equality here.
+    """
+    manifest_path = (
+        Path(__file__).resolve().parents[5]
+        / "bundles"
+        / "slack"
+        / "src"
+        / "lfx_slack"
+        / "components"
+        / "slack"
+        / "capabilities.v1.json"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    authorize, token = providers.endpoints(
+        config(provider="slack", redirect_uri="http://localhost/api/v1/connections/oauth/slack/callback")
+    )
+
+    # The app-level token profile is entered by hand and never goes through the
+    # broker, so it declares no OAuth endpoints to pin.
+    profiles = {profile["id"]: profile for profile in manifest["auth_profiles"] if profile["kind"] != "api_key"}
+    assert set(profiles) == {"slack-user-oauth", "slack-bot-install"}
+    for profile in profiles.values():
+        assert profile["authorization_url"] == authorize
+        assert profile["token_url"] == token

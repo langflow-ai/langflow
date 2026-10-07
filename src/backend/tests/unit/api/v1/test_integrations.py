@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.no_blockbuster
 
 PROVIDER = "google_workspace"
+# Keep the absent-provider ceiling independent of installed integration bundles.
+UNLOADED_PROVIDER = "test_unloaded_provider"
 SEARCH_CAPABILITY = f"{PROVIDER}.drive.files.search"
 DELETE_CAPABILITY = f"{PROVIDER}.drive.files.delete"
 SEARCH_KEY = f"integrations.{PROVIDER}.drive.search"
@@ -144,7 +146,7 @@ async def test_list_integrations_omits_a_provider_outside_the_ceiling(
     integration_policy,
 ) -> None:
     """QA: discovery enforces provider policy."""
-    integration_policy(providers=frozenset({"slack"}))
+    integration_policy(providers=frozenset({UNLOADED_PROVIDER}))
 
     response = await client.get("api/v1/integrations", headers=logged_in_headers)
 
@@ -180,7 +182,7 @@ async def test_include_blocked_is_refused_for_a_non_superuser(
     listing already hides what execution would refuse, and ``include_blocked``
     is the operator panel's view of *why*.
     """
-    integration_policy(providers=frozenset({"slack"}), actions=frozenset({DELETE_KEY}))
+    integration_policy(providers=frozenset({UNLOADED_PROVIDER}), actions=frozenset({DELETE_KEY}))
 
     response = await client.get("api/v1/integrations?include_blocked=true", headers=logged_in_headers)
 
@@ -196,7 +198,7 @@ async def test_include_blocked_explains_every_decision_for_the_operator_panel(
     logged_in_headers_super_user: dict[str, str],
     integration_policy,
 ) -> None:
-    integration_policy(providers=frozenset({"slack"}), actions=frozenset({DELETE_KEY}))
+    integration_policy(providers=frozenset({UNLOADED_PROVIDER}), actions=frozenset({DELETE_KEY}))
 
     response = await client.get("api/v1/integrations?include_blocked=true", headers=logged_in_headers_super_user)
 
@@ -342,7 +344,9 @@ async def test_effective_policy_reports_the_ceiling_and_deny_list(
 async def test_effective_policy_hides_operator_denials_from_plain_callers(
     client: AsyncClient, logged_in_headers: dict[str, str], integration_policy, *, approved: bool
 ) -> None:
-    integration_policy(providers=frozenset({PROVIDER if approved else "slack"}), actions=frozenset({DELETE_KEY}))
+    integration_policy(
+        providers=frozenset({PROVIDER if approved else UNLOADED_PROVIDER}), actions=frozenset({DELETE_KEY})
+    )
 
     response = await client.get("api/v1/integrations/policy/effective", headers=logged_in_headers)
 
@@ -383,3 +387,20 @@ async def test_integration_routes_require_authentication(client: AsyncClient) ->
     for path in ("api/v1/integrations", "api/v1/integrations/policy/effective"):
         response = await client.get(path)
         assert response.status_code in {401, 403}, f"{path}: {response.text}"
+
+
+@pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize("context", ["self_managed", "hosted", "desktop"])
+async def test_list_integrations_reports_the_deployment_context(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    monkeypatch,
+    context: str,
+) -> None:
+    """The connection dialog needs it: hosted offers no pasted Slack tokens."""
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", context)
+
+    response = await client.get("api/v1/integrations", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["deployment_context"] == context

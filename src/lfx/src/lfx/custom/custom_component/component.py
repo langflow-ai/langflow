@@ -26,6 +26,7 @@ from lfx.base.tools.constants import (
 from lfx.custom.annotation_validation import (
     resolve_method_return_annotation,
 )
+from lfx.custom.custom_component.input_names import ensure_inputs_not_shadowed_by_methods
 from lfx.custom.tree_visitor import RequiredInputsVisitor
 from lfx.exceptions.component import StreamingError
 from lfx.field_typing import Tool  # noqa: TC001
@@ -43,7 +44,7 @@ from lfx.schema.token_usage import accumulate_usage, extract_usage_from_chunk
 from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
-from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.async_helpers import async_delegate_target, run_until_complete
 from lfx.utils.secrets import is_secret_value, unwrap_secret_value
 from lfx.utils.util import find_closest_match
 
@@ -177,6 +178,7 @@ class Component(CustomComponent):
         if overlap := self._there_is_overlap_in_inputs_and_outputs():
             msg = f"Inputs and outputs have overlapping names: {overlap}"
             raise ValueError(msg)
+        ensure_inputs_not_shadowed_by_methods(type(self), self.inputs)
         self._output_logs: dict[str, list[Log]] = {}
         self._current_output: str = ""
         self._metadata: dict = {}
@@ -1709,8 +1711,16 @@ class Component(CustomComponent):
             raise ValueError(msg)
 
         method = getattr(self, output.method)
+        # A sync output method that merely wraps a coroutine (``delegates_to``) is awaited
+        # directly instead of running in a thread that would spin up its own event loop.
+        async_method = async_delegate_target(self, output.method)
         try:
-            result = await method() if inspect.iscoroutinefunction(method) else await asyncio.to_thread(method)
+            if async_method is not None:
+                result = await async_method()
+            elif inspect.iscoroutinefunction(method):
+                result = await method()
+            else:
+                result = await asyncio.to_thread(method)
         except TypeError as e:
             msg = f'Error running method "{output.method}": {e}'
             raise TypeError(msg) from e
@@ -2185,7 +2195,8 @@ class Component(CustomComponent):
         - Error handling and cleanup
 
         Message ID Rules:
-        - Messages only have an ID after being stored in the database
+        - Persisted messages get an ID from storage; ephemeral messages get an
+          in-memory ID so streaming events can be correlated
         - If _should_skip_message() returns True, the message is not stored and will not have an ID
         - Always use message.get_id() or message.has_id() to safely check for ID existence
         - Never access message.id directly without checking if it exists first
@@ -2195,8 +2206,8 @@ class Component(CustomComponent):
             id_: Optional message ID (used for event emission, not database storage)
             skip_db_update: If True, only update in-memory and send event, skip DB write.
                            Useful during streaming to avoid excessive DB round-trips.
-                           Note: When skip_db_update=True, the message must already have an ID
-                           (i.e., it must have been stored previously).
+                           Persistent messages must already have a stored ID;
+                           ephemeral messages use their in-memory ID.
 
         Returns:
             Message: The stored message (with ID if stored in database, without ID if skipped)
@@ -2213,23 +2224,25 @@ class Component(CustomComponent):
         # Ensure required fields for message storage are set
         self._ensure_message_required_fields(message)
 
-        # If skip_db_update is True and message already has an ID, skip the DB write
-        # This path is used during agent streaming to avoid excessive DB round-trips
-        # When skip_db_update=True, we require the message to already have an ID
-        # because we're updating an existing message, not creating a new one
-        if skip_db_update:
-            if not message.has_id():
-                from lfx.memory.flow_context import should_persist_messages
+        from lfx.memory.flow_context import should_persist_messages
 
-                if should_persist_messages():
-                    msg = (
-                        "skip_db_update=True requires the message to already have an ID. "
-                        "The message must have been stored in the database previously."
-                    )
-                    raise ValueError(msg)
-                # Ephemeral (anonymous serving) run: messages are never stored, so
-                # no ID can exist. There is no DB row to protect — fall through and
-                # emit the in-memory event only, keeping agent streaming working.
+        # Ephemeral runs still need a stable ID to correlate streamed message
+        # events. This ID stays in memory; astore_message skips the DB write.
+        persist_messages = should_persist_messages()
+        if not persist_messages and not message.has_id():
+            message.id = nanoid.generate()
+
+        # This path avoids DB round-trips during agent streaming. Persisting
+        # runs require an existing stored ID; ephemeral runs use the ID above.
+        if skip_db_update:
+            if not message.has_id() and persist_messages:
+                msg = (
+                    "skip_db_update=True requires the message to already have an ID. "
+                    "The message must have been stored in the database previously."
+                )
+                raise ValueError(msg)
+            # Ephemeral runs use the in-memory ID assigned above, so their
+            # streaming events remain correlated without a DB row.
 
             # Create a fresh Message instance for consistency with normal flow
             stored_message = await Message.create(**message.model_dump())

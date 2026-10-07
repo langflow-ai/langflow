@@ -106,6 +106,7 @@ _enterprise_lifespan_hooks: dict[str, list[Callable[[], Awaitable[None]]]] = {
 
 
 async def _run_enterprise_lifespan_hooks(phase: str) -> None:
+    """Run registered enterprise lifecycle hooks and isolate failures between hooks."""
     for hook in list(_enterprise_lifespan_hooks.get(phase, [])):
         try:
             await hook()
@@ -125,12 +126,15 @@ async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
     def __init__(self, app) -> None:
+        """Initialize middleware that tracks client disconnections."""
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Race request handling against a client-disconnection watcher."""
         sentinel = object()
 
         async def cancel_handler():
+            """Wait until the requesting client disconnects."""
             while True:
                 if await request.is_disconnected():
                     return sentinel
@@ -151,6 +155,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Convert serialization failures into an HTTP response."""
         try:
             response = await call_next(request)
         except Exception as exc:
@@ -172,6 +177,7 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
 
 
 async def load_bundles_with_error_handling():
+    """Load configured bundles and fall back to an empty result on network errors."""
     try:
         return await load_bundles_from_urls()
     except (httpx.TimeoutException, httpx.HTTPError, httpx.RequestError) as exc:
@@ -205,10 +211,12 @@ def warn_about_future_cors_changes(settings):
 
 
 def get_lifespan(*, fix_migration=False, version=None):
+    """Build the application startup and shutdown context for services and background workers."""
     initialize_settings_service()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        """Start application services and stop their owned background tasks on shutdown."""
         from lfx.interface.components import component_cache, get_and_cache_all_types_dict
 
         from langflow.preload import (
@@ -233,6 +241,13 @@ def get_lifespan(*, fix_migration=False, version=None):
         # even when startup fails before it is created.
         lag_monitor = None
         warm_registry_task = None
+        # Started per worker below when trigger_dispatcher_enabled; the loops it
+        # owns are DB-leased singletons, so every replica may run one.
+        trigger_dispatcher = None
+        # The listener child, in subprocess mode only. Exactly one API worker
+        # hosts it (a named lease elects which), because the API defaults to
+        # several workers and N listeners would fight over every connection.
+        trigger_listeners = None
         # Bind ``temp_dirs`` before the ``try`` so the shutdown cleanup in the
         # ``finally`` block (which iterates it) never raises ``UnboundLocalError``
         # when startup fails before bundle loading assigns it below. Otherwise an
@@ -280,7 +295,20 @@ def get_lifespan(*, fix_migration=False, version=None):
             # so each worker rebuilds its own connection pool (idempotent otherwise).
             await initialize_services(fix_migration=fix_migration)
             await initialize_environment_variables()
+            from langflow.services.knowledge_base_storage.coordinator import fence_legacy_records, schedule_upgrade
+
+            await fence_legacy_records()
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
+
+            # Surface the custom-component execution posture. Component code is exec()'d on
+            # the server at flow-build time (the feature); in multi-user mode with the
+            # permissive defaults every active non-admin user can therefore run arbitrary
+            # code. Warn once so operators discover the two lockdown settings rather than
+            # learning about the exposure from a report. No-op for the single-user default
+            # and for any deployment that already restricted this. Never raises.
+            from langflow.utils.security_posture import log_custom_component_execution_posture
+
+            await log_custom_component_execution_posture(get_settings_service())
 
             # Surface env-driven pgVector so operators can confirm the deployment
             # snap-configured to Postgres as the default Knowledge Base vector store.
@@ -382,11 +410,18 @@ def get_lifespan(*, fix_migration=False, version=None):
             except Exception as exc:  # noqa: BLE001
                 await logger.awarning("Memory Base row reconciliation skipped after startup error: %s", exc)
 
+            # Include reconstructed Memory backing rows in the same automatic
+            # upgrade. No ingestion-status update can remove their storage fence.
+            await fence_legacy_records()
+            schedule_upgrade()
+
+            prometheus_started = False
             if get_settings_service().settings.prometheus_enabled:
                 try:
                     from prometheus_client import start_http_server
 
                     start_http_server(get_settings_service().settings.prometheus_port)
+                    prometheus_started = True
                     await logger.adebug(
                         f"Started Prometheus server on port {get_settings_service().settings.prometheus_port}"
                     )
@@ -404,6 +439,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                         )
                     else:
                         await logger.awarning(f"Failed to start Prometheus server: {e}")
+
+            # Only the process that actually bound the Prometheus port runs the DB-derived
+            # collector, so `gunicorn -w N` does not spawn N collectors all querying the
+            # database while only one of them exposes anything to scrape.
+            from langflow.services.background_execution.metrics_collector import maybe_start_metrics_collector
+
+            await maybe_start_metrics_collector(
+                _app, get_settings_service().settings, prometheus_started=prometheus_started
+            )
 
             telemetry_service = get_telemetry_service()
 
@@ -563,10 +607,31 @@ def get_lifespan(*, fix_migration=False, version=None):
             with suppress(Exception):
                 await get_background_execution_service().sweep_orphans_on_startup()
 
+            # Triggers: the dispatcher and the schedule tick producer. Both are
+            # singletons held by a ``trigger_lease`` row, so starting one in
+            # every API replica still fires each schedule once and runs each
+            # ledger event once. Best-effort: a trigger loop that cannot start
+            # must never stop the API from booting.
+            with suppress(Exception):
+                from langflow.services.triggers.dispatcher import start_dispatcher_if_enabled
+
+                trigger_dispatcher = start_dispatcher_if_enabled()
+
+            # Track B listeners. Off unless LANGFLOW_LISTENERS_MODE=subprocess:
+            # the supported multi-replica shape is a separate `langflow
+            # listeners` service, which the API neither starts nor knows about.
+            with suppress(Exception):
+                from langflow.services.triggers.listeners.subprocess_host import (
+                    start_listener_subprocess_if_enabled,
+                )
+
+                trigger_listeners = start_listener_subprocess_if_enabled()
+
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
             async def delayed_init_mcp_servers():
+                """Initialize project MCP servers after starter-project setup has had time to finish."""
                 await asyncio.sleep(10.0)  # Increased delay to allow starter projects to be created
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Loading MCP servers for projects")
@@ -711,11 +776,30 @@ def get_lifespan(*, fix_migration=False, version=None):
             # This ensures MCP subprocesses are killed even if shutdown is interrupted.
             await cleanup_mcp_sessions()
 
+            # Stop the background-execution metrics collector. No-op when it never
+            # started, and it swallows its own errors: a collector that fails to stop
+            # must not be the reason shutdown does not finish.
+            from langflow.services.background_execution.metrics_collector import stop_metrics_collector
+
+            await stop_metrics_collector(_app)
+
             # Enterprise shutdown hooks run before service teardown so they can
             # still flush through live services. Also reached when startup
             # failed before the hooks ran — enterprise stop() paths must (and
             # do) tolerate never having started.
             await _run_enterprise_lifespan_hooks("shutdown")
+            from langflow.services.knowledge_base_storage.coordinator import stop_upgrade
+
+            try:
+                await stop_upgrade()
+            except Exception as exc:  # noqa: BLE001 -- storage shutdown must not skip other cleanup
+                await logger.awarning("Failed to stop storage upgrade: %s", type(exc).__name__)
+            from langflow.services.knowledge_base_storage.runtime import close_coordination_pools
+
+            try:
+                await close_coordination_pools()
+            except Exception as exc:  # noqa: BLE001 -- failed disposal must not skip service and sandbox cleanup
+                await logger.awarning("Failed to close storage coordination pools: %s", type(exc).__name__)
 
             # After the MCP cleanup above, deliberately: stopping the sampler awaits a
             # cancellation, and parking there first would both delay that guarantee and give
@@ -802,6 +886,16 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if warm_registry_task and not warm_registry_task.done():
                         warm_registry_task.cancel()
                         tasks_to_cancel.append(warm_registry_task)
+                    # SIGTERM the listener child and wait for it, so its
+                    # connection leases are released rather than left to expire.
+                    if trigger_listeners is not None:
+                        with suppress(Exception):
+                            await trigger_listeners.stop()
+                    # Stops the loop AND hands the lease back, so another
+                    # replica takes over without waiting out the TTL.
+                    if trigger_dispatcher is not None:
+                        with suppress(Exception):
+                            await trigger_dispatcher.stop()
                     if tasks_to_cancel:
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
@@ -868,6 +962,18 @@ def get_lifespan(*, fix_migration=False, version=None):
 
 def create_app():
     """Create the FastAPI app and include the router."""
+    from langflow.services.triggers.listeners.guard import is_listener_process
+
+    if is_listener_process():
+        # decisions/process-model.md: "The boot path asserts that no FastAPI app
+        # is created in the listener process, so the two never converge again by
+        # accident." Both prior trigger attempts converged here.
+        msg = (
+            "This process is a Langflow trigger listener and must not host the API. "
+            "Run the API and 'langflow listeners' as separate processes."
+        )
+        raise RuntimeError(msg)
+
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]
@@ -946,6 +1052,7 @@ def create_app():
 
     @app.middleware("http")
     async def check_boundary(request: Request, call_next):
+        """Require a multipart boundary for file-upload requests."""
         if "/api/v1/files/upload" in request.url.path:
             content_type = request.headers.get("Content-Type")
 
@@ -1003,6 +1110,7 @@ def create_app():
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
+        """Expand comma-separated query values into repeated query parameters."""
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
             flattened.extend((key, entry) for entry in value.split(","))
@@ -1066,6 +1174,7 @@ def create_app():
 
     @app.exception_handler(DeploymentGuardError)
     async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):
+        """Return a conflict response when a deployment guard rejects an operation."""
         return JSONResponse(
             status_code=HTTPStatus.CONFLICT,
             content={"detail": exc.detail},
@@ -1151,6 +1260,7 @@ def create_app():
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
+        """Convert uncaught application exceptions into API responses."""
         if isinstance(exc, HTTPException):
             await logger.aerror(f"HTTPException: {exc}", exc_info=exc)
             return JSONResponse(
@@ -1221,6 +1331,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
     # get a native 405, and real API routes are registered earlier so they win.
     @app.api_route("/api/{_path:path}", include_in_schema=False, methods=["GET", "HEAD"])
     async def api_not_found(_path: str):
+        """Reject unknown API routes before the frontend catch-all route."""
         raise HTTPException(status_code=404, detail="Not Found")
 
     # Serve the favicon from an explicit high-priority route instead of relying on
@@ -1235,6 +1346,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     @app.get("/favicon.ico", include_in_schema=False)
     async def favicon():
+        """Serve the frontend favicon when the asset exists."""
         if await anyio.Path(favicon_path).exists():
             return FileResponse(favicon_path, media_type="image/x-icon")
         raise HTTPException(status_code=404, detail="Not Found")
@@ -1249,6 +1361,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
         # Return JSON for all API endpoints to prevent HTML responses
+        """Return JSON for missing API routes and preserve frontend page handling."""
         if _request.url.path.startswith("/api"):
             # Extract detail from HTTPException if available
             detail = _exc.detail if isinstance(_exc, HTTPException) else "Not Found"

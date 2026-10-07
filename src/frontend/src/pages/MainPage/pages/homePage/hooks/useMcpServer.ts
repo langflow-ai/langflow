@@ -251,6 +251,7 @@ export const useMcpServer = ({
   const mcpJson = useMemo(() => {
     return buildMcpServerJson({
       folderName,
+      backendServerName: mcpProjectData?.server_name,
       selectedPlatform,
       apiUrl,
       isOAuthProject,
@@ -260,6 +261,7 @@ export const useMcpServer = ({
     });
   }, [
     folderName,
+    mcpProjectData?.server_name,
     selectedPlatform,
     apiUrl,
     isOAuthProject,

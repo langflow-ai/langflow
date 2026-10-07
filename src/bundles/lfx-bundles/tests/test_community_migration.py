@@ -5,8 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langchain_core.embeddings import DeterministicFakeEmbedding
-from lfx.schema.data import Data
+from lfx.base.knowledge_bases.backends.chroma import ChromaMigrationRequiredError
 from lfx_bundles.apify.apify_actor import ApifyActorsComponent
 from lfx_bundles.chroma.chroma import ChromaVectorStoreComponent
 from lfx_bundles.cloudflare.cloudflare import CloudflareWorkersAIEmbeddingsComponent
@@ -121,32 +120,20 @@ def test_cloudflare_embeddings_remain_picklable():
     assert restored._inference_url == embeddings._inference_url
 
 
-def test_chroma_persists_filtered_metadata_without_community(tmp_path):
+def test_chroma_retirement_preserves_source_and_bundle_discovery(tmp_path):
+    from lfx.extension.loader._detection import collect_component_classes
+    from lfx_bundles.chroma import chroma as module
+
+    original = tmp_path / "chroma.sqlite3"
+    original.write_bytes(b"existing-source")
+    assert collect_component_classes(module) == [ChromaVectorStoreComponent]
     component = ChromaVectorStoreComponent().set(
         collection_name="migration-test",
         persist_directory=str(tmp_path),
-        embedding=DeterministicFakeEmbedding(size=8),
-        allow_duplicates=True,
-        ingest_data=[
-            Data(
-                data={
-                    "text": "document",
-                    "str": "value",
-                    "bool": False,
-                    "int": 0,
-                    "float": 1.5,
-                    "none": None,
-                    "list": [],
-                    "dict": {},
-                }
-            )
-        ],
     )
-    with patch.dict("sys.modules", {"langchain_community.vectorstores.utils": None}):
-        store = component.build_vector_store()
-    result = store.get()
-    assert result["documents"] == ["document"]
-    assert result["metadatas"] == [{"str": "value", "bool": False, "int": 0, "float": 1.5}]
+    with pytest.raises(ChromaMigrationRequiredError, match="requires migration"):
+        component.build_vector_store()
+    assert original.read_bytes() == b"existing-source"
 
 
 @pytest.mark.asyncio

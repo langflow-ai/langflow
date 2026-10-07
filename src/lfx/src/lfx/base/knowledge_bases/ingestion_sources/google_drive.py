@@ -27,7 +27,7 @@ list, download and export is three URLs.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import quote
 
 from lfx.base.knowledge_bases.ingestion_sources.base import (
@@ -118,6 +118,8 @@ class GoogleDriveSource(KBConnectorSource):
     )
     icon = "google-drive"
     requires_credentials = True
+    connection_provider: ClassVar[str] = PROVIDER_ID
+    connection_required_scopes: ClassVar[tuple[str, ...]] = (DRIVE_FILE_SCOPE,)
 
     def __init__(self, user_id, source_config: dict[str, Any]) -> None:
         super().__init__(user_id=user_id, source_config=source_config)

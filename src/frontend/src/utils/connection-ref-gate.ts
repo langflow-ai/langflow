@@ -3,12 +3,14 @@ import type { APIClassType, APIDataType, InputFieldType } from "@/types/api";
 /**
  * Connection-backed components (the Google Workspace actions and their
  * Microsoft/Slack siblings) select a managed connection through a
- * `connection_ref` input. The builder has no renderer for that field type
- * until INT-8 ships the connection picker, so a required `connection_ref` can
- * never be set from the canvas and every run of such a component fails.
+ * `connection_ref` input, rendered by the connection picker
+ * (`components/core/parameterRenderComponent/components/connectionRefComponent`).
  *
- * While `ENABLE_INTEGRATIONS` is false the builder keeps these components and
- * fields out of view. INT-8 flips the flag once the renderer exists.
+ * The helpers below stay behind `ENABLE_INTEGRATIONS`, which is now a kill
+ * switch: a distribution that turns it off keeps these components and their
+ * fields out of the palette, the canvas and the Inspector Panel, because
+ * without a renderer a required `connection_ref` can never be set and every
+ * run of such a component fails.
  */
 export const CONNECTION_REF_FIELD_TYPE = "connection_ref";
 
