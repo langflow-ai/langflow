@@ -532,17 +532,32 @@ async def aget_provider_variable_value(user_id: UUID | str | None, variable_key:
     return _to_str(await _get_variable()) or _environment_variable_value(variable_key)
 
 
-async def aget_live_model_variables(user_id, enabled_providers, provider_metadata) -> dict[str, str | None]:
+async def aget_live_model_variables(
+    user_id: UUID | str | None,
+    enabled_providers: set[str],
+    provider_metadata: dict[str, Any],
+) -> dict[str, str | None]:
     """Read declared live-discovery variables before entering network/SDK workers."""
-    keys = set()
-    for provider in (*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS):
-        if provider not in enabled_providers:
-            continue
+    keys: set[str] = set()
+    for provider in enabled_providers & (LIVE_MODEL_PROVIDERS | CONDITIONAL_LIVE_MODEL_PROVIDERS):
         keys.update(_LIVE_DISCOVERY_VARIABLES.get(provider, ()))
         for variable in provider_metadata.get(provider, {}).get("variables", []):
             if key := variable.get("variable_key"):
                 keys.add(key)
-    return {key: await aget_provider_variable_value(user_id, key) for key in sorted(keys)}
+    if not keys:
+        return {}
+    values = {}
+    if user_id is not None and str(user_id) != "None":
+        async with session_scope() as session:
+            variable_service = get_variable_service()
+            if variable_service is not None:
+                values = await variable_service.get_variables(
+                    user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                    names=keys,
+                    field="",
+                    session=session,
+                )
+    return {key: _to_str(values.get(key)) or _environment_variable_value(key) for key in sorted(keys)}
 
 
 def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -1373,10 +1388,7 @@ def _replace_with_live_models(provider_models, user_id, enabled_providers, model
     if not user_id or not enabled_providers:
         return provider_models
 
-    for provider in (*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS):
-        if provider not in enabled_providers:
-            continue
-
+    for provider in sorted(set(enabled_providers) & (LIVE_MODEL_PROVIDERS | CONDITIONAL_LIVE_MODEL_PROVIDERS)):
         if model_type is None:
             live_llm = get_live_models_for_provider(user_id, provider, "llm")
             live_emb = get_live_models_for_provider(user_id, provider, "embeddings")

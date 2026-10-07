@@ -422,10 +422,10 @@ def register_provider(spec: ProviderDescriptor) -> bool:
 
         # --- live-discovery gate (C2) -------------------------------------
         if spec.live and spec.name not in LIVE_MODEL_PROVIDERS:
-            LIVE_MODEL_PROVIDERS.append(spec.name)
+            LIVE_MODEL_PROVIDERS.add(spec.name)
             _undo.live_names.add(spec.name)
         if spec.conditional_live and spec.name not in CONDITIONAL_LIVE_MODEL_PROVIDERS:
-            CONDITIONAL_LIVE_MODEL_PROVIDERS.append(spec.name)
+            CONDITIONAL_LIVE_MODEL_PROVIDERS.add(spec.name)
             _undo.conditional_live_names.add(spec.name)
 
         _registered[spec.name] = spec
