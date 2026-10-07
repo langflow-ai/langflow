@@ -39,10 +39,21 @@ _TIMEOUT = 10
 _PASSWORD_OPTIONS = frozenset({"password", "sslpassword"})
 
 
+def _read(address: str) -> sa.engine.URL:
+    """The address as SQLAlchemy reads it, without what a password spilled into the host.
+
+    A password with an "@" that is typed as it is, and not as %40, ends at that "@" where the address
+    is read, and the rest of it is taken for the start of the host. No host holds an "@", so whatever
+    stands before the last one is cut.
+    """
+    url = sa.make_url(address)
+    return url.set(host=url.host.rpartition("@")[2]) if url.host and "@" in url.host else url
+
+
 def location(address: str) -> str | None:
     """Where a database is, without the user or the password. None for an address that cannot be read."""
     try:
-        url = sa.make_url(address)
+        url = _read(address)
     except (sa.exc.ArgumentError, ValueError):
         return None
     host = f"[{url.host}]" if url.host and ":" in url.host else url.host
@@ -58,7 +69,7 @@ def database_identity(address: str) -> str:
     password do not, so the same destination written two ways has one identity.
     """
     try:
-        url = sa.make_url(address)
+        url = _read(address)
     except (sa.exc.ArgumentError, ValueError):
         return ""
     options = sorted((name, value) for name, value in url.query.items() if name not in _PASSWORD_OPTIONS)
@@ -168,6 +179,9 @@ def _ask(address: str, question: Callable[[sa.Connection], dict[str, Any] | None
     if url.get_backend_name() != "postgresql":
         # Anything else would be opened too, and a SQLite address creates the file it names.
         return _failed("db_unreachable", "This is not a PostgreSQL address.")
+    if url.host and "@" in url.host:
+        # The driver would name the host it was given, which starts with the rest of the password.
+        return _failed("db_unreachable", 'The password has an "@" in it. Write each "@" of the password as %40.')
     engine = None
     try:
         engine = sa.create_engine(url, connect_args={"connect_timeout": _TIMEOUT})

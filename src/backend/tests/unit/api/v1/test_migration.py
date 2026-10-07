@@ -1995,6 +1995,32 @@ async def test_a_destination_that_fails_gives_no_password_or_key_away(
     assert "AKIAEXAMPLE" not in record
 
 
+async def test_a_password_with_an_at_sign_in_it_gives_no_part_of_itself_away(
+    client, logged_in_headers_super_user, config_dir, server_log, caplog, capfd
+):
+    headers = logged_in_headers_super_user
+    caplog.set_level(logging.DEBUG)
+    # Typed as it is and not as %40, the "@" ends the password where the address is read, and the rest of
+    # the password is taken for the start of the host.
+    url = f"postgresql://migrator:Summer@Tail2026@{NOWHERE}/langflow"  # pragma: allowlist secret
+
+    responses = [
+        await client.put("api/v1/migration/destinations", json={"database_url": url}, headers=headers),
+        await client.get("api/v1/migration", headers=headers),
+    ]
+
+    assert [response.status_code for response in responses] == [200, 200]
+    database = responses[0].json()["results"]["database"]
+    assert database["code"] == "db_unreachable"
+    # The admin is told what to change, since the driver would only name a host that does not exist.
+    assert "%40" in database["reason"]
+    assert responses[1].json()["record"]["destinations"]["database"] == {
+        "location": f"{NOWHERE}/langflow",
+        "identity": database_identity(f"postgresql://migrator@{NOWHERE}/langflow"),
+    }
+    _nowhere(("Summer", "Tail2026"), responses, config_dir, server_log, caplog, capfd)
+
+
 @pytest.mark.api_key_required
 async def test_a_destination_that_passes_gives_no_password_or_key_away(
     client,
