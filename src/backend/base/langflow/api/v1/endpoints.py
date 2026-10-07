@@ -48,6 +48,7 @@ from lfx.workflow.end_user_identity import (
     end_user_required_detail,
     resolve_serving_scope,
 )
+from pydantic import ValidationError
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -88,6 +89,7 @@ from langflow.api.v1.schemas import (
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
+from langflow.api.validation_errors import redact_validation_errors
 from langflow.api.warm_graph import try_warm_run_graph
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
@@ -251,6 +253,10 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
         if body:
             body_data = orjson.loads(body)
             return SimplifiedAPIRequest(**body_data)
+        return SimplifiedAPIRequest()
+    except ValidationError as exc:
+        # Pydantic's own text quotes the submitted values. Log which field failed and why.
+        logger.warning(f"Failed to parse request body: {redact_validation_errors(exc.errors())}")
         return SimplifiedAPIRequest()
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"Failed to parse request body: {exc}")
