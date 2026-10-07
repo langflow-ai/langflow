@@ -118,3 +118,29 @@ async def test_handle_stream_invokes_directly_when_not_connected_to_chat_output(
     probe.send_message.assert_not_awaited()
     assert lf_message is None
     assert result == "direct"
+
+
+@pytest.mark.asyncio
+async def test_handle_stream_normalizes_list_chunks():
+    """Verify that chunks with list-of-dict content blocks (e.g. Bedrock Converse) are normalized to strings."""
+    probe = _make_probe(connected=True, session_id="sess-123", event_manager=MagicMock())
+
+    async def mock_astream(_inputs):
+        yield SimpleNamespace(content=[{"type": "text", "text": "Hello"}])
+        yield SimpleNamespace(content=[{"type": "text", "text": " World"}])
+
+    runnable = SimpleNamespace(astream=mock_astream, ainvoke=AsyncMock())
+
+    async def drain_message(msg):
+        chunks = [chunk.content if hasattr(chunk, "content") else chunk async for chunk in msg.text]
+        msg.text = "".join(chunks)
+        return msg
+
+    probe.send_message = AsyncMock(side_effect=drain_message)
+
+    lf_message, result, _ = await probe._handle_stream(runnable, "input")
+
+    probe.send_message.assert_awaited_once()
+    assert result == "Hello World"
+    assert lf_message is not None
+    assert lf_message.text == "Hello World"
