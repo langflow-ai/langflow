@@ -566,7 +566,12 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
             }
         return still_let_in
 
-    _save(admit)
+    try:
+        _save(admit)
+    except Exception:
+        # The record says nothing of the command, so nothing could follow it or stop it later.
+        await cancel_run(run_id)
+        raise
     if not still_let_in:
         # Changes were turned back on, or another destination was saved, between the check above and the
         # save. A copy of what the record now asks for has to pass that check itself.

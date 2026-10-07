@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import threading
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -480,6 +482,57 @@ async def test_a_copy_start_does_not_put_back_a_pause_that_another_worker_ended_
     # The other worker's word stands: this request's save did not put the pause back.
     assert "pause" not in migration["record"]
     assert "copy_database" not in migration["record"]["steps"]
+
+
+async def test_a_copy_start_whose_save_is_refused_every_time_stops_the_command_it_started(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _ready_to_copy(config_dir)
+    _send_to(monkeypatch, NOWHERE)
+    read_run, saves = migration_module.read_run, []
+
+    def read_run_while_another_worker_saves(run_id: str) -> dict:
+        # At each look another worker saves something that changes neither the pause nor the destination.
+        theirs = migration_module._read_record()
+        theirs["backup"]["location"] = f"place {len(saves)}"
+        migration_module._write_record(theirs)
+        saves.append(run_id)
+        return read_run(run_id)
+
+    monkeypatch.setattr(migration_module, "read_run", read_run_while_another_worker_saves)
+    refused = await asyncio.wait_for(client.post(RUNS.format("copy_database"), json={}, headers=headers), _TIMEOUT)
+    monkeypatch.setattr(migration_module, "read_run", read_run)
+
+    assert len(saves) == migration_module._SAVE_TRIES
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["detail"] == {"code": "record_changed"}
+    # The record says nothing of the command, so nothing could follow it or stop it later. It was stopped here.
+    [run] = migration_runs.list_runs()
+    assert run["status"] == "cancelled"
+    assert "copy_database" not in (await _migration(client, headers))["record"]["steps"]
+
+
+def test_a_save_waits_for_another_worker_that_is_in_the_middle_of_its_save(client, config_dir):  # noqa: ARG001
+    fcntl = pytest.importorskip("fcntl")
+    _ready_to_copy(config_dir)
+    record = migration_module._read_record()
+    saved_before = record.get("generation", 0)
+    # Another worker is between its look at the record and its write: it holds the lock that every save takes.
+    theirs = os.open(config_dir / "migrations" / "migration.lock", os.O_RDWR | os.O_CREAT, 0o600)
+    fcntl.flock(theirs, fcntl.LOCK_EX)
+    saving = threading.Thread(target=migration_module._write_record, args=(record,))
+    try:
+        saving.start()
+        saving.join(0.5)
+
+        assert saving.is_alive()
+        assert migration_module._read_record().get("generation", 0) == saved_before
+    finally:
+        os.close(theirs)
+    saving.join(10)
+    assert not saving.is_alive()
+    assert migration_module._read_record()["generation"] == saved_before + 1
 
 
 def test_a_save_of_a_record_that_another_worker_saved_since_is_refused(client, config_dir):  # noqa: ARG001
