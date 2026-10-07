@@ -88,9 +88,10 @@ def is_paused() -> bool:
     return _paused
 
 
-# ponytail: requests and trigger listeners hold a place. The loops of this process that ask
-# is_paused() do not, so a pass that began just before a pause can end a write just after it.
-# Have them hold writing() for a pass if a write that late ever matters.
+# ponytail: requests, trigger listeners and the flow sync from disk hold a place. The other loops of
+# this process (the trigger dispatcher, the telemetry writer, the audit cleanup) ask is_paused() and
+# do not, so one of their passes that began just before a pause can end a write just after it. Have
+# them hold writing() for a pass, as the flow sync does, if a write that late ever matters.
 @contextlib.contextmanager
 def writing() -> Iterator[bool]:
     """Hold a place among the changes a pause waits for, and say whether this one may go ahead.
@@ -99,9 +100,12 @@ def writing() -> Iterator[bool]:
     finds the place held and waits for the change. One that was written just before is seen
     here, and the change does not go ahead. Asking first would leave a gap between the two.
 
-    Callers use it only where the feature is on, so an instance that cannot be paused takes no lock.
+    With the feature off there is no pause to wait, so no place is taken and no lock.
     """
     global _in_flight  # noqa: PLW0603
+    if not FEATURE_FLAGS.instance_migration:
+        yield True
+        return
     _in_flight += 1
     place = None
     try:
