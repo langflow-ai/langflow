@@ -1466,22 +1466,58 @@ async def test_knowledge_bases_need_the_vector_extension_turned_on(
     assert {step["id"]: step["state"] for step in saved["steps"]}["connect_target"] == "done"
 
 
-async def test_an_instance_on_postgresql_keeps_its_knowledge_bases_in_its_own_database(
-    client, logged_in_headers_super_user, active_super_user, scratch_database, monkeypatch
+async def test_an_instance_on_postgresql_keeps_its_knowledge_bases_where_its_own_variable_points(
+    client,
+    logged_in_headers_super_user,
+    active_super_user,
+    config_dir,
+    scratch_database,
+    monkeypatch,
+    server_log,
+    caplog,
+    capfd,
 ):
     pytest.importorskip("pgvector", reason="needs the pgvector extra")
     headers = logged_in_headers_super_user
+    caplog.set_level(logging.DEBUG)
     await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
-    monkeypatch.setattr(get_db_service(), "database_url", scratch_database.render_as_string(hide_password=False))
+    # The instance runs on one database, and its server reads knowledge bases through another.
+    monkeypatch.setattr(get_db_service(), "database_url", f"postgresql://{NOWHERE}/own")
+    its_own = scratch_database.set(password=DB_PASSWORD).render_as_string(hide_password=False)
+    monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", its_own)
 
-    saved = await _connect(client, headers, vectors={"kind": "pgvector"})
+    tested = await client.put("api/v1/migration/destinations", json={"vectors": {"kind": "pgvector"}}, headers=headers)
 
-    # Tested in the database the instance runs on. This one is new, so nobody turned the extension on in it.
+    # Tested where the variable points. That database is new, so nobody turned the extension on in it.
+    saved = tested.json()
     assert saved["results"]["vectors"]["code"] == "pgvector_missing"
+    assert saved["record"]["destinations"]["vectors"] == {"kind": "pgvector"}
+    # The variable's value holds a password. It went to the test and nowhere else.
+    _nowhere((DB_PASSWORD,), [tested], config_dir, server_log, caplog, capfd)
+    assert migration_module._secrets == {"for": {}}
     refused = await client.put(
         "api/v1/migration/destinations", json={"database_url": f"postgresql://{NOWHERE}/other"}, headers=headers
     )
     assert refused.json()["detail"] == {"code": "not_needed", "parts": ["database"]}
+
+
+async def test_an_instance_on_postgresql_cannot_keep_knowledge_bases_without_its_own_variable(
+    client, logged_in_headers_super_user, active_super_user, monkeypatch
+):
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    monkeypatch.setattr(get_db_service(), "database_url", f"postgresql://{NOWHERE}/own")
+    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+
+    saved = await _connect(client, logged_in_headers_super_user, vectors={"kind": "pgvector"})
+
+    # After the copy the server reads them through that variable, so the admin learns it here, before the pause.
+    assert saved["results"]["vectors"]["code"] == "pgvector_env_missing"
+    assert "PGVECTOR_CONNECTION_STRING" in saved["results"]["vectors"]["reason"]
+    assert "restart Langflow" in saved["results"]["vectors"]["reason"]
+    assert {step["id"]: (step["state"], step["reason"]) for step in saved["steps"]}["connect_target"] == (
+        "blocked",
+        "pgvector_env_missing",
+    )
 
 
 async def test_knowledge_bases_cannot_be_tested_without_the_database_address(

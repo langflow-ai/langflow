@@ -25,6 +25,7 @@ import psutil
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from lfx.base.knowledge_bases.backends import is_local_backend
+from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
 from lfx.log.logger import logger
 from pydantic import BaseModel, SecretStr, ValidationError
 from sqlalchemy.engine import make_url
@@ -275,14 +276,24 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
         results["database"] = await asyncio.to_thread(probe_database, address, get_db_service().database_url)
         parts["database"] = {"location": location(address), "identity": database_identity(address)}
     if request.vectors:
-        # Knowledge bases go into the destination database. An instance already on PostgreSQL keeps them in its own.
+        # Knowledge bases go into the destination database. An instance already on PostgreSQL keeps them where
+        # the server's own PGVECTOR_CONNECTION_STRING points, because that is where it reads them from afterwards.
         own = instance["database"]["type"] == "postgresql"
         # The address sent with them if it passed, or else the one this worker holds from an earlier save.
         held = _secrets if not request.database_url else brought if results["database"]["ok"] else {}
-        address = get_db_service().database_url if own else held.get("database_url")
+        # The variable's value holds a password. It goes to the test and nowhere else.
+        address = os.getenv("PGVECTOR_CONNECTION_STRING") if own else held.get("database_url")
         if address and not own and not request.database_url:
             tested_in = database_identity(address)
-        results["vectors"] = (
+        if own and not postgres_env_configured():
+            # Nothing to enter again here: the server itself has to be told where its knowledge bases are.
+            results["vectors"] = {
+                "ok": False,
+                "code": "pgvector_env_missing",
+                "reason": "Set PGVECTOR_CONNECTION_STRING to the database this instance keeps its knowledge bases in, "
+                "then restart Langflow.",
+            }
+        results["vectors"] = results.get("vectors") or (
             await asyncio.to_thread(probe_vectors, address)
             if address
             else {"ok": False, "code": "secrets_missing", "reason": "Enter the database address again."}
