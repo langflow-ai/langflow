@@ -2552,6 +2552,9 @@ async def test_a_new_database_does_not_keep_what_knowledge_bases_found_in_the_ol
 
     assert "vectors" not in saved["record"]["destinations"]
     assert "vectors" not in saved["record"]["destinations"]["results"]
+    # The database that was just saved failed its test. The step says so, and does not wait as if nothing had.
+    steps = {step["id"]: (step["state"], step["reason"]) for step in saved["steps"]}
+    assert steps["connect_target"] == ("blocked", "db_unreachable")
 
 
 async def test_the_same_database_saved_again_keeps_what_knowledge_bases_found_in_it(
