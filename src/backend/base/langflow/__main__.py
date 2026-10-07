@@ -1318,6 +1318,11 @@ def relocate_kb(
         default=False,
         help="Move knowledge bases whose search rankings would change because the target ranks by another metric.",
     ),
+    as_json: bool = typer.Option(  # noqa: FBT001
+        False,  # noqa: FBT003
+        "--json",
+        help="Write progress and results to stdout as one JSON object per line, and logs to stderr.",
+    ),
     log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
 ) -> None:
     """Move knowledge base vectors to another backend without re-embedding.
@@ -1336,23 +1341,31 @@ def relocate_kb(
     Safe to re-run: chunks keep their ids, so a second run upserts, and knowledge
     bases already on the target are skipped. Nothing is deleted from the source.
     Exits non-zero if any knowledge base could not be moved.
+
+    With --json, stdout carries one JSON object per line and logs go to stderr:
+    "progress" as a knowledge base's chunks are copied, an "item" as each one
+    finishes, and a closing "report" with the counts and the knowledge bases
+    that need attention. A run refused before it starts writes one "error"
+    instead. Failed items and errors carry a stable "code".
     """
+    from langflow.cli import relocate_kb_events as events
+
     try:
         config = json.loads(target_config)
     except json.JSONDecodeError as exc:
-        typer.echo(f"--target-config is not valid JSON: {exc}", err=True)
+        events.refuse(f"--target-config is not valid JSON: {exc}", "bad_target_config", as_json=as_json)
         raise typer.Exit(2) from exc
     if not isinstance(config, dict):
-        typer.echo("--target-config must be a JSON object", err=True)
+        events.refuse("--target-config must be a JSON object", "bad_target_config", as_json=as_json)
         raise typer.Exit(2)
     from langflow.api.utils.knowledge_base_relocation import validate_relocation_target_config
 
     try:
         validate_relocation_target_config(to, config)
     except ValueError as exc:
-        typer.echo(str(exc), err=True)
+        events.refuse(str(exc), "bad_target_config", as_json=as_json)
         raise typer.Exit(2) from exc
-    configure(log_level=log_level)
+    configure(log_level=log_level, output_file=sys.stderr if as_json else None)
     failed = asyncio.run(
         _relocate_kb(
             target_backend_type=to,
@@ -1361,6 +1374,7 @@ def relocate_kb(
             dry_run=dry_run,
             batch_size=batch_size,
             allow_metric_change=allow_metric_change,
+            as_json=as_json,
         )
     )
     if failed:
@@ -1505,8 +1519,10 @@ async def _relocate_kb(
     dry_run: bool,
     batch_size: int,
     allow_metric_change: bool = False,
+    as_json: bool = False,
 ) -> int:
     from langflow.api.utils.knowledge_base_relocation import relocate_knowledge_bases
+    from langflow.cli import relocate_kb_events as events
     from langflow.services.utils import register_all_service_factories
 
     # Not initialize_services(): that is the server's startup, and it migrates the
@@ -1514,7 +1530,7 @@ async def _relocate_kb(
     # dry run or not. Each service is built on first use, which writes nothing.
     register_all_service_factories()
     if mismatch := await _schema_mismatch():
-        typer.echo(mismatch, err=True)
+        events.refuse(mismatch, "schema_mismatch", as_json=as_json)
         raise typer.Exit(1)
     results = await relocate_knowledge_bases(
         target_backend_type=target_backend_type,
@@ -1523,17 +1539,23 @@ async def _relocate_kb(
         dry_run=dry_run,
         batch_size=batch_size,
         allow_metric_change=allow_metric_change,
+        on_result=events.item if as_json else None,
+        on_progress=events.progress if as_json else None,
     )
+    by_status: dict[str, int] = {}
+    for result in results:
+        by_status[result.status] = by_status.get(result.status, 0) + 1
+    failed = by_status.get("failed", 0)
+    if as_json:
+        events.report(results, by_status, dry_run=dry_run)
+        return failed
     for result in results:
         typer.echo(relocation_line(result) + (f"  ({result.reason})" if result.reason else ""))
         for warning in result.warnings:
             typer.echo(f"{'':15} warning: {warning}")
-    by_status: dict[str, int] = {}
-    for result in results:
-        by_status[result.status] = by_status.get(result.status, 0) + 1
     summary = ", ".join(f"{count} {status}" for status, count in sorted(by_status.items())) or "no knowledge bases"
     typer.echo(f"Knowledge base relocation {'dry run ' if dry_run else ''}complete: {summary}.")
-    return by_status.get("failed", 0)
+    return failed
 
 
 @app.command(name="check-integrity")
