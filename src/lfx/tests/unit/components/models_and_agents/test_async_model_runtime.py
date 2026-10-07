@@ -172,24 +172,21 @@ async def test_custom_remediation_context_keeps_provenance_and_connected_target(
 
 
 @pytest.mark.asyncio
-async def test_legacy_agent_selection_and_credentials_use_native_async_hooks(monkeypatch):
+async def test_legacy_agent_uses_named_lookup_and_native_async_credentials(monkeypatch):
     c = AgentComponent(_user_id="runtime-owner", model=[], agent_llm="OpenAI", model_name="gpt-4o-mini")
     c.set_attributes({"tools": [], "add_current_date_tool": False, "chat_history": []})
     p = policy()
     monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", AsyncMock(return_value=p))
-    options = AsyncMock(return_value=SELECTION)
+    options = Mock(return_value=SELECTION[0])
     factory = AsyncMock(return_value=object())
-    monkeypatch.setattr(agent_module, "aget_language_model_options", options)
+    monkeypatch.setattr(agent_module, "get_language_model_option", options)
     monkeypatch.setattr(agent_module, "aget_llm", factory)
-    monkeypatch.setattr(
-        agent_module, "get_language_model_options", Mock(side_effect=AssertionError("sync legacy catalog forbidden"))
-    )
     monkeypatch.setattr(agent_module, "get_llm", Mock(side_effect=AssertionError("sync model factory forbidden")))
     monkeypatch.setattr(type(c), "get_memory_data", AsyncMock(return_value=[]))
     llm, history, _tools = await c.get_agent_requirements()
     assert llm is factory.return_value
     assert history == []
-    options.assert_awaited_once()
+    options.assert_called_once_with("OpenAI", "gpt-4o-mini")
     factory.assert_awaited_once()
 
 
@@ -199,14 +196,32 @@ async def test_legacy_direct_agent_denial_precedes_catalog_and_model(monkeypatch
     p = policy()
     p.require.side_effect = PermissionError("denied")
     monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", AsyncMock(return_value=p))
-    options = AsyncMock(side_effect=AssertionError("legacy catalog before denial"))
+    options = Mock(side_effect=AssertionError("legacy catalog before denial"))
     factory = AsyncMock()
-    monkeypatch.setattr(agent_module, "aget_language_model_options", options)
+    monkeypatch.setattr(agent_module, "get_language_model_option", options)
     monkeypatch.setattr(agent_module, "aget_llm", factory)
     with pytest.raises(PermissionError):
         await c.message_response()
-    options.assert_not_awaited()
+    options.assert_not_called()
     factory.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("asynchronous", [False, True])
+@pytest.mark.parametrize("failing_method", ["_resolve_selected_model", "_model_remediation_context"])
+async def test_failed_remediation_context_is_logged_without_masking_original_error(
+    monkeypatch, asynchronous, failing_method
+):
+    component = AgentComponent(_user_id="runtime-owner", model=SELECTION)
+    monkeypatch.setattr(component, failing_method, Mock(side_effect=ValueError("invalid selection")))
+    log = SimpleNamespace(debug=Mock(), adebug=AsyncMock())
+    monkeypatch.setattr(agent_module, "logger", log)
+    if asynchronous:
+        assert await component._aselected_model_remediation_context() == (None, None, None)
+        log.adebug.assert_awaited_once()
+    else:
+        assert component._selected_model_remediation_context() == (None, None, None)
+        log.debug.assert_called_once()
 
 
 @pytest.mark.asyncio

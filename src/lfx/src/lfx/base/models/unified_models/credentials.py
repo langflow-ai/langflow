@@ -16,7 +16,7 @@ from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.env_var_security import safe_getenv
 from lfx.utils.secrets import secret_value_to_str
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
-from lfx.utils.user_id import has_user_id, to_user_uuid
+from lfx.utils.util import is_uuid_set, to_uuid
 
 from .provider_queries import (
     get_model_provider_variable_mapping,
@@ -132,13 +132,13 @@ async def aget_api_key_for_provider(user_id: UUID | str | None, provider: str, a
 async def _aget_api_key_variable(user_id: UUID | str | None, name: str) -> str | None:
     """Resolve a named or primary key with identical database-first fallback rules."""
     value = None
-    if has_user_id(user_id):
+    if is_uuid_set(user_id):
         async with session_scope() as session:
             variable_service = get_variable_service()
             if variable_service is not None:
                 try:
                     value = await variable_service.get_variable(
-                        user_id=to_user_uuid(user_id), name=name, field="", session=session
+                        user_id=to_uuid(user_id), name=name, field="", session=session
                     )
                 except VariableNotFoundError:
                     value = None
@@ -188,11 +188,11 @@ async def aget_all_variables_for_provider(user_id: UUID | str | None, provider: 
         return {}
 
     values = {}
-    if has_user_id(user_id):
+    if is_uuid_set(user_id):
         async with session_scope() as session:
             variable_service = get_variable_service()
             if variable_service is not None:
-                user_id_uuid = to_user_uuid(user_id)
+                user_id_uuid = to_uuid(user_id)
                 for variable in provider_vars:
                     key = variable.get("variable_key")
                     if not key:
@@ -296,15 +296,6 @@ def _validate_and_get_enabled_providers(
     return enabled
 
 
-class _VarWithValue:
-    """Simple wrapper for passing raw variable values to _validate_and_get_enabled_providers."""
-
-    __slots__ = ("value",)
-
-    def __init__(self, value):
-        self.value = value
-
-
 async def _get_model_status(user_id: UUID | str) -> tuple[set[str], set[str]]:
     """Fetch disabled and explicitly enabled model sets for a user.
 
@@ -320,7 +311,7 @@ async def _get_model_status(user_id: UUID | str) -> tuple[set[str], set[str]]:
         if not isinstance(variable_service, DatabaseVariableService):
             return set(), set()
         all_vars = await variable_service.get_all(
-            user_id=to_user_uuid(user_id),
+            user_id=to_uuid(user_id),
             session=session,
         )
         disabled: set[str] = set()
@@ -378,38 +369,17 @@ async def _fetch_enabled_providers_for_user(
     if not provider_candidates:
         return set()
 
+    variable_names = {
+        variable["variable_key"]
+        for provider in provider_candidates
+        for variable in get_provider_all_variables(provider)
+        if variable.get("variable_key")
+    }
     async with session_scope() as session:
-        # Get all variable names (VariableRead has value=None for credentials)
-        all_vars = await variable_service.get_all(
-            user_id=to_user_uuid(user_id),
-            session=session,
+        all_provider_variables = await variable_service.get_variable_objects(
+            user_id=to_uuid(user_id), names=variable_names, session=session
         )
-        all_var_names = {var.name for var in all_vars}
-
-        # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
-        # We need to fetch raw Variable objects because VariableRead has value=None for credentials
-        all_provider_variables = {}
-        user_id_uuid = to_user_uuid(user_id)
-
-        variable_names = {
-            variable["variable_key"]
-            for provider in provider_candidates
-            for variable in get_provider_all_variables(provider)
-            if variable.get("variable_key") and variable["variable_key"] in all_var_names
-        }
-        for var_name in sorted(variable_names):
-            try:
-                variable_obj = await variable_service.get_variable_object(
-                    user_id=user_id_uuid, name=var_name, session=session
-                )
-                if variable_obj and variable_obj.value:
-                    all_provider_variables[var_name] = _VarWithValue(variable_obj.value)
-            except Exception:  # noqa: BLE001
-                await logger.aexception(f"Error accessing variable {var_name} for provider configuration")
-                continue
-
-        # Use shared helper to validate and get enabled providers
-        return _validate_and_get_enabled_providers(all_provider_variables, provider_candidates)
+    return _validate_and_get_enabled_providers(all_provider_variables, provider_candidates)
 
 
 def validate_model_provider_key(provider: str, variables: dict[str, str], model_name: str | None = None) -> None:

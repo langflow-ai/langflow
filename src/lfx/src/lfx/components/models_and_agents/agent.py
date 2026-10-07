@@ -46,9 +46,8 @@ from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.constants import STREAM_INFO_TEXT
 from lfx.base.models.unified_models import (
-    aget_language_model_options,
     aget_llm,
-    get_language_model_options,
+    get_language_model_option,
     get_llm,
     handle_model_input_update,
 )
@@ -396,10 +395,8 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if not legacy_provider or not legacy_model_name:
             return self.model
 
-        options = get_language_model_options(user_id=self.user_id)
-        for option in options:
-            if option.get("provider") == legacy_provider and option.get("name") == legacy_model_name:
-                return [option]
+        if option := get_language_model_option(legacy_provider, legacy_model_name):
+            return [option]
 
         return [
             {
@@ -427,10 +424,8 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if not legacy_provider or not legacy_model_name:
             return self.model
 
-        options = await aget_language_model_options(user_id=self.user_id)
-        for option in options:
-            if option.get("provider") == legacy_provider and option.get("name") == legacy_model_name:
-                return [option]
+        if option := get_language_model_option(legacy_provider, legacy_model_name):
+            return [option]
 
         return [
             {
@@ -856,36 +851,35 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         """Return provider/name plus a connected model target, when present."""
         try:
             selected = self._resolve_selected_model()
+            return self._model_remediation_context(selected)
         except (AttributeError, TypeError, ValueError, KeyError, ImportError):
+            logger.debug("Could not resolve selected model for remediation", exc_info=True)
             return None, None, None
-        return self._model_remediation_context(selected)
 
     async def _aselected_model_remediation_context(self) -> tuple[str | None, str | None, Any | None]:
         """Await the selected model before applying the existing identity checks."""
         try:
             selected = await async_call_method(self, "_resolve_selected_model")
+            return self._model_remediation_context(selected)
         except (AttributeError, TypeError, ValueError, KeyError, ImportError):
+            await logger.adebug("Could not resolve selected model for remediation", exc_info=True)
             return None, None, None
-        return self._model_remediation_context(selected)
 
     def _model_remediation_context(self, selected) -> tuple[str | None, str | None, Any | None]:
         """Return provider/name plus a connected model target, when present."""
-        try:
-            if isinstance(selected, list) and selected and isinstance(selected[0], dict):
-                return selected[0].get("provider"), selected[0].get("name"), None
+        if isinstance(selected, list) and selected and isinstance(selected[0], dict):
+            return selected[0].get("provider"), selected[0].get("name"), None
 
-            from langchain_core.language_models import BaseLanguageModel
+        from langchain_core.language_models import BaseLanguageModel
 
-            if isinstance(selected, BaseLanguageModel):
-                model_name = None
-                for attr in ("model_name", "model", "model_id"):
-                    value = getattr(selected, attr, None)
-                    if isinstance(value, str) and value:
-                        model_name = value
-                        break
-                return self._connected_model_provider(selected), model_name, selected
-        except (AttributeError, TypeError, ValueError, KeyError, ImportError):
-            pass
+        if isinstance(selected, BaseLanguageModel):
+            model_name = None
+            for attr in ("model_name", "model", "model_id"):
+                value = getattr(selected, attr, None)
+                if isinstance(value, str) and value:
+                    model_name = value
+                    break
+            return self._connected_model_provider(selected), model_name, selected
         return None, None, None
 
     def _connected_model_provider(self, model: Any) -> str | None:

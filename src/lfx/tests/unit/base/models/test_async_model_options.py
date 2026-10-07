@@ -15,6 +15,18 @@ def policy():
     )
 
 
+def test_named_model_lookup_returns_provider_metadata_without_variable_reads(monkeypatch):
+    monkeypatch.setattr(
+        "lfx.base.models.model_utils.get_variable_service", Mock(side_effect=AssertionError("unexpected variable read"))
+    )
+    option = model_catalog.get_language_model_option("OpenAI", "gpt-4o-mini")
+    assert option["name"] == "gpt-4o-mini"
+    assert option["provider"] == "OpenAI"
+    assert option["metadata"]["model_class"] == "ChatOpenAI"
+    assert model_catalog.get_language_model_option("Anthropic", "gpt-4o-mini") is None
+    assert model_catalog.get_language_model_option("OpenAI", "unlisted-deployment") is None
+
+
 @pytest.mark.asyncio
 async def test_async_catalog_parity_retains_policy_status_and_live_filters(monkeypatch):
     rows = [
