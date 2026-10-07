@@ -1,6 +1,12 @@
 import { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import {
+  appendProviderScope,
+  PROVIDER_POLICY_STALE_TIME_MS,
+  type ProviderScopeParams,
+  providerScopeQueryKey,
+} from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface ModelProviderInfo {
@@ -14,15 +20,19 @@ export interface ModelProviderInfo {
   api_docs_url?: string;
   /** Icon name from provider metadata (e.g. MODEL_PROVIDER_METADATA). */
   icon?: string;
+  /** True when the model list is discovered from the provider's endpoint
+   *  after credentials are configured (e.g. IBM WatsonX, OpenRouter, vLLM). */
+  live_discovery?: boolean;
 }
 
 export interface ModelProviderWithStatus extends ModelProviderInfo {
   icon?: string;
 }
 
-export interface GetModelProvidersParams {
+export interface GetModelProvidersParams extends ProviderScopeParams {
   includeDeprecated?: boolean;
   includeUnsupported?: boolean;
+  purpose?: "use" | "configure";
 }
 
 export const getModelProvidersQueryOptions = (
@@ -35,6 +45,10 @@ export const getModelProvidersQueryOptions = (
   if (params?.includeUnsupported) {
     queryParams.append("include_unsupported", "true");
   }
+  appendProviderScope(queryParams, params);
+  if (params?.purpose) {
+    queryParams.append("purpose", params.purpose);
+  }
 
   const url = `${getURL("MODELS")}${
     queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -45,6 +59,8 @@ export const getModelProvidersQueryOptions = (
       "useGetModelProviders",
       params?.includeDeprecated,
       params?.includeUnsupported,
+      ...providerScopeQueryKey(params),
+      params?.purpose,
     ] as const,
     queryFn: async (): Promise<ModelProviderWithStatus[]> => {
       const response = await api.get<ModelProviderInfo[]>(url);
@@ -55,8 +71,8 @@ export const getModelProvidersQueryOptions = (
         icon: providerInfo.icon || getProviderIcon(providerInfo.provider),
       }));
     },
-    refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: true,
+    staleTime: PROVIDER_POLICY_STALE_TIME_MS,
   };
 };
 

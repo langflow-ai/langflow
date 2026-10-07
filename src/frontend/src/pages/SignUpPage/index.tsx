@@ -10,6 +10,7 @@ import { CustomLink } from "@/customization/components/custom-link";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { track } from "@/customization/utils/analytics";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   appendErrorSuggestion,
   getRequiredFieldError,
@@ -31,8 +32,13 @@ export default function SignUp(): JSX.Element {
     useState<signUpInputStateType>(CONTROL_INPUT_STATE);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
+  // Server-side rejection (e.g. username taken), mirrored inline so the error
+  // is programmatically associated with the username field (WCAG 3.3.1)
+  // instead of living only in the transient toast.
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const { t } = useTranslation();
+  useDocumentTitle(t("auth.signupButton"));
   useTheme();
   const { password, cnfPassword, username } = inputState;
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -45,6 +51,7 @@ export default function SignUp(): JSX.Element {
     target: { name, value },
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
+    setServerError(null);
   }
 
   function handleSignup(): void {
@@ -63,20 +70,20 @@ export default function SignUp(): JSX.Element {
         navigate("/login");
       },
       onError: (error) => {
+        const message = appendErrorSuggestion(
+          extractApiErrorMessage(
+            error as Parameters<typeof extractApiErrorMessage>[0],
+            t("errors.signup"),
+          ),
+          t("errors.signupSuggestion", {
+            defaultValue:
+              "Use a different username or contact an administrator if you already have an account.",
+          }),
+        );
+        setServerError(message);
         setErrorData({
           title: t("errors.signup"),
-          list: [
-            appendErrorSuggestion(
-              extractApiErrorMessage(
-                error as Parameters<typeof extractApiErrorMessage>[0],
-                t("errors.signup"),
-              ),
-              t("errors.signupSuggestion", {
-                defaultValue:
-                  "Use a different username or contact an administrator if you already have an account.",
-              }),
-            ),
-          ],
+          list: [message],
         });
       },
     });
@@ -178,9 +185,14 @@ export default function SignUp(): JSX.Element {
                   className="h-11 w-full rounded-lg bg-muted"
                   required
                   aria-describedby={
-                    usernameError ? "signup-username-error" : undefined
+                    [
+                      usernameError && "signup-username-error",
+                      serverError && "signup-form-error",
+                    ]
+                      .filter(Boolean)
+                      .join(" ") || undefined
                   }
-                  aria-invalid={Boolean(usernameError)}
+                  aria-invalid={Boolean(usernameError || serverError)}
                   placeholder={t("auth.usernamePlaceholder")}
                 />
 
@@ -305,6 +317,16 @@ export default function SignUp(): JSX.Element {
                   </p>
                 )}
               </Form.Field>
+
+              {serverError && (
+                <p
+                  id="signup-form-error"
+                  role="alert"
+                  className="field-invalid static"
+                >
+                  {serverError}
+                </p>
+              )}
 
               <Form.Submit asChild>
                 <Button type="submit" className="h-11 w-full rounded-lg">

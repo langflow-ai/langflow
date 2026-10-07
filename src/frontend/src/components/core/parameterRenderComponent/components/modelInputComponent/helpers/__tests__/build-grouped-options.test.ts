@@ -19,7 +19,7 @@ const base = {
   modelType: "llm",
   savedValue: undefined,
   modelFilters: undefined,
-  providerStatusIsReliable: true,
+  providerStatusIsReliable: false,
 } as const;
 
 describe("buildGroupedOptions", () => {
@@ -65,6 +65,7 @@ describe("buildGroupedOptions", () => {
           is_configured: true,
         },
       ],
+      providerStatusIsReliable: true,
     });
     expect(withConfiguredProvider.OpenAI).toBeUndefined();
   });
@@ -83,6 +84,7 @@ describe("buildGroupedOptions", () => {
       options: [opt("gpt-4", "OpenAI")],
       providers,
       enabledModels: { OpenAI: { "gpt-4": true } },
+      providerStatusIsReliable: true,
     });
     expect(grouped).toEqual({});
   });
@@ -163,6 +165,7 @@ describe("buildGroupedOptions", () => {
       options: [],
       providers,
       savedValue: { name: "saved-model", provider: "OpenAI", icon: "Bot" },
+      providerStatusIsReliable: true,
     });
     expect(grouped.OpenAI).toHaveLength(1);
     expect(grouped.OpenAI[0].metadata?.not_enabled_locally).toBe(true);
@@ -182,6 +185,7 @@ describe("buildGroupedOptions", () => {
       options: [],
       providers,
       savedValue: { name: "saved-model", provider: "OpenAI", icon: "Bot" },
+      providerStatusIsReliable: true,
     });
     expect(grouped).toEqual({});
   });

@@ -50,6 +50,15 @@ class MemoryBaseCreate(MemoryBaseBase):
     backend_type: str | None = None
     backend_config: dict = Field(default_factory=dict)
 
+    # Provider that serves ``embedding_model``, as selected by the caller.
+    # Declared here rather than on ``MemoryBaseBase`` for the same reason as the
+    # backend fields above: no column is added to the ``memory_base`` table
+    # because the value is persisted in the backing ``knowledge_base`` row's
+    # ``model_selection``, which every ingestion/retrieval path resolves against.
+    # ``None`` falls back to name-based inference, which cannot see
+    # live-discovered models (e.g. an OpenAI-Compatible endpoint's catalog).
+    embedding_provider: str | None = None
+
     @model_validator(mode="after")
     def preprocessing_defaults(self) -> "MemoryBaseCreate":
         if self.preprocessing and not self.preproc_model:

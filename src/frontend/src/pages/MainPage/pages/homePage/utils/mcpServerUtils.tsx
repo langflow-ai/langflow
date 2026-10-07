@@ -95,6 +95,9 @@ export const getAuthHeaders = ({
 
 export const buildMcpServerJson = (opts: {
   folderName?: string;
+  /** Name the backend derives. Preferred over deriving one here from the project name:
+   *  the two disagree for names this helper cannot represent, such as Chinese ones. */
+  backendServerName?: string | null;
   selectedPlatform?: string;
   apiUrl: string;
   isOAuthProject: boolean;
@@ -104,6 +107,7 @@ export const buildMcpServerJson = (opts: {
 }): string => {
   const {
     folderName,
+    backendServerName,
     selectedPlatform,
     apiUrl,
     isOAuthProject,
@@ -112,7 +116,8 @@ export const buildMcpServerJson = (opts: {
     maxNameLength = MAX_MCP_SERVER_NAME_LENGTH,
   } = opts;
 
-  const serverName = getServerName(folderName, maxNameLength);
+  const serverName =
+    backendServerName || getServerName(folderName, maxNameLength);
   const command = getCommandForPlatform(selectedPlatform);
   const proxy = isOAuthProject ? '"mcp-composer"' : '"mcp-proxy"';
   const composerArgs = isOAuthProject ? ["--mode", "stdio", "--sse-url"] : [];

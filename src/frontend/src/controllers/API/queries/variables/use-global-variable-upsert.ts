@@ -1,6 +1,6 @@
 import { VALID_CATEGORIES } from "@/constants/constants";
-import type { TAB_TYPES } from "@/types/global_variables";
-import { useGetGlobalVariables } from "./use-get-global-variables";
+import type { GlobalVariable, TAB_TYPES } from "@/types/global_variables";
+import type { ProviderScopeParams } from "../../helpers/provider-scope";
 import { usePatchGlobalVariables } from "./use-patch-global-variables";
 import { usePostGlobalVariables } from "./use-post-global-variables";
 
@@ -43,8 +43,12 @@ function withAction(
  * not part of this façade — the settings page owns it via
  * useDeleteGlobalVariables.
  */
-export function useGlobalVariableUpsert() {
-  const { data: globalVariables } = useGetGlobalVariables();
+export function useGlobalVariableUpsert(
+  providerScope?: ProviderScopeParams,
+  // The modal already owns the query. Reusing its settled snapshot avoids a
+  // second observer racing the same scoped request when the modal mounts.
+  globalVariables?: GlobalVariable[],
+) {
   const postMutation = usePostGlobalVariables();
   const patchMutation = usePatchGlobalVariables();
 
@@ -90,7 +94,10 @@ export function useGlobalVariableUpsert() {
         // name and PATCH does not change it, so there is no need to read them
         // back from the (loosely typed) patch response. The create branch below
         // reads its response only because the id is server-generated.
-        await patchMutation.mutateAsync(updateData);
+        await patchMutation.mutateAsync({
+          ...updateData,
+          ...(providerScope ?? {}),
+        });
         return { action: "updated", name: params.name, id: existing.id };
       } catch (error) {
         throw withAction(error, "updated");
@@ -104,6 +111,7 @@ export function useGlobalVariableUpsert() {
         type: params.type,
         default_fields: params.default_fields ?? [],
         category: params.category,
+        ...(providerScope ?? {}),
       });
       return { action: "created", name: res.name, id: res.id };
     } catch (error) {
@@ -113,6 +121,9 @@ export function useGlobalVariableUpsert() {
 
   return {
     upsertGlobalVariable,
-    updateGlobalVariable: patchMutation.mutate,
+    updateGlobalVariable: (
+      params: Parameters<typeof patchMutation.mutate>[0],
+      options?: Parameters<typeof patchMutation.mutate>[1],
+    ) => patchMutation.mutate({ ...params, ...(providerScope ?? {}) }, options),
   };
 }

@@ -146,6 +146,42 @@ describe("LoginPage accessibility", () => {
     ).toBeInTheDocument();
   });
 
+  it("associates_server_rejection_with_both_credential_fields", async () => {
+    mockLoginMutate.mockImplementation((_user, options) => {
+      options.onError({
+        response: { data: { detail: "Incorrect username or password." } },
+      });
+    });
+    const { container } = renderLoginPage();
+
+    fireEvent.change(screen.getByPlaceholderText("Username"), {
+      target: { value: "alice" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Password"), {
+      target: { value: "wrong-password" },
+    });
+    fireEvent.submit(container.querySelector("form")!);
+
+    const message =
+      "Incorrect username or password. Check your username and password, then try again.";
+    const inline = await screen.findByText(message);
+    expect(inline).toHaveAttribute("role", "alert");
+    expect(inline).toHaveAttribute("id", "login-form-error");
+
+    const username = screen.getByPlaceholderText("Username");
+    const password = screen.getByPlaceholderText("Password");
+    expect(username).toHaveAttribute("aria-invalid", "true");
+    expect(username).toHaveAttribute("aria-describedby", "login-form-error");
+    expect(password).toHaveAttribute("aria-invalid", "true");
+    expect(password).toHaveAttribute("aria-describedby", "login-form-error");
+
+    // Editing either field clears the stale error and the invalid state.
+    fireEvent.change(username, { target: { value: "alice2" } });
+    expect(screen.queryByText(message)).not.toBeInTheDocument();
+    expect(username).toHaveAttribute("aria-invalid", "false");
+    expect(password).not.toHaveAttribute("aria-invalid");
+  });
+
   it("adds_actionable_suggestion_to_server_login_errors", () => {
     mockLoginMutate.mockImplementation((_user, options) => {
       options.onError({

@@ -56,10 +56,11 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         vector_store = FlowCreate(name="Flow", description="description", data=data, endpoint_name="f")
         response = await client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
         response.raise_for_status()
-        return response.json()["id"]
+        flow = response.json()
+        return flow["id"], flow["user_id"]
 
-    async def check_messages(self, flow_id):
-        messages = await aget_messages(flow_id=UUID(flow_id), order="ASC")
+    async def check_messages(self, flow_id, user_id):
+        messages = await aget_messages(flow_id=UUID(flow_id), user_id=UUID(user_id), order="ASC")
         assert len(messages) == 1
         assert messages[0].session_id == flow_id
         assert messages[0].sender == "Machine"
@@ -70,7 +71,7 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
     async def test_build_flow_loop(self, client, json_loop_test, logged_in_headers):
         """Test building a flow with a loop component."""
         # Create the flow
-        flow_id = await self._create_flow(client, json_loop_test, logged_in_headers)
+        flow_id, user_id = await self._create_flow(client, json_loop_test, logged_in_headers)
 
         # Start the build and get job_id
         build_response = await build_flow(client, flow_id, logged_in_headers)
@@ -93,7 +94,7 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
             # Process events if needed
             # We could add specific assertions here for loop-related events
         assert chat_output is not None
-        messages = await self.check_messages(flow_id)
+        messages = await self.check_messages(flow_id, user_id)
         ai_message = messages[0].text
         json_data = orjson.loads(ai_message)
 
@@ -109,7 +110,7 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
             found.append(expected_text)
 
     async def test_run_flow_loop(self, client: AsyncClient, created_api_key, json_loop_test, logged_in_headers):
-        flow_id = await self._create_flow(client, json_loop_test, logged_in_headers)
+        flow_id, _ = await self._create_flow(client, json_loop_test, logged_in_headers)
         headers = {"x-api-key": created_api_key.api_key}
         payload = {
             "input_value": TEXT,

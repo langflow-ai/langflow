@@ -27,7 +27,10 @@ const ModelList = ({
 
   if (Object.keys(groupedOptions).length === 0) {
     return (
-      <CommandList className="max-h-[300px] overflow-y-auto">
+      <CommandList
+        label={t("model.selectModel")}
+        className="max-h-[300px] overflow-y-auto"
+      >
         <CommandItem
           disabled
           className="w-full px-4 py-2 text-[13px] text-muted-foreground"
@@ -58,7 +61,10 @@ const ModelList = ({
   let position = 0;
 
   return (
-    <CommandList className="max-h-[300px] overflow-y-auto">
+    <CommandList
+      label={t("model.selectModel")}
+      className="max-h-[300px] overflow-y-auto"
+    >
       {providerEntries.map(([provider, models]) => (
         <CommandGroup
           className="p-0 [&_[cmdk-group-heading]]:mx-4 [&_[cmdk-group-heading]]:my-2 [&_[cmdk-group-heading]]:p-0 [&_[cmdk-group-heading]]:font-semibold"

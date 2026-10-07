@@ -644,3 +644,22 @@ class TestServiceManagerTeardown:
 
         assert good.torn_down is True
         assert service_manager.services == {}
+
+    async def test_service_without_teardown_is_skipped_not_failed(self, service_manager):
+        """A duck-typed service with no teardown holds nothing to dispose — not an error.
+
+        The in-memory caches and the Noop database/transaction services implement plain
+        protocols rather than Service, so calling through would raise AttributeError and
+        fail an otherwise clean fork-safety teardown.
+        """
+        from lfx.services.shared_component_cache.service import SharedComponentCacheService
+
+        cache = SharedComponentCacheService()
+        good = _SpyService("good_service")
+        service_manager.services[ServiceType.SHARED_COMPONENT_CACHE_SERVICE] = cache
+        service_manager.services[ServiceType.TRACING_SERVICE] = good
+
+        await service_manager.teardown(raise_on_error=True)  # no raise
+
+        assert good.torn_down is True
+        assert service_manager.services == {}

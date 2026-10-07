@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -11,12 +12,18 @@ import { cn } from "@/utils/utils";
 import type { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
 
+export type ConnectionOptionType = {
+  name: string;
+  icon?: string;
+  link?: string;
+};
+
 export type ConnectionComponentProps = {
   tooltip?: string;
   name: string;
   helperText?: string;
-  helperMetadata?: any;
-  options?: any[];
+  helperMetadata?: { icon: string | undefined; variant: string };
+  options?: ConnectionOptionType[];
   searchCategory?: string[];
   buttonMetadata?: { variant?: string; icon?: string };
   connectionLink?: string;
@@ -34,7 +41,7 @@ const ConnectionComponent = ({
   buttonMetadata = { variant: "destructive", icon: "unplug" },
   connectionLink = "",
   ...baseInputProps
-}: InputProps<any, ConnectionComponentProps>) => {
+}: InputProps<string, ConnectionComponentProps>) => {
   const {
     value,
     handleOnNewValue,
@@ -42,8 +49,10 @@ const ConnectionComponent = ({
     nodeClass,
     nodeId,
     placeholder,
+    ariaLabelledBy,
   } = baseInputProps;
 
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const [isAuthenticated, setIsAuthenticated] = useState(
@@ -52,7 +61,7 @@ const ConnectionComponent = ({
   const [link, setLink] = useState("");
   const [isPolling, setIsPolling] = useState(false);
   const [open, setOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<ConnectionOptionType[]>([]);
 
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -154,7 +163,7 @@ const ConnectionComponent = ({
   };
 
   // Updates selected item and triggers parent component update
-  const handleSelection = (item: any) => {
+  const handleSelection = (item: ConnectionOptionType) => {
     setIsAuthenticated(false);
     setSelectedItem([{ name: item.name }]);
     setLink(item.link === "validated" ? "validated" : "loading");
@@ -178,6 +187,8 @@ const ConnectionComponent = ({
           role="combobox"
           onClick={handleOpenListSelectionDialog}
           className="dropdown-component-outline input-edit-node w-full py-2"
+          aria-labelledby={ariaLabelledBy}
+          aria-expanded={open}
         >
           <div className={cn("flex w-full items-center justify-start text-sm")}>
             {selectedItem[0]?.icon && (
@@ -207,6 +218,7 @@ const ConnectionComponent = ({
               buttonMetadata.variant && `border-${buttonMetadata.variant}`,
             )}
             onClick={link === "error" ? undefined : handleConnectionButtonClick}
+            aria-label={t("connection.connect")}
           >
             <ForwardedIconComponent
               name={

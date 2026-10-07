@@ -231,12 +231,27 @@ async def list_owned_or_visible(
         return list(result.all())
 
 
-async def backfill_all_users_from_disk(*, kb_root: Path | None = None) -> int:
-    """Backfill missing KB rows for every existing user.
+async def backfill_all_users_from_disk(
+    *,
+    kb_root: Path | None = None,
+    username: str | None = None,
+    dry_run: bool = False,
+) -> int:
+    """Adopt KB directories that have no ``knowledge_base`` row.
 
-    Runs during application startup so list/detail endpoints can stay
-    read-only. Returns the total number of inserted rows across all
-    users and never raises for per-user failures.
+    Legacy-recovery only. The ``knowledge_base`` row is the sole authority for KB
+    metadata and nothing in the steady-state code path reads the on-disk
+    ``embedding_metadata.json`` sidecar any more, so this exists purely to adopt
+    directories written by a Langflow version that predates that change. It is
+    opt-in at startup (``LANGFLOW_KB_DISK_RECONCILE_ENABLED``) and available on
+    demand as ``langflow reconcile-kb-from-disk``.
+
+    ``username`` narrows the scan to a single account — the usual shape of a
+    real recovery ("this user's KBs vanished after the upgrade"). ``dry_run``
+    reports what would be adopted without writing.
+
+    Returns the number of rows inserted (or that would be inserted, under
+    ``dry_run``). Never raises for per-user failures.
     """
     from langflow.api.utils.kb_helpers import KBStorageHelper
     from langflow.services.database.models.user.model import User
@@ -246,7 +261,10 @@ async def backfill_all_users_from_disk(*, kb_root: Path | None = None) -> int:
         return 0
 
     async with session_scope() as session:
-        users = list((await session.exec(select(User))).all())
+        stmt = select(User)
+        if username:
+            stmt = stmt.where(User.username == username)
+        users = list((await session.exec(stmt)).all())
 
     inserted = 0
     for user in users:
@@ -254,10 +272,14 @@ async def backfill_all_users_from_disk(*, kb_root: Path | None = None) -> int:
         if not kb_user_root.exists():
             continue
         try:
-            inserted += await backfill_from_disk(user_id=user.id, kb_user_root=kb_user_root)
+            inserted += await backfill_from_disk(
+                user_id=user.id,
+                kb_user_root=kb_user_root,
+                dry_run=dry_run,
+            )
         except Exception as exc:  # noqa: BLE001
             await logger.awarning(
-                "knowledge-base startup reconciliation failed for user %s: %s",
+                "knowledge-base disk reconciliation failed for user %s: %s",
                 user.username,
                 exc,
             )
@@ -440,9 +462,8 @@ async def read_metadata(
 def record_to_metadata_dict(record: KnowledgeBaseRecord) -> dict[str, Any]:
     """Serialize a row into the legacy JSON-file shape.
 
-    Matches the keys ``KBAnalysisHelper.get_metadata`` and the API
-    routes expect so a DB-first migration doesn't need a parallel
-    consumer refactor.
+    Matches the key set the API routes and the frontend expect, so the
+    row can back the response shape without a parallel consumer refactor.
     """
     status = record.status
     if status == KnowledgeBaseStatus.READY.value and record.chunks <= 0:
@@ -497,13 +518,15 @@ async def backfill_from_disk(
     *,
     user_id: UUID,
     kb_user_root: Path,
+    dry_run: bool = False,
 ) -> int:
     """Create missing ``knowledge_base`` rows for existing KB directories.
 
-    Called on first boot after the Phase 1.5 migration lands so every
-    pre-existing KB gains a row. Also serves as an idempotent
-    fallback: if a user drops an exported KB directory on disk, this
-    upserts the corresponding row on next access.
+    Legacy-recovery only — see :func:`backfill_all_users_from_disk`. This is the
+    one remaining reader of the on-disk ``embedding_metadata.json`` sidecar, and
+    it runs only when an operator asks for it.
+
+    ``dry_run`` counts what would be adopted without writing any rows.
 
     Returns the number of rows inserted. Never raises — failures are
     logged and skipped so one malformed KB directory doesn't block the
@@ -538,9 +561,6 @@ async def backfill_from_disk(
             continue
 
         try:
-            from langflow.api.utils.kb_helpers import KBAnalysisHelper
-
-            metadata = KBAnalysisHelper.get_metadata(kb_dir, fast=False) or metadata
             model_selection = _normalize_model_selection(metadata.get("model_selection"))
             record_id = _coerce_uuid(metadata.get("id")) or uuid4()
             # ``backend_type``/``backend_config`` are persisted by
@@ -569,23 +589,24 @@ async def backfill_from_disk(
                         "provider": provider_raw,
                     }
 
-            await create_record(
-                user_id=user_id,
-                name=name,
-                model_selection=normalized_selection,
-                chunk_size=int(metadata.get("chunk_size") or 1000),
-                chunk_overlap=int(metadata.get("chunk_overlap") or 200),
-                separator=metadata.get("separator"),
-                column_config=metadata.get("column_config") or [],
-                backend_type=backend_type,
-                backend_config=backend_config,
-                chunks=_coerce_int(metadata.get("chunks"), default=0),
-                words=_coerce_int(metadata.get("words"), default=0),
-                characters=_coerce_int(metadata.get("characters"), default=0),
-                size_bytes=_coerce_int(metadata.get("size_bytes", metadata.get("size")), default=0),
-                source_types=_coerce_source_types(metadata.get("source_types")),
-                record_id=record_id,
-            )
+            if not dry_run:
+                await create_record(
+                    user_id=user_id,
+                    name=name,
+                    model_selection=normalized_selection,
+                    chunk_size=int(metadata.get("chunk_size") or 1000),
+                    chunk_overlap=int(metadata.get("chunk_overlap") or 200),
+                    separator=metadata.get("separator"),
+                    column_config=metadata.get("column_config") or [],
+                    backend_type=backend_type,
+                    backend_config=backend_config,
+                    chunks=_coerce_int(metadata.get("chunks"), default=0),
+                    words=_coerce_int(metadata.get("words"), default=0),
+                    characters=_coerce_int(metadata.get("characters"), default=0),
+                    size_bytes=_coerce_int(metadata.get("size_bytes", metadata.get("size")), default=0),
+                    source_types=_coerce_source_types(metadata.get("source_types")),
+                    record_id=record_id,
+                )
             inserted += 1
         except Exception as exc:  # noqa: BLE001
             await logger.aerror("backfill: failed to upsert KB %s/%s: %s", user_id, name, exc)

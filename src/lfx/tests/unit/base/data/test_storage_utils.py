@@ -1,5 +1,6 @@
 """Tests for base/data/storage_utils.py - storage-aware file utilities."""
 
+from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -9,7 +10,16 @@ from lfx.base.data.storage_utils import (
     parse_storage_path,
     read_file_bytes,
     read_file_text,
+    to_storage_path,
 )
+from lfx.services.deps import get_settings_service
+from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access
+
+
+@pytest.fixture(autouse=True)
+def unrestricted_standalone_reads(monkeypatch):
+    """Direct local-path controls opt out. Containment cases explicitly enable restriction."""
+    monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", False)
 
 
 class TestParseStoragePath:
@@ -54,6 +64,41 @@ class TestParseStoragePath:
         """Test parsing path with special characters."""
         result = parse_storage_path("flow_abc/file-name_v2.0.txt")
         assert result == ("flow_abc", "file-name_v2.0.txt")
+
+
+class TestToStoragePath:
+    """Test to_storage_path function."""
+
+    @staticmethod
+    def _settings(storage_type: str) -> Mock:
+        settings_service = Mock()
+        settings_service.settings.storage_type = storage_type
+        return settings_service
+
+    @staticmethod
+    def _s3_like_storage() -> Mock:
+        storage = Mock()
+        storage.parse_file_path.side_effect = lambda path: tuple(path.removeprefix("files/").rsplit("/", 1))
+        return storage
+
+    def test_should_return_local_path_unchanged(self):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=self._settings("local")):
+            assert to_storage_path("/data/flow_123/file.txt") == "/data/flow_123/file.txt"
+
+    def test_should_strip_backend_prefix_on_s3(self):
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=self._settings("s3")),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=self._s3_like_storage()),
+        ):
+            assert to_storage_path("files/flow_123/file.txt") == "flow_123/file.txt"
+
+    def test_should_reject_absolute_path_on_s3(self):
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=self._settings("s3")),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=self._s3_like_storage()),
+            pytest.raises(ValueError, match="Not a storage key"),
+        ):
+            to_storage_path("files//etc/hostname")
 
 
 @pytest.mark.asyncio
@@ -150,6 +195,9 @@ class TestReadFileBytes:
         components dir) into a Directory node. That path is not an S3 key, so the
         S3 reader must fall back to a local read instead of raising
         "Invalid S3 path format".
+
+        Local reads outside the storage scope require the operator opt-out
+        (``restrict_local_file_access=False``), which is the default only before 1.12.3.
         """
         test_file = tmp_path / "_importing.py"
         test_content = b"x = 1\n"
@@ -157,11 +205,13 @@ class TestReadFileBytes:
 
         mock_settings = Mock()
         mock_settings.settings.storage_type = "s3"
+        mock_settings.settings.restrict_local_file_access = False
 
         mock_storage = AsyncMock()
 
         with (
             patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
             patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
         ):
             content = await read_file_bytes(str(test_file))
@@ -246,18 +296,24 @@ class TestReadFileText:
         assert content == expected_content
 
     async def test_should_read_existing_local_text_file_when_storage_type_is_s3(self, tmp_path):
-        """Regression for #13798: read_file_text must read a real local file under S3 mode."""
+        """Regression for #13798: read_file_text must read a real local file under S3 mode.
+
+        Local reads outside the storage scope require the operator opt-out
+        (``restrict_local_file_access=False``), which is the default only before 1.12.3.
+        """
         test_file = tmp_path / "notes.txt"
         test_content = "hello from disk"
         test_file.write_text(test_content, encoding="utf-8")
 
         mock_settings = Mock()
         mock_settings.settings.storage_type = "s3"
+        mock_settings.settings.restrict_local_file_access = False
 
         mock_storage = AsyncMock()
 
         with (
             patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
             patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
         ):
             content = await read_file_text(str(test_file))
@@ -293,17 +349,23 @@ class TestGetFileSize:
                 get_file_size("/nonexistent/file.txt")
 
     def test_should_get_existing_local_file_size_when_storage_type_is_s3(self, tmp_path):
-        """Regression for #13798: get_file_size must stat a real local file under S3 mode."""
+        """Regression for #13798: get_file_size must stat a real local file under S3 mode.
+
+        Local reads outside the storage scope require the operator opt-out
+        (``restrict_local_file_access=False``), which is the default only before 1.12.3.
+        """
         test_file = tmp_path / "sized.txt"
         test_file.write_bytes(b"X" * 1234)
 
         mock_settings = Mock()
         mock_settings.settings.storage_type = "s3"
+        mock_settings.settings.restrict_local_file_access = False
 
         mock_storage = AsyncMock()
 
         with (
             patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
             patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
         ):
             size = get_file_size(str(test_file))
@@ -487,3 +549,152 @@ class TestStorageUtilsSyncEdgeCases:
             size = get_file_size(str(test_file))
 
         assert size == 0
+
+
+class _S3RestrictedEnv:
+    """Settings fixture for the S3 + LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS combination.
+
+    ``storage_utils`` and ``file_path_security`` each resolve settings through their own
+    module-level ``get_settings_service`` import, so both must be patched to model a
+    deployment that runs object storage with local-file containment enabled.
+    """
+
+    def __init__(self, config_dir: Path, *, storage_type: str = "s3", restricted: bool = True):
+        self.config_dir = config_dir
+        self.storage_type = storage_type
+        self.restricted = restricted
+
+    def __enter__(self):
+        settings = Mock()
+        settings.settings.storage_type = self.storage_type
+        settings.settings.restrict_local_file_access = self.restricted
+        settings.settings.config_dir = str(self.config_dir)
+        settings.settings.database_url = ""
+        self._patches = [
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=settings),
+            patch("lfx.utils.file_path_security.get_settings_service", return_value=settings),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=AsyncMock()),
+        ]
+        for p in self._patches:
+            p.start()
+        return self
+
+    def __exit__(self, *exc):
+        for p in self._patches:
+            p.stop()
+        return False
+
+
+def _scoped_resolver(scope_ids):
+    """Mimic the ``resolve_path`` callback components hand to the storage-aware readers."""
+
+    def _resolve(path: str) -> str:
+        return str(enforce_local_file_access(path, scope_ids=scope_ids))
+
+    return _resolve
+
+
+@pytest.fixture
+def restricted_layout(tmp_path):
+    """config_dir with an in-scope upload, a reserved secret, and an out-of-scope target."""
+    config_dir = tmp_path / "config"
+    (config_dir / "flow-id").mkdir(parents=True)
+    (config_dir / "flow-id" / "upload.csv").write_bytes(b"col\nin-scope\n")
+    (config_dir / "secret_key").write_bytes(b"fernet-master-key")  # pragma: allowlist secret
+    outside = tmp_path / "outside" / "target.csv"
+    outside.parent.mkdir(parents=True)
+    outside.write_bytes(b"col\nsecret-value\n")
+    return config_dir, outside
+
+
+@pytest.mark.asyncio
+class TestRestrictedLocalFileAccessUnderS3:
+    """LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS must hold on the S3 storage branch too.
+
+    The S3 reader short-circuits to a direct local read for absolute paths that exist on
+    disk (the #13798 escape hatch). That short-circuit must still go through the local-file
+    containment control, otherwise the documented hardening flag is a no-op whenever
+    ``LANGFLOW_STORAGE_TYPE=s3``.
+    """
+
+    async def test_read_file_bytes_denies_out_of_scope_path_with_resolver(self, restricted_layout):
+        """A component-supplied resolver must be honored on the S3 local-read branch."""
+        config_dir, outside = restricted_layout
+        with _S3RestrictedEnv(config_dir), pytest.raises(LocalFileAccessError):
+            await read_file_bytes(str(outside), resolve_path=_scoped_resolver(["flow-id"]))
+
+    async def test_read_file_bytes_denies_out_of_scope_path_without_resolver(self, restricted_layout):
+        """Callers that pass no resolver must still not escape the storage root."""
+        config_dir, outside = restricted_layout
+        with _S3RestrictedEnv(config_dir), pytest.raises(LocalFileAccessError):
+            await read_file_bytes(str(outside))
+
+    async def test_read_file_bytes_local_storage_negative_control(self, restricted_layout):
+        """Negative control: the same read on local storage is already refused."""
+        config_dir, outside = restricted_layout
+        with _S3RestrictedEnv(config_dir, storage_type="local"), pytest.raises(LocalFileAccessError):
+            await read_file_bytes(str(outside), resolve_path=_scoped_resolver(["flow-id"]))
+
+    async def test_read_file_bytes_allows_in_scope_path(self, restricted_layout):
+        """Positive case: a path inside the caller's storage scope still reads."""
+        config_dir, _ = restricted_layout
+        in_scope = config_dir / "flow-id" / "upload.csv"
+        with _S3RestrictedEnv(config_dir):
+            content = await read_file_bytes(str(in_scope), resolve_path=_scoped_resolver(["flow-id"]))
+        assert content == b"col\nin-scope\n"
+
+    async def test_read_file_bytes_denies_reserved_secret_key(self, restricted_layout):
+        """The reserved-secret denial must run on the S3 branch.
+
+        ``secret_key`` sits directly under config_dir, so a containment check alone would
+        admit it; ``_reserved_secret_paths`` is what refuses it. That logic lives inside
+        ``enforce_local_file_access``, so it only runs if the S3 branch calls the control.
+        """
+        config_dir, _ = restricted_layout
+        with _S3RestrictedEnv(config_dir), pytest.raises(LocalFileAccessError):
+            await read_file_bytes(str(config_dir / "secret_key"))
+
+    async def test_read_file_text_denies_out_of_scope_path(self, restricted_layout):
+        """read_file_text delegates to read_file_bytes under S3 and inherits the guard."""
+        config_dir, outside = restricted_layout
+        with _S3RestrictedEnv(config_dir), pytest.raises(LocalFileAccessError):
+            await read_file_text(str(outside), resolve_path=_scoped_resolver(["flow-id"]), newline="")
+
+    async def test_symlink_alias_cannot_launder_an_out_of_scope_target(self, restricted_layout):
+        """A .csv-named symlink inside the storage scope must not reach an outside target."""
+        config_dir, outside = restricted_layout
+        link = config_dir / "flow-id" / "alias.csv"
+        link.symlink_to(outside)
+        with _S3RestrictedEnv(config_dir), pytest.raises(LocalFileAccessError):
+            await read_file_bytes(str(link), resolve_path=_scoped_resolver(["flow-id"]))
+
+    async def test_unrestricted_s3_still_reads_local_component_paths(self, restricted_layout):
+        """#13798 must keep working: with the flag off the escape hatch is unchanged."""
+        config_dir, outside = restricted_layout
+        with _S3RestrictedEnv(config_dir, restricted=False):
+            content = await read_file_bytes(str(outside))
+        assert content == b"col\nsecret-value\n"
+
+
+class TestRestrictedLocalFileAccessUnderS3Sync:
+    """The sync size/existence probes share the same short-circuit."""
+
+    def test_get_file_size_denies_out_of_scope_path(self, restricted_layout):
+        config_dir, outside = restricted_layout
+        with _S3RestrictedEnv(config_dir), pytest.raises(LocalFileAccessError):
+            get_file_size(str(outside))
+
+    def test_file_exists_does_not_probe_out_of_scope_paths(self, restricted_layout):
+        config_dir, outside = restricted_layout
+        with _S3RestrictedEnv(config_dir):
+            assert file_exists(str(outside)) is False
+
+    def test_get_file_size_allows_in_scope_path(self, restricted_layout):
+        config_dir, _ = restricted_layout
+        with _S3RestrictedEnv(config_dir):
+            assert get_file_size(str(config_dir / "flow-id" / "upload.csv")) == len(b"col\nin-scope\n")
+
+    def test_unrestricted_s3_size_probe_unchanged(self, restricted_layout):
+        config_dir, outside = restricted_layout
+        with _S3RestrictedEnv(config_dir, restricted=False):
+            assert get_file_size(str(outside)) == len(b"col\nsecret-value\n")

@@ -542,6 +542,37 @@ export function brokenEdgeMessage({
     source.outputDisplayName ? " | " + source.outputDisplayName : ""
   } -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
 }
+// Mirrors lfx's `coalesce_bool`, which is how the backend reads a boolean
+// table cell, so a toggle never shows a value the backend reads differently.
+const TRUTHY_CELL_STRINGS = new Set(["true", "1", "t", "y", "yes"]);
+
+export function isTruthyCellValue(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    return TRUTHY_CELL_STRINGS.has(value.trim().toLowerCase());
+  }
+  if (typeof value === "number") return Number.isInteger(value) && value !== 0;
+  return false;
+}
+
+const BOOLEAN_COLUMN_TYPES = new Set(["boolean", "bool"]);
+
+// Backend table schemas declare a column's `type` but not its `formatter`, and
+// the text fallback below used to be written back into the schema, so saved
+// flows carry `formatter: "text"` too. Either way a boolean column would render
+// as a free-text cell whose typed value is a string, so derive the toggle from
+// `type` unless the column opted into a dropdown of options.
+function resolveColumnFormatter(col: ColumnField): FormatterType {
+  if (
+    BOOLEAN_COLUMN_TYPES.has(col.type ?? "") &&
+    !col.options?.length &&
+    (!col.formatter || col.formatter === FormatterType.text)
+  ) {
+    return FormatterType.boolean;
+  }
+  return col.formatter ?? FormatterType.text;
+}
+
 export function FormatColumns(columns: ColumnField[]): ColDef[] {
   if (!columns) return [];
   const basic_types = new Set(["date", "number"]);
@@ -579,9 +610,7 @@ export function FormatColumns(columns: ColumnField[]): ColDef[] {
         return newValue;
       },
     };
-    if (!col.formatter) {
-      col.formatter = FormatterType.text;
-    }
+    col.formatter = resolveColumnFormatter(col);
     if (basic_types.has(col.formatter)) {
       newCol.cellDataType = col.formatter;
     } else {
@@ -615,6 +644,9 @@ export function FormatColumns(columns: ColumnField[]): ColDef[] {
           };
         } else if (col.formatter === FormatterType.boolean) {
           newCol.cellRenderer = TableAutoCellRender;
+          // Grid edits (typing into the cell, fill) must not store a string.
+          newCol.valueParser = ({ newValue }: ValueParserParams) =>
+            isTruthyCellValue(newValue);
           newCol.editable = false;
           newCol.autoHeight = false;
           newCol.cellClass = "no-border !py-2";

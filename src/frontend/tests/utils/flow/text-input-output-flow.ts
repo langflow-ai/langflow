@@ -24,7 +24,7 @@ async function addComponent(
   });
   await expect(nodes).toHaveCount(previousCount + 1);
   await expect(
-    page.getByRole("group", { name: `${options.displayName} node` }),
+    page.getByRole("application", { name: `${options.displayName} node` }),
   ).toBeAttached();
 }
 
@@ -67,7 +67,9 @@ export async function createTextInputOutputFlow(page: Page): Promise<void> {
     addButtonSlug: "text-input",
     displayName: "Text Input",
   });
-  const textInputNode = page.getByRole("group", { name: "Text Input node" });
+  const textInputNode = page.getByRole("application", {
+    name: "Text Input node",
+  });
   await moveNodeBy(page, textInputNode, -400);
 
   await addComponent(page, {
@@ -77,7 +79,7 @@ export async function createTextInputOutputFlow(page: Page): Promise<void> {
     displayName: "Prompt Template",
   });
 
-  const promptNode = page.getByRole("group", {
+  const promptNode = page.getByRole("application", {
     name: "Prompt Template node",
   });
   await promptNode
@@ -97,7 +99,7 @@ export async function createTextInputOutputFlow(page: Page): Promise<void> {
     addButtonSlug: "text-output",
     displayName: "Text Output",
   });
-  const textOutputNode = page.getByRole("group", {
+  const textOutputNode = page.getByRole("application", {
     name: "Text Output node",
   });
   await moveNodeBy(page, textOutputNode, 400);
@@ -116,11 +118,13 @@ export async function runTextInputOutputFlow(
 ): Promise<string> {
   if (value !== undefined) {
     await page
-      .getByRole("group", { name: "Text Input node" })
+      .getByRole("application", { name: "Text Input node" })
       .getByTestId("textarea_str_input_value")
       .fill(value, { force: true });
   }
-  const textOutputNode = page.getByRole("group", { name: "Text Output node" });
+  const textOutputNode = page.getByRole("application", {
+    name: "Text Output node",
+  });
   const runButton = textOutputNode.getByRole("button", {
     name: "Run component",
   });

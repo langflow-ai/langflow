@@ -1,7 +1,9 @@
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
 import type { ModelOption, SelectedModel } from "../types";
 import { matchesModelIdentity } from "./model-option-identity";
+import { providerNamesMatch } from "./provider-identity";
 import { recoverModelOption } from "./recover-model-option";
+import { isSavedModelUnavailable } from "./saved-model-availability";
 
 export interface DeriveSelectedModelParams {
   isConnectionMode: boolean;
@@ -19,6 +21,10 @@ export interface DeriveSelectedModelParams {
    * not-enabled-locally trigger.
    */
   providerStatusIsReliable: boolean;
+  /** The user's enabled-models map; lets a restricted model be told apart from a deactivated one. */
+  enabledModels?: Record<string, Record<string, boolean>>;
+  /** Whether `providers` AND `enabledModels` are settled; gates the unavailable branch. */
+  modelStatusIsReliable?: boolean;
 }
 
 /**
@@ -33,6 +39,8 @@ export function deriveSelectedModel({
   flatOptions,
   providers,
   providerStatusIsReliable,
+  enabledModels,
+  modelStatusIsReliable = false,
 }: DeriveSelectedModelParams): SelectedModel | null {
   if (isConnectionMode) {
     return {
@@ -55,9 +63,42 @@ export function deriveSelectedModel({
   );
   if (match) return match;
 
+  // A model that is no longer offered at all (restricted by an administrator,
+  // removed from the catalog) keeps naming itself in the trigger, flagged so
+  // the trigger can explain why — showing flatOptions[0] here would present a
+  // model the field is not set to, and "Select a model" would hide the
+  // restriction entirely (LE-1960).
+  if (
+    saved &&
+    isSavedModelUnavailable({
+      savedValue,
+      providers,
+      enabledModels,
+      modelStatusIsReliable,
+    })
+  ) {
+    // Drop a backend-injected `not_enabled_locally` tag: that flag drives the
+    // "configure this provider" wrench, which has nothing to configure here.
+    const { not_enabled_locally: _notEnabledLocally, ...savedMetadata } =
+      saved.metadata ?? {};
+    return {
+      ...(saved.id && { id: saved.id }),
+      name: saved.name,
+      icon: saved.icon || "Bot",
+      provider: saved.provider || "Unknown",
+      metadata: {
+        ...savedMetadata,
+        unavailable: true,
+      },
+    } as SelectedModel;
+  }
+
   if (saved) {
     const savedProviderConfigured = providerStatusIsReliable
-      ? providers?.some((p) => p.provider === saved.provider && p.is_configured)
+      ? providers?.some(
+          (p) =>
+            providerNamesMatch(p.provider, saved.provider) && p.is_configured,
+        )
       : undefined;
     if (!savedProviderConfigured) {
       return {

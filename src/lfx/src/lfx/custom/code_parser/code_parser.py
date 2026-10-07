@@ -1,5 +1,4 @@
 import ast
-import contextlib
 import inspect
 import traceback
 from itertools import starmap
@@ -9,6 +8,7 @@ from typing import Any
 from cachetools import TTLCache, keys
 from fastapi import HTTPException
 
+from lfx.custom.annotation_validation import is_safe_return_annotation, resolve_type_annotation, safe_annotation_aliases
 from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.schema import CallableCodeDetails, ClassCodeDetails, MissingDefault
 from lfx.log.logger import logger
@@ -129,39 +129,11 @@ class CodeParser:
             arg_dict["type"] = ast.unparse(arg.annotation)
         return arg_dict
 
-    # @cachedmethod(operator.attrgetter("cache"))
-    def construct_eval_env(self, return_type_str: str, imports) -> dict:
-        """Constructs an evaluation environment.
-
-        Constructs an evaluation environment with the necessary imports for the return type,
-        taking into account module aliases.
-        """
-        eval_env: dict = {}
-        for import_entry in imports:
-            if isinstance(import_entry, tuple):  # from module import name
-                module, name = import_entry
-                if name in return_type_str:
-                    exec(f"import {module}", eval_env)
-                    exec(f"from {module} import {name}", eval_env)
-            else:  # import module
-                module = import_entry
-                alias = None
-                if " as " in module:
-                    module, alias = module.split(" as ")
-                if module in return_type_str or (alias and alias in return_type_str):
-                    exec(f"import {module} as {alias or module}", eval_env)
-        return eval_env
-
     def parse_callable_details(self, node: ast.FunctionDef) -> dict[str, Any]:
         """Extracts details from a single function or method node."""
         return_type = None
-        if node.returns:
-            return_type_str = ast.unparse(node.returns)
-            eval_env = self.construct_eval_env(return_type_str, tuple(self.data["imports"]))
-
-            # Handle cases where the type is not found in the constructed environment
-            with contextlib.suppress(NameError):
-                return_type = eval(return_type_str, eval_env)  # noqa: S307
+        if node.returns and is_safe_return_annotation(node.returns):
+            return_type = resolve_type_annotation(node.returns, aliases=safe_annotation_aliases(self.data["imports"]))
 
         func = CallableCodeDetails(
             name=node.name,

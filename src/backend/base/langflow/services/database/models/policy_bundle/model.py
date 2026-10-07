@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 import sqlalchemy as sa
+from sqlalchemy.sql.naming import conv
 from sqlmodel import Field, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -21,8 +22,8 @@ class PolicyBundleRevision(SQLModel, table=True):  # type: ignore[call-arg]
 
     __tablename__ = "policy_bundle_revision"
     __table_args__ = (
-        sa.CheckConstraint("revision >= 1", name="ck_policy_bundle_revision_positive"),
-        sa.CheckConstraint("length(content_hash) = 64", name="ck_policy_bundle_revision_hash_length"),
+        sa.CheckConstraint("revision >= 1", name=conv("ck_policy_bundle_revision_positive")),
+        sa.CheckConstraint("length(content_hash) = 64", name=conv("ck_policy_bundle_revision_hash_length")),
     )
 
     revision: int = Field(primary_key=True, ge=1)
@@ -75,9 +76,9 @@ class PolicyBundleActive(SQLModel, table=True):  # type: ignore[call-arg]
     __table_args__ = (
         sa.CheckConstraint(
             f"id = {POLICY_BUNDLE_SINGLETON_ID}",
-            name="ck_policy_bundle_active_singleton",
+            name=conv("ck_policy_bundle_active_singleton"),
         ),
-        sa.CheckConstraint("revision >= 1", name="ck_policy_bundle_active_revision_positive"),
+        sa.CheckConstraint("revision >= 1", name=conv("ck_policy_bundle_active_revision_positive")),
     )
 
     id: int = Field(default=POLICY_BUNDLE_SINGLETON_ID, primary_key=True)

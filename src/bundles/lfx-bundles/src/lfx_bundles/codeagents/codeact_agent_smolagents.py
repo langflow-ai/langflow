@@ -590,8 +590,8 @@ class CodeActAgentSmolagentsComponent(ToolCallingAgentComponent):
             from OpenDsStar.agents.codeact_smolagents.codeact_agent_smolagents import CodeActAgentSmolagents
         except ImportError as e:
             error_msg = (
-                f"Cannot import CodeActAgentSmolagents. Please ensure OpenDsStar is properly installed.\n"
-                f"Run: uv pip install -e /path/to/OpenDsStar\n"
+                "Cannot import CodeActAgentSmolagents. OpenDsStar requires a separate manual installation.\n"
+                "Run: uv pip install 'OpenDsStar==1.0.26' 'langchain-litellm==0.5.1'\n"
                 f"Error: {e}"
             )
             raise ImportError(error_msg) from e

@@ -18,6 +18,7 @@ the mitigations the v2 public endpoint is supposed to inherit from v1:
 from __future__ import annotations
 
 import copy
+import json
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -307,6 +308,7 @@ async def test_public_endpoint_namespaces_caller_session(client: AsyncClient, pu
     assert sent_inputs is not None
     assert sent_inputs.session == f"{expected_namespace}:{victim_session}"
     assert sent_inputs.session != victim_session
+    assert captured["run_id"] is not None
 
 
 @pytest.mark.benchmark
@@ -669,6 +671,60 @@ async def test_public_endpoint_rejects_code_execution_components(
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_public_endpoint_rejects_mcp_stdio_server_config(
+    client: AsyncClient, json_memory_chatbot_no_llm, logged_in_headers
+):
+    """An MCP Tools node configured for the stdio transport must not run anonymously.
+
+    The command it would launch lives in the ``mcp_server`` field VALUE rather than in
+    ``code``, so trusted-code substitution leaves it intact; without the public-path
+    check an anonymous visitor would make the server spawn that OS process.
+    """
+    import json
+
+    from tests.unit.build_utils import create_flow
+
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "MCPTools-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "MCPTools-pub1",
+                "type": "MCPTools",
+                "node": {
+                    "display_name": "MCP Tools",
+                    "template": {
+                        "mcp_server": {
+                            "type": "mcp",
+                            "name": "mcp_server",
+                            "value": {
+                                "name": "local",
+                                "config": {"command": "python", "args": ["-m", "some_module"]},
+                            },
+                        }
+                    },
+                },
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+    await _make_flow_public(client, flow_id, logged_in_headers)
+
+    _send_unauthenticated(client, "test-mcp-stdio-client")
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_public_endpoint_surfaces_value_error_as_400(client: AsyncClient, public_flow_id, monkeypatch):
     """Other gate ``ValueError``s become a sanitized 400."""
     import langflow.api.v2.workflow_public as workflow_public_module
@@ -730,3 +786,121 @@ def test_public_endpoint_throttles_per_ip(monkeypatch):
     # the third exhausts the 2/min window and is rejected at the throttle.
     assert statuses[2] == codes.TOO_MANY_REQUESTS, statuses
     assert codes.TOO_MANY_REQUESTS not in statuses[:2], statuses
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_endpoint_rejects_expose_graph_state_field(client: AsyncClient, public_flow_id):
+    """A visitor cannot ask for the graph state: the field is not on the public schema.
+
+    Rejecting is deliberate rather than accepting-and-ignoring, so a caller that
+    tries to turn it on learns it is unavailable instead of silently getting a
+    stream they think carries node state.
+    """
+    _send_unauthenticated(client, "graph-state-rejection-client")
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={
+            "flow_id": str(public_flow_id),
+            "input_value": "Hi",
+            "stream_protocol": "agui",
+            "expose_graph_state": True,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.UNPROCESSABLE_ENTITY
+
+
+def _mirrored_sources(body: str) -> list[dict]:
+    """Every ``properties.source`` carried by a message frame in an SSE body.
+
+    Covers both wire shapes: the ``langflow`` passthrough (``add_message``) and
+    the ``agui`` ``langflow.event`` mirror that wraps the same payload.
+    """
+    sources: list[dict] = []
+    for line in body.splitlines():
+        if not line.startswith("data:"):
+            continue
+        payload = json.loads(line.removeprefix("data:").strip())
+        data = payload.get("data") or {}
+        if payload.get("type") == "CUSTOM":
+            data = (payload.get("value") or {}).get("data") or {}
+        source = (data.get("properties") or {}).get("source")
+        if isinstance(source, dict):
+            sources.append(source)
+    return sources
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_default_protocol_stream_carries_no_graph_state(client: AsyncClient, public_flow_id):
+    """The guarantee holds on the endpoint's DEFAULT protocol, not just ``agui``.
+
+    ``stream_protocol`` defaults to ``langflow``, so a visitor who omits it was
+    the likeliest caller of all and used to receive ``vertices_sorted`` plus an
+    ``end_vertex`` per component, each carrying that component's own output.
+    """
+    _send_unauthenticated(client, "default-protocol-client")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        body = "".join([chunk async for chunk in response.aiter_text()])
+
+    assert '"event": "vertices_sorted"' not in body
+    assert '"event": "end_vertex"' not in body
+    assert '"event": "log"' not in body
+
+    # Messages no longer name the component that produced them.
+    sources = _mirrored_sources(body)
+    assert sources, "expected at least one message frame to check"
+    assert all(not any(source.values()) for source in sources), sources
+
+    # The flow's answer is not graph state, so the terminal output survives.
+    assert '"event": "output"' in body
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_agui_stream_carries_no_graph_state(client: AsyncClient, public_flow_id):
+    """An anonymous AG-UI stream never carries the flow's topology or component outputs.
+
+    The visitor still gets the conversation, including the ``langflow.event``
+    mirror the shareable playground's chat-view renders from.
+    """
+    _send_unauthenticated(client, "graph-state-forced-client")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={
+            "flow_id": str(public_flow_id),
+            "input_value": "Hi",
+            "stream_protocol": "agui",
+        },
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        body = "".join([chunk async for chunk in response.aiter_text()])
+
+    assert "RUN_STARTED" in body
+    assert "RUN_FINISHED" in body
+
+    assert "STATE_SNAPSHOT" not in body
+    assert "STATE_DELTA" not in body
+    assert "STEP_STARTED" not in body
+    assert "STEP_FINISHED" not in body
+    assert "langflow.log" not in body
+
+    # The playground's chat channel survives; without it a shared link renders
+    # no messages at all (its chat-view has no TEXT_MESSAGE_* handling).
+    assert "langflow.event" in body
+
+    # The mirror forwards message payloads verbatim, so assert on the payload
+    # rather than trusting the event-type assertions above: it used to carry
+    # ``properties.source``, naming the component (and, for an LLM, the model).
+    sources = _mirrored_sources(body)
+    assert sources, "expected at least one mirrored message to check"
+    assert all(not any(source.values()) for source in sources), sources

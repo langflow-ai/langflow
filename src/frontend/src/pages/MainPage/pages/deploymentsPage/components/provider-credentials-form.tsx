@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,6 @@ interface ProviderCredentialsFormProps {
   apiKeyRequired?: boolean;
   urlRequired?: boolean;
   urlReadOnly?: boolean;
-  apiKeyPlaceholder?: string;
 }
 
 export default function ProviderCredentialsForm({
@@ -21,25 +20,36 @@ export default function ProviderCredentialsForm({
   apiKeyRequired = true,
   urlRequired = true,
   urlReadOnly = false,
-  apiKeyPlaceholder,
 }: ProviderCredentialsFormProps) {
   const { t } = useTranslation();
   const [showApiKey, setShowApiKey] = useState(false);
+  const nameId = useId();
+  const urlId = useId();
+  const apiKeyId = useId();
 
   const urlAndApiKeyFields = (
     <>
       <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">
+        <label htmlFor={urlId} className="pb-2 text-sm font-medium">
           {t("deployments.fieldServiceInstanceUrl")}{" "}
-          {urlRequired ? <span className="text-destructive">*</span> : null}
-        </span>
+          {urlRequired ? (
+            <>
+              <span className="text-destructive" aria-hidden="true">
+                *
+              </span>
+              <span className="sr-only">{t("deployments.required")}</span>
+            </>
+          ) : null}
+        </label>
         <Input
+          id={urlId}
           type="url"
           placeholder={t("deployments.placeholderApiUrl")}
           className="bg-muted"
           value={credentials.url}
           disabled={urlReadOnly}
           readOnly={urlReadOnly}
+          aria-required={urlRequired}
           onChange={(e) =>
             onCredentialsChange({
               ...credentials,
@@ -49,24 +59,28 @@ export default function ProviderCredentialsForm({
         />
       </div>
       <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">
+        <label htmlFor={apiKeyId} className="pb-2 text-sm font-medium">
           {t("deployments.fieldApiKey")}{" "}
           {apiKeyRequired ? (
-            <span className="text-destructive">*</span>
+            <>
+              <span className="text-destructive" aria-hidden="true">
+                *
+              </span>
+              <span className="sr-only">{t("deployments.required")}</span>
+            </>
           ) : (
             <span className="text-muted-foreground">
               ({t("deployments.optional")})
             </span>
           )}
-        </span>
+        </label>
         <div className="relative">
           <Input
+            id={apiKeyId}
             type={showApiKey ? "text" : "password"}
-            placeholder={
-              apiKeyPlaceholder ?? t("deployments.placeholderApiKey")
-            }
             className="bg-muted pr-10"
             value={credentials.api_key}
+            aria-required={apiKeyRequired}
             onChange={(e) =>
               onCredentialsChange({
                 ...credentials,
@@ -102,15 +116,20 @@ export default function ProviderCredentialsForm({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">
+        <label htmlFor={nameId} className="pb-2 text-sm font-medium">
           {t("deployments.fieldName")}{" "}
-          <span className="text-destructive">*</span>
-        </span>
+          <span className="text-destructive" aria-hidden="true">
+            *
+          </span>
+          <span className="sr-only">{t("deployments.required")}</span>
+        </label>
         <Input
+          id={nameId}
           type="text"
           placeholder={t("deployments.placeholderEnvironmentName")}
           className="bg-muted"
           value={credentials.name}
+          aria-required="true"
           onChange={(e) =>
             onCredentialsChange({
               ...credentials,

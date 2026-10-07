@@ -11,6 +11,7 @@ import CustomLoginFormGate from "@/customization/components/custom-login-form-ga
 import CustomLoginSignupPrompt from "@/customization/components/custom-login-signup-prompt";
 import CustomLoginSsoOptions from "@/customization/components/custom-login-sso-options";
 import useTheme from "@/customization/hooks/use-custom-theme";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
 import {
   appendErrorSuggestion,
@@ -33,6 +34,10 @@ export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  // Server-side rejection (e.g. wrong credentials), mirrored inline so the
+  // error is programmatically associated with the credential fields
+  // (WCAG 3.3.1) instead of living only in the transient toast.
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const { password, username } = inputState;
 
@@ -40,6 +45,7 @@ export default function LoginPage(): JSX.Element {
   useTheme();
 
   const { t } = useTranslation();
+  useDocumentTitle(t("auth.signInButton"));
   const { login, clearAuthSession } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -47,6 +53,7 @@ export default function LoginPage(): JSX.Element {
     target: { name, value },
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
+    setServerError(null);
   }
 
   const { mutate } = useLoginUser();
@@ -65,20 +72,19 @@ export default function LoginPage(): JSX.Element {
         queryClient.clear();
       },
       onError: (error) => {
+        const message = appendErrorSuggestion(
+          extractApiErrorMessage(
+            error as Parameters<typeof extractApiErrorMessage>[0],
+            t("errors.signin"),
+          ),
+          t("errors.signinSuggestion", {
+            defaultValue: "Check your username and password, then try again.",
+          }),
+        );
+        setServerError(message);
         setErrorData({
           title: t("errors.signin"),
-          list: [
-            appendErrorSuggestion(
-              extractApiErrorMessage(
-                error as Parameters<typeof extractApiErrorMessage>[0],
-                t("errors.signin"),
-              ),
-              t("errors.signinSuggestion", {
-                defaultValue:
-                  "Check your username and password, then try again.",
-              }),
-            ),
-          ],
+          list: [message],
         });
       },
     });
@@ -157,9 +163,14 @@ export default function LoginPage(): JSX.Element {
                     className="h-11 w-full rounded-lg bg-muted"
                     required
                     aria-describedby={
-                      usernameError ? "login-username-error" : undefined
+                      [
+                        usernameError && "login-username-error",
+                        serverError && "login-form-error",
+                      ]
+                        .filter(Boolean)
+                        .join(" ") || undefined
                     }
-                    aria-invalid={Boolean(usernameError)}
+                    aria-invalid={Boolean(usernameError || serverError)}
                     placeholder={t("auth.usernamePlaceholder")}
                   />
 
@@ -199,10 +210,15 @@ export default function LoginPage(): JSX.Element {
                     id="login-password"
                     inputProps={{
                       autoComplete: "current-password",
-                      "aria-describedby": passwordError
-                        ? "login-password-error"
-                        : undefined,
-                      "aria-invalid": Boolean(passwordError) || undefined,
+                      "aria-describedby":
+                        [
+                          passwordError && "login-password-error",
+                          serverError && "login-form-error",
+                        ]
+                          .filter(Boolean)
+                          .join(" ") || undefined,
+                      "aria-invalid":
+                        Boolean(passwordError || serverError) || undefined,
                     }}
                     placeholder={t("auth.passwordPlaceholder")}
                     className="h-11 w-full rounded-lg bg-muted"
@@ -218,6 +234,16 @@ export default function LoginPage(): JSX.Element {
                     </p>
                   )}
                 </Form.Field>
+
+                {serverError && (
+                  <p
+                    id="login-form-error"
+                    role="alert"
+                    className="field-invalid static"
+                  >
+                    {serverError}
+                  </p>
+                )}
 
                 <Form.Submit asChild>
                   <Button className="h-11 w-full rounded-lg" type="submit">

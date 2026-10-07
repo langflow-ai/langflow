@@ -10,29 +10,40 @@ interface DeleteMessagesParams {
 
 export const useDeleteMessages: useMutationFunctionType<
   undefined,
-  DeleteMessagesParams
+  DeleteMessagesParams,
+  DeleteMessagesParams,
+  Error
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const deleteMessage = async ({ ids }: DeleteMessagesParams): Promise<any> => {
-    const response = await api.delete(`${getURL("MESSAGES")}`, {
-      data: ids,
-    });
+  const deleteMessage = async ({
+    ids,
+  }: DeleteMessagesParams): Promise<DeleteMessagesParams> => {
+    const response = await api.delete<DeleteMessagesParams>(
+      `${getURL("MESSAGES")}`,
+      {
+        data: ids,
+      },
+    );
 
     return response.data;
   };
 
   const mutation: UseMutationResult<
     DeleteMessagesParams,
-    any,
+    Error,
     DeleteMessagesParams
   > = mutate(["useDeleteMessages"], deleteMessage, {
     ...options,
-    onSettled: (data, error, variables, context) => {
+    onSettled: (...args) => {
+      // Deletions shift offsets; refresh loaded pages before requesting older rows.
+      queryClient.invalidateQueries({
+        queryKey: ["useGetMessagesQuery"],
+      });
       queryClient.invalidateQueries({
         queryKey: ["useGetSessionsFromFlowQuery"],
       });
-      options?.onSettled?.(data, error, variables, context);
+      options?.onSettled?.(...args);
     },
   });
 

@@ -85,6 +85,26 @@ class TestSubgraphIsolation:
                 )
 
     @pytest.mark.asyncio
+    async def test_create_subgraph_inherits_end_user_identity(self):
+        """A subgraph extends the parent's run, so it carries the end-user identity down.
+
+        Sub-flows and loop iterations must scope per-user state (chat memory) to the same
+        end user as the parent, so ``end_user_id`` propagates alongside ``persist_messages``.
+        """
+        chat_input = ChatInput(_id="chat_input")
+        chat_input.set(input_value="test")
+        chat_output = ChatOutput(_id="chat_output")
+        chat_output.set(input_value=chat_input.message_response)
+
+        parent_graph = Graph(chat_input, chat_output)
+        # Default carrier is None so editor-plane graphs are unchanged.
+        assert parent_graph.end_user_id is None
+        parent_graph.end_user_id = "alice"
+
+        async with parent_graph.create_subgraph({"chat_input", "chat_output"}) as subgraph:
+            assert subgraph.end_user_id == "alice"
+
+    @pytest.mark.asyncio
     async def test_create_subgraph_isolates_run_state(self):
         """Test that subgraph run state (run_manager, queues) is isolated."""
         chat_input = ChatInput(_id="chat_input")

@@ -13,7 +13,8 @@ export default function HelperLines({ helperLines }: HelperLinesProps) {
   }
 
   return (
-    <svg className="helper-lines">
+    // Transient drag-alignment guides: decoration with no meaning to announce.
+    <svg className="helper-lines" aria-hidden="true">
       {helperLines.horizontal && (
         <line
           x1={0}

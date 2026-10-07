@@ -17,7 +17,7 @@ class TestPreprocessSchema:
 
         assert normalized == [{"name": "tags", "type": "str", "description": "tags", "multiple": True}]
 
-    @pytest.mark.parametrize("truthy", ["true", "True", "TRUE", "1", "t", "y", "yes", "YES"])
+    @pytest.mark.parametrize("truthy", ["true", "True", "TRUE", "1", "t", "y", "yes", "YES", " true ", "\tyes\n"])
     def test_should_coerce_truthy_string_variants_to_bool_when_multiple_is_truthy(self, truthy):
         raw = [{"name": "f", "type": "str", "description": "", "multiple": truthy}]
 

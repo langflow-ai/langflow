@@ -100,7 +100,8 @@ async def build_and_cache_graph_from_data(
     return graph
 
 
-async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None:
+async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> bool:
+    """Delete a flow and its related rows, returning whether the flow was removed."""
     try:
         await check_flow_has_deployed_versions(session, flow_id=flow_id)
         # TODO: Verify if deleting messages is safe in terms of session id relevance
@@ -129,7 +130,7 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         await session.exec(
             delete(AuthzShare).where(AuthzShare.resource_type == "flow").where(AuthzShare.resource_id == flow_id)
         )
-        await session.exec(delete(Flow).where(Flow.id == flow_id))
+        result = await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,
@@ -137,6 +138,7 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         )
         msg = f"Unable to cascade delete flow: {flow_id}"
         raise RuntimeError(msg, e) from e
+    return result.rowcount == 1
 
 
 # Public flow file paths must be ``{source_flow_id}/{safe_basename}`` — uploads

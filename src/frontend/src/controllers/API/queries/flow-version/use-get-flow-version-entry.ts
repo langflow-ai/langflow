@@ -9,21 +9,28 @@ interface FlowVersionEntryParams {
   versionId: string;
 }
 
+export const getFlowVersionEntry = async ({
+  flowId,
+  versionId,
+}: FlowVersionEntryParams): Promise<FlowVersionEntryWithData> => {
+  const response = await api.get<FlowVersionEntryWithData>(
+    `${getURL("FLOWS")}/${flowId}/versions/${versionId}`,
+  );
+  return response.data;
+};
+
 export const useGetFlowVersionEntry: useQueryFunctionType<
   FlowVersionEntryParams,
   FlowVersionEntryWithData
 > = ({ flowId, versionId }, options) => {
   const { query } = UseRequestProcessor();
 
-  const getEntryFn = async (): Promise<FlowVersionEntryWithData> => {
-    const response = await api.get<FlowVersionEntryWithData>(
-      `${getURL("FLOWS")}/${flowId}/versions/${versionId}`,
-    );
-    return response.data;
-  };
-
-  return query(["useGetFlowVersionEntry", { flowId, versionId }], getEntryFn, {
-    ...options,
-    enabled: !!versionId && (options?.enabled ?? true),
-  });
+  return query(
+    ["useGetFlowVersionEntry", { flowId, versionId }],
+    () => getFlowVersionEntry({ flowId, versionId }),
+    {
+      ...options,
+      enabled: !!versionId && (options?.enabled ?? true),
+    },
+  );
 };

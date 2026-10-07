@@ -108,6 +108,7 @@ def is_retryable_create_exception(exc: Exception) -> bool:
             InvalidContentError,
             InvalidDeploymentOperationError,
             InvalidDeploymentTypeError,
+            ValueError,
         ),
     )
 

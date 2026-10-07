@@ -16,7 +16,7 @@ from uuid import uuid4
 import pytest
 from langflow.services.background_execution.live_bus import InMemoryLiveBus
 from langflow.services.background_execution.runner import HUMAN_INPUT_REQUIRED_EVENT, JobRunner
-from langflow.services.database.models.jobs.model import JobStatus
+from langflow.services.database.models.jobs.model import JobStatus, SignalType
 from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 
 
@@ -425,3 +425,50 @@ async def test_heartbeat_stopped_before_suspend_preserves_request_id(real_servic
     job = await job_service.get_job_by_job_id(job_id)
     assert job.status == JobStatus.SUSPENDED
     assert (job.job_metadata or {}).get("pending_request_id") == "req-hb"
+
+
+def _narrowed_run_source(started: list[str]):
+    """A two-node run whose per-vertex frames are suppressed.
+
+    Mirrors what ``_stream_event_frames`` produces for a background run with
+    ``expose_graph_state=False``: no durable per-vertex frame, just the off-wire
+    checkpoint where one would have been. ``started`` records the nodes that got
+    to run, so the test can assert the second one never did.
+    """
+    from lfx.workflow.adapters.langflow import WORKFLOW_STOP_CHECKPOINT_EVENT
+
+    async def _source(**_kwargs):
+        started.append("node-1")
+        yield (b"{}", WORKFLOW_STOP_CHECKPOINT_EVENT)
+        started.append("node-2")
+        yield _frame("add_message", {"text": "side effect of the second node"})
+
+    return _source
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
+async def test_stop_is_honored_at_a_vertex_boundary_without_graph_state(real_services_job_service) -> None:
+    """Cancellation must not depend on how much of the graph the caller asked to see.
+
+    The runner polls STOP when a durable frame goes by. A run without graph
+    state emits no durable per-vertex frame, so without the off-wire checkpoint
+    a stop during the first node would not be noticed until the next
+    conversation frame, and the second node would run first.
+    """
+    job_service = real_services_job_service
+    job_id, flow_id = uuid4(), uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=uuid4())
+    await job_service.write_signal(job_id, SignalType.STOP)
+
+    started: list[str] = []
+    runner = _runner(job_service, job_id, _narrowed_run_source(started))
+    await runner.run(job_id=job_id, source_kwargs={})
+
+    assert started == ["node-1"], "the stop was not honored at the vertex boundary"
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.CANCELLED
+
+    # The checkpoint is off-wire: it must not reach the durable log.
+    events = await job_service.read_events(job_id, after_seq=0)
+    assert "__workflow_stop_checkpoint__" not in [e.event_type for e in events]

@@ -40,6 +40,18 @@ on the user's canvas. Components appear in real time as you add them.
 - **describe_component** - Get a component TYPE's inputs, outputs, fields.
 - **get_field_value** - Read field values from a component on the canvas (by ID). No field_name = list all.
 
+Treat configuration metadata from `describe_component` as authoritative:
+- When `conditional_options` are present, use the first rule whose `when` fields
+  match the intended configuration. An empty `when` is the fallback. Configure
+  a mode and its dependent selections together when changing modes.
+- For closed scalar `options`, use exact, case-sensitive values. For `list` fields,
+  select each item from the options. A `combobox` allows free-text values; preserve
+  structured values (such as duration objects) and structured options in their declared shape.
+- Keep numeric values within `range_spec` bounds. When an optional field has a
+  `default`, omit it unless the user requests another value.
+- If configuration fails validation, correct the invalid parameter before retrying;
+  the rejected configuration call does not apply any of its parameter changes.
+
 **Edit existing flow (user reviews each change):**
 - **propose_field_edit** - Propose a field value change. User sees a diff card and accepts/rejects.
 
@@ -569,19 +581,23 @@ async def get_graph(
         model_name: Model name (e.g., "gpt-4o").
         api_key_var: Optional API key variable name.
         iterations_limit: Per-request Agent step budget; defaults to the shared
-            assistant budget. This flow is Python-built, so the JSON-side
+            assistant budget (``LANGFLOW_ASSISTANT_ITERATIONS`` or the pinned
+            value). This flow is Python-built, so the JSON-side
             ``inject_iterations_into_flow`` never touches it — the budget must
             arrive here or the Agent silently runs on the component default.
 
     Returns:
         Graph: The configured flow builder assistant graph.
     """
-    from langflow.agentic.services.flow_preparation import DEFAULT_ASSISTANT_ITERATIONS, MAX_ASSISTANT_ITERATIONS
+    from langflow.agentic.services.flow_preparation import (
+        MAX_ASSISTANT_ITERATIONS,
+        assistant_iterations_default,
+    )
 
     provider = provider or "OpenAI"
     model_name = model_name or "gpt-4o"
     if iterations_limit is None:
-        step_budget = DEFAULT_ASSISTANT_ITERATIONS
+        step_budget = assistant_iterations_default()
     else:
         step_budget = max(1, min(int(iterations_limit), MAX_ASSISTANT_ITERATIONS))
 

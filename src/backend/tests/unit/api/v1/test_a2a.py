@@ -114,12 +114,13 @@ async def test_get_agent_card_returns_valid_card(client: AsyncClient, active_use
 
     input_schema = body["skills"][0]["inputSchema"]
     assert input_schema["type"] == "object"
+    assert input_schema["properties"]["input_value"]["type"] == "string"
     assert input_schema["properties"]["session_id"]["type"] == "string"
 
     # The published schema matches what json_schema_from_flow computes directly.
     async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
-        assert input_schema == json_schema_from_flow(flow)
+        assert input_schema == json_schema_from_flow(flow, require_api_editable=False)
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -522,6 +523,16 @@ _ECHO_FLOW = Path(__file__).parents[3] / "data" / "chat_echo_no_llm.json"
 def echo_flow_data():
     """ChatInput -> ChatOutput echo flow (no LLM); a sync run returns input_value verbatim."""
     return orjson.loads(_ECHO_FLOW.read_bytes())["data"]
+
+
+def _refresh_template_sources(flow_data):
+    """Use this server's source so policy tests do not depend on saved fixture versions."""
+    from lfx.utils.flow_validation import get_component_code_lookups_for_validation
+
+    trusted_sources = get_component_code_lookups_for_validation()
+    assert trusted_sources is not None
+    for node in flow_data["nodes"]:
+        node["data"]["node"]["template"]["code"]["value"] = trusted_sources[node["data"]["type"]]
 
 
 def _text_message(text, message_id="m1", context_id=None, task_id=None):
@@ -1630,6 +1641,97 @@ async def test_apikey_folder_accepts_owner_key(client: AsyncClient, active_user,
     result = resp.json()["result"]
     assert result["status"]["state"] == "completed"
     assert result["artifacts"][0]["parts"][0]["text"] == "hello a2a"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_apikey_admin_only_run_returns_completed_task(
+    client: AsyncClient, active_user, echo_flow_data, monkeypatch
+):
+    """An owner key can execute a trusted echo graph with administrator-only policy enabled."""
+    _refresh_template_sources(echo_flow_data)
+    flow_id = await _apikey_flow(active_user, echo_flow_data)
+    key = await _create_api_key(active_user.id)
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", True)
+
+    response = await _jsonrpc(
+        client, flow_id, "message/send", _text_message("trusted echo"), headers={"x-api-key": key}
+    )
+
+    assert response.status_code == 200
+    assert "error" not in response.json()
+    result = response.json()["result"]
+    assert result["status"]["state"] == "completed"
+    assert result["artifacts"][0]["parts"][0]["text"] == "trusted echo"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_apikey_admin_only_denial_returns_failed_task(
+    client: AsyncClient, active_user, echo_flow_data, monkeypatch
+):
+    """Denied source returns a redacted failed Task without invoking the workflow executor."""
+    from unittest.mock import AsyncMock
+
+    from langflow.api.v2 import workflow
+
+    _refresh_template_sources(echo_flow_data)
+    echo_flow_data["nodes"][0]["data"]["node"]["template"]["code"]["value"] += "\n# untrusted local edit"
+    flow_id = await _apikey_flow(active_user, echo_flow_data)
+    key = await _create_api_key(active_user.id)
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", True)
+    execute = AsyncMock()
+    monkeypatch.setattr(workflow, "execute_sync_workflow_with_timeout", execute)
+
+    response = await _jsonrpc(client, flow_id, "message/send", _text_message("hello"), headers={"x-api-key": key})
+
+    assert response.status_code == 200
+    result = response.json()["result"]
+    assert result["status"]["state"] == "failed"
+    assert result["status"]["message"]["parts"][0]["text"] == "Flow execution failed"
+    assert not result.get("artifacts")
+    execute.assert_not_awaited()
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_apikey_resume_policy_denial_returns_failed_task(
+    client: AsyncClient, active_user, human_input_flow_data, monkeypatch
+):
+    """A resumed task rechecks policy and retains its checkpoint when source is denied."""
+    from unittest.mock import AsyncMock
+
+    from langflow.api.v1.a2a import A2ACheckpointStore
+    from langflow.processing import process
+
+    _refresh_template_sources(human_input_flow_data)
+    flow_id = await _apikey_flow(active_user, human_input_flow_data)
+    key = await _create_api_key(active_user.id)
+    headers = {"x-api-key": key}
+    paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"), headers=headers)).json()["result"]
+    assert paused["status"]["state"] == "input-required"
+    store = A2ACheckpointStore()
+    checkpoint = await store.load_by_run_id(paused["id"])
+    assert checkpoint is not None
+    checkpoint.flow_payload["nodes"][0]["data"]["node"]["template"]["code"]["value"] += "\n# untrusted local edit"
+    await store.save(checkpoint)
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", True)
+    execute = AsyncMock()
+    monkeypatch.setattr(process, "run_graph_internal", execute)
+
+    response = await _jsonrpc(
+        client,
+        flow_id,
+        "message/send",
+        _text_message("Approve", message_id="m2", context_id=paused["contextId"], task_id=paused["id"]),
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    result = response.json()["result"]
+    assert result["id"] == paused["id"]
+    assert result["status"]["state"] == "failed"
+    assert result["status"]["message"]["parts"][0]["text"] == "Flow execution failed"
+    assert not result.get("artifacts")
+    assert await store.load_by_run_id(paused["id"]) is not None
+    execute.assert_not_awaited()
 
 
 @pytest.mark.usefixtures("a2a_flag_on")

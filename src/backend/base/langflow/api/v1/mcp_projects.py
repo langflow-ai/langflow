@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import platform
+import re
 from asyncio.subprocess import create_subprocess_exec
 from collections.abc import Awaitable, Callable, Sequence
 from contextvars import ContextVar
@@ -17,8 +18,7 @@ from anyio import BrokenResourceError
 from anyio.abc import TaskGroup, TaskStatus
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse
-from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.util import project_mcp_server_name, sanitize_mcp_name
 from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service, session_scope
@@ -43,20 +43,26 @@ from langflow.api.utils import (
 from langflow.api.utils.mcp import (
     auto_configure_starter_projects_mcp,
     get_composer_streamable_http_url,
+    get_project_local_sse_url,
+    get_project_local_streamable_http_url,
     get_project_sse_url,
     get_project_streamable_http_url,
     get_url_by_os,
+    project_mcp_server_name_candidates,
 )
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.mcp import ResponseNoOp
 from langflow.api.v1.mcp_utils import (
+    authenticated_caller_ctx,
+    current_request_headers_ctx,
     current_request_variables_ctx,
     current_user_ctx,
     handle_call_tool,
     handle_list_resources,
-    handle_list_tools,
+    handle_list_tools_result,
     handle_mcp_errors,
     handle_read_resource,
+    raise_if_sse_disabled,
 )
 from langflow.api.v1.schemas import (
     AuthSettings,
@@ -66,7 +72,7 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
-from langflow.services.auth.constants import AUTO_LOGIN_WARNING
+from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
     AUTH_METHOD_AUTO_LOGIN,
     AuthCredentialContext,
@@ -86,6 +92,7 @@ from langflow.services.rate_limit.service import get_last_forwarded_for_hop
 
 # Constants
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
+_PROJECT_URL_ID_PATTERN = re.compile(r"/api/v1/mcp/project/([0-9a-fA-F-]{36})")
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
@@ -104,6 +111,7 @@ async def verify_project_auth(
     # Mirror the service.py auth entrypoints: reset request-local credential metadata at entry so a
     # later branch (e.g. the composer-token fast path) never inherits stale context from a prior call.
     clear_current_auth_context()
+    authenticated_caller_ctx.set(None)
     # Defensive invariant: drop any stale external access ceiling so it can't carry into MCP project auth.
     clear_current_external_access_context()
 
@@ -150,8 +158,13 @@ async def verify_project_auth(
         project_auth_type in {"apikey", "oauth"}
     )
 
-    if requires_api_key:
-        api_key = query_param or header_param
+    # A presented API key is always honoured, even when policy would not have demanded one.
+    # Under MCP Composer with a default project and AUTO_LOGIN=true, ``requires_api_key`` is
+    # False; without this, a key minted by ``/install`` would be ignored and the caller would
+    # fall through to the (now-rejecting) superuser fallback. Callers presenting NO credential
+    # still reach ``_superuser_fallback`` and get 403 AUTO_LOGIN_ERROR.
+    api_key = query_param or header_param
+    if requires_api_key or api_key:
         if not api_key:
             if project_auth_type == "oauth":
                 detail = (
@@ -178,6 +191,7 @@ async def verify_project_auth(
         if project_user_id != user.id:
             raise HTTPException(status_code=404, detail="Project not found")
 
+        authenticated_caller_ctx.set(user.id)
         return user
 
     return await _superuser_fallback(settings_service)
@@ -185,6 +199,15 @@ async def verify_project_auth(
 
 async def _superuser_fallback(settings_service) -> User:
     """Resolve the configured superuser for unauthenticated MCP paths that allow fallback."""
+    # AUTO_LOGIN parity with the non-MCP entrypoints (``_api_key_security_impl``,
+    # ``ws_api_key_security``, ``authenticate_with_credentials``): AUTO_LOGIN alone is not
+    # a credential. Only an explicit ``skip_auth_auto_login`` opt-in may resolve a caller
+    # that presented no API key and no token to the instance superuser.
+    if not settings_service.auth_settings.skip_auth_auto_login:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=AUTO_LOGIN_ERROR,
+        )
     if not settings_service.auth_settings.SUPERUSER:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -195,6 +218,10 @@ async def _superuser_fallback(settings_service) -> User:
     if result:
         logger.warning(AUTO_LOGIN_WARNING)
         set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
+        # Auto-login means the deployment has no authentication boundary at all, so the
+        # caller is this principal by the instance's own definition. A project that opted
+        # into auth_type="none" is a different case and returns above without a caller.
+        authenticated_caller_ctx.set(result.id)
         return result
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -252,6 +279,7 @@ async def verify_project_auth_conditional(
     if project_user_id != user.id:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    authenticated_caller_ctx.set(user.id)
     return user
 
 
@@ -281,6 +309,7 @@ async def _build_project_tools_response(
 ) -> MCPProjectResponse:
     """Return tool metadata for a project."""
     tools: list[MCPSettings] = []
+    server_name: str | None = None
     try:
         async with session_scope() as session:
             # Fetch the project first to verify it exists and belongs to the current user
@@ -294,6 +323,10 @@ async def _build_project_tools_response(
 
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
+
+            # Sent to clients so they show the backend's name, instead of each client
+            # deriving its own and disagreeing about non-Latin names.
+            server_name = project_mcp_server_name(project.name)
 
             # Query flows in the project
             flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.is_component == False)  # noqa: E712
@@ -346,12 +379,15 @@ async def _build_project_tools_response(
                         masked_settings["api_key"] = "*******"
                     auth_settings = AuthSettings(**masked_settings)
 
+    except HTTPException:
+        # A missing project is a 404, not a 500
+        raise
     except Exception as e:
         msg = f"Error listing project tools: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return MCPProjectResponse(tools=tools, auth_settings=auth_settings)
+    return MCPProjectResponse(tools=tools, auth_settings=auth_settings, server_name=server_name)
 
 
 @router.get("/{project_id}")
@@ -374,7 +410,7 @@ async def list_project_tools(
 @router.head(
     "/{project_id}/sse",
     response_class=HTMLResponse,
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
     include_in_schema=False,
 )
 async def im_alive(project_id: str):  # noqa: ARG001
@@ -384,7 +420,7 @@ async def im_alive(project_id: str):  # noqa: ARG001
 @router.get(
     "/{project_id}/sse",
     response_class=HTMLResponse,
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
     include_in_schema=False,
 )
 async def handle_project_sse(
@@ -465,12 +501,12 @@ async def _handle_project_sse_messages(
 
 @router.post(
     "/{project_id}",
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
     include_in_schema=False,
 )
 @router.post(
     "/{project_id}/",
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
     include_in_schema=False,
 )
 async def handle_project_messages(
@@ -507,6 +543,9 @@ async def _dispatch_project_streamable_http(
     project_token = current_project_ctx.set(project_id)
     variables = extract_global_variables_from_headers(request.headers, include_auth_headers=True)
     request_vars_token = current_request_variables_ctx.set(variables or None)
+    # Carry the raw request headers into the deep tool dispatch so an MCP-triggered run
+    # scopes to the serving end-user identity (resolve_serving_scope) like /run does.
+    request_headers_token = current_request_headers_ctx.set(request.headers)
 
     try:
         await project_server.session_manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
@@ -516,6 +555,7 @@ async def _dispatch_project_streamable_http(
         await logger.aexception(f"Error handling Streamable HTTP request for project {project_id}: {exc!s}")
         raise HTTPException(status_code=500, detail="Internal server error in project MCP transport") from exc
     finally:
+        current_request_headers_ctx.reset(request_headers_token)
         current_request_variables_ctx.reset(request_vars_token)
         current_project_ctx.reset(project_token)
         current_user_ctx.reset(user_token)
@@ -844,8 +884,13 @@ async def install_mcp_config(
 
         # Get settings service to build the SSE URL
         settings_service = get_settings_service()
-        if settings_service.auth_settings.AUTO_LOGIN and not settings_service.auth_settings.SUPERUSER:
-            # Without a superuser fallback, require API key auth for MCP installs.
+        if settings_service.auth_settings.AUTO_LOGIN and not (
+            settings_service.auth_settings.skip_auth_auto_login and settings_service.auth_settings.SUPERUSER
+        ):
+            # The MCP transport endpoints only resolve a credential-less caller to the
+            # superuser when skip_auth_auto_login is explicitly enabled and a superuser is
+            # configured. In every other AUTO_LOGIN configuration the installed client must
+            # carry an API key, otherwise it would be rejected at connect time.
             should_generate_api_key = True
         settings = settings_service.settings
         host = settings.host or None
@@ -928,18 +973,10 @@ async def install_mcp_config(
             args = ["/c", "uvx", *args]
             await logger.adebug("Windows detected, using cmd command")
 
-        name = project.name
-        server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
-
-        # Create the MCP configuration
         server_config: dict[str, Any] = {
             "command": command,
             "args": args,
         }
-
-        mcp_config = {"mcpServers": {server_name: server_config}}
-
-        await logger.adebug("Installing MCP config for project: %s (server name: %s)", project.name, server_name)
 
         # Get the config file path and check if client is available
         try:
@@ -978,8 +1015,18 @@ async def install_mcp_config(
         if removed_servers:
             await logger.adebug("Removed existing MCP servers with same SSE URL for reinstall: %s", removed_servers)
 
-        # Merge new config with existing config
-        existing_config["mcpServers"].update(mcp_config["mcpServers"])
+        # Distinct project names can share the truncated base name; never overwrite another project's entry.
+        candidate_names = project_mcp_server_name_candidates(project_id, project.name)
+        server_name = next(
+            (
+                name
+                for name in candidate_names
+                if not _entry_targets_other_project(existing_config["mcpServers"].get(name, {}), project_id)
+            ),
+            candidate_names[0],
+        )
+        await logger.adebug("Installing MCP config for project: %s (server name: %s)", project.name, server_name)
+        existing_config["mcpServers"][server_name] = server_config
 
         # Write the updated config
         with config_path.open("w") as f:
@@ -1278,6 +1325,21 @@ async def get_config_path(client: str) -> Path:
     raise ValueError(msg)
 
 
+def _entry_targets_other_project(server_config: dict[str, Any], project_id: UUID) -> bool:
+    """Return whether a client config entry points at a different Langflow project's MCP endpoint.
+
+    Entries that reference no project URL (e.g. an MCP Composer entry) are not treated as taken, so a
+    reinstall after an auth-mode switch still replaces them instead of adding a duplicate.
+    """
+    referenced_ids = {
+        project_ref.lower()
+        for arg in server_config.get("args", [])
+        if isinstance(arg, str)
+        for project_ref in _PROJECT_URL_ID_PATTERN.findall(arg)
+    }
+    return bool(referenced_ids) and str(project_id) not in referenced_ids
+
+
 def remove_server_by_urls(config_data: dict, urls: Sequence[str] | str) -> tuple[dict, list[str]]:
     """Remove any MCP servers that use one of the specified URLs from config data.
 
@@ -1349,9 +1411,13 @@ class ProjectMCPServer:
         # Register handlers that filter by project
         @self.server.list_tools()
         @handle_mcp_errors
-        async def handle_list_project_tools():
+        async def handle_list_project_tools(_request: types.ListToolsRequest) -> types.ListToolsResult:
             """Handle listing tools for this specific project."""
-            return await handle_list_tools(project_id=self.project_id, mcp_enabled_only=True)
+            result = await handle_list_tools_result(project_id=self.project_id, mcp_enabled_only=True)
+            # The SDK clears its cache only on the list[Tool] branch; the ListToolsResult
+            # branch upserts, so a tool that disappeared would linger with a stale schema.
+            self.server._tool_cache.clear()  # noqa: SLF001
+            return result
 
         @self.server.list_prompts()
         async def handle_list_prompts():
@@ -1537,8 +1603,8 @@ async def register_project_with_composer(project: Folder):
             error_msg = "Project must have an ID to register with MCP Composer"
             raise ValueError(error_msg)
 
-        streamable_http_url = await get_project_streamable_http_url(project.id)
-        legacy_sse_url = await get_project_sse_url(project.id)
+        streamable_http_url = await get_project_local_streamable_http_url(project.id)
+        legacy_sse_url = await get_project_local_sse_url(project.id)
         auth_config = await _get_mcp_composer_auth_config(project)
 
         error_message = await mcp_composer_service.start_project_composer(
@@ -1624,6 +1690,9 @@ async def init_mcp_servers():
                                     project_user,
                                     session,
                                     raise_on_error=True,
+                                    # This savepoint owns the transaction; a commit inside
+                                    # would close it and break every later statement.
+                                    owns_transaction=False,
                                 )
 
                     if persist_reason == "auto_enable_apikey":
@@ -1709,8 +1778,8 @@ async def get_or_start_mcp_composer(auth_config: dict, project_name: str, projec
         error_msg = "Langflow host and port must be set in settings to register project with MCP Composer"
         raise ValueError(error_msg)
 
-    streamable_http_url = await get_project_streamable_http_url(project_id)
-    legacy_sse_url = await get_project_sse_url(project_id)
+    streamable_http_url = await get_project_local_streamable_http_url(project_id)
+    legacy_sse_url = await get_project_local_sse_url(project_id)
     if not auth_config:
         error_msg = f"Auth config is required to start MCP Composer for project {project_name}"
         raise MCPComposerConfigError(error_msg, str(project_id))

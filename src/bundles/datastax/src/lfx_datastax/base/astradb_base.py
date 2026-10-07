@@ -15,6 +15,27 @@ from lfx.io import (
     StrInput,
 )
 from lfx.log.logger import logger
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
+
+
+def validate_api_endpoint(api_endpoint: str | None) -> str | None:
+    """SSRF-validate a tenant-controlled Astra/HCD Data API endpoint before it is dialed.
+
+    ``api_endpoint`` (and a ``https://``-prefixed ``database_name``) are free-form fields any flow
+    author can set, and the resolved URL is handed to the astrapy client together with the
+    configured application token. Route it through the shared connector guard -- the same one the
+    sibling ``astradb_cql`` REST path uses -- so a blocked destination (RFC1918, cloud metadata,
+    ...) is rejected before a client is built and before the token can leave the process.
+
+    An unset endpoint is passed through untouched: callers treat ``None``/empty as "not configured
+    yet" and must not blow up in build_config paths.
+
+    Raises:
+        SSRFProtectionError: If the endpoint is set and its host is blocked by connector policy.
+    """
+    if api_endpoint:
+        validate_connector_url_for_ssrf(api_endpoint)
+    return api_endpoint
 
 
 class AstraDBBaseComponent(Component):
@@ -151,7 +172,7 @@ class AstraDBBaseComponent(Component):
         DropdownInput(
             name="api_endpoint",
             display_name="Astra DB API Endpoint",
-            info="The API Endpoint for the Astra DB instance. Supercedes database selection.",
+            info="The API Endpoint for the Astra DB instance. Supersedes database selection.",
             advanced=True,
         ),
         DropdownInput(
@@ -226,6 +247,8 @@ class AstraDBBaseComponent(Component):
 
     @classmethod
     def get_vectorize_providers(cls, token: str, environment: str | None = None, api_endpoint: str | None = None):
+        # Fed a build_config value; validate before the blanket except below can swallow the error.
+        validate_api_endpoint(api_endpoint)
         try:
             # Get the admin object
             client = DataAPIClient(environment=cls.get_environment(environment))
@@ -298,6 +321,9 @@ class AstraDBBaseComponent(Component):
         embedding_generation_provider: str | None = None,
         embedding_generation_model: str | None = None,
     ):
+        # Fed a build_config value; validate before the endpoint is dialed with the token.
+        validate_api_endpoint(api_endpoint)
+
         # Build vectorize options, if needed
         vectorize_options = None
         if not dimension:
@@ -399,13 +425,14 @@ class AstraDBBaseComponent(Component):
         api_endpoint: str | None = None,
         database_name: str | None = None,
     ):
-        # If the api_endpoint is set, return it
+        # If the api_endpoint is set, return it. Both this and the url-shaped database_name below
+        # are tenant-controlled, so SSRF-validate them before any caller dials them with the token.
         if api_endpoint:
-            return api_endpoint
+            return validate_api_endpoint(api_endpoint)
 
         # Check if the database_name is like a url
         if database_name and database_name.startswith("https://"):
-            return database_name
+            return validate_api_endpoint(database_name)
 
         # If the database is not set, nothing we can do.
         if not database_name:
@@ -449,11 +476,15 @@ class AstraDBBaseComponent(Component):
         return "default_keyspace"
 
     def get_database_object(self, api_endpoint: str | None = None):
+        # Resolve (and SSRF-validate) the endpoint OUTSIDE the try below: callers pass build_config
+        # values straight through, and the blanket handler would otherwise remap the SSRF error
+        # into a generic ValueError after the client had already been constructed.
+        resolved_endpoint = validate_api_endpoint(api_endpoint) or self.get_api_endpoint()
         try:
             client = DataAPIClient(environment=self.environment)
 
             return client.get_database(
-                api_endpoint or self.get_api_endpoint(),
+                resolved_endpoint,
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
@@ -462,12 +493,15 @@ class AstraDBBaseComponent(Component):
             raise ValueError(msg) from e
 
     def collection_data(self, collection_name: str, database: Database = None):
+        # Resolve the endpoint (SSRF-validated) before the try so a blocked host never reaches the
+        # client; the handler below deliberately swallows errors for this best-effort UI count.
+        resolved_endpoint = None if database else self.get_api_endpoint()
         try:
             if not database:
                 client = DataAPIClient(environment=self.environment)
 
                 database = client.get_database(
-                    self.get_api_endpoint(),
+                    resolved_endpoint,
                     token=self.token,
                     keyspace=self.get_keyspace(),
                 )

@@ -1,0 +1,112 @@
+---
+title: Instana
+slug: /observability-instana
+description: Export Langflow traces and metrics to IBM Instana over OTLP, and verify the data actually landed.
+---
+
+Instana accepts OpenTelemetry data over OTLP, so Langflow exports to it with configuration only and no vendor code.
+
+This page covers the Instana specifics. For what Langflow exports, what it withholds, and how to control span volume, see [OpenTelemetry](./observability-opentelemetry.mdx) first.
+
+For the Traceloop-based integration, which captures LLM-level detail rather than Langflow's own service telemetry, see [Instana with Traceloop](./integrations-instana-traceloop.mdx). The two are independent and can run together.
+
+## Prerequisites
+
+- An Instana tenant, and the ability to sign in to its UI to run the verification steps at the end of this page.
+- An Instana **agent key**. In Instana, go to **Settings** > **Agent Keys**.
+
+  Agent keys are tenant-scoped and often restricted to administrators. If your Settings page shows only **User settings**, you do not have the role and need to request a key from whoever operates the tenant.
+
+- Your tenant's **OTLP endpoint**. See below.
+
+## Find your OTLP endpoint
+
+Instana SaaS exposes a per-region OTLP acceptor:
+
+```text
+https://otlp-COLOR-saas.instana.io:4318
+```
+
+`COLOR` is the region identifier for your tenant, such as `orange`, `blue`, `coral`, or `magenta`. Port `4318` is OTLP/HTTP; `4317` is OTLP/gRPC. Instana also documents `otlp-http-COLOR-saas.instana.io` and `otlp-grpc-COLOR-saas.instana.io` on port `443`; both forms reach the same acceptor.
+
+If your tenant URL does not follow the `TENANT-COLOR.instana.io` pattern, it is a dedicated or self-hosted unit and the acceptor host differs. Ask whoever operates the tenant rather than guessing, because a wrong host fails in the same silent way as a wrong key.
+
+## Configure environment variables
+
+Add the following to your Langflow environment. Replace the placeholders:
+
+```text
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-COLOR-saas.instana.io:4318
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS=x-instana-key=YOUR_AGENT_KEY,x-instana-host=YOUR_HOST_ID
+OTEL_SERVICE_NAME=langflow
+OTEL_RESOURCE_ATTRIBUTES=host.id=YOUR_HOST_ID,host.name=YOUR_HOST_ID,service.name=langflow
+OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta
+```
+
+Three of these are not optional in practice:
+
+- **A host identity.** This is the one that breaks a naive setup. Instana attaches telemetry to a host entity, and data that identifies no host is accepted and then has nowhere to live, so it never appears in the UI. Satisfy it in one of two ways: set the `x-instana-host` header, or set a `host.id`, `faas.id`, or `device.id` resource attribute. `host.name` does not count. It is a label, so it can supply the *value* you put in `x-instana-host`, but on its own it leaves the data unattached. Any stable string works; reuse the same one across restarts or each run creates a new entity.
+- **`OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`.** Port `4318` speaks HTTP. Pointing the gRPC exporter at it fails at connect time.
+- **`OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta`.** Instana renders counters from delta values, and the OpenTelemetry SDK sends cumulative by default. Without this, rate charts read as ever-climbing totals, which looks like a broken integration when it is only the temporality.
+
+If your tenant enforces tagging conventions, such as an application or environment tag, add them to `OTEL_RESOURCE_ATTRIBUTES`. Confirm with the tenant operator that the conventions are read from OTLP resource attributes, because in agent-based deployments they are configured in the agent's `configuration.yaml` instead and the two paths are not interchangeable.
+
+Restart Langflow and run a flow to generate traffic.
+
+## Verify the data landed
+
+A `2xx` response on export is not evidence. Instana acknowledges the payload before it is processed, and data that identifies no host is discarded after acceptance.
+
+1. Confirm the service exists. In Instana, open **Applications** > **Services** and look for `langflow`. If nothing appears, the host identity is the first thing to check.
+
+2. Retrieve a single run by its trace ID. Take a `trace_id` from any Langflow log line, then use **Analytics** > **Traces** and filter on it. Finding the exact run you just executed is the evidence that the pipeline works end to end; a service that merely exists is not.
+
+   If the trace view is not available to your role, query the API instead, which needs only an API token:
+
+   ```bash
+   curl -s "https://YOUR_TENANT.instana.io/api/application-monitoring/v2/analyze/traces/YOUR_TRACE_ID" \
+     -H "authorization: apiToken YOUR_API_TOKEN"
+   ```
+
+   A run driven over HTTP returns the request span with `flow.execute` nested beneath it.
+
+3. Confirm metrics are arriving. Open the `langflow` service and check that request rate and latency are populated, or query the metric by `service.name` in a custom dashboard.
+
+A failed run's `flow.execute` span arrives with `error.type` set to the exception class. The exception message is not exported. For the full list of what Langflow withholds, see [OpenTelemetry](./observability-opentelemetry.mdx).
+
+## Troubleshooting
+
+### A run appears by API but not by browsing
+
+Instana builds its Calls views from entry spans. A run with an HTTP request in front of it has one, and browses normally. A CLI run (`lfx run`) emits only an internal `flow.execute` span, so there is no entry span to anchor a Call to, and the run can be retrievable by trace ID while not appearing in the trace list.
+
+Retrieve those by ID through the API rather than expecting to find them by browsing.
+
+### The export succeeds but nothing appears in the UI
+
+Almost always the host identity. Instana has accepted data it cannot attach to anything. Check that you set `x-instana-host`, or one of `host.id` / `faas.id` / `device.id`. Setting only `host.name` is the common version of this mistake, because it looks like a host identity and is not one. Fix it, restart, and generate new traffic.
+
+If your tenant enforces tagging conventions, untagged data can also be accepted and then be invisible to you specifically, through access control rather than through discarding. Check with the tenant operator.
+
+### Charts show ever-climbing totals instead of a rate
+
+The temporality preference is missing. See [Configure environment variables](#configure-environment-variables).
+
+### Metrics arrive but timestamps look wrong
+
+Instana timestamps some ingested data at reception rather than at the time recorded in the payload. A backlog after a restart, or a batch delayed by a slow network, lands bunched at the reception time instead of spread across the period it describes. Judge ingest health on span and metric presence rather than on the exact shape of a chart immediately after a restart.
+
+### No data at all
+
+Run `lfx observability doctor` to confirm the endpoint accepts data with your configuration. A `401` or `403` means the agent key is wrong or is not valid for this tenant. A connection error usually means the wrong port or protocol.
+
+### Your bill is higher than expected
+
+Database spans are roughly 80% of Langflow's exported spans. Set `LANGFLOW_OTEL_DB_SPANS=false` to drop them, after reading the trade-off in [Control span volume](./observability-opentelemetry.mdx#control-span-volume).
+
+## See also
+
+- [OpenTelemetry](./observability-opentelemetry.mdx)
+- [Instana with Traceloop](./integrations-instana-traceloop.mdx)
+- [New Relic](./observability-new-relic.mdx)

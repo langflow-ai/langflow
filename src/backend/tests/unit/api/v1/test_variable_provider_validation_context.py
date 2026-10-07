@@ -93,6 +93,7 @@ async def test_should_validate_with_owner_provider_vars_not_caller_in_share_awar
             variable_id=existing.id,
             variable=VariableUpdate(id=existing.id, name="OPENAI_API_KEY", value="sk-new"),
             current_user=caller,
+            provider_policy_attributes={},
         )
 
     assert captured["user_id"] == owner_id, (

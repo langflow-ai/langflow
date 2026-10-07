@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from collections import Counter
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -102,31 +103,27 @@ def patch_components_send_message(component: Component):
     return old_send_message
 
 
-def _patch_send_message_decorator(component, func):
-    """Decorator to patch the send_message method of a component.
+def _resolve_local_method(component: Component, output_method: Callable, method_name: str) -> Callable:
+    """Resolve an output method against the per-invocation component copy.
 
-    This is useful when we want to use a component as a tool, but we don't want to
-    send any messages to the UI. With this only the Component calling the tool
-    will send messages to the UI.
+    ``method_name`` is ``output_method.__name__``, which only names an attribute
+    for a method declared on the class. Run Flow registers its per-selected-flow
+    resolvers on the *instance*, under a name the closure itself does not carry,
+    so the lookup misses; ``Component.__deepcopy__`` also rebuilds the component
+    rather than copying its ``__dict__``, so the copy need not have it at all.
+    Falling back to ``output_method`` then ran the component the toolkit was
+    built from -- the call's arguments had been set on the copy, so the method
+    that ran never saw them, the sub-flow ran with no tweak, and the tool
+    answered with empty content (#15034). Bind the captured function to the copy
+    instead, so the object that received the arguments is the object that runs.
     """
-
-    async def async_wrapper(*args, **kwargs):
-        original_send_message = component.send_message
-        component.send_message = send_message_noop
-        try:
-            return await func(*args, **kwargs)
-        finally:
-            component.send_message = original_send_message
-
-    def sync_wrapper(*args, **kwargs):
-        original_send_message = component.send_message
-        component.send_message = send_message_noop
-        try:
-            return func(*args, **kwargs)
-        finally:
-            component.send_message = original_send_message
-
-    return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+    local_method = getattr(component, method_name, None)
+    if local_method is not None:
+        return local_method
+    function = getattr(output_method, "__func__", None)
+    if function is None:
+        return output_method
+    return function.__get__(component, type(component))
 
 
 def _build_output_function(
@@ -148,7 +145,11 @@ def _build_output_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
-        local_method = getattr(comp, method_name, output_method)
+        # Nothing patches send_message here. Silencing the shared component leaked across
+        # overlapping calls: the second call recorded the first call's no-op as the method
+        # to restore, and restored it once the first call had put the real one back.
+        # Suppressing the tool run's own messages is a separate change, tracked on its own.
+        local_method = _resolve_local_method(comp, output_method, method_name)
         build_started = False
         result = None
         try:
@@ -183,7 +184,7 @@ def _build_output_function(
         # removing the model_dump() call here because it is not serializable
         return serialize(result)
 
-    return _patch_send_message_decorator(component, output_function)
+    return output_function
 
 
 def _build_output_async_function(
@@ -205,7 +206,8 @@ def _build_output_async_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
-        local_method = getattr(comp, method_name, output_method)
+        # See _build_output_function: a tool call must not patch send_message anywhere.
+        local_method = _resolve_local_method(comp, output_method, method_name)
         build_started = False
         result = None
         try:
@@ -239,7 +241,7 @@ def _build_output_async_function(
         # removing the model_dump() call here because it is not serializable
         return serialize(result)
 
-    return _patch_send_message_decorator(component, output_function)
+    return output_function
 
 
 def _format_tool_name(name: str):
@@ -300,6 +302,78 @@ def _derive_tool_name(component: Component, output_method: str, outputs: list[Ou
 
 def _add_commands_to_tool_description(tool_description: str, commands: str):
     return f"very_time you see one of those commands {commands} run the tool. tool description is {tool_description}"
+
+
+_MAX_TOOL_NAME_LENGTH = 64
+_MAX_INSTANCE_SUFFIX_LENGTH = 32
+
+
+def _instance_suffix(tool: BaseTool, position: int) -> str:
+    """Identify the component instance a tool runs.
+
+    Falls back to the tool's position for tools built outside
+    ``ComponentToolkit``, which carry no source component.
+    """
+    source_id = (getattr(tool, "metadata", None) or {}).get("source_id")
+    slug = re.sub(r"[^a-zA-Z0-9_]", "_", str(source_id or "")).strip("_")
+    return slug[-_MAX_INSTANCE_SUFFIX_LENGTH:] if slug else str(position)
+
+
+def _rename_tool(tool: BaseTool, name: str) -> None:
+    """Rename a tool, carrying ``tags[0]`` along.
+
+    ``tags[0]`` is the tool's identity for the Actions metadata merge and for
+    HITL gating, so the two must never drift apart.
+    """
+    tool.name = name
+    tool.tags = [name, *(tool.tags or [])[1:]]
+
+
+def disambiguate_tool_names(tools: list[BaseTool]) -> list[BaseTool]:
+    """Give same-named tools from different component instances distinct names.
+
+    ``_MAX_TOOL_NAME_LENGTH`` is the ceiling OpenAI and Anthropic enforce on a
+    tool name; the instance suffix keeps a node id's unique tail.
+
+    ``_derive_tool_name`` names a tool from its component's class and output
+    method, both class-level constants. Two nodes of the same type wired as
+    separate tools into one Agent therefore register under the identical name
+    and the LLM cannot address them individually: every call lands on whichever
+    one won the collision. A toolkit only ever sees one component, so the agent
+    aggregating the connected tools is the first place the whole set is visible.
+
+    Only names that actually collide are rewritten. A tool name is the key a
+    saved flow's ``tools_metadata`` rows match on, so renaming an uncontested
+    tool would discard the user's Actions-panel edits -- and drop the tool
+    itself, since ``update_tools_metadata`` keeps only the tools it finds in
+    that metadata.
+
+    Renamed tools are shallow copies so other consumers keep their original
+    names, while each copy still executes against the same component instance.
+    """
+    named = [(position, tool) for position, tool in enumerate(tools) if isinstance(tool, BaseTool)]
+    duplicated = {name for name, count in Counter(tool.name for _, tool in named).items() if count > 1}
+    if not duplicated:
+        return tools
+
+    resolved = list(tools)
+    taken = {tool.name for _, tool in named}
+    for position, tool in named:
+        if tool.name not in duplicated:
+            continue
+        suffix = _instance_suffix(tool, position + 1)
+        base = _format_tool_name(tool.name)[: _MAX_TOOL_NAME_LENGTH - len(suffix) - 1]
+        candidate = f"{base}_{suffix}"
+        ordinal = 2
+        while candidate in taken:
+            candidate = f"{base[: len(base) - len(str(ordinal)) - 1]}_{suffix}_{ordinal}"
+            ordinal += 1
+        taken.add(candidate)
+        # Outputs can be shared by multiple graph consumers. Keep renames local
+        # while preserving the callable and its component execution context.
+        resolved[position] = tool.model_copy()
+        _rename_tool(resolved[position], candidate)
+    return resolved
 
 
 class ComponentToolkit:
@@ -400,6 +474,11 @@ class ComponentToolkit:
             name = _derive_tool_name(self.component, f"{output.method}".strip("."), eligible_outputs)
             formatted_name = _format_tool_name(name)
             event_manager = self.component.get_event_manager()
+            tool_metadata = {
+                "display_name": formatted_name,
+                "display_description": build_description(self.component, output),
+                "source_id": self.component.get_id(),
+            }
             if asyncio.iscoroutinefunction(output_method):
                 tools.append(
                     ComponentStructuredTool(
@@ -412,10 +491,7 @@ class ComponentToolkit:
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
-                        metadata={
-                            "display_name": formatted_name,
-                            "display_description": build_description(self.component, output),
-                        },
+                        metadata=dict(tool_metadata),
                     )
                 )
             else:
@@ -428,10 +504,7 @@ class ComponentToolkit:
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
-                        metadata={
-                            "display_name": formatted_name,
-                            "display_description": build_description(self.component, output),
-                        },
+                        metadata=dict(tool_metadata),
                     )
                 )
         if len(tools) == 1 and (tool_name or tool_description):

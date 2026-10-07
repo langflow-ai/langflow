@@ -14,6 +14,7 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema.data import Data
+from lfx_datastax.base.astradb_base import validate_api_endpoint
 
 
 class HCDVectorStoreComponent(LCVectorStoreComponent):
@@ -173,6 +174,10 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self):
+        # The HCD API endpoint is tenant-controlled and is dialed with the configured HCD
+        # credentials; block internal/cloud-metadata hosts before the vector store is built.
+        validate_api_endpoint(self.api_endpoint)
+
         try:
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode

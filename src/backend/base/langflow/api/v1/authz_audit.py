@@ -10,7 +10,7 @@ without direct DB access.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -23,9 +23,12 @@ from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.user.model import User
 
-router = APIRouter(prefix="/authz/audit", tags=["Authorization"])
+router = APIRouter(prefix="/authz/audit", tags=["Authorization"], include_in_schema=False)
 
 _MAX_PAGE_SIZE = 200
+
+AuditResultFilter = Literal["allow", "deny", "owner_override", "skip"]
+AuditActorTypeFilter = Literal["user", "api_key", "unknown", "anonymous_public"]
 
 
 class AuthzAuditLogRead(BaseModel):
@@ -62,7 +65,7 @@ async def list_audit_log(
     _admin: Annotated[User, Depends(get_current_active_superuser)],
     user_id: Annotated[UUID | None, Query(description="Filter by acting user id.")] = None,
     actor_type: Annotated[
-        str | None,
+        AuditActorTypeFilter | None,
         Query(description="Filter by credential actor type; ``unknown`` also includes legacy rows without a type."),
     ] = None,
     actor_id: Annotated[
@@ -78,9 +81,31 @@ async def list_audit_log(
         str | None,
         Query(description="Filter by action string, e.g. ``flow:read`` or ``share:create``."),
     ] = None,
+    exclude_action: Annotated[
+        list[str] | None,
+        Query(description="Exclude rows whose action exactly matches any supplied value."),
+    ] = None,
     result: Annotated[
-        str | None,
+        AuditResultFilter | None,
         Query(description="Filter by audit result (``allow`` / ``deny`` / ``owner_override`` / ``skip``)."),
+    ] = None,
+    event: Annotated[
+        list[str] | None,
+        Query(
+            description=(
+                "Include only rows whose ``details.event`` class matches, e.g. ``mutation`` for "
+                "things that happened and ``authorization_decision`` for permission checks."
+            )
+        ),
+    ] = None,
+    exclude_event: Annotated[
+        list[str] | None,
+        Query(
+            description=(
+                "Exclude rows whose ``details.event`` class matches. Rows written before event "
+                "classification existed carry no class and are always kept."
+            )
+        ),
     ] = None,
     since: Annotated[datetime | None, Query(description="Inclusive lower bound on ``timestamp``.")] = None,
     until: Annotated[datetime | None, Query(description="Exclusive upper bound on ``timestamp``.")] = None,
@@ -120,8 +145,20 @@ async def list_audit_log(
         base = base.where(AuthzAuditLog.resource_id == resource_id)
     if action is not None:
         base = base.where(AuthzAuditLog.action == action)
+    if exclude_action:
+        base = base.where(col(AuthzAuditLog.action).not_in(exclude_action))
     if result is not None:
         base = base.where(AuthzAuditLog.result == result)
+    # ``details`` is a JSON column; SQLAlchemy renders the index access as
+    # ``json_extract`` on SQLite and ``->>`` on Postgres, so one expression
+    # serves both. An untagged row (written before classification existed) has
+    # a NULL extraction: it can never satisfy an include, and is never dropped
+    # by an exclude, so history stays visible.
+    event_class = col(AuthzAuditLog.details)["event"].as_string()
+    if event:
+        base = base.where(event_class.in_(event))
+    if exclude_event:
+        base = base.where(or_(event_class.not_in(exclude_event), event_class.is_(None)))
     if since is not None:
         base = base.where(AuthzAuditLog.timestamp >= since)
     if until is not None:

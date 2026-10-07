@@ -12,7 +12,12 @@ from zipfile import ZipFile, is_zipfile
 import orjson
 import pandas as pd
 
-from lfx.base.data.storage_utils import get_file_size, parse_storage_path, read_file_bytes
+from lfx.base.data.storage_utils import (
+    StorageServiceUnavailableError,
+    get_file_size,
+    parse_storage_path,
+    read_file_bytes,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from lfx.schema.data import Data
@@ -21,9 +26,11 @@ from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.file_path_security import (
+    StorageNamespaceError,
     component_authenticated_user_scope,
     component_file_access_scopes,
     enforce_local_file_access,
+    validate_storage_key,
 )
 from lfx.utils.helpers import build_content_type_from_extension
 
@@ -352,7 +359,7 @@ class BaseFileComponent(Component, ABC):
             storage_service = get_storage_service()
             if storage_service is None:
                 msg = "Storage service is unavailable; could not delete processed S3 file."
-                raise RuntimeError(msg)
+                raise StorageServiceUnavailableError(msg)
             run_until_complete(storage_service.delete_file(namespace_id, file_name))
             return
 
@@ -445,7 +452,7 @@ class BaseFileComponent(Component, ABC):
         return str(data_item)
 
     def load_files_message(self) -> Message:
-        """Load files and return as Message.
+        """Load files as one Message, retaining each source file's parsed text when there are multiple.
 
         Returns:
           Message: Message containing all file data
@@ -459,23 +466,39 @@ class BaseFileComponent(Component, ABC):
 
         sep: str = getattr(self, "separator", "\n\n") or "\n\n"
         parts: list[str] = []
+        source_files: list[dict[str, str | None]] = []
+        source_file_indexes: dict[str, int] = {}
         for d in data_list:
             try:
                 data_text = self._extract_text(d)
                 if data_text and isinstance(data_text, str):
-                    parts.append(data_text)
+                    part = data_text
                 elif data_text:
                     # get_text() returned non-string, convert it
-                    parts.append(str(data_text))
+                    part = str(data_text)
                 elif isinstance(d.data, dict):
                     # convert the data dict to a readable string
-                    parts.append(orjson.dumps(d.data, option=orjson.OPT_INDENT_2, default=str).decode())
+                    part = orjson.dumps(d.data, option=orjson.OPT_INDENT_2, default=str).decode()
                 else:
-                    parts.append(str(d))
+                    part = str(d)
             except Exception:  # noqa: BLE001
                 # Final fallback - just try to convert to string
                 # TODO: Consider downstream error case more. Should this raise an error?
-                parts.append(str(d))
+                part = str(d)
+            parts.append(part)
+            if len(data_list) > 1:
+                file_path = d.data.get(self.SERVER_FILE_PATH_FIELDNAME) if isinstance(d.data, dict) else None
+                file_path = str(file_path) if file_path else None
+                if file_path and file_path in source_file_indexes:
+                    source_file = source_files[source_file_indexes[file_path]]
+                    source_file["text"] = f"{source_file['text']}{sep}{part}"
+                else:
+                    if file_path:
+                        source_file_indexes[file_path] = len(source_files)
+                    source_files.append({"file_path": file_path, "text": part})
+
+        if source_files:
+            metadata["source_files"] = source_files
 
         return Message(text=sep.join(parts), **metadata)
 
@@ -772,6 +795,11 @@ class BaseFileComponent(Component, ABC):
                         resolved_path, scope_ids=component_file_access_scopes(self)
                     )
                     delete_after_processing = False
+                elif parse_storage_path(path_str):
+                    # Relative values are object keys ("<namespace>/<file_name>") handed to
+                    # ``storage_service.get_file`` at read time. The namespace selects another
+                    # principal's prefix, so it must belong to this graph.
+                    validate_storage_key(self, path_str)
                 resolved_files.append(
                     BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
                 )
@@ -782,6 +810,10 @@ class BaseFileComponent(Component, ABC):
                     try:
                         resolved_path = Path(self.get_full_path(path_str))
                         self.log(f"Resolved storage path '{path_str}' to '{resolved_path}'")
+                    except StorageNamespaceError:
+                        # An out-of-scope namespace is an access denial, not a resolution
+                        # failure: never fall back to reading the raw string as a local path.
+                        raise
                     except (ValueError, AttributeError) as e:
                         # Fallback to resolve_path if get_full_path fails
                         self.log(f"get_full_path failed for '{path_str}': {e}, falling back to resolve_path")
@@ -1007,6 +1039,7 @@ class BaseFileComponent(Component, ABC):
                 self.log(msg)
                 if not self.silent_errors:
                     raise ValueError(msg)
+                continue
 
             final_files.append(file)
 

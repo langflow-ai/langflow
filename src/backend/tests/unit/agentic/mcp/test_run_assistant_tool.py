@@ -99,6 +99,64 @@ class TestRunAssistantToolRegistration:
 
 
 class TestRunAssistantAndPersist:
+    @pytest.mark.parametrize(
+        "acting_user", [SimpleNamespace(is_superuser=False), None], ids=["non-admin", "missing-user"]
+    )
+    async def test_should_reject_non_admin_before_creating_flow_when_admin_only(self, acting_user):
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+
+        session = _session_mock()
+        session.get = AsyncMock(return_value=acting_user)
+        with (
+            patch(
+                "lfx.services.deps.get_settings_service",
+                return_value=SimpleNamespace(settings=SimpleNamespace(custom_component_admin_only=True)),
+            ),
+            patch(f"{RUNNER_MODULE}._ensure_flow", new_callable=AsyncMock) as ensure_flow,
+            pytest.raises(HTTPException) as exc,
+        ):
+            await run_assistant_and_persist(session=session, user_id=uuid4(), instruction="Build a component")
+
+        assert exc.value.status_code == 403
+        ensure_flow.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_should_allow_admin_to_create_flow_when_admin_only(self):
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+
+        user_id = uuid4()
+        created_flow = SimpleNamespace(id=uuid4(), name="Assistant Flow", data=None, user_id=user_id)
+        session = _session_mock()
+        session.get = AsyncMock(side_effect=[SimpleNamespace(is_superuser=True), created_flow])
+        with (
+            patch(
+                "lfx.services.deps.get_settings_service",
+                return_value=SimpleNamespace(settings=SimpleNamespace(custom_component_admin_only=True)),
+            ),
+            patch(f"{RUNNER_MODULE}._new_flow", new_callable=AsyncMock, return_value=created_flow) as new_flow,
+            patch(f"{RUNNER_MODULE}._save_flow_to_fs", new_callable=AsyncMock),
+            patch(
+                f"{RUNNER_MODULE}.get_or_create_default_folder",
+                new_callable=AsyncMock,
+                return_value=SimpleNamespace(id=uuid4()),
+            ),
+            patch(f"{RUNNER_MODULE}.get_storage_service", MagicMock()),
+            patch(
+                f"{RUNNER_MODULE}._resolve_assistant_context",
+                new_callable=AsyncMock,
+                return_value=_context_stub(),
+            ),
+            patch(
+                f"{RUNNER_MODULE}.execute_flow_with_validation_streaming",
+                side_effect=_stream_of(EVENTS_WITH_FLOW),
+            ),
+        ):
+            result = await run_assistant_and_persist(session=session, user_id=user_id, instruction="Build a component")
+
+        new_flow.assert_awaited_once()
+        assert result["flow_id"] == str(created_flow.id)
+        assert result["flow_changed"] is True
+
     @pytest.mark.asyncio
     async def test_should_create_a_new_flow_when_no_flow_id_is_given(self):
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist

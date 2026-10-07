@@ -1,5 +1,6 @@
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
 import type { ModelOption } from "../types";
+import { canonicalProviderName, providerNamesMatch } from "./provider-identity";
 
 type EnabledModels = Record<string, Record<string, boolean>>;
 
@@ -52,18 +53,32 @@ export function buildGroupedOptions({
 }: BuildGroupedOptionsParams): Record<string, ModelOption[]> {
   const grouped: Record<string, ModelOption[]> = {};
   const seen = new Set<string>();
+  const authorizedProviders = new Set(
+    providerStatusIsReliable
+      ? (providers ?? []).map((provider) =>
+          canonicalProviderName(provider.provider),
+        )
+      : [],
+  );
   const disconnectedProviders = new Set(
     providerStatusIsReliable
       ? (providers ?? [])
           .filter((provider) => provider.is_configured === false)
-          .map((provider) => provider.provider)
+          .map((provider) => canonicalProviderName(provider.provider))
       : [],
   );
 
   for (const option of options) {
     if (option.metadata?.is_disabled_provider) continue;
     const provider = option.provider || "Unknown";
-    if (disconnectedProviders.has(provider)) continue;
+    const providerIdentity = canonicalProviderName(provider);
+    if (
+      providerStatusIsReliable &&
+      !authorizedProviders.has(providerIdentity)
+    ) {
+      continue;
+    }
+    if (disconnectedProviders.has(providerIdentity)) continue;
 
     // Sticky-default entries only let the trigger name the saved model;
     // they are never selectable, disconnected or merely deactivated.
@@ -76,7 +91,8 @@ export function buildGroupedOptions({
     // enabled_models, the model must be explicitly enabled (=== true); a
     // `false` or missing entry means the model should be hidden.
     if (enabledModels) {
-      const providerModels = enabledModels[provider];
+      const providerModels =
+        enabledModels[provider] ?? enabledModels[providerIdentity];
       if (providerModels && providerModels[option.name] !== true) {
         continue;
       }
@@ -95,14 +111,16 @@ export function buildGroupedOptions({
       grouped[provider] = [];
     }
     grouped[provider].push(option);
-    seen.add(`${provider}::${option.name}`);
+    seen.add(`${providerIdentity}::${option.name}`);
   }
 
   if (enabledModels && providers) {
     for (const providerInfo of providers) {
       const providerName = providerInfo.provider;
-      if (disconnectedProviders.has(providerName)) continue;
-      const providerModels = enabledModels[providerName];
+      const providerIdentity = canonicalProviderName(providerName);
+      if (disconnectedProviders.has(providerIdentity)) continue;
+      const providerModels =
+        enabledModels[providerName] ?? enabledModels[providerIdentity];
       if (!providerModels) continue;
 
       for (const model of providerInfo.models ?? []) {
@@ -120,7 +138,7 @@ export function buildGroupedOptions({
 
         if (!passesModelFilters(modelMetadata, modelFilters)) continue;
 
-        const key = `${providerName}::${modelName}`;
+        const key = `${providerIdentity}::${modelName}`;
         if (seen.has(key)) continue;
         seen.add(key);
 
@@ -140,19 +158,22 @@ export function buildGroupedOptions({
   // Keeps an Assistant-applied registry model selectable while it is missing
   // from enabled_models; a disconnected provider must inject nothing.
   const savedKey = savedValue?.name
-    ? `${savedValue.provider || "Unknown"}::${savedValue.name}`
+    ? `${canonicalProviderName(savedValue.provider || "Unknown")}::${savedValue.name}`
     : null;
   const savedProviderConfigured =
     providerStatusIsReliable &&
     (providers?.some(
-      (p) => p.provider === savedValue?.provider && p.is_configured,
+      (p) =>
+        !!savedValue?.provider &&
+        providerNamesMatch(p.provider, savedValue.provider) &&
+        p.is_configured,
     ) ??
       false);
   const savedInRegistry =
     !!savedValue?.name &&
     (providers?.some(
       (p) =>
-        p.provider === savedValue.provider &&
+        providerNamesMatch(p.provider, savedValue.provider) &&
         (p.models ?? []).some((m) => m.model_name === savedValue.name),
     ) ??
       false);

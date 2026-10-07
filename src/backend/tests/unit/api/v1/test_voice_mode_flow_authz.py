@@ -9,7 +9,11 @@ from fastapi import BackgroundTasks, HTTPException
 from langflow.api.v1 import voice_mode
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.deps import session_scope
-from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
+    ModelProviderPolicyPurpose,
+    current_model_provider_policy_context,
+)
 
 
 def _flow(*, owner_id, description="Authorized flow"):
@@ -43,18 +47,19 @@ async def test_openai_voice_policy_denial_precedes_secret_lookup(monkeypatch):
         get_variable=AsyncMock(side_effect=AssertionError("secret lookup reached after provider denial"))
     )
     require_provider = Mock(side_effect=ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.USE))
+    resolve_policy = AsyncMock(return_value=SimpleNamespace(require=require_provider))
     monkeypatch.setattr(voice_mode, "get_variable_service", Mock(return_value=variable_service))
-    monkeypatch.setattr(voice_mode, "require_model_provider", require_provider, raising=False)
+    monkeypatch.setattr(voice_mode, "aresolve_model_provider_policy", resolve_policy, raising=False)
 
     result = await voice_mode.authenticate_and_get_openai_key(SimpleNamespace(), user, websocket)
 
     assert result == (None, None)
-    require_provider.assert_called_once_with(
+    resolve_policy.assert_awaited_once_with(
         user_id=user.id,
-        provider="OpenAI",
+        providers=["OpenAI"],
         purpose=ModelProviderPolicyPurpose.USE,
-        attributes={"is_superuser": False},
     )
+    require_provider.assert_called_once_with("OpenAI")
     variable_service.get_variable.assert_not_awaited()
     websocket.send_json.assert_awaited_once_with(
         {
@@ -71,18 +76,19 @@ async def test_openai_voice_policy_allows_secret_lookup(monkeypatch):
     websocket = SimpleNamespace(send_json=AsyncMock())
     variable_service = SimpleNamespace(get_variable=AsyncMock(return_value="sk-test"))
     require_provider = Mock()
+    resolve_policy = AsyncMock(return_value=SimpleNamespace(require=require_provider))
     monkeypatch.setattr(voice_mode, "get_variable_service", Mock(return_value=variable_service))
-    monkeypatch.setattr(voice_mode, "require_model_provider", require_provider, raising=False)
+    monkeypatch.setattr(voice_mode, "aresolve_model_provider_policy", resolve_policy, raising=False)
 
     result = await voice_mode.authenticate_and_get_openai_key(session, user, websocket)
 
     assert result == (user, "sk-test")
-    require_provider.assert_called_once_with(
+    resolve_policy.assert_awaited_once_with(
         user_id=user.id,
-        provider="OpenAI",
+        providers=["OpenAI"],
         purpose=ModelProviderPolicyPurpose.USE,
-        attributes={"is_superuser": True},
     )
+    require_provider.assert_called_once_with("OpenAI")
     variable_service.get_variable.assert_awaited_once_with(
         user_id=user.id,
         name="OPENAI_API_KEY",
@@ -290,3 +296,90 @@ async def test_denied_tts_websocket_reaches_no_secret_config_provider_or_flow_si
     get_tts_config.assert_not_called()
     connect.assert_not_called()
     build_flow.assert_not_awaited()
+
+
+@pytest.mark.parametrize("endpoint", ["flow_as_tool", "flow_tts"])
+async def test_voice_websocket_uses_target_scope_before_provider_secret_or_network(endpoint, monkeypatch):
+    """Both voice modes must deny target-scoped OpenAI before secrets or sockets."""
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    flow = _flow(owner_id=user.id)
+    websocket = SimpleNamespace(accept=AsyncMock(), send_json=AsyncMock())
+    variable_service = SimpleNamespace(
+        get_variable=AsyncMock(side_effect=AssertionError("secret lookup reached after target policy denial"))
+    )
+    observed_contexts = []
+    provider_id = "openai"
+
+    async def _resolve_openai(**_kwargs):
+        observed_contexts.append(current_model_provider_policy_context())
+        return SimpleNamespace(
+            require=Mock(side_effect=ModelProviderPolicyError(provider_id, ModelProviderPolicyPurpose.USE))
+        )
+
+    connect = Mock(side_effect=AssertionError("OpenAI socket reached after target policy denial"))
+    monkeypatch.setattr(voice_mode, "get_current_user_for_websocket", AsyncMock(return_value=user))
+    monkeypatch.setattr(voice_mode, "_get_authorized_voice_flow", AsyncMock(return_value=flow))
+    monkeypatch.setattr(voice_mode, "get_variable_service", Mock(return_value=variable_service))
+    monkeypatch.setattr(voice_mode, "aresolve_model_provider_policy", _resolve_openai, raising=False)
+    monkeypatch.setattr(voice_mode.websockets, "connect", connect)
+
+    kwargs = {
+        "client_websocket": websocket,
+        "flow_id": str(flow.id),
+        "background_tasks": BackgroundTasks(),
+        "session": SimpleNamespace(),
+        "session_id": "voice-target-scope",
+    }
+    if endpoint == "flow_as_tool":
+        await voice_mode.flow_as_tool_websocket(**kwargs)
+    else:
+        await voice_mode.flow_tts_websocket(**kwargs)
+
+    assert len(observed_contexts) == 1
+    context = observed_contexts[0]
+    assert context is not None
+    assert context.attributes["provider_scope_required"] is True
+    assert context.attributes["project_id"] == flow.folder_id
+    assert context.attributes["workspace_id"] == flow.workspace_id
+    variable_service.get_variable.assert_not_awaited()
+    connect.assert_not_called()
+
+
+@pytest.mark.parametrize("endpoint", ["flow_as_tool", "flow_tts"])
+async def test_voice_websocket_keeps_target_scope_through_openai_socket(endpoint, monkeypatch):
+    """The trusted target scope must remain bound for the socket lifetime, not only key lookup."""
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    flow = _flow(owner_id=user.id)
+    websocket = SimpleNamespace(accept=AsyncMock(), send_json=AsyncMock())
+    observed_contexts = []
+    stop_message = "stop after socket scope probe"
+
+    def _connect(*_args, **_kwargs):
+        observed_contexts.append(current_model_provider_policy_context())
+        raise RuntimeError(stop_message)
+
+    monkeypatch.setattr(voice_mode, "get_current_user_for_websocket", AsyncMock(return_value=user))
+    monkeypatch.setattr(voice_mode, "_get_authorized_voice_flow", AsyncMock(return_value=flow))
+    monkeypatch.setattr(voice_mode, "authenticate_and_get_openai_key", AsyncMock(return_value=(user, "sk-test")))
+    monkeypatch.setattr(voice_mode, "get_voice_config", Mock(return_value=SimpleNamespace()))
+    monkeypatch.setattr(voice_mode, "get_tts_config", Mock(return_value=SimpleNamespace()))
+    monkeypatch.setattr(voice_mode.websockets, "connect", _connect)
+
+    kwargs = {
+        "client_websocket": websocket,
+        "flow_id": str(flow.id),
+        "background_tasks": BackgroundTasks(),
+        "session": SimpleNamespace(),
+        "session_id": "voice-target-scope",
+    }
+    if endpoint == "flow_as_tool":
+        await voice_mode.flow_as_tool_websocket(**kwargs)
+    else:
+        await voice_mode.flow_tts_websocket(**kwargs)
+
+    assert len(observed_contexts) == 1
+    context = observed_contexts[0]
+    assert context is not None
+    assert context.attributes["provider_scope_required"] is True
+    assert context.attributes["project_id"] == flow.folder_id
+    assert context.attributes["workspace_id"] == flow.workspace_id

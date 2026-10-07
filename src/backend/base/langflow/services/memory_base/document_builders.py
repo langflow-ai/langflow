@@ -11,13 +11,11 @@ from typing import TYPE_CHECKING
 from langchain_core.documents import Document
 from lfx.log.logger import logger
 
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper, chunk_text_for_ingestion
+from langflow.api.utils.kb_helpers import KBAnalysisHelper, chunk_text_for_ingestion
 
 if TYPE_CHECKING:
     import uuid
-    from pathlib import Path
 
-    from langchain_chroma import Chroma
     from lfx.base.knowledge_bases.backends.base import BaseVectorStoreBackend
 
     from langflow.services.database.models.message.model import MessageTable
@@ -64,6 +62,7 @@ def build_documents_from_messages(
     session_id: str,
     flow_id: str,
     job_id: str = "",
+    end_user_id: str | None = None,
 ) -> list[Document]:
     """Convert MessageTable rows into LangChain Documents.
 
@@ -71,6 +70,11 @@ def build_documents_from_messages(
     content-block fragments whose type is text, code, or json.  Other block
     types (tool_use, error, media, ...) are ignored.  Long combined texts are
     split by RecursiveCharacterTextSplitter before embedding.
+
+    ``end_user_id`` (serving plane only; ``None`` off / editor / anonymous) is stamped
+    as its own metadata field so cross-session recall can stay scoped to one end user in
+    the shared service-account store — the session-id prefix is the only other end-user
+    discriminator and it is dropped when ``filter_by_session`` is off.
     """
     docs: list[Document] = []
     for msg in messages:
@@ -90,24 +94,24 @@ def build_documents_from_messages(
             chunk_overlap=MESSAGE_CHUNK_OVERLAP,
         )
         for i, chunk in enumerate(chunks):
-            docs.append(
-                Document(
-                    page_content=chunk,
-                    metadata={
-                        "message_id": str(msg.id),
-                        "session_id": session_id,
-                        "flow_id": flow_id,
-                        "sender": msg.sender,
-                        "sender_name": msg.sender_name,
-                        "timestamp": msg.timestamp.isoformat() if msg.timestamp else "",
-                        "run_id": str(msg.run_id) if msg.run_id else "",
-                        "chunk_index": i,
-                        "total_chunks": len(chunks),
-                        "source": f"memory_base/{session_id}",
-                        "job_id": job_id,
-                    },
-                )
-            )
+            metadata = {
+                "message_id": str(msg.id),
+                "session_id": session_id,
+                "flow_id": flow_id,
+                "sender": msg.sender,
+                "sender_name": msg.sender_name,
+                "timestamp": msg.timestamp.isoformat() if msg.timestamp else "",
+                "run_id": str(msg.run_id) if msg.run_id else "",
+                "chunk_index": i,
+                "total_chunks": len(chunks),
+                "source": f"memory_base/{session_id}",
+                "job_id": job_id,
+            }
+            # Only stamped when present, so off / editor / anonymous chunks carry no key
+            # and the retrieval exact-match filter never falsely excludes them.
+            if end_user_id:
+                metadata["end_user_id"] = end_user_id
+            docs.append(Document(page_content=chunk, metadata=metadata))
     return docs
 
 
@@ -119,6 +123,7 @@ def build_preprocessed_document(
     flow_id: str,
     job_id: str,
     preproc_output_id: str,
+    end_user_id: str | None = None,
 ) -> list[Document]:
     """Build LangChain Documents from a preprocessed (LLM-distilled) batch.
 
@@ -128,6 +133,11 @@ def build_preprocessed_document(
     Metadata mirrors :func:`build_documents_from_messages` and adds two keys:
       - ``preprocessed`` — boolean for query-side filtering / debug visibility.
       - ``preproc_output_id`` — pointer back to ``MemoryBasePreprocessingOutput``.
+
+    ``end_user_id`` is stamped identically to the raw-message path (serving plane only;
+    ``None`` off / editor / anonymous) so preprocessed chunks are scoped for
+    cross-session recall too — otherwise they would leak across end users under the
+    ``filter_by_session`` off toggle.
     """
     chunks = chunk_text_for_ingestion(
         output_text,
@@ -136,56 +146,27 @@ def build_preprocessed_document(
     )
     if not chunks:
         return []
-    return [
-        Document(
-            page_content=chunk,
-            metadata={
-                "session_id": session_id,
-                "flow_id": flow_id,
-                "sender": "Machine",
-                "sender_name": "Preprocessor",
-                "timestamp": "",
-                "run_id": "",
-                "chunk_index": i,
-                "total_chunks": len(chunks),
-                "source": f"memory_base/{session_id}",
-                "job_id": job_id,
-                "preprocessed": True,
-                "preproc_output_id": preproc_output_id,
-                "source_message_ids": ",".join(source_message_ids),
-            },
-        )
-        for i, chunk in enumerate(chunks)
-    ]
-
-
-def sync_kb_metadata(*, kb_path: Path, chroma: Chroma) -> None:
-    """Update embedding_metadata.json after a successful Memory Base ingestion.
-
-    Mirrors the post-write metadata sync in ``KBIngestionHelper.perform_ingestion``:
-    - Refreshes chunk / word / character counts from the live Chroma collection.
-    - Updates on-disk size.
-    - Stamps ``is_memory_base: true`` (required for Knowledge Retrieval filtering).
-    - Sets ``source_types: ["memory"]`` to distinguish from file-based KBs.
-
-    Called while the Chroma client is still open so that ``update_text_metrics``
-    can query the collection directly without opening a second client.
-    """
-    try:
-        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-        KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma=chroma)
-        metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
-        metadata["is_memory_base"] = True
-        # Preserve any existing source_types but always include "memory"
-        existing = set(metadata.get("source_types") or [])
-        existing.add("memory")
-        metadata["source_types"] = sorted(existing)
-        (kb_path / "embedding_metadata.json").write_text(json.dumps(metadata, indent=2))
-    except (OSError, json.JSONDecodeError, ValueError):
-        # Metadata sync is best-effort; a failure here must not block the cursor advance.
-        # Note: this runs inside asyncio.to_thread so we use sync logging here.
-        # The lfx logger's sync .warning() method goes through the same structured pipeline.
-        logger.warning("KB metadata sync failed for kb_path=%s", kb_path, exc_info=True)
+    docs: list[Document] = []
+    for i, chunk in enumerate(chunks):
+        metadata = {
+            "session_id": session_id,
+            "flow_id": flow_id,
+            "sender": "Machine",
+            "sender_name": "Preprocessor",
+            "timestamp": "",
+            "run_id": "",
+            "chunk_index": i,
+            "total_chunks": len(chunks),
+            "source": f"memory_base/{session_id}",
+            "job_id": job_id,
+            "preprocessed": True,
+            "preproc_output_id": preproc_output_id,
+            "source_message_ids": ",".join(source_message_ids),
+        }
+        if end_user_id:
+            metadata["end_user_id"] = end_user_id
+        docs.append(Document(page_content=chunk, metadata=metadata))
+    return docs
 
 
 async def sync_kb_stats_to_record(

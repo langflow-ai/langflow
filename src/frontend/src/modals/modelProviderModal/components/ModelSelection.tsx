@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
@@ -14,7 +15,13 @@ import { cn } from "@/utils/utils";
 /** Providers where the callable model id is a user-chosen deployment name. */
 const CUSTOM_DEPLOYMENT_PROVIDERS = new Set(["Azure AI Foundry"]);
 
-export interface ModelProviderSelectionProps {
+/** Providers that render their own useful UI when no catalog models exist. */
+export const hasProviderOwnedEmptyState = (providerName?: string): boolean =>
+  !!providerName &&
+  (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
+    providerName.toLowerCase() === "ollama");
+
+export interface ModelProviderSelectionProps extends ProviderScopeParams {
   availableModels: Model[];
   onModelToggle: (
     modelName: string,
@@ -24,6 +31,11 @@ export interface ModelProviderSelectionProps {
   modelType: ModelTypeFilter;
   providerName?: string;
   isEnabledModel?: boolean;
+  /** True when the provider's model list is discovered from its endpoint
+   *  after credentials are configured (backend ``live_discovery`` flag). */
+  liveDiscovery?: boolean;
+  /** True when the provider's credentials are already configured. */
+  isConfigured?: boolean;
 }
 
 interface ModelRowProps {
@@ -187,11 +199,29 @@ const ModelSelection = ({
   onModelToggle,
   providerName,
   isEnabledModel,
+  liveDiscovery,
+  isConfigured,
+  flowId,
+  projectId,
 }: ModelProviderSelectionProps) => {
   const { t } = useTranslation();
-  const { data: enabledModelsData } = useGetEnabledModels();
+  const {
+    data: enabledModelsData,
+    isSuccess: isEnabledModelsSuccess,
+    isFetching: isEnabledModelsFetching,
+    isFetchedAfterMount: isEnabledModelsFetchedAfterMount,
+    fetchStatus: enabledModelsFetchStatus,
+    isError: isEnabledModelsError,
+    refetch: refetchEnabledModels,
+  } = useGetEnabledModels({ flowId, projectId, purpose: "configure" });
   const [modelQuery, setModelQuery] = useState<string>("");
   const [showDeprecated, setShowDeprecated] = useState<boolean>(false);
+  const canUseEnabledModels =
+    !!enabledModelsData &&
+    isEnabledModelsSuccess &&
+    !isEnabledModelsFetching &&
+    isEnabledModelsFetchedAfterMount &&
+    enabledModelsFetchStatus === "idle";
 
   // Reset both the search and the deprecated disclosure when the selected
   // provider changes so neither state leaks across providers
@@ -205,7 +235,13 @@ const ModelSelection = ({
     modelName: string,
     selectedModelType: ModelType,
   ): boolean => {
-    if (!providerName || !enabledModelsData?.enabled_models) return false;
+    if (
+      !canUseEnabledModels ||
+      !providerName ||
+      !enabledModelsData.enabled_models
+    ) {
+      return false;
+    }
 
     const typedProvider =
       enabledModelsData.enabled_models_by_type?.[providerName];
@@ -226,6 +262,9 @@ const ModelSelection = ({
 
   // Merge enabled free-text deployments; typed API wins, legacy customs default to llm.
   const modelsWithCustomDeployments = useMemo(() => {
+    if (!canUseEnabledModels) {
+      return [];
+    }
     if (!supportsCustomDeployments || !providerName) {
       return availableModels;
     }
@@ -279,6 +318,7 @@ const ModelSelection = ({
       : availableModels;
   }, [
     availableModels,
+    canUseEnabledModels,
     enabledModelsData?.enabled_models,
     enabledModelsData?.enabled_models_by_type,
     providerName,
@@ -312,7 +352,10 @@ const ModelSelection = ({
   );
 
   const addableDeploymentTypes =
-    supportsCustomDeployments && isEnabledModel && trimmedModelQuery.length > 0
+    canUseEnabledModels &&
+    supportsCustomDeployments &&
+    isEnabledModel &&
+    trimmedModelQuery.length > 0
       ? visibleDeploymentTypes.filter(
           (deploymentType) =>
             !modelsWithCustomDeployments.some(
@@ -402,7 +445,14 @@ const ModelSelection = ({
     );
   };
 
-  const isOllama = providerName?.toLowerCase() === "ollama";
+  const providerOwnsEmptyState = hasProviderOwnedEmptyState(providerName);
+  const isOllama =
+    providerOwnsEmptyState && providerName?.toLowerCase() === "ollama";
+  // Live-discovery providers have nothing to list until credentials are
+  // configured; show a configure-credentials hint instead of the generic
+  // "no models" state. Ollama keeps its own specialized empty state.
+  const awaitsCredentialDiscovery =
+    !!liveDiscovery && !isConfigured && !isOllama;
   // Use the unfiltered list for the empty-state check so an
   // ollama-no-models warning still fires when the search field happens to be
   // populated.
@@ -434,6 +484,33 @@ const ModelSelection = ({
     : t("modelProviders.searchModels", {
         defaultValue: "Search models…",
       });
+
+  if (!canUseEnabledModels) {
+    return (
+      <div
+        data-testid="model-provider-selection"
+        className="flex flex-col gap-3"
+      >
+        {isEnabledModelsError ? (
+          <div role="alert" className="flex flex-col items-start gap-3">
+            <span>{t("modelProviders.errorUnexpected")}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refetchEnabledModels()}
+            >
+              {t("common.retry")}
+            </Button>
+          </div>
+        ) : (
+          <div role="status" aria-live="polite">
+            {t("modelInput.loadingModels")}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div data-testid="model-provider-selection" className="flex flex-col gap-6">
@@ -532,6 +609,28 @@ const ModelSelection = ({
           >
             {t("modelProviders.checkOllamaLibrary")}
           </a>
+        </div>
+      ) : awaitsCredentialDiscovery && noModelsAvailable ? (
+        <div
+          className="flex flex-col items-center justify-center p-8 text-center border border-dashed rounded-lg bg-muted/30"
+          data-testid="live-discovery-empty-state"
+        >
+          <ForwardedIconComponent
+            name="Info"
+            className="w-10 h-10 mb-4 text-muted-foreground"
+          />
+          <h3 className="mb-2 text-sm font-semibold text-foreground">
+            {t("modelProviders.liveDiscoveryTitle", {
+              defaultValue: "No models yet",
+            })}
+          </h3>
+          <p className="max-w-[300px] text-xs text-muted-foreground leading-relaxed">
+            {t("modelProviders.liveDiscoveryHint", {
+              provider: providerName,
+              defaultValue:
+                "{{provider}} models are discovered from your account once credentials are configured. Save your credentials above to load the available models.",
+            })}
+          </p>
         </div>
       ) : (
         <>

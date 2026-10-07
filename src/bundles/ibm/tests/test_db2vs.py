@@ -49,16 +49,14 @@ class TestDB2VSHelperFunctions:
 
     def test_get_distance_function_cosine(self):
         """Test distance function mapping for COSINE."""
-        from langchain_community.vectorstores.utils import DistanceStrategy
-        from lfx_ibm.components.ibm.db2vs import _get_distance_function
+        from lfx_ibm.components.ibm.db2vs import DistanceStrategy, _get_distance_function
 
         func = _get_distance_function(DistanceStrategy.COSINE)
         assert "COSINE_DISTANCE" in func or "COSINE" in func
 
     def test_get_distance_function_euclidean(self):
         """Test distance function mapping for EUCLIDEAN."""
-        from langchain_community.vectorstores.utils import DistanceStrategy
-        from lfx_ibm.components.ibm.db2vs import _get_distance_function
+        from lfx_ibm.components.ibm.db2vs import DistanceStrategy, _get_distance_function
 
         func = _get_distance_function(DistanceStrategy.EUCLIDEAN_DISTANCE)
         # Function returns "EUCLIDEAN" which contains the word
@@ -66,8 +64,7 @@ class TestDB2VSHelperFunctions:
 
     def test_get_distance_function_dot_product(self):
         """Test distance function mapping for DOT_PRODUCT."""
-        from langchain_community.vectorstores.utils import DistanceStrategy
-        from lfx_ibm.components.ibm.db2vs import _get_distance_function
+        from lfx_ibm.components.ibm.db2vs import DistanceStrategy, _get_distance_function
 
         func = _get_distance_function(DistanceStrategy.DOT_PRODUCT)
         # Function returns "DOT" which contains the word
@@ -104,8 +101,7 @@ class TestDB2VSClass:
         self, mock_get_dim, mock_get_columns, mock_create_table, mock_table_exists, mock_client, mock_embedding
     ):
         """Test DB2VS initialization with new table."""
-        from langchain_community.vectorstores.utils import DistanceStrategy
-        from lfx_ibm.components.ibm.db2vs import DB2VS
+        from lfx_ibm.components.ibm.db2vs import DB2VS, DistanceStrategy
 
         # Mock embedding dimension
         mock_get_dim.return_value = 3
@@ -142,8 +138,7 @@ class TestDB2VSClass:
         mock_embedding,
     ):
         """Test DB2VS initialization with existing table."""
-        from langchain_community.vectorstores.utils import DistanceStrategy
-        from lfx_ibm.components.ibm.db2vs import DB2VS
+        from lfx_ibm.components.ibm.db2vs import DB2VS, DistanceStrategy
 
         # Mock embedding dimension
         mock_get_dim.return_value = 3
@@ -180,8 +175,7 @@ class TestDB2VSClass:
         mock_embedding,
     ):
         """Test adding texts to vector store."""
-        from langchain_community.vectorstores.utils import DistanceStrategy
-        from lfx_ibm.components.ibm.db2vs import DB2VS
+        from lfx_ibm.components.ibm.db2vs import DB2VS, DistanceStrategy
 
         # Mock embedding dimension
         mock_get_dim.return_value = 3
@@ -222,8 +216,7 @@ class TestDB2VSClass:
         mock_embedding,
     ):
         """Test adding texts with custom IDs."""
-        from langchain_community.vectorstores.utils import DistanceStrategy
-        from lfx_ibm.components.ibm.db2vs import DB2VS
+        from lfx_ibm.components.ibm.db2vs import DB2VS, DistanceStrategy
 
         # Mock embedding dimension
         mock_get_dim.return_value = 3
@@ -259,8 +252,7 @@ class TestDB2VSClass:
         self, mock_get_dim, mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
     ):
         """Test deleting documents by IDs."""
-        from langchain_community.vectorstores.utils import DistanceStrategy
-        from lfx_ibm.components.ibm.db2vs import DB2VS
+        from lfx_ibm.components.ibm.db2vs import DB2VS, DistanceStrategy
 
         # Mock embedding dimension
         mock_get_dim.return_value = 3
@@ -292,8 +284,7 @@ class TestDB2VSClass:
         self, mock_get_dim, mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
     ):
         """Test embedding dimension validation."""
-        from langchain_community.vectorstores.utils import DistanceStrategy
-        from lfx_ibm.components.ibm.db2vs import DB2VS
+        from lfx_ibm.components.ibm.db2vs import DB2VS, DistanceStrategy
 
         # Mock embedding dimension
         mock_get_dim.return_value = 3

@@ -1,8 +1,9 @@
 import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.custom.eval import eval_custom_component_code
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
-from lfx.graph.state.model import create_state_model
+from lfx.graph.state.model import build_output_getter, create_state_model
 from lfx.template.field.base import UNDEFINED
 from pydantic import Field
 
@@ -27,6 +28,82 @@ class TestCreateStateModel:
         assert state_instance.method_one is UNDEFINED
         chat_input_component.set_output_value("message", "test")
         assert state_instance.method_one == "test"
+
+    def test_output_getter_resolves_runtime_alias_from_function_globals(self):
+        namespace = {}
+        exec(  # noqa: S102
+            """\
+from __future__ import annotations
+from lfx.schema import Data as Payload
+
+class AliasComponent:
+    def get_output_by_method(self, _method):
+        raise AssertionError
+
+    def build(self) -> Payload:
+        raise AssertionError
+""",
+            namespace,
+        )
+        component = namespace["AliasComponent"]()
+
+        getter = build_output_getter(component.build)
+
+        assert getter.__annotations__["return"] is namespace["Payload"]
+
+    def test_output_getter_uses_compiled_sidecar_before_runtime_annotations(self):
+        code = """\
+from lfx.custom import Component
+
+annotation_calls = []
+
+class PoisonAnnotations(dict):
+    def get(self, key, default=None):
+        annotation_calls.append(key)
+        raise AssertionError("runtime annotations were read")
+
+def poison_annotations(function):
+    function.__annotations__ = PoisonAnnotations()
+    return function
+
+class GraphSidecarComponent(Component):
+    @poison_annotations
+    def build(self) -> str:
+        return "ok"
+"""
+        component = eval_custom_component_code(code)()
+
+        getter = build_output_getter(component.build)
+
+        assert getter.__annotations__["return"] is str
+        assert component.build.__globals__["annotation_calls"] == []
+
+    def test_output_getter_uses_runtime_override_attribute_name(self):
+        base_class = eval_custom_component_code(
+            """\
+from lfx.custom import Component
+
+class GraphSidecarBase(Component):
+    def build(self) -> str:
+        return "base"
+"""
+        )
+
+        def rename_override(_function):
+            def wrapper(_self) -> int:
+                return 1
+
+            return wrapper
+
+        class RuntimeSubclass(base_class):
+            @rename_override
+            def build(self):
+                return 1
+
+        getter = build_output_getter(RuntimeSubclass().build)
+
+        assert RuntimeSubclass()._get_method_return_type("build") == ["int"]
+        assert getter.__annotations__["return"] is int
 
     def test_create_model_and_assign_values_fails(self, chat_input_component):
         state_model = create_state_model(method_one=chat_input_component.message_response)

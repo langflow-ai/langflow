@@ -75,3 +75,20 @@ async def test_generate_flow_events_sanitizes_cooperative_and_queue_fallback_err
     assert saw_sentinel
     assert all("Workflow execution failed." in json.dumps(payload) for payload in error_payloads)
     assert sensitive_detail not in json.dumps(payloads)
+
+
+def test_shared_vertex_event_hides_restored_credential_params() -> None:
+    """The raw V1 end_vertex payload must not echo the owner key used at runtime."""
+    from langflow.api.build import _vertex_build_data_for_event
+
+    response = SimpleNamespace(
+        model_dump_json=lambda: json.dumps(
+            {"params": {"api_key": "owner-secret"}, "data": {"results": "visible-output"}}
+        )
+    )
+
+    shared_event = _vertex_build_data_for_event(response, redact_build_params=True)
+    owner_event = _vertex_build_data_for_event(response, redact_build_params=False)
+
+    assert shared_event == {"params": None, "data": {"results": "visible-output"}}
+    assert owner_event["params"]["api_key"] == "owner-secret"

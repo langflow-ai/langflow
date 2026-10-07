@@ -77,6 +77,7 @@
       ],
       "forbidden_distributions_add": [
         "lfx-arxiv",
+        "lfx-confluent",
         "lfx-duckduckgo",
         "lfx-empiriolabs",
         "lfx-exa",
@@ -182,6 +183,7 @@
       "required_distributions_add": [
         "lfx-arxiv",
         "lfx-bundles",
+        "lfx-confluent",
         "lfx-duckduckgo",
         "lfx-empiriolabs",
         "lfx-exa",
@@ -193,6 +195,7 @@
       "forbidden_distributions_remove": [
         "lfx-arxiv",
         "lfx-bundles",
+        "lfx-confluent",
         "lfx-duckduckgo",
         "lfx-empiriolabs",
         "lfx-exa",
@@ -208,6 +211,7 @@
           "lfx-arxiv",
           "lfx-azure",
           "lfx-cohere",
+          "lfx-confluent",
           "lfx-datastax",
           "lfx-docling",
           "lfx-duckduckgo",
@@ -266,6 +270,7 @@
         "milvus",
         "mistral",
         "mongodb",
+        "mrscraper",
         "needle",
         "notdiamond",
         "notion",
@@ -273,6 +278,7 @@
         "nvidia",
         "olivya",
         "openrouter",
+        "orcarouter",
         "perplexity",
         "pgvector",
         "pinecone",

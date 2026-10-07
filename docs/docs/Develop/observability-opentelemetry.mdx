@@ -1,0 +1,147 @@
+---
+title: OpenTelemetry
+slug: /observability-opentelemetry
+---
+
+Langflow emits OpenTelemetry traces, metrics, and logs describing the health of the Langflow service itself: request rate, error rate, duration, runtime health, and one span per flow run.
+
+This telemetry answers operator questions, such as which flows are failing, whether the service is slow, and where the time went. It is not LLM tracing. Langflow deliberately withholds prompts, completions, and other flow payloads from this export. For prompt-level tracing, use one of the [monitoring integrations](/integrations-langfuse) instead.
+
+Langflow speaks plain OTLP, so any OpenTelemetry-compatible backend works, either directly or through an OpenTelemetry Collector.
+
+## Prerequisites
+
+- An OTLP endpoint, such as an OpenTelemetry Collector, a Grafana stack, or a commercial APM.
+- The `langflow` distribution already includes the OpenTelemetry packages. If you run the `lfx` engine on its own, install the extra:
+
+  ```bash
+  pip install "lfx[otel]"
+  ```
+
+  If an OTLP endpoint is configured and the packages are missing, Langflow logs a warning at startup rather than exporting nothing silently.
+
+## Configure environment variables
+
+Set the endpoint and a service name. Nothing else is required.
+
+```text
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+OTEL_SERVICE_NAME=langflow
+```
+
+If no OTLP endpoint is set, Langflow installs no providers and the export path stays inert.
+
+The standard OpenTelemetry SDK variables also apply. The following are the ones operators reach for most often:
+
+| Variable | Purpose |
+|----------|---------|
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` (default) or `grpc`. |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Authentication headers, such as an API key. |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Per-signal endpoint override. The same pattern applies to `METRICS` and `LOGS`. |
+| `OTEL_TRACES_EXPORTER=none` | Disables a single signal. The same pattern applies to `METRICS` and `LOGS`. |
+| `OTEL_EXPORTER_OTLP_COMPRESSION=gzip` | Compresses payloads. Required by backends with a payload size cap. |
+
+## What Langflow exports
+
+### Traces
+
+| Span | Emitted by | Carries |
+|------|-----------|---------|
+| `flow.execute` | Langflow | `flow_id`, `run_id`, `session_id`, `protocol`, `status`, and `error.type` when the run fails |
+| HTTP server spans | FastAPI and ASGI instrumentation | Route, method, status code |
+| Database spans | SQLAlchemy instrumentation | `db.system`, `db.operation`, and `db.statement` with bound parameters left as `?` placeholders |
+
+The `flow.execute` span is the unit of work. There is no span per component, because component spans would carry component payloads.
+
+The `protocol` attribute records which entry point drove the run: `v1`, `v1.build`, `v1.build.public`, `v1.advanced`, `v2`, `webhook`, `mcp`, `a2a`, `openai_responses`, `voice`, `agentic`, `lfx.run`, or `lfx.serve`. Use it to compare error rates across the API, the MCP server, and the UI's build endpoint.
+
+The `status` attribute is `ok`, `error`, `paused`, or `cancelled`. A run stopped by a user is `cancelled` rather than `error`, so a stop button does not inflate your error rate.
+
+### Metrics
+
+- HTTP server metrics, including `http.server.request.duration`, which give you rate, errors, and duration.
+- Process metrics for this interpreter: CPU, memory, threads, open file descriptors, context switches, and garbage collection.
+- Langflow's own gauges, such as `langflow_event_loop_lag_seconds`.
+
+Process metrics deliberately describe the process rather than the host. Under Kubernetes, host metrics would report the node, which is misleading next to a per-pod request rate, and your infrastructure agent already provides them.
+
+### Logs
+
+If an OTLP endpoint is configured, log records at `INFO` and above are exported, and every record carries `trace_id` and `span_id` so you can pivot from a slow trace to the lines it produced.
+
+## What Langflow does not export
+
+The export is an allowlist, not a filter applied after the fact. Spans from instrumentation that is not on the list, including every LLM tracing integration, are dropped on the way out.
+
+The following never reach your backend:
+
+- Prompts, completions, tool arguments, and tool results.
+- Exception **messages**. A failed run reports `error.type` only, because the message frequently embeds flow content. For example, a run that failed with `RuntimeError("inventory service returned 503")` exports `error.type = RuntimeError` and nothing else.
+- Database bound parameters, so chat message text stays in the database.
+- Outbound provider request URLs, since provider keys are sometimes passed as query parameters.
+- Log message bodies, unless a call site explicitly opts in.
+
+Two settings widen this, and both warn when set:
+
+| Variable | Effect |
+|----------|--------|
+| `LANGFLOW_OTEL_LOG_LEVEL=DEBUG` | Exports `DEBUG` records. Langflow logs flow inputs and outputs at `DEBUG`, so this raises export volume. Prompt and completion **bodies** stay withheld unless `LANGFLOW_OTEL_LOG_BODIES=all` is also set. |
+| `LANGFLOW_OTEL_LOG_BODIES=all` | Exports log message bodies, including completions, chat history, and provider error text. With `LANGFLOW_OTEL_LOG_LEVEL=DEBUG`, prompt and completion content reaches your backend. |
+
+## Control span volume
+
+Database spans are the bulk of the export. Measured against a running instance under steady load, they were roughly 80% of exported spans, at about 50 spans per flow run against a single `flow.execute`. Backends that bill per span ingested will bill mostly for them.
+
+To send flow and request spans only:
+
+```text
+LANGFLOW_OTEL_DB_SPANS=false
+```
+
+Consider the trade before you set it. In that same measurement, 17% of database connection checkouts took longer than 50 ms and 4% took longer than 200 ms. Without database spans, a run that was slow waiting on the database looks simply slow, with no cause attached.
+
+When the setting is off, the instrumentation is never installed, so the spans are not created rather than created and discarded.
+
+## Verify your configuration
+
+Run the doctor. It sends a probe on every signal and reports what the backend accepted:
+
+```bash
+lfx observability doctor
+```
+
+The doctor also reports what you are about to send, including whether log bodies are exported and whether database spans are on. Look for items named `lfx.observability.doctor` in your backend.
+
+A successful send is not proof that your backend kept the data. Some backends acknowledge a payload and then discard invalid records during asynchronous validation. Always confirm by querying the backend for the trace or metric you expect.
+
+## Migrating from the pre-1.0 metric names {#semconv-migration}
+
+Langflow opts into the stable OpenTelemetry HTTP semantic conventions, because APMs key their HTTP dashboards and service maps off the stable names. Dashboards or alerts built on the older names need updating.
+
+| Before | After |
+|---|---|
+| `http.server.duration` (milliseconds) | `http.server.request.duration` (seconds) |
+| `http.method` | `http.request.method` |
+| `http.status_code` | `http.response.status_code` |
+| `http.target` | `url.path` and `url.query`, split into two |
+
+Note the unit change on the first row. A latency threshold carried over unchanged is out by a factor of 1000, and it will not look broken: it will simply stop firing.
+
+To emit both generations while you migrate, set:
+
+```text
+OTEL_SEMCONV_STABILITY_OPT_IN=http/dup
+```
+
+Langflow only sets that variable when it is unset, so a value you provide always wins.
+
+`http.route` is not part of that rename. It is a separate attribute that existed before and after, and it carries the templated path, such as `/api/v1/flows/{flow_id}`, so distinct flow IDs collapse into one time series rather than creating one per ID. If you were grouping by `http.target`, note that you get the concrete path and query rather than the template, which is a different cardinality.
+
+## Vendor guides
+
+- [New Relic](./observability-new-relic.mdx) — OTLP export to New Relic.
+
+## See also
+
+- [Logs](/logging)
+- [Traces](/traces)

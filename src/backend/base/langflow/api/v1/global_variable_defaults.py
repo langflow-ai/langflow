@@ -122,7 +122,7 @@ async def apply_global_variable_defaults(
     try:
         variable_service = get_variable_service()
         async with session_scope() as session:
-            variables = await variable_service.get_all(user_id=user_id, session=session)
+            bindings = await variable_service.get_default_field_bindings(user_id=user_id, session=session)
     except Exception as exc:  # noqa: BLE001 - never block flow runs on variable lookup
         await logger.awarning(
             "Could not load global variables for user %s while applying default_fields: %s",
@@ -131,6 +131,5 @@ async def apply_global_variable_defaults(
         )
         return graph_data
 
-    pairs = [(v.name, v.default_fields) for v in variables if v.name]
-    unavailable_fields = build_unavailable_fields_map(pairs)
+    unavailable_fields = build_unavailable_fields_map(bindings)
     return apply_unavailable_fields_to_graph(graph_data, unavailable_fields)

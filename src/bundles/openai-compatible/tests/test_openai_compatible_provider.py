@@ -13,6 +13,8 @@ Covers:
 
 from __future__ import annotations
 
+import json
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -48,6 +50,220 @@ def test_bundle_registers_provider_end_to_end():
         assert provider_registry.validator_for("OpenAI Compatible") is not None
     finally:
         provider_registry.clear()
+
+
+@contextmanager
+def _openai_compatible_embeddings(monkeypatch, handler, base_url="https://compatible.example/v1"):
+    """Yield real OpenAI-compatible embeddings backed by a mock HTTP transport."""
+    from lfx.base.models import provider_registry, unified_models
+    from lfx.base.models.unified_models import instantiation
+    from lfx.base.models.unified_models.instantiation import get_embeddings
+    from lfx.extension import load_extension
+
+    provider_registry.clear()
+    try:
+        root = Path(__file__).resolve().parents[1] / "src" / "lfx_openai_compatible"
+        result = load_extension(root)
+        assert result.ok, (result.errors, result.warnings)
+
+        monkeypatch.setattr(unified_models, "get_api_key_for_provider", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr(
+            unified_models,
+            "get_all_variables_for_provider",
+            lambda *_args, **_kwargs: {"OPENAI_COMPATIBLE_BASE_URL": base_url},
+        )
+
+        with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+            monkeypatch.setattr(
+                instantiation,
+                "ssrf_protected_openai_clients_for_url",
+                lambda _url: {"http_client": client},
+            )
+            yield get_embeddings([{"name": "nomic-embed-text", "provider": "OpenAI Compatible", "metadata": {}}])
+    finally:
+        provider_registry.clear()
+
+
+@contextmanager
+def _openai_compatible_chat(monkeypatch, handler, base_url):
+    """Yield a real OpenAI-compatible chat model backed by a mock HTTP transport."""
+    from lfx.base.models import provider_registry, unified_models
+    from lfx.base.models.unified_models import instantiation
+    from lfx.base.models.unified_models.instantiation import get_llm
+    from lfx.extension import load_extension
+
+    provider_registry.clear()
+    try:
+        root = Path(__file__).resolve().parents[1] / "src" / "lfx_openai_compatible"
+        result = load_extension(root)
+        assert result.ok, (result.errors, result.warnings)
+
+        monkeypatch.setattr(unified_models, "get_api_key_for_provider", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr(
+            unified_models,
+            "get_all_variables_for_provider",
+            lambda *_args, **_kwargs: {"OPENAI_COMPATIBLE_BASE_URL": base_url},
+        )
+
+        with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+            monkeypatch.setattr(
+                instantiation,
+                "ssrf_protected_openai_clients_for_url",
+                lambda _url: {"http_client": client},
+            )
+            yield get_llm(
+                [{"name": "qwen2.5", "provider": "OpenAI Compatible", "metadata": {}}],
+                user_id=None,
+            )
+    finally:
+        provider_registry.clear()
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "https://compatible.example",
+        "https://compatible.example/",
+        "https://compatible.example/v1",
+        "https://compatible.example/v1/",
+    ],
+)
+def test_chat_runtime_normalizes_openai_compatible_base_url(monkeypatch, base_url):
+    """A URL accepted by validation must use the same /v1 API root at runtime."""
+    captured_urls = []
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        """Capture one successful chat completion request."""
+        captured_urls.append(str(request.url))
+        return httpx.Response(
+            200,
+            json={
+                "id": "chatcmpl-test",
+                "object": "chat.completion",
+                "created": 0,
+                "model": "qwen2.5",
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": "ok"},
+                        "finish_reason": "stop",
+                    }
+                ],
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            },
+            request=request,
+        )
+
+    with _openai_compatible_chat(monkeypatch, handle_request, base_url) as chat_model:
+        chat_model.invoke("hello world")
+
+    assert captured_urls == ["https://compatible.example/v1/chat/completions"]
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "https://compatible.example",
+        "https://compatible.example/",
+        "https://compatible.example/v1",
+        "https://compatible.example/v1/",
+    ],
+)
+def test_embeddings_runtime_normalizes_openai_compatible_base_url(monkeypatch, base_url):
+    """Embedding requests use the same normalized /v1 API root as chat requests."""
+    captured_urls = []
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        """Capture one successful embedding request."""
+        captured_urls.append(str(request.url))
+        return httpx.Response(
+            200,
+            json={
+                "data": [{"embedding": [0.1], "index": 0}],
+                "model": "nomic-embed-text",
+                "usage": {"prompt_tokens": 2, "total_tokens": 2},
+            },
+            request=request,
+        )
+
+    with _openai_compatible_embeddings(monkeypatch, handle_request, base_url) as embeddings:
+        embeddings.embed_query("hello world")
+
+    assert captured_urls == ["https://compatible.example/v1/embeddings"]
+
+
+def test_embeddings_send_string_input_to_compatible_endpoint(monkeypatch):
+    """OpenAI-compatible servers receive text, not OpenAI-only token arrays."""
+    captured_inputs = []
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        """Capture one successful query request."""
+        captured_inputs.append(json.loads(request.content)["input"])
+        return httpx.Response(
+            200,
+            json={
+                "data": [{"embedding": [0.1], "index": 0}],
+                "model": "nomic-embed-text",
+                "usage": {"prompt_tokens": 2, "total_tokens": 2},
+            },
+            request=request,
+        )
+
+    with _openai_compatible_embeddings(monkeypatch, handle_request) as embeddings:
+        embeddings.embed_query("hello world")
+
+    assert captured_inputs == [["hello world"]]
+
+
+def test_embeddings_preserve_batch_strings_and_empty_input(monkeypatch):
+    """Batch embedding preserves string shape, including an empty boundary value."""
+    captured_inputs = []
+    texts = ["", "first document", "second document"]
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        """Return one embedding for every captured batch item."""
+        request_inputs = json.loads(request.content)["input"]
+        captured_inputs.append(request_inputs)
+        return httpx.Response(
+            200,
+            json={
+                "data": [{"embedding": [0.1, float(index)], "index": index} for index in range(len(request_inputs))],
+                "model": "nomic-embed-text",
+                "usage": {"prompt_tokens": 4, "total_tokens": 4},
+            },
+            request=request,
+        )
+
+    with _openai_compatible_embeddings(monkeypatch, handle_request) as embeddings:
+        result = embeddings.embed_documents(texts)
+
+    assert captured_inputs == [texts]
+    assert len(result) == len(texts)
+
+
+def test_embeddings_propagate_compatible_endpoint_errors(monkeypatch):
+    """A compatible endpoint error remains visible to the flow execution path."""
+    from openai import BadRequestError
+
+    captured_inputs = []
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        """Reject the request with the endpoint's invalid-input response."""
+        captured_inputs.append(json.loads(request.content)["input"])
+        return httpx.Response(
+            400,
+            json={"error": {"message": "invalid input type", "type": "invalid_request_error"}},
+            request=request,
+        )
+
+    with (
+        _openai_compatible_embeddings(monkeypatch, handle_request) as embeddings,
+        pytest.raises(BadRequestError, match="invalid input type") as exc_info,
+    ):
+        embeddings.embed_query("rejected input")
+
+    assert exc_info.value.status_code == 400
+    assert captured_inputs == [["rejected input"]]
 
 
 def _ok_response(payload: dict | list) -> MagicMock:

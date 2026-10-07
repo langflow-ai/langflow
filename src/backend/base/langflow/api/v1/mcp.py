@@ -15,12 +15,14 @@ from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
 from langflow.api.utils import CurrentActiveMCPUser, raise_error_if_astra_cloud_env
 from langflow.api.v1.mcp_utils import (
+    authenticated_caller_ctx,
     current_user_ctx,
     handle_call_tool,
     handle_list_resources,
     handle_list_tools,
     handle_mcp_errors,
     handle_read_resource,
+    raise_if_sse_disabled,
 )
 
 
@@ -160,7 +162,7 @@ def _bind_mcp_transport_user(request: Request, current_user: CurrentActiveMCPUse
 @router.head(
     "/sse",
     response_class=HTMLResponse,
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
 )
 async def im_alive():
     return Response()
@@ -169,12 +171,13 @@ async def im_alive():
 @router.get(
     "/sse",
     response_class=ResponseNoOp,
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
 )
 async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
     msg = f"Starting SSE connection, server name: {server.name}"
     await logger.ainfo(msg)
     _bind_mcp_transport_user(request, current_user)
+    authenticated_caller_ctx.set(current_user.id)
     token = current_user_ctx.set(current_user)
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:  # noqa: SLF001
@@ -216,7 +219,7 @@ async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
         current_user_ctx.reset(token)
 
 
-@router.post("/", dependencies=[Depends(raise_error_if_astra_cloud_env)])
+@router.post("/", dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)])
 async def handle_messages(request: Request, current_user: CurrentActiveMCPUser):
     _bind_mcp_transport_user(request, current_user)
     try:
@@ -350,6 +353,7 @@ async def _dispatch_streamable_http(
         current_user.id,
     )
 
+    authenticated_caller_ctx.set(current_user.id)
     context_token = current_user_ctx.set(current_user)
     try:
         manager = get_streamable_http_manager()

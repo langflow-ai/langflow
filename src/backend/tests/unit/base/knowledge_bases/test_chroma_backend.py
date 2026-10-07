@@ -9,7 +9,10 @@ tmp_path-backed collections with tiny document sets.
 from __future__ import annotations
 
 import gc
+import re
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock, patch
+from uuid import UUID, uuid4
 
 import chromadb.errors
 import pytest
@@ -24,12 +27,16 @@ from lfx.base.knowledge_bases.backends import (
     ChromaCloudBackend,
     ChromaLocalBackend,
     IngestedDocument,
+    PostgresBackend,
 )
 from lfx.base.knowledge_bases.backends.base import (
     METADATA_KEY_JOB_ID,
     METADATA_KEY_SOURCE,
     METADATA_KEY_SOURCE_TYPE,
 )
+from lfx.base.knowledge_bases.backends.chroma import LEGACY_SHARED_COLLECTION_KEY
+from lfx.base.knowledge_bases.backends.naming import owner_scoped_collection_name
+from lfx.base.knowledge_bases.validation import is_valid_collection_name
 
 
 class _DeterministicEmbeddings(Embeddings):
@@ -205,6 +212,9 @@ _CLOUD_CONFIG: dict = {
 }
 
 
+_CLOUD_OWNER = UUID("7a0c2f7e-5f1b-4b8e-9d0c-2b1f6f3c9e41")
+
+
 class TestChromaCloudMode:
     """Unit tests for ChromaBackend cloud mode — all network calls are mocked."""
 
@@ -214,6 +224,7 @@ class TestChromaCloudMode:
             kb_path=tmp_path / "cloud_test_kb",
             backend_config=cfg or _CLOUD_CONFIG,
             embedding_function=_DeterministicEmbeddings(),
+            user_id=_CLOUD_OWNER,
         )
 
     # ---- mode detection --------------------------------------------------
@@ -330,14 +341,20 @@ class TestChromaCloudMode:
         mock_local.assert_not_called()
         mock_chroma.assert_called_once_with(
             client=mock_client,
-            collection_name="cloud_test_kb",
+            collection_name=owner_scoped_collection_name(_CLOUD_OWNER, "cloud_test_kb"),
             embedding_function=bk.embedding_function,
             collection_configuration={"embedding_function": None},
         )
 
-    def test_get_cloud_client_passes_optional_host_port(self, tmp_path: Path):
+    def test_get_cloud_client_passes_optional_host_port(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         from unittest.mock import patch
 
+        # The custom host now goes through connector SSRF validation; allowlist
+        # it so the test exercises the pass-through without a DNS lookup.
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "custom.host.example")
+        monkeypatch.setenv("LANGFLOW_KB_ALLOWED_HOSTS", "custom.host.example")
         bk = ChromaCloudBackend(
             kb_name="cloud_kb",
             kb_path=tmp_path / "cloud_kb",
@@ -358,6 +375,147 @@ class TestChromaCloudMode:
         _, kwargs = mock_cloud.call_args
         assert kwargs["cloud_host"] == "custom.host.example"
         assert kwargs["cloud_port"] == 8080
+
+    # ---- SSRF and destination policy -------------------------------------
+
+    @pytest.fixture
+    def ssrf_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Pin the destination knobs so the tests don't depend on ambient settings.
+
+        The hosts under test are approved for the exclusive destination gate so
+        each assertion measures the *address* policy. The gate itself is covered
+        by ``test_custom_host_needs_operator_approval`` below.
+        """
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+        monkeypatch.setenv(
+            "LANGFLOW_KB_ALLOWED_HOSTS",
+            "169.254.169.254,10.0.0.5,chroma.internal.example",
+        )
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+        monkeypatch.delenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", raising=False)
+
+    def _cloud_backend_with_host(self, tmp_path: Path, cloud_host: str) -> ChromaCloudBackend:
+        """Cloud backend whose credential lookups are stubbed, leaving only the host checks."""
+        from unittest.mock import AsyncMock
+
+        bk = ChromaCloudBackend(
+            kb_name="cloud_kb",
+            kb_path=tmp_path / "cloud_kb",
+            backend_config={"mode": "cloud", "cloud_host": cloud_host},
+            embedding_function=_DeterministicEmbeddings(),
+        )
+        bk.resolve_required_secret = AsyncMock(return_value="k")
+        bk.resolve_secret = AsyncMock(return_value=None)
+        return bk
+
+    @pytest.mark.parametrize("hostile_host", ["169.254.169.254", "10.0.0.5"])
+    async def test_resolve_secrets_rejects_ssrf_targets(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, hostile_host: str
+    ):
+        """Tenant-controlled cloud_host must not reach internal/metadata IPs.
+
+        Regression guard for the KB Chroma Cloud SSRF (CWE-918): cloud_host /
+        cloud_port come straight from the request body's backend_config and
+        were handed to chromadb.CloudClient unvalidated, letting a tenant point
+        the server at 169.254.169.254 / RFC1918 targets.
+
+        The check lives in ``_resolve_secrets``, which ``ensure_ready`` runs before
+        anything can build a client, so it covers test-connection, create, ingest,
+        retrieval and delete from one place. It is deliberately *not* repeated in
+        ``_get_cloud_client``: ``vector_store`` builds lazily from a sync property,
+        so a validator call there is a blocking DNS lookup on the event loop.
+        """
+        from unittest.mock import AsyncMock
+
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+        monkeypatch.setenv(
+            "LANGFLOW_KB_ALLOWED_HOSTS",
+            "169.254.169.254,10.0.0.5,chroma.internal.example",
+        )
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+        bk = ChromaCloudBackend(
+            kb_name="cloud_kb",
+            kb_path=tmp_path / "cloud_kb",
+            backend_config={"mode": "cloud", "cloud_host": hostile_host},
+            embedding_function=_DeterministicEmbeddings(),
+        )
+        bk.resolve_required_secret = AsyncMock(return_value="k")
+        bk.resolve_secret = AsyncMock(return_value=None)
+        with (
+            patch("chromadb.CloudClient") as mock_cloud,
+            pytest.raises(SSRFProtectionError, match="blocked"),
+        ):
+            await bk._resolve_secrets()
+        mock_cloud.assert_not_called()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_resolve_secrets_rejects_hostname_resolving_to_private_ip(self, tmp_path: Path):
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        bk = self._cloud_backend_with_host(tmp_path, "chroma.internal.example")
+        with (
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["10.1.2.3"]),
+            patch("chromadb.CloudClient") as mock_cloud,
+            pytest.raises(SSRFProtectionError, match="blocked"),
+        ):
+            await bk._resolve_secrets()
+        mock_cloud.assert_not_called()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_default_cloud_host_needs_no_validation(self, tmp_path: Path):
+        """No ``cloud_host`` means chromadb's fixed public default, which has no tenant input."""
+        from unittest.mock import AsyncMock
+
+        bk = self._cloud_backend(tmp_path)
+        bk.resolve_required_secret = AsyncMock(return_value="k")
+        bk.resolve_secret = AsyncMock(return_value=None)
+        with patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve:
+            await bk._resolve_secrets()
+        mock_resolve.assert_not_called()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_test_connection_reports_ssrf_block(self, tmp_path: Path):
+        """A blocked host surfaces as a failed probe typed ``SSRFProtectionError``."""
+        bk = self._cloud_backend_with_host(tmp_path, "169.254.169.254")
+        with patch("chromadb.CloudClient") as mock_cloud:
+            result = await bk.test_connection()
+        assert result.ok is False
+        assert result.details["type"] == "SSRFProtectionError"
+        assert "blocked" in result.message
+        mock_cloud.assert_not_called()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_custom_host_needs_operator_approval(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        """A public-looking custom host is still refused — the KB list is exclusive.
+
+        chromadb builds its own httpx client inside ``CloudClient`` and dials during
+        construction, so the address validated here cannot be pinned for the connection
+        that follows. ``cloud_host`` is a testing-only knob upstream, so requiring
+        approval leaves the ordinary Chroma Cloud path alone.
+        """
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        monkeypatch.delenv("LANGFLOW_KB_ALLOWED_HOSTS", raising=False)
+        bk = self._cloud_backend_with_host(tmp_path, "rebind.attacker.example")
+        with (
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+            patch("chromadb.CloudClient") as mock_cloud,
+            pytest.raises(SSRFProtectionError, match="not an approved destination"),
+        ):
+            await bk._resolve_secrets()
+        mock_cloud.assert_not_called()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_approved_custom_host_passes(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("LANGFLOW_KB_ALLOWED_HOSTS", "chroma.corp.example")
+        bk = self._cloud_backend_with_host(tmp_path, "chroma.corp.example")
+        with patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]):
+            await bk._resolve_secrets()
+        assert bk._resolved_api_key == "k"  # pragma: allowlist secret
 
     def test_get_cloud_client_omits_host_port_when_not_configured(self, tmp_path: Path):
         from unittest.mock import patch
@@ -448,7 +606,9 @@ class TestChromaCloudMode:
         ):
             await bk.delete_collection()
 
-        mock_client.delete_collection.assert_called_once_with(name="cloud_test_kb")
+        mock_client.delete_collection.assert_called_once_with(
+            name=owner_scoped_collection_name(_CLOUD_OWNER, "cloud_test_kb")
+        )
 
     async def test_delete_collection_propagates_cloud_errors(self, tmp_path: Path):
         """Cloud errors must bubble up so the route can surface a warning."""
@@ -462,3 +622,94 @@ class TestChromaCloudMode:
             pytest.raises(chromadb.errors.ChromaError),
         ):
             await bk.delete_collection()
+
+
+class TestChromaCloudCollectionIsolation:
+    """Each owner's Chroma Cloud knowledge base must get its own collection.
+
+    Every user whose credentials resolve to the same tenant and database shares
+    one collection namespace, and KB names are only unique per user. Naming the
+    collection after the KB let two users' same-named KBs read, count, and delete
+    each other's chunks. The collection is now owner-scoped unless an explicit
+    ``collection_name`` override is configured.
+    """
+
+    def _make(self, kb_name: str, backend_config: dict, user_id: UUID | str | None) -> ChromaCloudBackend:
+        backend = ChromaCloudBackend(kb_name=kb_name, backend_config=backend_config, user_id=user_id)
+        backend._resolved_api_key = "k"
+        return backend
+
+    def _built_collection(self, backend: ChromaCloudBackend) -> str:
+        with (
+            patch("chromadb.CloudClient", return_value=MagicMock()),
+            patch("lfx.base.knowledge_bases.backends.chroma.Chroma", return_value=MagicMock()) as fake_chroma,
+        ):
+            backend._build_vector_store()
+        return fake_chroma.call_args.kwargs["collection_name"]
+
+    def test_same_kb_name_for_different_owners_gets_different_collections(self) -> None:
+        first = self._built_collection(self._make("docs", {"mode": "cloud"}, uuid4()))
+        second = self._built_collection(self._make("docs", {"mode": "cloud"}, uuid4()))
+        assert first != second
+
+    def test_collection_matches_pgvector_and_is_a_valid_chroma_name(self) -> None:
+        owner = uuid4()
+        collection = self._built_collection(self._make("Team Docs", {"mode": "cloud"}, owner))
+        assert collection == PostgresBackend(kb_name="Team Docs", user_id=owner).collection_name
+        assert re.fullmatch(r"lf_[0-9a-f]{24}", collection)
+        assert is_valid_collection_name(collection)
+
+    def test_string_and_uuid_owner_ids_resolve_to_the_same_collection(self) -> None:
+        owner = uuid4()
+        from_uuid = self._built_collection(self._make("docs", {"mode": "cloud"}, owner))
+        from_string = self._built_collection(self._make("docs", {"mode": "cloud"}, str(owner).upper()))
+        assert from_uuid == from_string
+
+    def test_missing_owner_fails_closed(self) -> None:
+        with pytest.raises(ValueError, match="valid user_id"):
+            self._built_collection(self._make("docs", {"mode": "cloud"}, None))
+
+    def test_explicit_collection_name_overrides_derivation(self) -> None:
+        backend = self._make("docs", {"mode": "cloud", "collection_name": "docs"}, uuid4())
+        assert self._built_collection(backend) == "docs"
+
+    def test_override_cannot_target_another_owners_scoped_collection(self) -> None:
+        victim = owner_scoped_collection_name(uuid4(), "docs")
+        backend = self._make("docs", {"mode": "cloud", "collection_name": victim}, uuid4())
+        with pytest.raises(ValueError, match="reserved for owner-scoped"):
+            self._built_collection(backend)
+
+    async def test_delete_collection_uses_the_resolved_collection(self) -> None:
+        owner = uuid4()
+        client = MagicMock()
+        backend = self._make("docs", {"mode": "cloud"}, owner)
+        backend._secrets_resolved = True
+        with patch.object(backend, "_get_cloud_client", return_value=client):
+            await backend.delete_collection()
+        client.delete_collection.assert_called_once_with(name=owner_scoped_collection_name(owner, "docs"))
+
+    async def test_delete_collection_without_owner_touches_nothing(self) -> None:
+        client = MagicMock()
+        backend = self._make("docs", {"mode": "cloud"}, None)
+        backend._secrets_resolved = True
+        with (
+            patch.object(backend, "_get_cloud_client", return_value=client),
+            pytest.raises(ValueError, match="valid user_id"),
+        ):
+            await backend.delete_collection()
+        client.delete_collection.assert_not_called()
+
+    def test_shared_legacy_collection_marker_warns(self) -> None:
+        owner = uuid4()
+        backend = self._make("docs", {"mode": "cloud", LEGACY_SHARED_COLLECTION_KEY: "docs"}, owner)
+        with patch("lfx.base.knowledge_bases.backends.chroma.logger") as fake_logger:
+            collection = self._built_collection(backend)
+        assert collection == owner_scoped_collection_name(owner, "docs")
+        fake_logger.warning.assert_called_once()
+        assert "docs" in fake_logger.warning.call_args.args
+
+    def test_no_warning_without_the_marker(self) -> None:
+        backend = self._make("docs", {"mode": "cloud"}, uuid4())
+        with patch("lfx.base.knowledge_bases.backends.chroma.logger") as fake_logger:
+            self._built_collection(backend)
+        fake_logger.warning.assert_not_called()

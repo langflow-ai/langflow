@@ -22,7 +22,6 @@ from fastapi.testclient import TestClient
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
 from lfx.schema.workflow import JobStatus, WorkflowJobResponse
-from lfx.workflow import router as router_module
 from lfx.workflow.host import ResolvedFlow, WorkflowHostBase
 from lfx.workflow.router import create_workflow_router
 
@@ -48,6 +47,7 @@ class _CaptureHost(WorkflowHostBase):
         self._graph = graph
         self.seen_session_id: str | None = "<unset>"
         self.seen_persist: bool | None = None
+        self.seen_end_user_id: str | None = "<unset>"
 
     async def resolve_caller(self, request: Request) -> Any:  # noqa: ARG002
         return "caller"
@@ -61,6 +61,7 @@ class _CaptureHost(WorkflowHostBase):
     async def submit_background(self, parsed, flow, caller, *, stream_protocol) -> WorkflowJobResponse:  # noqa: ARG002
         self.seen_session_id = parsed.session_id
         self.seen_persist = parsed.persist_messages
+        self.seen_end_user_id = parsed.end_user_id
         return WorkflowJobResponse(job_id=str(uuid4()), flow_id=flow.flow_id, status=JobStatus.QUEUED)
 
 
@@ -77,8 +78,14 @@ def _settings(**overrides):
 @pytest.fixture
 def client_with_settings(monkeypatch):
     def _make(host: _CaptureHost, settings_ns):
+        # The session scoping now reads settings inside the shared
+        # ``resolve_serving_scope`` helper, which imports ``get_settings_service``
+        # from ``lfx.services.deps`` at call time — so the stub is applied there
+        # (not on the router module) for the router to observe it.
+        from lfx.services import deps as deps_module
+
         monkeypatch.setattr(
-            router_module,
+            deps_module,
             "get_settings_service",
             lambda: SimpleNamespace(settings=settings_ns),
         )
@@ -104,6 +111,8 @@ def test_identified_request_merges_end_user_into_session(client_with_settings):
     assert host.seen_session_id == "alice::chat-1"
     # An identified run persists memory.
     assert host.seen_persist is True
+    # The raw end-user id rides the parsed run so the build site can stamp the graph.
+    assert host.seen_end_user_id == "alice"
 
 
 def test_two_users_same_session_id_are_isolated(client_with_settings):
@@ -133,6 +142,8 @@ def test_anonymous_request_gets_reserved_ephemeral_scope(client_with_settings):
     assert "chat-1" not in host.seen_session_id
     # An anonymous run is ephemeral: it must not persist memory.
     assert host.seen_persist is False
+    # No identity => no end-user id stamped on the graph (falls back to the SID).
+    assert host.seen_end_user_id is None
 
 
 def test_anonymous_request_cannot_target_identified_scope(client_with_settings):

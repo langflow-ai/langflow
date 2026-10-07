@@ -15,11 +15,23 @@ import pytest
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 from lfx.schema.dataframe import DataFrame
+from lfx.services.shared_component_cache.service import SharedComponentCacheService
 
 from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestMCPComponentCache(ComponentTestBaseWithoutClient):
+    @pytest.fixture(autouse=True)
+    def isolated_shared_cache(self, monkeypatch):
+        # Share a real cache between instances in this test, without depending
+        # on another test's app startup or retaining its cached tools.
+        cache = SharedComponentCacheService()
+        monkeypatch.setattr(
+            "lfx.custom.custom_component.component_with_cache.get_shared_component_cache_service",
+            lambda: cache,
+        )
+        return cache
+
     @pytest.fixture
     def component_class(self):
         return MCPToolsComponent
@@ -84,10 +96,11 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
 
     @pytest.mark.asyncio
     async def test_cache_stores_tools_when_enabled(
-        self, component_class, default_kwargs, mock_tools_list, mock_server_config
+        self, component_class, default_kwargs, mock_tools_list, mock_server_config, active_user
     ):
         """Test that tools are cached when cache is enabled."""
         component = await self.component_setup(component_class, default_kwargs)
+        component._user_id = str(active_user.id)
         component.use_cache = True
         server_name = "test_server"
         cache_key = component._mcp_servers_cache_key(server_name)
@@ -127,10 +140,11 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
 
     @pytest.mark.asyncio
     async def test_cache_reuses_cached_tools(
-        self, component_class, default_kwargs, mock_tools_list, mock_server_config
+        self, component_class, default_kwargs, mock_tools_list, mock_server_config, active_user
     ):
         """Test that cached tools are reused on subsequent calls."""
         component = await self.component_setup(component_class, default_kwargs)
+        component._user_id = str(active_user.id)
         component.use_cache = True
         server_name = "test_server"
         cache_key = component._mcp_servers_cache_key(server_name)
@@ -400,14 +414,15 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
 
     @pytest.mark.asyncio
     async def test_cache_persistence_across_instances(
-        self, component_class, default_kwargs, mock_tools_list, mock_server_config
+        self, component_class, default_kwargs, mock_tools_list, mock_server_config, active_user
     ):
         """Test that cache persists across component instances."""
         server_name = "test_server"
+        shared_tenant_id = str(active_user.id)
 
         # First component instance
         component1 = await self.component_setup(component_class, default_kwargs)
-        component1._user_id = "shared-tenant"
+        component1._user_id = shared_tenant_id
         component1.use_cache = True
         cache_key = component1._mcp_servers_cache_key(server_name)
 
@@ -422,7 +437,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
 
         # Second component instance
         component2 = await self.component_setup(component_class, default_kwargs)
-        component2._user_id = "shared-tenant"
+        component2._user_id = shared_tenant_id
         component2.use_cache = True
 
         # Should access the same cache

@@ -122,6 +122,38 @@ def get_provider_secret_variable_key(provider: str) -> str | None:
     return next((variable.get("variable_key") for variable in variables if variable.get("is_secret")), None)
 
 
+def is_required_provider_variable(variable_key: str) -> bool:
+    """True when *variable_key* is a required variable of some model provider.
+
+    "Required" is the same notion provider enablement uses: a provider counts as
+    configured once every required variable is present. Optional variables
+    (``OPENAI_BASE_URL``, ``AZURE_AI_FOUNDRY_API_VERSION``) are opt-in switches
+    that enablement never consults, so they must stay explicitly configured.
+    """
+    return any(
+        variable.get("required") and variable.get("variable_key") == variable_key
+        for meta in model_provider_metadata.values()
+        for variable in meta.get("variables", [])
+    )
+
+
+def is_known_model_provider(provider: str) -> bool:
+    """True when *provider* names a provider the model catalog recognizes.
+
+    Recognition is independent of credentials: a provider configured only by a
+    base URL (Ollama) declares no secret variable, so a secret lookup returning
+    ``None`` says nothing about whether the provider exists.
+
+    Bundle-registered providers need no separate check — registration writes the
+    bundle's metadata into this same table and unregistration removes it — so a
+    single canonicalized membership test answers for every selector form (name,
+    provider id, alias) and for core and bundle providers alike.
+
+    Deliberately uncached: bundles register and unregister providers at runtime.
+    """
+    return _canonical_provider_name(provider) in model_provider_metadata
+
+
 @lru_cache(maxsize=1)
 def get_model_provider_variable_mapping() -> dict[str, str]:
     """Return one primary variable for each provider.

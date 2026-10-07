@@ -136,6 +136,21 @@ describe("patchEmptyRowGroups", () => {
 });
 
 describe("patchTabbableRow", () => {
+  /** Body rows carrying AG Grid's `row-index`, appended in the given DOM order. */
+  function makeBodyRows(container: HTMLElement, rowIndexes: number[]) {
+    const rowsContainer = document.createElement("div");
+    rowsContainer.className = "ag-center-cols-container";
+    const rows = rowIndexes.map((rowIndex) => {
+      const row = document.createElement("div");
+      row.setAttribute("role", "row");
+      row.setAttribute("row-index", String(rowIndex));
+      rowsContainer.appendChild(row);
+      return row;
+    });
+    container.appendChild(rowsContainer);
+    return rows;
+  }
+
   it("makes only the first body row tabbable (roving tabindex)", () => {
     const container = document.createElement("div");
     const rowsContainer = document.createElement("div");
@@ -194,5 +209,67 @@ describe("patchTabbableRow", () => {
 
     expect(bodyRow.getAttribute("tabindex")).toBe("0");
     expect(headerRow.getAttribute("tabindex")).toBe("-1");
+  });
+
+  // Virtualization recycles row elements, so the rendered window is a moving
+  // range of row indexes rather than rows 0..n. Re-patching must put the tab
+  // stop on whichever row is now topmost.
+  it("moves the tab stop to the topmost row of the rendered window", () => {
+    const container = document.createElement("div");
+    const rows = makeBodyRows(container, [120, 121, 122]);
+
+    patchTabbableRow(container);
+
+    expect(rows[0].getAttribute("tabindex")).toBe("0");
+    expect(rows[1].getAttribute("tabindex")).toBe("-1");
+    expect(rows[2].getAttribute("tabindex")).toBe("-1");
+  });
+
+  // `ensureDomOrder` is on by default but consumers can turn it off through
+  // `gridOptions`, and AG Grid then reuses row elements in place — DOM order no
+  // longer tracks visual order, so `row-index` decides the tab stop.
+  it("picks the lowest row-index, not the first element in the DOM", () => {
+    const container = document.createElement("div");
+    const rows = makeBodyRows(container, [122, 120, 121]);
+
+    patchTabbableRow(container);
+
+    expect(rows[0].getAttribute("tabindex")).toBe("-1");
+    expect(rows[1].getAttribute("tabindex")).toBe("0");
+    expect(rows[2].getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("keeps exactly one tab stop when the rendered window scrolls on", () => {
+    const container = document.createElement("div");
+    const rows = makeBodyRows(container, [0, 1, 2]);
+
+    patchTabbableRow(container);
+    expect(rows[0].getAttribute("tabindex")).toBe("0");
+
+    // AG Grid recycles the element that owned the tab stop onto a later row.
+    rows[0].setAttribute("row-index", "3");
+
+    patchTabbableRow(container);
+
+    const tabbable = rows.filter((row) => row.getAttribute("tabindex") === "0");
+    expect(tabbable).toEqual([rows[1]]);
+  });
+
+  it("falls back to the first rendered row when no row exposes a row-index", () => {
+    const container = document.createElement("div");
+    const rowsContainer = document.createElement("div");
+    rowsContainer.className = "ag-center-cols-container";
+    const rows = [0, 1].map(() => {
+      const row = document.createElement("div");
+      row.setAttribute("role", "row");
+      rowsContainer.appendChild(row);
+      return row;
+    });
+    container.appendChild(rowsContainer);
+
+    patchTabbableRow(container);
+
+    expect(rows[0].getAttribute("tabindex")).toBe("0");
+    expect(rows[1].getAttribute("tabindex")).toBe("-1");
   });
 });

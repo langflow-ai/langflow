@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -8,14 +8,19 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import type { Category } from "@/types/templates/types";
+import type { Category, NavItem } from "@/types/templates/types";
 import { cn } from "@/utils/utils";
 import type { newFlowModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import GetStartedComponent from "./components/GetStartedComponent";
 import { Nav } from "./components/navComponent";
 import TemplateContentComponent from "./components/TemplateContentComponent";
+import {
+  ALL_TEMPLATES_TAB,
+  availableTemplateTabs,
+} from "./utils/template-availability";
 
 export default function TemplatesModal({
   open,
@@ -33,12 +38,16 @@ export default function TemplatesModal({
   const hideStarterProjects = useUtilityStore(
     (state) => state.hideStarterProjects,
   );
+  // AppInitPage holds every route back until the examples fetch settles, so an
+  // empty store here means a policy blocked them, never "still loading".
+  const examples = useFlowsManagerStore((state) => state.examples);
 
-  // If starter projects are hidden and we're on the get-started tab, switch to all-templates
-  const effectiveTab =
-    hideStarterProjects && currentTab === "get-started"
-      ? "all-templates"
-      : currentTab;
+  // A catalog policy can empty any tab, and a tab with nothing behind it is
+  // offered but not selectable rather than opening onto an empty pane.
+  const availableTabs = useMemo(
+    () => availableTemplateTabs(examples),
+    [examples],
+  );
 
   const handleFlowCreating = (isCreating: boolean) => {
     setLoading(isCreating);
@@ -62,7 +71,7 @@ export default function TemplatesModal({
   };
 
   // Define categories and their items
-  const categories: Category[] = [
+  const rawCategories: Category[] = [
     {
       title: t("templatesModal.title"),
       items: [
@@ -125,6 +134,27 @@ export default function TemplatesModal({
     },
   ];
 
+  // A tab a policy emptied is dropped rather than shown inert, and a group
+  // that loses every tab goes with it so no bare heading is left behind.
+  const categories: Category[] = rawCategories
+    .map((category) => ({
+      ...category,
+      items: category.items.filter((item) => availableTabs.has(item.id)),
+    }))
+    .filter((category) => category.items.length > 0);
+  const selectableItems: NavItem[] = categories.flatMap(
+    (category) => category.items,
+  );
+
+  // Land on a tab that has something in it: the chosen one when it survives
+  // the policy, otherwise the first that does. With every tab gone nothing is
+  // selectable, so fall back to the listing whose empty copy speaks for the
+  // whole catalog rather than just the featured cards.
+  const effectiveTab =
+    selectableItems.find((item) => item.id === currentTab)?.id ??
+    selectableItems[0]?.id ??
+    ALL_TEMPLATES_TAB;
+
   return (
     <BaseModal
       size="templates"
@@ -141,7 +171,9 @@ export default function TemplatesModal({
               currentTab={effectiveTab}
               setCurrentTab={setCurrentTab}
             />
-            <main className="flex flex-1 flex-col gap-4 overflow-auto p-6 md:gap-8">
+            {/* Not a <main>: the page underneath already owns the single
+                main landmark (WCAG 2.4.1). */}
+            <div className="flex flex-1 flex-col gap-4 overflow-auto p-6 md:gap-8">
               {effectiveTab === "get-started" ? (
                 <GetStartedComponent
                   loading={loading}
@@ -182,7 +214,7 @@ export default function TemplatesModal({
                   </Button>
                 </div>
               </BaseModal.Footer>
-            </main>
+            </div>
           </SidebarProvider>
         </div>
       </BaseModal.Content>

@@ -12,6 +12,7 @@ from langflow.api.v1.flows_helpers import _canonicalize_flow_destination, _read_
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.database.models.folder.model import Folder
 
 _FLOW_WRITE_DENIED_DETAIL = "You don't have permission to edit this flow."
 _FLOW_DELETE_DENIED_DETAIL = "You don't have permission to delete this flow."
@@ -95,11 +96,20 @@ async def require_flow_create_permission(
         current_user.id,
         widen_for_authz=True,
     )
+    _, destination_folder_id = destination
+    # Read the owner off the *resolved* destination rather than the payload:
+    # canonicalization may have redirected an unusable folder_id to the
+    # caller's default project, and only the stored row can say who owns the
+    # project the flow will actually land in. This is what lets the owner
+    # override cover creating a flow in a project you own — the new flow has no
+    # owner of its own yet.
+    destination_folder = await session.get(Folder, destination_folder_id)
     await ensure_flow_permission(
         current_user,
         FlowAction.CREATE,
         workspace_id=flow.workspace_id,
         folder_id=flow.folder_id,
+        folder_user_id=getattr(destination_folder, "user_id", None),
     )
     return destination
 

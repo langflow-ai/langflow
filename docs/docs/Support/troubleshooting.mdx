@@ -440,7 +440,8 @@ Therefore, you are locked out of this Langflow instance.
 
 If you aren't an administrator, then a superuser must create and activate a non-superuser account before you can sign in.
 
-If you are the administrator, sign in with a superuser account, or restart Langflow with `LANGFLOW_AUTO_LOGIN=true`.
+If you are the administrator, sign in with a superuser account, and then create and activate users with the [Users API](/api-users).
+Alternatively, restart Langflow with `LANGFLOW_AUTO_LOGIN=true`.
 
 For more information, see [Start Langflow Server with authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
 
@@ -664,6 +665,21 @@ If you experience this when upgrading a flow that you created in Langflow versio
 
 5. Click **Check & Save** to apply the code changes.
 
+## Langflow Assistant issues {#langflow-assistant}
+
+The following issues can occur when using [Langflow Assistant](/langflow-assistant).
+
+### The agent ran out of steps before finishing
+
+If **Langflow Assistant** stops with `The agent ran out of steps before finishing. Try again, or break the request into smaller parts.`, the request needed more steps than the Assistant's step limit allows.
+
+To resolve this error, raise the limit for your session with the `/iterations` command, such as `/iterations 150`, and then send the request again.
+The default limit is `100`, and the maximum is `200`.
+To raise the default for every user of your Langflow server, set [`LANGFLOW_ASSISTANT_ITERATIONS`](/environment-variables).
+You can also split the request into smaller prompts.
+
+For more information, see [The agent ran out of steps before finishing](/langflow-assistant#the-agent-ran-out-of-steps-before-finishing).
+
 ## Token length limit errors in Embedding Model components
 
 Token length errors can happen if your chunking strategy doesn't align with your embedding model's tokenization limits.
@@ -744,9 +760,18 @@ Polling and streaming delivery use a follow-up `GET /api/v1/build/<job_id>/event
 
 Set `LANGFLOW_JOB_QUEUE_TYPE=redis` on all workers so queue state is shared. This supports all `LANGFLOW_EVENT_DELIVERY` modes.
 
+If the deployment is headless and never uses the visual editor or MCP over SSE, you can set `LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE=true` to start anyway. This is unsupported with the Langflow UI and with MCP over SSE, and several subsystems become per-worker. Read [Run multiple workers without Redis](./deployment-multi-worker#run-multiple-workers-without-redis) before enabling it.
+
 ### Builds are cancelled unexpectedly
 
 The polling watchdog reclaims builds whose client heartbeat has gone stale. The default threshold is 90 seconds (`LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S=90`). If legitimate long-running builds are being cancelled, increase this value or set it to `0` to disable the watchdog entirely.
+
+## Voice mode {#voice-mode}
+
+Voice mode is deprecated as of Langflow 1.10.
+The Playground microphone now provides speech-to-text only.
+
+For setup, remaining WebSocket endpoints, and current behavior, see [Use voice mode](/concepts-voice-mode).
 
 ## Intel Mac issues {#intel-mac-issues}
 

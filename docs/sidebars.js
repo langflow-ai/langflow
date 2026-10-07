@@ -173,14 +173,16 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/observability-opentelemetry",
+            "Develop/observability-new-relic",
+            "Develop/observability-instana",
             "Develop/observability-grafana-loki",
             "Develop/traces",
             {
               type: "category",
-              label: "Monitoring",
+              label: "LLM tracing",
               items: [
                 "Develop/integrations-arize",
-                "Develop/observability-grafana-loki",
                 "Develop/integrations-langfuse",
                 "Develop/integrations-langsmith",
                 "Develop/integrations-langwatch",
@@ -322,6 +324,16 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
+        },
+        {
+          type: "doc",
+          id: "Deployment/sandbox-backends",
+          label: "Sandbox backends",
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-tweaks-policy",
+          label: "Restrict API tweaks",
         },
         {
           type: "doc",
@@ -507,6 +519,7 @@ module.exports = {
             "Components/bundles-cohere",
             "Components/bundles-cometapi",
             "Components/bundles-composio",
+            "Components/bundles-confluent",
             "Components/bundles-couchbase",
             "Components/bundles-cuga",
             "Components/bundles-datastax",
@@ -533,6 +546,7 @@ module.exports = {
             "Components/bundles-milvus",
             "Components/bundles-mistralai",
             "Components/bundles-mongodb",
+            "Components/bundles-mrscraper",
             "Components/bundles-nextplaid",
             "Components/bundles-notion",
             "Components/bundles-novita",
@@ -542,6 +556,7 @@ module.exports = {
             "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
             "Components/bundles-oracle",
+            "Components/bundles-orcarouter",
             "Components/bundles-paddle",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",
@@ -617,6 +632,7 @@ module.exports = {
         "API-Reference/api-monitor",
         "API-Reference/api-build",
         "API-Reference/api-users",
+        "API-Reference/api-governance-policy",
         {
           type: "link",
           label: "Langflow API specification",

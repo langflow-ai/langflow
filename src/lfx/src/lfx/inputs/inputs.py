@@ -944,7 +944,7 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     options: list[str] = Field(default_factory=list)
-    is_list: bool = Field(default=True, serialization_alias="list")
+    is_list: bool = Field(default=True, alias="list")
     combobox: CoalesceBool = False
 
     @field_validator("value")

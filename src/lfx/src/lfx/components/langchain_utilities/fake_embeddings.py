@@ -1,4 +1,4 @@
-from langchain_community.embeddings import FakeEmbeddings
+from langchain_core.embeddings import FakeEmbeddings
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.field_typing import Embeddings

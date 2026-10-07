@@ -1,8 +1,19 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH } from "@/constants/constants";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { AssistantInput } from "../assistant-input";
 
 // --- Mocks ---
+
+let mockIsModelEnabled = true;
+
+jest.mock("../../hooks/use-enabled-models", () => ({
+  useEnabledModels: () => ({
+    isCatalogReady: mockIsModelEnabled,
+    isModelEnabled: (model: unknown) => mockIsModelEnabled && model !== null,
+  }),
+}));
 
 jest.mock("@/components/common/genericIconComponent", () => {
   return function MockIcon({ name }: { name: string }) {
@@ -30,7 +41,36 @@ describe("AssistantInput", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsModelEnabled = true;
     localStorage.clear();
+    useUtilityStore
+      .getState()
+      .setAssistantMaxMessageLength(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH);
+  });
+
+  it("blocks send when the saved model is absent from the latest authorized catalog", async () => {
+    localStorage.setItem(
+      "langflow-assistant-selected-model",
+      JSON.stringify({
+        id: "OpenAI-gpt-4o",
+        name: "gpt-4o",
+        provider: "OpenAI",
+        displayName: "gpt-4o",
+      }),
+    );
+    mockIsModelEnabled = false;
+    const onSend = jest.fn();
+    const user = userEvent.setup();
+
+    render(<AssistantInput {...defaultProps} onSend={onSend} />);
+    await user.type(screen.getByTestId("assistant-input-textarea"), "hello");
+
+    expect(screen.getByTestId("assistant-send-button")).toBeDisabled();
+    fireEvent.keyDown(screen.getByTestId("assistant-input-textarea"), {
+      key: "Enter",
+      shiftKey: false,
+    });
+    expect(onSend).not.toHaveBeenCalled();
   });
 
   describe("rendering", () => {
@@ -190,13 +230,23 @@ describe("AssistantInput", () => {
   describe("keyboard interactions", () => {
     it("should send message on Enter key", async () => {
       const onSend = jest.fn();
+      const model = {
+        id: "OpenAI-gpt-4o",
+        name: "gpt-4o",
+        provider: "OpenAI",
+        displayName: "gpt-4o",
+      };
+      localStorage.setItem(
+        "langflow-assistant-selected-model",
+        JSON.stringify(model),
+      );
       render(<AssistantInput {...defaultProps} onSend={onSend} />);
 
       const textarea = screen.getByRole("textbox");
       await userEvent.type(textarea, "hello{enter}");
 
       expect(onSend).toHaveBeenCalledTimes(1);
-      expect(onSend).toHaveBeenCalledWith("hello", null);
+      expect(onSend).toHaveBeenCalledWith("hello", model);
     });
 
     it("should not send on Shift+Enter", async () => {
@@ -320,6 +370,15 @@ describe("AssistantInput", () => {
 
     it("should_clear_draft_on_send", async () => {
       const onDraftChange = jest.fn();
+      localStorage.setItem(
+        "langflow-assistant-selected-model",
+        JSON.stringify({
+          id: "OpenAI-gpt-4o",
+          name: "gpt-4o",
+          provider: "OpenAI",
+          displayName: "gpt-4o",
+        }),
+      );
       render(
         <AssistantInput
           {...defaultProps}
@@ -336,6 +395,15 @@ describe("AssistantInput", () => {
 
   describe("message clearing", () => {
     it("should clear textarea after sending", async () => {
+      localStorage.setItem(
+        "langflow-assistant-selected-model",
+        JSON.stringify({
+          id: "OpenAI-gpt-4o",
+          name: "gpt-4o",
+          provider: "OpenAI",
+          displayName: "gpt-4o",
+        }),
+      );
       render(<AssistantInput {...defaultProps} />);
 
       const textarea = screen.getByRole("textbox");
@@ -462,6 +530,99 @@ describe("AssistantInput", () => {
       // Value did NOT get replaced by history; user keeps editing what
       // they typed.
       expect(textarea).toHaveValue("line one\nline two");
+    });
+  });
+  describe("message length limit", () => {
+    const primeModel = () =>
+      localStorage.setItem(
+        "langflow-assistant-selected-model",
+        JSON.stringify({
+          id: "openai/gpt-4",
+          name: "gpt-4",
+          provider: "openai",
+          displayName: "GPT-4",
+        }),
+      );
+
+    const setValue = (textarea: HTMLTextAreaElement, value: string) => {
+      fireEvent.change(textarea, { target: { value } });
+    };
+
+    it("should_accept_a_prompt_far_past_the_old_500_character_cap", () => {
+      // Regression: the composer hard-capped at 500 while the API accepted 2000,
+      // so longer prompts were clipped in the browser and never sent in full.
+      render(<AssistantInput {...defaultProps} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+
+      setValue(textarea, "a".repeat(1600));
+
+      expect(textarea.value).toHaveLength(1600);
+      expect(textarea).toHaveAttribute(
+        "maxlength",
+        String(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH),
+      );
+    });
+
+    it("should_always_show_the_character_count", () => {
+      render(<AssistantInput {...defaultProps} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+
+      expect(
+        screen.getByTestId("assistant-input-char-count"),
+      ).toHaveTextContent(`0/${DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH}`);
+
+      setValue(textarea, "a".repeat(120));
+
+      expect(
+        screen.getByTestId("assistant-input-char-count"),
+      ).toHaveTextContent(`120/${DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH}`);
+    });
+
+    it("should_send_a_prompt_at_the_configured_limit", () => {
+      primeModel();
+      const onSend = jest.fn();
+      render(<AssistantInput {...defaultProps} onSend={onSend} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+
+      const prompt = "a".repeat(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH);
+      setValue(textarea, prompt);
+      fireEvent.keyDown(textarea, { key: "Enter" });
+
+      expect(onSend).toHaveBeenCalledWith(prompt, expect.anything());
+    });
+
+    it("should_name_the_environment_variable_when_the_limit_is_reached", () => {
+      render(<AssistantInput {...defaultProps} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+
+      setValue(textarea, "a".repeat(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH));
+
+      const hint = screen.getByTestId("assistant-input-limit-hint");
+      expect(hint).toBeVisible();
+      expect(hint).toHaveTextContent("LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH");
+      expect(textarea).toHaveAttribute("aria-describedby", hint.id);
+    });
+
+    it("should_follow_the_limit_served_by_the_backend_config", () => {
+      primeModel();
+      useUtilityStore.getState().setAssistantMaxMessageLength(6000);
+      const onSend = jest.fn();
+      render(<AssistantInput {...defaultProps} onSend={onSend} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+
+      expect(textarea).toHaveAttribute("maxlength", "6000");
+      expect(
+        screen.getByTestId("assistant-input-char-count"),
+      ).toHaveTextContent("0/6000");
+
+      const prompt = "a".repeat(4000);
+      setValue(textarea, prompt);
+      fireEvent.keyDown(textarea, { key: "Enter" });
+
+      expect(onSend).toHaveBeenCalledWith(prompt, expect.anything());
+      expect(
+        screen.queryByTestId("assistant-input-limit-hint"),
+      ).not.toBeInTheDocument();
     });
   });
 });

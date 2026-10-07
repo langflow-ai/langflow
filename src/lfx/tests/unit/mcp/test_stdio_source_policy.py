@@ -2,6 +2,7 @@ import pytest
 from lfx.base.mcp.security import validate_mcp_stdio_config
 from lfx.base.mcp.source_policy import (
     is_package_manager_config_env_var,
+    parse_mcp_shell_wrapper,
     validate_mcp_stdio_source_policy,
 )
 
@@ -301,12 +302,45 @@ def test_interpreter_hardening_rejects_tenant_selected_code(command, args):
         validate_mcp_stdio_source_policy(command, args, interpreter_hardening=True)
 
 
+@pytest.mark.parametrize("switch", ["/c", "/C", "/k", "/K", "/r", "/R", "/q/k", "/s/k", "/d/k"])
+def test_cmd_wrapper_parser_recognises_every_execution_switch(switch):
+    """Every cmd.exe switch that runs a command line must expose the wrapped payload.
+
+    The parser result is what binds a wrapper to the command allowlist; returning ``None``
+    silently skips that check for the switch in question.
+    """
+    assert parse_mcp_shell_wrapper("cmd", [switch, "whoami"]) == ("whoami", [])
+
+
+@pytest.mark.parametrize("switch", ["/a", "/d", "/e:on", "/f:off", "/q", "/s", "/t:0a", "/u", "/v:on"])
+def test_cmd_wrapper_parser_skips_switches_that_do_not_execute(switch):
+    assert parse_mcp_shell_wrapper("cmd", [switch, "/c", "uvx", "mcp-proxy"]) == ("uvx", ["mcp-proxy"])
+
+
 def test_interpreter_hardening_preserves_authenticated_agentic_module():
     validate_mcp_stdio_source_policy(
         "python",
         ["-m", "langflow.agentic.mcp"],
         interpreter_hardening=True,
     )
+
+
+def test_node_source_policy_rejects_runtime_options_without_optional_hardening():
+    with pytest.raises(ValueError, match=r"Node[.]js runtime options"):
+        validate_mcp_stdio_source_policy(
+            "node",
+            ["--import=data:text/javascript,console.log%281%29"],
+            interpreter_hardening=False,
+        )
+
+
+def test_node_source_policy_rejects_inspect_subcommand_without_optional_hardening():
+    with pytest.raises(ValueError, match=r"Node[.]js runtime options or 'inspect'"):
+        validate_mcp_stdio_source_policy(
+            "node",
+            ["inspect", "--import=data:text/javascript,console.log%281%29", "server.js"],
+            interpreter_hardening=False,
+        )
 
 
 def test_windows_forward_slash_executable_path_preserves_source_policy():

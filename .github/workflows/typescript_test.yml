@@ -372,6 +372,21 @@ jobs:
       - name: Install Python Dependencies
         run: uv sync --extra audio
 
+      # The backend spawns `uvx --with mcp~=1.28 mcp-proxy ...` for the
+      # project MCP server as soon as the UI asks for tool counts
+      # (GET /api/v2/mcp/servers?action_count=true). On a cold uv cache that
+      # first invocation resolves and downloads mcp-proxy mid-test, which on
+      # Windows runners stalls the API for 20-30s until the stdio connect
+      # times out. Warm the environment during setup instead. The --with
+      # constraint must match mcp_sdk_constraint_args() (lfx.base.mcp.uvx)
+      # or uvx builds a different cached environment than the backend uses.
+      - name: Pre-warm uvx mcp-proxy (Windows)
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        timeout-minutes: 5
+        shell: bash
+        run: uvx --with 'mcp~=1.28' mcp-proxy --help > /dev/null
+
       - name: Execute Playwright Tests
         timeout-minutes: 18
         shell: bash

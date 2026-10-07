@@ -200,6 +200,15 @@ def _build_overlay_entry(py_file: Path, base_template: dict) -> dict | None:
         logger.debug("Skipping %s: not parseable Python", py_file.name)
         return None
 
+    # Files may survive an upgrade from a release whose scanner permitted
+    # dangerous code, or may have been planted outside the privileged writer.
+    # Refuse them before the template builder imports and executes the source.
+    from langflow.agentic.helpers.code_security import scan_code_security
+
+    if not scan_code_security(code).is_safe:
+        logger.warning("Skipping %s: failed component security validation", py_file.name)
+        return None
+
     # PRIMARY: build the REAL template by introspecting the component —
     # exactly what the normal create-component "Add to canvas" path does
     # (Component(_code=code) + build_custom_component_template). This makes

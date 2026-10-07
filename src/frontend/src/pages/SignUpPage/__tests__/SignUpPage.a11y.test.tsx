@@ -212,4 +212,39 @@ describe("SignUpPage accessibility", () => {
       ],
     });
   });
+
+  it("associates_server_rejection_with_the_username_field", async () => {
+    mockAddUserMutate.mockImplementation((_user, options) => {
+      options.onError({
+        response: { data: { detail: "This username is unavailable." } },
+      });
+    });
+    const { container } = renderSignUpPage();
+
+    fireEvent.change(screen.getByPlaceholderText("Username"), {
+      target: { value: "taken" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Password"), {
+      target: { value: "same-password" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Confirm your password"), {
+      target: { value: "same-password" },
+    });
+    fireEvent.submit(container.querySelector("form")!);
+
+    const message =
+      "This username is unavailable. Use a different username or contact an administrator if you already have an account.";
+    const inline = await screen.findByText(message);
+    expect(inline).toHaveAttribute("role", "alert");
+    expect(inline).toHaveAttribute("id", "signup-form-error");
+
+    const username = screen.getByPlaceholderText("Username");
+    expect(username).toHaveAttribute("aria-invalid", "true");
+    expect(username).toHaveAttribute("aria-describedby", "signup-form-error");
+
+    // Editing the username clears the stale error and the invalid state.
+    fireEvent.change(username, { target: { value: "taken2" } });
+    expect(screen.queryByText(message)).not.toBeInTheDocument();
+    expect(username).toHaveAttribute("aria-invalid", "false");
+  });
 });

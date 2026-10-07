@@ -77,6 +77,11 @@ export interface CreateMemoryPayload {
   name: string;
   flow_id: string;
   embedding_model: string;
+  // Provider that serves `embedding_model`. Required: the server can only guess
+  // it from the model name otherwise, and that guess cannot see live-discovered
+  // models (e.g. an OpenAI-Compatible endpoint's catalog), which it would
+  // mislabel as OpenAI.
+  embedding_provider: string;
   threshold?: number;
   auto_capture?: boolean;
   preprocessing?: boolean;

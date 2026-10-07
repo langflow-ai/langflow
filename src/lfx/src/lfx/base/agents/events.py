@@ -377,6 +377,22 @@ async def handle_on_tool_end(
     return agent_message, start_time
 
 
+def _coerce_tool_error(error: Any) -> Any:
+    """Return a wire-safe ``ToolContent.error`` payload.
+
+    ``astream_events`` hands ``on_tool_error`` the raw exception object. The block is
+    re-serialized on every publication (``Message.create(**model_dump())`` in
+    ``send_message``), and an exception has no JSON form: ``jsonable_encoder`` falls
+    back to ``vars(exc)`` and the error degrades to ``{}`` before it ever reaches the
+    frontend, the chat history, or the OpenAI Responses stream. Keep the message text
+    (falling back to the class name for a bare ``raise SomeError()``); strings and
+    structured payloads pass through untouched.
+    """
+    if isinstance(error, BaseException):
+        return str(error) or type(error).__name__
+    return error
+
+
 async def handle_on_tool_error(
     event: dict[str, Any],
     agent_message: Message,
@@ -390,7 +406,7 @@ async def handle_on_tool_error(
     tool_content = tool_blocks_map.get(tool_key)
 
     if tool_content and isinstance(tool_content, ToolContent):
-        tool_content.error = event["data"].get("error", "Unknown error")
+        tool_content.error = _coerce_tool_error(event["data"].get("error", "Unknown error"))
         tool_content.duration = _calculate_duration(start_time)
         tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
         agent_message = await send_message_callback(message=agent_message, skip_db_update=True)

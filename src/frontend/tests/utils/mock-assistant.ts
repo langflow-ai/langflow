@@ -78,7 +78,12 @@ export async function mockAssistant(
           icon: "OpenAI",
           is_configured: true,
           is_enabled: true,
-          models: [{ metadata: {}, model_name: "gpt-4o-mini" }],
+          models: [
+            {
+              metadata: { model_type: "llm" },
+              model_name: "gpt-4o-mini",
+            },
+          ],
           provider: "OpenAI",
         },
       ]);

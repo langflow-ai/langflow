@@ -1,0 +1,60 @@
+---
+title: Restrict API tweaks
+slug: /deployment-tweaks-policy
+---
+
+When an application runs a flow through the Langflow API, the request can include `tweaks`, one-time overrides of component settings for that run.
+
+By default, a caller can change almost any field, not only the fields marked **API** in the Langflow visual editor.
+The **API** button adds marked fields to the generated code snippets, but it does not stop the server from accepting other tweaks.
+
+To limit what callers can override, set the following [environment variable](/environment-variables):
+
+```bash
+LANGFLOW_TWEAKS_POLICY=declared
+```
+
+Existing servers keep the default `permissive` behavior until you set this variable.
+
+## Choose a policy
+
+| Value | When to use it | What callers can change |
+|-------|----------------|-------------------------|
+| `permissive` (default) | Trusted callers, local development | Almost any component field. Code fields and other privileged settings stay blocked. |
+| `declared` | Production APIs where you choose the knobs | Only fields marked **API** on a flow. If a flow marks none, it behaves like `permissive` so unpublished flows continue working. |
+| `off` | Run-only serving | Nothing. Callers can still send the chat input (`input_value`) and `session_id`. |
+
+This policy applies to API callers, not values Langflow passes internally. A **Run Flow** component can still feed a sub-flow under `off`.
+
+MCP tools that only accept a prompt still work under `off`.
+Additional MCP fields are tweaks, so they are refused.
+Use `permissive` or `declared` for tools with additional MCP fields.
+
+This setting does not hide components from the palette or block model providers.
+For those controls, see [Catalog and model policy](./api-governance-policy).
+
+To mark fields that `declared` should allow, see [Tweaks (API inputs)](/concepts-publish#input-schema).
+
+## Refused tweaks with `TWEAKS_REFUSED` {#tweaks-refused}
+
+A refused tweak fails the run with `422 Unprocessable Entity`. The extra keys are not applied.
+`input_value` and `session_id` are not tweaks, so both values are still accepted.
+
+```json
+{
+  "detail": {
+    "error": "Refused tweaks",
+    "code": "TWEAKS_REFUSED",
+    "message": "This flow declares which fields the API may set. Only fields marked editable via API accept a tweak.",
+    "fields": ["temperature"]
+  }
+}
+```
+
+Returned from `POST /api/v1/run`, `/run/advanced`, `/build/{flow_id}/flow`, and `/api/v2/workflows`. 
+
+For more information, see:
+
+* [Environment variables](/environment-variables#visual-editor-and-playground-behavior)
+* [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening)
+* [Security](/security)

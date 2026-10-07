@@ -11,6 +11,7 @@ import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
 from lfx.graph.checkpoint.resume import resume_graph_with_decision
+from lfx.graph.checkpoint.schema import _WIRE_KIND
 from lfx.graph.checkpoint.store import InMemoryCheckpointStore
 
 
@@ -99,12 +100,14 @@ async def test_resume_keeps_inactivated_branch_stopped():
     graph, _ = await _paused_checkpoint()
     # Simulate a ConditionalRouter having stopped the chat_output branch before the pause.
     graph.inactivated_vertices = {"chat_output"}
+    graph.branch_inactivation_sources = {"chat_input": {"chat_output"}}
     graph.get_vertex("chat_output").state = VertexStates.INACTIVE
     checkpoint = graph.build_checkpoint()
 
     resumed = Graph.resume_from_checkpoint(checkpoint)
     # The inactivated state survives resume and the dead branch is NOT queued to run again.
     assert resumed.inactivated_vertices == {"chat_output"}
+    assert resumed.branch_inactivation_sources == {"chat_input": {"chat_output"}}
     assert resumed.get_vertex("chat_output").state == VertexStates.INACTIVE
     assert "chat_output" not in resumed.resume_first_layer()
 
@@ -138,6 +141,33 @@ async def test_resume_flags_only_opaque_dropped_producers():
 
     assert "chat_input" in resumed.checkpoint_opaque_dropped_ids
     assert "chat_output" not in resumed.checkpoint_opaque_dropped_ids
+
+
+async def test_resume_survives_a_checkpoint_whose_built_object_no_longer_validates():
+    """A checkpoint written before this fix must still resume.
+
+    An affected install persisted an agent's tool with ``func``/``coroutine`` degraded to their
+    repr. Re-validating that payload raises, and raising here strands the run forever -- the only
+    escape is a brand-new run. Drop it instead and re-run the vertex, as for an opaque value.
+    """
+    _, checkpoint = await _paused_checkpoint()
+    checkpoint.vertex_results["chat_input"].built = True
+    checkpoint.vertex_results["chat_input"].built_object = {
+        _WIRE_KIND: "model",
+        "module": "lfx.base.tools.component_tool",
+        "name": "ComponentStructuredTool",
+        "value": {
+            "name": "fetch_content",
+            "description": "fetch",
+            "func": "<function build_output at 0x104f1e5c0>",
+            "coroutine": "<function build_output at 0x104f1e660>",
+        },
+    }
+
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+
+    assert "chat_input" in resumed.checkpoint_opaque_dropped_ids
+    assert not isinstance(resumed.get_vertex("chat_input").built_object, str)
 
 
 async def _three_node_checkpoint():
@@ -209,3 +239,62 @@ async def test_resume_restores_cycle_vertices_from_graph():
     # graph so a looped flow still schedules its loop vertex (here both are empty, but the
     # restored manager must mirror the graph rather than an independently-empty set).
     assert resumed.run_manager.cycle_vertices == set(resumed.cycle_vertices)
+
+
+_UNRESTORABLE_TOOL_WIRE = {
+    _WIRE_KIND: "model",
+    "module": "lfx.base.tools.component_tool",
+    "name": "ComponentStructuredTool",
+    "value": {
+        "name": "fetch_content",
+        "description": "fetch",
+        "func": "<function build_output at 0x104f1e5c0>",
+        "coroutine": "<function build_output at 0x104f1e660>",
+    },
+}
+
+
+async def test_resume_flags_a_vertex_whose_built_result_no_longer_validates():
+    """A failed ``built_result`` restore must flag the vertex, not silently leave it built.
+
+    ``built_result`` is what ``Vertex.get_result`` serves when ``use_result`` is set, so a vertex
+    left marked built after a failed restore hands its consumer the None the failure produced --
+    the same crash the dropped-``built_object`` path exists to prevent.
+    """
+    _, checkpoint = await _three_node_checkpoint()
+    checkpoint.vertex_results["mid"].built = True
+    checkpoint.vertex_results["mid"].built_result = _UNRESTORABLE_TOOL_WIRE
+    checkpoint.vertex_results["sink"].built = False
+
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+
+    assert "mid" in resumed.checkpoint_opaque_dropped_ids
+    # sink still has to run, so mid must re-run to regenerate the value rather than serve None.
+    assert resumed.get_vertex("mid").built is False
+
+
+async def test_resume_flags_a_vertex_whose_result_no_longer_validates():
+    """Same for a per-output ``results`` entry: the drop is a failure, not a restored None."""
+    _, checkpoint = await _three_node_checkpoint()
+    checkpoint.vertex_results["mid"].built = True
+    checkpoint.vertex_results["mid"].results = {"message": _UNRESTORABLE_TOOL_WIRE}
+    checkpoint.vertex_results["sink"].built = False
+
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+
+    assert "mid" in resumed.checkpoint_opaque_dropped_ids
+    assert resumed.get_vertex("mid").built is False
+
+
+async def test_resume_keeps_a_legitimately_none_result_restored():
+    """A checkpointed None is a value, not a failure: it must not flag the vertex for re-run."""
+    _, checkpoint = await _three_node_checkpoint()
+    checkpoint.vertex_results["mid"].built = True
+    checkpoint.vertex_results["mid"].results = {"message": {_WIRE_KIND: "raw", "value": None}}
+    checkpoint.vertex_results["sink"].built = False
+
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+
+    assert "mid" not in resumed.checkpoint_opaque_dropped_ids
+    assert resumed.get_vertex("mid").built is True
+    assert resumed.get_vertex("mid").results == {"message": None}

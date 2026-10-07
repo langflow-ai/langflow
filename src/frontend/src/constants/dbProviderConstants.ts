@@ -159,7 +159,7 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
       },
       {
         // Optional. Knowledge Bases / Memory Bases now derive a unique index
-        // per base from its name, so this is no longer required and is not used
+        // per base from its owner and name, so this is no longer required and is not used
         // to route KB/MB storage. Kept for operators who want a shared default
         // index for other (non-KB) OpenSearch usage.
         label: "Default index name (optional)",
@@ -291,6 +291,7 @@ export function parseBooleanGlobalVariable(
 
 export function getActiveDBProvider(
   variables: GlobalVariable[],
+  localVectorStoreAvailable = true,
 ): AvailableDBProviderId {
   const configuredProvider = getGlobalVariableValue(
     variables,
@@ -300,9 +301,18 @@ export function getActiveDBProvider(
     (configuredProvider === "opensearch" ||
       configuredProvider === "chroma_cloud" ||
       configuredProvider === "postgres") &&
-    isDBProviderConfigured(configuredProvider, variables)
+    isDBProviderConfigured(
+      configuredProvider,
+      variables,
+      localVectorStoreAvailable,
+    )
   )
     return configuredProvider;
+  // Local Chroma writes vectors to the serving box's own disk, which the
+  // production profile refuses. When it's unavailable, fall back to the
+  // environment-driven pgVector rather than a Chroma the create endpoint would
+  // reject with 422 (pgVector's own connectivity is re-validated server-side).
+  if (!localVectorStoreAvailable) return "postgres";
   return "chroma";
 }
 
@@ -344,9 +354,9 @@ export function getDBProviderConfig(
     // Intentionally NOT setting ``index_name``: pinning the single global
     // OPENSEARCH_INDEX_NAME into every base's config made all Knowledge Bases /
     // Memory Bases share one index (cross-base retrieval + collection-level
-    // deletion). The backend now derives a unique index per KB from its name
-    // when ``index_name`` is absent, mirroring how the Chroma backends use
-    // ``collection_name=kb_name``. Operators pointing a base at a pre-existing
+    // deletion). The backend now derives a unique index per KB from its owner
+    // and name when ``index_name`` is absent, the same way pgvector names each
+    // KB's table. Operators pointing a base at a pre-existing
     // external index can still set ``index_name`` explicitly downstream.
     vector_field:
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.VECTOR_FIELD) ??
@@ -402,9 +412,14 @@ export function resolveUIBackendType(
 export function isDBProviderConfigured(
   providerType: AvailableDBProviderId,
   variables: GlobalVariable[],
+  localVectorStoreAvailable = true,
 ): boolean {
   if (providerType === "chroma") {
-    return true;
+    // Local Chroma is only a usable target when the deployment allows local
+    // vector storage. On the production profile it isn't, so report it as
+    // unconfigured — pickers then disable it and create-time validation blocks
+    // it (instead of the server rejecting the request with a 422).
+    return localVectorStoreAvailable;
   }
 
   // pgVector has no UI fields. It becomes explicitly selectable only after the
@@ -433,11 +448,14 @@ export function isDBProviderConfigured(
     });
 }
 
-export function getDefaultDBProviderConfig(variables: GlobalVariable[]): {
+export function getDefaultDBProviderConfig(
+  variables: GlobalVariable[],
+  localVectorStoreAvailable = true,
+): {
   backendType: AvailableDBProviderId;
   backendConfig: Record<string, DBProviderConfigValue>;
 } {
-  const backendType = getActiveDBProvider(variables);
+  const backendType = getActiveDBProvider(variables, localVectorStoreAvailable);
   return {
     backendType,
     backendConfig: getDBProviderConfig(backendType, variables),

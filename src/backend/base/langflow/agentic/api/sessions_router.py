@@ -32,7 +32,7 @@ from langflow.api.utils.core import CurrentActiveUser  # noqa: TC001 — FastAPI
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/agentic/sessions", tags=["agentic"])
+router = APIRouter(prefix="/agentic/sessions", tags=["agentic"], include_in_schema=False)
 
 
 @router.post("/reset")

@@ -12,7 +12,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_flow_events_service
 from langflow.services.flow_events import FLOW_EVENT_TYPES, FlowEventsService
 
-router = APIRouter(prefix="/flows", tags=["Flow Events"])
+router = APIRouter(prefix="/flows", tags=["Flow Events"], include_in_schema=False)
 
 
 class FlowEventResponse(BaseModel):

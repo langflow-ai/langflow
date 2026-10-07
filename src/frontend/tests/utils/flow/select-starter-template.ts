@@ -65,6 +65,10 @@ export async function selectStarterTemplate(
       (response) =>
         response.request().method() === "POST" &&
         new URL(response.url()).pathname === "/api/v1/flows/",
+      // Creating a starter flow does real backend work (template hydration,
+      // folder wiring) and can outlive the default action timeout on slow
+      // Windows CI runners.
+      { timeout: TIMEOUTS.long },
     ),
     template.click(),
   ]);

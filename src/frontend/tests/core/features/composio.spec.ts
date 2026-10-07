@@ -97,7 +97,7 @@ test(
     await fetchEmails.click();
     await expect(
       page
-        .getByRole("group", { name: "Gmail node" })
+        .getByRole("application", { name: "Gmail node" })
         .getByText("Fetch Emails", { exact: true }),
     ).toBeVisible();
 

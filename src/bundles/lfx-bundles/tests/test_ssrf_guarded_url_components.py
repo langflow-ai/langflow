@@ -164,3 +164,306 @@ def test_litellm_build_blocks_metadata_url_before_httpx_and_openai_client():
 
     mock_get.assert_not_called()
     mock_chat_openai.assert_not_called()
+
+
+def test_aiml_build_blocks_metadata_url_before_openai_client():
+    from lfx_bundles.aiml.aiml import AIMLModelComponent
+
+    component = AIMLModelComponent(aiml_api_base=BLOCKED_URL, model_name="model", api_key="test")
+
+    with (
+        patch("lfx_bundles.aiml.aiml.ChatOpenAI") as mock_chat_openai,
+        pytest.raises(ValueError, match="SSRF Protection"),
+    ):
+        component.build_model()
+
+    mock_chat_openai.assert_not_called()
+
+
+def test_aiml_build_default_base_url_still_constructs_client():
+    from lfx_bundles.aiml.aiml import AIMLModelComponent
+
+    component = AIMLModelComponent(model_name="model", api_key="test")
+
+    with patch("lfx_bundles.aiml.aiml.ChatOpenAI") as mock_chat_openai:
+        component.build_model()
+
+    mock_chat_openai.assert_called_once()
+    assert mock_chat_openai.call_args.kwargs["base_url"] == "https://api.aimlapi.com/v2"
+    assert "http_client" not in mock_chat_openai.call_args.kwargs
+
+
+def test_groq_build_blocks_metadata_url_before_groq_client():
+    langchain_groq = pytest.importorskip("langchain_groq")
+    from lfx_bundles.groq.groq import GroqModel
+
+    component = GroqModel(base_url=BLOCKED_URL, model_name="model", api_key="test")
+
+    with (
+        patch.object(langchain_groq, "ChatGroq") as mock_chat_groq,
+        pytest.raises(ValueError, match="SSRF Protection"),
+    ):
+        component.build_model()
+
+    mock_chat_groq.assert_not_called()
+
+
+def test_nvidia_build_blocks_metadata_url_before_sdk_client():
+    pytest.importorskip("langchain_nvidia_ai_endpoints")
+    from lfx_bundles.nvidia.nvidia import NVIDIAModelComponent
+
+    component = NVIDIAModelComponent(base_url=BLOCKED_URL, model_name="model", api_key="test")
+
+    with (
+        patch("langchain_nvidia_ai_endpoints.ChatNVIDIA") as mock_chat_nvidia,
+        pytest.raises(ValueError, match="SSRF Protection"),
+    ):
+        component.build_model()
+
+    mock_chat_nvidia.assert_not_called()
+
+
+def test_nvidia_model_fetch_blocks_metadata_url_before_sdk_client():
+    pytest.importorskip("langchain_nvidia_ai_endpoints")
+    from lfx_bundles.nvidia.nvidia import NVIDIAModelComponent
+
+    component = NVIDIAModelComponent(base_url=BLOCKED_URL, api_key="test")
+
+    with (
+        patch("langchain_nvidia_ai_endpoints.ChatNVIDIA") as mock_chat_nvidia,
+        pytest.raises(ValueError, match="SSRF Protection"),
+    ):
+        component.get_models()
+
+    mock_chat_nvidia.assert_not_called()
+
+
+def test_nvidia_embeddings_build_blocks_metadata_url_before_sdk_client():
+    pytest.importorskip("langchain_nvidia_ai_endpoints")
+    from lfx_bundles.nvidia.nvidia_embedding import NVIDIAEmbeddingsComponent
+
+    component = NVIDIAEmbeddingsComponent(base_url=BLOCKED_URL, model="nvidia/nv-embed-v1", nvidia_api_key="test")
+
+    with (
+        patch("langchain_nvidia_ai_endpoints.NVIDIAEmbeddings") as mock_embeddings,
+        pytest.raises(ValueError, match="SSRF Protection"),
+    ):
+        component.build_embeddings()
+
+    mock_embeddings.assert_not_called()
+
+
+def test_nvidia_rerank_build_blocks_metadata_url_before_sdk_client():
+    pytest.importorskip("langchain_nvidia_ai_endpoints")
+    from lfx_bundles.nvidia.nvidia_rerank import NvidiaRerankComponent
+
+    component = NvidiaRerankComponent(base_url=BLOCKED_URL, model="nv-rerank-qa-mistral-4b:1", api_key="test")
+
+    with (
+        patch("langchain_nvidia_ai_endpoints.NVIDIARerank") as mock_rerank,
+        pytest.raises(ValueError, match="SSRF Protection"),
+    ):
+        component.build_compressor()
+
+    mock_rerank.assert_not_called()
+
+
+def test_nvidia_ingest_blocks_metadata_url_before_ingestor(tmp_path):
+    # importorskip on the submodule so the Ingestor patch target is importable
+    pytest.importorskip("nv_ingest_client.client")
+
+    from lfx_bundles.nvidia.nvidia_ingest import NvidiaIngestComponent
+
+    component = NvidiaIngestComponent(base_url=BLOCKED_URL, api_key="test")
+    doc = tmp_path / "doc.txt"
+    doc.write_text("hello")
+    base_file = NvidiaIngestComponent.BaseFile(data=[], path=doc)
+
+    with (
+        patch("nv_ingest_client.client.Ingestor") as mock_ingestor,
+        pytest.raises(ValueError, match="SSRF Protection"),
+    ):
+        component.process_files([base_file])
+
+    mock_ingestor.assert_not_called()
+
+
+def test_mistral_embeddings_build_blocks_metadata_url_before_sdk_client():
+    pytest.importorskip("langchain_mistralai")
+    from lfx_bundles.mistral.mistral_embeddings import MistralAIEmbeddingsComponent
+
+    component = MistralAIEmbeddingsComponent(endpoint=BLOCKED_URL, mistral_api_key="test")
+
+    with (
+        patch("lfx_bundles.mistral.mistral_embeddings.MistralAIEmbeddings") as mock_embeddings,
+        pytest.raises(ValueError, match="SSRF Protection"),
+    ):
+        component.build_embeddings()
+
+    mock_embeddings.assert_not_called()
+
+
+def test_mistral_embeddings_default_endpoint_passes_no_client():
+    pytest.importorskip("langchain_mistralai")
+    from lfx_bundles.mistral.mistral_embeddings import MistralAIEmbeddingsComponent
+
+    component = MistralAIEmbeddingsComponent(mistral_api_key="test")
+
+    with patch("lfx_bundles.mistral.mistral_embeddings.MistralAIEmbeddings") as mock_embeddings:
+        component.build_embeddings()
+
+    mock_embeddings.assert_called_once()
+    assert "client" not in mock_embeddings.call_args.kwargs
+    assert "async_client" not in mock_embeddings.call_args.kwargs
+
+
+def test_sambanova_build_blocks_metadata_url_before_sdk_client():
+    pytest.importorskip("langchain_sambanova")
+    from lfx_bundles.sambanova.sambanova import SambaNovaComponent
+
+    component = SambaNovaComponent(base_url=BLOCKED_URL, model_name="model", api_key="test")
+
+    with (
+        patch("lfx_bundles.sambanova.sambanova.ChatSambaNovaCloud") as mock_chat,
+        pytest.raises(ValueError, match="SSRF Protection"),
+    ):
+        component.build_model()
+
+    mock_chat.assert_not_called()
+
+
+def test_baidu_qianfan_build_blocks_metadata_url_before_sdk_client():
+    """A metadata URL in Qianfan's "endpoint" is still refused before the SDK is built.
+
+    The message changed with the guard: this field is a model identifier the SDK
+    appends to its own API host, not a base URL, so it is rejected for being the
+    wrong shape rather than by the base-URL SSRF policy. The property under test
+    is unchanged - the URL never reaches QianfanChatEndpoint.
+    """
+    pytest.importorskip("qianfan")
+    try:
+        from lfx_bundles.baidu.baidu_qianfan_chat import QianfanChatEndpointComponent
+    except Exception:
+        pytest.skip("qianfan stack is not importable (likely pydantic v1 incompatibility)")
+
+    component = QianfanChatEndpointComponent(
+        endpoint=BLOCKED_URL, model="ERNIE-Bot-turbo-AI", qianfan_ak="ak", qianfan_sk="sk"
+    )
+
+    with (
+        patch("lfx_bundles.baidu.baidu_qianfan_chat.QianfanChatEndpoint") as mock_qianfan,
+        pytest.raises(ValueError, match="model identifier"),
+    ):
+        component.build_model()
+
+    mock_qianfan.assert_not_called()
+
+
+def test_mistral_embeddings_custom_endpoint_client_satisfies_the_sdk_contract():
+    """An injected client must arrive fully formed, not transport-only.
+
+    MistralAIEmbeddings only configures its clients inside ``if not self.client:``,
+    and that branch is what sets base_url, the bearer header and the timeout. It
+    then posts to the *relative* path "/embeddings", so a transport-only client
+    has no base URL (httpx raises UnsupportedProtocol) and no credentials.
+    """
+    import httpx
+
+    pytest.importorskip("langchain_mistralai")
+    from lfx_bundles.mistral.mistral_embeddings import MistralAIEmbeddingsComponent
+
+    component = MistralAIEmbeddingsComponent(
+        endpoint="https://mistral.example.com/v1",
+        mistral_api_key="sk-test",  # pragma: allowlist secret
+        model="mistral-embed",
+        max_concurrent_requests=1,
+        max_retries=1,
+        timeout=30,
+    )
+    # Pinning itself is exercised elsewhere; here we only need the non-default path,
+    # so stand in kwargs that require no DNS resolution.
+    with patch(
+        "lfx_bundles.mistral.mistral_embeddings.provider_httpx_client_kwargs",
+        return_value=({"follow_redirects": False}, {"follow_redirects": False}),
+    ):
+        embeddings = component.build_embeddings()
+
+    client = embeddings.client
+    assert str(client.base_url) == "https://mistral.example.com/v1/"
+    assert client.headers["authorization"] == "Bearer sk-test"
+    assert client.headers["content-type"] == "application/json"
+    assert client.timeout.connect == 30
+    assert client.follow_redirects is False
+    assert str(embeddings.async_client.base_url) == "https://mistral.example.com/v1/"
+    assert embeddings.async_client.headers["authorization"] == "Bearer sk-test"
+
+    # And the request the SDK actually issues resolves and parses.
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["auth"] = request.headers.get("authorization")
+        return httpx.Response(200, json={"data": [{"embedding": [0.1, 0.2]}]})
+
+    embeddings.client = httpx.Client(
+        base_url=client.base_url,
+        headers=client.headers,
+        timeout=client.timeout,
+        transport=httpx.MockTransport(handler),
+    )
+    assert embeddings.embed_documents(["hello"]) == [[0.1, 0.2]]
+    assert seen["url"] == "https://mistral.example.com/v1/embeddings"
+    assert seen["auth"] == "Bearer sk-test"
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    ["ernie-3.5-8k-0329", "ernie-4.0-8k", "completions_pro", "ERNIE_Speed", ""],
+)
+def test_baidu_qianfan_accepts_model_identifiers(endpoint):
+    """Qianfan's "endpoint" is a model id appended to the SDK's own host, not a URL.
+
+    Validating it as an HTTP base URL rejected every legitimate value.
+    """
+    pytest.importorskip("qianfan")
+    try:
+        from lfx_bundles.baidu.baidu_qianfan_chat import QianfanChatEndpointComponent
+    except Exception:
+        pytest.skip("qianfan stack is not importable (likely pydantic v1 incompatibility)")
+
+    component = QianfanChatEndpointComponent(
+        endpoint=endpoint, model="ERNIE-Bot-turbo-AI", qianfan_ak="ak", qianfan_sk="sk"
+    )
+    with patch("lfx_bundles.baidu.baidu_qianfan_chat.QianfanChatEndpoint") as mock_qianfan:
+        component.build_model()
+    mock_qianfan.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        BLOCKED_URL,
+        "https://evil.example.com",
+        "//evil.example.com/x",
+        "../../etc/passwd",
+        "chat/completions",
+        "model?x=1",
+    ],
+)
+def test_baidu_qianfan_rejects_origin_and_path_injection(endpoint):
+    """A value that changes the origin or escapes the SDK's path is still refused."""
+    pytest.importorskip("qianfan")
+    try:
+        from lfx_bundles.baidu.baidu_qianfan_chat import QianfanChatEndpointComponent
+    except Exception:
+        pytest.skip("qianfan stack is not importable (likely pydantic v1 incompatibility)")
+
+    component = QianfanChatEndpointComponent(
+        endpoint=endpoint, model="ERNIE-Bot-turbo-AI", qianfan_ak="ak", qianfan_sk="sk"
+    )
+    with (
+        patch("lfx_bundles.baidu.baidu_qianfan_chat.QianfanChatEndpoint") as mock_qianfan,
+        pytest.raises(ValueError, match="model identifier"),
+    ):
+        component.build_model()
+    mock_qianfan.assert_not_called()

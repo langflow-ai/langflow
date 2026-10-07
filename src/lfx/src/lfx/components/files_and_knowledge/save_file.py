@@ -1,5 +1,6 @@
 import contextlib
 import json
+import re
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path, PurePath, PureWindowsPath
 from typing import Any
@@ -643,6 +644,22 @@ class SaveToFileComponent(Component):
             return getattr(self, "gdrive_format", "txt")
         return self._get_default_format()
 
+    def _serving_end_user_segment(self) -> str | None:
+        """Filesystem-safe end-user id to namespace saved files under, or ``None``.
+
+        On the serving plane an identified end user owns the files they write during their
+        session, so their id (``graph.end_user_id``) namespaces the save destination instead
+        of the shared service account. Sanitized to ``[A-Za-z0-9_.-]`` so a gateway-supplied
+        id can never traverse out of the storage root. ``None`` off / editor / anonymous, so
+        the destination falls back to the SID scope exactly as before (strict BC).
+        """
+        graph = getattr(getattr(self, "_vertex", None), "graph", None)
+        end_user = getattr(graph, "end_user_id", None)
+        if not end_user:
+            return None
+        safe = re.sub(r"[^A-Za-z0-9_.-]", "_", str(end_user)).strip("._")
+        return safe or None
+
     async def _save_to_local(self) -> Message:
         """Save file to local storage (original functionality)."""
         file_format = self._get_file_format_for_location("Local")
@@ -658,6 +675,12 @@ class SaveToFileComponent(Component):
         # Prepare file path. file_name is tenant-controlled and this writes to local disk.
         settings = get_settings_service().settings
         scope_ids = component_file_access_scopes(self)
+        # Serving plane: an identified end user owns their files, so their (sanitized) id
+        # becomes the namespace folder AND an allowed access scope for enforce_local_file_access.
+        # None off / editor / anonymous -> scope_ids unchanged -> SID namespace as before (BC).
+        end_user_segment = self._serving_end_user_segment()
+        if end_user_segment:
+            scope_ids = (end_user_segment, *scope_ids)
         file_path = Path(self._get_safe_local_file_name()).expanduser()
         if settings.restrict_local_file_access and not file_path.is_absolute():
             # New files belong to the authenticated user's storage namespace. If no
@@ -797,7 +820,8 @@ class SaveToFileComponent(Component):
         path_segments = []
         if hasattr(self, "s3_prefix") and self.s3_prefix:
             path_segments.append(self.s3_prefix.rstrip("/"))
-        user_id = self.user_id
+        # Serving plane: an identified end user owns their files (sanitized id); else the SID.
+        user_id = self._serving_end_user_segment() or self.user_id
         if user_id and str(user_id) != "None":
             path_segments.append(str(user_id))
         path_segments.append(file_name)

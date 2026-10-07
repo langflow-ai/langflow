@@ -102,7 +102,16 @@
       "id": "settings-messages",
       "path": "/settings/messages",
       "surface": "Messages settings page",
-      "ready": [{ "testId": "settings_menu_header" }]
+      "ready": [
+        { "testId": "settings_menu_header" },
+        {
+          "oneOf": [
+            { "role": "treegrid", "name": "Messages" },
+            { "role": "grid", "name": "Messages" },
+            { "role": "alert", "first": true }
+          ]
+        }
+      ]
     }
   ],
   "dynamic": [

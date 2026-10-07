@@ -1,0 +1,48 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+local.file_match "langflow" {
+  path_targets = [
+    {
+      __path__ = "/var/log/langflow/*.log",
+      job      = "langflow",
+    },
+  ]
+}
+
+loki.source.file "langflow" {
+  targets    = local.file_match.langflow.targets
+  forward_to = [loki.process.langflow.receiver]
+}
+
+loki.process "langflow" {
+  stage.json {
+    expressions = {
+      level       = "level",
+      service     = "service",
+      environment = "environment",
+      version     = "version",
+      logger      = "logger",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level       = "",
+      service     = "",
+      environment = "",
+      version     = "",
+      logger      = "",
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

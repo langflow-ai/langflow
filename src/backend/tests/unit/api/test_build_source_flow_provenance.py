@@ -84,6 +84,11 @@ async def test_generate_flow_events_maps_rejected_file_tweaks_to_bad_request(mon
     user_id = uuid.uuid4()
     vertex = MagicMock(spec=Vertex)
     vertex.id = "file-node"
+    # The tweak only reaches update_raw_params if the template declares the
+    # field, so the stand-in needs a real node payload rather than bare mocks.
+    vertex.data = {"node": {"template": {"file": {"type": "file", "value": ""}}}}
+    vertex.params = {}
+    vertex.load_from_db_fields = []
     rejection = "FileInput path is outside the authenticated user's storage scope."
     vertex.update_raw_params.side_effect = LocalFileAccessError(rejection)
     graph = MagicMock()
@@ -100,6 +105,13 @@ async def test_generate_flow_events_maps_rejected_file_tweaks_to_bad_request(mon
     monkeypatch.setattr(build_module, "get_telemetry_service", lambda: telemetry_service)
     monkeypatch.setattr(build_module, "session_scope", fake_session_scope)
     monkeypatch.setattr(build_module, "build_graph_from_db", AsyncMock(return_value=graph))
+    # The tweak-validation pass only needs to reach the mocked update_raw_params, which
+    # supplies the containment rejection; opt out of the restricted default so the
+    # stand-in vertex (no graph scopes or storage service) takes the unrestricted path.
+    monkeypatch.setattr(
+        "lfx.utils.file_path_security.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+    )
     unexpected_log = AsyncMock()
     monkeypatch.setattr(build_module.logger, "aexception", unexpected_log)
 

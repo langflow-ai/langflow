@@ -33,7 +33,7 @@ test(
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
-    await page.getByRole("group", { name: "Chat Input node" }).click();
+    await page.getByRole("application", { name: "Chat Input node" }).click();
     // LE-1810: the parameters panel adds the hidden files field to the node
     await openParametersPanel(page);
     await toggleParameterOnNode(page, "files");

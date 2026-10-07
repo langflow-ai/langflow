@@ -1,8 +1,11 @@
 import { useMemo } from "react";
+import { isBlockedByCatalogPolicy } from "@/CustomNodes/helpers/check-code-validity";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useFlowStore from "@/stores/flowStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { getPresentComponentTypes } from "@/utils/componentConstraints";
 import { removeCountFromString } from "@/utils/utils";
+import { TOOLTIP_MESSAGES } from "../helpers/constants";
 import { disableItem } from "../helpers/disable-item";
 import { getDisabledTooltip } from "../helpers/get-disabled-tooltip";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
@@ -14,6 +17,13 @@ const SidebarItemsList = ({
   onDragStart,
   sensitiveSort,
 }) => {
+  // An administrator's catalog policy refuses these server side, so offering
+  // the affordance only lets a user build a flow that cannot save or run. The
+  // same set gates the node banner, so the palette and the canvas agree.
+  const blockedComponentTypes = useUtilityStore(
+    (state) => state.blockedComponentTypes,
+  );
+
   return (
     <div className="flex flex-col gap-1 py-1">
       {Object.keys(dataFilter[item.name])
@@ -50,9 +60,15 @@ const SidebarItemsList = ({
                 SBItemName={SBItemName}
                 onDragStart={onDragStart}
                 nodeColors={nodeColors}
+                blockedComponentTypes={blockedComponentTypes}
               />
             );
           }
+
+          const isBlocked = isBlockedByCatalogPolicy(
+            blockedComponentTypes,
+            removeCountFromString(SBItemName),
+          );
           return (
             <ShadTooltip
               content={currentItem.display_name}
@@ -76,8 +92,10 @@ const SidebarItemsList = ({
                 official={currentItem.official !== false}
                 beta={currentItem.beta ?? false}
                 legacy={currentItem.legacy ?? false}
-                disabled={false}
-                disabledTooltip={""}
+                disabled={isBlocked}
+                disabledTooltip={
+                  isBlocked ? TOOLTIP_MESSAGES.BLOCKED_BY_CATALOG_POLICY : ""
+                }
               />
             </ShadTooltip>
           );
@@ -94,11 +112,19 @@ const UniqueInputsDraggableComponent = ({
   SBItemName,
   onDragStart,
   nodeColors,
+  blockedComponentTypes,
 }) => {
   const nodes = useFlowStore((state) => state.nodes);
   const presentComponentTypes = useMemo(
     () => getPresentComponentTypes(nodes),
     [nodes],
+  );
+  // A catalog block outranks a placement constraint: the placement reason
+  // ("already added") would tell the user to remove a node and try again, which
+  // can never work for a component the policy refuses outright.
+  const isBlocked = isBlockedByCatalogPolicy(
+    blockedComponentTypes,
+    removeCountFromString(SBItemName),
   );
 
   return (
@@ -124,8 +150,12 @@ const UniqueInputsDraggableComponent = ({
         official={currentItem.official !== false}
         beta={currentItem.beta ?? false}
         legacy={currentItem.legacy ?? false}
-        disabled={disableItem(SBItemName, presentComponentTypes)}
-        disabledTooltip={getDisabledTooltip(SBItemName, presentComponentTypes)}
+        disabled={isBlocked || disableItem(SBItemName, presentComponentTypes)}
+        disabledTooltip={
+          isBlocked
+            ? TOOLTIP_MESSAGES.BLOCKED_BY_CATALOG_POLICY
+            : getDisabledTooltip(SBItemName, presentComponentTypes)
+        }
       />
     </ShadTooltip>
   );

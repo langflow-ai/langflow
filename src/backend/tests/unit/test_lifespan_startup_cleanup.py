@@ -14,7 +14,7 @@ asserts the cleanup path no longer raises.
 Issue: https://github.com/langflow-ai/langflow/issues/13634
 """
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import langflow.main as main_module
 import pytest
@@ -55,3 +55,33 @@ async def test_startup_failure_does_not_mask_error_with_unbound_temp_dirs(monkey
     cleanup_failures = [context for context, _ in telemetry_calls if context == "lifespan_cleanup"]
     assert cleanup_failures == [], f"shutdown cleanup raised during startup failure: {telemetry_calls}"
     assert ("lifespan_cleanup", "UnboundLocalError") not in telemetry_calls
+
+
+async def test_environment_import_failure_does_not_abort_worker_startup(monkeypatch):
+    """The real worker lifespan continues past a failed environment sweep."""
+    from langflow.preload import _STATE
+
+    monkeypatch.setattr(_STATE, "environment_variables_initialized", False)
+    sweep = AsyncMock(side_effect=RuntimeError("environment import failed"))
+    variable_service = AsyncMock(initialize_all_user_variables=sweep)
+    monkeypatch.setattr("langflow.services.deps.get_variable_service", lambda: variable_service)
+    monkeypatch.setattr(main_module, "initialize_services", AsyncMock())
+    reached_next_step = RuntimeError("reached next startup step")
+
+    async def stop_after_services(message, *_args, **_kwargs):
+        if message.startswith("Services initialized in"):
+            raise reached_next_step
+
+    logger = AsyncMock()
+    logger.exception = MagicMock()
+    logger.adebug.side_effect = stop_after_services
+    monkeypatch.setattr(main_module, "logger", logger)
+    monkeypatch.setattr(main_module, "log_exception_to_telemetry", AsyncMock())
+    monkeypatch.setattr(main_module, "teardown_services", AsyncMock())
+    monkeypatch.setattr(main_module, "cleanup_mcp_sessions", AsyncMock())
+    with pytest.raises(RuntimeError, match="reached next startup step") as exc:
+        async with main_module.get_lifespan()(object()):
+            pass
+    assert exc.value is reached_next_step
+    sweep.assert_awaited_once()
+    assert _STATE.environment_variables_initialized is False

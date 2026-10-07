@@ -44,7 +44,7 @@ def upgrade() -> None:
             constraint_name = batch_op.f(existing["name"])
             batch_op.drop_constraint(constraint_name, type_="check")
         else:
-            constraint_name = _CONSTRAINT_NAME
+            constraint_name = batch_op.f(_CONSTRAINT_NAME)
         batch_op.create_check_constraint(constraint_name, _RESULT_CHECK)
 
 

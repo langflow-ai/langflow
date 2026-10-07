@@ -372,7 +372,12 @@ async def test_custom_component_viewer_denied_before_build(monkeypatch, owner):
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
-            await endpoints.custom_component(raw_code=raw_code, user=owner, request=MagicMock())
+            await endpoints.custom_component(
+                raw_code=raw_code,
+                user=owner,
+                request=MagicMock(),
+                provider_policy_attributes={},
+            )
     finally:
         set_current_external_access_context(None)
 
@@ -391,7 +396,12 @@ async def test_custom_component_update_viewer_denied_before_build(monkeypatch, o
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
-            await endpoints.custom_component_update(code_request=code_request, user=owner, request=MagicMock())
+            await endpoints.custom_component_update(
+                code_request=code_request,
+                user=owner,
+                request=MagicMock(),
+                provider_policy_attributes={},
+            )
     finally:
         set_current_external_access_context(None)
 
@@ -424,7 +434,12 @@ async def test_custom_component_editor_passes_ceiling(monkeypatch, owner):
 
     set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="s-1", level="editor"))
     try:
-        result = await endpoints.custom_component(raw_code=raw_code, user=owner, request=request)
+        result = await endpoints.custom_component(
+            raw_code=raw_code,
+            user=owner,
+            request=request,
+            provider_policy_attributes={},
+        )
     finally:
         set_current_external_access_context(None)
 
@@ -546,7 +561,12 @@ async def test_update_enabled_models_viewer_denied(monkeypatch, owner):
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
-            await models.update_enabled_models(session=MagicMock(), current_user=owner, updates=[])
+            await models.update_enabled_models(
+                session=MagicMock(),
+                current_user=owner,
+                provider_policy_attributes={},
+                updates=[],
+            )
     finally:
         set_current_external_access_context(None)
 
@@ -565,7 +585,12 @@ async def test_set_default_model_viewer_denied(monkeypatch, owner):
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
-            await models.set_default_model(session=MagicMock(), current_user=owner, request=request)
+            await models.set_default_model(
+                session=MagicMock(),
+                current_user=owner,
+                provider_policy_attributes={},
+                request=request,
+            )
     finally:
         set_current_external_access_context(None)
 
@@ -583,7 +608,12 @@ async def test_clear_default_model_viewer_denied(monkeypatch, owner):
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
-            await models.clear_default_model(session=MagicMock(), current_user=owner, model_type="language")
+            await models.clear_default_model(
+                session=MagicMock(),
+                current_user=owner,
+                _provider_policy_attributes={},
+                model_type="language",
+            )
     finally:
         set_current_external_access_context(None)
 
@@ -602,7 +632,12 @@ async def test_set_default_model_owner_proceeds(monkeypatch, owner):
     monkeypatch.setattr(models, "get_variable_service", lambda: var_service)
     request = SimpleNamespace(model_type="language", model_name="m", provider="OpenAI")
 
-    result = await models.set_default_model(session=MagicMock(), current_user=owner, request=request)
+    result = await models.set_default_model(
+        session=MagicMock(),
+        current_user=owner,
+        provider_policy_attributes={},
+        request=request,
+    )
 
     var_service.update_variable_fields.assert_awaited_once()
     assert result["default_model"]["model_name"] == "m"

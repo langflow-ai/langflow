@@ -39,6 +39,11 @@ class Variable(VariableBase, table=True):  # type: ignore[call-arg]
         sa_column=Column(DateTime(timezone=True), nullable=True),
         description="Last update time of the variable",
     )
+    is_environment_managed: bool | None = Field(
+        default=None,
+        nullable=True,
+        description="True for environment imports, False for user overrides, None for legacy rows",
+    )
     default_fields: list[str] | None = Field(sa_column=Column(JSON))
     # foreign key to user table
     user_id: UUID = Field(description="User ID associated with this variable", foreign_key="user.id")

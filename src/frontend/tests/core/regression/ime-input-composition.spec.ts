@@ -14,7 +14,7 @@ async function addTextInputNode(page: Page) {
     hoverAdd: true,
   });
   await expect(
-    page.getByRole("group", { name: "Text Input node" }),
+    page.getByRole("application", { name: "Text Input node" }),
   ).toHaveCount(1);
   await adjustScreenView(page);
 }

@@ -4,11 +4,11 @@ import ast
 import asyncio
 import inspect
 import logging
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Iterator, Mapping
 from copy import deepcopy
 from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 from uuid import UUID
 
 import nanoid
@@ -23,6 +23,10 @@ from lfx.base.tools.constants import (
     TOOLS_METADATA_INFO,
     TOOLS_METADATA_INPUT_NAME,
 )
+from lfx.custom.annotation_validation import (
+    resolve_method_return_annotation,
+)
+from lfx.custom.custom_component.input_names import ensure_inputs_not_shadowed_by_methods
 from lfx.custom.tree_visitor import RequiredInputsVisitor
 from lfx.exceptions.component import StreamingError
 from lfx.field_typing import Tool  # noqa: TC001
@@ -173,6 +177,7 @@ class Component(CustomComponent):
         if overlap := self._there_is_overlap_in_inputs_and_outputs():
             msg = f"Inputs and outputs have overlapping names: {overlap}"
             raise ValueError(msg)
+        ensure_inputs_not_shadowed_by_methods(type(self), self.inputs)
         self._output_logs: dict[str, list[Log]] = {}
         self._current_output: str = ""
         self._metadata: dict = {}
@@ -1141,11 +1146,11 @@ class Component(CustomComponent):
                 raise ValueError(msg) from e
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
-        method = getattr(self, method_name)
-        try:
-            return_type = get_type_hints(method).get("return")
-        except TypeError:
-            return []
+        return_type = resolve_method_return_annotation(
+            component_class=type(self),
+            method_name=method_name,
+            method_getter=lambda: getattr(self, method_name),
+        )
         if return_type is None:
             return []
         extracted_return_types = self._extract_return_type(return_type)
@@ -1296,28 +1301,139 @@ class Component(CustomComponent):
     async def _build_without_tracing(self):
         return await self._build_results()
 
-    def require_model_provider_policy(self, purpose: ModelProviderPolicyPurpose) -> None:
-        """Gate standalone model/embedding components before sensitive work."""
+    def _model_provider_policy_id(self) -> str | None:
+        """Return the stable policy identity for a standalone model component."""
         # Enforce provider policy before tracing, input setup, output methods,
         # credential lookup, or provider imports. This closes the legacy saved
         # standalone-node path that does not use unified_models.get_llm().
         from lfx.base.embeddings.model import LCEmbeddingsModel
         from lfx.base.models.model import LCModelComponent
 
-        if isinstance(self, LCModelComponent | LCEmbeddingsModel):
-            from lfx.base.models.provider_registry import (
-                model_component_provider_id,
-                uses_standalone_model_provider_policy,
-            )
-            from lfx.services.model_provider_policy import require_model_provider
+        if not isinstance(self, LCModelComponent | LCEmbeddingsModel):
+            return None
 
-            if not uses_standalone_model_provider_policy(self):
-                return
-            require_model_provider(
-                user_id=self.user_id,
-                provider=model_component_provider_id(self),
-                purpose=purpose,
-            )
+        from lfx.base.models.provider_registry import (
+            model_component_provider_id,
+            uses_standalone_model_provider_policy,
+        )
+
+        if not uses_standalone_model_provider_policy(self):
+            return None
+        return model_component_provider_id(self)
+
+    def _selected_model_provider_policy_ids(self, parameters: Mapping[str, Any] | None = None) -> tuple[str, ...]:
+        """Return providers from every raw ModelInput selection before input hydration."""
+        from lfx.base.models.provider_registry import model_component_policy_mode, resolve_provider_id
+        from lfx.inputs.inputs import ModelInput
+
+        if model_component_policy_mode(self) == "none":
+            return ()
+        effective_parameters = parameters if parameters is not None else getattr(self, "_parameters", None)
+        if not isinstance(effective_parameters, Mapping):
+            return ()
+
+        provider_ids: list[str] = []
+        for input_ in getattr(self, "_inputs", {}).values():
+            if not isinstance(input_, ModelInput) or not isinstance(input_.name, str):
+                continue
+            model_selection = effective_parameters.get(input_.name)
+            if isinstance(model_selection, Mapping):
+                model_selection = [model_selection]
+            if (
+                not isinstance(model_selection, list)
+                or not model_selection
+                or not isinstance(model_selection[0], Mapping)
+            ):
+                continue
+
+            provider = ""
+            if input_.name == "model":
+                # This mirrors apply_model_overrides: a non-empty raw provider
+                # override applies to the canonical ``model`` selector only.
+                # StrInput overrides are never load_from_db, so this identity is
+                # safe to inspect before secrets.
+                provider_override = effective_parameters.get("provider")
+                provider = provider_override.strip() if isinstance(provider_override, str) else ""
+            if not provider:
+                selected_provider = model_selection[0].get("provider")
+                provider = selected_provider.strip() if isinstance(selected_provider, str) else ""
+            if provider:
+                provider_id = resolve_provider_id(provider)
+                if provider_id not in provider_ids:
+                    provider_ids.append(provider_id)
+
+        # Historical Agent/ALTK nodes used a plain DropdownInput named
+        # ``agent_llm`` instead of ModelInput. Saved flows execute their
+        # embedded component source, so they do not inherit a newer Agent
+        # override; recognize the stable legacy selector in the shared base.
+        legacy_provider = effective_parameters.get("agent_llm")
+        if isinstance(legacy_provider, str):
+            legacy_provider = legacy_provider.strip()
+            if legacy_provider and legacy_provider != "Custom":
+                provider_id = resolve_provider_id(legacy_provider)
+                if provider_id not in provider_ids:
+                    provider_ids.append(provider_id)
+        return tuple(provider_ids)
+
+    def _selected_model_provider_policy_id(self, parameters: Mapping[str, Any] | None = None) -> str | None:
+        """Return the first selected ModelInput provider for compatibility."""
+        return next(iter(self._selected_model_provider_policy_ids(parameters)), None)
+
+    async def _additional_model_provider_policy_ids(
+        self,
+        purpose: ModelProviderPolicyPurpose,
+        parameters: Mapping[str, Any] | None = None,
+    ) -> tuple[str, ...]:
+        """Resolve provider identities not represented by top-level ModelInputs.
+
+        Components with legacy provider selectors or provider metadata stored
+        behind another resource can override this hook. It runs before input
+        hydration, so implementations must only inspect raw parameters or
+        non-secret metadata.
+        """
+        _ = purpose, parameters
+        return ()
+
+    def require_model_provider_policy(self, purpose: ModelProviderPolicyPurpose) -> None:
+        """Gate standalone model/embedding components before sensitive work."""
+        provider_id = self._model_provider_policy_id()
+        if provider_id is None:
+            return
+
+        from lfx.services.model_provider_policy import require_model_provider
+
+        require_model_provider(
+            user_id=self.user_id,
+            provider=provider_id,
+            purpose=purpose,
+        )
+
+    async def arequire_model_provider_policy(
+        self,
+        purpose: ModelProviderPolicyPurpose,
+        *,
+        user_id: UUID | str | None = None,
+        parameters: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Gate runtime use through the hierarchy-refreshing async policy hook."""
+        provider_ids = list(self._selected_model_provider_policy_ids(parameters))
+        for provider_id in await self._additional_model_provider_policy_ids(purpose, parameters):
+            if provider_id not in provider_ids:
+                provider_ids.append(provider_id)
+        if (standalone_provider_id := self._model_provider_policy_id()) and standalone_provider_id not in provider_ids:
+            provider_ids.insert(0, standalone_provider_id)
+        if not provider_ids:
+            return
+
+        from lfx.services.model_provider_policy import aresolve_model_provider_policy
+
+        snapshot = await aresolve_model_provider_policy(
+            user_id=self.user_id if user_id is None else user_id,
+            providers=provider_ids,
+            purpose=purpose,
+        )
+        for provider_id in provider_ids:
+            snapshot.require(provider_id)
 
     async def build_results(self):
         """Build the results of the component."""
@@ -1920,7 +2036,8 @@ class Component(CustomComponent):
         - Error handling and cleanup
 
         Message ID Rules:
-        - Messages only have an ID after being stored in the database
+        - Persisted messages get an ID from storage; ephemeral messages get an
+          in-memory ID so streaming events can be correlated
         - If _should_skip_message() returns True, the message is not stored and will not have an ID
         - Always use message.get_id() or message.has_id() to safely check for ID existence
         - Never access message.id directly without checking if it exists first
@@ -1930,8 +2047,8 @@ class Component(CustomComponent):
             id_: Optional message ID (used for event emission, not database storage)
             skip_db_update: If True, only update in-memory and send event, skip DB write.
                            Useful during streaming to avoid excessive DB round-trips.
-                           Note: When skip_db_update=True, the message must already have an ID
-                           (i.e., it must have been stored previously).
+                           Persistent messages must already have a stored ID;
+                           ephemeral messages use their in-memory ID.
 
         Returns:
             Message: The stored message (with ID if stored in database, without ID if skipped)
@@ -1948,23 +2065,25 @@ class Component(CustomComponent):
         # Ensure required fields for message storage are set
         self._ensure_message_required_fields(message)
 
-        # If skip_db_update is True and message already has an ID, skip the DB write
-        # This path is used during agent streaming to avoid excessive DB round-trips
-        # When skip_db_update=True, we require the message to already have an ID
-        # because we're updating an existing message, not creating a new one
-        if skip_db_update:
-            if not message.has_id():
-                from lfx.memory.flow_context import should_persist_messages
+        from lfx.memory.flow_context import should_persist_messages
 
-                if should_persist_messages():
-                    msg = (
-                        "skip_db_update=True requires the message to already have an ID. "
-                        "The message must have been stored in the database previously."
-                    )
-                    raise ValueError(msg)
-                # Ephemeral (anonymous serving) run: messages are never stored, so
-                # no ID can exist. There is no DB row to protect — fall through and
-                # emit the in-memory event only, keeping agent streaming working.
+        # Ephemeral runs still need a stable ID to correlate streamed message
+        # events. This ID stays in memory; astore_message skips the DB write.
+        persist_messages = should_persist_messages()
+        if not persist_messages and not message.has_id():
+            message.id = nanoid.generate()
+
+        # This path avoids DB round-trips during agent streaming. Persisting
+        # runs require an existing stored ID; ephemeral runs use the ID above.
+        if skip_db_update:
+            if not message.has_id() and persist_messages:
+                msg = (
+                    "skip_db_update=True requires the message to already have an ID. "
+                    "The message must have been stored in the database previously."
+                )
+                raise ValueError(msg)
+            # Ephemeral runs use the in-memory ID assigned above, so their
+            # streaming events remain correlated without a DB row.
 
             # Create a fresh Message instance for consistency with normal flow
             stored_message = await Message.create(**message.model_dump())
@@ -2016,15 +2135,19 @@ class Component(CustomComponent):
         user_id: str | None = None
         session_metadata = dict(message.session_metadata or {})
         if hasattr(self, "graph"):
+            from lfx.memory.flow_context import resolve_message_owner_id
+
             # Convert UUID to str if needed
             flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
             graph_run_id = str(self.graph.run_id) if self.graph.run_id else None
             run_id = graph_run_id
-            # Stamp the executing user so chat-history retrieval can be scoped to its owner,
-            # closing cross-user disclosure via session_id collision. PlaceholderGraph stores
-            # user_id as ``str(...)``, so guard against the literal "None".
-            graph_user_id = self.graph.user_id
-            user_id = str(graph_user_id) if graph_user_id and str(graph_user_id) != "None" else None
+            # Stamp the message owner so chat-history retrieval can be scoped to it,
+            # closing cross-user disclosure via session_id collision. On the serving
+            # plane this is the end user (graph.end_user_id); otherwise the executing
+            # user. The read path (_safe_graph_user_id) resolves identically so the
+            # stored owner and the retrieval predicate always agree.
+            owner_id = resolve_message_owner_id(self.graph)
+            user_id = str(owner_id) if owner_id is not None else None
             if self.tracing_service:
                 langfuse_tracer = self.tracing_service.get_tracer("langfuse")
                 langfuse_trace_id = getattr(langfuse_tracer, "langfuse_trace_id", None)
@@ -2192,12 +2315,23 @@ class Component(CustomComponent):
         flow_id = self.graph.flow_id if hasattr(self, "graph") else None
         if not session_id:
             return None
+        # AG-UI treats this first error event as terminal, before Vertex can enrich
+        # the raised exception. Include the same diagnosis on the emitted message.
+        from lfx.utils.flow_validation import explain_restricted_component_mismatch
+
+        vertex_data = getattr(self._vertex, "data", None)
+        context_note = (
+            explain_restricted_component_mismatch(vertex_data.get("type"), vertex_data.get("node"))
+            if isinstance(vertex_data, Mapping)
+            else None
+        )
         error_message = ErrorMessage(
             flow_id=flow_id,
             exception=exception,
             session_id=session_id,
             trace_name=trace_name,
             source=source,
+            context_note=context_note,
         )
         await self.send_message(error_message)
         return error_message

@@ -47,6 +47,24 @@ def test_dangerous_run_flag_replaces_plain_run():
     assert ok.exit_code == 0, ok.stdout
 
 
+def test_prewarm_survives_a_teardown_less_service_already_in_the_manager():
+    """A warmed process that already holds the shared component cache still exits 0.
+
+    Any ``ComponentWithCache`` (every MCP component, the run-flow tool) registers the
+    shared component cache on construction, and that service implements a plain cache
+    protocol with no ``teardown``. Fork-safety teardown must skip it rather than count
+    it as a disposal failure and fail the command.
+    """
+    from lfx.services.deps import get_shared_component_cache_service
+
+    get_shared_component_cache_service()
+
+    result = runner.invoke(app, ["prewarm"])
+
+    assert result.exit_code == 0, result.stderr
+    assert "Disposed warm services" in result.stdout
+
+
 def test_prewarm_disposes_services_on_fork_safe_path():
     """The default (fork-safe) path tears warmed services down before returning."""
     result = runner.invoke(app, ["prewarm"])

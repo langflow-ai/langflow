@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -12,6 +13,15 @@ from lfx.schema.data import Data
 from lfx_bundles.chroma.local_db import LocalDBComponent
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
+
+
+@pytest.fixture(autouse=True)
+def _unrestricted_file_access(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests exercise vector-store mechanics against tmp_path, not containment; opt out of restriction."""
+    monkeypatch.setattr(
+        "lfx.utils.file_path_security.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+    )
 
 
 class _KeywordEmbeddings(Embeddings):

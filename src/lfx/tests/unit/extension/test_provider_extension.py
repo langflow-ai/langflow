@@ -295,6 +295,26 @@ def test_manifest_rejects_metadata_without_model_class():
         )
 
 
+def test_manifest_rejects_unknown_base_url_variable_key():
+    entry = _provider_entry()
+    entry["metadata"]["variables"][0] = {
+        **entry["metadata"]["variables"][0],
+        "langchain_param": "base_url",
+        "base_url_sufix": "/v1",
+    }
+
+    with pytest.raises(ValueError, match="base_url_sufix"):
+        ExtensionManifest.model_validate(
+            {
+                "id": "lfx-fakeco",
+                "version": "0.1.0",
+                "name": "FakeCo",
+                "lfx": {"compat": ["1"]},
+                "providers": [entry],
+            }
+        )
+
+
 def test_manifest_rejects_live_and_conditional_live():
     with pytest.raises(ValueError, match="both 'live' and 'conditional_live'"):
         ExtensionManifest.model_validate(

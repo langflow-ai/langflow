@@ -14,6 +14,7 @@ interface CursorInputProps {
   editNode?: boolean;
   onFocus?: () => void;
   onBlur?: () => void;
+  ariaLabelledBy?: string;
 }
 
 export const CursorInput = forwardRef<HTMLInputElement, CursorInputProps>(
@@ -28,6 +29,7 @@ export const CursorInput = forwardRef<HTMLInputElement, CursorInputProps>(
       editNode = false,
       onFocus,
       onBlur,
+      ariaLabelledBy,
     },
     ref,
   ) => {
@@ -75,6 +77,7 @@ export const CursorInput = forwardRef<HTMLInputElement, CursorInputProps>(
         data-testid={dataTestId}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
+        aria-labelledby={ariaLabelledBy}
       />
     );
   },

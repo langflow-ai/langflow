@@ -127,9 +127,13 @@ function mockTurnWithEdits(n: number, continuationExpected = true) {
   mockPostAssistStream.mockResolvedValue(undefined);
 }
 
-async function proposeEditsTurn(n: number, continuationExpected = true) {
+async function proposeEditsTurn(
+  n: number,
+  continuationExpected = true,
+  canUseModel: () => boolean = () => true,
+) {
   mockTurnWithEdits(n, continuationExpected);
-  const hook = renderHook(() => useAssistantChat());
+  const hook = renderHook(() => useAssistantChat({ canUseModel }));
   await act(async () => {
     await hook.result.current.handleSend(
       continuationExpected
@@ -191,6 +195,21 @@ describe("useAssistantChat — edit-approval continuation", () => {
     expect(userContents).toEqual([
       "change the chat input to Cat and run the flow",
     ]);
+  });
+
+  it("does not persist or continue an edit after the selected model is revoked", async () => {
+    let modelAllowed = true;
+    const { result } = await proposeEditsTurn(1, true, () => modelAllowed);
+    const msgId = assistantMsgId(result);
+    modelAllowed = false;
+
+    await act(async () => {
+      await result.current.handleUpdateFlowAction(msgId, "act-1", "applied");
+    });
+    await flushTimers();
+
+    expect(mockSaveFlow).not.toHaveBeenCalled();
+    expect(mockPostAssistStream).toHaveBeenCalledTimes(1);
   });
 
   // Regression guard for reference_assistant_edit_continuation: the

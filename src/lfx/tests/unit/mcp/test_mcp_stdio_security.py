@@ -321,7 +321,7 @@ def test_yes_flag_allowed_for_safe_commands():
     with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
         validate_mcp_stdio_config("docker", ["run", "-y", "img"], {})
 
-    with pytest.raises(MCPStdioSecurityError, match="contains dangerous keyword"):
+    with pytest.raises(MCPStdioSecurityError, match=r"Node[.]js runtime options"):
         validate_mcp_stdio_config("node", ["--yes", "script.js"], {})
 
 
@@ -391,6 +391,57 @@ def test_uvx_attached_with_preserves_approved_package_at_public_boundary(with_ar
 def test_python_attached_code_flag_is_still_rejected():
     with pytest.raises(MCPStdioSecurityError, match="Flag -c or /c is only allowed with shell wrappers"):
         validate_mcp_stdio_config("python", ["-cpass"], {})
+
+
+# ``cmd /c`` is not the only way cmd.exe runs a command line: ``/k`` runs it and keeps the
+# session alive, ``/r`` is an undocumented synonym of ``/c``, and boolean switches may be
+# clustered ahead of the executing switch (``/q/k``). Every spelling must bind the wrapped
+# payload to the command allowlist exactly like ``/c`` does, otherwise the wrapper check is
+# skipped and cmd.exe launches an arbitrary executable.
+CMD_EXEC_SWITCHES = ["/c", "/C", "/k", "/K", "/r", "/R", "/q/k", "/s/k", "/d/k", "/Q/K"]
+
+
+@pytest.mark.parametrize("switch", CMD_EXEC_SWITCHES)
+def test_cmd_exec_switches_bind_wrapped_command_to_allowlist(switch):
+    with pytest.raises(MCPStdioSecurityError, match="Shell wrapper 'cmd' cannot execute 'whoami'"):
+        validate_mcp_stdio_config("cmd", [switch, "whoami"], {})
+
+
+@pytest.mark.parametrize("switch", CMD_EXEC_SWITCHES)
+def test_cmd_exec_switches_bind_wrapped_payload_to_package_allowlist(switch):
+    with pytest.raises(MCPStdioSecurityError, match="not allowed for MCP npx"):
+        validate_mcp_stdio_config(
+            "cmd",
+            [switch, "npx", "@attacker/owned-package"],
+            {},
+            allowed_packages={"mcp-proxy"},
+        )
+
+
+@pytest.mark.parametrize("switch", CMD_EXEC_SWITCHES)
+def test_cmd_exec_switches_bind_wrapped_payload_to_interpreter_hardening(switch):
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        validate_mcp_stdio_config(
+            "cmd",
+            [switch, "node", "C:\\Users\\attacker\\server.js"],
+            {},
+            interpreter_hardening=True,
+        )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["/c", "uvx", "mcp-server-fetch"],
+        ["/k", "uvx", "mcp-server-fetch"],
+        ["/q", "/c", "uvx", "mcp-server-fetch"],
+        ["/d", "/k", "uvx", "mcp-server-fetch"],
+        ["/e:on", "/c", "uvx", "mcp-server-fetch"],
+        ["/t:0a", "/k", "uvx", "mcp-server-fetch"],
+    ],
+)
+def test_cmd_wrapper_preserves_allowed_payload_behind_benign_switches(args):
+    validate_mcp_stdio_config("cmd", args, {})
 
 
 @pytest.mark.parametrize(
@@ -492,6 +543,96 @@ def test_interpreter_hardening_rejects_late_shell_exec_flag(command, args):
 def test_interpreter_default_preserves_legacy_single_tenant_config():
     validate_mcp_stdio_config("python", ["custom_server.py"], {}, interpreter_hardening=False)
     validate_mcp_stdio_config("node", ["custom_server.js"], {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--import", "data:text/javascript,console.log%281%29", "--interactive"],
+        ["--import=data:text/javascript,console.log%281%29", "--interactive"],
+        ["--require", "./preload.js", "server.js"],
+        ["-r", "./preload.js", "server.js"],
+        ["--experimental-loader", "./loader.mjs", "server.js"],
+        ["--run", "mcp-server"],
+        ["--interactive"],
+        ["-"],
+        ["inspect", "--import=data:text/javascript,console.log%281%29", "server.js"],
+    ],
+)
+def test_node_runtime_options_cannot_load_code_before_mcp_script(args):
+    with pytest.raises(MCPStdioSecurityError, match=r"Node[.]js runtime options"):
+        validate_mcp_stdio_config("node", args, {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize("command", ["node", "/usr/local/bin/node"])
+def test_node_script_arguments_are_not_interpreted_as_runtime_options(command):
+    validate_mcp_stdio_config(command, ["server.js", "--import=log-only"], {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("sh", ["-c", "node --import=data:text/javascript,console.log%281%29"]),
+        ("cmd", ["/c", "node", "--import=./preload.js"]),
+    ],
+)
+def test_node_runtime_options_remain_blocked_through_shell_wrappers(command, args):
+    with pytest.raises(MCPStdioSecurityError, match=r"Node[.]js runtime options"):
+        validate_mcp_stdio_config(command, args, {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+@pytest.mark.parametrize("assignment", ["X=/node", "X[0]=/node", "X+=/node", "X[0]+=/node"])
+def test_shell_wrapper_rejects_leading_assignment_before_node(command, assignment):
+    with pytest.raises(MCPStdioSecurityError, match="cannot start with an assignment-like token"):
+        validate_mcp_stdio_config(
+            command,
+            ["-c", f"{assignment} node --import=data:text/javascript,console.log%281%29 server.js"],
+            {},
+            interpreter_hardening=False,
+        )
+
+
+def test_shell_wrapper_allows_equals_in_server_arguments():
+    validate_mcp_stdio_config("sh", ["-c", "node server.js NAME=value"], {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+@pytest.mark.parametrize("payload", ["node {-p,42}", "node ?p", "node *", "node [-]p"])
+def test_posix_shell_wrapper_rejects_expansion_before_node(command, payload):
+    with pytest.raises(MCPStdioSecurityError, match="not allowed for MCP stdio"):
+        validate_mcp_stdio_config(command, ["-c", payload], {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize("option", ["%MCP_OPTION%", "!MCP_OPTION!", "^-p", "inspec^t", '"-p"', '"inspect"'])
+@pytest.mark.parametrize("payload_as_one_arg", [False, True])
+def test_cmd_wrapper_rejects_token_transformation_before_node(option, payload_as_one_arg):
+    payload = [f"node {option} server.js"] if payload_as_one_arg else ["node", option, "server.js"]
+    with pytest.raises(MCPStdioSecurityError, match="not allowed for MCP stdio"):
+        validate_mcp_stdio_config("cmd", ["/c", *payload], {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize(
+    ("command", "args", "character"),
+    [
+        ("sh", ["-c", "uvx mcp-proxy https://host.invalid/sse?token=abc"], "?"),
+        ("cmd", ["/c", "uvx", "mcp-proxy", "https://host.invalid/a%20b"], "%"),
+    ],
+)
+def test_shell_wrapper_url_error_identifies_character_and_direct_form(command, args, character):
+    with pytest.raises(MCPStdioSecurityError) as exc_info:
+        validate_mcp_stdio_config(command, args, {}, interpreter_hardening=False)
+
+    message = str(exc_info.value)
+    assert f"character {character!r}" in message
+    assert "directly as 'command'" in message
+    assert "separately in 'args'" in message
+    assert "token=abc" not in message
+
+
+@pytest.mark.parametrize("url", ["https://host.invalid/sse?token=abc", "https://host.invalid/a%20b"])
+def test_direct_package_runner_preserves_url_characters(url):
+    validate_mcp_stdio_config("uvx", ["mcp-proxy", url], {}, interpreter_hardening=False)
 
 
 def test_configured_package_allowlist_is_enforced_at_validation_sink(monkeypatch):
@@ -709,6 +850,156 @@ def test_command_safe_flags_extensibility():
     assert COMMAND_SAFE_FLAGS.get("docker", frozenset()) == frozenset()
 
 
+# ---------------------------------------------------------------------------
+# Runtime-loader environment policy
+#
+# The first-generation env policy was a flat blocklist of exact names, so it only
+# covered the loader/interpreter variables that had been enumerated at the time. Any
+# code-loading variable that was not on the list -- most notably the OPENSSL_* family,
+# whose OPENSSL_CONF points libcrypto at a config file that can dlopen an arbitrary
+# shared object through its engine/provider sections -- passed validation and was
+# forwarded verbatim into the spawned server's environment.
+#
+# The policy is now deny-by-default across whole runtime families, so an unenumerated
+# member of an already-dangerous family is rejected without a code change.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "env_var",
+    [
+        # OpenSSL config/engine/provider loading -> dlopen of an attacker-supplied object.
+        "OPENSSL_CONF",
+        "OPENSSL_ENGINES",
+        "OPENSSL_MODULES",
+        # An unenumerated member of the same family must also be denied.
+        "OPENSSL_SOMETHING_NEW",
+        # CPython interpreter control beyond PYTHONPATH/PYTHONSTARTUP.
+        "PYTHONHOME",
+        "PYTHONBREAKPOINT",
+        "PYTHONUSERBASE",
+        "PYTHONEXECUTABLE",
+        "PYTHONWARNINGS",
+        # Node.js module/loader control beyond NODE_OPTIONS.
+        "NODE_PATH",
+        "NODE_REPL_EXTERNAL_MODULE",
+        # git spawns these as helper commands.
+        "GIT_SSH_COMMAND",
+        "GIT_ASKPASS",
+        "GIT_PROXY_COMMAND",
+        "GIT_EXTERNAL_DIFF",
+        "GIT_CONFIG_GLOBAL",
+        # Other interpreters reachable through an allowlisted runner.
+        "PERL5OPT",
+        "PERL5LIB",
+        "RUBYOPT",
+        "RUBYLIB",
+        "JAVA_TOOL_OPTIONS",
+        "JDK_JAVA_OPTIONS",
+        "CLASSPATH",
+        "LUA_PATH",
+        "LUA_CPATH",
+        "DOTNET_STARTUP_HOOKS",
+        "PHP_INI_SCAN_DIR",
+        # TLS trust anchors: replacing the trust store lets a tenant MITM the package
+        # download that an allowlisted uvx/npx runner then executes.
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+        "CURL_CA_BUNDLE",
+        "REQUESTS_CA_BUNDLE",
+        # Proxy overrides redirect that same fetch to attacker-controlled infrastructure.
+        "HTTPS_PROXY",
+        "HTTP_PROXY",
+        "ALL_PROXY",
+        # Commands that other tools shell out to.
+        "LESSOPEN",
+        "PAGER",
+        "EDITOR",
+        # Plugin/module directories honored by common native libraries.
+        "GTK_MODULES",
+        "QT_PLUGIN_PATH",
+        "GIO_MODULE_DIR",
+        # glibc message-catalog / locale loading.
+        "NLSPATH",
+        "LOCPATH",
+    ],
+)
+def test_runtime_loader_env_vars_rejected(env_var):
+    """Every runtime-interpreted env var is rejected, not just the originally enumerated ones."""
+    from lfx.base.mcp.security import is_dangerous_mcp_env_var
+
+    assert is_dangerous_mcp_env_var(env_var) is True
+    for variant in (env_var, env_var.lower(), env_var.title()):
+        with pytest.raises(MCPStdioSecurityError, match="not allowed"):
+            validate_mcp_stdio_config("uvx", ["mcp-server-time"], {variant: "/tmp/tenant-controlled"})
+
+
+@pytest.mark.parametrize(
+    "env_var",
+    [
+        # Application credentials/config use arbitrary names -- this is the documented shape
+        # of a real MCP server config, and the reason the default policy denies by family
+        # rather than enforcing a closed name allowlist.
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "BRAVE_API_KEY",
+        "API_KEY",
+        "API_URL",
+        "ENVIRONMENT",
+        "LANGFLOW_SERVER_URL",
+        "LANGFLOW_API_KEY",
+        "PORT",
+        "DEBUG",
+        # Benign members of otherwise-dangerous families stay allowed by explicit exception.
+        "PYTHONUNBUFFERED",
+        "PYTHONIOENCODING",
+        "PYTHONDONTWRITEBYTECODE",
+        "NODE_ENV",
+        "GIT_AUTHOR_NAME",
+        "GIT_COMMITTER_EMAIL",
+        "GIT_TERMINAL_PROMPT",
+        "NO_PROXY",
+    ],
+)
+def test_legitimate_server_env_vars_still_accepted(env_var):
+    """The hardened policy must not break ordinary MCP server configuration."""
+    from lfx.base.mcp.security import is_dangerous_mcp_env_var
+
+    assert is_dangerous_mcp_env_var(env_var) is False
+    validate_mcp_stdio_config("uvx", ["mcp-server-time"], {env_var: "value"})
+
+
+def test_openssl_conf_rejected_at_spawn_path_wrapper():
+    """The env-only wrapper used immediately before spawn rejects the same input."""
+    from lfx.base.mcp.util import _validate_mcp_stdio_env
+
+    with pytest.raises(MCPStdioSecurityError, match="not allowed"):
+        _validate_mcp_stdio_env({"OPENSSL_CONF": "/tmp/tenant.cnf"})
+
+
+def test_env_allowlist_mode_denies_everything_not_listed(monkeypatch):
+    """Opt-in strict mode: only operator-listed names survive, regardless of family."""
+    from lfx.base.mcp import security
+
+    monkeypatch.setattr(security, "_configured_env_allowlist", lambda: frozenset({"github_token"}))
+
+    validate_mcp_stdio_config("uvx", ["mcp-server-time"], {"GITHUB_TOKEN": "t"})  # pragma: allowlist secret
+    for denied in ("BRAVE_API_KEY", "API_URL", "OPENSSL_CONF"):
+        with pytest.raises(MCPStdioSecurityError, match="not allowed"):
+            validate_mcp_stdio_config("uvx", ["mcp-server-time"], {denied: "v"})
+
+
+def test_env_allowlist_empty_string_blocks_all_tenant_env(monkeypatch):
+    """An explicitly empty allowlist means 'no tenant env at all', not 'unset'."""
+    from lfx.base.mcp import security
+
+    monkeypatch.setattr(security, "_configured_env_allowlist", lambda: frozenset())
+
+    with pytest.raises(MCPStdioSecurityError, match="not allowed"):
+        validate_mcp_stdio_config("uvx", ["mcp-server-time"], {"API_KEY": "v"})  # pragma: allowlist secret
+    # No env at all remains valid.
+    validate_mcp_stdio_config("uvx", ["mcp-server-time"], {})
+
+
 async def test_update_tools_injects_bound_user_for_agentic_server():
     """A provided user id is injected into the agentic server's spawn env (never from config)."""
     from unittest.mock import AsyncMock
@@ -727,3 +1018,76 @@ async def test_update_tools_injects_bound_user_for_agentic_server():
         {},
         current_user_id=user_id,
     )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        pytest.param(["/c", "uvx", "mcp-proxy"], id="bare-exec-switch"),
+        pytest.param(["/d", "/c", "uvx", "mcp-proxy"], id="benign-switch-before-exec"),
+        pytest.param(["/q", "/c", "uvx", "mcp-proxy"], id="another-benign-switch-before-exec"),
+        pytest.param(["/t:0a", "/c", "uvx", "mcp-proxy"], id="value-bearing-benign-switch-before-exec"),
+        pytest.param(["/d", "/q", "/c", "uvx", "mcp-proxy"], id="two-benign-switches-before-exec"),
+        pytest.param(["/q/k", "uvx", "mcp-proxy"], id="clustered-benign-and-exec"),
+    ],
+)
+def test_cmd_benign_switches_may_precede_the_exec_switch_under_hardening(args):
+    """cmd.exe accepts benign switches ahead of the execution switch, and so must we.
+
+    Both policy layers previously inspected ``args[0]`` only, so ``cmd /d /c uvx ...`` --
+    a legitimate configuration -- was rejected under interpreter hardening even though the
+    wrapped command is allow-listed.
+    """
+    validate_mcp_stdio_config("cmd", args, {}, interpreter_hardening=True)
+
+
+def test_cmd_operand_before_exec_switch_is_not_a_validated_wrapper():
+    """A non-switch operand ahead of the execution switch must not pass hardening.
+
+    ``parse_mcp_shell_wrapper`` skips any token that is not an execution switch while it
+    searches, so it alone would accept this shape. The leading-switch scan is what keeps a
+    script operand from preceding the execution switch.
+    """
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        validate_mcp_stdio_config(
+            "cmd",
+            ["foo.bat", "/c", "uvx", "mcp-proxy"],
+            {},
+            interpreter_hardening=True,
+        )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        pytest.param(["/d", "/c", "whoami"], id="benign-then-c"),
+        pytest.param(["/d", "/k", "whoami"], id="benign-then-k"),
+        pytest.param(["/q/k", "whoami"], id="clustered"),
+    ],
+)
+def test_cmd_benign_switch_prefix_still_binds_payload_to_the_allow_list(args):
+    """Allowing a benign prefix must not let the wrapped payload escape the allow-list."""
+    with pytest.raises(MCPStdioSecurityError):
+        validate_mcp_stdio_config("cmd", args, {})
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        pytest.param(["/c", "uvx mcp-proxy && calc.exe"], id="and-chain"),
+        pytest.param(["/c", "uvx mcp-proxy; whoami"], id="semicolon-chain"),
+        pytest.param(["/c", "uvx", "mcp-proxy", "|", "evil"], id="pipe-in-split-payload"),
+        pytest.param(["/d", "/c", "uvx mcp-proxy & calc.exe"], id="benign-switch-then-chain"),
+        pytest.param(["/c", "uvx 'unterminated"], id="unparseable-quoting"),
+    ],
+)
+def test_cmd_payload_control_chars_raise_the_security_error_type(args):
+    """A cmd payload denial must arrive as MCPStdioSecurityError, like every other denial.
+
+    ``parse_mcp_shell_wrapper`` is reached before the argument metacharacter scan and signals
+    shell control characters (and unparseable quoting) with a bare ``ValueError``. The
+    equivalent ``sh -c 'uvx mcp-proxy && calc'`` denial comes back as ``MCPStdioSecurityError``,
+    so without the conversion the exception type depended on which shell the caller named.
+    """
+    with pytest.raises(MCPStdioSecurityError):
+        validate_mcp_stdio_config("cmd", args, {})

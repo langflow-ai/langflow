@@ -174,11 +174,8 @@ export type IOJSONInputComponentType = {
   output?: boolean;
 };
 export type outputComponentType = {
-  types: string[];
-  selected: string;
   nodeId: string;
   frozen?: boolean;
-  idx: number;
   name: string;
   proxy?: OutputFieldProxyType;
   isToolMode?: boolean;
@@ -250,6 +247,8 @@ export type SliderComponentType = {
     id: number;
   }[];
   sliderInput?: boolean;
+  valueInverted?: boolean;
+  sliderColor?: "default" | "red";
 };
 
 export type FilePreviewType = {

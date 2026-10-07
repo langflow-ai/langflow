@@ -125,6 +125,9 @@ describe("useSaveFlow", () => {
         onError: expect.any(Function),
       }),
     );
+    expect(mockMutate.mock.calls[0][0]).not.toHaveProperty(
+      "providerScopeChanged",
+    );
     expect(mockSetSaveLoading).toHaveBeenCalledWith(true);
     expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
     expect(mockSetCurrentFlow).toHaveBeenCalled();
@@ -151,6 +154,39 @@ describe("useSaveFlow", () => {
       list: ["You do not have permission to edit this flow"],
     });
     expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
+  });
+
+  it("stays silent but still rejects when the caller suppresses the error toast", async () => {
+    const error = {
+      response: { status: 400, data: { detail: "Name must be unique" } },
+    };
+    mockMutate.mockImplementation((_payload, options) => {
+      options.onError(error);
+    });
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(
+      result.current(undefined, { suppressErrorToast: true }),
+    ).rejects.toBe(error);
+
+    expect(mockSetErrorData).not.toHaveBeenCalled();
+    expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
+  });
+
+  it("suppresses the store-inconsistency toast too so the caller never gets two", async () => {
+    // A caller that reports the rejection itself would otherwise show a second
+    // toast on top of this one.
+    flowsManagerState.flows = undefined;
+    mockMutate.mockImplementation((_payload, options) => {
+      options.onSuccess({ ...flowsManagerState.currentFlow, name: "Renamed" });
+    });
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(
+      result.current(undefined, { suppressErrorToast: true }),
+    ).rejects.toThrow("Flows variable undefined");
+
+    expect(mockSetErrorData).not.toHaveBeenCalled();
   });
 
   it("does not autosave hydrated data while the persisted flow is locked", async () => {
@@ -355,6 +391,7 @@ describe("useSaveFlow", () => {
       expect.objectContaining({
         id: "flow-1",
         folder_id: "folder-B",
+        providerScopeChanged: true,
       }),
       expect.objectContaining({
         onSuccess: expect.any(Function),
@@ -367,5 +404,172 @@ describe("useSaveFlow", () => {
     expect(nextFlows[0]).toEqual(
       expect.objectContaining({ id: "flow-1", folder_id: "folder-B" }),
     );
+  });
+  it("keeps canvas edits made while the save was in flight", async () => {
+    // The editor's `currentFlow` is the baseline the next autosave diffs
+    // against. Overwriting it with the response of a save that started before
+    // the edit makes that edit look already-persisted, so the follow-up save
+    // is skipped and the work is lost. Reproduced on Windows CI as a published
+    // flow whose edge never reached the backend.
+    let resolveSave: (() => void) | undefined;
+    mockMutate.mockImplementation((payload, options) => {
+      resolveSave = () =>
+        options.onSuccess({
+          ...flowsManagerState.currentFlow,
+          data: payload.data,
+        });
+    });
+
+    const { result } = renderHook(() => useSaveFlow());
+    const inFlight = result.current();
+
+    // The user connects an edge while the request is still open.
+    const newEdges = [{ id: "new-edge" }];
+    flowStoreState.edges = newEdges;
+    flowStoreState.currentFlow = {
+      ...flowStoreState.currentFlow,
+      data: { ...flowStoreState.currentFlow.data, edges: newEdges },
+    };
+
+    resolveSave!();
+    await inFlight;
+
+    expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
+    expect(mockSetCurrentFlow.mock.calls[0][0].data.edges).toBe(newEdges);
+  });
+
+  describe("when a node update lands while the save is in flight", () => {
+    let resolveSave: (() => void) | undefined;
+
+    beforeEach(() => {
+      resolveSave = undefined;
+      mockMutate.mockImplementation((payload, options) => {
+        resolveSave = () =>
+          options.onSuccess({
+            ...flowsManagerState.currentFlow,
+            ...payload,
+            updated_at: "2026-09-28T00:00:00Z",
+          });
+      });
+    });
+
+    const landNodeUpdate = () => {
+      const updatedNodes = [{ id: "refreshed-node" }];
+      flowStoreState.nodes = updatedNodes;
+      flowStoreState.currentFlow = {
+        ...flowStoreState.currentFlow,
+        data: { ...flowStoreState.currentFlow.data, nodes: updatedNodes },
+      };
+      return updatedNodes;
+    };
+
+    it("adopts the lock the save persisted", async () => {
+      const { result } = renderHook(() => useSaveFlow());
+      const inFlight = result.current({
+        ...flowStoreState.currentFlow,
+        locked: true,
+      });
+      const updatedNodes = landNodeUpdate();
+
+      resolveSave!();
+      await inFlight;
+
+      expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
+      const adopted = mockSetCurrentFlow.mock.calls[0][0];
+      expect(adopted.locked).toBe(true);
+      expect(adopted.updated_at).toBe("2026-09-28T00:00:00Z");
+      expect(adopted.data.nodes).toBe(updatedNodes);
+    });
+
+    it("adopts the unlock the save persisted", async () => {
+      const lockedFlow = { ...flowStoreState.currentFlow, locked: true };
+      flowStoreState.currentFlow = lockedFlow;
+      flowsManagerState.currentFlow = {
+        ...flowsManagerState.currentFlow,
+        locked: true,
+      };
+      mockMutate.mockImplementation((payload, options) => {
+        if (payload.data === undefined) {
+          options.onSuccess({
+            ...flowsManagerState.currentFlow,
+            locked: false,
+          });
+          return;
+        }
+        resolveSave = () =>
+          options.onSuccess({ ...flowsManagerState.currentFlow, ...payload });
+      });
+
+      const { result } = renderHook(() => useSaveFlow());
+      const inFlight = result.current({ ...lockedFlow, locked: false });
+      landNodeUpdate();
+
+      resolveSave!();
+      await inFlight;
+
+      expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
+      expect(mockSetCurrentFlow.mock.calls[0][0].locked).toBe(false);
+    });
+
+    it("keeps a setting the user changed after the save started", async () => {
+      const { result } = renderHook(() => useSaveFlow());
+      const inFlight = result.current({
+        ...flowStoreState.currentFlow,
+        locked: true,
+      });
+      landNodeUpdate();
+      flowStoreState.currentFlow = {
+        ...flowStoreState.currentFlow,
+        description: "typed during the save",
+      };
+
+      resolveSave!();
+      await inFlight;
+
+      const adopted = mockSetCurrentFlow.mock.calls[0][0];
+      expect(adopted.locked).toBe(true);
+      expect(adopted.description).toBe("typed during the save");
+    });
+
+    it("leaves the editor alone when another flow is open", async () => {
+      const { result } = renderHook(() => useSaveFlow());
+      const inFlight = result.current({
+        ...flowStoreState.currentFlow,
+        locked: true,
+      });
+      flowStoreState.nodes = [{ id: "other-flow-node" }];
+      flowStoreState.currentFlow = {
+        ...flowStoreState.currentFlow,
+        id: "flow-2",
+      };
+
+      resolveSave!();
+      await inFlight;
+
+      expect(mockSetCurrentFlow).not.toHaveBeenCalled();
+    });
+
+    it("leaves the editor alone outside the flow page", async () => {
+      const { result } = renderHook(() => useSaveFlow());
+      const inFlight = result.current({
+        ...flowStoreState.currentFlow,
+        locked: true,
+      });
+      landNodeUpdate();
+      flowStoreState.onFlowPage = false;
+
+      resolveSave!();
+      await inFlight;
+
+      expect(mockSetCurrentFlow).not.toHaveBeenCalled();
+    });
+  });
+
+  it("still adopts the saved flow when the canvas did not change", async () => {
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current()).resolves.toBeUndefined();
+
+    expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
   });
 });

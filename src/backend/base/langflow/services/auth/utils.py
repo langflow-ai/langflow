@@ -186,7 +186,7 @@ async def get_current_user(
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
-    db: AsyncSession = Depends(injectable_session_scope),
+    db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User:
     # Keep the native token (resolved by oauth2_login, which may already have
     # collapsed to the external credential) separate from a freshly-extracted
@@ -256,7 +256,7 @@ async def get_current_user_for_websocket(
 
 async def get_current_user_for_sse(
     request: Request,
-    db: AsyncSession = Depends(injectable_session_scope),
+    db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User | UserRead:
     """Extracts credentials from request and delegates to auth service.
 
@@ -314,7 +314,7 @@ async def get_optional_user(
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
-    db: AsyncSession = Depends(injectable_session_scope),
+    db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User | None:
     """Get the current user if authenticated, otherwise return None.
 
@@ -355,7 +355,7 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
 
 async def get_current_user_optional(
     request: Request,
-    db: AsyncSession = Depends(injectable_session_scope),
+    db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User | None:
     """Resolve the current user if authenticated, otherwise return None.
 
@@ -510,7 +510,7 @@ async def get_current_user_mcp(
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
-    db: AsyncSession = Depends(injectable_session_scope),
+    db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User:
     try:
         return await _auth_service().get_current_user_mcp(token, query_param, header_param, db)

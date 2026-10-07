@@ -254,3 +254,80 @@ describe("project rename focus handling", () => {
     expect(newProjectButton).toHaveFocus();
   });
 });
+
+// A rejected rename used to be swallowed: the mutation had no onError, so the old
+// name reappeared with nothing on screen explaining why. The backend rejects a
+// rename when the project's MCP server name collides with another project's.
+describe("project rename error feedback", () => {
+  const CONFLICT_DETAIL =
+    "MCP server name conflict: 'lf-unnamed' already exists for a different project.";
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCan.mockReturnValue(true);
+    mockFolders = [FOLDER];
+    jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const renameTo = (newName: string) => {
+    render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+    fireEvent.doubleClick(screen.getByTestId(`sidebar-nav-${FOLDER.id}`));
+    const input = screen.getByTestId(`input-project-${FOLDER.id}`);
+    fireEvent.change(input, { target: { value: newName } });
+    fireEvent.blur(input);
+  };
+
+  it("shows the backend reason when the rename is rejected", () => {
+    mockMutateUpdateFolder.mockImplementation((_payload, options) => {
+      options?.onError?.({ response: { data: { detail: CONFLICT_DETAIL } } });
+    });
+
+    renameTo("繁體中文專案");
+
+    expect(mockSetErrorData).toHaveBeenCalledWith({
+      title: "sidebar.renameError",
+      list: [CONFLICT_DETAIL],
+    });
+  });
+
+  it("falls back to the error message when the response carries no detail", () => {
+    mockMutateUpdateFolder.mockImplementation((_payload, options) => {
+      options?.onError?.(new Error("Network Error"));
+    });
+
+    renameTo("繁體中文專案");
+
+    expect(mockSetErrorData).toHaveBeenCalledWith({
+      title: "sidebar.renameError",
+      list: ["Network Error"],
+    });
+  });
+
+  it("puts the stored name back in the input after a failure", () => {
+    mockMutateUpdateFolder.mockImplementation((_payload, options) => {
+      options?.onError?.({ response: { data: { detail: CONFLICT_DETAIL } } });
+    });
+
+    renameTo("繁體中文專案");
+    fireEvent.doubleClick(screen.getByTestId(`sidebar-nav-${FOLDER.id}`));
+
+    // Without the restore the rejected name would still be sitting in the input
+    expect(screen.getByTestId(`input-project-${FOLDER.id}`)).toHaveValue(
+      FOLDER.name,
+    );
+  });
+
+  it("stays quiet when the rename succeeds", () => {
+    mockMutateUpdateFolder.mockImplementation((_payload, options) => {
+      options?.onSuccess?.({ ...FOLDER, name: "繁體中文專案" });
+    });
+
+    renameTo("繁體中文專案");
+
+    expect(mockSetErrorData).not.toHaveBeenCalled();
+  });
+});

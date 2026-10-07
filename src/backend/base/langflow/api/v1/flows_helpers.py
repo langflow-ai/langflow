@@ -22,7 +22,12 @@ from pydantic import ValidationError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import build_content_disposition, normalize_flow_for_export, remove_api_keys
+from langflow.api.utils import (
+    build_content_disposition,
+    normalize_flow_for_export,
+    remove_api_keys,
+    strip_flow_secrets,
+)
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
@@ -40,8 +45,9 @@ from langflow.services.database.models.flow.model import (
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.services.storage.service import StorageService
+from langflow.utils.flow_secrets import HiddenFieldMetadataError, restore_redacted_flow_values
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
@@ -359,6 +365,21 @@ async def _resolve_flow_destination(
     return folder.workspace_id, folder.id
 
 
+async def destination_folder_owner_id(session: AsyncSession, folder_id: UUID | None) -> UUID | None:
+    """Return who owns the project a flow is about to be created in.
+
+    A flow being created has no owner yet, so the destination project is the
+    only ownership the CREATE check can consult. Read it from the stored row
+    after canonicalization — a caller-supplied folder_id may have been
+    redirected to the caller's default project, and the payload can never be
+    trusted to assert who owns a project.
+    """
+    if folder_id is None:
+        return None
+    folder = await session.get(Folder, folder_id)
+    return getattr(folder, "user_id", None)
+
+
 async def _canonicalize_flow_destination(
     session: AsyncSession,
     flow: Flow | FlowCreate | FlowUpdate,
@@ -603,6 +624,13 @@ async def _update_existing_flow(
 
     # None-valued inputs are treated as omitted by default for updates.
     update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
+    if not is_owner_edit and isinstance(update_data.get("data"), dict):
+        try:
+            update_data["data"] = restore_redacted_flow_values(update_data["data"], existing_flow.data)
+        except HiddenFieldMetadataError as exc:
+            raise HTTPException(
+                status_code=400, detail="Cannot change hidden fields or executable graph data in a shared flow."
+            ) from exc
 
     # Preserve the existing endpoint unless the request explicitly clears it.
     if _endpoint_name_was_explicitly_cleared(flow):
@@ -676,6 +704,13 @@ async def _patch_flow(
     # PATCH follows the same rule: None-valued fields are omitted unless
     # explicitly reintroduced below (for example endpoint_name clear).
     update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
+    if not is_owner_edit and isinstance(update_data.get("data"), dict):
+        try:
+            update_data["data"] = restore_redacted_flow_values(update_data["data"], db_flow.data)
+        except HiddenFieldMetadataError as exc:
+            raise HTTPException(
+                status_code=400, detail="Cannot change hidden fields or executable graph data in a shared flow."
+            ) from exc
 
     # Preserve the existing endpoint unless the request explicitly clears it.
     if _endpoint_name_was_explicitly_cleared(flow):
@@ -775,14 +810,46 @@ def _sanitize_flow_filename(raw_name: str, fallback_id: str = "flow") -> str:
     return name or fallback_id
 
 
-def _build_flows_download_response(
+async def _export_variable_names(session: AsyncSession, owner_id: UUID | None) -> frozenset[str]:
+    """Return the global-variable names a flow owner's export may keep as bindings.
+
+    Export keeps a ``load_from_db`` value only when it names one of the owner's
+    existing global variables, so a literal secret behind a stale flag is not
+    exported even when it is shaped like a variable name.
+    """
+    if owner_id is None:
+        return frozenset()
+    names = await get_variable_service().list_variables(user_id=owner_id, session=session)
+    return frozenset(name for name in names if name)
+
+
+async def _build_flows_download_response(
+    session: AsyncSession,
     flows: list[Flow],
+    *,
+    caller_id: UUID,
 ) -> StreamingResponse | dict:
     """Build a download response (ZIP or single JSON) for the given flows.
 
-    Strips API keys and normalises for git-friendly export before packaging.
+    Strips secret field values and normalises for git-friendly export before
+    packaging. Scrubbing uses the metadata-driven scrubber rather than the
+    legacy API-key-name matcher, so ``password``-marked fields under ordinary
+    names and credential-bearing connection strings are cleared too. Global
+    variable bindings survive only when they name one of the flow owner's
+    variables.
     """
-    normalised_flows = [normalize_flow_for_export(remove_api_keys(flow.model_dump())) for flow in flows]
+    # A shared reader's in-app view hides even variable names. The download
+    # must follow that same rule; only an owner may export their bindings.
+    owner_variable_names = await _export_variable_names(session, caller_id)
+    normalised_flows = [
+        normalize_flow_for_export(
+            strip_flow_secrets(
+                flow.model_dump(),
+                known_variable_names=owner_variable_names if flow.user_id == caller_id else frozenset(),
+            )
+        )
+        for flow in flows
+    ]
 
     if len(normalised_flows) > 1:
         zip_stream = io.BytesIO()

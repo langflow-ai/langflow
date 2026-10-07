@@ -32,6 +32,7 @@ from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from lfx.services.authorization import AuthorizationPrincipal
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 # Shared audit result vocabulary.
 AUDIT_ALLOW = "allow"
@@ -42,6 +43,22 @@ AUDIT_SKIP = "skip"
 AUDIT_ACTOR_API_KEY = "api_key"  # pragma: allowlist secret
 AUDIT_ACTOR_UNKNOWN = "unknown"
 AUDIT_ACTOR_USER = "user"
+
+# ``details["event"]`` discriminates the two row classes that share this table.
+# Guards emit a row for every authorization *decision* they make; routes emit a
+# second row after the effect is durable. Both used to be written under the same
+# action name (``share:create`` for the check and for the created share), so a
+# check and a real mutation were indistinguishable downstream. Readers that need
+# "what actually happened" filter on ``AUDIT_EVENT_MUTATION``.
+AUDIT_EVENT_DECISION = "authorization_decision"
+AUDIT_EVENT_MUTATION = "mutation"
+# Two further classes exist so that *every* row can be classified. Without them
+# a reader filtering on ``event`` silently drops the untagged rows: reading the
+# audit log itself, and the reconcile the server runs at startup with no user
+# behind it. ``access`` is something a user did that changed nothing; ``system``
+# is something the server did on its own.
+AUDIT_EVENT_ACCESS = "access"
+AUDIT_EVENT_SYSTEM = "system"
 
 _AUDIT_QUEUE_MAX = 10_000
 _AUDIT_BATCH_MAX = 100
@@ -449,38 +466,80 @@ async def _flush_audit_batch(batch: list[_AuditEntry]) -> None:
     """Insert a batch of ``_AuditEntry`` rows in a single session."""
     if not batch:
         return
-    # Imported lazily so the request path doesn't pull DB modules until the
-    # writer first runs (matches the lazy import in the old per-row path).
+    from langflow.services.deps import session_scope
+
+    async with session_scope() as session:
+        _stage_audit_entries(session, batch)
+
+
+def _stage_audit_entries(session: AsyncSession, entries: list[_AuditEntry]) -> None:
+    """Add audit rows and plugin events to an existing transaction."""
+    # Imported lazily so callers with auditing disabled do not pull DB models.
     from lfx.services.authorization import AuthorizationAuditEvent
 
     from langflow.services.database.models.auth import AuthzAuditLog
-    from langflow.services.deps import get_authorization_service, session_scope
+    from langflow.services.deps import get_authorization_service
 
-    async with session_scope() as session:
-        events: list[AuthorizationAuditEvent] = []
-        for entry in batch:
-            resource_type, resource_id = _split_obj(entry.obj)
-            session.add(
-                AuthzAuditLog(
-                    id=entry.event_id,
-                    timestamp=entry.occurred_at,
-                    user_id=entry.user_id,
-                    actor_type=entry.actor_type,
-                    actor_id=entry.actor_id,
-                    action=entry.action,
-                    resource_type=resource_type,
-                    resource_id=resource_id,
-                    result=entry.result,
-                    details=entry.details,
-                )
+    events: list[AuthorizationAuditEvent] = []
+    for entry in entries:
+        resource_type, resource_id = _split_obj(entry.obj)
+        session.add(
+            AuthzAuditLog(
+                id=entry.event_id,
+                timestamp=entry.occurred_at,
+                user_id=entry.user_id,
+                actor_type=entry.actor_type,
+                actor_id=entry.actor_id,
+                action=entry.action,
+                resource_type=resource_type,
+                resource_id=resource_id,
+                result=entry.result,
+                details=entry.details,
             )
-            events.append(
-                AuthorizationAuditEvent(
-                    event_id=entry.event_id,
-                    occurred_at=entry.occurred_at,
-                )
+        )
+        events.append(
+            AuthorizationAuditEvent(
+                event_id=entry.event_id,
+                occurred_at=entry.occurred_at,
             )
-        get_authorization_service().stage_audit_events(session=session, events=tuple(events))
+        )
+    get_authorization_service().stage_audit_events(session=session, events=tuple(events))
+
+
+def stage_audit_decision(
+    *,
+    session: AsyncSession,
+    user_id: UUID | None,
+    principal: AuthorizationPrincipal | None = None,
+    action: str,
+    obj: str,
+    result: str,
+    details: dict[str, Any] | None = None,
+) -> bool:
+    """Stage a durable audit row in a caller-owned mutation transaction.
+
+    Returns ``True`` when the row was staged. Best-effort mode returns ``False``
+    so the caller can submit through the asynchronous audit pipeline after its
+    mutation commits.
+    """
+    auth_settings = get_settings_service().auth_settings
+    if not getattr(auth_settings, "AUTHZ_AUDIT_ENABLED", False) or not getattr(
+        auth_settings, "AUTHZ_AUDIT_DURABLE", False
+    ):
+        return False
+
+    resolved_user_id, actor_type, actor_id = _resolve_actor(user_id, principal)
+    entry = _AuditEntry(
+        user_id=resolved_user_id,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        action=action,
+        obj=obj,
+        result=result,
+        details=_merge_audit_details(details, include_credential=resolved_user_id is not None),
+    )
+    _stage_audit_entries(session, [entry])
+    return True
 
 
 async def drain_pending_audit_writes(timeout: float = 5.0) -> None:

@@ -5,6 +5,7 @@ from lfx.io import MessageTextInput, Output, SecretStrInput
 
 
 class GoogleGenerativeAIEmbeddingsComponent(Component):
+    model_provider_id = "google-generative-ai"
     display_name = "Google Generative AI Embeddings"
     description = (
         "Connect to Google's generative AI embeddings service using the GoogleGenerativeAIEmbeddings class, "
@@ -22,6 +23,11 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
     outputs = [
         Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
     ]
+
+    async def _additional_model_provider_policy_ids(self, purpose, parameters=None) -> tuple[str, ...]:
+        """Authorize this legacy embedding component as Google before credentials load."""
+        _ = purpose, parameters
+        return (self.model_provider_id,)
 
     def build_embeddings(self) -> Embeddings:
         if not self.api_key:

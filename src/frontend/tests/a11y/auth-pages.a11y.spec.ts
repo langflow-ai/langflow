@@ -107,11 +107,14 @@ async function driveLoginErrorToast(page: LangflowPage) {
   await page.getByLabel(/^Password/).fill("wrong-password");
   await page.getByRole("button", { name: /sign in/i }).click();
   await expect(page.getByText("Error signing in")).toBeVisible();
+  // The rejection surfaces twice by design: the toast announcement and the
+  // inline error associated with the credential fields (WCAG 3.3.1).
   await expect(
     page.getByText(
       "Incorrect username or password. Check your username and password, then try again.",
     ),
-  ).toBeVisible();
+  ).toHaveCount(2);
+  await expect(page.locator("#login-form-error")).toBeVisible();
 }
 
 async function driveSignupEmpty(page: LangflowPage) {
@@ -151,11 +154,13 @@ async function driveSignupErrorToast(page: LangflowPage) {
   await page.getByLabel(/^Confirm your password/).fill("same-password");
   await page.getByRole("button", { name: /sign up/i }).click();
   await expect(page.getByText("Error signing up")).toBeVisible();
+  // Toast + inline error associated with the username field (WCAG 3.3.1).
   await expect(
     page.getByText(
       "This username is unavailable. Use a different username or contact an administrator if you already have an account.",
     ),
-  ).toBeVisible();
+  ).toHaveCount(2);
+  await expect(page.locator("#signup-form-error")).toBeVisible();
 }
 
 async function driveAdminLoginEmpty(page: LangflowPage) {

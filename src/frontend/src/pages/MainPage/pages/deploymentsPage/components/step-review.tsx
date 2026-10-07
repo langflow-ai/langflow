@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
-import { UNKNOWN_FLOW_NAME } from "../types";
+import { UNKNOWN_FLOW_NAME, WXO_PROVIDER_KEY } from "../types";
 import { ReviewDetachingSection } from "./step-review/review-detaching-section";
 import { ReviewFlowConfigCard } from "./step-review/review-flow-config-card";
 import { ReviewSummaryCard } from "./step-review/review-summary-card";
@@ -16,6 +16,7 @@ export default function StepReview() {
     deploymentType,
     deploymentName,
     selectedLlm,
+    selectedInstance,
     connections,
     selectedVersionByFlow,
     toolNameByFlow,
@@ -54,6 +55,8 @@ export default function StepReview() {
         removedFlowIds,
         selectedVersionByFlow,
         toolNameByFlow,
+        includeWatsonxEligibility:
+          selectedInstance?.provider_key === WXO_PROVIDER_KEY,
       }),
     [
       allFlows,
@@ -62,6 +65,7 @@ export default function StepReview() {
       removedFlowIds,
       selectedVersionByFlow,
       toolNameByFlow,
+      selectedInstance,
     ],
   );
   const removedReviewFlows = useMemo(

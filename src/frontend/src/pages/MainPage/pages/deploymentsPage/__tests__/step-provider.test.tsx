@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { axe } from "@/utils/a11y-test";
 import type { ProviderAccount, ProviderCredentials } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -119,7 +120,7 @@ describe("No existing environments", () => {
     render(<StepProvider />);
     expect(screen.getByPlaceholderText("e.g. Production")).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText("Enter your API key"),
+      screen.getByLabelText(/API Key/, { selector: "input" }),
     ).toBeInTheDocument();
   });
 
@@ -207,7 +208,7 @@ describe("With existing environments", () => {
     await user.click(screen.getByText("Add new environment"));
     expect(screen.getByPlaceholderText("e.g. Production")).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText("Enter your API key"),
+      screen.getByLabelText(/API Key/, { selector: "input" }),
     ).toBeInTheDocument();
   });
 
@@ -218,5 +219,75 @@ describe("With existing environments", () => {
         screen.getByRole("radiogroup", { name: "Existing environments" }),
       ).toBeInTheDocument();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Accessibility
+// ---------------------------------------------------------------------------
+
+describe("Accessibility", () => {
+  beforeEach(() => {
+    mockProviderAccountsData = {
+      provider_accounts: [makeEnvironment({ id: "env-1" })],
+    };
+  });
+
+  it("should_have_no_axe_violations", async () => {
+    const { container } = render(<StepProvider />);
+    await waitFor(() => {
+      expect(screen.getByText("Prod Environment")).toBeInTheDocument();
+    });
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("exposes the environment toggle as a real tablist with roving tabindex", async () => {
+    render(<StepProvider />);
+    await waitFor(() => {
+      expect(screen.getByText("Prod Environment")).toBeInTheDocument();
+    });
+
+    const existingTab = screen.getByRole("tab", {
+      name: "Choose existing environment",
+    });
+    const newTab = screen.getByRole("tab", { name: "Add new environment" });
+
+    expect(existingTab).toHaveAttribute("aria-selected", "true");
+    expect(existingTab).toHaveAttribute("tabindex", "0");
+    expect(newTab).toHaveAttribute("aria-selected", "false");
+    expect(newTab).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("switches tabs and moves focus via ArrowRight", async () => {
+    const user = userEvent.setup();
+    render(<StepProvider />);
+    await waitFor(() => {
+      expect(screen.getByText("Prod Environment")).toBeInTheDocument();
+    });
+
+    screen.getByRole("tab", { name: "Choose existing environment" }).focus();
+    await user.keyboard("{ArrowRight}");
+
+    const newTab = screen.getByRole("tab", { name: "Add new environment" });
+    expect(newTab).toHaveAttribute("aria-selected", "true");
+    expect(newTab).toHaveFocus();
+  });
+
+  it("associates each tab with its panel via aria-controls", async () => {
+    render(<StepProvider />);
+    await waitFor(() => {
+      expect(screen.getByText("Prod Environment")).toBeInTheDocument();
+    });
+
+    const existingTab = screen.getByRole("tab", {
+      name: "Choose existing environment",
+    });
+    const controlsId = existingTab.getAttribute("aria-controls");
+    expect(controlsId).toBeTruthy();
+    expect(document.getElementById(controlsId as string)).toHaveAttribute(
+      "role",
+      "tabpanel",
+    );
   });
 });

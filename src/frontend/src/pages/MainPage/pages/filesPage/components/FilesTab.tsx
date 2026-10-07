@@ -20,6 +20,7 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
 import useAlertStore from "@/stores/alertStore";
 import type { FileType } from "@/types/file_management";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
@@ -35,6 +36,15 @@ interface FilesTabProps {
   setQuantitySelected: (quantity: number) => void;
   isShiftPressed: boolean;
 }
+
+const getFileExtension = (path: string) => {
+  const fileName = path.split("/").pop() ?? "";
+  const extensionStart = fileName.lastIndexOf(".");
+  if (extensionStart <= 0 || extensionStart === fileName.length - 1) {
+    return undefined;
+  }
+  return fileName.slice(extensionStart + 1).toLowerCase();
+};
 
 const FilesTab = ({
   quickFilterText,
@@ -54,10 +64,23 @@ const FilesTab = ({
   const { mutate: rename } = usePostRenameFileV2();
   const { mutate: deleteFiles, isPending: isDeleting } = useDeleteFilesV2();
   const handleRename = (params: NewValueParams<FileType, string>) => {
-    rename({
-      id: params.data.id,
-      name: params.newValue,
-    });
+    if (typeof params.newValue !== "string") {
+      return;
+    }
+    rename(
+      {
+        id: params.data.id,
+        name: params.newValue,
+      },
+      {
+        onError: (error) => {
+          setErrorData({
+            title: t("files.errorRenaming"),
+            list: extractApiErrorMessages(error),
+          });
+        },
+      },
+    );
   };
 
   const handleOpenRename = (id: string, name: string) => {
@@ -167,7 +190,7 @@ const FilesTab = ({
       cellClass:
         "cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
       cellRenderer: (params) => {
-        const type = params.data.path.split(".")[1]?.toLowerCase();
+        const type = getFileExtension(params.data.path);
         return (
           <div className="flex items-center gap-4 font-medium">
             {params.data.progress !== undefined &&
@@ -229,7 +252,7 @@ const FilesTab = ({
       filter: "agTextColumnFilter",
       editable: false,
       valueFormatter: (params) => {
-        return params.value.split(".")[1]?.toUpperCase();
+        return getFileExtension(params.value)?.toUpperCase();
       },
       cellClass:
         "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",

@@ -5,15 +5,23 @@ the same component instance is reused, causing inputs to be overwritten between
 concurrent invocations (data corruption).
 """
 
+import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+from types import MethodType
 
-from lfx.base.tools.component_tool import ComponentToolkit
+from lfx.base.tools.component_tool import (
+    ComponentToolkit,
+    _build_output_async_function,
+    _build_output_function,
+    send_message_noop,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DataInput, MessageTextInput
 from lfx.io import Output
 from lfx.schema.data import Data
+from lfx.schema.message import Message
 
 
 class SlowLabelComponent(Component):
@@ -242,6 +250,141 @@ def test_deepcopy_preserves_component_reference_cycles():
     assert b_copy is not b
 
 
+def test_should_keep_send_message_when_sync_tool_calls_overlap():
+    """Bug #14088: an overlapping tool call must not leave send_message replaced.
+
+    GIVEN: A component-backed tool whose invocations overlap in time
+    WHEN:  They interleave as A starts, B starts, A finishes, B finishes
+    THEN:  The shared component still carries its original send_message
+    """
+    # Arrange - gates let the test drive the interleaving instead of racing for it
+    gates = {"a": threading.Event(), "b": threading.Event()}
+    entered = {"a": threading.Event(), "b": threading.Event()}
+
+    class GatedComponent(Component):
+        display_name = "Gated Tool"
+        description = "Blocks inside the tool call until its gate is released."
+        name = "GatedComponent"
+
+        inputs = [MessageTextInput(name="tag", display_name="Tag", tool_mode=True)]
+        outputs = [Output(display_name="Result", name="result", method="process")]
+
+        def process(self) -> Data:
+            entered[self.tag].set()
+            gates[self.tag].wait(timeout=5)
+            return Data(data={"tag": self.tag})
+
+    component = GatedComponent()
+    original_send_message = component.send_message
+    tool = ComponentToolkit(component=component).get_tools()[0]
+
+    # Act
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(tool.invoke, {"tag": "a"})
+        assert entered["a"].wait(timeout=5)
+        second = executor.submit(tool.invoke, {"tag": "b"})
+        assert entered["b"].wait(timeout=5)
+
+        gates["a"].set()
+        first.result(timeout=5)
+        gates["b"].set()
+        second.result(timeout=5)
+
+    # Assert
+    assert component.send_message is not send_message_noop, "send_message was left as the tool-mode no-op"
+    assert component.send_message == original_send_message
+
+
+async def test_should_keep_send_message_when_async_tool_calls_overlap():
+    """Bug #14088, async wrapper: same interleaving, same guarantee.
+
+    GIVEN: A component-backed tool with an async output method
+    WHEN:  Two calls interleave as A starts, B starts, A finishes, B finishes
+    THEN:  The shared component still carries its original send_message
+    """
+    # Arrange
+    gates = {"a": asyncio.Event(), "b": asyncio.Event()}
+    entered = {"a": asyncio.Event(), "b": asyncio.Event()}
+
+    class AsyncGatedComponent(Component):
+        display_name = "Async Gated Tool"
+        description = "Blocks inside the tool call until its gate is released."
+        name = "AsyncGatedComponent"
+
+        inputs = [MessageTextInput(name="tag", display_name="Tag", tool_mode=True)]
+        outputs = [Output(display_name="Result", name="result", method="process")]
+
+        async def process(self) -> Data:
+            entered[self.tag].set()
+            await asyncio.wait_for(gates[self.tag].wait(), timeout=5)
+            return Data(data={"tag": self.tag})
+
+    component = AsyncGatedComponent()
+    original_send_message = component.send_message
+    tool = ComponentToolkit(component=component).get_tools()[0]
+
+    # Act
+    first = asyncio.create_task(tool.ainvoke({"tag": "a"}))
+    await asyncio.wait_for(entered["a"].wait(), timeout=5)
+    second = asyncio.create_task(tool.ainvoke({"tag": "b"}))
+    await asyncio.wait_for(entered["b"].wait(), timeout=5)
+
+    gates["a"].set()
+    await asyncio.wait_for(first, timeout=5)
+    gates["b"].set()
+    await asyncio.wait_for(second, timeout=5)
+
+    # Assert
+    assert component.send_message is not send_message_noop, "send_message was left as the tool-mode no-op"
+    assert component.send_message == original_send_message
+
+
+async def test_should_leave_message_delivery_unchanged_when_running_as_tool():
+    """A tool call must not patch send_message anywhere - not on the copy, not on the shared component.
+
+    Message suppression during tool runs has been inactive since #11994 and reviving it
+    is a user-visible change tracked separately. This pins the current behavior so it
+    cannot come back by accident.
+
+    GIVEN: A component whose output method sends a message while running as a tool
+    WHEN:  The tool is invoked
+    THEN:  The message reaches the component's own send_message, and the shared component
+           still holds that same method afterwards
+    """
+    # Arrange - delivered records every message that reaches the component's send_message
+    delivered: list[str] = []
+
+    class MessagingComponent(Component):
+        display_name = "Messaging Tool"
+        description = "Sends a message while running."
+        name = "MessagingComponent"
+
+        inputs = [MessageTextInput(name="tag", display_name="Tag", tool_mode=True)]
+        outputs = [Output(display_name="Result", name="result", method="process")]
+
+        async def send_message(self, message: Message, *_args, **_kwargs):
+            delivered.append(message.text)
+            return message
+
+        async def process(self) -> Data:
+            echoed = await self.send_message(Message(text=f"message from {self.tag}"))
+            return Data(data={"tag": self.tag, "echoed": echoed.text})
+
+    component = MessagingComponent()
+    original_send_message = component.send_message
+    tool = ComponentToolkit(component=component).get_tools()[0]
+
+    # Act
+    result = await tool.ainvoke({"tag": "a"})
+
+    # Assert - the copy ran with the component's own send_message, not with a no-op
+    assert delivered == ["message from a"]
+    assert result["echoed"] == "message from a"
+    # And the shared component was never patched
+    assert component.send_message == original_send_message
+    assert component.send_message is not send_message_noop
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -279,3 +422,63 @@ def test_deepcopy_with_non_deepcopyable_output_value():
 
     assert clone is not component
     assert clone._outputs_map["result"].value is undeepcopyable
+
+
+class RuntimeOutputComponent(Component):
+    """Component whose output method is registered on the instance, not the class.
+
+    Run Flow does this: ``_register_flow_output_method`` writes one resolver per
+    selected-flow output onto the instance it is asked for tools on.
+    """
+
+    display_name = "Runtime Output"
+    description = "Answers with the value the invocation was given."
+    name = "RuntimeOutputComponent"
+
+    inputs = [MessageTextInput(name="input_value", display_name="Input", value="original", tool_mode=True)]
+    outputs = [Output(display_name="Result", name="result", method="declared_output")]
+
+    def declared_output(self) -> str:
+        return self.input_value
+
+
+def _with_runtime_output(component: Component, *, is_async: bool):
+    """Register an output method on the instance and hand back the captured method."""
+    if is_async:
+
+        async def runtime_output(self) -> str:
+            return self.input_value
+    else:
+
+        def runtime_output(self) -> str:
+            return self.input_value
+
+    # The name the method answers to is the closure's, not the attribute's, which
+    # is why the wrapper's `getattr(copy, output_method.__name__)` misses it.
+    component.resolve_runtime_output = MethodType(runtime_output, component)
+    return component.resolve_runtime_output
+
+
+def test_runtime_registered_output_runs_on_the_invocation_copy():
+    """#15034: an output method missing from the copy must not run on the original.
+
+    The wrapper copies the component so concurrent calls do not share state
+    (#8791), sets the call's arguments on that copy, then resolves the output
+    method against it. An instance-registered method is not on the copy, and the
+    fallback used to be the method bound to the component the toolkit was built
+    from -- which never saw the arguments.
+    """
+    component = RuntimeOutputComponent()
+    output_function = _build_output_function(component, _with_runtime_output(component, is_async=False))
+
+    assert output_function(input_value="tool input") == "tool input"
+    assert component.input_value == "original"
+
+
+async def test_runtime_registered_async_output_runs_on_the_invocation_copy():
+    """The async wrapper, which is the one Run Flow's resolvers go through."""
+    component = RuntimeOutputComponent()
+    output_function = _build_output_async_function(component, _with_runtime_output(component, is_async=True))
+
+    assert await output_function(input_value="tool input") == "tool input"
+    assert component.input_value == "original"

@@ -10,9 +10,13 @@ benign fields tweakable.
 
 from __future__ import annotations
 
-from unittest.mock import call, patch
+from unittest.mock import MagicMock, call, patch
 
-from lfx.processing.process import apply_tweaks
+import pytest
+from lfx.exceptions.tweaks import TweakRefusedError
+from lfx.graph import Graph
+from lfx.graph.vertex.base import ParameterHandler, Vertex
+from lfx.processing.process import apply_tweaks, process_tweaks, process_tweaks_on_graph
 from lfx.utils.flow_validation import CODE_EXECUTION_COMPONENT_TYPES, CODE_EXECUTION_FIELD_NAMES
 
 
@@ -21,6 +25,17 @@ def _template_node(template: dict, *, node_type: str | None = None) -> dict:
     if node_type is not None:
         data["type"] = node_type
     return {"id": "n", "data": data}
+
+
+_BING_NODE_TYPES = (
+    "BingSearchAPI",
+    "BingSearchAPIComponent",
+    "Bing Search API",
+    "ext:bing:BingSearchAPIComponent@official",
+    "ext:bing:BingSearchAPIComponent@official-pre-a",
+    "lfx.components.bing.bing_search_api.BingSearchAPIComponent",
+    "lfx.components.bing.BingSearchAPIComponent",
+)
 
 
 def test_apply_tweaks_applies_ordinary_field():
@@ -59,6 +74,330 @@ def test_apply_tweaks_blocks_sql_connection_and_query():
         call("Security: refusing to override protected field 'database_url' via tweaks."),
         call("Security: refusing to override protected field 'query' via tweaks."),
     ]
+
+
+@pytest.mark.parametrize("node_type", _BING_NODE_TYPES)
+def test_process_tweaks_cannot_redirect_bing_credential(node_type: str):
+    """An execution caller cannot redirect the flow author's stored Bing key."""
+    node = _template_node(
+        {
+            "bing_search_url": {"value": "https://api.bing.microsoft.com/v7.0/search", "type": "str"},
+            "bing_subscription_key": {"value": "stored-key", "type": "str", "load_from_db": True},
+            "k": {"value": 4, "type": "int"},
+        },
+        node_type=node_type,
+    )
+    graph_data = {"nodes": [node]}
+
+    with pytest.raises(TweakRefusedError, match="bing_search_url"):
+        process_tweaks(graph_data, {"n": {"bing_search_url": "https://attacker.example/search", "k": 1}})
+
+    template = node["data"]["node"]["template"]
+    assert template["bing_search_url"]["value"] == "https://api.bing.microsoft.com/v7.0/search"
+    assert template["bing_subscription_key"]["value"] == "stored-key"
+    assert template["k"]["value"] == 4  # refusal is atomic
+
+    process_tweaks(graph_data, {"n": {"k": 1}})
+    assert template["k"]["value"] == 1
+
+
+@pytest.mark.parametrize(
+    "tweaks",
+    [
+        {"Bing Search API": {"bing_search_url": "https://attacker.example/search"}},
+        {"bing_search_url": "https://attacker.example/search"},
+    ],
+    ids=["display-name", "all-nodes"],
+)
+def test_process_tweaks_refuses_other_bing_key_forms(tweaks: dict):
+    node = _template_node(
+        {"bing_search_url": {"value": "https://api.bing.microsoft.com/v7.0/search", "type": "str"}},
+        node_type="BingSearchAPIComponent",
+    )
+    node["data"]["node"]["display_name"] = "Bing Search API"
+    with pytest.raises(TweakRefusedError, match="bing_search_url"):
+        process_tweaks({"nodes": [node]}, tweaks)
+    assert node["data"]["node"]["template"]["bing_search_url"]["value"] == (
+        "https://api.bing.microsoft.com/v7.0/search"
+    )
+
+
+@pytest.mark.parametrize(
+    ("child_type", "field_name"),
+    [("BingSearchAPIComponent", "bing_search_url"), ("SQLComponent", "database_url")],
+)
+def test_process_tweaks_refuses_group_proxy_to_protected_field(child_type: str, field_name: str):
+    """A group proxy cannot turn an ordinary-looking outer field into a sink override."""
+    child_id = f"{child_type}-abc12"
+    original = "https://stored.example/sink"
+    proxy_name = f"{field_name}_{child_id}"
+    child = {
+        "id": child_id,
+        "data": {
+            "type": child_type,
+            "node": {"template": {field_name: {"value": original, "type": "str"}}},
+        },
+    }
+    outer = _template_node(
+        {
+            proxy_name: {
+                "value": original,
+                "type": "str",
+                "proxy": {"id": child_id, "field": field_name},
+            },
+            "label": {"value": "before", "type": "str"},
+        },
+        node_type="GroupNode",
+    )
+    outer["data"]["node"]["flow"] = {"data": {"nodes": [child]}}
+    graph_data = {"nodes": [outer]}
+
+    with pytest.raises(TweakRefusedError, match=proxy_name):
+        process_tweaks(graph_data, {"n": {proxy_name: "https://attacker.example/sink", "label": "after"}})
+
+    assert outer["data"]["node"]["template"][proxy_name]["value"] == original
+    assert outer["data"]["node"]["template"]["label"]["value"] == "before"
+    assert child["data"]["node"]["template"][field_name]["value"] == original
+
+
+def test_process_tweaks_accepts_group_proxy_to_ordinary_field():
+    child = _template_node({"query": {"value": "before", "type": "str"}}, node_type="SearchComponent")
+    child["id"] = "SearchComponent-abc12"
+    outer = _template_node(
+        {
+            "query_SearchComponent-abc12": {
+                "value": "before",
+                "type": "str",
+                "proxy": {"id": child["id"], "field": "query"},
+            }
+        },
+        node_type="GroupNode",
+    )
+    outer["data"]["node"]["flow"] = {"data": {"nodes": [child]}}
+
+    process_tweaks({"nodes": [outer]}, {"n": {"query_SearchComponent-abc12": "after"}})
+
+    assert outer["data"]["node"]["template"]["query_SearchComponent-abc12"]["value"] == "after"
+
+
+def test_graph_tweaks_refuse_group_proxy_to_protected_field():
+    child_id = "BingSearchAPI-abc12"
+    proxy_name = f"bing_search_url_{child_id}"
+    original = "https://api.bing.microsoft.com/v7.0/search"
+    vertex = MagicMock(spec=Vertex)
+    vertex.id = "group-1"
+    vertex.data = {
+        "type": "GroupNode",
+        "node": {
+            "template": {
+                proxy_name: {
+                    "value": original,
+                    "type": "str",
+                    "proxy": {"id": child_id, "field": "bing_search_url"},
+                }
+            },
+            "flow": {
+                "data": {
+                    "nodes": [
+                        {
+                            "id": child_id,
+                            "data": {
+                                "type": "BingSearchAPI",
+                                "node": {"template": {"bing_search_url": {"value": original, "type": "str"}}},
+                            },
+                        }
+                    ]
+                }
+            },
+        },
+    }
+    graph = MagicMock()
+    graph.vertices = [vertex]
+
+    with pytest.raises(TweakRefusedError, match=proxy_name):
+        process_tweaks_on_graph(graph, {vertex.id: {proxy_name: "https://attacker.example/search"}})
+
+    assert vertex.data["node"]["template"][proxy_name]["value"] == original
+    vertex.update_raw_params.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("child_type", "field_name", "child_field_type", "group_field_type", "expected_result"),
+    [
+        ("SearchComponent", "k", "str", "str", "accepted"),
+        ("SQLComponent", "database_url", "str", "str", "refused"),
+        ("SearchComponent", "custom_source", "code", "str", "refused"),
+    ],
+)
+def test_graph_tweaks_check_child_field_after_group_expansion(
+    child_type: str, field_name: str, child_field_type: str, group_field_type: str, expected_result: str
+):
+    """A copied proxy is inert, while the child's protected field still refuses tweaks."""
+    child_id = f"{child_type}-abc12"
+    child_field = {"name": field_name, "value": "before", "type": child_field_type, "show": True, "advanced": False}
+    child = {
+        "id": child_id,
+        "type": "genericNode",
+        "data": {
+            "id": child_id,
+            "type": child_type,
+            "node": {
+                "template": {"_type": child_type, field_name: child_field},
+                "base_classes": [],
+                "outputs": [],
+            },
+        },
+    }
+    group = {
+        "id": "group-1",
+        "type": "genericNode",
+        "data": {
+            "id": "group-1",
+            "type": "Group",
+            "node": {
+                "template": {
+                    field_name: {
+                        **child_field,
+                        "type": group_field_type,
+                        "proxy": {"id": child_id, "field": field_name},
+                    },
+                },
+                "flow": {"data": {"nodes": [child], "edges": []}},
+            },
+        },
+    }
+
+    graph = Graph.from_payload({"nodes": [group], "edges": []}, instantiate_components=False)
+    vertex = graph.get_vertex(child_id)
+    assert vertex.data["node"]["template"][field_name]["proxy"] == {"id": child_id, "field": field_name}
+    assert "flow" not in vertex.data["node"]
+
+    if expected_result == "refused":
+        with pytest.raises(TweakRefusedError, match=field_name):
+            process_tweaks_on_graph(graph, {child_id: {field_name: "after"}})
+        assert vertex.data["node"]["template"][field_name]["value"] == "before"
+    else:
+        process_tweaks_on_graph(graph, {child_id: {field_name: "after"}})
+
+        assert vertex.raw_params[field_name] == "after"
+
+
+def test_process_tweaks_refuses_nested_group_proxy_to_protected_field():
+    bing = _template_node({"bing_search_url": {"value": "stored", "type": "str"}}, node_type="BingSearchAPI")
+    bing["id"] = "BingSearchAPI-1"
+    inner = _template_node(
+        {
+            "search_url": {
+                "value": "stored",
+                "type": "str",
+                "proxy": {"id": bing["id"], "field": "bing_search_url"},
+            }
+        },
+        node_type="GroupNode",
+    )
+    inner["id"] = "inner-group"
+    inner["data"]["node"]["flow"] = {"data": {"nodes": [bing]}}
+    outer = _template_node(
+        {
+            "search_url": {
+                "value": "stored",
+                "type": "str",
+                "proxy": {"id": inner["id"], "field": "search_url"},
+            }
+        },
+        node_type="GroupNode",
+    )
+    outer["data"]["node"]["flow"] = {"data": {"nodes": [inner]}}
+
+    with pytest.raises(TweakRefusedError, match="search_url"):
+        process_tweaks({"nodes": [outer]}, {"n": {"search_url": "https://attacker.example"}})
+
+    assert outer["data"]["node"]["template"]["search_url"]["value"] == "stored"
+
+
+@pytest.mark.parametrize("flow_data", [None, []])
+def test_process_tweaks_refuses_malformed_group_proxy_without_server_error(flow_data):
+    outer = _template_node(
+        {
+            "search_url": {
+                "value": "stored",
+                "type": "str",
+                "proxy": {"id": "missing-child", "field": "bing_search_url"},
+            }
+        },
+        node_type="GroupNode",
+    )
+    outer["data"]["node"]["flow"] = {"data": flow_data}
+
+    with pytest.raises(TweakRefusedError, match="search_url"):
+        process_tweaks({"nodes": [outer]}, {"n": {"search_url": "https://attacker.example"}})
+
+
+def test_process_tweaks_cannot_retarget_ordinary_group_proxy_to_bing():
+    ordinary = _template_node({"query": {"value": "stored", "type": "str"}}, node_type="SearchComponent")
+    ordinary["id"] = "SearchComponent-1"
+    bing = _template_node({"bing_search_url": {"value": "stored", "type": "str"}}, node_type="BingSearchAPI")
+    bing["id"] = "BingSearchAPI-1"
+    outer = _template_node(
+        {
+            "query": {
+                "value": "stored",
+                "type": "str",
+                "proxy": {"id": ordinary["id"], "field": "query"},
+            },
+            "label": {"value": "before", "type": "str"},
+        },
+        node_type="GroupNode",
+    )
+    outer["data"]["node"]["flow"] = {"data": {"nodes": [ordinary, bing]}}
+
+    with pytest.raises(TweakRefusedError, match="query"):
+        process_tweaks(
+            {"nodes": [outer]},
+            {
+                "n": {
+                    "query": {
+                        "value": "https://attacker.example",
+                        "proxy": {"id": bing["id"], "field": "bing_search_url"},
+                    },
+                    "label": "after",
+                }
+            },
+        )
+
+    template = outer["data"]["node"]["template"]
+    assert template["query"]["value"] == "stored"
+    assert template["query"]["proxy"] == {"id": ordinary["id"], "field": "query"}
+    assert template["label"]["value"] == "before"
+
+
+def test_process_tweaks_allows_proxy_key_in_dict_value():
+    node = _template_node({"config": {"value": {}, "type": "dict"}})
+
+    process_tweaks({"nodes": [node]}, {"n": {"config": {"proxy": "ordinary data"}}})
+
+    assert node["data"]["node"]["template"]["config"]["value"] == {"proxy": "ordinary data"}
+
+
+@pytest.mark.parametrize("node_type", _BING_NODE_TYPES)
+def test_graph_tweaks_cannot_redirect_bing_credential(node_type: str):
+    """Streaming runs enforce the same destination boundary on a built graph."""
+    vertex = MagicMock(spec=Vertex)
+    vertex.id = "BingSearchAPI-1"
+    vertex.data = {
+        "type": node_type,
+        "node": {
+            "template": {"bing_search_url": {"value": "https://api.bing.microsoft.com/v7.0/search", "type": "str"}}
+        },
+    }
+    graph = MagicMock()
+    graph.vertices = [vertex]
+
+    with pytest.raises(TweakRefusedError, match="bing_search_url"):
+        process_tweaks_on_graph(graph, {vertex.id: {"bing_search_url": "https://attacker.example/search"}})
+
+    assert vertex.data["node"]["template"]["bing_search_url"]["value"] == "https://api.bing.microsoft.com/v7.0/search"
+    vertex.update_raw_params.assert_not_called()
 
 
 def test_apply_tweaks_blocks_code_named_field():
@@ -176,6 +515,75 @@ def test_apply_tweaks_smart_transform_blocks_instruction_allows_data():
 
     assert node["data"]["node"]["template"]["filter_instruction"]["value"] == "uppercase the text"
     assert node["data"]["node"]["template"]["sample_size"]["value"] == 25
+
+
+def test_runtime_file_validation_failure_is_atomic_across_the_graph(monkeypatch):
+    """A later invalid FileInput tweak must not leave any cached vertex half-mutated."""
+    from lfx.processing.process import process_tweaks_on_graph
+    from lfx.utils.file_path_security import LocalFileAccessError
+
+    settings_service = MagicMock()
+    settings_service.settings.restrict_local_file_access = False
+    monkeypatch.setattr("lfx.utils.file_path_security.get_settings_service", lambda: settings_service)
+
+    class _G:
+        user_id = "attacker"
+        flow_id = "attacker-flow"
+        source_flow_id = "trusted-source-flow"
+        vertices = []
+
+    graph = _G()
+
+    def real_shaped(vertex_id, *, load_from_db):
+        vertex = MagicMock(spec=Vertex)
+        vertex.id = vertex_id
+        vertex.graph = graph
+        vertex.data = {
+            "node": {
+                "template": {
+                    "path": {
+                        "type": "file",
+                        "_input_type": "FileInput",
+                        "value": "attacker/original.txt",
+                        "load_from_db": load_from_db,
+                    }
+                }
+            }
+        }
+        vertex.params = {"path": "attacker/original.txt"}
+        vertex.raw_params = {"path": "attacker/original.txt"}
+        vertex.load_from_db_fields = ["path"] if load_from_db else []
+
+        def update_raw_params(new_params, *, overwrite=False):
+            assert overwrite is True
+            validated = ParameterHandler(vertex, storage_service=None).process_runtime_params(dict(new_params))
+            vertex.raw_params.update(validated)
+            vertex.params = vertex.raw_params.copy()
+
+        vertex.update_raw_params.side_effect = update_raw_params
+        return vertex
+
+    safe = real_shaped("safe", load_from_db=False)
+    invalid = real_shaped("invalid", load_from_db=True)
+    graph.vertices = [safe, invalid]
+
+    with pytest.raises(LocalFileAccessError):
+        process_tweaks_on_graph(
+            graph,
+            {
+                "safe": {"path": "trusted-source-flow/source.txt"},
+                "invalid": {"path": {"file_path": r"attacker\..\outside.txt", "load_from_db": False}},
+            },
+        )
+
+    assert safe.raw_params == {"path": "attacker/original.txt"}
+    assert safe.params == {"path": "attacker/original.txt"}
+    assert safe.load_from_db_fields == []
+    assert invalid.raw_params == {"path": "attacker/original.txt"}
+    assert invalid.params == {"path": "attacker/original.txt"}
+    assert invalid.load_from_db_fields == ["path"]
+    safe.update_raw_params.assert_not_called()
+    invalid.update_raw_params.assert_not_called()
 
 
 # The intended code/sandbox inputs for code-execution component types that expose

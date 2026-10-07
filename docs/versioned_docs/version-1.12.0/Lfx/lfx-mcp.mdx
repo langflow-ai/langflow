@@ -1,0 +1,168 @@
+---
+title: Build flows with the LFX MCP server
+slug: /lfx-mcp
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
+
+Use `lfx-mcp` to connect a coding agent to a running Langflow instance, and then build, validate, and run flows from your terminal.
+
+Your MCP client starts `lfx-mcp` as a local standard stdio subprocess.
+The server calls the Langflow REST API, so flows that the agent creates appear in the Langflow UI.
+
+`lfx-mcp` differs from these other MCP options:
+
+* [Use Langflow as an MCP server](./mcp-server): Expose existing flows as tools that clients can call.
+* [Use Langflow as an MCP client](./mcp-client): Call MCP servers from components on the canvas.
+
+For Bob (IBM) and Claude Code, you can also use the guided setup in Langflow under **Settings** → <Icon name="Terminal" aria-hidden="true" /> **Langflow MCP Client**.
+For more information, see [Langflow MCP Client for coding agents](./langflow-mcp-client).
+
+## Prerequisites
+
+* A running Langflow instance
+* A [Langflow API key](./api-keys-and-authentication)
+* An LLM provider API key available in Langflow, typically as a [global variable](./configuration-global-variables)
+* [`uv`](https://docs.astral.sh/uv/getting-started/installation/), or `lfx` installed with `uv pip install lfx`
+* [Claude Code](https://docs.anthropic.com/en/docs/claude-code), or another MCP client that supports stdio servers
+
+## Connect an agent and build a flow
+
+To connect an agent and create a flow on your Langflow server, follow these steps:
+
+1. Add `lfx-mcp` to your MCP client.
+
+    Use `uvx --from lfx lfx-mcp`.
+    There is no standalone `lfx-mcp` package on PyPI; the binary ships inside the `lfx` package.
+
+    To add the server in Claude Code, run:
+
+    ```bash
+    claude mcp add langflow \
+      -e LANGFLOW_SERVER_URL=http://localhost:7860 \
+      -e LANGFLOW_API_KEY=<YOUR_LANGFLOW_API_KEY> \
+      -- uvx --from lfx lfx-mcp
+    ```
+
+    To add the server in Claude Desktop or another stdio client, create an MCP server entry that runs `lfx-mcp` and sets the same environment variables:
+
+    <Tabs>
+    <TabItem value="uvx" label="uvx (recommended)" default>
+
+    ```json
+    {
+      "mcpServers": {
+        "langflow": {
+          "command": "uvx",
+          "args": ["--from", "lfx", "lfx-mcp"],
+          "env": {
+            "LANGFLOW_SERVER_URL": "http://localhost:7860",
+            "LANGFLOW_API_KEY": "<YOUR_LANGFLOW_API_KEY>"
+          }
+        }
+      }
+    }
+    ```
+
+    </TabItem>
+    <TabItem value="installed" label="lfx installed">
+
+    ```json
+    {
+      "mcpServers": {
+        "langflow": {
+          "command": "lfx-mcp",
+          "env": {
+            "LANGFLOW_SERVER_URL": "http://localhost:7860",
+            "LANGFLOW_API_KEY": "<YOUR_LANGFLOW_API_KEY>"
+          }
+        }
+      }
+    }
+    ```
+
+    </TabItem>
+    </Tabs>
+
+    On macOS, Claude Desktop stores this configuration in `~/Library/Application Support/Claude/claude_desktop_config.json`.
+
+    | Variable | Description | Default |
+    | --- | --- | --- |
+    | `LANGFLOW_SERVER_URL` | URL of your Langflow instance | `http://localhost:7860` |
+    | `LANGFLOW_API_KEY` | Langflow API key | None |
+
+    If you omit `LANGFLOW_API_KEY`, the agent can call the `login` tool with your Langflow username and password.
+
+2. Confirm that the server is registered.
+
+    ```bash
+    claude mcp list
+    ```
+
+    The output includes an entry similar to the following:
+
+    ```
+    langflow: uvx --from lfx lfx-mcp
+    ```
+
+3. Start the agent, and then ask it to build a flow.
+
+    ```bash
+    claude
+    ```
+
+    Enter a prompt such as the following:
+
+    ```text
+    Create a simple agent chatbot flow in Langflow using OpenAI, validate the flow,
+    and then run it with the message "What is Langflow?"
+    ```
+
+    The agent usually does the following:
+
+    1. Discovers component types with `search_component_types` or `describe_component_type`
+    2. Creates the flow in one request with `create_flow_from_spec`
+    3. Validates connections with `validate_flow`
+    4. Runs the flow with `run_flow`, and then returns the response
+
+    The new flow appears in the Langflow UI at your server URL.
+
+    The `create_flow_from_spec` tool accepts a compact text specification for nodes, edges, and configuration:
+
+    ```text
+    name: My Chatbot
+    description: A simple chatbot
+
+    nodes:
+      A: ChatInput
+      B: OpenAIModel
+      C: ChatOutput
+
+    edges:
+      A.message -> B.input_value
+      B.text_output -> C.input_value
+
+    config:
+      B.model_name: gpt-4o-mini
+    ```
+
+    To confirm type names and input and output names before you write edges, use `describe_component_type`.
+    Connecting through `component_as_tool` enables tool mode for agent tool wiring.
+
+    The MCP client discovers the full tool list from the server.
+    In addition to building and running flows, agents can do the following:
+
+    * List, duplicate, rename, export, and delete flows
+    * Create flows from starter projects
+    * Batch several tool calls with `$N.field` references between steps
+    * Call `notify_done` when edits are finished so that the Langflow UI refreshes
+
+## See also
+
+* [Langflow MCP Client for coding agents](./langflow-mcp-client)
+* [Use Langflow as an MCP server](./mcp-server)
+* [Use Langflow as an MCP client](./mcp-client)
+* [About LFX](./lfx-overview)
+* [Install LFX](./lfx-install)

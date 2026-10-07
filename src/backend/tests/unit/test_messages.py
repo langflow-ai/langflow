@@ -54,14 +54,19 @@ async def created_messages(async_session):  # noqa: ARG001
 
 @pytest.mark.usefixtures("client")
 def test_get_messages():
+    flow_id, user_id = uuid4(), uuid4()
     add_messages(
         [
             Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
-        ]
+        ],
+        flow_id=flow_id,
+        user_id=user_id,
     )
     limit = 2
-    messages = get_messages(sender="User", session_id="session_id2", limit=limit, order="ASC")
+    messages = get_messages(
+        sender="User", session_id="session_id2", flow_id=flow_id, user_id=user_id, limit=limit, order="ASC"
+    )
     assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
@@ -69,14 +74,19 @@ def test_get_messages():
 
 @pytest.mark.usefixtures("client")
 async def test_aget_messages():
+    flow_id, user_id = uuid4(), uuid4()
     await aadd_messages(
         [
             Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
-        ]
+        ],
+        flow_id=flow_id,
+        user_id=user_id,
     )
     limit = 2
-    messages = await aget_messages(sender="User", session_id="session_id2", limit=limit, order="ASC")
+    messages = await aget_messages(
+        sender="User", session_id="session_id2", flow_id=flow_id, user_id=user_id, limit=limit, order="ASC"
+    )
     assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
@@ -232,33 +242,36 @@ async def test_aadd_messagetables_allows_cancellation_to_interrupt_rollback():
 @pytest.mark.usefixtures("client")
 def test_delete_messages():
     session_id = "new_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="New Test message", sender="User", sender_name="User", session_id=session_id)
-    add_messages([message])
-    messages = get_messages(sender="User", session_id=session_id)
+    add_messages([message], flow_id=flow_id, user_id=user_id)
+    messages = get_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 1
-    delete_messages(session_id)
-    messages = get_messages(sender="User", session_id=session_id)
+    delete_messages(session_id, flow_id=flow_id, user_id=user_id)
+    messages = get_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 0
 
 
 @pytest.mark.usefixtures("client")
 async def test_adelete_messages():
     session_id = "new_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="New Test message", sender="User", sender_name="User", session_id=session_id)
-    await aadd_messages([message])
-    messages = await aget_messages(sender="User", session_id=session_id)
+    await aadd_messages([message], flow_id=flow_id, user_id=user_id)
+    messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 1
-    await adelete_messages(session_id)
-    messages = await aget_messages(sender="User", session_id=session_id)
+    await adelete_messages(session_id, flow_id=flow_id, user_id=user_id)
+    messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 0
 
 
 @pytest.mark.usefixtures("client")
 async def test_store_message():
     session_id = "stored_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="Stored message", sender="User", sender_name="User", session_id=session_id)
-    await astore_message(message)
-    stored_messages = await aget_messages(sender="User", session_id=session_id)
+    await astore_message(message, flow_id=flow_id, user_id=user_id)
+    stored_messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message"
 
@@ -266,9 +279,10 @@ async def test_store_message():
 @pytest.mark.usefixtures("client")
 async def test_astore_message():
     session_id = "stored_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="Stored message", sender="User", sender_name="User", session_id=session_id)
-    await astore_message(message)
-    stored_messages = await aget_messages(sender="User", session_id=session_id)
+    await astore_message(message, flow_id=flow_id, user_id=user_id)
+    stored_messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message"
 
@@ -299,7 +313,32 @@ def test_convert_to_langchain(method_name):
     assert len(list(iterator)) == expected_len
 
 
-def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
+@pytest.fixture
+def attachment_upload_dir(tmp_path, monkeypatch):
+    """Exercise attachment parsing inside an authorized local upload namespace."""
+    from langflow.services.deps import get_settings_service
+    from lfx.services.storage.local import LocalStorageService
+    from lfx.utils.file_path_security import file_access_scope
+    from lfx.utils.image import create_image_content_dict
+
+    storage_dir = tmp_path / "storage"
+    scope_id = str(uuid4())
+    upload_dir = storage_dir / scope_id
+    upload_dir.mkdir(parents=True)
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "storage_type", "local")
+    monkeypatch.setattr(settings_service.settings, "restrict_local_file_access", True)
+    monkeypatch.setattr(settings_service.settings, "config_dir", str(storage_dir))
+    storage = LocalStorageService(session_service=None, settings_service=settings_service)
+    monkeypatch.setattr("lfx.schema.image.get_storage_service", lambda: storage)
+    monkeypatch.setattr("lfx.utils.image.get_storage_service", lambda: storage)
+    create_image_content_dict.cache_clear()
+    with file_access_scope((scope_id,)):
+        yield upload_dir
+    create_image_content_dict.cache_clear()
+
+
+def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch, attachment_upload_dir):
     events: list[str] = []
 
     def record(event: str, **_kwargs):
@@ -310,12 +349,14 @@ def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
         SimpleNamespace(debug=record, warning=record, error=lambda *_args, **_kwargs: None),
     )
 
+    unsupported_path = attachment_upload_dir / "file.unsupported"
+    unsupported_path.write_bytes(b"\x00unsupported attachment canary")
     message = Message(
         text="Hello",
         sender="User",
         sender_name="User",
         session_id="session-id",
-        files=["nonexistent.unsupported"],
+        files=[str(unsupported_path)],
     )
 
     lc_message = message.to_lc_message()
@@ -325,8 +366,8 @@ def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
     assert any("Skipping attachment during message conversion" in event for event in events)
 
 
-def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
-    csv_path = tmp_path / "table.csv"
+def test_to_lc_message_keeps_supported_csv_attachments_as_text(attachment_upload_dir):
+    csv_path = attachment_upload_dir / "table.csv"
     csv_path.write_text("name,role\nAda,Engineer\n", encoding="utf-8")
 
     message = Message(
@@ -347,8 +388,8 @@ def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
     assert "name,role" in lc_message.content[1]["text"]
 
 
-def test_to_lc_message_keeps_supported_image_attachments(tmp_path):
-    image_path = tmp_path / "image.png"
+def test_to_lc_message_keeps_supported_image_attachments(attachment_upload_dir):
+    image_path = attachment_upload_dir / "image.png"
     image_content = base64.b64decode(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
     )
@@ -370,8 +411,8 @@ def test_to_lc_message_keeps_supported_image_attachments(tmp_path):
     assert lc_message.content[1]["type"] == "image_url"
 
 
-def test_to_lc_message_skips_oversized_file_attachments(tmp_path):
-    big_path = tmp_path / "big.txt"
+def test_to_lc_message_skips_oversized_file_attachments(attachment_upload_dir):
+    big_path = attachment_upload_dir / "big.txt"
 
     big_size = MAX_ATTACHMENT_SIZE_BYTES + 1
     with big_path.open("wb") as handle:

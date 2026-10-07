@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
-import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
+import { useGetMessageHistory } from "@/controllers/API/queries/messages/use-get-message-history";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
@@ -188,17 +188,13 @@ export default function IOModal({
     (state) => state.setCurrentSessionId,
   );
 
+  const messageHistory = useGetMessageHistory({
+    id: currentFlowId,
+    sessionId: visibleSession,
+    enabled: open,
+  });
   const { isFetched: messagesFetched, refetch: refetchMessages } =
-    useGetMessagesQuery(
-      {
-        mode: "union",
-        id: currentFlowId,
-        params: {
-          session_id: visibleSession,
-        },
-      },
-      { enabled: open },
-    );
+    messageHistory;
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValue = useUtilityStore((state) => state.setChatValueStore);
@@ -236,14 +232,13 @@ export default function IOModal({
       window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
     }
     if (newChatOnPlayground && !sessionsLoading) {
+      // "New chat" sends under the generated `sessionId`. Select it by id: the
+      // refetched list is newest first and may not be complete.
+      const newSessionId = sessionId;
       const handleRefetchAndSetSession = async () => {
         try {
-          const result = await refetchSessions();
-          if (result.data?.sessions && result.data.sessions.length > 0) {
-            setvisibleSession(
-              result.data.sessions[result.data.sessions.length - 1],
-            );
-          }
+          await refetchSessions();
+          setvisibleSession(newSessionId);
         } catch (error) {
           console.error("Error refetching sessions:", error);
         }
@@ -499,6 +494,7 @@ export default function IOModal({
                 setSelectedViewField={setSelectedViewField}
                 haveChat={haveChat}
                 messagesFetched={messagesFetched}
+                messageHistory={messageHistory}
                 sessionId={sessionId}
                 sendMessage={sendMessage}
                 canvasOpen={canvasOpen}

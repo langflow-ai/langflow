@@ -5,6 +5,14 @@ on:
     paths:
       - "scripts/ci/**"
       - ".github/workflows/ci-scripts-test.yml"
+      - ".github/workflows/backend-unit-tests.yml"
+      - ".github/workflows/python_test.yml"
+      - ".github/workflows/store_pytest_durations.yml"
+      - ".github/workflows/test-coverage-advisor.yml"
+      - ".github/workflows/release.yml"
+      - "pyproject.toml"
+      - "src/bundles/*/pyproject.toml"
+      - "src/bundles/lfx-bundles/src/lfx_bundles/*/__init__.py"
       - "src/backend/base/langflow/api/build.py"
       - "src/backend/base/langflow/api/v1/a2a.py"
       - "src/backend/base/langflow/api/v1/chat.py"
@@ -42,7 +50,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install orjson packaging pytest requests
+        run: pip install orjson packaging pytest pytest-xdist pytest-rerunfailures pytest-timeout pyyaml requests
 
       - name: Run CI script tests
         run: python -m pytest scripts/ci/ -v

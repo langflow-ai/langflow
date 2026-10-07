@@ -4,10 +4,14 @@ The built-in file-reading components (File, Directory, JSON/CSV-to-Data) accept 
 path from a tenant-controlled input field. Without restriction a tenant can read arbitrary
 server files (``/etc/passwd``, the SQLite DB, secrets) or other tenants' uploads.
 
-When ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is enabled, resolved local file paths must stay
-within the authenticated user's or executing flow's storage subdirectory under
-``settings.config_dir``. The check is a no-op when the setting is disabled (OSS default), so
-single-tenant deployments keep the existing "read any local file by absolute path" behavior.
+When ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is enabled (the default), resolved local file paths
+must stay within the authenticated user's or executing flow's storage subdirectory under
+``settings.config_dir``. The check is a no-op when the setting is explicitly disabled, which
+single-tenant deployments may do to keep the legacy "read any local file by absolute path"
+behavior. UNC/device paths are denied in either mode before resolution because Windows may
+connect to the remote host while resolving them. Reading the setting fails closed: if the
+settings service is unavailable the restriction is treated as enabled, because the default is
+on and a fail-open read would drop containment for every caller without an operator opting out.
 
 Reserved-secret denial: the storage data directory IS ``config_dir``, which also holds the
 server-managed secret files as siblings of the per-flow upload subdirectories — the Fernet
@@ -21,6 +25,7 @@ would disclose every tenant's stored credentials.
 from __future__ import annotations
 
 import contextlib
+import contextvars
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -28,11 +33,61 @@ from lfx.logging import logger
 from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
+
+
+_current_file_access_scopes: contextvars.ContextVar[tuple[str, ...] | None] = contextvars.ContextVar(
+    "lfx_current_file_access_scopes", default=None
+)
+
+
+@contextlib.contextmanager
+def file_access_scope(scope_ids: Iterable[object]) -> Iterator[None]:
+    """Bind trusted graph storage scopes while components read message attachments."""
+    token = _current_file_access_scopes.set(tuple(str(scope) for scope in scope_ids))
+    try:
+        yield
+    finally:
+        _current_file_access_scopes.reset(token)
+
+
+def enforce_current_file_access(file_path: str | Path) -> Path:
+    """Confine a local read to the executing graph, or the storage-root floor outside a run.
+
+    Message payloads cannot establish their own access scope. Component execution binds
+    trusted user/flow scopes, including public source-flow provenance, for these reads.
+    Trusted callers outside a graph still cannot read server-managed secrets or escape
+    storage unless the operator explicitly disables local-file restriction.
+    """
+    scope_ids = _current_file_access_scopes.get()
+    return enforce_local_file_access(file_path, scope_ids=scope_ids, allow_storage_root=scope_ids is None)
+
+
+def enforce_current_storage_key_scope(path: str) -> None:
+    """Check a normalized object-storage key against the executing graph's trusted scopes.
+
+    Trusted standalone callers have no tenant scope to enforce. A graph with missing
+    scopes must fail closed instead of being mistaken for a standalone caller.
+    """
+    scope_ids = _current_file_access_scopes.get()
+    if scope_ids is None:
+        return
+    if not scope_ids:
+        msg = "Object-storage access requires an authenticated user or flow scope."
+        raise StorageNamespaceError(msg)
+    enforce_storage_key_scope(path, scope_ids)
 
 
 class LocalFileAccessError(ValueError):
-    """Raised when a resolved path escapes the allowed storage root under restriction."""
+    """Raised when a local path is unsafe or escapes the allowed storage scope."""
+
+
+class StorageNamespaceError(LocalFileAccessError):
+    """Raised when a storage key addresses a namespace the executing graph does not own.
+
+    Subclasses :class:`LocalFileAccessError` so existing handlers that treat a containment
+    failure as a caller error (e.g. the 400 mapping in the build API) cover this denial too.
+    """
 
 
 # Server-managed secret/key file names that live directly under config_dir (see auth.py:
@@ -43,15 +98,23 @@ _RESERVED_SECRET_FILENAMES = frozenset({"secret_key", "private_key.pem", "public
 
 
 def is_local_file_access_restricted() -> bool:
-    """Return True if local file access is restricted to the storage directory."""
+    """Return True if local file access is restricted to the storage directory.
+
+    Fails CLOSED. ``get_settings_service()`` returns ``None`` when service creation fails, so
+    this read can raise. The setting defaults to True, so answering False there would hand back
+    the opposite of the configured default and silently drop containment for every caller
+    (``enforce_local_file_access``, the FileInput tweak path, and the sqlite/duckdb database-URL
+    and local-Git-clone checks in ``ssrf_protection``). The single-tenant opt-out is honored
+    only when the setting is actually readable.
+    """
     try:
         return bool(get_settings_service().settings.restrict_local_file_access)
-    except Exception:  # noqa: BLE001 - settings service may be unavailable; fail open to default
+    except Exception:  # noqa: BLE001 - settings service may be unavailable; fail closed to the default
         logger.warning(
             "Could not read restrict_local_file_access setting; treating local file restriction "
-            "as DISABLED (fail-open to default). Local-file containment is not being enforced."
+            "as ENABLED (fail-closed). Local file paths outside the storage scope are denied."
         )
-        return False
+        return True
 
 
 def _reserved_secret_paths(data_dir: Path) -> set[Path]:
@@ -115,7 +178,77 @@ def component_file_access_scopes(component: object) -> tuple[str, ...]:
     return tuple(scopes)
 
 
-def _scope_roots(data_dir: Path, scope_ids: Iterable[object] | None) -> tuple[Path, ...]:
+def enforce_storage_key_scope(path: str, scope_ids: Iterable[object] | None) -> tuple[str, str]:
+    """Split a ``"<namespace>/<file_name>"`` storage key and verify the caller may address it.
+
+    Storage keys are the internal addressing scheme for uploaded files: ``<namespace>`` is the
+    uploading user's id (``/api/v2/files``) or a flow id (legacy per-flow uploads), and it selects
+    a per-principal directory under ``config_dir`` (local storage) or object prefix (S3). The value
+    arrives from a tenant-controlled component input field, so an unvalidated namespace lets one
+    tenant address another tenant's uploads — the *shape* of the path ends up deciding access.
+
+    Unlike :func:`enforce_local_file_access` this check is NOT gated on
+    ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS``. Reading a local *server* file by absolute path is a
+    documented single-tenant feature that the flag exists to turn off; addressing another
+    principal's storage namespace is never legitimate, so it is rejected unconditionally. This
+    mirrors the namespace check already applied to unauthenticated public builds by
+    ``langflow.api.utils.flow_utils.validate_public_files``.
+
+    Args:
+        path: The caller-supplied storage key.
+        scope_ids: Storage namespaces the executing graph owns. An empty/None value means there is
+            no tenant boundary to enforce (standalone ``lfx run``, scripted graphs), and the key is
+            accepted; served executions always carry at least the caller's user id or the flow id.
+
+    Returns:
+        tuple[str, str]: The validated ``(namespace, file_name)`` pair.
+
+    Raises:
+        StorageNamespaceError: If the key is malformed, the file name carries path separators or
+            traversal sequences, or the namespace is outside the given scopes.
+    """
+    namespace, separator, file_name = str(path).partition("/")
+    if not separator or not namespace or not file_name:
+        msg = f"Invalid storage path '{path}'. Expected '<namespace>/<file_name>'."
+        raise StorageNamespaceError(msg)
+
+    # Stored file names are single path segments (the storage backends reject separators on
+    # write), so anything else here is an attempt to climb out of the namespace directory —
+    # e.g. "<own_id>/../<victim_id>/secret.txt" would otherwise pass the scope check below.
+    if ".." in file_name or any(char in file_name for char in ("/", "\\", "\x00")):
+        msg = "Invalid storage file name: contains path separators or traversal sequences."
+        raise StorageNamespaceError(msg)
+
+    if isinstance(scope_ids, (str, bytes)):
+        scope_ids = (scope_ids,)
+    scopes = {str(scope).strip().casefold() for scope in scope_ids or ()}
+    scopes.discard("")
+    if not scopes:
+        return namespace, file_name
+
+    if namespace.casefold() not in scopes:
+        msg = (
+            "Access to a storage namespace outside the authenticated user's or executing flow's scope is not permitted."
+        )
+        raise StorageNamespaceError(msg)
+    return namespace, file_name
+
+
+def validate_storage_key(component: object, path: str) -> tuple[str, str]:
+    """Component-facing wrapper around :func:`enforce_storage_key_scope`.
+
+    Resolves the executing graph's storage scopes from the component and applies the same
+    namespace-ownership contract used at the vertex parameter boundary.
+    """
+    return enforce_storage_key_scope(path, component_file_access_scopes(component))
+
+
+def _scope_roots(
+    data_dir: Path,
+    scope_ids: Iterable[object] | None,
+    *,
+    allow_storage_root: bool = False,
+) -> tuple[Path, ...]:
     """Build validated storage roots for the current authenticated user/flow."""
     if isinstance(scope_ids, (str, bytes)):
         scope_ids = (scope_ids,)
@@ -132,6 +265,9 @@ def _scope_roots(data_dir: Path, scope_ids: Iterable[object] | None) -> tuple[Pa
         if root not in roots:
             roots.append(root)
 
+    if allow_storage_root and data_dir not in roots:
+        roots.append(data_dir)
+
     if not roots:
         msg = (
             "Local-file access requires an authenticated user or flow scope "
@@ -145,31 +281,58 @@ def enforce_local_file_access(
     resolved_path: str | Path,
     *,
     scope_ids: Iterable[object] | None = None,
+    allow_storage_root: bool = False,
 ) -> Path:
     """Ensure a local path is inside the current user/flow storage scope when restricted.
 
     Symlinks are resolved before the containment check so a symlink inside the storage dir
-    cannot point outside it.
+    cannot point outside it. UNC/device paths are always denied before resolution.
 
     Args:
         resolved_path: A filesystem path. It is re-resolved here (``Path.resolve()``) so that
             symlinks are followed before the containment check; the caller need not pre-resolve it.
         scope_ids: Authenticated user id and/or executing flow id. At least one valid scope is
             required in restricted mode; paths under other storage subdirectories are denied.
+        allow_storage_root: Widen the containment boundary to ``config_dir`` itself and stop
+            requiring a scope. This is a defense-in-depth FLOOR, not tenant isolation: it keeps
+            arbitrary server files (and the reserved secret/key/DB files) out of reach but does
+            not separate one tenant's uploads from another's. Use it only from shared plumbing
+            that cannot see a user/flow scope and whose paths were already scope-checked by the
+            component that produced them; always prefer passing ``scope_ids``.
 
     Returns:
         The resolved path as a ``Path`` object when allowed.
 
     Raises:
-        LocalFileAccessError: If the restriction is enabled and the path escapes the
-            authenticated user's or executing flow's storage scope.
+        LocalFileAccessError: If the path is a UNC/device path, or if restriction is enabled
+            and the path escapes the authenticated user's or executing flow's storage scope.
     """
+    # On Windows, resolving a UNC or device path can open an SMB connection before
+    # the scope check runs. Deny it before any filesystem operation in either mode.
+    raw_path = str(resolved_path)
+    # Windows accepts either slash as a separator, including mixed UNC prefixes
+    # such as ``\\/server`` and ``/\\server``.
+    if raw_path.replace("\\", "/").startswith("//"):
+        msg = "Access to UNC and device file paths is not permitted."
+        raise LocalFileAccessError(msg)
+
     path = Path(resolved_path)
     if not is_local_file_access_restricted():
         return path
 
-    data_dir = Path(get_settings_service().settings.config_dir).resolve()
-    allowed_roots = _scope_roots(data_dir, scope_ids)
+    # The restriction is in force, so an unreadable settings service must deny rather than
+    # raise an opaque AttributeError from ``None.settings``: same fail-closed reasoning as
+    # ``is_local_file_access_restricted``, and it keeps the denial on the LocalFileAccessError
+    # contract callers already map to a 400.
+    try:
+        data_dir = Path(get_settings_service().settings.config_dir).resolve()
+    except Exception as e:  # settings unavailable while the restriction is in force; deny
+        msg = (
+            "Access to local file paths is disabled because the storage directory could not be "
+            "resolved (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true). Use an uploaded file instead."
+        )
+        raise LocalFileAccessError(msg) from e
+    allowed_roots = _scope_roots(data_dir, scope_ids, allow_storage_root=allow_storage_root)
     try:
         candidate = path.resolve()
     except OSError as e:
@@ -184,8 +347,11 @@ def enforce_local_file_access(
         raise LocalFileAccessError(msg)
 
     # The storage dir is config_dir, which also holds server-managed secret/key/DB files as
-    # siblings of the upload subdirs. Scope containment rejects them; retain exact denial as
-    # defense in depth in case storage layout or scope handling changes later.
+    # siblings of the upload subdirs. Scope containment rejects them only when a scope narrows
+    # the root below config_dir -- under ``allow_storage_root`` config_dir IS an allowed root,
+    # so this exact-path denial is the control that keeps secret_key/private_key.pem/the SQLite
+    # DB out of reach, not a redundant second line. Covered by
+    # test_read_file_bytes_denies_reserved_secret_key.
     if candidate in _reserved_secret_paths(data_dir):
         msg = "Access to this server-managed file is not permitted (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true)."
         raise LocalFileAccessError(msg)

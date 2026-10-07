@@ -842,4 +842,419 @@ async def test_delete_messages_sessions_exceeds_limit(client: AsyncClient, logge
     data = response.json()
     assert "Cannot delete more than 500 sessions" in data["detail"]
     # After a 400 error, no deletions should have occurred
+
+
+@pytest.fixture
+async def many_timestamped_messages(active_user):
+    """Create enough messages to exercise the default/clamped history window (issue #15023)."""
+    async with session_scope() as session:
+        flow = Flow(name="test_flow_for_message_pagination", user_id=active_user.id, data={"nodes": [], "edges": []})
+        session.add(flow)
+        await session.flush()
+
+        base_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        messages = [
+            MessageCreate(
+                text=f"Pagination message {index}",
+                sender="User",
+                # Zero-padded so sender_name order matches timestamp order.
+                sender_name=f"Sender {index:03d}",
+                session_id="paginated-session",
+                timestamp=base_timestamp + timedelta(minutes=index),
+            )
+            for index in range(250)
+        ]
+        messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for message in messagetables:
+            message.flow_id = flow.id
+        return await aadd_messagetables(messagetables, session)
+
+
+@pytest.fixture
+async def shared_virtual_flow_messages(active_user):
+    """Create messages under the authenticated virtual flow id used by /messages/shared (issue #15023)."""
+    async with session_scope() as session:
+        from langflow.api.utils.flow_utils import compute_virtual_flow_id
+
+        source_flow_id = uuid4()
+        virtual_flow_id = compute_virtual_flow_id(active_user.id, source_flow_id, principal_type="user")
+        base_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        messages = [
+            MessageCreate(
+                text=f"Shared message {index}",
+                sender="User",
+                sender_name="User",
+                session_id="shared-session",
+                timestamp=base_timestamp + timedelta(minutes=index),
+            )
+            for index in range(250)
+        ]
+        messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for message in messagetables:
+            message.flow_id = virtual_flow_id
+        await aadd_messagetables(messagetables, session)
+        return source_flow_id
+
+
+@pytest.mark.usefixtures("many_timestamped_messages")
+async def test_get_messages_defaults_to_bounded_recent_window(client: AsyncClient, logged_in_headers):
+    """Without a limit the endpoint must return only the newest default-limit window (issue #15023)."""
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "paginated-session"},
+    )
+
+    assert response.status_code == 200, response.text
+    messages = response.json()
+    assert len(messages) == monitor_api._MESSAGES_DEFAULT_LIMIT
+    # The newest window is returned chronologically (ascending).
+    assert messages[0]["text"] == "Pagination message 150"
+    assert messages[-1]["text"] == "Pagination message 249"
+
+
+@pytest.mark.usefixtures("many_timestamped_messages")
+async def test_get_messages_clamps_limit_to_server_side_maximum(client: AsyncClient, logged_in_headers):
+    """A client-requested limit above the server maximum is clamped, not honored (issue #15023)."""
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "paginated-session", "limit": 100000},
+    )
+
+    assert response.status_code == 200, response.text
+    messages = response.json()
+    assert len(messages) == monitor_api._MESSAGES_MAX_LIMIT
+    assert messages[0]["text"] == "Pagination message 50"
+    assert messages[-1]["text"] == "Pagination message 249"
+
+
+@pytest.mark.usefixtures("many_timestamped_messages")
+async def test_get_messages_offset_pages_through_older_messages(client: AsyncClient, logged_in_headers):
+    """Offset skips the most recent rows so callers can page through older history (issue #15023)."""
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "paginated-session", "limit": 100, "offset": 100},
+    )
+
+    assert response.status_code == 200, response.text
+    messages = response.json()
+    assert len(messages) == 100
+    assert messages[0]["text"] == "Pagination message 50"
+    assert messages[-1]["text"] == "Pagination message 149"
+
+
+@pytest.mark.usefixtures("many_timestamped_messages")
+async def test_get_messages_non_timestamp_order_by_pages_newest_window_by_timestamp(
+    client: AsyncClient, logged_in_headers
+):
+    """A non-timestamp order_by must still select the newest window by timestamp (issue #15023).
+
+    The fixture's sender_name is zero-padded and monotonic with timestamp, so
+    sorting by sender_name under the old (order-by-then-paginate) behavior would
+    have returned the alphabetically-first (i.e. oldest) rows instead of the
+    newest window.
+    """
+    # Newest 100 rows by timestamp, displayed in sender_name order.
+    first_page = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "paginated-session", "order_by": "sender_name", "limit": 100},
+    )
+
+    assert first_page.status_code == 200, first_page.text
+    assert [message["text"] for message in first_page.json()] == [
+        f"Pagination message {index}" for index in range(150, 250)
+    ]
+
+    # offset=100 pages to the next-older window: every returned row has an older
+    # timestamp than every row on the first page (index 50..149 < 150..249).
+    second_page = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "paginated-session", "order_by": "sender_name", "limit": 100, "offset": 100},
+    )
+
+    assert second_page.status_code == 200, second_page.text
+    assert [message["text"] for message in second_page.json()] == [
+        f"Pagination message {index}" for index in range(50, 150)
+    ]
+
+
+@pytest.mark.usefixtures("shared_virtual_flow_messages")
+async def test_get_shared_messages_defaults_to_bounded_recent_window(
+    client: AsyncClient, logged_in_headers, shared_virtual_flow_messages
+):
+    """The shared-flow history endpoint must also bound the default window (issue #15023)."""
+    response = await client.get(
+        "api/v1/monitor/messages/shared",
+        headers=logged_in_headers,
+        params={"source_flow_id": str(shared_virtual_flow_messages)},
+    )
+
+    assert response.status_code == 200, response.text
+    messages = response.json()
+    assert len(messages) == monitor_api._MESSAGES_DEFAULT_LIMIT
+    assert messages[0]["text"] == "Shared message 150"
+    assert messages[-1]["text"] == "Shared message 249"
     # The test validates the error response only
+
+
+@pytest.fixture
+async def many_sessions_messages(active_user):
+    """Create 250 messages across 250 distinct sessions to exercise session-list bounding (issue #15463)."""
+    async with session_scope() as session:
+        flow = Flow(name="test_flow_for_session_pagination", user_id=active_user.id, data={"nodes": [], "edges": []})
+        session.add(flow)
+        await session.flush()
+
+        base_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        messages = [
+            MessageCreate(
+                text=f"Session message {index}",
+                sender="User",
+                sender_name="User",
+                session_id=f"session-{index:03d}",
+                timestamp=base_timestamp + timedelta(minutes=index),
+            )
+            for index in range(250)
+        ]
+        messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for message in messagetables:
+            message.flow_id = flow.id
+        return await aadd_messagetables(messagetables, session)
+
+
+@pytest.mark.parametrize("with_flow_id", [True, False])
+async def test_get_message_sessions_defaults_to_bounded_recent_sessions(
+    client: AsyncClient, logged_in_headers, many_sessions_messages, with_flow_id
+):
+    """Without a limit the session list is capped to the newest default-limit sessions (issue #15463)."""
+    flow_id = str(many_sessions_messages[0].flow_id)
+    response = await client.get(
+        "api/v1/monitor/messages/sessions",
+        headers=logged_in_headers,
+        params={"flow_id": flow_id} if with_flow_id else {},
+    )
+
+    assert response.status_code == 200, response.text
+    sessions = response.json()
+    assert len(sessions) == monitor_api._MESSAGES_DEFAULT_LIMIT
+    # Most recent sessions first.
+    assert sessions[0] == "session-249"
+    assert sessions[-1] == "session-150"
+
+
+@pytest.mark.parametrize("with_flow_id", [True, False])
+async def test_get_message_sessions_clamps_limit_to_server_side_maximum(
+    client: AsyncClient, logged_in_headers, many_sessions_messages, with_flow_id
+):
+    """A client-requested limit above the server maximum is clamped (issue #15463)."""
+    flow_id = str(many_sessions_messages[0].flow_id)
+    response = await client.get(
+        "api/v1/monitor/messages/sessions",
+        headers=logged_in_headers,
+        params={"flow_id": flow_id, "limit": 100000} if with_flow_id else {"limit": 100000},
+    )
+
+    assert response.status_code == 200, response.text
+    sessions = response.json()
+    assert len(sessions) == monitor_api._MESSAGES_MAX_LIMIT
+    assert sessions[0] == "session-249"
+    assert sessions[-1] == "session-050"
+
+
+@pytest.fixture
+async def many_shared_sessions_messages(active_user):
+    """Create 250 messages across 250 distinct sessions under the shared virtual flow id (issue #15463)."""
+    async with session_scope() as session:
+        from langflow.api.utils.flow_utils import compute_virtual_flow_id
+
+        source_flow_id = uuid4()
+        virtual_flow_id = compute_virtual_flow_id(active_user.id, source_flow_id, principal_type="user")
+        base_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        messages = [
+            MessageCreate(
+                text=f"Shared session message {index}",
+                sender="User",
+                sender_name="User",
+                session_id=f"session-{index:03d}",
+                timestamp=base_timestamp + timedelta(minutes=index),
+            )
+            for index in range(250)
+        ]
+        messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for message in messagetables:
+            message.flow_id = virtual_flow_id
+        await aadd_messagetables(messagetables, session)
+        return source_flow_id
+
+
+@pytest.mark.usefixtures("many_shared_sessions_messages")
+async def test_get_shared_message_sessions_defaults_to_bounded_recent_sessions(
+    client: AsyncClient, logged_in_headers, many_shared_sessions_messages
+):
+    """Without a limit the shared session list is capped to the newest default-limit sessions (issue #15463)."""
+    response = await client.get(
+        "api/v1/monitor/messages/shared/sessions",
+        headers=logged_in_headers,
+        params={"source_flow_id": str(many_shared_sessions_messages)},
+    )
+
+    assert response.status_code == 200, response.text
+    sessions = response.json()
+    assert len(sessions) == monitor_api._MESSAGES_DEFAULT_LIMIT
+    # Most recent sessions first.
+    assert sessions[0] == "session-249"
+    assert sessions[-1] == "session-150"
+
+
+@pytest.mark.usefixtures("many_shared_sessions_messages")
+async def test_get_shared_message_sessions_clamps_limit_to_server_side_maximum(
+    client: AsyncClient, logged_in_headers, many_shared_sessions_messages
+):
+    """A client-requested limit above the server maximum is clamped for the shared session list (issue #15463)."""
+    response = await client.get(
+        "api/v1/monitor/messages/shared/sessions",
+        headers=logged_in_headers,
+        params={"source_flow_id": str(many_shared_sessions_messages), "limit": 100000},
+    )
+
+    assert response.status_code == 200, response.text
+    sessions = response.json()
+    assert len(sessions) == monitor_api._MESSAGES_MAX_LIMIT
+    assert sessions[0] == "session-249"
+    assert sessions[-1] == "session-050"
+
+
+@pytest.mark.usefixtures("many_shared_sessions_messages")
+async def test_get_shared_message_sessions_respects_explicit_limit_below_default(
+    client: AsyncClient, logged_in_headers, many_shared_sessions_messages
+):
+    """An explicit limit below the default returns exactly that many newest sessions (issue #15463)."""
+    response = await client.get(
+        "api/v1/monitor/messages/shared/sessions",
+        headers=logged_in_headers,
+        params={"source_flow_id": str(many_shared_sessions_messages), "limit": 10},
+    )
+
+    assert response.status_code == 200, response.text
+    sessions = response.json()
+    assert len(sessions) == 10
+    assert sessions[0] == "session-249"
+    assert sessions[-1] == "session-240"
+
+
+@pytest.fixture
+async def shared_sessions_tied_timestamps(active_user):
+    """Create 3 distinct sessions whose latest messages share one timestamp (issue #15463)."""
+    async with session_scope() as session:
+        from langflow.api.utils.flow_utils import compute_virtual_flow_id
+
+        source_flow_id = uuid4()
+        virtual_flow_id = compute_virtual_flow_id(active_user.id, source_flow_id, principal_type="user")
+        same_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        messages = [
+            MessageCreate(
+                text=f"Tied session message {session_id}",
+                sender="User",
+                sender_name="User",
+                session_id=session_id,
+                timestamp=same_timestamp,
+            )
+            for session_id in ("s-a", "s-b", "s-c")
+        ]
+        messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for message in messagetables:
+            message.flow_id = virtual_flow_id
+        await aadd_messagetables(messagetables, session)
+        return source_flow_id
+
+
+@pytest.mark.usefixtures("shared_sessions_tied_timestamps")
+async def test_get_shared_message_sessions_deterministic_tie_break_ordering(
+    client: AsyncClient, logged_in_headers, shared_sessions_tied_timestamps
+):
+    """Sessions whose latest messages share a timestamp are ordered deterministically by session_id (issue #15463)."""
+    response = await client.get(
+        "api/v1/monitor/messages/shared/sessions",
+        headers=logged_in_headers,
+        params={"source_flow_id": str(shared_sessions_tied_timestamps)},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json() == ["s-c", "s-b", "s-a"]
+
+
+@pytest.mark.parametrize("shared", [False, True])
+@pytest.mark.parametrize(("limit", "expected_status"), [(0, 200), (-1, 422)])
+async def test_session_list_limit_validation(
+    client: AsyncClient,
+    logged_in_headers,
+    many_sessions_messages,
+    many_shared_sessions_messages,
+    shared,
+    limit,
+    expected_status,
+):
+    if shared:
+        endpoint = "api/v1/monitor/messages/shared/sessions"
+        params = {"source_flow_id": str(many_shared_sessions_messages), "limit": limit}
+    else:
+        endpoint = "api/v1/monitor/messages/sessions"
+        params = {"flow_id": str(many_sessions_messages[0].flow_id), "limit": limit}
+
+    response = await client.get(endpoint, headers=logged_in_headers, params=params)
+
+    assert response.status_code == expected_status, response.text
+    if expected_status == 200:
+        assert response.json() == [f"session-{index:03d}" for index in range(249, 149, -1)]
+
+
+async def test_bulk_session_list_excludes_other_users_sessions(
+    client: AsyncClient, logged_in_headers, cross_user_messages
+):
+    response = await client.get("api/v1/monitor/messages/sessions", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json() == ["owned-session"]
+    assert cross_user_messages["foreign_session_id"] not in response.json()
+
+
+@pytest.mark.parametrize("shared", [False, True])
+async def test_session_list_orders_by_latest_message_activity(
+    client: AsyncClient,
+    logged_in_headers,
+    many_sessions_messages,
+    many_shared_sessions_messages,
+    active_user,
+    shared,
+):
+    if shared:
+        endpoint = "api/v1/monitor/messages/shared/sessions"
+        source_flow_id = many_shared_sessions_messages
+        flow_id = monitor_api._compute_shared_message_flow_id(active_user.id, source_flow_id)
+        params = {"source_flow_id": str(source_flow_id), "limit": 2}
+    else:
+        endpoint = "api/v1/monitor/messages/sessions"
+        flow_id = many_sessions_messages[0].flow_id
+        params = {"flow_id": str(flow_id), "limit": 2}
+    async with session_scope() as session:
+        message = MessageTable.model_validate(
+            MessageCreate(
+                text="New activity in an old session",
+                sender="User",
+                sender_name="User",
+                session_id="session-000",
+                timestamp=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            ),
+            from_attributes=True,
+        )
+        message.flow_id = flow_id
+        await aadd_messagetables([message], session)
+
+    response = await client.get(endpoint, headers=logged_in_headers, params=params)
+
+    assert response.status_code == 200, response.text
+    assert response.json() == ["session-000", "session-249"]

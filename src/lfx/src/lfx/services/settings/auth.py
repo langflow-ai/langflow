@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
-from passlib.context import CryptContext
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -15,6 +14,7 @@ from lfx.services.settings.constants import (
     MINIMUM_SECRET_KEY_LENGTH,
     SHORT_SECRET_KEY_WARNING,
 )
+from lfx.services.settings.password_hashing import PasswordContext
 from lfx.services.settings.utils import (
     derive_public_key_from_private,
     generate_rsa_key_pair,
@@ -65,6 +65,16 @@ class AuthSettings(BaseSettings):
     ALGORITHM: JWTAlgorithm = Field(
         default=JWTAlgorithm.HS256,
         description="JWT signing algorithm. Use RS256 or RS512 for asymmetric signing (recommended for production).",
+    )
+    CACHE_SIGNING_KEY: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "Shared secret used to sign external cache payloads (Redis). Set this to the same value on every "
+            "worker and replica that shares a cache backend; entries signed by one instance are otherwise "
+            "unverifiable by another. When unset, a per-deployment key is generated in CONFIG_DIR, which only "
+            "covers processes that share that directory."
+        ),
+        frozen=False,
     )
     ACCESS_TOKEN_EXPIRE_SECONDS: int = 60 * 60  # 1 hour
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 24 * 7  # 7 days
@@ -329,7 +339,7 @@ class AuthSettings(BaseSettings):
         ),
     )
 
-    pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    pwd_context: PasswordContext = Field(default_factory=PasswordContext)
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 

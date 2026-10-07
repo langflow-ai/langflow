@@ -19,7 +19,7 @@ from lfx.io import IntInput, MessageTextInput, Output, TabInput
 from lfx.schema import Data, DataFrame, Message
 from lfx.utils.request_utils import get_user_agent
 from lfx.utils.ssrf_protection import SSRFProtectionError, is_ssrf_protection_enabled, validate_and_resolve_url
-from lfx.utils.ssrf_transport import create_ssrf_protected_sync_client
+from lfx.utils.ssrf_transport import create_ssrf_protected_sync_client, pin_host_for_url
 
 DEFAULT_MAX_RESULTS = 5
 DEFAULT_MAX_CONTENT_LENGTH = 2000
@@ -178,7 +178,7 @@ class WebSearchComponent(Component):
     def _build_safe_client(self, url: str, validated_ips: list[str]) -> httpx.Client:
         """Create a sync HTTP client with DNS pinning when SSRF protection applies."""
         if is_ssrf_protection_enabled() and validated_ips:
-            hostname = urlparse(url).hostname
+            hostname = pin_host_for_url(url)
             if hostname:
                 return create_ssrf_protected_sync_client(hostname=hostname, validated_ips=validated_ips)
         return httpx.Client()

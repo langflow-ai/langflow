@@ -113,15 +113,19 @@ const config = {
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
           // Versioning configuration
-          lastVersion: "1.11.0",
+          lastVersion: "1.12.0",
           versions: {
             current: {
-              label: "1.12.x (Next)",
+              label: "1.13.x (Next)",
               path: "next",
+            },
+            "1.12.0": {
+              label: "1.12.x",
+              path: "",
             },
             "1.11.0": {
               label: "1.11.x",
-              path: "",
+              path: "1.11.0",
             },
             "1.10.0": {
               label: "1.10.x",
@@ -452,6 +456,10 @@ const config = {
               "/integrations-nvidia-g-assist",
               "/integrations-nvidia-system-assist",
             ]
+          },
+          {
+            to: "/next/guardrails",
+            from: "/next/guardrails-legacy",
           },
           {
             to: "/legacy-core-components",

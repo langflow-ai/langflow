@@ -187,3 +187,58 @@ describe("AssistantMessageBody — proposal-mode render (PR #12575 round 2)", ()
     expect(screen.getByTestId("assistant-flow-add-button")).toBeInTheDocument();
   });
 });
+
+describe("AssistantMessageBody — proposal stranded by a failed turn (LE-2324)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  /**
+   * The step budget can run out AFTER the agent built part of the flow. The
+   * backend forwards that partial ``set_flow`` and tells the user it is offered
+   * here, but the message also carries ``status: "error"``. The error branch
+   * used to return early, so the Apply/Dismiss card was unreachable and the
+   * rescued work could be neither applied nor refused.
+   */
+  function buildErroredProposalMessage(): AssistantMessage {
+    return {
+      ...buildProposalMessage(),
+      status: "error",
+      error:
+        "The agent ran out of steps before finishing. Try again, or break the request into smaller parts. The part of the flow that was already built is offered above — add it to the canvas to continue from there.",
+    };
+  }
+
+  it("should_render_the_flow_proposal_card_alongside_the_error_text", () => {
+    render(
+      <AssistantMessageBody
+        message={buildErroredProposalMessage()}
+        isGeneratingCode={false}
+      />,
+    );
+
+    expect(screen.getByTestId("assistant-flow-add-button")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("assistant-flow-dismiss-button"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/ran out of steps/)).toBeInTheDocument();
+  });
+
+  it("should_still_render_only_the_error_when_no_partial_flow_was_rescued", () => {
+    const {
+      pendingFlowProposal: _p,
+      flowProposalStatus: _s,
+      ...rest
+    } = buildErroredProposalMessage();
+
+    render(
+      <AssistantMessageBody
+        message={rest as AssistantMessage}
+        isGeneratingCode={false}
+      />,
+    );
+
+    expect(screen.queryByTestId("assistant-flow-add-button")).toBeNull();
+    expect(screen.getByText(/ran out of steps/)).toBeInTheDocument();
+  });
+});

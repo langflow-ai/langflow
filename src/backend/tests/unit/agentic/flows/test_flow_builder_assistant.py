@@ -15,6 +15,12 @@ from tests.api_keys import has_api_key
 
 
 class TestFlowBuilderPrompt:
+    def test_should_use_declared_configuration_constraints(self):
+        assert "exact, case-sensitive values" in FLOW_BUILDER_PROMPT
+        assert "`combobox` allows free-text" in FLOW_BUILDER_PROMPT
+        assert "within `range_spec` bounds" in FLOW_BUILDER_PROMPT
+        assert "does not apply any of its parameter changes" in FLOW_BUILDER_PROMPT
+
     def test_should_mention_search_components_tool(self):
         assert "search_components" in FLOW_BUILDER_PROMPT
 

@@ -34,6 +34,7 @@ export default function InputFileComponent({
   editNode = false,
   placeholder,
   allowFolderSelection = false,
+  ariaLabelledBy,
 }: InputProps<string, FileComponentType> & {
   allowFolderSelection?: boolean;
 }): JSX.Element {
@@ -317,6 +318,11 @@ export default function InputFileComponent({
                           "font-semibold",
                         )}
                         data-testid="button_open_file_management"
+                        aria-label={
+                          isList
+                            ? t("fileManager.selectFiles")
+                            : t("fileManager.selectFile")
+                        }
                       >
                         {disabled ? (
                           getPlaceholder(disabled, placeholder)
@@ -346,7 +352,7 @@ export default function InputFileComponent({
                   data-testid="input-file-component"
                   type="text"
                   className={cn(
-                    "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
+                    "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:outline-none focus:ring-0",
                     !value && "text-placeholder-foreground",
                     editNode && "h-6",
                   )}
@@ -354,7 +360,10 @@ export default function InputFileComponent({
                   readOnly
                   disabled={isDisabled}
                   onClick={handleButtonClick}
-                  aria-label={t("fileManager.selectFile")}
+                  aria-labelledby={ariaLabelledBy}
+                  aria-label={
+                    ariaLabelledBy ? undefined : t("fileManager.selectFile")
+                  }
                 />
               </div>
               <div>

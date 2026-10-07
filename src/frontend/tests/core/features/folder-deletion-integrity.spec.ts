@@ -15,8 +15,43 @@ import {
 // case that deletes every project. Keep those destructive transitions ordered.
 test.describe.configure({ mode: "serial" });
 
+const PROJECT_PATH_PREFIX = "/api/v1/projects/";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Deleting the last project leaves the home page re-rendering with a project
+// id that has just become undefined. It used to reach the network as
+// GET /api/v1/projects/undefined and come back 422, so watch every project
+// request these destructive tests make and keep non-id ones out.
+function collectInvalidProjectRequests(page: Page): string[] {
+  const invalidRequests: string[] = [];
+  page.on("request", (request) => {
+    const { pathname } = new URL(request.url());
+    if (!pathname.startsWith(PROJECT_PATH_PREFIX)) return;
+
+    // Everything past the prefix identifies a single project; the list route
+    // ends at the prefix and nested routes (download/, upload/) keep a slash.
+    const projectId = pathname.slice(PROJECT_PATH_PREFIX.length);
+    if (projectId === "" || projectId.includes("/")) return;
+    if (UUID_PATTERN.test(projectId)) return;
+
+    invalidRequests.push(`${request.method()} ${pathname}`);
+  });
+  return invalidRequests;
+}
+
+let invalidProjectRequests: string[] = [];
+
 test.beforeEach(async ({ page }, testInfo) => {
+  invalidProjectRequests = collectInvalidProjectRequests(page);
   await routeTestScopedDefaultFlowNames(page, testInfo, "folder-integrity");
+});
+
+test.afterEach(() => {
+  expect(
+    invalidProjectRequests,
+    "the frontend requested a project by an id that is not a UUID",
+  ).toEqual([]);
 });
 
 async function createAndRenameProject(page: Page, projectName: string) {

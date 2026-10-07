@@ -39,6 +39,7 @@ from lfx.schema.legacy_render import legacy_text, render_v1_content_blocks
 from lfx.schema.properties import Properties, Source
 from lfx.schema.validators import str_to_timestamp_validator, timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
+from lfx.utils.file_path_security import enforce_current_file_access, enforce_current_storage_key_scope
 from lfx.utils.image import create_image_content_dict
 from lfx.utils.mustache_security import safe_mustache_render
 from lfx.utils.secrets import is_secret_value
@@ -68,6 +69,21 @@ def _is_text_like_extension(file_path: Any) -> bool:
     if not suffix:
         return True
     return suffix in TEXT_FILE_TYPES
+
+
+def _is_image_attachment(file_path: str) -> bool:
+    """Return True for image attachments, including ones that only exist in remote storage.
+
+    On local storage the file is checked by its content, so a mislabelled binary is never sent as
+    an image. On S3 the path is a bucket key that PIL can't open, so it is judged by its extension —
+    the same image list ChatInput accepts.
+    """
+    from lfx.base.data.utils import IMG_FILE_TYPES
+    from lfx.services.deps import get_settings_service
+
+    if get_settings_service().settings.storage_type != "s3":
+        return is_image_file(file_path)
+    return Path(file_path).suffix.lstrip(".").lower() in IMG_FILE_TYPES
 
 
 class Message(Data):
@@ -502,7 +518,12 @@ class Message(Data):
 
     # Keep this async method for backwards compatibility
     def get_file_content_dicts(self, model_name: str | None = None):
+        """Convert accessible attachments to model content, skipping unsafe or unavailable files."""
+        from lfx.base.data.storage_utils import StorageServiceUnavailableError, require_storage_service, to_storage_path
+        from lfx.services.deps import get_settings_service, get_storage_service
+
         def _safe_attachment_name(value: Any) -> str | None:
+            """Return only the basename used to label an attachment in model input."""
             if isinstance(value, Image):
                 if not value.path:
                     return None
@@ -517,8 +538,13 @@ class Message(Data):
 
         content_dicts = []
         try:
+            storage_type = get_settings_service().settings.storage_type
+            if storage_type == "s3":
+                # Image encoding otherwise falls back to opening the path locally.
+                # An unavailable object store must never select that fallback.
+                require_storage_service(get_storage_service())
             files = get_file_paths(self.files)
-        except (OSError, TypeError, ValueError) as exc:
+        except (OSError, TypeError, ValueError, StorageServiceUnavailableError) as exc:
             logger.error(
                 "Error getting file paths",
                 error_type=type(exc).__name__,
@@ -526,13 +552,24 @@ class Message(Data):
             )
             return content_dicts
 
-        for file in files:
-            if isinstance(file, Image):
-                content_dicts.append(file.to_content_dict(flow_id=self.flow_id))
-                continue
-
+        for attachment in files:
+            file = attachment
             try:
-                if is_image_file(file):
+                if storage_type == "s3":
+                    file = to_storage_path(file.path if isinstance(file, Image) else file)
+                    enforce_current_storage_key_scope(file)
+                else:
+                    # Validate before image detection, which also opens the path, and
+                    # before any text parser or image encoder consumes stored history.
+                    path = file.path if isinstance(file, Image) else file
+                    path = str(enforce_current_file_access(path))
+                    file = Image(path=path) if isinstance(file, Image) else path
+
+                if isinstance(file, Image):
+                    content_dicts.append(file.to_content_dict(flow_id=self.flow_id))
+                    continue
+
+                if _is_image_attachment(file):
                     content_dicts.append(create_image_content_dict(file, None, model_name))
                     continue
 
@@ -549,8 +586,12 @@ class Message(Data):
                     )
                     continue
 
+                from lfx.base.data.storage_utils import get_file_size
+                from lfx.base.data.utils import parse_text_file_to_data
+
+                storage_path = to_storage_path(file)
                 try:
-                    file_size_bytes = Path(file).stat().st_size
+                    file_size_bytes = get_file_size(storage_path)
                 except (OSError, ValueError) as exc:
                     logger.warning(
                         "Skipping attachment during message conversion: could not stat file",
@@ -562,9 +603,7 @@ class Message(Data):
                 if file_size_bytes > MAX_ATTACHMENT_SIZE_BYTES:
                     continue
 
-                from lfx.base.data.utils import parse_text_file_to_data
-
-                parsed_file = parse_text_file_to_data(file, silent_errors=True)
+                parsed_file = parse_text_file_to_data(storage_path, silent_errors=True)
                 parsed_data = parsed_file.data if parsed_file else {}
                 parsed_text = parsed_data.get("text") if isinstance(parsed_data, dict) else None
                 if not parsed_text:
@@ -597,6 +636,21 @@ class Message(Data):
                     "Skipping unsupported attachment during message conversion",
                     error_type=type(exc).__name__,
                     file_name=_safe_attachment_name(file),
+                )
+                continue
+            except Exception as exc:  # noqa: BLE001
+                # Storage backends raise their own error types, outside this hierarchy: S3 only
+                # translates a 404 into FileNotFoundError and re-raises everything else (an
+                # AccessDenied from a role without GetObject, throttling, a network blip) as a
+                # botocore ClientError, which is not an OSError. One unreadable attachment must
+                # not take the whole message down with it, so it is skipped like any other
+                # failure — loudly, with the traceback, because an unexpected error here is
+                # usually a storage misconfiguration an operator needs to see.
+                logger.error(
+                    "Skipping attachment during message conversion: storage backend error",
+                    error_type=type(exc).__name__,
+                    file_name=_safe_attachment_name(file),
+                    exc_info=True,
                 )
                 continue
         return content_dicts
@@ -857,13 +911,47 @@ class ErrorMessage(Message):
     """A message class specifically for error messages with predefined error-specific attributes."""
 
     @staticmethod
+    def _coded_exception_message(exception: BaseException) -> str | None:
+        """Return the human-readable message of an exception that also carries a ``code``.
+
+        Reason-coded errors (for example ``ModelProviderPolicyError`` with
+        ``code="policy_blocked"``) raise with a message meant for the person
+        reading the error panel. Rendering only ``Code: policy_blocked`` --
+        prefixed by the Python class name -- told builders nothing about what
+        was blocked or who to ask.
+
+        Driver and SDK errors are coded too, but put nothing in ``args``: a Cassandra
+        ``SyntaxException`` carries the protocol status on ``.code`` and the parser text
+        on ``.message``/``__str__``. Reading only ``args`` made a mistyped table name
+        surface as ``Code: 8192`` while the real cause sat in the logs (LE-2352).
+        """
+        args = getattr(exception, "args", ())
+        if args and isinstance(args[0], str) and args[0].strip():
+            return args[0].strip()
+
+        # ``.message`` is the SDK convention for the human text; ``__str__`` is the
+        # fallback for drivers that only render it there.
+        message = getattr(exception, "message", None)
+        if isinstance(message, str) and message.strip():
+            return message.strip()
+
+        rendered = str(exception).strip()
+        return rendered or None
+
+    @staticmethod
     def _format_markdown_reason(exception: BaseException) -> str:
         """Format the error reason with markdown formatting."""
         reason = f"**{exception.__class__.__name__}**\n"
         if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
             reason += f" - **{exception.body.get('message')}**\n"
         elif hasattr(exception, "code"):
-            reason += f" - **Code: {exception.code}**\n"
+            message = ErrorMessage._coded_exception_message(exception)
+            if message:
+                reason = f"**{message}**\n - **Code: {exception.code}**\n"
+            else:
+                reason += f" - **Code: {exception.code}**\n"
+        elif isinstance(exception, OSError):
+            reason += f" - **Details: {exception!s}**\n"
         elif hasattr(exception, "args") and exception.args:
             reason += f" - **Details: {exception.args[0]}**\n"
         elif isinstance(exception, ValidationError):
@@ -880,7 +968,10 @@ class ErrorMessage(Message):
         elif hasattr(exception, "_message"):
             reason = f"{exception._message()}\n" if callable(exception._message) else f"{exception._message}\n"  # noqa: SLF001
         elif hasattr(exception, "code"):
-            reason = f"Code: {exception.code}\n"
+            message = ErrorMessage._coded_exception_message(exception)
+            reason = f"{message}\n" if message else f"Code: {exception.code}\n"
+        elif isinstance(exception, OSError):
+            reason = f"{exception!s}\n"
         elif hasattr(exception, "args") and exception.args:
             reason = f"{exception.args[0]}\n"
         elif isinstance(exception, ValidationError):
@@ -904,6 +995,7 @@ class ErrorMessage(Message):
         session_metadata: dict | None = None,
         *,
         include_traceback: bool = True,
+        context_note: str | None = None,
     ) -> None:
         # This is done to avoid circular imports
         if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
@@ -911,6 +1003,11 @@ class ErrorMessage(Message):
 
         plain_reason = self._format_plain_reason(exception)
         markdown_reason = self._format_markdown_reason(exception)
+        # Keep the original exception's formatting and metadata while adding
+        # diagnostic context to both the streamed text and the error details.
+        if context_note:
+            plain_reason = f"{plain_reason.rstrip()}\n\n{context_note}\n"
+            markdown_reason = f"{markdown_reason.rstrip()}\n\n{context_note}\n"
         # Get the sender ID
         if trace_name:
             match = re.search(r"\((.*?)\)", trace_name)

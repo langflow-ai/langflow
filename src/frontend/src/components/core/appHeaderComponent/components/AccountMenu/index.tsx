@@ -10,6 +10,7 @@ import {
 } from "@/constants/constants";
 import { useLogout } from "@/controllers/API/queries/auth";
 import { CustomAdminPageMenuItem } from "@/customization/components/custom-admin-page-menu-item";
+import { CustomHeaderMenuItemsTitle } from "@/customization/components/custom-header-menu-items-title";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -60,6 +61,7 @@ export const AccountMenu = () => {
       </HeaderMenuToggle>
       <HeaderMenuItems position="right" classNameSize="w-[272px]">
         <div className="divide-y divide-foreground/10">
+          <CustomHeaderMenuItemsTitle />
           <div>
             <div className="h-[44px] items-center px-4 pt-3">
               <div className="flex items-center justify-between">

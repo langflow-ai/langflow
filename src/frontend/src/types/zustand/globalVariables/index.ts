@@ -1,6 +1,7 @@
 import type { GlobalVariable } from "@/types/global_variables";
 
 export type GlobalVariablesStore = {
+  setGlobalVariables: (entities: GlobalVariable[]) => void;
   globalVariablesEntries: Array<string> | undefined;
   setGlobalVariablesEntries: (entries: Array<string>) => void;
   unavailableFields: { [name: string]: string };

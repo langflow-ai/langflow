@@ -652,6 +652,27 @@ describe("SidebarDraggableComponent", () => {
       expect(outerWrapper).not.toHaveAttribute("tabIndex");
     });
 
+    // WCAG 2.5.3 Label in Name (LE-2235): the badge is visible text, so the
+    // accessible name must contain "<name> Beta" / "<name> Legacy".
+    it("includes the Beta / Legacy badge text in the accessible name", () => {
+      const { rerender } = render(
+        <SidebarDraggableComponent {...defaultProps} beta />,
+      );
+      expect(screen.getByTestId(/testsectiontest component/i)).toHaveAttribute(
+        "aria-label",
+        "Add Test Component Beta to canvas",
+      );
+      expect(
+        screen.getByTestId("add-component-button-test-component"),
+      ).toHaveAttribute("aria-label", "Add Test Component Beta to canvas");
+
+      rerender(<SidebarDraggableComponent {...defaultProps} legacy />);
+      expect(screen.getByTestId(/testsectiontest component/i)).toHaveAttribute(
+        "aria-label",
+        "Add Test Component Legacy to canvas",
+      );
+    });
+
     it("should have add button with tabIndex -1", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 

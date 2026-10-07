@@ -5,7 +5,16 @@ import { PORT } from "./src/customization/config-constants";
 // Deliberately not 7860: that is the blocking suite's backend port.
 const LIVE_BACKEND_PORT = 7861;
 
-export default defineConfig(baseConfig, {
+// Spread the base config rather than passing it as defineConfig's first
+// argument. Multi-argument defineConfig CONCATENATES array options instead of
+// replacing them, so `defineConfig(baseConfig, { webServer: [...] })` starts the
+// base servers *and* these ones — five servers, two of them on port 3000, which
+// fails the run outright with "http://localhost:3000 is already used". Worse,
+// without the port clash the suite would drive the base frontend, whose proxy
+// targets the loopback-fixture backend, and every "live" assertion would pass
+// without ever reaching a real provider. Spreading overrides `webServer`.
+export default defineConfig({
+  ...baseConfig,
   testDir: "./tests/live",
   testIgnore: [],
   fullyParallel: false,

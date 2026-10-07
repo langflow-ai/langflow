@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from lfx.services.settings.constants import AGENTIC_VARIABLES, VARIABLES_TO_GET_FROM_ENVIRONMENT
 
@@ -29,6 +29,16 @@ class VariablesSettings(BaseModel):
     REST calls the API already authorizes. Note this is not the control over in-process code
     execution -- that is ``allow_custom_components``, which applies to the Assistant and to
     hand-written custom components alike.
+    """
+
+    assistant_max_message_length: int = Field(default=2000, ge=1)
+    """Maximum length, in characters, of a single message sent to the Langflow Assistant.
+
+    Enforced server-side on the assistant API entry points and mirrored to the UI through
+    ``/api/v1/config`` so the composer and the API agree on one number -- a UI cap below the
+    server's would silently truncate the prompt before it is ever sent. Raise it for
+    deployments whose users paste specs or schemas into the composer; the cost of a turn grows
+    with it, which is why it is capped at all.
     """
 
     variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT

@@ -1,5 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type React from "react";
+import { axe } from "@/utils/a11y-test";
 import type { ConnectionItem, EnvVarEntry } from "../types";
 
 jest.mock(
@@ -82,7 +84,9 @@ const defaultProps = {
   isDuplicateName: false,
 };
 
-function renderPanel(overrides: Partial<typeof defaultProps> = {}) {
+function renderPanel(
+  overrides: Partial<React.ComponentProps<typeof ConnectionPanel>> = {},
+) {
   const props = { ...defaultProps, ...overrides };
   return render(<ConnectionPanel {...props} />);
 }
@@ -394,5 +398,73 @@ describe("Global variable options", () => {
       envVars: [{ id: "ev-1", key: "TEST_KEY", value: "" }],
     });
     expect(screen.getByTestId("select-env-val-ev-1")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Accessibility
+// ---------------------------------------------------------------------------
+
+describe("Accessibility", () => {
+  it("should_have_no_axe_violations on the available-connections tab", async () => {
+    const { container } = renderPanel();
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("should_have_no_axe_violations on the create-connection tab", async () => {
+    const { container } = renderPanel({ connectionTab: "create" });
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("exposes the connection toggle as a real tablist with roving tabindex", () => {
+    renderPanel();
+
+    const availableTab = screen.getByRole("tab", {
+      name: "Available Connections",
+    });
+    const createTab = screen.getByRole("tab", { name: "Create Connection" });
+
+    expect(availableTab).toHaveAttribute("aria-selected", "true");
+    expect(availableTab).toHaveAttribute("tabindex", "0");
+    expect(createTab).toHaveAttribute("aria-selected", "false");
+    expect(createTab).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("moves focus and calls onTabChange via ArrowRight", async () => {
+    const user = userEvent.setup();
+    const onTabChange = jest.fn();
+    renderPanel({ onTabChange });
+
+    screen.getByRole("tab", { name: "Available Connections" }).focus();
+    await user.keyboard("{ArrowRight}");
+
+    expect(onTabChange).toHaveBeenCalledWith("create");
+  });
+
+  it("associates each tab with its panel via aria-controls", () => {
+    renderPanel();
+
+    const availableTab = screen.getByRole("tab", {
+      name: "Available Connections",
+    });
+    const controlsId = availableTab.getAttribute("aria-controls");
+    expect(controlsId).toBeTruthy();
+    expect(document.getElementById(controlsId as string)).toHaveAttribute(
+      "role",
+      "tabpanel",
+    );
+  });
+
+  // Regression guard: a bare "*" reads as "asterisk"/"star" to a screen
+  // reader, not "required" — it must be aria-hidden, with the real
+  // requiredness communicated via aria-required instead.
+  it("hides the connection name's required asterisk from assistive tech and exposes aria-required instead", () => {
+    renderPanel({ connectionTab: "create" });
+
+    expect(
+      screen.getByRole("textbox", { name: /Connection Name/ }),
+    ).toHaveAttribute("aria-required", "true");
   });
 });

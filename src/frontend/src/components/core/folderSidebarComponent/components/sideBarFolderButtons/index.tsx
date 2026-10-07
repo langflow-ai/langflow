@@ -328,6 +328,18 @@ const SideBarFoldersButtonsComponent = ({
               })),
             );
           },
+          onError: (err) => {
+            console.error(err);
+            // Put the stored name back: the rename did not happen
+            setFoldersNames((old) => ({
+              ...old,
+              [item.id]: item.name,
+            }));
+            setErrorData({
+              title: t("sidebar.renameError"),
+              list: extractApiErrorMessages(err),
+            });
+          },
         },
       );
     } else {
@@ -485,7 +497,7 @@ const SideBarFoldersButtonsComponent = ({
                                     }
                                   }}
                                   className={cn(
-                                    "flex-grow pr-16",
+                                    "flex-grow pr-8",
                                     hoveredFolderId === item.id && "bg-accent",
                                     checkHoveringFolder(item.id!),
                                   )}
@@ -509,7 +521,16 @@ const SideBarFoldersButtonsComponent = ({
                                           handleKeyDown={handleKeyDown}
                                         />
                                       ) : (
-                                        <span className="block w-0 grow truncate text-sm opacity-100">
+                                        <span
+                                          className="block w-0 grow truncate text-sm opacity-100"
+                                          // The sidebar cannot be widened, so a
+                                          // truncated name is otherwise
+                                          // unreadable. With one default project
+                                          // per user the list fills with rows
+                                          // that differ only in the truncated
+                                          // part.
+                                          title={getProjectDisplayName(item, t)}
+                                        >
                                           {getProjectDisplayName(item, t)}
                                         </span>
                                       )}

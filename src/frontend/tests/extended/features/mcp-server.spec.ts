@@ -12,8 +12,16 @@ import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-re
 import { useMcpServerListWithoutToolCounts } from "../../utils/mcp-server-list-without-tool-counts";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
 
+const MASKED_CREDENTIAL = "********";
+
 test.beforeEach(async ({ page }) => {
   await useMcpServerListWithoutToolCounts(page);
+});
+
+test.afterEach(async ({ page }) => {
+  // Saves/deletes refetch the server list. Finish those requests before teardown
+  // closes the page underneath the route.fetch used by the list helper.
+  await page.unrouteAll({ behavior: "wait" });
 });
 
 async function scrollMcpSidebarRowIntoView(page: Page, name: string) {
@@ -66,7 +74,7 @@ async function addMcpNodeFromSidebar(page: Page, name: string): Promise<void> {
     timeout: 30_000,
   });
   await expect(
-    page.getByRole("group", { name: "MCP Tools node" }).last(),
+    page.getByRole("application", { name: "MCP Tools node" }).last(),
   ).toBeVisible({
     timeout: 30_000,
   });
@@ -185,7 +193,7 @@ test(
       return document.body.classList.contains("dark");
     });
     for (const icon of await page
-      .getByRole("group", { name: "MCP Tools node" })
+      .getByRole("application", { name: "MCP Tools node" })
       .last()
       .getByTestId("icon-Mcp")
       .locator("path")
@@ -538,7 +546,7 @@ test(
       timeout: 30000,
     });
 
-    // Verify all fields persisted correctly
+    // Non-secret fields remain readable; management responses mask credentials.
     expect(await page.getByTestId("stdio-name-input").inputValue()).toBe(
       testName,
     );
@@ -552,18 +560,18 @@ test(
     expect(await page.getByTestId("stdio-env-key-0").last().inputValue()).toBe(
       testEnvKey1,
     );
-    expect(
-      await page.getByTestId("stdio-env-value-0").last().inputValue(),
-    ).toBe(testEnvValue1);
+    await expect(page.getByTestId("stdio-env-value-0").last()).toHaveValue(
+      MASKED_CREDENTIAL,
+    );
     expect(await page.getByTestId("stdio-env-key-1").last().inputValue()).toBe(
       testEnvKey2,
     );
-    expect(
-      await page.getByTestId("stdio-env-value-1").last().inputValue(),
-    ).toBe(testEnvValue2);
+    await expect(page.getByTestId("stdio-env-value-1").last()).toHaveValue(
+      MASKED_CREDENTIAL,
+    );
 
-    // Clean up - cancel the edit modal
-    await page.keyboard.press("Escape");
+    // Saving an unchanged editor must accept the masks as preserved credentials.
+    await saveMcpServer(page, testName, "PATCH");
 
     // Delete the test server
     await page
@@ -703,7 +711,7 @@ test(
       },
     );
 
-    // Verify all fields persisted correctly
+    // Non-secret fields remain readable; management responses mask credentials.
     expect(await page.getByTestId("http-name-input").inputValue()).toBe(
       testName,
     );
@@ -711,37 +719,30 @@ test(
     expect(await page.getByTestId("http-headers-key-0").inputValue()).toBe(
       testHeaderKey1,
     );
-    // Header values use InputComponent with global variables
-    expect(
-      await page
-        .getByTestId("popover-anchor-http-headers-value-0")
-        .first()
-        .inputValue(),
-    ).toBe(testHeaderValue1);
+    await expect(
+      page.getByTestId("popover-anchor-http-headers-value-0").first(),
+    ).toHaveValue(MASKED_CREDENTIAL);
     expect(await page.getByTestId("http-headers-key-1").inputValue()).toBe(
       testHeaderKey2,
     );
-    expect(
-      await page
-        .getByTestId("popover-anchor-http-headers-value-1")
-        .first()
-        .inputValue(),
-    ).toBe(testHeaderValue2);
+    await expect(
+      page.getByTestId("popover-anchor-http-headers-value-1").first(),
+    ).toHaveValue(MASKED_CREDENTIAL);
     expect(await page.getByTestId("http-env-key-0").inputValue()).toBe(
       testEnvKey1,
     );
-    expect(await page.getByTestId("http-env-value-0").inputValue()).toBe(
-      testEnvValue1,
+    await expect(page.getByTestId("http-env-value-0")).toHaveValue(
+      MASKED_CREDENTIAL,
     );
     expect(await page.getByTestId("http-env-key-1").inputValue()).toBe(
       testEnvKey2,
     );
-    expect(await page.getByTestId("http-env-value-1").inputValue()).toBe(
-      testEnvValue2,
+    await expect(page.getByTestId("http-env-value-1")).toHaveValue(
+      MASKED_CREDENTIAL,
     );
 
-    // Clean up - cancel the edit modal
-    await page.keyboard.press("Escape");
+    // Saving an unchanged editor must accept the masks as preserved credentials.
+    await saveMcpServer(page, testName, "PATCH");
 
     // Delete the test server
     await page

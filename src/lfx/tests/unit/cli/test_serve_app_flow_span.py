@@ -38,6 +38,16 @@ provider = TracerProvider()
 provider.add_span_processor(SimpleSpanProcessor(exporter))
 trace.set_tracer_provider(provider)
 
+# The server metric is the other half of a passing cell: a flow span says the run happened,
+# the duration histogram says the surface in front of it is instrumented at all. Installed
+# before the app is imported, because a meter provider is process-global and set once.
+from opentelemetry import metrics
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+
+reader = InMemoryMetricReader()
+metrics.set_meter_provider(MeterProvider(metric_readers=[reader]))
+
 from httpx import ASGITransport, AsyncClient
 
 from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app
@@ -75,7 +85,24 @@ async def main():
         for s in exporter.get_finished_spans()
         if s.name == "flow.execute"
     ]
-    print("PROBE_RESULT " + json.dumps({{"status_code": response.status_code, "spans": spans}}))
+
+    metric_names = []
+    data = reader.get_metrics_data()
+    for resource_metric in (data.resource_metrics if data else []):
+        for scope_metric in resource_metric.scope_metrics:
+            for metric in scope_metric.metrics:
+                metric_names.append(metric.name)
+
+    print(
+        "PROBE_RESULT "
+        + json.dumps(
+            {{
+                "status_code": response.status_code,
+                "spans": spans,
+                "metrics": sorted(set(metric_names)),
+            }}
+        )
+    )
 
 
 asyncio.run(main())
@@ -110,3 +137,102 @@ def test_the_native_serve_run_route_labels_its_flow_span():
     assert attrs["protocol"] == "lfx.serve"
     assert attrs["flow_id"] == FLOW_ID
     assert attrs["status"] == "ok"
+
+    # The other half of a passing cell: a flow span says the run happened, the server duration
+    # histogram says the surface in front of it is instrumented at all.
+    #
+    # Either name counts, deliberately. ``instrument_fastapi_app`` opts into the stable HTTP
+    # conventions, but the opt-in is read when OpenTelemetry's instrumentation package first
+    # initialises, which on this path already happened by the time the helper runs, so the app
+    # emits the pre-stable ``http.server.duration``. Measured, with the opt-in exported before
+    # the first lfx import for contrast:
+    #
+    #     default            -> http.server.duration, http.server.request.size
+    #     opt-in set earlier -> http.server.request.duration, http.server.request.body.size
+    #
+    # That is a real defect in the runtime, not in this cell, and pinning the stable name here
+    # would make this test fail for a reason it does not own. Pinning the legacy name would
+    # bake the defect in. So this asserts the histogram exists, and the naming is tracked
+    # separately.
+    duration_metrics = {"http.server.request.duration", "http.server.duration"}
+    assert duration_metrics & set(result["metrics"]), result["metrics"]
+
+
+# The N/A half of the runtime x protocol table: routes that belong to the langflow runtime and
+# must not exist on ``lfx serve``. The requirement is not merely "no span". It is that the
+# request fails loudly, because the failure mode worth guarding against is a route that quietly
+# accepts the call and runs nothing, which an operator reads as a working integration.
+NA_PROBE = f"""
+import asyncio, json
+
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+exporter = InMemorySpanExporter()
+provider = TracerProvider()
+provider.add_span_processor(SimpleSpanProcessor(exporter))
+trace.set_tracer_provider(provider)
+
+from httpx import ASGITransport, AsyncClient
+
+from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.graph.graph.base import Graph
+
+FLOW_ID = {FLOW_ID!r}
+
+# The langflow-runtime routes. Paths taken from the real decorators rather than invented, so
+# this keeps testing the actual surface if langflow ever moves them onto the serve app.
+NA_ROUTES = [
+    ("v1", f"/api/v1/run/{{FLOW_ID}}"),
+    ("webhook", f"/api/v1/webhook/{{FLOW_ID}}"),
+    ("mcp", "/api/v1/mcp/sse"),
+    ("mcp.v2", "/api/v2/mcp"),
+]
+
+
+def build_graph():
+    chat_input = ChatInput(_id="chat-input")
+    chat_output = ChatOutput(_id="chat-output")
+    chat_output.set(input_value=chat_input.message_response)
+    return Graph(chat_input, chat_output, flow_id=FLOW_ID)
+
+
+async def main():
+    registry = FlowRegistry()
+    registry.add(build_graph(), FlowMeta(id=FLOW_ID, relative_path="probe.json", title="probe"))
+    app = create_multi_serve_app(registry=registry)
+    app.state.expected_api_key = {API_KEY!r}
+
+    results = {{}}
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://probe") as client:
+        for cell, path in NA_ROUTES:
+            response = await client.post(
+                path,
+                json={{"input_value": "hello operator"}},
+                headers={{"x-api-key": {API_KEY!r}}},
+            )
+            results[cell] = response.status_code
+
+    provider.force_flush()
+    flow_spans = [s.name for s in exporter.get_finished_spans() if s.name == "flow.execute"]
+    print("PROBE_RESULT " + json.dumps({{"results": results, "flow_spans": flow_spans}}))
+
+
+asyncio.run(main())
+"""
+
+
+def test_langflow_only_routes_are_absent_from_lfx_serve():
+    """Every langflow-runtime route must 404 or 405 on the serve app, and run nothing."""
+    result = run_probe(NA_PROBE)
+
+    wrong = {cell: code for cell, code in result["results"].items() if code not in {404, 405}}
+    assert not wrong, f"langflow-only routes answered on lfx serve: {wrong}"
+
+    # The load-bearing half. A 404 alone would still pass if the app had somehow executed the
+    # flow on the way to the error, and a silent run is the failure this cell exists to catch.
+    assert result["flow_spans"] == [], result

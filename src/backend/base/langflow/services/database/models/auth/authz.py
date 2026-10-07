@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, UniqueConstraint, text
+from sqlalchemy.sql.naming import conv
 from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -170,7 +171,7 @@ class AuthzRoleAssignmentGrant(SQLModel, table=True):  # type: ignore[call-arg]
         CheckConstraint(
             "(source_kind = 'manual' AND provider_id IS NULL AND external_group IS NULL) "
             "OR (source_kind = 'idp' AND provider_id IS NOT NULL AND external_group IS NOT NULL)",
-            name="ck_authz_role_assignment_grant_source",
+            name=conv("ck_authz_role_assignment_grant_source"),
         ),
         Index(
             "uq_authz_role_assignment_grant_manual",
@@ -269,11 +270,11 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
         # partial unique indexes (which match on the lowercase form).
         CheckConstraint(
             "scope IN ('private', 'team', 'user', 'public')",
-            name="ck_authz_share_scope_enum",
+            name=conv("ck_authz_share_scope_enum"),
         ),
         CheckConstraint(
             "permission_level IN ('read', 'write', 'execute', 'admin')",
-            name="ck_authz_share_permission_enum",
+            name=conv("ck_authz_share_permission_enum"),
         ),
         # Targeted (TEAM/USER) shares require a target_id; untargeted
         # (PRIVATE/PUBLIC) shares forbid one. Matches the partial-unique-index
@@ -282,7 +283,7 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
         CheckConstraint(
             "(scope IN ('team', 'user') AND target_id IS NOT NULL) "
             "OR (scope IN ('private', 'public') AND target_id IS NULL)",
-            name="ck_authz_share_scope_target_consistency",
+            name=conv("ck_authz_share_scope_target_consistency"),
         ),
         Index(
             "uq_authz_share_targeted",
@@ -356,7 +357,7 @@ class AuthzAuditLog(SQLModel, table=True):  # type: ignore[call-arg]
         # not apply an authoritative directory snapshot.
         CheckConstraint(
             "result IN ('allow', 'deny', 'owner_override', 'skip')",
-            name="ck_authz_audit_log_result_enum",
+            name=conv("ck_authz_audit_log_result_enum"),
         ),
     )
 

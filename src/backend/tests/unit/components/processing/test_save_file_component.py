@@ -1,4 +1,5 @@
 import contextlib
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -312,6 +313,10 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 "lfx.components.files_and_knowledge.save_file.get_settings_service",
                 return_value=settings_service_mock,
             ),
+            patch(
+                "lfx.utils.file_path_security.get_settings_service",
+                return_value=settings_service_mock,
+            ),
         ):
             mock_db = AsyncMock()
             mock_session.return_value.__aenter__.return_value = mock_db
@@ -373,6 +378,10 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 ) as mock_get_user,
                 patch(
                     "lfx.components.files_and_knowledge.save_file.get_settings_service",
+                    return_value=settings_service_mock,
+                ),
+                patch(
+                    "lfx.utils.file_path_security.get_settings_service",
                     return_value=settings_service_mock,
                 ),
             ):
@@ -617,6 +626,10 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                     "lfx.components.files_and_knowledge.save_file.get_settings_service",
                     return_value=settings_service_mock,
                 ),
+                patch(
+                    "lfx.utils.file_path_security.get_settings_service",
+                    return_value=settings_service_mock,
+                ),
             ):
                 # Make Path() return our temp file path
                 mock_path_class.return_value = tmp_path
@@ -768,6 +781,8 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             ('{"type": "service_account", "private_key": "-----BEGIN\nKEY\n-----END"}', "With control chars"),
             # Case 3: JSON with extra whitespace
             ('  \n{"type": "service_account", "project_id": "test"}  \n', "With whitespace"),
+            # Case 4: Double-encoded JSON, as emitted by some secret pipelines (LE-2561)
+            (json.dumps('{"type": "service_account", "project_id": "test"}'), "Double-encoded"),
         ]
 
         for service_account_json, test_name in test_cases:
@@ -934,3 +949,41 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         """Test that file_format is hidden in the flow UI."""
         format_field = next(i for i in component_class.inputs if i.name == "file_format")
         assert format_field.show is False
+
+
+# --- serving-plane end-user namespacing (files owned by the end user, not the SID) ---
+
+from types import SimpleNamespace  # noqa: E402
+
+
+def _save_component_with_end_user(end_user):
+    component = SaveToFileComponent()
+    component._vertex = MagicMock()
+    component._vertex.graph = SimpleNamespace(end_user_id=end_user)
+    return component
+
+
+def test_end_user_segment_none_when_absent():
+    # BC: no end user -> None -> save path falls back to the SID scope, unchanged.
+    assert _save_component_with_end_user(None)._serving_end_user_segment() is None
+
+
+def test_end_user_segment_readable_id_preserved():
+    assert _save_component_with_end_user("alice")._serving_end_user_segment() == "alice"
+
+
+def test_end_user_segment_uuid_preserved():
+    uid = "0c870455-b9e3-480c-bc84-0794de978f51"
+    assert _save_component_with_end_user(uid)._serving_end_user_segment() == uid
+
+
+def test_end_user_segment_blocks_path_traversal():
+    seg = _save_component_with_end_user("../../etc/passwd")._serving_end_user_segment()
+    assert seg is not None
+    # single path component -> cannot escape the root
+    assert "/" not in seg
+    assert "\\" not in seg
+
+
+def test_end_user_segment_sanitizes_separators():
+    assert _save_component_with_end_user("a/b\\c")._serving_end_user_segment() == "a_b_c"

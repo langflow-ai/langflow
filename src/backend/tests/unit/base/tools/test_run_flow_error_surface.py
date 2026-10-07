@@ -9,6 +9,8 @@ through unchanged; unexpected errors keep the generic wrapper.
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 import pytest
 from lfx.base.tools.run_flow import RunFlowBaseComponent
 from lfx.components.flow_controls.human_input import HumanInput
@@ -64,7 +66,16 @@ class _StubbedRunFlow(RunFlowBaseComponent):
         return {"input_value": "hi"}
 
 
-async def test_nested_hitl_rejection_is_surfaced_verbatim():
+@asynccontextmanager
+async def _authorized_target_scope(**_kwargs):
+    yield object()
+
+
+async def test_nested_hitl_rejection_is_surfaced_verbatim(monkeypatch):
+    monkeypatch.setattr(
+        "langflow.helpers.flow.scoped_model_provider_policy_for_target_flow",
+        _authorized_target_scope,
+    )
     component = _StubbedRunFlow()
     component.flow_name_selected = "HITL"
     component.flow_id_selected = "sub"
