@@ -789,15 +789,13 @@ class KnowledgeComponent(Component):
         kb_record_id: Any,
         backend: BaseVectorStoreBackend,
         extensions: set[str],
-        written: _WrittenTotals | None = None,
+        written: _WrittenTotals,
     ) -> None:
-        """Update the KB row's chunk, word, character and size totals.
+        """Add this run's totals and file types to the KB row and refresh its size.
 
         ``written`` holds the totals of the rows this run wrote; they are added to
-        the row's counters in one atomic update, so the cost follows the run, not
-        the KB size, and concurrent runs into one KB don't overwrite each other.
-        Without it (or with an older Langflow) the KB is recounted from its
-        vector store through ``count`` / ``iter_documents``. ``extensions`` are
+        the row's counters, so the cost follows the run, not the KB size, and
+        concurrent runs into one KB don't overwrite each other. ``extensions`` are
         merged into ``source_types`` so the KB list renders the right file-type
         icon regardless of which ingestion route produced the chunks.
 
@@ -812,37 +810,13 @@ class KnowledgeComponent(Component):
             return
 
         try:
-            increment_stats = getattr(knowledge_base_service, "increment_stats", None)
-            if written is not None and increment_stats is not None:
-                await increment_stats(
-                    kb_record_id,
-                    chunks=written.chunks,
-                    words=written.words,
-                    characters=written.characters,
-                    size_bytes=await backend.storage_size_bytes(),
-                    source_types=extensions,
-                )
-                return
-
-            chunks = await backend.count()
-            characters = 0
-            words = 0
-            async with aclosing(backend.iter_documents()) as batches:
-                async for batch in batches:
-                    for document in batch:
-                        characters += len(document.content)
-                        words += len(document.content.split())
-
-            record = await knowledge_base_service.get_by_id(kb_record_id)
-            existing = set(record.source_types or []) if record is not None else set()
-
-            await knowledge_base_service.update_stats(
+            await knowledge_base_service.increment_stats(
                 kb_record_id,
-                chunks=chunks,
-                words=words,
-                characters=characters,
+                chunks=written.chunks,
+                words=written.words,
+                characters=written.characters,
                 size_bytes=await backend.storage_size_bytes(),
-                source_types=sorted(existing | extensions),
+                source_types=extensions,
             )
         except Exception as e:  # noqa: BLE001 — stats are cosmetic; chunks are already written
             self.log(f"Warning: Could not refresh knowledge base stats: {e}")
@@ -942,8 +916,8 @@ class KnowledgeComponent(Component):
         df_source: pd.DataFrame,
         config_list: list[dict[str, Any]],
         embedding_function,
-    ) -> BaseVectorStoreBackend:
-        """Create vector store using the configured DB provider."""
+    ) -> tuple[BaseVectorStoreBackend, _WrittenTotals]:
+        """Write the new rows to the configured DB provider; return the backend and the written totals."""
         from langflow.api.utils.kb_helpers import backend_for_name
 
         owner_id = self._user_uuid
@@ -971,8 +945,7 @@ class KnowledgeComponent(Component):
                 doc.metadata["source_metadata"] = user_metadata_tag
             documents.append(doc)
         if not documents:
-            self._written_totals = _WrittenTotals()
-            return backend
+            return backend, _WrittenTotals()
 
         # No storage lease may surround the provider call. The write lease
         # below rechecks routing and IDs after concurrent operations finish.
@@ -1008,9 +981,7 @@ class KnowledgeComponent(Component):
             if embedded:
                 await backend.add_embedded_documents(embedded)
                 self.log(f"Added {len(embedded)} documents to vector store '{self.knowledge_base}'")
-        self._written_totals = _WrittenTotals.of(embedded)
-
-        return backend
+        return backend, _WrittenTotals.of(embedded)
 
     async def _skip_stored_rows(self, backend: BaseVectorStoreBackend, data_objects: list[Data]) -> list[Data]:
         """Drop rows whose content hash is already stored, looking up only these rows' hashes."""
@@ -1032,13 +1003,9 @@ class KnowledgeComponent(Component):
         self,
         df_source: pd.DataFrame,
         config_list: list[dict[str, Any]],
-        existing_ids: set[str] | None = None,
     ) -> list[Data]:
         """Convert DataFrame to Data objects for vector store."""
         data_objects: list[Data] = []
-
-        if existing_ids is None:
-            existing_ids = set()
 
         content_cols = []
         identifier_cols = []
@@ -1073,10 +1040,6 @@ class KnowledgeComponent(Component):
 
             page_content_hash = hashlib.sha256(page_content.encode()).hexdigest()
             data_dict["_id"] = page_content_hash
-
-            if not self.allow_duplicates and page_content_hash in existing_ids:
-                self.log(f"Skipping duplicate row with hash {page_content_hash}")
-                continue
 
             data_obj = Data(data=data_dict)
             data_objects.append(data_obj)
@@ -1255,8 +1218,9 @@ class KnowledgeComponent(Component):
             if kb_record_id is not None:
                 await self._record_kb_status(kb_record_id, "ingesting")
 
-            self._written_totals = None
-            backend = await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
+            backend, written = await self._create_vector_store(
+                df_source, config_list, embedding_function=embedding_function
+            )
 
             try:
                 # Stamp the KB with the file extensions we just ingested so
@@ -1273,7 +1237,7 @@ class KnowledgeComponent(Component):
                     kb_record_id=kb_record_id,
                     backend=backend,
                     extensions=source_types,
-                    written=getattr(self, "_written_totals", None),
+                    written=written,
                 )
             finally:
                 await backend.teardown()

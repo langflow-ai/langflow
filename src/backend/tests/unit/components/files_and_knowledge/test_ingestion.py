@@ -289,21 +289,6 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert "category" in first_obj.data
         assert "_id" in first_obj.data
 
-    async def test_convert_df_to_data_objects_no_duplicates(self, component_class, default_kwargs):
-        """Test converting DataFrame to Data objects with duplicate prevention."""
-        default_kwargs["allow_duplicates"] = False
-        component = component_class(**default_kwargs)
-        data_df = default_kwargs["input_df"]
-        config_list = default_kwargs["column_config"]
-
-        # The storage operation supplies existing identifiers to the converter.
-        existing_hash = hashlib.sha256(b"cat1").hexdigest()
-        data_objects = await component._convert_df_to_data_objects(data_df, config_list, existing_ids={existing_hash})
-
-        # Should only return one object (second row) since first is duplicate
-        assert len(data_objects) == 1
-        assert data_objects[0].data["category"] == "cat2"
-
     def test_is_valid_collection_name(self, component_class, default_kwargs):
         """Test collection name validation."""
         component = component_class(**default_kwargs)
@@ -332,7 +317,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         # Isolate metadata building from storage and its statistics refresh.
         with (
-            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), _WrittenTotals())),
             patch.object(component, "_refresh_kb_stats"),
         ):
             result = await component.build_kb_info()
@@ -479,7 +464,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_get_embeddings.return_value = mock_embedding_fn
 
         with (
-            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), _WrittenTotals())),
             patch.object(component, "_refresh_kb_stats"),
         ):
             result = await component.build_kb_info()
@@ -509,7 +494,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_get_embeddings.return_value = MagicMock()
 
         with (
-            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), _WrittenTotals())),
             patch.object(component, "_refresh_kb_stats"),
         ):
             result = await component.build_kb_info()
@@ -524,19 +509,6 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert isinstance(passed_model, list)
         assert passed_model[0]["name"] == "sentence-transformers/all-MiniLM-L6-v2"
         assert passed_model[0]["provider"] == "HuggingFace"
-
-    async def test_convert_df_to_data_objects_allow_duplicates(self, component_class, default_kwargs):
-        """Test that allow_duplicates=True returns all rows even when their hashes already exist."""
-        default_kwargs["allow_duplicates"] = True
-        component = component_class(**default_kwargs)
-        data_df = default_kwargs["input_df"]
-        config_list = default_kwargs["column_config"]
-
-        existing_ids = {hashlib.sha256(category.encode()).hexdigest() for category in ("cat1", "cat2")}
-        data_objects = await component._convert_df_to_data_objects(data_df, config_list, existing_ids=existing_ids)
-
-        # All rows should be included — duplicates are allowed
-        assert len(data_objects) == 2
 
     async def test_build_kb_info_without_a_kb_row_raises_error(
         self, component_class, default_kwargs, tmp_path, active_user
@@ -703,7 +675,7 @@ class TestIngestionReadsOnlyNewRows:
         backend = _RemoteBackendStub(stored_ids=self._hashes("gamma") | {"some-other-chunk"})
         component = self._component(component_class, default_kwargs)
 
-        await self._ingest(component, backend)
+        _, written = await self._ingest(component, backend)
 
         # Once before embedding, then only the remaining rows again under the write lease.
         assert backend.lookups == [
@@ -712,32 +684,30 @@ class TestIngestionReadsOnlyNewRows:
         ]
         assert backend.scanned is False
         assert [doc.content for doc in backend.written] == ["alpha beta", "delta epsilon zeta"]
-        assert component._written_totals.chunks == 2
-        assert component._written_totals.words == 5
-        assert component._written_totals.characters == len("alpha beta") + len("delta epsilon zeta")
+        assert written == _WrittenTotals(chunks=2, words=5, characters=len("alpha beta") + len("delta epsilon zeta"))
 
     async def test_skips_rows_another_run_stored_while_embedding(self, component_class, default_kwargs):
         backend = _RemoteBackendStub()
         backend.stored_during_embedding = self._hashes("gamma")
         component = self._component(component_class, default_kwargs)
 
-        await self._ingest(component, backend)
+        _, written = await self._ingest(component, backend)
 
         assert backend.scanned is False
         assert [doc.content for doc in backend.written] == ["alpha beta", "delta epsilon zeta"]
-        assert component._written_totals.chunks == 2
+        assert written.chunks == 2
 
     async def test_allow_duplicates_writes_every_row_without_a_lookup(self, component_class, default_kwargs):
         default_kwargs["allow_duplicates"] = True
         backend = _RemoteBackendStub(stored_ids=self._hashes("gamma"))
         component = self._component(component_class, default_kwargs)
 
-        await self._ingest(component, backend)
+        _, written = await self._ingest(component, backend)
 
         assert backend.lookups == []
         assert backend.scanned is False
         assert len(backend.written) == 3
-        assert component._written_totals.chunks == 3
+        assert written.chunks == 3
 
     async def test_stats_add_this_runs_totals_without_reading_the_kb(self, component_class, default_kwargs):
         from langflow.api.utils import knowledge_base_service
@@ -778,25 +748,6 @@ class TestIngestionReadsOnlyNewRows:
 
         row = await knowledge_base_service.get_by_id(record_id)
         assert (row.chunks, row.words, row.characters) == (10, 20, 30)
-
-    async def test_stats_fall_back_to_a_recount_without_run_totals(self, component_class, default_kwargs):
-        from langflow.api.utils import knowledge_base_service
-        from lfx.base.knowledge_bases.backends.base import IngestedDocument
-
-        record_id = default_kwargs["_record_id"]
-        component = self._component(component_class, default_kwargs)
-        backend = _RemoteBackendStub()
-        backend.count = AsyncMock(return_value=2)
-
-        async def _iter(**_kwargs):
-            yield [IngestedDocument(content="one two"), IngestedDocument(content="three")]
-
-        backend.iter_documents = _iter
-
-        await component._refresh_kb_stats(kb_record_id=record_id, backend=backend, extensions=set())
-
-        row = await knowledge_base_service.get_by_id(record_id)
-        assert (row.chunks, row.words, row.characters) == (2, 3, len("one two") + len("three"))
 
     async def test_concurrent_runs_keep_each_others_source_types(self, component_class, default_kwargs):
         import asyncio
