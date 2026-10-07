@@ -260,9 +260,16 @@ def _project_scope_exclusion_clause(
     if exclude_personal_projects:
         from langflow.services.database.models.folder.model import Folder
 
-        # Keep the subquery independent when the caller also selects/joins Folder.
-        personal_projects = select(Folder.id).where(col(Folder.is_personal).is_(True)).correlate(None)
-        allowed.append(col(project_column).not_in(personal_projects))
+        # Match the parent by its primary key, including when the outer query
+        # selects Folder itself. No tenant-wide personal-project ID set is needed.
+        personal_project = Folder.__table__.alias("personal_project")
+        is_personal_project = (
+            select(personal_project.c.id)
+            .where(personal_project.c.id == col(project_column), personal_project.c.is_personal.is_(True))
+            .correlate_except(personal_project)
+            .exists()
+        )
+        allowed.append(~is_personal_project)
     return or_(col(project_column).is_(None), and_(*allowed)) if allowed else None
 
 
