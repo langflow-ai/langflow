@@ -39,7 +39,7 @@ async def test_served_v1_run_records_terminal_completion_for_success_and_failure
     telemetry_service = TelemetryService(SimpleNamespace(settings=SimpleNamespace(prometheus_enabled=False)))
     app = FastAPI()
 
-    monkeypatch.setattr(endpoints, "datetime", CompletionClock)
+    monkeypatch.setattr(run_event_store, "datetime", CompletionClock)
     monkeypatch.setattr(endpoints, "get_telemetry_service", lambda: telemetry_service)
     monkeypatch.setattr(endpoints, "resolve_serving_scope", lambda **_: None)
     run = AsyncMock(return_value=object()) if failure is None else AsyncMock(side_effect=failure)
