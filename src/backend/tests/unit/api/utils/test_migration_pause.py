@@ -22,7 +22,14 @@ from langflow.api.utils.migration_pause import MigrationPauseMiddleware, is_paus
 from langflow.initial_setup.setup import sync_flows_from_fs
 from langflow.main import create_app
 from langflow.services.background_execution.executor import InProcessExecutor
+from langflow.services.data_subjects.worker import DataSubjectEraseWorker, data_subject_erase_worker
 from langflow.services.database.models.auth import AuthzAuditLog
+from langflow.services.database.models.data_subject_request import (
+    DataSubjectRequest,
+    DataSubjectRequestSource,
+    DataSubjectRequestStatus,
+    DataSubjectType,
+)
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.database.models.transactions.model import TransactionTable
@@ -44,6 +51,7 @@ from sqlmodel import select
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
     from pathlib import Path
+    from uuid import UUID
 
 RECORD = {"target": {}, "steps": {}, "accepted_findings": []}
 PAUSED = {**RECORD, "pause": {"frozen_at": "2026-10-05T12:00:00+00:00", "frozen_by": "admin"}}
@@ -404,6 +412,66 @@ async def test_the_audit_log_cleanup_waits_out_the_pause(config_dir, monkeypatch
         await _acts_only_after_the_pause(config_dir, pruned)
     finally:
         await worker.stop()
+
+
+async def _approved_erase(decided: datetime) -> UUID:
+    """An erase request that an admin approved, for a user this instance holds nothing of."""
+    async with session_scope() as session:
+        approved = DataSubjectRequest(
+            subject_type=DataSubjectType.BUILDER.value,
+            subject_user_id=uuid4(),
+            source=DataSubjectRequestSource.ADMIN.value,
+            status=DataSubjectRequestStatus.APPROVED.value,
+            due_at=decided + timedelta(days=30),
+            decided_at=decided,
+        )
+        session.add(approved)
+        await session.flush()
+        return approved.id
+
+
+async def _erase_status(request_id: UUID) -> str:
+    async with session_scope() as session:
+        return (await session.get(DataSubjectRequest, request_id)).status
+
+
+async def test_an_approved_erase_waits_out_the_pause(config_dir, monkeypatch):
+    monkeypatch.setattr("langflow.services.data_subjects.engine.LATE_WRITE_SETTLE_SECONDS", 0)
+    # One worker runs at a time, and the app's own worker holds the lease that says which.
+    await data_subject_erase_worker.stop()
+    request_id = await _approved_erase(datetime.now(timezone.utc))
+
+    async def taken_up() -> bool:
+        return await _erase_status(request_id) != DataSubjectRequestStatus.APPROVED.value
+
+    _write_record(config_dir, PAUSED)
+    worker = DataSubjectEraseWorker(interval=0.05)
+    await worker.start()
+    try:
+        await _acts_only_after_the_pause(config_dir, taken_up)
+    finally:
+        await worker.stop()
+
+
+async def test_an_erase_pass_that_the_pause_overtakes_starts_no_other_erase(config_dir, monkeypatch):
+    # Each erase waits this long for late writes, which is when the pause begins here.
+    monkeypatch.setattr("langflow.services.data_subjects.engine.LATE_WRITE_SETTLE_SECONDS", 1)
+    await data_subject_erase_worker.stop()
+    decided = datetime.now(timezone.utc)
+    first = await _approved_erase(decided - timedelta(minutes=1))
+    second = await _approved_erase(decided)
+
+    async def first_is_under_way() -> bool:
+        return await _erase_status(first) == DataSubjectRequestStatus.ERASING.value
+
+    one_pass = asyncio.create_task(DataSubjectEraseWorker().run_once())
+    assert await _eventually(first_is_under_way)
+    _write_record(config_dir, PAUSED)
+
+    # The erase that was under way ends. The one behind it in the same pass keeps its status for after the pause.
+    assert await one_pass == 1
+    assert await _erase_status(first) == DataSubjectRequestStatus.DONE.value
+    assert await _erase_status(second) == DataSubjectRequestStatus.APPROVED.value
 
 
 async def test_the_telemetry_writer_neither_flushes_nor_prunes_while_paused(active_user, config_dir, monkeypatch):
