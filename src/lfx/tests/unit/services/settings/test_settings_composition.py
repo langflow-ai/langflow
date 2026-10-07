@@ -264,6 +264,8 @@ EXPECTED_FIELDS = {
     "background_watchdog_interval_s",
     "background_retention_days",
     "test_redis_url",
+    "data_subject_response_days",
+    "data_subject_auto_erase_on_expiry",
     # Triggers (TRG-2)
     "trigger_dispatcher_enabled",
     "trigger_dispatcher_poll_interval_s",

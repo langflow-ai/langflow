@@ -358,6 +358,13 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             await warn_about_ignored_exclusions()
 
+            try:
+                from langflow.services.data_subjects.worker import data_subject_erase_worker
+
+                await data_subject_erase_worker.start()
+            except Exception as exc:  # noqa: BLE001 — never block startup on the erase worker
+                await logger.awarning(f"Failed to start the data subject erase worker: {exc}")
+
             # Keep the default OSS provider ceiling coherent across backend
             # worker processes after an administrator commits a replacement.
             # This worker is part of policy enforcement, so a scheduling failure
@@ -877,6 +884,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await audit_event_cleanup_worker.stop()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop audit event cleanup worker: {e}")
+                    try:
+                        from langflow.services.data_subjects.worker import data_subject_erase_worker
+
+                        await data_subject_erase_worker.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop the data subject erase worker: {e}")
                     try:
                         from langflow.services.task.model_provider_policy_refresh import (
                             model_provider_policy_refresh_worker,
