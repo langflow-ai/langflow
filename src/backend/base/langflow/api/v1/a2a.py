@@ -80,7 +80,7 @@ from langflow.api.utils.execution_principal import (
     stamp_execution_principal,
 )
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
-from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError, run_saved
+from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError, task_saved
 from langflow.api.v1.a2a_utils import (
     A2A_APIKEY_HEADER,
     build_agent_card,
@@ -780,9 +780,11 @@ class DurableTaskStore(TaskStore):
                 pass
             else:
                 row.task = blob  # fresh dict reference flags the JSON column dirty
-        if _task_state(blob) in _RUN_OVER_STATE_NAMES:
-            # Written, so the run has nothing of this left to save. Its place in a migration pause can go.
-            run_saved(task.id)
+        state = _task_state(blob)
+        # Told to the run that holds a place in a migration pause for this task. Only a save that moves the
+        # task into a state that ends a run lets the place go. An answer to a task that waits for a person is
+        # saved first in that same state, when the run it goes on with has only begun.
+        task_saved(task.id, run_over=state in _RUN_OVER_STATE_NAMES and state != existing_state)
 
     async def get(self, task_id: str, context: ServerCallContext) -> pb.Task | None:
         owner = _task_scope(context)

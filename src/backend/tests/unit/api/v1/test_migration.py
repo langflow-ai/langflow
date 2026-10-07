@@ -1346,22 +1346,13 @@ async def test_an_a2a_run_stops_the_pause_until_the_state_it_ended_with_is_saved
     assert (await client.post(PAUSE, headers=headers)).status_code == 200
 
 
-async def test_a_message_that_does_not_wait_for_its_a2a_run_stops_the_pause_until_the_run_is_saved(
-    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
-):
+def _hold_the_save_an_a2a_run_ends_with(monkeypatch: pytest.MonkeyPatch) -> tuple[asyncio.Event, asyncio.Event]:
+    """Hold the task store's save of a state that ends a task, as a slow database holds it.
+
+    Returns an event that is set when that save is reached, and the event that lets it go on.
+    """
     from langflow.api.v1 import a2a
-    from langflow.services.database.models.a2a.model import A2ATask
-    from lfx.services.deps import get_settings_service as lfx_settings
-    from sqlmodel import select
 
-    from .test_a2a import _ECHO_FLOW, _create_flow, _jsonrpc, _text_message
-
-    headers = logged_in_headers_super_user
-    _checked(config_dir, [PASSING], **PREPARED)
-    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
-    monkeypatch.setattr(lfx_settings().settings, "a2a_enabled", True)
-    flow_id = await _create_flow(active_super_user.id, data=json.loads(_ECHO_FLOW.read_bytes())["data"])
-    # The save of the state a run ends with is held, as a slow database holds it.
     reached, release = asyncio.Event(), asyncio.Event()
     save = a2a.DurableTaskStore.save
 
@@ -1372,13 +1363,13 @@ async def test_a_message_that_does_not_wait_for_its_a2a_run_stops_the_pause_unti
         await save(store, task, context)
 
     monkeypatch.setattr(a2a.DurableTaskStore, "save", save_held)
+    return reached, release
 
-    # The request answers with the task at once. The SDK runs the flow and saves the task after that.
-    sent = await _jsonrpc(
-        client, flow_id, "message/send", {**_text_message("hello"), "configuration": {"blocking": False}}
-    )
-    assert sent.status_code == 200, sent.text
-    task_id = sent.json()["result"]["id"]
+
+async def _the_pause_waits_for_the_held_save(client, headers, task_id: str, reached, release) -> None:
+    from langflow.services.database.models.a2a.model import A2ATask
+    from sqlmodel import select
+
     try:
         await asyncio.wait_for(reached.wait(), timeout=30)
 
@@ -1397,6 +1388,56 @@ async def test_a_message_that_does_not_wait_for_its_a2a_run_stops_the_pause_unti
         [task] = (await session.exec(select(A2ATask).where(A2ATask.id == task_id))).all()
     # It was saved before the pause, so the pause holds all of it.
     assert task.task["status"]["state"] == "TASK_STATE_COMPLETED"
+
+
+async def test_a_message_that_does_not_wait_for_its_a2a_run_stops_the_pause_until_the_run_is_saved(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    from lfx.services.deps import get_settings_service as lfx_settings
+
+    from .test_a2a import _ECHO_FLOW, _create_flow, _jsonrpc, _text_message
+
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
+    monkeypatch.setattr(lfx_settings().settings, "a2a_enabled", True)
+    flow_id = await _create_flow(active_super_user.id, data=json.loads(_ECHO_FLOW.read_bytes())["data"])
+    reached, release = _hold_the_save_an_a2a_run_ends_with(monkeypatch)
+
+    # The request answers with the task at once. The SDK runs the flow and saves the task after that.
+    sent = await _jsonrpc(
+        client, flow_id, "message/send", {**_text_message("hello"), "configuration": {"blocking": False}}
+    )
+    assert sent.status_code == 200, sent.text
+
+    await _the_pause_waits_for_the_held_save(client, headers, sent.json()["result"]["id"], reached, release)
+
+
+async def test_an_answer_to_an_a2a_task_that_waits_for_a_person_stops_the_pause_until_its_run_is_saved(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    from lfx.services.deps import get_settings_service as lfx_settings
+
+    from .test_a2a import _HUMAN_INPUT_FLOW, _create_flow, _jsonrpc, _text_message
+
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
+    monkeypatch.setattr(lfx_settings().settings, "a2a_enabled", True)
+    flow_id = await _create_flow(active_super_user.id, data=json.loads(_HUMAN_INPUT_FLOW.read_bytes())["data"])
+    # The first message runs until the flow asks a person. Its request waits for that, and the task is saved.
+    waiting = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+    assert waiting["status"]["state"] == "input-required"
+    assert await migration_pause.drained(10)
+    reached, release = _hold_the_save_an_a2a_run_ends_with(monkeypatch)
+
+    # The answer goes on with the run. The SDK first saves the task once more as it is, still waiting for
+    # a person, with the answer in it. That save ends nothing: the run has only begun.
+    answer = _text_message("Approve", message_id="m2", context_id=waiting["contextId"], task_id=waiting["id"])
+    sent = await _jsonrpc(client, flow_id, "message/send", {**answer, "configuration": {"blocking": False}})
+    assert sent.status_code == 200, sent.text
+
+    await _the_pause_waits_for_the_held_save(client, headers, waiting["id"], reached, release)
 
 
 async def test_an_a2a_run_still_going_keeps_its_place_when_its_task_is_saved_as_cancelled(
@@ -1436,6 +1477,36 @@ async def test_an_a2a_run_still_going_keeps_its_place_when_its_task_is_saved_as_
     release.set()
     await running
     assert await migration_pause.drained(5)
+
+
+async def test_the_wait_for_the_last_save_of_an_a2a_run_starts_again_at_each_save_of_its_task(
+    client,  # noqa: ARG001
+    config_dir,
+):
+    from a2a.server.events import EventQueue
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1 import a2a, a2a_executor
+
+    _checked(config_dir, [PASSING], **PREPARED)
+    executor, context, caller = _an_a2a_run_that_fails()
+    await executor.execute(context, EventQueue())
+    place = a2a_executor._places[context.task_id]
+    given_up_at = place.giving_up.when()
+
+    # The SDK saves what the run did one event after the other, and a slow reader can still be at an early one.
+    working = pb.TaskStatus(state=pb.TaskState.TASK_STATE_WORKING)
+    await a2a._TASK_STORE.save(pb.Task(id=context.task_id, context_id="c", status=working), caller)
+
+    assert a2a_executor._places[context.task_id] is place
+    assert place.giving_up.when() > given_up_at
+    assert not await migration_pause.drained(0)
+
+    failed = pb.TaskStatus(state=pb.TaskState.TASK_STATE_FAILED)
+    await a2a._TASK_STORE.save(pb.Task(id=context.task_id, context_id="c", status=failed), caller)
+
+    assert context.task_id not in a2a_executor._places
+    assert place.giving_up.cancelled()
+    assert await migration_pause.drained(0)
 
 
 async def test_an_a2a_run_whose_last_state_is_never_saved_gives_its_place_up(
