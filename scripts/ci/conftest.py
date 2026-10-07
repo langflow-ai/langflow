@@ -8,6 +8,7 @@ import pytest
 @pytest.fixture
 def capability_reference_date(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> date:
     """Evaluate historical fixtures at a stable date without changing the production clock."""
+    # Keep the frozen clock aligned with the committed evidence snapshot.
     reference_date = getattr(request, "param", date(2026, 10, 2))
 
     class ReferenceDateTime(datetime):

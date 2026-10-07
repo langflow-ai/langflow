@@ -715,6 +715,7 @@ async def read_project(
                         resource_id=flow.id,
                         workspace_id=project.workspace_id,
                         project_id=flow.folder_id,
+                        project_is_personal=project.is_personal,
                         visibility=visibility_scope,
                     )
                 ]
