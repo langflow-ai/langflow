@@ -6,6 +6,7 @@ precedence. Slots remain explicit registrations; importing declarations never ru
 
 from __future__ import annotations
 
+import inspect
 import threading
 from typing import TypeVar
 
@@ -31,6 +32,12 @@ def _validate_project_type(key: str, project_type: type[ProjectTypeDefinition]) 
     if project_type.name != key:
         msg = f"Project type key {key!r} does not match declared name {project_type.name!r}."
         raise ValueError(msg)
+    if not inspect.iscoroutinefunction(project_type.save_config):
+        msg = f"Project type {key!r} must implement an asynchronous save_config hook."
+        raise TypeError(msg)
+    if not callable(project_type.compose) or inspect.iscoroutinefunction(project_type.compose):
+        msg = f"Project type {key!r} must implement a synchronous compose hook."
+        raise TypeError(msg)
     if not isinstance(project_type.description, str) or not isinstance(project_type.fields, tuple):
         msg = f"Project type {key!r} must declare a string description and a tuple of fields."
         raise TypeError(msg)

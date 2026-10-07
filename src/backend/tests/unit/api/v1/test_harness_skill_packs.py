@@ -142,7 +142,7 @@ async def test_skill_attachment_requires_tool_execute_permission(client, logged_
         if action.value == "execute":
             raise HTTPException(403)
 
-    monkeypatch.setattr("langflow.services.database.models.folder.tool_packs.ensure_flow_permission", deny_execute)
+    monkeypatch.setattr("langflow.services.database.models.folder.save_context.ensure_flow_permission", deny_execute)
     response = await client.patch(
         f"/api/v1/projects/{project}", headers=logged_in_headers, json={"project_config": config}
     )

@@ -107,7 +107,12 @@ _escape_like = escape_like_pattern
 
 
 async def _write_config_through(
-    session: DbSession, project: Folder, *, current_user: User, previous_config: dict | None = None
+    session: DbSession,
+    project: Folder,
+    *,
+    current_user: User,
+    previous_config: dict | None = None,
+    creating: bool = False,
 ) -> ProjectConfigWrite:
     """Apply the project's form to its flows, and keep any file-backed copy in step.
 
@@ -115,7 +120,7 @@ async def _write_config_through(
     it behind would defeat the point of writing through at all.
     """
     changed = await write_project_config_to_flows(
-        session, project, current_user=current_user, previous_config=previous_config
+        session, project, current_user=current_user, previous_config=previous_config, creating=creating
     )
     if changed.flows:
         storage_service = get_storage_service()
@@ -305,7 +310,7 @@ async def _new_project(
     else:
         await _move_flows_into_project()
 
-    flows_updated = await _write_config_through(session, new_project, current_user=current_user)
+    flows_updated = await _write_config_through(session, new_project, current_user=current_user, creating=True)
 
     # Convert to FolderRead while session is still active to avoid detached instance errors
     saved = FolderSaveRead.model_validate(new_project, from_attributes=True)
@@ -870,6 +875,16 @@ async def _apply_project_update(
 
     Raises on deployment-guard errors; callers map those to their own status.
     """
+    if {"project_config", "project_type"} & project.model_fields_set:
+        # Capture previous config only after acquiring the write transaction. The
+        # no-op update provides the same serialization on SQLite as a row lock.
+        try:
+            await session.exec(update(Folder).where(Folder.id == existing_project.id).values(id=Folder.id))
+        except Exception as exc:
+            if is_database_lock_error(exc):
+                raise HTTPException(409, "The project changed during save. Reload and try again.") from exc
+            raise
+        await session.refresh(existing_project)
     if (
         project.name is not None
         and project.name != existing_project.name
@@ -950,7 +965,10 @@ async def _apply_project_update(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="project_type must not be null.",
             )
-        existing_project.project_type = validate_project_type(project.project_type)
+        requested_type = validate_project_type(project.project_type)
+        if requested_type != existing_project.project_type and existing_project.project_config:
+            raise HTTPException(422, "Clear this project's configuration before changing its type.")
+        existing_project.project_type = requested_type
 
     # project_config uses model_fields_set, not a None check: clearing the config and leaving
     # it untouched are different requests, and a None check cannot tell them apart.

@@ -13,6 +13,7 @@ file, because a flow file is the only artifact both langflow and lfx load.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, ClassVar
@@ -20,6 +21,7 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
     from lfx.projects.bindings import FlowBinding
+    from lfx.projects.lifecycle import CompositionContext, FlowChange, PreparedSave, ProjectSaveContext, SaveRequest
 
 
 class Cardinality(str, Enum):
@@ -177,8 +179,7 @@ class ProjectTypeDefinition:
     """Stateless project type declaration, shared by built-ins and installed plugins.
 
     Subclasses declare class attributes and require no constructor arguments. Register the
-    class, not an instance. Instances contain no project, user, or database state. Config
-    validation and composition hooks will be added with their execution context separately.
+    class, not an instance. Instances contain no project, user, or database state.
     """
 
     name: ClassVar[str]
@@ -189,6 +190,26 @@ class ProjectTypeDefinition:
     allows_empty_project: ClassVar[bool] = False
     exportable: ClassVar[bool] = True
     panels: ClassVar[tuple[str, ...]] = ()
+
+    async def save_config(self, request: SaveRequest, ctx: ProjectSaveContext) -> PreparedSave:  # noqa: ARG002
+        """Prepare config without committing. Override to validate and pin sources."""
+        from lfx.projects.lifecycle import PreparedSave
+
+        targets = tuple(flow.id for flow in request.flows) if any(field.writes_to for field in self.fields) else ()
+        return PreparedSave(deepcopy(request.config), targets)
+
+    def compose(self, prepared: PreparedSave, ctx: CompositionContext) -> tuple[FlowChange, ...]:
+        """Propose field writes, preserving inputs independently edited on the canvas."""
+        from lfx.projects.lifecycle import FlowChange
+        from lfx.projects.writer import apply_project_config
+
+        changes = []
+        for flow in ctx.flows:
+            result = apply_project_config(
+                flow.data, self, prepared.config, previous_values=ctx.applied_values.get(str(flow.id))
+            )
+            changes.append(FlowChange(flow.id, flow.token, result.data, result.applied_values, result.inputs_skipped))
+        return tuple(changes)
 
     def field_names(self) -> tuple[str, ...]:
         return tuple(f.name for f in self.fields)

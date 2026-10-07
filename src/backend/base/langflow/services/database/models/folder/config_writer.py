@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from lfx.base.agents.harness import HarnessRuntimeConfig
 from lfx.log.logger import logger
 from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type
@@ -171,6 +171,30 @@ async def _binding_version(session: AsyncSession, source: Flow, field_name: str)
 
 
 async def write_project_config_to_flows(
+    session: AsyncSession,
+    project: Folder,
+    *,
+    current_user: User,
+    previous_config: dict | None = None,
+    creating: bool = False,
+) -> ProjectConfigWrite:
+    """Dispatch to lifecycle hooks; harness migration is isolated until E05/E06."""
+    try:
+        definition = get_project_type(project.project_type or DEFAULT_PROJECT_TYPE)
+    except ValueError as exc:
+        raise HTTPException(
+            422, "The project type plugin is unavailable. Restore it before saving configuration."
+        ) from exc
+    if definition.name != "agent-harness":
+        from langflow.services.database.models.folder.save_hooks import write_with_hooks
+
+        return await write_with_hooks(
+            session, project, definition, current_user=current_user, previous_config=previous_config, creating=creating
+        )
+    return await _write_harness_config(session, project, current_user=current_user, previous_config=previous_config)
+
+
+async def _write_harness_config(
     session: AsyncSession, project: Folder, *, current_user: User, previous_config: dict | None = None
 ) -> ProjectConfigWrite:
     result = ProjectConfigWrite()
@@ -198,31 +222,6 @@ async def write_project_config_to_flows(
     )
     config = deepcopy(project.project_config or {})
     await validate_project_references(session, current_user, project_type, config)
-    if project_type.name == "eval-suite":
-        from langflow.services.evaluations.configuration import save_eval_config
-
-        project.project_config = await save_eval_config(session, current_user, config, previous_config)
-        session.add(project)
-        return result
-    if project_type.name == "skill-pack":
-        manifest = await resolve_skill_pack(session, current_user, project.id)
-        config["skills"] = [skill.model_dump(mode="json") for skill in manifest.skills]
-        project.project_config = None if clearing_config else config
-        session.add(project)
-        return result
-    if project_type.name == "tool-pack":
-        try:
-            manifest, _ = await resolve_tool_pack(session, current_user, project.id)
-        except HTTPException as exc:
-            if exc.status_code == status.HTTP_409_CONFLICT:
-                raise HTTPException(422, exc.detail) from exc
-            raise
-        except (ValueError, KeyError, TypeError) as exc:
-            raise HTTPException(422, f"Could not export the selected tools: {exc}") from exc
-        config["tools"] = [str(tool.flow_id) for tool in manifest.tools]
-        project.project_config = None if clearing_config else config
-        session.add(project)
-        return result
     if not project.project_config and previous_config:
         # Clearing configuration still removes its generated Instructions connection.
         config["agent_flow_id"] = previous_config.get("agent_flow_id")

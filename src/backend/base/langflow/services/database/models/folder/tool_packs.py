@@ -5,10 +5,8 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from lfx.projects.bindings import flow_revision
-from lfx.projects.dependencies import flow_references
-from lfx.projects.tool_packs import ToolPackManifest, ToolPackToolBinding, exported_flow_ids, tool_pack_manifest
+from lfx.projects.tool_packs import ToolPackManifest, ToolPackToolBinding, tool_pack_manifest
 from lfx.schema.data import Data
-from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.authorization import FlowAction, ProjectAction, ensure_flow_permission, ensure_project_permission
@@ -17,7 +15,6 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_authorization_service
 
 MAX_DEPENDENCY_FLOWS = 500
 
@@ -84,77 +81,25 @@ async def resolve_tool_pack(
     action: FlowAction = FlowAction.READ,
     _resolving: frozenset[UUID] = frozenset(),
 ) -> tuple[ToolPackManifest, list[Flow]]:
-    if project_id in _resolving:
-        raise HTTPException(422, "The Tool Packs contain a recursive project reference.")
-    resolving = _resolving | {project_id}
-    project = await _read_pack(session, user, project_id)
+    from lfx.projects.lifecycle import ProjectConfigError
+    from lfx.projects.source_resolution import resolve_tool_pack as resolve_sources
+
+    from langflow.services.database.models.folder.save_context import LangflowProjectSaveContext, project_error_http
+
     try:
-        ids = exported_flow_ids(project.project_config)
-    except ValueError as exc:
-        raise HTTPException(409, "The tool pack has invalid exports. Review its configuration.") from exc
-    stmt = select(Flow).where(Flow.folder_id == project.id, Flow.id.in_(ids))
-    authz = get_authorization_service()
-    if not (await authz.supports_cross_user_fetch() and await authz.is_enabled()):
-        stmt = stmt.where(Flow.user_id == user.id)
-    flows = list((await session.exec(stmt)).all())
-    if {flow.id for flow in flows} != set(ids):
-        raise HTTPException(409, "An exported tool is no longer available in its Tool Pack.")
-    available = {str(flow.id): flow for flow in flows}
-    pending = list(flows)
-    while pending:
-        source = pending.pop()
-        await _authorize_flow(user, source, action)
-        try:
-            references = flow_references(source.data or {})
-            bindings = [
-                ToolPackToolBinding.model_validate(nested)
-                for node in (source.data or {}).get("nodes", [])
-                if (nested := (node.get("data", {}).get("_harness_tool") or {}).get("tool_pack"))
-            ]
-            # Persisted flow references use UUIDs; standalone resolution also supports
-            # non-database IDs, so keep this check at the database boundary.
-            for reference in references:
-                if reference.flow_id:
-                    UUID(reference.flow_id)
-        except (ValueError, KeyError, TypeError, AttributeError) as exc:
-            raise HTTPException(409, "The tool pack has invalid dependencies. Review its configuration.") from exc
-        for binding in bindings:
-            nested_manifest, _ = await resolve_tool_pack(
-                session, user, binding.reference.project_id, action=action, _resolving=resolving
-            )
-            if binding.reference != nested_manifest.reference or binding.tool not in nested_manifest.tools:
-                raise HTTPException(422, "A nested Tool Pack changed. Review its reference before using this export.")
-        for reference in references:
-            dependency = available.get(reference.flow_id)
-            if dependency is not None:
-                continue
-            if reference.flow_id:
-                dependency = await authorized_or_owner_scoped(
-                    session,
-                    Flow,
-                    id_column=Flow.id,
-                    resource_id=UUID(reference.flow_id),
-                    owner_column=Flow.user_id,
-                    owner_id=user.id,
-                )
-            else:
-                # Legacy name references have always resolved inside the executing account.
-                dependency = (
-                    await session.exec(select(Flow).where(Flow.user_id == user.id, Flow.name == reference.name))
-                ).first()
-            if dependency is None:
-                raise HTTPException(404, "Tool pack dependency not found")
-            if str(dependency.id) not in available:
-                available[str(dependency.id)] = dependency
-                pending.append(dependency)
-            if len(available) > MAX_DEPENDENCY_FLOWS:
-                raise HTTPException(422, "A Tool Pack cannot depend on more than 500 flows.")
-    flows = list(available.values())
-    try:
-        manifest = describe_tool_pack(project, flows)
+        manifest, sources = await resolve_sources(
+            LangflowProjectSaveContext(session, user),
+            project_id,
+            access="execute" if action == FlowAction.EXECUTE else "read",
+            resolving=_resolving,
+        )
+    except ProjectConfigError as exc:
+        raise project_error_http(exc) from exc
     except (ValueError, KeyError, TypeError) as exc:
-        raise HTTPException(409, "The tool pack has invalid exports. Review its configuration.") from exc
-    return manifest, flows
+        raise HTTPException(
+            409, "The tool pack has invalid exports or dependencies. Review its configuration."
+        ) from exc
+    return manifest, [await session.get(Flow, flow_id) for flow_id in sources]
 
 
 async def resolve_tool_pack_snapshot(
