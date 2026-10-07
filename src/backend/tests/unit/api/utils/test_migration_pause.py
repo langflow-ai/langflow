@@ -338,6 +338,12 @@ async def test_a_record_that_says_paused_changes_nothing_while_the_feature_is_of
 
 
 async def test_the_flow_sync_from_disk_waits_out_the_pause(active_user, config_dir, monkeypatch):
+    # The app under test runs this loop too, every ten seconds. It is stopped here: one of its passes
+    # between the flow below and the pause would sync the flow before the pause was on.
+    theirs = [task for task in asyncio.all_tasks() if getattr(task.get_coro(), "__name__", "") == "sync_flows_from_fs"]
+    for task in theirs:
+        task.cancel()
+    await asyncio.gather(*theirs, return_exceptions=True)
     flow_file = config_dir / "flow.json"
     flow_file.write_text(json.dumps({"name": "renamed on disk"}))
     async with session_scope() as session:
