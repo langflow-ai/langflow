@@ -63,3 +63,4 @@ async def test_missing_local_attachment_is_reported_and_preserved(attachment_ses
     assert message.files == [entry]
     assert [result.status for result in results] == ["failed"]
     assert str(message.id) in results[0].reason
+    assert results[0].code == "attachment_unmatched"

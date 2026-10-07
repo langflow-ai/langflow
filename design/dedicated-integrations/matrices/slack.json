@@ -9,7 +9,7 @@
   },
   "wave": 1,
   "max_included_actions": 8,
-  "verified_on": "2026-09-01",
+  "verified_on": "2026-10-02",
   "oauth_app_owner_by_context": {
     "hosted": "langflow",
     "self_managed": "customer",
@@ -34,70 +34,70 @@
       "url": "https://docs.slack.dev/reference/scopes",
       "title": "Slack: Permission scopes reference",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Descriptions: search:read 'Search a workspace's content'; channels:history / groups:history / im:history / mpim:history 'View messages and other content in ... that your Slack app has been added to'; chat:write 'Send messages as your Slack app'; canvases:read 'Access contents of canvases created inside Slack'; canvases:write 'Create, edit and remove canvases'; reactions:write 'Add and edit emoji reactions'; channels:read / groups:read 'View basic information about ... channels'; users:read 'View people in a workspace'. Token-type availability is taken from each method page."
     },
     "slack-mcp-server": {
       "url": "https://docs.slack.dev/ai/slack-mcp-server/",
       "title": "Slack: Slack MCP server",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Endpoint https://mcp.slack.com/mcp, JSON-RPC 2.0 over Streamable HTTP; 'Slack supports confidential OAuth for MCP clients'; user tokens; 'Only directory-published apps or internal apps may use MCP'; workspace admins approve and manage MCP client integrations; tools cover search, retrieving and sending messages, canvases, users, files, lists; per-tool rate tiers from Tier 2 to Tier 4 with special limits for search and posting. The page carries no availability label (no preview or beta marker). The page names capabilities (search messages and files, read channel history and send messages, create/update/read canvases, fetch user info, list channel members, file upload via the slack_get_file_upload_url and slack_complete_file_upload tools, lists) and requests the granular search scopes search:read.public, search:read.private, search:read.mpim, search:read.im; it does not enumerate the tool identifiers for search, messages, or canvases. Authentication: 'Slack supports confidential OAuth for MCP clients' with the app's client_id and client_secret; a 'Consider using PKCE' callout adds 'Looking to use desktop clients? PKCE support is now available!'; MCP clients must be backed by a registered Slack app with a fixed app ID; SSE and Dynamic Client Registration are not supported; user-token endpoints are https://slack.com/oauth/v2_user/authorize and oauth.v2.user.access."
     },
     "slack-pkce": {
       "url": "https://docs.slack.dev/authentication/using-pkce/",
       "title": "Slack: Using PKCE",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "code_challenge_method must be S256; custom URI schemes are always treated as desktop redirects and localhost redirects are desktop when the app opts into PKCE; 'Desktop redirects are not allowed to request bot scopes'; the token exchange omits client_secret and sends code_verifier."
     },
     "slack-rate-limits": {
       "url": "https://docs.slack.dev/apis/web-api/rate-limits",
       "title": "Slack: Web API rate limits",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Tier 1: 1+ per minute; Tier 2: 20+ per minute; Tier 3: 50+ per minute; Tier 4: 100+ per minute; Special tier per method; limits apply per API method per workspace per app; 429 with Retry-After in seconds; since May 29, 2025 newly created commercially distributed non-Marketplace apps have reduced limits on conversations.history and conversations.replies."
     },
     "slack-oauth-install": {
       "url": "https://docs.slack.dev/authentication/installing-with-oauth",
       "title": "Slack: Installing with OAuth",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "https://slack.com/oauth/v2/authorize with scope (bot) and user_scope (user); oauth.v2.access exchange requires client_id and client_secret (or PKCE); response carries the bot access_token and optionally authed_user.access_token; 'The redirect_uri must use HTTPS'; 'OAuth tokens do not expire' unless rotation is enabled."
     },
     "slack-token-rotation": {
       "url": "https://docs.slack.dev/authentication/using-token-rotation/",
       "title": "Slack: Using token rotation",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Rotation 'may not be turned off once it's turned on'; access tokens expire every 12 hours (43,200 seconds); refresh with oauth.v2.access grant_type=refresh_token; refresh tokens are single-use and revoked after a grace period; applies to bot and user tokens."
     },
     "slack-auth-revoke": {
       "url": "https://docs.slack.dev/reference/methods/auth.revoke",
       "title": "Slack: auth.revoke",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Revokes the calling token (bot or user); test=1 dry run; Tier 3."
     },
     "slack-remove-apps": {
       "url": "https://slack.com/help/articles/360003125231-Remove-apps-and-custom-integrations-from-your-workspace",
       "title": "Slack Help: Remove apps and custom integrations from your workspace",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Owners remove an app via Tools & settings > Manage apps > Installed Apps > Configuration > Remove App; members revoke their own authorization under Authorized members > Revoke; with app approval enabled only owners and app managers can remove apps."
     },
     "slack-app-approval": {
       "url": "https://slack.com/help/articles/222386767-Manage-app-approval-for-your-workspace",
       "title": "Slack Help: Manage app approval for your workspace",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "By default members can install apps without Workspace Owner approval; owners can enable app approval and pre-approve or restrict apps; members then request apps; an Enterprise org app management policy enables approval automatically."
     },
     "slack-search-messages": {
       "url": "https://docs.slack.dev/reference/methods/search.messages",
       "title": "Slack: search.messages",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "User token with search:read; query required; count max 100 default 20; page or cursor; sort score or timestamp; response messages.matches with pagination and total_count; Tier 2."
     },
     "slack-conversations-replies": {
@@ -111,42 +111,42 @@
       "url": "https://docs.slack.dev/reference/methods/chat.postMessage",
       "title": "Slack: chat.postMessage",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "chat:write with bot or user token; channel required; text, blocks, attachments, thread_ts, reply_broadcast, unfurl_links; username and icon need chat:write.customize; response ok, channel, ts, message; special rate limit of about 1 message per second per channel with burst allowance; 40,000-character truncation."
     },
     "slack-reactions-add": {
       "url": "https://docs.slack.dev/reference/methods/reactions.add",
       "title": "Slack: reactions.add",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "reactions:write with bot or user token; channel, name, timestamp; errors already_reacted and too_many_reactions; Tier 3."
     },
     "slack-conversations-members": {
       "url": "https://docs.slack.dev/reference/methods/conversations.members",
       "title": "Slack: conversations.members",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "channels:read, groups:read, im:read, mpim:read with bot or user token; channel required; cursor and limit; returns members[] of user ids and response_metadata.next_cursor; Tier 4."
     },
     "slack-canvases-create": {
       "url": "https://docs.slack.dev/reference/methods/canvases.create",
       "title": "Slack: canvases.create",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "canvases:write with bot or user token; title, document_content of type markdown up to 1 MiB, channel_id (required for free teams); returns canvas_id; Tier 2; free teams cannot create standalone canvases."
     },
     "slack-mcp-ga-announcement": {
       "url": "https://slack.com/blog/news/mcp-real-time-search-api-now-available",
       "title": "Slack blog (2026-02-17): Slack securely powers your third-party agents with your business context",
       "kind": "provider_changelog",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Announces 'the general availability of Slack's Real-Time Search (RTS) API and Model Context Protocol (MCP) server' on February 17, 2026; names Claude, ChatGPT, Perplexity, Google, Cursor, and Marketplace agents as connecting clients."
     },
     "slack-mcp-changelog": {
       "url": "https://docs.slack.dev/changelog/2026/02/17/slack-mcp/",
       "title": "Slack Developer changelog (2026-02-17): Announcing the Slack MCP server and Real-time Search API",
       "kind": "provider_changelog",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-10-02",
       "notes": "Companion changelog entry; states the server exposes tools 'designed for LLM-driven discovery, configuration, and execution' and points to the server documentation."
     },
     "slack-search-read-scope": {

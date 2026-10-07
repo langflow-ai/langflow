@@ -354,6 +354,8 @@ def verify_migration(conn, new_key: str) -> tuple[int, int]:
         text('SELECT id, store_api_key FROM "user" WHERE store_api_key IS NOT NULL LIMIT 3')
     ).fetchall()
     for _, encrypted_key in users:
+        if not looks_like_fernet_token(encrypted_key):
+            continue
         try:
             decrypt_with_key(encrypted_key, new_key)
             verified += 1
@@ -572,6 +574,9 @@ def migrate(
 
         migrated, failed = 0, 0
         for user_id, encrypted_key in users:
+            # auto_login stores "" for a user without a Store API key.
+            if not looks_like_fernet_token(encrypted_key):
+                continue
             new_encrypted = migrate_value(encrypted_key, old_key, new_key)
             if new_encrypted:
                 if not dry_run:

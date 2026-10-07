@@ -27,6 +27,8 @@ async def test_async_catalog_parity_retains_policy_status_and_live_filters(monke
         }
     ]
     p = policy()
+    resolve_policy = AsyncMock(return_value=p)
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
     monkeypatch.setattr(model_catalog, "get_unified_models_detailed", lambda **_kwargs: deepcopy(rows))
     monkeypatch.setattr(model_catalog, "_get_model_status", AsyncMock(return_value=(set(), set())))
     monkeypatch.setattr(model_catalog, "_fetch_enabled_providers_for_user", AsyncMock(return_value={"OpenAI"}))
@@ -40,13 +42,12 @@ async def test_async_catalog_parity_retains_policy_status_and_live_filters(monke
 
     monkeypatch.setattr(model_catalog, "replace_with_live_models", discover)
     monkeypatch.setattr(model_catalog, "aget_live_model_variables", AsyncMock(return_value={}))
-    asynchronous = await model_catalog.aget_language_model_options(
-        "runtime-owner", tool_calling=True, provider_policy=p
-    )
-    synchronous = model_catalog.get_language_model_options("runtime-owner", tool_calling=True, provider_policy=p)
+    asynchronous = await model_catalog.aget_language_model_options("runtime-owner", tool_calling=True)
+    synchronous = model_catalog.get_language_model_options("runtime-owner", tool_calling=True)
     assert asynchronous == synchronous
     assert all(x["name"] != "no-tools" for x in asynchronous)
     assert len(seen) == 2
+    assert resolve_policy.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -77,3 +78,36 @@ async def test_async_overrides_match_sync_without_mutating_saved_selection(provi
     assert saved == before
     if provider:
         assert native[0]["metadata"] == {}
+
+
+@pytest.mark.asyncio
+async def test_async_override_awaits_options_and_returns_an_independent_match():
+    saved = [{"name": "old-model", "provider": "OpenAI", "metadata": {"model_class": "old-client"}}]
+    options = [{"name": "new-model", "provider": "Anthropic", "metadata": {"model_class": "new-client"}}]
+    before = deepcopy(saved)
+    get_options = AsyncMock(return_value=options)
+    result = await aapply_model_overrides(
+        saved, model_name="new-model", provider="Anthropic", user_id="owner", get_options=get_options
+    )
+    get_options.assert_awaited_once_with(user_id="owner")
+    assert result == options
+    assert result[0] is not options[0]
+    result[0]["metadata"]["model_class"] = "changed"
+    assert options[0]["metadata"]["model_class"] == "new-client"
+    assert saved == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("lookup_fails", [False, True])
+async def test_async_override_uses_fallback_when_lookup_misses_or_fails(lookup_fails):
+    saved = [{"name": "old-model", "provider": "OpenAI", "metadata": {"model_class": "old-client"}}]
+    before = deepcopy(saved)
+    get_options = AsyncMock(return_value=[{"name": "unrelated-model", "provider": "Anthropic"}])
+    if lookup_fails:
+        get_options.side_effect = RuntimeError("lookup unavailable")
+    result = await aapply_model_overrides(
+        saved, model_name="new-model", provider="Anthropic", user_id="owner", get_options=get_options
+    )
+    get_options.assert_awaited_once_with(user_id="owner")
+    assert result == [{"name": "new-model", "provider": "Anthropic", "category": "Anthropic", "metadata": {}}]
+    assert saved == before
