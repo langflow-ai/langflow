@@ -1301,6 +1301,16 @@ async def test_a_run_that_an_a2a_request_left_going_stops_the_pause(
     assert await migration_pause.drained(5)
 
 
+@pytest.fixture(autouse=True)
+def no_a2a_place_left_behind():
+    """A test that fails midway must not leave a run's place for the tests after it in this process."""
+    yield
+    from langflow.api.v1 import a2a_executor
+
+    for task_id, place in list(a2a_executor._places.items()):
+        a2a_executor._settle(task_id, place, given_up=True)
+
+
 def _an_a2a_run_that_fails() -> tuple:
     """An executor whose run ends at once, the context of one message, and the task store's own call context."""
     from a2a.server.agent_execution import RequestContext
@@ -1438,6 +1448,58 @@ async def test_an_answer_to_an_a2a_task_that_waits_for_a_person_stops_the_pause_
     assert sent.status_code == 200, sent.text
 
     await _the_pause_waits_for_the_held_save(client, headers, waiting["id"], reached, release)
+
+
+@pytest.mark.parametrize("stored_by", ["this version", "a version before the owner of a public task had a name"])
+async def test_an_answer_keeps_its_place_through_its_first_save_whichever_row_the_store_finds(
+    client,  # noqa: ARG001
+    config_dir,
+    stored_by,
+):
+    from a2a.server.agent_execution import RequestContext
+    from a2a.server.context import ServerCallContext
+    from a2a.server.events import EventQueue
+    from a2a.types import a2a_pb2 as pb
+    from google.protobuf.json_format import MessageToDict
+    from langflow.api.v1 import a2a, a2a_executor
+    from langflow.services.authorization.public_access import PUBLIC_ANONYMOUS_ACTOR_ID
+    from langflow.services.database.models import A2ATask
+
+    _checked(config_dir, [PASSING], **PREPARED)
+    flow_id, task_id = str(uuid4()), uuid4().hex
+    caller = ServerCallContext(state={"flow_id": flow_id, "admitted_user_id": str(PUBLIC_ANONYMOUS_ACTOR_ID)})
+    # An older version stored a public task under the flow alone. It is still read from there, and saved under
+    # the owner of today, where the store then finds no row.
+    owner = f"{flow_id}:{PUBLIC_ANONYMOUS_ACTOR_ID}" if stored_by == "this version" else f"{flow_id}:"
+    waiting = pb.Task(id=task_id, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_INPUT_REQUIRED))
+    async with session_scope() as session:
+        session.add(A2ATask(id=task_id, owner=owner, task=MessageToDict(waiting)))
+    read = await a2a._TASK_STORE.get(task_id, caller)
+    arrived, release = asyncio.Event(), asyncio.Event()
+
+    async def run(*_args) -> None:
+        pytest.fail("an answer to a waiting task does not start a first run")
+
+    async def resume(*_args) -> None:
+        arrived.set()
+        await release.wait()
+        msg = "the run ends here"
+        raise RuntimeError(msg)
+
+    context = RequestContext(call_context=caller, task_id=task_id, context_id="c", task=read)
+    running = asyncio.create_task(a2a_executor.FlowAgentExecutor(run, resume).execute(context, EventQueue()))
+    await asyncio.wait_for(arrived.wait(), timeout=10)
+
+    # The SDK's first save for an answer: the task as it is, still waiting, with the answer in it.
+    await a2a._TASK_STORE.save(read, caller)
+    release.set()
+    await running
+
+    # The run has returned, and what it ended with is still to be saved.
+    assert not await migration_pause.drained(0)
+    failed = pb.Task(id=task_id, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_FAILED))
+    await a2a._TASK_STORE.save(failed, caller)
+    assert await migration_pause.drained(0)
 
 
 async def test_an_a2a_run_still_going_keeps_its_place_when_its_task_is_saved_as_cancelled(

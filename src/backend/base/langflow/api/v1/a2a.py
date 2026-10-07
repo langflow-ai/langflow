@@ -781,10 +781,9 @@ class DurableTaskStore(TaskStore):
             else:
                 row.task = blob  # fresh dict reference flags the JSON column dirty
         state = _task_state(blob)
-        # Told to the run that holds a place in a migration pause for this task. Only a save that moves the
-        # task into a state that ends a run lets the place go. An answer to a task that waits for a person is
-        # saved first in that same state, when the run it goes on with has only begun.
-        task_saved(task.id, run_over=state in _RUN_OVER_STATE_NAMES and state != existing_state)
+        # Told to the run that holds a place in a migration pause for this task. The run decides whether
+        # this save is the one it ends with.
+        task_saved(task.id, state, run_over=state in _RUN_OVER_STATE_NAMES)
 
     async def get(self, task_id: str, context: ServerCallContext) -> pb.Task | None:
         owner = _task_scope(context)

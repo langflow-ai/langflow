@@ -98,6 +98,11 @@ class _Place:
     """A run's place among the changes a migration pause waits for."""
 
     let_go: Callable[[], None]
+    # The state the task was in when the run began. An answer to a task that waits for a person is saved
+    # first in that same state, with the answer in it, and that save ends nothing.
+    began_in: str | None = None
+    # A save of the task in a state that ends no run has come since the run began.
+    moved: bool = False
     returned: bool = False
     saved: bool = False
     # Set once the run has returned: gives the place up when no save of the task has come for _SAVE_GRACE.
@@ -108,12 +113,17 @@ class _Place:
 _places: dict[str, _Place] = {}
 
 
-def task_saved(task_id: str, *, run_over: bool) -> None:
-    """The task store has written this task. run_over says that the save moved it into a state that ends a run."""
+def task_saved(task_id: str, state: str | None, *, run_over: bool) -> None:
+    """The task store has written this task in this state. run_over says that the state ends a run."""
     place = _places.get(task_id)
     if place is None:
         return
-    place.saved = place.saved or run_over
+    if not run_over:
+        place.moved = True
+    elif place.moved or state != place.began_in:
+        # The run brought the task here. The place does not ask the store what the row held before: an
+        # older version stored a public task under another owner, and another worker can save in between.
+        place.saved = True
     if not _settle(task_id, place) and place.giving_up:
         # The SDK is still saving what the run did, so the wait for the last save starts again.
         _give_up_later(task_id, place)
@@ -152,7 +162,8 @@ class FlowAgentExecutor(AgentExecutor):
         if let_go is None:
             await self._execute(context, event_queue)
             return
-        place = _Place(let_go)
+        existing = context.current_task
+        place = _Place(let_go, began_in=pb.TaskState.Name(existing.status.state) if existing is not None else None)
         if earlier := _places.pop(context.task_id, None):
             # A follow-up message on the same task: this run takes the place over.
             _settle(context.task_id, earlier, given_up=True)
@@ -164,7 +175,10 @@ class FlowAgentExecutor(AgentExecutor):
             if not _settle(context.task_id, place):
                 # ponytail: a save that never comes, because the SDK's reader died, would hold every pause off.
                 # The place is given up once no save of the task has come for _SAVE_GRACE. Have the store take
-                # a place of its own if one save is ever slower than that.
+                # a place of its own if one save is ever slower than that. An answer that lost the claim to
+                # another worker saves nothing that ends a run, so its place waits that long as well. A run
+                # that is cancelled is saved as cancelled once more after its place is gone: the row's
+                # time changes and nothing else.
                 _give_up_later(context.task_id, place)
 
     async def _execute(self, context: RequestContext, event_queue: EventQueue) -> None:
