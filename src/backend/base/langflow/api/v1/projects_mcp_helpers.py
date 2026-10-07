@@ -3,6 +3,8 @@
 Extracted from projects.py to reduce file size and isolate MCP concerns (SO1).
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any, cast
 from uuid import UUID
 
@@ -22,6 +24,27 @@ from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.api_key.policy import ApiKeyIssuanceDeniedError
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
 from langflow.services.schema import ServiceType
+
+
+@asynccontextmanager
+async def _unwindable(session, *, owns_transaction: bool) -> AsyncIterator[None]:
+    """Give a borrowed transaction a savepoint the registration can fail into.
+
+    On a borrowed transaction ``update_server`` re-raises the duplicate-name
+    ``IntegrityError`` rather than rolling back, because a rollback there would
+    discard the caller's work. The failed flush still leaves the session needing
+    one, so the swallowed failure below would poison the caller's transaction and
+    its next statement would raise ``PendingRollbackError`` — a 500 for a create
+    or rename that only lost a server name. The savepoint unwinds the API key and
+    the server write together and hands the caller its transaction back intact.
+    A caller that owns the transaction lets ``update_server`` commit, which no
+    savepoint can contain, so it keeps the plain path.
+    """
+    if owns_transaction:
+        yield
+        return
+    async with session.begin_nested():
+        yield
 
 
 def _server_config_uses_streamable_http(args: list[Any], streamable_http_url: str) -> bool:
@@ -94,88 +117,89 @@ async def register_mcp_servers_for_project(
         HTTPException: On server name conflicts.
     """
     try:
-        streamable_http_url = await get_project_streamable_http_url(project.id)
-        auth_type = default_auth.get("auth_type", "none")
+        async with _unwindable(session, owns_transaction=owns_transaction):
+            streamable_http_url = await get_project_streamable_http_url(project.id)
+            auth_type = default_auth.get("auth_type", "none")
 
-        validation_result = await validate_mcp_server_for_project(
-            project.id,
-            project.name,
-            current_user,
-            session,
-            get_storage_service(),
-            get_settings_service(),
-            operation="create",
-        )
-
-        if validation_result.has_conflict:
-            await logger.aerror(validation_result.conflict_message)
-            raise HTTPException(
-                status_code=409,
-                detail=validation_result.conflict_message,
-            )
-
-        if validation_result.should_skip and _server_config_matches_project_auth(
-            validation_result.existing_config,
-            auth_type,
-            streamable_http_url,
-        ):
-            await logger.adebug(
-                "MCP server '%s' already matches auth %s for project %s, skipping",
-                validation_result.server_name,
-                auth_type,
+            validation_result = await validate_mcp_server_for_project(
                 project.id,
+                project.name,
+                current_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+                operation="create",
             )
-            return False
 
-        if auth_type == "apikey":
-            api_key_name = f"MCP Project {project.name} - default"
-            unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
-            command = "uvx"
-            args = [
-                *mcp_sdk_constraint_args(),
-                "mcp-proxy",
-                "--transport",
-                "streamablehttp",
-                "--headers",
-                "x-api-key",
-                unmasked_api_key.api_key,
-                streamable_http_url,
-            ]
-        elif auth_type == "oauth":
-            msg = "OAuth authentication is not yet implemented for MCP server creation during project creation."
-            await logger.awarning(msg)
-            return False
-        else:
-            command = "uvx"
-            args = [
-                *mcp_sdk_constraint_args(),
-                "mcp-proxy",
-                "--transport",
-                "streamablehttp",
-                streamable_http_url,
-            ]
+            if validation_result.has_conflict:
+                await logger.aerror(validation_result.conflict_message)
+                raise HTTPException(
+                    status_code=409,
+                    detail=validation_result.conflict_message,
+                )
 
-        server_config = {"command": command, "args": args}
-
-        if validation_result.should_skip:
-            await logger.adebug(
-                "MCP server '%s' exists for project %s but does not match auth %s, updating",
-                validation_result.server_name,
-                project.id,
+            if validation_result.should_skip and _server_config_matches_project_auth(
+                validation_result.existing_config,
                 auth_type,
+                streamable_http_url,
+            ):
+                await logger.adebug(
+                    "MCP server '%s' already matches auth %s for project %s, skipping",
+                    validation_result.server_name,
+                    auth_type,
+                    project.id,
+                )
+                return False
+
+            if auth_type == "apikey":
+                api_key_name = f"MCP Project {project.name} - default"
+                unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
+                command = "uvx"
+                args = [
+                    *mcp_sdk_constraint_args(),
+                    "mcp-proxy",
+                    "--transport",
+                    "streamablehttp",
+                    "--headers",
+                    "x-api-key",
+                    unmasked_api_key.api_key,
+                    streamable_http_url,
+                ]
+            elif auth_type == "oauth":
+                msg = "OAuth authentication is not yet implemented for MCP server creation during project creation."
+                await logger.awarning(msg)
+                return False
+            else:
+                command = "uvx"
+                args = [
+                    *mcp_sdk_constraint_args(),
+                    "mcp-proxy",
+                    "--transport",
+                    "streamablehttp",
+                    streamable_http_url,
+                ]
+
+            server_config = {"command": command, "args": args}
+
+            if validation_result.should_skip:
+                await logger.adebug(
+                    "MCP server '%s' exists for project %s but does not match auth %s, updating",
+                    validation_result.server_name,
+                    project.id,
+                    auth_type,
+                )
+
+            server_name = validation_result.server_name
+
+            await update_server(
+                server_name,
+                server_config,
+                current_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+                owns_transaction=owns_transaction,
             )
-
-        server_name = validation_result.server_name
-
-        await update_server(
-            server_name,
-            server_config,
-            current_user,
-            session,
-            get_storage_service(),
-            get_settings_service(),
-            owns_transaction=owns_transaction,
-        )
     except (HTTPException, ApiKeyIssuanceDeniedError):
         # A refused key is a decision, not a transient registration failure:
         # swallowing it would report success for a server that was never
@@ -235,66 +259,67 @@ async def handle_mcp_server_rename(
     Raises HTTPException on name conflicts.
     """
     try:
-        old_validation = await validate_mcp_server_for_project(
-            existing_project.id,
-            old_project_name,
-            current_user,
-            session,
-            get_storage_service(),
-            get_settings_service(),
-            operation="update",
-        )
+        async with _unwindable(session, owns_transaction=owns_transaction):
+            old_validation = await validate_mcp_server_for_project(
+                existing_project.id,
+                old_project_name,
+                current_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+                operation="update",
+            )
 
-        new_validation = await validate_mcp_server_for_project(
-            existing_project.id,
-            new_project_name,
-            current_user,
-            session,
-            get_storage_service(),
-            get_settings_service(),
-            operation="update",
-        )
+            new_validation = await validate_mcp_server_for_project(
+                existing_project.id,
+                new_project_name,
+                current_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+                operation="update",
+            )
 
-        if old_validation.server_name != new_validation.server_name:
-            if new_validation.has_conflict:
-                await logger.aerror(new_validation.conflict_message)
-                raise HTTPException(
-                    status_code=409,
-                    detail=new_validation.conflict_message,
-                )
+            if old_validation.server_name != new_validation.server_name:
+                if new_validation.has_conflict:
+                    await logger.aerror(new_validation.conflict_message)
+                    raise HTTPException(
+                        status_code=409,
+                        detail=new_validation.conflict_message,
+                    )
 
-            if old_validation.server_exists and old_validation.project_id_matches:
-                await update_server(
-                    old_validation.server_name,
-                    {},
-                    current_user,
-                    session,
-                    get_storage_service(),
-                    get_settings_service(),
-                    delete=True,
-                    owns_transaction=owns_transaction,
-                )
+                if old_validation.server_exists and old_validation.project_id_matches:
+                    await update_server(
+                        old_validation.server_name,
+                        {},
+                        current_user,
+                        session,
+                        get_storage_service(),
+                        get_settings_service(),
+                        delete=True,
+                        owns_transaction=owns_transaction,
+                    )
 
-                await update_server(
-                    new_validation.server_name,
-                    old_validation.existing_config or {},
-                    current_user,
-                    session,
-                    get_storage_service(),
-                    get_settings_service(),
-                    owns_transaction=owns_transaction,
-                )
+                    await update_server(
+                        new_validation.server_name,
+                        old_validation.existing_config or {},
+                        current_user,
+                        session,
+                        get_storage_service(),
+                        get_settings_service(),
+                        owns_transaction=owns_transaction,
+                    )
 
-                await logger.adebug(
-                    "Updated MCP server name from %s to %s",
-                    old_validation.server_name,
-                    new_validation.server_name,
-                )
-            else:
-                await logger.adebug(
-                    "Old MCP server '%s' not found for this project, skipping rename",
-                    old_validation.server_name,
-                )
+                    await logger.adebug(
+                        "Updated MCP server name from %s to %s",
+                        old_validation.server_name,
+                        new_validation.server_name,
+                    )
+                else:
+                    await logger.adebug(
+                        "Old MCP server '%s' not found for this project, skipping rename",
+                        old_validation.server_name,
+                    )
 
     except HTTPException:
         raise
