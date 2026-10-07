@@ -109,7 +109,9 @@ async def check_version_direction(
     """
     name = "version"
     if not target_revision and target_version:
-        return check_target_version(target_version)
+        check = check_target_version(target_version)
+        # The admin gave a version and it could not be read, so the command must not end as if the check passed.
+        return replace(check, status="fail") if check.status == "warn" else check
     if not target_revision:
         return CheckResult(
             name,
