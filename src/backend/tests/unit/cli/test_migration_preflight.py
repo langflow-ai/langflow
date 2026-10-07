@@ -232,10 +232,13 @@ class TestTargetVersion:
 
         assert check.status == "fail"
 
-    async def test_something_that_is_not_a_version_is_a_warning(self, safe_superuser):  # noqa: ARG002
-        check = _check(await run_preflight(target_version="latest"), "version")
+    @pytest.mark.parametrize("mistyped", ["latest", "1.13.O"])
+    async def test_something_that_is_not_a_version_is_refused(self, safe_superuser, mistyped):  # noqa: ARG002
+        # The admin asked for the check and it could not run, so the command must not end as if it passed.
+        check = _check(await run_preflight(target_version=mistyped), "version")
 
-        assert check.status == "warn"
+        assert check.status == "fail"
+        assert "is not a Langflow version" in check.summary
 
     async def test_a_revision_is_exact_so_it_wins_over_a_version(self, safe_superuser):  # noqa: ARG002
         check = _check(await run_preflight(target_revision=PARENT, target_version="99.0.0"), "version")
