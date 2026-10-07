@@ -298,11 +298,10 @@ async def erase_subject(ref: DataSubjectRef, current_user: CurrentActiveUser, se
     """Create and approve in one call, for a customer app that decides on its own."""
     await _require_admin(current_user)
     try:
-        request, _ = await _create(session, ref, current_user, _caller_source())
-        if request.status == DataSubjectRequestStatus.REQUESTED.value:
-            await request_service.approve(session, request, current_user.id)
+        request = await request_service.create_and_approve(
+            session, _create(session, ref, current_user, _caller_source()), current_user.id
+        )
     except DataSubjectError as exc:
-        await session.commit()
         raise to_http_error(exc) from exc
     await session.commit()
     data_subject_erase_worker.notify()

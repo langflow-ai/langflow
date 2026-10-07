@@ -61,7 +61,7 @@ TABLE_POLICY: dict[str, str] = {
     "sso_settings": NOT_PERSONAL,
     "sso_user_profile": BUILDER_ROWS,
     "trace": END_USER_ROWS,
-    "transaction": "erased with each owned flow; not attributable to an end user (documented limit)",
+    "transaction": "erased with each owned flow; an end user's and a builder's own runs matched by run owner",
     "trigger": "deleted when the erase is approved",
     "trigger_cleanup": "kept until the provider subscription is revoked or its sealed token expires; holds no content",
     "trigger_event": "deleted with its trigger",

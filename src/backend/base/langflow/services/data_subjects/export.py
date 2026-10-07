@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 from sqlmodel import col, select
 
 from langflow.services.data_subjects.batching import BATCH_SIZE
+from langflow.services.data_subjects.transactions import end_user_transactions
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.auth.sso import SSOUserProfile
 from langflow.services.database.models.file.model import File
@@ -23,6 +24,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.traces.model import TraceTable
+from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_storage_service
 from langflow.utils.flow_secrets import strip_flow_secrets
@@ -181,5 +183,25 @@ async def export_end_user(
         "traces.json",
         [{"name": t.name, "status": t.status, "start_time": t.start_time, "session_id": t.session_id} for t in traces],
         count=len(traces),
+    )
+    transactions = await _rows(
+        session, select(TransactionTable).where(end_user_transactions(keys, scope)), col(TransactionTable.timestamp)
+    )
+    archive.write_json(
+        "transactions.json",
+        [
+            {
+                "timestamp": t.timestamp,
+                "flow_id": t.flow_id,
+                "vertex_id": t.vertex_id,
+                "session_id": t.session_id,
+                "status": t.status,
+                "inputs": t.inputs,
+                "outputs": t.outputs,
+                "error": t.error,
+            }
+            for t in transactions
+        ],
+        count=len(transactions),
     )
     return archive.close(_manifest("end_user", actor_id))

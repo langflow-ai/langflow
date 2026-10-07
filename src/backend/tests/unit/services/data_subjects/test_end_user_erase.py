@@ -131,7 +131,7 @@ async def test_should_count_what_would_be_erased_without_changing_anything():
         summary = await end_user_dry_run(session, end_user_keys("alice"), ())
         messages_after = await _messages_of(session, "alice")
 
-    assert summary.counts == {"messages": 2, "traces": 1, "runs": 1, "flows": 2}
+    assert summary.counts == {"messages": 2, "traces": 1, "transactions": 0, "runs": 1, "flows": 2}
     assert messages_after == 2
 
 

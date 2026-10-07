@@ -53,10 +53,7 @@ from langflow.services.data_subjects.user_listing import (
     open_deletion_request_subjects,
 )
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
-from langflow.services.database.models.data_subject_request import (
-    DataSubjectRequestSource,
-    DataSubjectRequestStatus,
-)
+from langflow.services.database.models.data_subject_request import DataSubjectRequestSource
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
 from langflow.services.deps import get_auth_service, get_authorization_service, get_settings_service
@@ -793,16 +790,18 @@ async def delete_user(
 
     # Deleting a user is an erase: everything the account holds goes, in the background, and
     # only after this synchronous stop succeeds. Deployments block it rather than being torn down.
+    actor_id = current_user.id
     try:
-        request, _ = await request_service.create_builder_request(
-            session, subject=user_db, requested_by=current_user.id, source=DataSubjectRequestSource.ADMIN
+        request = await request_service.create_and_approve(
+            session,
+            request_service.create_builder_request(
+                session, subject=user_db, requested_by=actor_id, source=DataSubjectRequestSource.ADMIN
+            ),
+            actor_id,
         )
-        if request.status == DataSubjectRequestStatus.REQUESTED.value:
-            await request_service.approve(session, request, current_user.id)
     except DataSubjectError as exc:
-        await session.commit()
         await _audit_deny(
-            user_id=current_user.id,
+            user_id=actor_id,
             action="user:delete",
             obj=f"user:{user_id}",
             status_code=int(exc.status_code),

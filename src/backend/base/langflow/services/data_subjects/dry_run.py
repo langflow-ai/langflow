@@ -10,6 +10,7 @@ from sqlmodel import col, select
 from langflow.services.data_subjects.errors import DeployedResourcesError, LastAdministratorError
 from langflow.services.data_subjects.schemas import DryRunSummary
 from langflow.services.data_subjects.stop import deployed_resources, ensure_builder_erasable
+from langflow.services.data_subjects.transactions import end_user_transactions
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.auth.authz import AuthzShare, ShareScope
 from langflow.services.database.models.data_subject_request.schemas import DataSubjectType
@@ -20,6 +21,7 @@ from langflow.services.database.models.jobs.model import Job
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.traces.model import TraceTable
+from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.variable.model import Variable
 
 if TYPE_CHECKING:
@@ -97,6 +99,7 @@ async def end_user_dry_run(session: AsyncSession, keys: EndUserKeys, scope: tupl
         counts={
             "messages": await _count(session, MessageTable, *message_where),
             "traces": await _count(session, TraceTable, *trace_where),
+            "transactions": await _count(session, TransactionTable, end_user_transactions(keys, scope)),
             "runs": await _count(session, Job, *job_where),
             "flows": int(flows_touched),
         },

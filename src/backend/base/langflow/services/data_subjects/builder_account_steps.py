@@ -9,6 +9,7 @@ from sqlmodel import and_, col, or_, select
 
 from langflow.services.data_subjects.audit_redaction import redact_audit_rows
 from langflow.services.data_subjects.batching import clear_reference_batch, delete_batch, delete_job_batch
+from langflow.services.data_subjects.transactions import builder_transactions
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.auth.authz import (
     AuthzAuditLog,
@@ -33,6 +34,7 @@ from langflow.services.database.models.mcp_server.model import MCPServer
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.policy_bundle.model import PolicyBundleRevision
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
+from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.variable.model import Variable
 
 if TYPE_CHECKING:
@@ -57,6 +59,11 @@ async def erase_jobs(session: AsyncSession, ctx: EraseContext) -> int:
 async def erase_messages_elsewhere(session: AsyncSession, ctx: EraseContext) -> int:
     """The person's own messages in flows owned by other people."""
     return await delete_batch(session, MessageTable, MessageTable.user_id == ctx.subject_user_id)
+
+
+async def erase_transactions_elsewhere(session: AsyncSession, ctx: EraseContext) -> int:
+    """Run records of the person's own runs in flows owned by other people."""
+    return await delete_batch(session, TransactionTable, builder_transactions(ctx.subject_user_id))
 
 
 async def erase_ingestion_runs(session: AsyncSession, ctx: EraseContext) -> int:
@@ -152,6 +159,7 @@ async def erase_folders(session: AsyncSession, ctx: EraseContext) -> int:
 BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("jobs", erase_jobs),
     ("messages_elsewhere", erase_messages_elsewhere),
+    ("transactions_elsewhere", erase_transactions_elsewhere),
     ("ingestion_runs", erase_ingestion_runs),
     ("mcp_servers", _delete_by_user(MCPServer, MCPServer.user_id)),
     ("files", _delete_by_user(File, File.user_id)),

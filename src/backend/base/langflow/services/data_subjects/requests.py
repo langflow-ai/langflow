@@ -11,6 +11,7 @@ from sqlmodel import col, select
 
 from langflow.services.data_subjects import audit_events
 from langflow.services.data_subjects.context import EraseContext
+from langflow.services.data_subjects.dry_run import builder_dry_run, end_user_dry_run
 from langflow.services.data_subjects.errors import (
     DataSubjectError,
     InvalidTransitionError,
@@ -36,6 +37,8 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable
+
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -208,7 +211,9 @@ def erase_context(request: DataSubjectRequest, username: str | None = None) -> E
     )
 
 
-async def _approve_builder(session: AsyncSession, request: DataSubjectRequest, actor_id: UUID | None) -> dict[str, int]:
+async def _approve_builder(
+    session: AsyncSession, request: DataSubjectRequest, actor_id: UUID | None
+) -> tuple[dict[str, int], dict[str, int]]:
     await lock_account(session, request.subject_user_id)
     user = await session.get(User, request.subject_user_id)
     if user is None:
@@ -219,7 +224,20 @@ async def _approve_builder(session: AsyncSession, request: DataSubjectRequest, a
     ctx = erase_context(request, username=user.username)
     request.pending_paths = await builder_storage_plan(session, ctx)
     request.subject_label = user.username
-    return await stop_builder(session, user)
+    approved = (await builder_dry_run(session, user)).counts
+    return await stop_builder(session, user), approved
+
+
+async def _approve_end_user(
+    session: AsyncSession, request: DataSubjectRequest
+) -> tuple[dict[str, int], dict[str, int]]:
+    ctx = erase_context(request)
+    if ctx.end_user is None:
+        msg = "The end-user id of this request is no longer available"
+        raise SubjectNotFoundError(msg)
+    request.pending_paths = end_user_storage_plan(ctx)
+    approved = (await end_user_dry_run(session, ctx.end_user, ctx.scope_flow_ids)).counts
+    return await stop_end_user(session, ctx.end_user, ctx.scope_flow_ids), approved
 
 
 async def approve(
@@ -237,14 +255,9 @@ async def approve(
     await _claim(session, request, DataSubjectRequestStatus.APPROVED)
     try:
         if request.subject_type == DataSubjectType.BUILDER.value:
-            stopped = await _approve_builder(session, request, actor_id)
+            stopped, approved = await _approve_builder(session, request, actor_id)
         else:
-            ctx = erase_context(request)
-            if ctx.end_user is None:
-                msg = "The end-user id of this request is no longer available"
-                raise SubjectNotFoundError(msg)
-            request.pending_paths = end_user_storage_plan(ctx)
-            stopped = await stop_end_user(session, ctx.end_user, ctx.scope_flow_ids)
+            stopped, approved = await _approve_end_user(session, request)
     except DataSubjectError as exc:
         request.status = DataSubjectRequestStatus.REQUESTED.value
         session.add(request)
@@ -260,7 +273,8 @@ async def approve(
     request.status = DataSubjectRequestStatus.APPROVED.value
     request.decided_by = actor_id
     request.decided_at = _now()
-    request.counts = {"stopped": stopped}
+    # What the administrator approved, in dry-run units; the engine adds its own per-step counters beside it.
+    request.counts = {"stopped": stopped, "approved": approved}
     request.error = None
     session.add(request)
     await audit_events.record_dsar_event(
@@ -270,6 +284,31 @@ async def approve(
         request_id=request.id,
         details={"request_id": str(request.id), "subject_type": request.subject_type, "automatic": automatic},
     )
+    return request
+
+
+async def create_and_approve(
+    session: AsyncSession,
+    create: Awaitable[tuple[DataSubjectRequest, bool]],
+    actor_id: UUID | None,
+) -> DataSubjectRequest:
+    """Open (or reuse) a request and approve it at once, for an administrator who erases directly.
+
+    When a guard refuses, a request this call created is rolled back with its events: nobody asked for
+    it, and keeping it would let the expiry sweep approve it later. A request that was already open
+    keeps the refusal on record.
+    """
+    created = False
+    try:
+        request, created = await create
+        if request.status == DataSubjectRequestStatus.REQUESTED.value:
+            await approve(session, request, actor_id)
+    except DataSubjectError:
+        if created:
+            await session.rollback()
+        else:
+            await session.commit()
+        raise
     return request
 
 
