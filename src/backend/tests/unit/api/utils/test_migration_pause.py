@@ -18,11 +18,13 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest
+from fastapi import APIRouter
 from fastapi.routing import iter_route_contexts
 from httpx import ASGITransport, AsyncClient
 from langflow.api.utils import migration_pause
 from langflow.api.utils.migration_jobs import live_listeners
 from langflow.api.utils.migration_pause import MigrationPauseMiddleware, changes_the_instance, is_paused
+from langflow.api.v1.deployments import router as deployment_router
 from langflow.initial_setup import setup as flow_sync
 from langflow.initial_setup.setup import sync_flows_from_fs
 from langflow.main import create_app
@@ -556,8 +558,11 @@ async def test_the_desktop_browser_handoff_is_refused_while_paused(client, logge
 
 
 def test_every_get_route_says_whether_it_changes_the_instance():
+    # Deployments are disabled by default, but their reads need the same classification when enabled.
+    deployments = APIRouter(prefix="/api/v1")
+    deployments.include_router(deployment_router)
     served: dict[str, bool] = {}
-    for route in iter_route_contexts(create_app().routes):
+    for route in iter_route_contexts([*create_app().routes, *deployments.routes]):
         # Only what Langflow's own code serves is asked about. The API docs are FastAPI's, and a route that a
         # plugin mounts is the plugin's to answer for.
         ours = getattr(route.endpoint, "__module__", "").startswith(("langflow.", "lfx."))
