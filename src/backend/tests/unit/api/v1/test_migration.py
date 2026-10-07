@@ -11,6 +11,7 @@ import io
 import json
 import logging
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -2788,6 +2789,43 @@ async def test_a_destination_that_fails_gives_no_password_or_key_away(
     record = (config_dir / "migrations" / "migration.json").read_text()
     assert "migrator" not in record
     assert "AKIAEXAMPLE" not in record
+
+
+@pytest.mark.parametrize(
+    "password",
+    ["Zq7Summer@Xk2Tail", "Zq7Summer@Xk2Tail/Wd5Wind", "Zq7Summer@Xk2Tail?Wd5Wind"],  # pragma: allowlist secret
+    ids=["into the host", "into the database", "into an option"],
+)
+async def test_a_password_with_an_at_sign_in_it_gives_no_part_of_itself_away(
+    client, logged_in_headers_super_user, config_dir, server_log, caplog, capfd, password
+):
+    headers = logged_in_headers_super_user
+    caplog.set_level(logging.DEBUG)
+    # Typed as it is and not as %40, the "@" ends the password where the address is read. The rest of the
+    # password is taken for the host, and for the database or an option when it also holds a "/" or a "?".
+    url = f"postgresql://migrator:{password}@{NOWHERE}/langflow"
+
+    responses = [
+        await client.put("api/v1/migration/destinations", json={"database_url": url}, headers=headers),
+        await client.get("api/v1/migration", headers=headers),
+    ]
+
+    assert [response.status_code for response in responses] == [200, 200]
+    database = responses[0].json()["results"]["database"]
+    assert database["code"] == "db_unreachable"
+    # The admin is told what to change. No driver is asked, since it would name the host it was given.
+    assert "%40" in database["reason"]
+    # Nothing tells the rest of the password from a real host, so no location is kept for the address.
+    assert responses[1].json()["record"]["destinations"]["database"] == {"location": None, "identity": ""}
+    _nowhere(tuple(re.split("[@/?]", password)), responses, config_dir, server_log, caplog, capfd)
+
+
+def test_a_user_name_with_an_at_sign_in_it_is_still_read():
+    # Some servers name their users user@server. Only an "@" after the password is in doubt.
+    address = "postgresql://migrator@pool:db-password@db.internal:5432/langflow"  # pragma: allowlist secret
+
+    assert location(address) == "db.internal:5432/langflow"
+    assert database_identity(address)
 
 
 @pytest.mark.api_key_required

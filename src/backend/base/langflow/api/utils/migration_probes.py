@@ -37,10 +37,26 @@ _KNOWLEDGE_BASE_TABLE = re.compile(r"lf_[0-9a-f]{24}")
 _TIMEOUT = 10
 # The options of an address that carry a secret.
 _PASSWORD_OPTIONS = frozenset({"password", "sslpassword"})
+# What SQLAlchemy takes for the user and the password of an address, and then the rest of the address.
+_AFTER_THE_PASSWORD = re.compile(r"[\w+]+://(?:[^:/]*(?::[^@]*)?@)?(?P<rest>.*)", re.DOTALL)
+
+
+def _password_spilled(address: str) -> bool:
+    """Whether an "@" follows what is read as the password, so that the rest may be more of it.
+
+    A password with an "@" that is typed as it is, and not as %40, ends at that "@" where the address
+    is read. What follows is taken for the host, and for the database or an option when it also holds
+    a "/" or a "?". Nothing tells such a part from a real one. So the address is not read at all: no
+    location is shown for it and no driver is given it, because both would name a part of the password.
+    """
+    read = _AFTER_THE_PASSWORD.match(address)
+    return bool(read and "@" in read["rest"])
 
 
 def location(address: str) -> str | None:
     """Where a database is, without the user or the password. None for an address that cannot be read."""
+    if _password_spilled(address):
+        return None
     try:
         url = sa.make_url(address)
     except (sa.exc.ArgumentError, ValueError):
@@ -56,6 +72,8 @@ def database_identity(address: str) -> str:
     the user, the host, the port, the database name and every option. The driver and the
     password do not, so the same destination written two ways has one identity.
     """
+    if _password_spilled(address):
+        return ""
     try:
         url = sa.make_url(address)
     except (sa.exc.ArgumentError, ValueError):
@@ -160,6 +178,9 @@ async def probe_files(
 
 def _ask(address: str, question: Callable[[sa.Connection], dict[str, Any] | None]) -> dict[str, Any]:
     """Put a question to the PostgreSQL database at this address. The question returns what is wrong, or None."""
+    if _password_spilled(address):
+        reason = 'This address has an "@" after its password. If the password has an "@" in it, write it as %40.'
+        return _failed("db_unreachable", reason)
     try:
         url = sa.make_url(_sync_postgres_url(address))
     except (sa.exc.ArgumentError, ValueError):
