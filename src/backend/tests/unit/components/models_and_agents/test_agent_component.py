@@ -294,7 +294,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             assert call_kwargs.get("watsonx_url") == "https://us-south.ml.cloud.ibm.com"
             assert call_kwargs.get("watsonx_project_id") == "test-project-id"
 
-    @patch("lfx.components.models_and_agents.agent.aget_language_model_options", new_callable=AsyncMock)
+    @patch("lfx.components.models_and_agents.agent.get_language_model_option")
     @patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock)
     async def test_get_agent_requirements_supports_legacy_agent_llm_model_name(
         self, mock_get_llm, mock_get_options, component_class, default_kwargs
@@ -309,22 +309,20 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component.get_memory_data = AsyncMock(return_value=[])
         component._get_shared_callbacks = list
         component.set_tools_callbacks = lambda *_: None
-        mock_get_options.return_value = [
-            {
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "metadata": {
-                    "model_class": "ChatOpenAI",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }
-        ]
+        mock_get_options.return_value = {
+            "name": "gpt-4o",
+            "provider": "OpenAI",
+            "metadata": {
+                "model_class": "ChatOpenAI",
+                "model_name_param": "model",
+                "api_key_param": "api_key",
+            },
+        }
         mock_get_llm.return_value = MockLanguageModel()
 
         await component.get_agent_requirements()
 
-        assert mock_get_llm.call_args.kwargs["model"] == [mock_get_options.return_value[0]]
+        assert mock_get_llm.call_args.kwargs["model"] == [mock_get_options.return_value]
 
     @patch("lfx.components.models_and_agents.agent.aget_llm", new_callable=AsyncMock)
     async def test_get_agent_requirements_accepts_connected_model_instance(
@@ -875,7 +873,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         from lfx.schema.dotdict import dotdict
 
         with patch(
-            "lfx.components.models_and_agents.agent.aget_language_model_options", new_callable=AsyncMock
+            "lfx.base.models.unified_models.model_catalog.aget_language_model_options", new_callable=AsyncMock
         ) as mock_opts:
             mock_opts.return_value = [
                 {
@@ -980,7 +978,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         from lfx.schema.dotdict import dotdict
 
         with patch(
-            "lfx.components.models_and_agents.agent.aget_language_model_options", new_callable=AsyncMock
+            "lfx.base.models.unified_models.model_catalog.aget_language_model_options", new_callable=AsyncMock
         ) as mock_opts:
             mock_opts.return_value = [
                 {
