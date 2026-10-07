@@ -812,5 +812,65 @@ def test_all_filter_operators_comprehensive():
         assert len(result) == expected_count, f"Failed for {operator} on {column} with value {value}"
 
 
+class TestReplaceValueOperation:
+    """Test replace value operation on various column types."""
+
+    def test_replace_value_integer_column(self, component):
+        """Test replacing integer values where input arrives as text strings."""
+        df = DataFrame(pd.DataFrame({"id": [1, 2, 3], "score": [20, 50, 20]}))
+        component.df = df
+        component.operation = [{"name": "Replace Value", "icon": "replace"}]
+        component.column_name = "score"
+        component.replace_value = "20"
+        component.replacement_value = "99"
+
+        result = component.perform_operation()
+
+        assert result["score"].tolist() == [99, 50, 99]
+        assert pd.api.types.is_integer_dtype(result["score"])
+
+    def test_replace_value_float_column(self, component):
+        """Test replacing float values where input arrives as text strings."""
+        df = DataFrame(pd.DataFrame({"id": [1, 2, 3], "ratio": [1.5, 2.5, 3.5]}))
+        component.df = df
+        component.operation = [{"name": "Replace Value", "icon": "replace"}]
+        component.column_name = "ratio"
+        component.replace_value = "2.5"
+        component.replacement_value = "9.5"
+
+        result = component.perform_operation()
+
+        assert result["ratio"].tolist() == [1.5, 9.5, 3.5]
+        assert pd.api.types.is_float_dtype(result["ratio"])
+
+    def test_replace_value_string_column(self, component):
+        """Test string/object column replacement remains unchanged."""
+        df = DataFrame(pd.DataFrame({"name": ["apple", "banana", "apple"]}))
+        component.df = df
+        component.operation = [{"name": "Replace Value", "icon": "replace"}]
+        component.column_name = "name"
+        component.replace_value = "apple"
+        component.replacement_value = "orange"
+
+        result = component.perform_operation()
+
+        assert result["name"].tolist() == ["orange", "banana", "orange"]
+        assert pd.api.types.is_object_dtype(result["name"]) or pd.api.types.is_string_dtype(result["name"])
+
+    def test_replace_value_non_numeric_replacement_on_numeric_column(self, component):
+        """Test replacing a number with a non-numeric string gracefully casts column."""
+        df = DataFrame(pd.DataFrame({"score": [10, 20, 30]}))
+        component.df = df
+        component.operation = [{"name": "Replace Value", "icon": "replace"}]
+        component.column_name = "score"
+        component.replace_value = "20"
+        component.replacement_value = "N/A"
+
+        result = component.perform_operation()
+
+        assert result["score"].tolist() == [10, "N/A", 30]
+        assert result["score"].dtype == object
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
