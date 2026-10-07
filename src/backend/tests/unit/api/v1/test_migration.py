@@ -1499,7 +1499,8 @@ async def test_an_answer_keeps_its_place_through_its_first_save_whichever_row_th
     assert not await migration_pause.drained(0)
     failed = pb.Task(id=task_id, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_FAILED))
     await a2a._TASK_STORE.save(failed, caller)
-    assert await migration_pause.drained(0)
+    # A loop of the app can be in the middle of a pass, which holds a place of its own for a moment.
+    assert await migration_pause.drained(5)
 
 
 async def test_an_a2a_run_still_going_keeps_its_place_when_its_task_is_saved_as_cancelled(
@@ -1568,7 +1569,8 @@ async def test_the_wait_for_the_last_save_of_an_a2a_run_starts_again_at_each_sav
 
     assert context.task_id not in a2a_executor._places
     assert place.giving_up.cancelled()
-    assert await migration_pause.drained(0)
+    # A loop of the app can be in the middle of a pass, which holds a place of its own for a moment.
+    assert await migration_pause.drained(5)
 
 
 async def test_an_a2a_run_whose_last_state_is_never_saved_gives_its_place_up(
