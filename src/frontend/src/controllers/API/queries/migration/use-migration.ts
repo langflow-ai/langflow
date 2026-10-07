@@ -25,11 +25,15 @@ export const useMigrationQuery = (enabled = true) =>
     enabled,
     // An HTTP error such as record_unreadable answers the same on every try, so only a dropped connection is retried.
     retry: (count, error) => !(error as AxiosError).response && count < 3,
-    // While another admin runs the check, the page follows it until it finishes.
-    refetchInterval: (query) =>
-      query.state.data?.record.steps.check_source?.status === "running"
-        ? 5000
-        : false,
+    // Another admin can turn changes back on, or start, stop or finish a check or a copy. While changes are paused
+    // or something runs, the page follows the record, so it never shows a pause or a copy that is no longer there.
+    refetchInterval: (query) => {
+      const record = query.state.data?.record;
+      const running = Object.values(record?.steps ?? {}).some(
+        (step) => step?.status === "running",
+      );
+      return record?.pause || running ? 5000 : false;
+    },
   });
 
 /**
