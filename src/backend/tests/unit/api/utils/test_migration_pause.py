@@ -126,6 +126,29 @@ async def _acts_only_after_the_pause(config_dir: Path, acted: Callable[[], Await
     assert await _eventually(acted)
 
 
+def _held_open(monkeypatch: pytest.MonkeyPatch, owner: object, its_pass: str) -> tuple[asyncio.Event, asyncio.Event]:
+    """Make a pass wait before it does anything, as one that was let in before a pause and has not written yet."""
+    began, go_on = asyncio.Event(), asyncio.Event()
+    real = getattr(owner, its_pass)
+
+    async def waits(*args, **kwargs):
+        began.set()
+        await go_on.wait()
+        return await real(*args, **kwargs)
+
+    monkeypatch.setattr(owner, its_pass, waits)
+    return began, go_on
+
+
+async def _the_pause_waits_for_it(config_dir: Path, began: asyncio.Event, go_on: asyncio.Event) -> None:
+    await began.wait()
+    _write_record(config_dir, PAUSED)
+    # The pass was let in before the pause, so the pause waits for it and does not count yet.
+    assert not await migration_pause.drained(0.2)
+    go_on.set()
+    assert await migration_pause.drained(5)
+
+
 async def _job_status(job_id) -> JobStatus:
     return (await get_job_service().get_job_by_job_id(job_id)).status
 
@@ -527,6 +550,57 @@ async def test_a_pause_waits_for_a_flow_sync_pass_that_began_before_it(active_us
         go_on.set()
         sync.cancel()
         await asyncio.gather(sync, return_exceptions=True)
+
+
+@pytest.mark.parametrize(("loop", "its_pass"), [("_loop", "tick"), ("_source_loop", "source_tick")])
+async def test_a_pause_waits_for_a_trigger_dispatcher_pass_that_began_before_it(
+    config_dir, monkeypatch, loop, its_pass
+):
+    dispatcher = TriggerDispatcher(owner="pause-test")
+    began, go_on = _held_open(monkeypatch, dispatcher, its_pass)
+    running = asyncio.create_task(getattr(dispatcher, loop)())
+    try:
+        await _the_pause_waits_for_it(config_dir, began, go_on)
+    finally:
+        go_on.set()
+        running.cancel()
+        await asyncio.gather(running, return_exceptions=True)
+
+
+async def test_a_pause_waits_for_an_audit_log_cleanup_that_began_before_it(config_dir, monkeypatch):
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_AUDIT_ENABLED", True)
+    worker = AuditLogCleanupWorker(interval=0.05)
+    began, go_on = _held_open(monkeypatch, worker, "_run_once")
+    await worker.start()
+    try:
+        await _the_pause_waits_for_it(config_dir, began, go_on)
+    finally:
+        go_on.set()
+        await worker.stop()
+
+
+@pytest.mark.parametrize("its_pass", ["_flush", "_run_retention_pass"])
+async def test_a_pause_waits_for_a_telemetry_write_that_began_before_it(active_user, config_dir, monkeypatch, its_pass):
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "telemetry_writer_enabled", True)
+    monkeypatch.setattr(settings, "telemetry_writer_outbox_dir", str(config_dir / "outbox"))
+    monkeypatch.setattr(settings, "telemetry_writer_flush_interval_s", 0.05)
+    monkeypatch.setattr(settings, "telemetry_writer_cleanup_interval_s", 1)
+    async with session_scope() as session:
+        flow = Flow(name="traced", user_id=active_user.id, data={})
+        session.add(flow)
+        await session.flush()
+        row = TransactionTable(vertex_id="first", inputs={}, outputs={}, status="success", flow_id=flow.id)
+    writer = TelemetryWriterService(get_settings_service())
+    began, go_on = _held_open(monkeypatch, writer, its_pass)
+    await writer.start()
+    try:
+        # Something for the writer to flush. The sweep runs whether or not anything was written.
+        assert writer.enqueue_transaction(row.model_dump(mode="python"))
+        await _the_pause_waits_for_it(config_dir, began, go_on)
+    finally:
+        go_on.set()
+        await writer.teardown()
 
 
 async def test_the_audit_log_cleanup_waits_out_the_pause(config_dir, monkeypatch):
