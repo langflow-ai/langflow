@@ -123,11 +123,13 @@ def test_anonymous_id_persists_in_config_directory(tmp_path) -> None:
 
 def test_concurrent_services_share_one_installation_id(tmp_path, monkeypatch) -> None:
     barrier = threading.Barrier(2)
+    thread_state = threading.local()
     original_mkdir = Path.mkdir
 
     def synchronized_mkdir(path, *args, **kwargs):
         original_mkdir(path, *args, **kwargs)
-        if path == tmp_path:
+        if path == tmp_path and not getattr(thread_state, "synchronized", False):
+            thread_state.synchronized = True
             barrier.wait(timeout=5)
 
     monkeypatch.setattr(Path, "mkdir", synchronized_mkdir)

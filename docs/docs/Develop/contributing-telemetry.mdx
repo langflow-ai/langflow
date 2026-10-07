@@ -15,8 +15,8 @@ Langflow telemetry doesn't send raw operating-system or authenticated Langflow u
 Authenticated Langflow user names are represented by a one-way SHA256 hash and used solely for product analytics.
 The data collected by each event, including fields that can contain user-provided values, is documented below.
 
-Product-usage events are delivered through Segment. Langflow generates an anonymous identifier when the telemetry
-service starts and doesn't send operating-system user names or raw authenticated Langflow user IDs.
+Product-usage events are delivered through Segment. Langflow uses a persistent anonymous installation identifier
+and doesn't send operating-system user names or raw authenticated Langflow user IDs.
 
 ## Configure Segment
 
@@ -36,6 +36,8 @@ The persistent installation identifier is used for `anonymousId`, `properties.in
 For authenticated requests, the top-level `userId` is `lf-` followed by the SHA256 hash of the Langflow username.
 Langflow captures this opaque ID before handing an event to the telemetry worker. Lifecycle events and standalone LFX
 events don't have a Langflow username, so they use `lf-` followed by the SHA256 hash of the installation identifier.
+The shared default `langflow` account and unauthenticated webhook callers also use this installation fallback.
+Background workflow jobs retain only the opaque telemetry user ID and restore it during execution and resume.
 
 ## Opt out of telemetry
 

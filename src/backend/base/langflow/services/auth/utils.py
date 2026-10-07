@@ -363,7 +363,9 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
         HTTPException: If authentication fails or user doesn't have permission
     """
     user = await _auth_service().get_webhook_user(flow_id, request)
-    set_current_telemetry_user(user.username)
+    # Public webhooks execute as the owner without authenticating their caller.
+    authenticated = get_settings_service().auth_settings.WEBHOOK_AUTH_ENABLE
+    set_current_telemetry_user(user.username if authenticated else None)
     return user
 
 

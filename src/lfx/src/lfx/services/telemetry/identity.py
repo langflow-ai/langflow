@@ -5,6 +5,7 @@ import os
 import uuid
 from pathlib import Path
 
+from filelock import FileLock
 from platformdirs import user_cache_dir
 
 _TELEMETRY_ID_FILE = "telemetry_id"
@@ -29,7 +30,13 @@ def get_or_create_anonymous_id(config_dir: str | Path | None = None) -> str:
     generated = str(uuid.uuid4())
     try:
         root.mkdir(parents=True, exist_ok=True)
-        identity_path.write_text(generated, encoding="utf-8")
+        # The lock covers both the second read and write, including concurrent
+        # workers that see the file before its first write has completed.
+        with FileLock(f"{identity_path}.lock"):
+            existing = _read_id(identity_path)
+            if existing is not None:
+                return existing
+            identity_path.write_text(generated, encoding="utf-8")
     except OSError:
         return generated
     return generated
