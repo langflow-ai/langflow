@@ -879,6 +879,60 @@ class TestDeleteBy:
             await backend.delete_by({"topic": "dogs"})
 
 
+class TestExistingContentIds:
+    async def test_looks_up_only_the_given_ids_through_the_metadata_index(self, make_backend) -> None:
+        conn = _FakeConn(select_rows=(("h1",),))
+        backend = make_backend(conn)
+
+        found = await backend.existing_content_ids({"h1", "h2"})
+
+        assert found == {"h1"}
+        lookup = conn.statements[-1]
+        assert f"FROM {backend.table_name}" in lookup
+        assert "cmetadata @> ANY(CAST(:probes AS jsonb[]))" in lookup
+        assert not any(sql.startswith("SELECT document") for sql in conn.statements)  # no full read
+
+    async def test_batches_large_lookups(self, make_backend, monkeypatch: pytest.MonkeyPatch) -> None:
+        from lfx.base.knowledge_bases.backends import postgres as pg_module
+
+        monkeypatch.setattr(pg_module, "_CONTENT_ID_LOOKUP_BATCH", 2)
+        conn = _FakeConn()
+        backend = make_backend(conn)
+
+        await backend.existing_content_ids({"a", "b", "c", "d", "e"})
+
+        assert sum("@> ANY" in sql for sql in conn.statements) == 3
+
+    async def test_missing_table_has_no_ids(self, make_backend) -> None:
+        conn = _FakeConn(table_exists=False)
+        assert await make_backend(conn).existing_content_ids({"h1"}) == set()
+        assert not any("@> ANY" in sql for sql in conn.statements)
+
+    async def test_no_ids_skips_the_database(self, make_backend) -> None:
+        conn = _FakeConn()
+        assert await make_backend(conn).existing_content_ids(set()) == set()
+        assert conn.statements == []
+
+
+class TestDefaultExistingContentIds:
+    async def test_default_scans_the_collection_for_matching_ids(self, tmp_path: Path) -> None:
+        from lfx.base.knowledge_bases.backends.base import BaseVectorStoreBackend, IngestedDocument
+
+        class _ScanOnly(BaseVectorStoreBackend):
+            backend_type = BackendType.CHROMA
+
+            def _build_vector_store(self):  # pragma: no cover — unused
+                raise NotImplementedError
+
+            async def iter_documents(self, **_kwargs):
+                yield [IngestedDocument(content="a", metadata={"_id": "h1"}), IngestedDocument(content="b")]
+                yield [IngestedDocument(content="c", metadata={"_id": "h3"})]
+
+        backend = _ScanOnly(kb_name="kb", kb_path=tmp_path)
+        assert await backend.existing_content_ids({"h1", "h2", "h3"}) == {"h1", "h3"}
+        assert await backend.existing_content_ids(set()) == set()
+
+
 class TestStorageSize:
     async def test_reports_total_relation_size(self, make_backend) -> None:
         assert await make_backend(_FakeConn(storage_size=4096)).storage_size_bytes() == 4096

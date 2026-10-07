@@ -275,3 +275,24 @@ async def test_remote_lock_contention_has_bounded_wait(remote_engine, monkeypatc
             await asyncio.create_task(contender())
         assert remote_engine.active == 1
     assert remote_engine.active == 0
+
+
+async def test_content_id_lookup_takes_a_shared_lease(monkeypatch):
+    # Ingestion looks up stored hashes before embedding; that read must not
+    # block other readers of the same knowledge base.
+    leases = []
+
+    @asynccontextmanager
+    async def operation(_record, *, shared=False):
+        leases.append(shared)
+        yield
+
+    monkeypatch.setattr(runtime, "operation", operation)
+
+    class Backend:
+        async def existing_content_ids(self, content_ids):
+            return {"stored"} & set(content_ids)
+
+    backend = runtime._GuardedMethods(Backend(), object())
+    assert await backend.existing_content_ids({"stored", "new"}) == {"stored"}
+    assert leases == [True]

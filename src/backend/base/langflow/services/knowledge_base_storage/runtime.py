@@ -40,6 +40,7 @@ _READ_METHODS = frozenset(
         "asimilarity_search_with_score",
         "count",
         "iter_documents",
+        "existing_content_ids",
         "storage_size_bytes",
         "read_migration_manifest",
         "integrity_check",

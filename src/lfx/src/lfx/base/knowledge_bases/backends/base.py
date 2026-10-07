@@ -35,7 +35,7 @@ SecretSource = Literal["variable", "environment", "missing"]
 
 if TYPE_CHECKING:
     import queue as sync_queue
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Collection
     from pathlib import Path
 
     from langchain_core.documents import Document
@@ -81,6 +81,9 @@ METADATA_KEY_CHUNK_INDEX = "chunk_index"
 METADATA_KEY_TOTAL_CHUNKS = "total_chunks"
 METADATA_KEY_INGESTED_AT = "ingested_at"
 METADATA_KEY_JOB_ID = "job_id"
+# Content hash the Knowledge component stamps on every row it writes; used to
+# skip rows that are already stored when duplicates are not allowed.
+METADATA_KEY_CONTENT_ID = "_id"
 
 
 @dataclass(frozen=True)
@@ -408,6 +411,24 @@ class BaseVectorStoreBackend(ABC):
         """Default implementation yields nothing; subclasses override."""
         if False:  # pragma: no cover — keeps this an async generator
             yield []
+
+    async def existing_content_ids(self, content_ids: Collection[str]) -> set[str]:
+        """Return the subset of ``content_ids`` already stored as a chunk's ``_id``.
+
+        Ingestion calls this to skip rows it has already written. This default
+        streams the whole collection; backends that can look the ids up directly
+        override it so the cost follows the new rows, not the collection size.
+        """
+        wanted = {content_id for content_id in content_ids if content_id}
+        found: set[str] = set()
+        if not wanted:
+            return found
+        async for batch in self.iter_documents():
+            for document in batch:
+                content_id = document.metadata.get(METADATA_KEY_CONTENT_ID)
+                if content_id in wanted:
+                    found.add(content_id)
+        return found
 
     async def storage_size_bytes(self) -> int:  # pragma: no cover
         """Default: unknown. Subclasses override where meaningful."""
