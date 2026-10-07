@@ -288,6 +288,9 @@ class ResourceVisibilityScope:
     resources in an explicit workspace.
     ``excluded_global_project_ids`` removes reserved projects from a global
     wildcard while preserving owner and concrete resource grants.
+    ``exclude_personal_projects`` excludes marked personal projects from global
+    and workspace wildcards in SQL, without enumerating their UUIDs. Explicit
+    project grants, concrete resource grants, and ownership remain additive.
     """
 
     all_resources: bool = False
@@ -297,6 +300,7 @@ class ResourceVisibilityScope:
     include_unassigned_workspace: bool = False
     excluded_workspace_project_ids: tuple[UUID, ...] = ()
     excluded_global_project_ids: tuple[UUID, ...] = ()
+    exclude_personal_projects: bool = False
 
     @property
     def has_cross_user_access(self) -> bool:
