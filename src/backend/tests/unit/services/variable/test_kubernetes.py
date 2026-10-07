@@ -43,7 +43,7 @@ def test_resolve_variable_returns_credential_variable() -> None:
     )
 
 
-async def test_batch_fallback_preserves_values_and_warns_once() -> None:
+async def test_batch_fallback_preserves_values_and_warns_on_each_call() -> None:
     service = _service_with_secret({"VALUE": "test-value"})
     with patch("langflow.services.variable.base.logger.warning") as warning:
         assert await service.get_variables("user-1", [], "", None) == {}
@@ -53,7 +53,7 @@ async def test_batch_fallback_preserves_values_and_warns_once() -> None:
                 "VALUE": "test-value",
                 "MISSING": None,
             }
-    warning.assert_called_once()
+    assert warning.call_count == 2
     message = warning.call_args.args[0]
     assert "KubernetesSecretService" in message
     assert "VALUE" not in message

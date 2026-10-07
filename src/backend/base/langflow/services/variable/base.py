@@ -59,11 +59,10 @@ class VariableService(Service):
     ) -> dict[str, str | SecretStr | None]:
         """Resolve a batch; external stores may override this compatibility implementation."""
         names = set(names)
-        if names and not getattr(self, "_batch_lookup_warning_logged", False):
+        if names:
             logger.warning(
                 f"{type(self).__name__} uses individual variable reads because batch lookup is not implemented"
             )
-            self._batch_lookup_warning_logged = True
         values = {}
         for name in names:
             try:
