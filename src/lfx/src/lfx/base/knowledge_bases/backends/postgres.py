@@ -66,6 +66,16 @@ _READY_TABLES: set[tuple[str, str, int]] = set()
 # sharing the engine lets those jobs reuse pooled connections. ``max_overflow=-1``
 # puts no limit on concurrent connections, and up to ``pool_size`` idle
 # connections stay open for reuse.
+#
+# Backends run on the caller's event loop. The KB API, ingestion jobs and flow
+# runs in the server (including the Knowledge component as an agent tool) all
+# await them on the server loop, so each server process keeps one pool. A flow
+# run from a temporary loop (``run_until_complete``, ``asyncio.run`` or
+# ``Graph.start`` in a script) gets its own engine and pool. Once that loop is
+# closed and collected its entry is dropped, and the garbage collector closes its
+# connections without ``dispose()``. A new synchronous caller awaits the async
+# API on its own loop, or pops its loop's engines and awaits ``dispose()``
+# before that loop closes.
 _ENGINES: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, dict[tuple[int, str], Any]] = weakref.WeakKeyDictionary()
 _ENGINE_POOL_SIZE = 5
 
