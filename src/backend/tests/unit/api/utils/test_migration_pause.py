@@ -8,6 +8,7 @@ background service and the second worker process are real.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import subprocess
@@ -21,6 +22,7 @@ from httpx import ASGITransport, AsyncClient
 from langflow.api.utils import migration_pause
 from langflow.api.utils.migration_jobs import live_listeners
 from langflow.api.utils.migration_pause import MigrationPauseMiddleware, is_paused
+from langflow.initial_setup import setup as flow_sync
 from langflow.initial_setup.setup import sync_flows_from_fs
 from langflow.main import create_app
 from langflow.services.background_execution.executor import InProcessExecutor
@@ -418,17 +420,26 @@ async def test_a_record_that_says_paused_changes_nothing_while_the_feature_is_of
     assert MigrationPauseMiddleware not in [middleware.cls for middleware in create_app().user_middleware]
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
     listener = ListenerSupervisor()
+    sync = asyncio.create_task(sync_flows_from_fs())
     try:
         await listener.reconcile()
+        # Long enough for the flow sync to begin a pass.
+        await asyncio.sleep(0)
     finally:
         await listener.stop()
-    # Neither a change nor a listener takes the lock a pause waits on: this instance pays nothing.
+        sync.cancel()
+        await asyncio.gather(sync, return_exceptions=True)
+    # Neither a change, a listener nor the flow sync takes the lock a pause waits on: this instance pays nothing.
     assert not (config_dir / "migrations" / "pause.lock").exists()
 
 
 async def test_the_flow_sync_from_disk_waits_out_the_pause(active_user, config_dir, monkeypatch):
     flow_file = config_dir / "flow.json"
     flow_file.write_text(json.dumps({"name": "renamed on disk"}))
+    # Paused the way the route does it: the pause is written, then the passes that began before it end.
+    # The app under test runs this loop too, and one of its passes may be going.
+    _write_record(config_dir, PAUSED)
+    assert await migration_pause.drained(5)
     async with session_scope() as session:
         flow = Flow(name="named in the database", user_id=active_user.id, data={}, fs_path=str(flow_file))
         session.add(flow)
@@ -440,11 +451,54 @@ async def test_the_flow_sync_from_disk_waits_out_the_pause(active_user, config_d
             return (await session.get(Flow, flow_id)).name == "renamed on disk"
 
     monkeypatch.setattr(get_settings_service().settings, "fs_flows_polling_interval", 50)
-    _write_record(config_dir, PAUSED)
     sync = asyncio.create_task(sync_flows_from_fs())
     try:
+        # The loop has found the instance paused and waits. It holds no place meanwhile, or no pause
+        # could ever count.
+        await asyncio.sleep(0)
+        assert await migration_pause.drained(0.2)
         await _acts_only_after_the_pause(config_dir, synced)
     finally:
+        sync.cancel()
+        await asyncio.gather(sync, return_exceptions=True)
+
+
+async def test_a_pause_waits_for_a_flow_sync_pass_that_began_before_it(active_user, config_dir, monkeypatch):
+    flow_file = config_dir / "flow.json"
+    flow_file.write_text(json.dumps({"name": "renamed on disk"}))
+    async with session_scope() as session:
+        flow = Flow(name="named in the database", user_id=active_user.id, data={}, fs_path=str(flow_file))
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+    reading, go_on = asyncio.Event(), asyncio.Event()
+
+    @contextlib.asynccontextmanager
+    async def a_session_that_waits():
+        # A pass has asked about the pause, was let in, and is about to read the flows.
+        reading.set()
+        await go_on.wait()
+        async with session_scope() as session:
+            yield session
+
+    monkeypatch.setattr(flow_sync, "session_scope", a_session_that_waits)
+    monkeypatch.setattr(get_settings_service().settings, "fs_flows_polling_interval", 50)
+    sync = asyncio.create_task(sync_flows_from_fs())
+    try:
+        await reading.wait()
+        _write_record(config_dir, PAUSED)
+
+        # The pass was let in before the pause, so the pause waits for it and does not count yet.
+        assert not await migration_pause.drained(0.2)
+
+        go_on.set()
+
+        assert await migration_pause.drained(5)
+        async with session_scope() as session:
+            # What it wrote, it wrote before the pause counted.
+            assert (await session.get(Flow, flow_id)).name == "renamed on disk"
+    finally:
+        go_on.set()
         sync.cancel()
         await asyncio.gather(sync, return_exceptions=True)
 
