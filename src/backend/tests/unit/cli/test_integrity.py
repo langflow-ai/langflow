@@ -854,3 +854,52 @@ class TestSecretKeyFile:
         await _check_integrity()
 
         assert not (config_dir / "secret_key").exists()
+
+
+class TestOutput:
+    """An admin UI runs the command as a child process and reads each result as it arrives."""
+
+    async def test_each_check_is_handed_over_as_it_finishes(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        seen = []
+
+        report = await check_instance(on_check=seen.append)
+
+        assert seen == report.checks
+
+    async def test_json_is_one_line_per_check_then_the_report(self, active_user, storage_dir, kb_root, capsys):  # noqa: ARG002
+        from langflow.__main__ import _check_integrity
+
+        ok = await _check_integrity(as_json=True)
+
+        *checks, report = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+        assert {line["event"] for line in checks} == {"check"}
+        assert checks[-1]["check"]["name"] == "authorization"
+        assert report == {"event": "report", "ok": ok, "checks": [line["check"] for line in checks]}
+
+    def test_json_output_keeps_the_logs_out(self, tmp_path):
+        import os
+        import subprocess
+        import sys
+
+        env = {
+            **os.environ,
+            "LANGFLOW_CONFIG_DIR": str(tmp_path),
+            "LANGFLOW_DATABASE_URL": f"sqlite:///{tmp_path / 'empty.db'}",
+            "LANGFLOW_LOG_LEVEL": "debug",
+        }
+        result = subprocess.run(  # noqa: S603 - the command as an admin UI would start it
+            [sys.executable, "-m", "langflow", "check-integrity", "--json"],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
+        )
+
+        lines = [json.loads(line) for line in result.stdout.splitlines()]
+        assert result.returncode == 1
+        assert [(line["event"], line.get("check", {}).get("name")) for line in lines] == [
+            ("check", "schema"),
+            ("report", None),
+        ]
+        assert "Logger set up" in result.stderr
