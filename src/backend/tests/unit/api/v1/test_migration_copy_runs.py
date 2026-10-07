@@ -910,6 +910,24 @@ async def test_a_copy_that_was_made_waits_again_when_the_copy_before_it_is_no_lo
     assert migration_runs.list_runs() == []
 
 
+async def test_on_postgresql_a_copy_of_the_knowledge_bases_is_refused_without_the_store_whatever_its_step_reads(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    _ready_to_copy(config_dir, destinations={"vectors": {"kind": "pgvector"}, "results": {"vectors": {"ok": True}}})
+    monkeypatch.setattr(get_db_service(), "database_url", f"postgresql://{NOWHERE}/langflow")
+    # The copy was made while the server named its store. Then the server was started again without it.
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+    assert (await _steps(client, headers))["copy_knowledge_bases"] == ("done", None)
+
+    refused = await client.post(RUNS.format("copy_knowledge_bases"), json={}, headers=headers)
+
+    assert (refused.status_code, refused.json()) == (409, {"detail": {"code": "pgvector_env_missing"}})
+    assert migration_runs.list_runs() == []
+
+
 @pytest.mark.parametrize(
     ("named", "step", "answer"),
     [
@@ -928,13 +946,19 @@ async def test_on_postgresql_the_knowledge_bases_are_copied_only_when_this_serve
     own = f"postgresql://{NOWHERE}/langflow"
     monkeypatch.setattr(get_db_service(), "database_url", own)
     # The server reads pgvector knowledge bases from the store its own environment names, and from no other.
+    # That store need not be its database.
+    store = f"postgresql://{NOWHERE}/vectors"
     if named:
-        monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", own)
+        monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", store)
     else:
         monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
 
     steps = await _steps(client, headers)
     started = await client.post(RUNS.format("copy_knowledge_bases"), json={}, headers=headers)
+    if named:
+        # The copy writes where this server reads: it is given the server's own store, and the database to work on.
+        given = psutil.Process(migration_runs.read_run(started.json()["run_id"])["child"]["pid"]).environ()
+        assert (given["LANGFLOW_DATABASE_URL"], given["PGVECTOR_CONNECTION_STRING"]) == (own, store)
 
     assert (steps["copy_database"], steps["copy_knowledge_bases"]) == (("skipped", "already_postgresql"), step)
     status, refusal = answer

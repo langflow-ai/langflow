@@ -132,8 +132,17 @@ def test_an_instance_already_on_postgresql_keeps_its_database_and_the_copies_wor
     knowledge_bases = copy_environment("copy_knowledge_bases", server, {})
     files = copy_environment("copy_files", server, {"files": S3_KEYS})
 
-    assert (knowledge_bases["LANGFLOW_DATABASE_URL"], knowledge_bases["PGVECTOR_CONNECTION_STRING"]) == (own, own)
+    # The instance goes on serving from its database, and reads its knowledge bases from the store its own
+    # environment names. The copy is sent to that store, which need not be the database.
+    assert (knowledge_bases["LANGFLOW_DATABASE_URL"], knowledge_bases["PGVECTOR_CONNECTION_STRING"]) == (
+        own,
+        "postgresql://the-servers-own-vectors",
+    )
     assert files["LANGFLOW_DATABASE_URL"] == own
+    # A server that names no store could not read them afterwards, so there is no environment to copy them in.
+    unnamed = {name: value for name, value in server.items() if name != "PGVECTOR_CONNECTION_STRING"}
+    with pytest.raises(KeyError):
+        copy_environment("copy_knowledge_bases", unnamed, {})
 
 
 @pytest.mark.parametrize(
