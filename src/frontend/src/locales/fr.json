@@ -2173,7 +2173,7 @@
   "settings.migration.files.acceptMissing": "Migrer sans ce fichier",
   "settings.migration.copy.acceptNote": "Accepter un résultat dans « {{step}} » permet à la migration de continuer. Cette copie nomme chaque élément qu'elle a laissé, donc chacun s'accepte ici, pour cette copie seulement.",
   "settings.migration.copy.reportChanged": "Cette copie a été refaite entre-temps, votre choix n'a donc pas été enregistré. La liste affiche maintenant ce que la nouvelle copie a laissé.",
-  "settings.migration.copy.applyNext": "Copiez à nouveau pour que cela s'applique.",
+  "settings.migration.copy.applyNext": "Cela s'applique à la prochaine copie.",
   "settings.migration.copy.tooManyToAccept": "Il y en a plus de non copiés que cette liste n'en contient : ils ne peuvent donc pas être acceptés un par un.",
   "settings.nav.modelProviders": "Fournisseurs de modèles",
   "settings.nav.shortcuts": "Raccourcis",

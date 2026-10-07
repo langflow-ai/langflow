@@ -249,6 +249,7 @@ describe("COPY_CODES", () => {
       "crashed",
       "destination_changed",
       "interrupted",
+      "locked",
       "orphans_droppable",
       "orphans_no_rule",
       "pgvector_env_missing",

@@ -120,6 +120,12 @@ export function CopyStep({
       : run?.dry_run
         ? run.error?.code
         : undefined;
+  // The server starts a copy only when every step before it is done or skipped. A copy that ran keeps its
+  // place when one of them opens again, so the page offers no start until that step is finished.
+  const place = migration.steps.findIndex(({ id }) => id === step);
+  const reached = migration.steps
+    .slice(0, place)
+    .every((earlier) => ["done", "skipped"].includes(earlier.state));
   // A copy that ended in a step that waits again no longer counts, so it is history. A test run never counted.
   const stale = state.state === "current" && Boolean(run) && !run?.dry_run;
   // What the last run found. A copy that is history has no result to show.
@@ -266,44 +272,50 @@ export function CopyStep({
           <p>{t("settings.migration.copy.tooManyToAccept")}</p>
         </div>
       )}
-      {start.isError && (
-        <p role="alert" className="text-sm text-destructive">
-          {refusal in COPY_CODES
-            ? line(refusal)
-            : t("settings.migration.failed")}
-        </p>
+      {reached ? (
+        <>
+          {start.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              {refusal in COPY_CODES
+                ? line(refusal)
+                : t("settings.migration.failed")}
+            </p>
+          )}
+          <div className="flex w-full flex-col gap-2 sm:flex-row">
+            <Button
+              className="w-full sm:w-fit"
+              loading={start.isPending && !start.variables}
+              onClick={() => {
+                // A new copy leaves the last choice, and how it went, behind.
+                decide.reset();
+                start.mutate(false);
+              }}
+              ignoreTitleCase
+            >
+              {/* A test run copied nothing, so the copy after it is still the first. */}
+              {run && !run.dry_run
+                ? t("settings.migration.copy.again")
+                : t(`settings.migration.step.${STEP_SLUGS[step]}.title`)}
+            </Button>
+            {testRun && (
+              <Button
+                variant="outline"
+                className="w-full sm:w-fit"
+                loading={start.isPending && start.variables}
+                onClick={() => {
+                  decide.reset();
+                  start.mutate(true);
+                }}
+                ignoreTitleCase
+              >
+                {t("settings.migration.copy.testRun")}
+              </Button>
+            )}
+          </div>
+        </>
+      ) : (
+        <p className="text-sm">{t("settings.migration.notStarted")}</p>
       )}
-      <div className="flex w-full flex-col gap-2 sm:flex-row">
-        <Button
-          className="w-full sm:w-fit"
-          loading={start.isPending && !start.variables}
-          onClick={() => {
-            // A new copy leaves the last choice, and how it went, behind.
-            decide.reset();
-            start.mutate(false);
-          }}
-          ignoreTitleCase
-        >
-          {/* A test run copied nothing, so the copy after it is still the first. */}
-          {run && !run.dry_run
-            ? t("settings.migration.copy.again")
-            : t(`settings.migration.step.${STEP_SLUGS[step]}.title`)}
-        </Button>
-        {testRun && (
-          <Button
-            variant="outline"
-            className="w-full sm:w-fit"
-            loading={start.isPending && start.variables}
-            onClick={() => {
-              decide.reset();
-              start.mutate(true);
-            }}
-            ignoreTitleCase
-          >
-            {t("settings.migration.copy.testRun")}
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

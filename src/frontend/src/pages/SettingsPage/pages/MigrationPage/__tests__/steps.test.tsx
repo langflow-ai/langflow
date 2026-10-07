@@ -1176,6 +1176,8 @@ describe("Copy the database", () => {
       "Langflow no longer holds the passwords and keys of the new instance. Enter them again in 'Where your data goes'.",
     ],
     ["run_active", "Another step is running. Wait for it to finish."],
+    // A step above opened again in another tab, and this page has not read that yet.
+    ["locked", "Finish the steps above first."],
   ])("says why the server would not start it: %s", async (code, line) => {
     jest.spyOn(api, "post").mockRejectedValue(refused(409, { code }));
     show(panel(undefined, "current"));
@@ -1486,6 +1488,82 @@ describe("Copy knowledge bases and files", () => {
     const runs = expect.stringContaining("steps/copy_knowledge_bases/runs");
     expect(post).toHaveBeenNthCalledWith(1, runs, { dry_run: true });
     expect(post).toHaveBeenNthCalledWith(2, runs, { dry_run: false });
+  });
+
+  // Every step above the knowledge base copy, as the server lists them.
+  const above = (
+    check: MigrationStepState,
+    database = step("copy_database", "done"),
+  ) => [
+    check,
+    step("connect_target", "done"),
+    step("secret_key", "done"),
+    step(
+      "pause",
+      check.state === "done" ? "done" : "blocked",
+      "recheck_failed",
+    ),
+    step("backup", "done"),
+    database,
+  ];
+
+  it("offers no start, real or test, while a step before it is open again, and says why", () => {
+    // The check failed again after this copy. The copy keeps its place, and the server would refuse to start it.
+    show(
+      <CopyStep
+        migration={{
+          ...ended("copy_knowledge_bases", {
+            report: { ok: true, counts: { relocated: 3 }, attention: [] },
+          }),
+          steps: [
+            ...above(step("check_source", "blocked", "blocking_findings")),
+            step("copy_knowledge_bases", "done"),
+            step("copy_files", "done"),
+          ],
+        }}
+        state={step("copy_knowledge_bases", "done")}
+        step="copy_knowledge_bases"
+      />,
+    );
+
+    // What the copy did is still there to read.
+    expect(
+      screen.getByText("Copied: 3. Already copied: 0. Not copied: 0."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Finish the steps above first."),
+    ).toBeInTheDocument();
+  });
+
+  it("offers the start when every step before it is done or not needed, whatever comes after it", () => {
+    show(
+      <CopyStep
+        migration={{
+          ...ended("copy_knowledge_bases"),
+          steps: [
+            ...above(
+              step("check_source", "done"),
+              step("copy_database", "skipped", "already_postgresql"),
+            ),
+            step("copy_knowledge_bases", "current"),
+            step("copy_files", "locked", "earlier_step"),
+          ],
+        }}
+        state={step("copy_knowledge_bases", "current")}
+        step="copy_knowledge_bases"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Copy knowledge bases" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Test run" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Finish the steps above first."),
+    ).not.toBeInTheDocument();
   });
 
   it("says what a test run found, and still offers the first copy", () => {
@@ -1914,7 +1992,7 @@ describe("What the admin decides about a copy", () => {
     // Nothing says it was decided until it is.
     expect(screen.queryByText(/^Accepted by /)).not.toBeInTheDocument();
     expect(
-      screen.queryByText("Copy again for this to apply."),
+      screen.queryByText("This applies to the next copy."),
     ).not.toBeInTheDocument();
 
     await userEvent.click(leaveOut);
@@ -1962,7 +2040,7 @@ describe("What the admin decides about a copy", () => {
     ).not.toHaveTextContent("2026-10-06T12:30:00Z");
     // An option changes the next copy, and nothing about the one that asked.
     expect(
-      screen.getByText("Copy again for this to apply."),
+      screen.getByText("This applies to the next copy."),
     ).toBeInTheDocument();
 
     await userEvent.click(leaveOut);
@@ -2033,7 +2111,7 @@ describe("What the admin decides about a copy", () => {
     expect(screen.getAllByText(/^Accepted by /)).toHaveLength(1);
     // Leaving one behind settles it at once, so nothing waits for another copy.
     expect(
-      screen.queryByText("Copy again for this to apply."),
+      screen.queryByText("This applies to the next copy."),
     ).not.toBeInTheDocument();
 
     await userEvent.click(option);
@@ -2214,7 +2292,7 @@ describe("What the admin decides about a copy", () => {
       screen.getByRole("checkbox", { name: /^Accept the new ranking/ }),
     ).toBeChecked();
     expect(
-      screen.getByText("Copy again for this to apply."),
+      screen.getByText("This applies to the next copy."),
     ).toBeInTheDocument();
   });
 

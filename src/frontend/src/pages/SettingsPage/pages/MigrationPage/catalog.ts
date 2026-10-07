@@ -208,6 +208,8 @@ export const isCopy = (id: MigrationStepId): id is CopyStepId => id in COPIES;
 export const COPY_CODES: Record<string, string> = {
   secrets_missing: "error.enterAgain", // pragma: allowlist secret
   run_active: "error.runningElsewhere",
+  // A step above opened again after the page last read the state. The page then stops offering the start.
+  locked: "notStarted",
   cancelled: "error.interrupted",
   interrupted: "error.interrupted",
   crashed: "error.crashed",
