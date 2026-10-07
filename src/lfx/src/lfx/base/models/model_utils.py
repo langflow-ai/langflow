@@ -525,9 +525,11 @@ async def aget_live_model_variables(
     """Read declared live-discovery variables before entering network/SDK workers."""
     keys: set[str] = set()
     for provider in enabled_providers & (LIVE_MODEL_PROVIDERS | CONDITIONAL_LIVE_MODEL_PROVIDERS):
-        for variable in provider_metadata.get(provider, {}).get("variables", []):
-            if key := variable.get("variable_key"):
-                keys.add(key)
+        keys.update(
+            variable["variable_key"]
+            for variable in provider_metadata.get(provider, {}).get("variables", [])
+            if variable.get("variable_key")
+        )
     if not keys:
         return {}
     values = {}
