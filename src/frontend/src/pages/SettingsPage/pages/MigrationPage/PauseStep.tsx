@@ -118,7 +118,11 @@ export function PauseStep({
       {waiting && <Waiting refusal={waiting} />}
       {pause.isError && !waiting && (
         <p role="alert" className="text-sm text-destructive">
-          {t("settings.migration.failed")}
+          {t(
+            refusal?.code === "pause_ended"
+              ? "settings.migration.pause.ended"
+              : "settings.migration.failed",
+          )}
         </p>
       )}
       <Button
@@ -267,21 +271,32 @@ function JobRow({ job }: { job: MigrationJob }) {
 /** Stays in view while changes are paused, wherever the admin is on the page. */
 export function PausedBanner({ migration }: { migration: MigrationState }) {
   const { t, i18n } = useTranslation();
-  // A pause that still waits refuses changes as well, and one that the server left behind stays.
-  const pause = migration.record.pause ?? migration.record.pausing;
+  // A pause that still waits refuses changes as well, and one that the server left behind stays. It is
+  // no pause yet for the backup or a copy, so the banner does not call it one.
+  const { pause, pausing } = migration.record;
+  const refused = pause ?? pausing;
   return (
     // Stays in the accessibility tree while empty, so the pause is announced when it starts.
     <div role="status" className="sticky top-0 z-10 empty:-mt-6">
-      {pause && (
+      {refused && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-accent-amber-foreground bg-accent-amber px-4 py-3 text-sm">
           <p className="min-w-48 flex-1">
             <span className="font-medium">
-              {t("settings.migration.pause.banner")}
+              {t(
+                pause
+                  ? "settings.migration.pause.banner"
+                  : "settings.migration.pause.bannerWaiting",
+              )}
             </span>{" "}
-            {t("settings.migration.pause.done", {
-              time: formatTime(pause.frozen_at, i18n.language),
-              user: pause.frozen_by,
-            })}
+            {t(
+              pause
+                ? "settings.migration.pause.done"
+                : "settings.migration.pause.asked",
+              {
+                time: formatTime(refused.frozen_at, i18n.language),
+                user: refused.frozen_by,
+              },
+            )}
           </p>
           <ResumeButton />
         </div>

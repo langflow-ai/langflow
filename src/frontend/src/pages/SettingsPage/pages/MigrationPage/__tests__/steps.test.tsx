@@ -674,6 +674,28 @@ describe("Pause changes", () => {
     );
   });
 
+  it("says that the pause did not begin when it was ended while its request waited", async () => {
+    jest
+      .spyOn(api, "post")
+      .mockRejectedValue(refused(409, { code: "pause_ended" }));
+    show(
+      <PauseStep migration={migration()} state={step("pause", "current")} />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Pause changes" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Pause",
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /^The pause did not begin\. Changes were turned back on, or another request/,
+    );
+  });
+
   it("shows a pause that never reached the server", async () => {
     jest.spyOn(api, "post").mockRejectedValue(unreachable());
     show(
@@ -775,8 +797,9 @@ describe("Pause changes", () => {
     const waiting = migration({}, { pausing: paused });
 
     const { unmount } = show(<PausedBanner migration={waiting} />);
+    // It is not called a pause: the backup and the copies wait for one that has begun.
     expect(screen.getByRole("status")).toHaveTextContent(
-      /^Changes are paused on this instance\. Paused .* by alice\./,
+      /^Changes are refused\. A pause was asked for and has not begun\. Asked .* by alice\./,
     );
     expect(
       screen.getByRole("button", { name: "Turn changes back on" }),
