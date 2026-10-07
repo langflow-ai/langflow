@@ -5,6 +5,7 @@ import os
 import re
 import sqlite3
 import sys
+import threading
 import time
 from contextlib import asynccontextmanager, contextmanager, nullcontext
 from datetime import datetime, timezone
@@ -43,6 +44,8 @@ from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Callable
+
     from lfx.services.settings.service import SettingsService
 
 
@@ -254,6 +257,17 @@ def check_sqlite_database_path(database_url: str) -> None:
     raise ValueError(msg)
 
 
+class _LoopEngine:
+    """An engine whose pool and connections belong to one event loop."""
+
+    __slots__ = ("engine", "release", "session_maker")
+
+    def __init__(self, engine: AsyncEngine, session_maker: async_sessionmaker) -> None:
+        self.engine = engine
+        self.session_maker = session_maker
+        self.release: AsyncGenerator[None, None] | None = None
+
+
 class DatabaseService(Service):
     name = "database_service"
 
@@ -297,6 +311,7 @@ class DatabaseService(Service):
             class_=SQLModelAsyncSession,  # SQLModel's AsyncSession with exec() support
             expire_on_commit=False,
         )
+        self._init_loop_engines()
 
         # Check if Alembic should log to stdout or a file.
         # If file, check if the provided path is absolute, cross-platform.
@@ -346,6 +361,122 @@ class DatabaseService(Service):
             class_=SQLModelAsyncSession,
             expire_on_commit=False,
         )
+        self._init_loop_engines()
+
+    def _init_loop_engines(self) -> None:
+        """Reset the bookkeeping that ties engines to event loops.
+
+        A queue pool waits on an ``asyncio.Queue`` bound to one loop, and its
+        driver connections belong to the loop that opened them. ``self.engine``
+        serves event loops on the main thread, one at a time. Loops on other
+        threads (``run_until_complete`` bridges, ``asyncio.run`` inside
+        ``asyncio.to_thread``, test client portals) each get their own engine
+        with the same settings, disposed when that loop shuts down.
+        """
+        self._loop_engines_lock = threading.Lock()
+        self._loop_engines_pid = os.getpid()
+        self._loop_engines: dict[asyncio.AbstractEventLoop, _LoopEngine] = {}
+        self._engine_loop: asyncio.AbstractEventLoop | None = None
+        self._engine_loop_release: AsyncGenerator[None, None] | None = None
+
+    def _session_maker_needs_loop_binding(self) -> bool:
+        # NullPool opens and closes each connection inside one session, and
+        # StaticPool/SingletonThreadPool hold the single connection an in-memory
+        # SQLite database lives on, so those engines are shared by every loop.
+        return isinstance(getattr(self.engine, "pool", None), sa.pool.QueuePool)
+
+    async def _session_maker_for_running_loop(self) -> async_sessionmaker:
+        if not self._session_maker_needs_loop_binding():
+            return self.async_session_maker
+        loop = asyncio.get_running_loop()
+        if threading.current_thread() is threading.main_thread():
+            return await self._bind_engine_to_main_thread_loop(loop)
+        return await self._engine_for_worker_loop(loop)
+
+    def _forget_stale_loop_engines_locked(self) -> None:
+        pid = os.getpid()
+        if pid != self._loop_engines_pid:
+            # A forked child must not use or close the parent's connections. The
+            # inherited _engine_loop is not the child's loop, so binding a loop
+            # below also starts a new pool for self.engine.
+            self._loop_engines_pid = pid
+            self._loop_engines.clear()
+            return
+        for loop in [loop for loop in self._loop_engines if loop.is_closed()]:
+            # The loop closed without shutting down async generators, so its
+            # connections cannot be closed on it; drop them with the engine.
+            del self._loop_engines[loop]
+
+    async def _bind_engine_to_main_thread_loop(self, loop: asyncio.AbstractEventLoop) -> async_sessionmaker:
+        if self._engine_loop is loop and self._loop_engines_pid == os.getpid():
+            return self.async_session_maker
+        with self._loop_engines_lock:
+            self._forget_stale_loop_engines_locked()
+            if self._engine_loop is loop:
+                return self.async_session_maker
+            if self._engine_loop is not None:
+                # The previous main-thread loop stopped without shutting down,
+                # so its idle connections cannot be closed here. Start a new pool.
+                self.engine.sync_engine.dispose(close=False)
+            self._engine_loop = loop
+            engine = self.engine
+
+        def release() -> bool:
+            with self._loop_engines_lock:
+                if self._engine_loop is not loop or self.engine is not engine:
+                    return False
+                self._engine_loop = None
+                self._engine_loop_release = None
+                return True
+
+        self._engine_loop_release = await self._dispose_on_loop_shutdown(engine, release)
+        return self.async_session_maker
+
+    async def _engine_for_worker_loop(self, loop: asyncio.AbstractEventLoop) -> async_sessionmaker:
+        with self._loop_engines_lock:
+            self._forget_stale_loop_engines_locked()
+            loop_engine = self._loop_engines.get(loop)
+            if loop_engine is not None:
+                return loop_engine.session_maker
+            engine = self._create_engine()
+            loop_engine = _LoopEngine(
+                engine,
+                async_sessionmaker(engine, class_=SQLModelAsyncSession, expire_on_commit=False),
+            )
+            self._loop_engines[loop] = loop_engine
+
+        def release() -> bool:
+            with self._loop_engines_lock:
+                if self._loop_engines.get(loop) is not loop_engine:
+                    return False
+                del self._loop_engines[loop]
+                return True
+
+        loop_engine.release = await self._dispose_on_loop_shutdown(engine, release)
+        return loop_engine.session_maker
+
+    @staticmethod
+    async def _dispose_on_loop_shutdown(engine: AsyncEngine, release: Callable[[], bool]) -> AsyncGenerator[None, None]:
+        """Dispose ``engine`` on the running loop when that loop shuts down.
+
+        ``asyncio.run``, ``asyncio.Runner`` and ``run_until_complete`` call
+        ``loop.shutdown_asyncgens()`` before closing a loop, which closes every
+        async generator started on it. The returned generator is started here
+        and parked, so its ``finally`` block runs on this loop at shutdown.
+        ``release`` returns False when the engine was rebound or replaced, and
+        the generator then leaves the engine alone.
+        """
+
+        async def dispose_at_shutdown():
+            try:
+                yield
+            finally:
+                if release():
+                    await engine.dispose()
+
+        guard = dispose_at_shutdown()
+        await guard.asend(None)
+        return guard
 
     def _sanitize_database_url(self):
         """Create the engine for the database."""
@@ -460,9 +591,10 @@ class DatabaseService(Service):
         if self.settings_service.settings.use_noop_database:
             yield NoopSession()
         else:
-            # Use async_session_maker - the recommended SQLAlchemy 2.0+ pattern
-            # Provides efficient session creation and proper connection pooling
-            async with self.async_session_maker() as session:
+            # Sessions use the engine owned by the running event loop; see
+            # _init_loop_engines.
+            session_maker = await self._session_maker_for_running_loop()
+            async with session_maker() as session:
                 yield session
 
     async def ensure_postgresql_version(self) -> None:
