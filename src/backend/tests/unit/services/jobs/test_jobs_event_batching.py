@@ -9,7 +9,7 @@ from langflow.services.database.models.jobs.model import JobEvent
 from langflow.services.jobs import service as jobs_module
 from langflow.services.jobs.service import JobService
 from sqlalchemy import event
-from sqlalchemy.exc import IntegrityError, OperationalError, StatementError
+from sqlalchemy.exc import DataError, IntegrityError, OperationalError, StatementError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -31,6 +31,11 @@ class _EventStore:
         self.fail_commit = False
         self.commit_failures = []
         self.commit_failure = None
+        # Unlike commit_failures (a one-shot queue, for simulating transient contention),
+        # this fails every flush whose batch contains the marker payload -- a retry of the
+        # same bad data must keep failing, the way a real DataError would.
+        self.fail_payload_marker = None
+        self.fail_payload_exception = None
 
     @asynccontextmanager
     async def _with_session(self):
@@ -59,6 +64,14 @@ class _EventStore:
                         raise RuntimeError(msg)
 
                     event.listen(session.sync_session, "before_commit", fail_commit)
+                if self.fail_payload_marker is not None:
+
+                    def fail_on_marker(flush_session, _ctx, _instances):
+                        for obj in flush_session.new:
+                            if isinstance(obj, JobEvent) and obj.payload == store.fail_payload_marker:
+                                raise store.fail_payload_exception
+
+                    event.listen(session.sync_session, "before_flush", fail_on_marker)
                 yield session
             finally:
                 self.active_sessions -= 1
@@ -306,6 +319,30 @@ async def test_invalid_event_does_not_fail_another_job(event_store):
         return_exceptions=True,
     )
     assert isinstance(results[0], StatementError)
+    assert results[1] == 1
+    events = await event_store.events()
+    assert len(events) == 1
+    assert events[0].job_id == healthy_job
+    assert events[0].payload == {"value": "persisted"}
+
+
+async def test_data_error_does_not_fail_another_job(event_store):
+    """A DataError (e.g. Postgres rejecting a NUL byte) must isolate like a StatementError.
+
+    Regression test: DataError is also a DBAPIError, so it used to fall through to the
+    "poison every job in the batch" branch instead of being split and retried per job.
+    """
+    bad_payload = {"value": "contains-a-nul-\x00-byte"}
+    event_store.fail_payload_marker = bad_payload
+    event_store.fail_payload_exception = DataError("INSERT", {}, Exception("unsupported Unicode escape sequence"))
+    service = JobService()
+    bad_job, healthy_job = uuid4(), uuid4()
+    results = await asyncio.gather(
+        service.append_event(bad_job, "invalid", bad_payload),
+        service.append_event(healthy_job, "healthy", {"value": "persisted"}),
+        return_exceptions=True,
+    )
+    assert isinstance(results[0], DataError)
     assert results[1] == 1
     events = await event_store.events()
     assert len(events) == 1
