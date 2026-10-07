@@ -429,3 +429,39 @@ def test_personal_exclusions_require_metadata_but_keep_explicit_grants(broad_sco
         workspace_id=workspace,
         visibility=scope,
     ) is (broad_scope != "unassigned")
+
+
+@pytest.mark.parametrize("exclude_personal_projects", [False, True])
+async def test_explicit_project_grant_survives_global_reserved_project_exclusion(
+    async_session, exclude_personal_projects
+):
+    """Reserved-project exclusions restrict broad grants, not explicit delegation."""
+    project_id, flow_id, owner_id = uuid4(), uuid4(), uuid4()
+    async_session.add_all(
+        [
+            Folder(id=project_id, name="Reserved project", is_personal=False),
+            Flow(id=flow_id, name="Reserved flow", folder_id=project_id, user_id=uuid4()),
+        ]
+    )
+    await async_session.commit()
+    for project_ids in ((), (project_id,)):
+        scope = ResourceVisibilityScope(
+            all_resources=True,
+            excluded_global_project_ids=(project_id,),
+            project_ids=project_ids,
+            exclude_personal_projects=exclude_personal_projects,
+        )
+        stmt = restrict_to_owned_or_visible_scope(
+            select(Flow.id),
+            id_column=Flow.id,
+            owner_clause=Flow.user_id == owner_id,
+            project_column=Flow.folder_id,
+            visibility=scope,
+        )
+        assert set((await async_session.exec(stmt)).all()) == ({flow_id} if project_ids else set())
+        assert resource_visible_in_scope(
+            resource_id=flow_id,
+            project_id=project_id,
+            project_is_personal=False,
+            visibility=scope,
+        ) is bool(project_ids)

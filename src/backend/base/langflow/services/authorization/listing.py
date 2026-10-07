@@ -253,15 +253,15 @@ def _project_scope_exclusion_clause(
     excluded_project_ids: Sequence[UUID],
     exclude_personal_projects: bool,
 ) -> ColumnElement[bool] | None:
-    """Exclude projects from broad grants without loading personal-project IDs."""
+    """Exclude projects from broad grants without binding personal-project IDs."""
     allowed: list[ColumnElement[bool]] = []
     if excluded_project_ids:
         allowed.append(col(project_column).not_in(excluded_project_ids))
     if exclude_personal_projects:
         from langflow.services.database.models.folder.model import Folder
 
-        # Match the parent by its primary key, including when the outer query
-        # selects Folder itself. No tenant-wide personal-project ID set is needed.
+        # Match the parent by its primary key without binding personal-project
+        # IDs as parameters. The alias also handles outer queries selecting Folder.
         personal_project = Folder.__table__.alias("personal_project")
         is_personal_project = (
             select(personal_project.c.id)
