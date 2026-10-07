@@ -10,6 +10,8 @@ They share the same frontend, non-root runtime (uid 1000),
 None of them install PyTorch or TorchVision.
 All three include the `postgresql` extra so they can use an external Postgres
 database without a derived image.
+All three also include the `pgvector` extra, so they can keep knowledge bases in a
+Postgres database that has the pgvector extension.
 Choose the smallest profile that contains every extension used by your flows.
 
 | Profile | Docker Hub image | GitHub Container Registry image | Included inventory |

@@ -71,12 +71,13 @@ COPY ./src/bundles /app/src/bundles
 
 FROM workspace-metadata AS base-dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --package langflow-base --extra postgresql \
+    uv sync --frozen --package langflow-base --extra postgresql --extra pgvector \
         --no-default-groups --no-install-workspace
 
 FROM workspace-metadata AS full-dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --extra postgresql --no-default-groups --no-install-workspace
+    uv sync --frozen --extra postgresql --extra pgvector \
+        --no-default-groups --no-install-workspace
 
 ################################
 # FRONTEND BUILDER
@@ -112,7 +113,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         sed -i "s/^version = .*/version = \"${BASE_VERSION}\"/" \
             /app/src/backend/base/pyproject.toml; \
     fi \
-    && uv sync --frozen --package langflow-base --extra postgresql \
+    && uv sync --frozen --package langflow-base --extra postgresql --extra pgvector \
         --no-default-groups --no-editable \
     && uv pip check --python /app/.venv/bin/python \
     && /app/.venv/bin/python -c 'import importlib.metadata as m; names = {d.metadata["Name"].lower() for d in m.distributions()}; required = {"langflow-base", "lfx", "langflow-sdk"}; missing = sorted(required - names); extensions = sorted(name for name in names if name.startswith("lfx-")); forbidden = sorted({"torch", "torchvision"} & names); assert not missing, f"missing base distributions: {missing}"; assert not extensions, f"extension distributions installed: {extensions}"; assert not forbidden, f"forbidden distributions installed: {forbidden}"' \
@@ -146,7 +147,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
             /app/src/backend/base/pyproject.toml; \
         sh /tmp/rewrite_langflow_base_constraint.sh "$BASE_VERSION" /app/pyproject.toml; \
     fi \
-    && uv sync --frozen --extra postgresql --no-default-groups --no-editable \
+    && uv sync --frozen --extra postgresql --extra pgvector \
+        --no-default-groups --no-editable \
     && uv pip check --python /app/.venv/bin/python \
     && /app/.venv/bin/python -c 'import importlib.metadata as m; names = {d.metadata["Name"].lower() for d in m.distributions()}; required = {"langflow", "langflow-base"}; missing = sorted(required - names); forbidden = sorted({"langflow-core", "torch", "torchvision"} & names); assert not missing, f"missing full distributions: {missing}"; assert not forbidden, f"forbidden distributions installed: {forbidden}"' \
     && if [ -n "$MAIN_VERSION" ]; then \
@@ -169,7 +171,7 @@ FROM full-builder AS full-bundles-builder
 # ``bundles`` installs the reviewed all-no-torch long-tail profile and the
 # standalone providers intentionally omitted from the default distribution.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --extra postgresql --extra bundles \
+    uv sync --frozen --extra postgresql --extra bundles --extra pgvector \
         --no-default-groups --no-editable \
     && python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
         --python /app/.venv/bin/python \

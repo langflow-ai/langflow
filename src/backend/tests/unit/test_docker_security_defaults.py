@@ -217,6 +217,14 @@ def test_full_target_checks_only_default_workspace_distributions() -> None:
     assert '{"torch", "torchvision"} & names' in dockerfile
 
 
+def test_public_docker_targets_install_the_pgvector_extra() -> None:
+    dockerfile = (REPO_ROOT / "docker" / "build_and_push.Dockerfile").read_text(encoding="utf-8")
+
+    # Every install that takes the postgresql extra takes pgvector with it, so a knowledge base can
+    # live in that database without a derived image.
+    assert dockerfile.count("--extra postgresql") == dockerfile.count("--extra pgvector") == 5
+
+
 def test_published_images_pin_hardened_package_managers() -> None:
     install_script = (REPO_ROOT / "docker" / "install_hardened_npm.sh").read_text(encoding="utf-8")
 
