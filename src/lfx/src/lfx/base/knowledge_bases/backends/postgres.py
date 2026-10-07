@@ -62,10 +62,10 @@ DEFAULT_CONNECTION_STRING_VARIABLE = "PGVECTOR_CONNECTION_STRING"
 _READY_TABLES: set[tuple[str, str, int]] = set()
 
 # One async engine (one connection pool) per event loop, process and connection
-# string, shared by every backend instance. Ingestion builds a backend per job,
-# and a per-instance engine opened, pre-pinged and disposed a pool on every job.
-# ``max_overflow=-1`` keeps concurrency unbounded as before; only up to
-# ``pool_size`` idle connections are kept for reuse.
+# string, shared by every backend instance. Ingestion creates a backend per job;
+# sharing the engine lets those jobs reuse pooled connections. ``max_overflow=-1``
+# puts no limit on concurrent connections, and up to ``pool_size`` idle
+# connections stay open for reuse.
 _ENGINES: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, dict[tuple[int, str], Any]] = weakref.WeakKeyDictionary()
 _ENGINE_POOL_SIZE = 5
 
