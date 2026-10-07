@@ -322,8 +322,8 @@ async def _scenario(scenario: str, directory: Path) -> dict:
                 # supported interpreter, rather than relying on callbacks.
                 wire_chunks = [chunk.content async for chunk in model.astream("hello")]
                 assert "".join(wire_chunks) == "local answer"
+                # Named legacy lookup must not fetch the full provider catalog.
                 assert [path for path, _key in requests] == [
-                    "/v1/models",
                     "/v1/chat/completions",
                     "/v1/chat/completions",
                 ]

@@ -59,17 +59,20 @@ def run_until_complete(coro):
 
 
 def delegates_to(async_name: str) -> Callable[[_F], _F]:
-    """Mark a synchronous method as having an equivalent async implementation.
+    """Mark a sync method with an equivalent coroutine method ``async_name``.
 
-    The decorator only attaches metadata; it does not wrap or call the method.
-    A marked method may bridge to its async counterpart or keep a parallel
-    synchronous implementation. Async callers use ``async_delegate_target``
-    to await the counterpart directly, avoiding a blocking sync-to-async bridge.
+    The sync method can keep a parallel implementation or use
+    ``return run_until_complete(self.<async_name>(...))``. Callers that already run
+    on an event loop look the marker up with ``async_delegate_target`` and
+    await the coroutine directly, instead of pushing the wrapper to a worker thread where
+    ``run_until_complete`` has to start yet another event loop.
 
-    An unmarked subclass/instance override must still execute its own behavior,
-    so callers run it in a worker thread. Mark only equivalent implementations:
-    bypassing custom validation or calling back into the sync method from its
-    async counterpart can respectively skip behavior or recurse forever.
+    Copied decorator attributes and borrowed bound methods keep their own behavior.
+    A subclass that overrides the sync method does not inherit the marker, so async callers
+    fall back to running that override in a thread. The class that owns the coroutine must
+    implement it natively: a marked wrapper whose coroutine calls back into the wrapper would
+    recurse forever. File-loader sync wrappers should run from plain threads; a coroutine
+    should await the corresponding async method to avoid blocking its event loop.
     """
 
     def decorator(func: _F) -> _F:

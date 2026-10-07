@@ -561,6 +561,18 @@ async def test_get_variable(service, session: AsyncSession):
     assert str(result) == "**********"
 
 
+async def test_get_variable_objects_fetches_requested_owned_names_in_one_query(service, session):
+    owner = uuid4()
+    first = await service.create_variable(owner, "FIRST", "first", type_=GENERIC_TYPE, session=session)
+    second = await service.create_variable(owner, "SECOND", "second", type_=GENERIC_TYPE, session=session)
+    await service.create_variable(uuid4(), "FIRST", "other-owner", type_=GENERIC_TYPE, session=session)
+    await service.create_variable(owner, "UNRELATED", "unrelated", type_=GENERIC_TYPE, session=session)
+    with patch.object(session, "exec", wraps=session.exec) as execute:
+        variables = await service.get_variable_objects(str(owner), {"FIRST", "SECOND", "MISSING"}, session)
+    assert variables == {"FIRST": first, "SECOND": second}
+    execute.assert_awaited_once()
+
+
 async def test_get_variables_batches_owned_names_and_only_decrypts_requested_credentials(service, session):
     user_id = uuid4()
     await service.create_variable(user_id, "URL", "https://owned.example", type_=GENERIC_TYPE, session=session)
