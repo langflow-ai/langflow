@@ -42,6 +42,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import col
 
+from langflow.api.utils.migration_pause import is_paused
 from langflow.services.base import Service
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
@@ -723,8 +724,10 @@ class TelemetryWriterService(Service):
         consecutive_failures = 0
         while True:
             should_stop = self._shutdown_event.is_set()
-            tx_batch = self._drain_batch("transactions", batch_size, batch_size_bytes)
-            vb_batch = self._drain_batch("vertex_builds", batch_size, batch_size_bytes)
+            # A paused instance flushes nothing. The rows wait in memory, and teardown spills them to disk.
+            paused = is_paused()
+            tx_batch = [] if paused else self._drain_batch("transactions", batch_size, batch_size_bytes)
+            vb_batch = [] if paused else self._drain_batch("vertex_builds", batch_size, batch_size_bytes)
 
             if not tx_batch and not vb_batch:
                 if should_stop:
@@ -799,7 +802,7 @@ class TelemetryWriterService(Service):
                 logger.exception("telemetry_writer: cross-host orphan prune failed")
 
     async def _run_retention_pass(self) -> None:
-        if self._session_maker is None:
+        if self._session_maker is None or is_paused():
             return
         settings = self.settings_service.settings
         max_transactions = int(getattr(settings, "max_transactions_to_keep", 3000))
