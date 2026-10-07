@@ -12,6 +12,10 @@ The pause is a field of the migration record, CONFIG_DIR/migrations/migration.js
 It lives outside the database because the database is what moves: a flag stored
 there would travel to the new instance, which would then boot refusing writes.
 
+A pause that still waits for the changes let in before it is written as "pausing",
+with the same fields. It refuses new changes as a pause does, and is a pause for
+nothing else: no check and no copy is measured against it.
+
 A pause counts only once every change that was let in before it has ended. Each such
 change holds a place, writing(), from before it asks about the pause until it is over,
 and the pause waits in drained() until no place is held. Places are kept in this
@@ -86,8 +90,9 @@ def is_paused() -> bool:
         # The record is replaced by rename, so the inode changes even when the time and size do not.
         seen = (str(path), stat.st_ino, stat.st_mtime_ns, stat.st_size)
         if seen != _seen:
-            pause = json.loads(path.read_bytes()).get("pause") or {}
-            _seen, _paused = seen, bool(pause.get("frozen_at"))
+            record = json.loads(path.read_bytes())
+            # A pause that still waits for the changes before it refuses new ones, as a pause does.
+            _seen, _paused = seen, any((record.get(key) or {}).get("frozen_at") for key in ("pause", "pausing"))
     except FileNotFoundError:
         _seen = None
         return False

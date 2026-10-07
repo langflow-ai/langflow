@@ -799,8 +799,8 @@ def _tell_when_the_pause_is_written(monkeypatch: pytest.MonkeyPatch) -> tuple[as
 
     def write_and_tell(record: dict) -> None:
         write(record)
-        if record.get("pause"):
-            moments.append(record["pause"]["frozen_at"])
+        if pause := record.get("pausing") or record.get("pause"):
+            moments.append(pause["frozen_at"])
             written.set()
 
     monkeypatch.setattr(migration_module, "_write_record", write_and_tell)
@@ -872,6 +872,90 @@ async def test_the_pause_begins_once_the_last_change_let_in_before_it_has_ended(
     # The moment the re-check and the copies are measured against is the one the instance became still at.
     frozen_at = paused.json()["record"]["pause"]["frozen_at"]
     assert datetime.fromisoformat(frozen_at) > datetime.fromisoformat(moments[0])
+
+
+async def test_a_second_pause_request_is_not_told_that_changes_are_paused_while_the_first_still_waits(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 1)
+    written, _ = _tell_when_the_pause_is_written(monkeypatch)
+    arrived, release = asyncio.Event(), asyncio.Event()
+    uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
+    await arrived.wait()
+    first = asyncio.create_task(client.post(PAUSE, headers=headers))
+    await written.wait()
+
+    # The first request still waits for the upload, so the instance is not still. The second waits for it too.
+    second = await client.post(PAUSE, headers=headers)
+
+    assert second.status_code == 409, second.text
+    assert second.json()["detail"]["code"] == "requests_active"
+    assert (await first).status_code == 409
+    record = (await _migration(client, headers))["record"]
+    assert "pause" not in record
+    assert "pausing" not in record
+    release.set()
+    assert await uploading == 201
+
+
+async def test_a_check_that_runs_while_a_pause_still_waits_does_not_count_for_it(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    # Long enough for the check's own command to run while the pause waits for the upload.
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 120)
+    written, _ = _tell_when_the_pause_is_written(monkeypatch)
+    arrived, release = asyncio.Event(), asyncio.Event()
+    uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
+    await arrived.wait()
+    pausing = asyncio.create_task(client.post(PAUSE, headers=headers))
+    await written.wait()
+
+    # The upload has not ended. A check that passes now says nothing about what the instance holds once it is still.
+    await _run_checks(client, headers)
+    assert (await _steps(client, headers))["pause"] == ("current", None)
+
+    release.set()
+    assert await uploading == 201
+    assert (await pausing).status_code == 200
+    # The pause begins after that check, so the check has to run again.
+    assert (await _steps(client, headers))["pause"] == ("blocked", "recheck_pending")
+
+
+async def test_a_pause_that_nobody_finished_checking_is_checked_by_the_next_request(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers = logged_in_headers_super_user
+    # The worker that wrote it was stopped while it waited for writes to end.
+    left_behind = {"frozen_at": "2026-10-06T12:00:00+00:00", "frozen_by": "bob"}
+    _checked(config_dir, [PASSING], **PREPARED, pausing=left_behind)
+
+    # No new change is let in, and no step takes it for a pause.
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 503
+    assert (await _steps(client, headers))["pause"] == ("current", None)
+
+    paused = await client.post(PAUSE, headers=headers)
+
+    assert paused.status_code == 200, paused.text
+    record = paused.json()["record"]
+    assert "pausing" not in record
+    assert record["pause"]["frozen_by"] == active_super_user.username
+    assert datetime.fromisoformat(record["pause"]["frozen_at"]) > datetime.fromisoformat(left_behind["frozen_at"])
+
+
+async def test_turning_changes_back_on_ends_a_pause_that_nobody_finished_checking(
+    client, logged_in_headers_super_user, config_dir
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED, pausing={"frozen_at": "2026-10-06T12:00:00+00:00", "frozen_by": "bob"})
+
+    assert (await client.delete(PAUSE, headers=headers)).status_code == 200
+
+    assert "pausing" not in (await _migration(client, headers))["record"]
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 201
 
 
 async def test_a_job_started_by_a_change_that_was_still_going_stops_the_pause(

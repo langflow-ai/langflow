@@ -174,28 +174,35 @@ async def pause_changes(admin: Superuser) -> dict[str, Any]:
     if record.get("pause"):
         # The moment the re-check and the copies are measured against stays the first one.
         return state
-    _require_unlocked(state, "pause")
-    # Written first, so that no worker lets a new change in. Read again, with nothing awaited
-    # before the write, so that what another request saved meanwhile is kept.
-    record = _read_record()
-    if record.get("pause"):
-        return await _state(record)
-    pause = record["pause"] = {"frozen_at": _now(), "frozen_by": admin.username}
-    _write_record(record)
+    if not record.get("pausing"):
+        _require_unlocked(state, "pause")
+        # Written first, so that no worker lets a new change in. Read again, with nothing awaited
+        # before the write, so that what another request saved meanwhile is kept.
+        record = _read_record()
+        if record.get("pause"):
+            return await _state(record)
+        if not record.get("pausing"):
+            # It is "pausing" until every change let in before it has ended. It refuses new changes
+            # from now on and is a pause for nothing else, so no check or copy is measured against it.
+            record["pausing"] = {"frozen_at": _now(), "frozen_by": admin.username}
+            _write_record(record)
+    # One that another request still waits on, or that a stopped worker left behind, is waited on here as well.
+    pausing = record["pausing"]
     try:
         refusal = await _still_writing(admin)
     except BaseException:
         # A request that is cut off while it waits must not leave a pause that nobody checked.
-        _lift(pause)
+        _lift(pausing)
         raise
     if refusal:
-        _lift(pause)
+        _lift(pausing)
         raise HTTPException(status_code=409, detail=refusal)
     record = _read_record()
-    # Another request may have resumed, or paused for itself, while this one waited. Its word stands.
-    if record.get("pause") == pause:
+    # Another request may have resumed, or finished this pause, while this one waited. Its word stands.
+    if record.get("pausing") == pausing:
         # The instance is still from this moment. The re-check and the copies are measured against it.
-        record["pause"] = {**pause, "frozen_at": _now()}
+        del record["pausing"]
+        record["pause"] = {"frozen_at": _now(), "frozen_by": admin.username}
         _write_record(record)
         await logger.ainfo(f"Migration: user_id={admin.id} paused changes to this instance")
     return await _state(record)
@@ -205,7 +212,9 @@ async def pause_changes(admin: Superuser) -> dict[str, Any]:
 async def resume_changes(admin: Superuser) -> dict[str, Any]:
     """End the pause. What was checked or copied during it no longer counts, because later changes are in none of it."""
     record = _read_record()
-    if record.pop("pause", None):
+    # A pause that still waited refuses changes as well, so it ends here too.
+    paused, pausing = record.pop("pause", None), record.pop("pausing", None)
+    if paused or pausing:
         _write_record(record)
         await logger.ainfo(f"Migration: user_id={admin.id} resumed changes to this instance")
     return await _state(record)
@@ -444,11 +453,11 @@ async def _jobs_and_listeners(admin: User) -> dict[str, Any] | None:
     return {"code": "jobs_active", "jobs": jobs, "listeners": listeners} if jobs or listeners else None
 
 
-def _lift(pause: dict[str, Any]) -> None:
-    """Take a pause out again, unless another request has since resumed or paused for itself."""
+def _lift(pausing: dict[str, Any]) -> None:
+    """Take out a pause that still waited, unless another request has since finished it or taken it out."""
     record = _read_record()
-    if record.get("pause") == pause:
-        del record["pause"]
+    if record.get("pausing") == pausing:
+        del record["pausing"]
         _write_record(record)
 
 
