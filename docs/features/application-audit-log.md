@@ -67,8 +67,10 @@ as a change.
 
 **Project, schema 1**
 
-- `description` — the value the operation wrote, stored complete. Absent means
-  not written; `null` means written as null. No previous value is stored.
+- `description` — the value the operation wrote, trimmed to its first 255
+  characters: enough to recognize the new value in a row that outlives the
+  project, without copying free text of any length into the audit store. Absent
+  means not written; `null` means written as null. No previous value is stored.
 - `flows` — `before_count`, `after_count`, `updated_count` (exact), `changes`
   (at most 100 `{id, name, change}` entries ordered by change type then id,
   `change` in `added`/`removed`/`updated`), `truncated`. Classification is by

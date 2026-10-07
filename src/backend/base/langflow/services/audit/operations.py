@@ -22,10 +22,16 @@ from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 from uuid import UUID
 
 from fastapi import HTTPException
+from lfx.log.logger import logger
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 from langflow.services.audit.attribution import resolve_audit_actor
-from langflow.services.audit.details import field_names, summarize_flow_membership
+from langflow.services.audit.details import (
+    AuditContractError,
+    bounded_description,
+    field_names,
+    summarize_flow_membership,
+)
 from langflow.services.audit.vocabulary import (
     AuditErrorCode,
     AuditEventType,
@@ -264,6 +270,24 @@ async def _release(session: AsyncSession) -> None:
         await session.rollback()
 
 
+async def _record_failure(audited: AuditedOperation, error_code: AuditErrorCode) -> None:
+    """Record the failure without letting a bug in that record answer the request.
+
+    A draft that breaks the contract is a producer bug, and the staged path still
+    raises it where a test sees it. Here the route is already answering a failure
+    of its own, so raising would replace its 4xx with a 500 and hide the failure
+    the caller actually hit.
+    """
+    try:
+        await record_audit_event_after_rollback(audited.draft(AuditResult.FAILED, error_code))
+    except AuditContractError:
+        await logger.aexception(
+            "op=record_audit_event_after_rollback outcome=refused action=%s operation=%s",
+            audited.action,
+            audited.operation.value,
+        )
+
+
 def audited_route(
     resource_type: AuditResourceType,
     action: str,
@@ -311,9 +335,7 @@ def audited_route(
                     # failure event opens its own transaction either way.
                     if session_param is not None:
                         await _release(kwargs[session_param])
-                    await record_audit_event_after_rollback(
-                        audited.draft(AuditResult.FAILED, classify_failure(exc, resource_type))
-                    )
+                    await _record_failure(audited, classify_failure(exc, resource_type))
                 raise
             finally:
                 _current.reset(token)
@@ -381,7 +403,7 @@ async def stage_project_succeeded(
         return
     details: dict[str, Any] = {"schema_version": 1}
     if description is not _NOT_WRITTEN:
-        details["description"] = description
+        details["description"] = bounded_description(description)
     if flows_before is not None or flows_after is not None:
         details["flows"] = summarize_flow_membership(flows_before or {}, flows_after or {})
     await stage_audit_event(

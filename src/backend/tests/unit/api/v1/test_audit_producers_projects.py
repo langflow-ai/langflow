@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException, status
+from langflow.services.audit.details import DESCRIPTION_LIMIT
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.mcp_server.model import MCPServer
 from langflow.services.deps import get_settings_service, session_scope
@@ -63,6 +64,14 @@ async def test_creating_a_project_records_its_description_and_the_flows_it_took(
     assert sorted((change["id"], change["name"], change["change"]) for change in summary["changes"]) == sorted(
         (flow["id"], flow["name"], "added") for flow in flows
     )
+
+
+async def test_a_long_description_reaches_the_event_trimmed(client, logged_in_headers):
+    """The project column takes free text of any length; the row that outlives it does not."""
+    project = await _create_project(client, logged_in_headers, description="d" * 10_000)
+
+    [event] = await events_for(project["id"])
+    assert event.details["description"] == "d" * DESCRIPTION_LIMIT
 
 
 async def test_a_description_not_supplied_is_not_recorded_as_written(client, logged_in_headers):

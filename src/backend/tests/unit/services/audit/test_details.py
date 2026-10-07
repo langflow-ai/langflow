@@ -6,9 +6,11 @@ from uuid import UUID, uuid4
 
 import pytest
 from langflow.services.audit.details import (
+    DESCRIPTION_LIMIT,
     FIELD_NAMES_LIMIT,
     FLOW_CHANGES_LIMIT,
     AuditContractError,
+    bounded_description,
     field_names,
     summarize_flow_membership,
     validate_details,
@@ -31,12 +33,28 @@ def test_description_written_as_null_is_kept_distinct_from_a_description_not_wri
     assert not_written == {"schema_version": 1}
 
 
-def test_description_is_stored_complete_rather_than_truncated():
+def test_a_written_description_is_trimmed_to_what_an_event_may_carry():
+    """The column it is copied from is free text of any length; the event is bounded."""
     description = "x" * 10_000
 
-    stored = validate_details(PROJECT, AuditResult.SUCCEEDED, {"schema_version": 1, "description": description})
+    trimmed = bounded_description(description)
 
-    assert stored["description"] == description
+    assert trimmed == "x" * DESCRIPTION_LIMIT
+    assert validate_details(PROJECT, AuditResult.SUCCEEDED, {"schema_version": 1, "description": trimmed}) == {
+        "schema_version": 1,
+        "description": trimmed,
+    }
+
+
+def test_a_description_nobody_trimmed_is_refused_rather_than_stored():
+    with pytest.raises(AuditContractError):
+        validate_details(PROJECT, AuditResult.SUCCEEDED, {"schema_version": 1, "description": "x" * 10_000})
+
+
+def test_a_description_that_is_not_text_is_left_for_the_contract_to_refuse():
+    assert bounded_description(None) is None
+    with pytest.raises(AuditContractError):
+        validate_details(PROJECT, AuditResult.SUCCEEDED, {"schema_version": 1, "description": bounded_description(7)})
 
 
 @pytest.mark.parametrize(

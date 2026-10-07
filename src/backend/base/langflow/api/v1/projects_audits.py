@@ -79,6 +79,8 @@ async def read_project_audits(
         project_user_id=getattr(project, "user_id", None),
         workspace_id=getattr(project, "workspace_id", None),
     )
-    visibility = await owner_visibility(current_user, select(Folder.id).where(Folder.user_id == current_user.id))
+    visibility = await owner_visibility(
+        current_user, select(Folder.id).where(Folder.user_id == current_user.id), resource_id=project_id
+    )
     page = await read_audit_page(session, query, visibility)
     return ProjectAuditPage(items=[_project_item(event) for event in page.items], next_cursor=page.next_cursor)

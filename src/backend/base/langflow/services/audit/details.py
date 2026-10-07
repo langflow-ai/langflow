@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 SCHEMA_VERSION = 1
 FIELD_NAMES_LIMIT = 16
 FLOW_CHANGES_LIMIT = 100
+DESCRIPTION_LIMIT = 255
 _FIELD_NAME = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 
 COMMITTED_RESULTS = frozenset({AuditResult.SUCCEEDED})
@@ -55,6 +56,18 @@ def field_names(names: Iterable[str]) -> list[str]:
 def bounded_name(name: str | None) -> str | None:
     """An event-time name that always fits its column."""
     return None if name is None else name[:RESOURCE_NAME_MAX_LENGTH]
+
+
+def bounded_description(description: Any) -> Any:
+    """A written description trimmed to what an event may carry.
+
+    The column it lands in is free text of any length, and every edit copies the
+    value into a row that outlives the project and is readable and searchable for
+    the whole retention period. An event describes an operation, so it records
+    enough of the new value to recognize it, not the text itself. A value that is
+    not a string is handed on untouched for the contract below to refuse.
+    """
+    return description[:DESCRIPTION_LIMIT] if isinstance(description, str) else description
 
 
 FieldNameList = Annotated[list[str], AfterValidator(field_names)]
@@ -147,7 +160,7 @@ def summarize_flow_membership(
 
 class ProjectDetailsV1(_Strict):
     schema_version: Literal[1]
-    description: str | None = None
+    description: str | None = Field(default=None, max_length=DESCRIPTION_LIMIT)
     flows: FlowMembershipSummary | None = None
     attempted_fields: FieldNameList | None = None
     requested_flow_count: NonNegativeInt | None = None

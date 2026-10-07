@@ -10,6 +10,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.services.audit import operations
+from langflow.services.audit.details import AuditContractError
 from langflow.services.audit.operations import (
     UNKNOWN_RESOURCE_ID,
     AuditedOperation,
@@ -162,6 +163,33 @@ async def test_a_real_failure_after_authorization_is_still_recorded(audit_enable
     assert [(draft.result, draft.error_code) for draft in written] == [
         (AuditResult.FAILED, AuditErrorCode.FLOW_NAME_CONFLICT)
     ]
+
+
+async def test_a_contract_bug_in_the_failure_event_keeps_the_routes_own_error(audit_enabled, monkeypatch):  # noqa: ARG001
+    """The caller must read the failure they hit, not a 500 from recording it."""
+
+    async def refuse(draft):
+        msg = f"{draft.action!r} is not an action on anything"
+        raise AuditContractError(msg)
+
+    monkeypatch.setattr(operations, "record_audit_event_after_rollback", refuse)
+    monkeypatch.setattr(operations, "_release", lambda _session: asyncio.sleep(0))
+    conflict = HTTPException(status_code=409, detail="A flow with that name exists")
+
+    @audited_route(
+        resource_type=AuditResourceType.FLOW,
+        action=FLOW_WRITE,
+        operation=AuditOperation.PATCH,
+        resource_id_param="flow_id",
+        authorized=True,
+    )
+    async def route(*, flow_id, session, current_user):  # noqa: ARG001
+        raise conflict
+
+    with pytest.raises(HTTPException) as raised:
+        await route(flow_id=uuid4(), session=None, current_user=SimpleNamespace(id=uuid4()))
+
+    assert raised.value is conflict
 
 
 @pytest.mark.parametrize(

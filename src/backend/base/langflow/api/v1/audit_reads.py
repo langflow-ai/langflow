@@ -279,14 +279,16 @@ async def owner_visibility(
     ``resource_id`` keeps the same window over a plugin's decision when the read
     names one resource. The plugin decides who may read that id, but it decides
     against the resource holding it *now*, and the domain it resolves is the
-    Project the resource is in — one the caller can choose. So a caller with
+    container the resource is in — one the caller can choose. So a caller with
     ``flow:create`` and ``flow:audit_read`` scoped to their own Project could
     re-create a deleted Flow id there and inherit the previous owner's whole
-    trail, which only a global grant is meant to read. The unfiltered feed keeps
-    its plugin decision untouched: it names no id a caller could claim, and that
-    is where a global grant still reads every life. A Project needs none of this
-    — ``?project_id=X`` resolves to ``project:X`` itself, so creating at an id
-    cannot bring a scope the caller did not already hold.
+    trail, which only a global grant is meant to read. A Project is no different:
+    ``?project_id=X`` resolves to ``project:X``, and a plugin that cannot decide
+    that domain outright resolves it through the workspace X is in *now* — which
+    a caller names when they re-create the id. Both named-resource reads
+    therefore keep the window. The unfiltered feed keeps its plugin decision
+    untouched: it names no id a caller could claim, and that is where a grant
+    meant to read every life still reads them all.
     """
     if user.is_superuser:
         return None

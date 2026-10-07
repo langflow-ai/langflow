@@ -379,6 +379,47 @@ async def _role(name: str, permissions: list[str]) -> UUID:
         return role.id
 
 
+async def test_with_a_plugin_naming_one_project_reads_only_its_current_life(client, logged_in_headers):
+    """Re-creating a freed id must not hand its old trail to whoever reads the new one.
+
+    ``?project_id=X`` is decided against the project holding X *now*: a plugin
+    that cannot decide ``project:X`` outright resolves it through the workspace
+    X was just created in, a scope the caller chooses by creating there. So the
+    read keeps the resource's current life, as the Flow read does, and a grant
+    meant to read every life still reads them all through the unfiltered feed.
+    """
+    from tests.unit.services.authorization._policy_double import assign_role, install_policy_authz
+
+    victim = await _project(client, logged_in_headers)
+    victim_id = victim["id"]
+    secret_name = f"victim-secret-{uuid4().hex[:8]}"
+    await client.patch(f"api/v1/projects/{victim_id}", json={"name": secret_name}, headers=logged_in_headers)
+    await client.delete(f"api/v1/projects/{victim_id}", headers=logged_in_headers)
+
+    _taker_id, taker_name = await make_user("retaker")
+    taker_headers = await login(client, taker_name)
+    retaken = await client.put(
+        f"api/v1/projects/{victim_id}", json={"name": f"taken-{uuid4().hex[:8]}"}, headers=taker_headers
+    )
+    assert retaken.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}, retaken.text
+
+    auditor_id, auditor_name = await make_user("lifeauditor")
+    global_role = await _role("life-auditor", ["project:audit_read"])
+    async with session_scope() as session:
+        await assign_role(session, user_id=auditor_id, role_id=global_role)
+    auditor = await login(client, auditor_name)
+
+    with install_policy_authz(get_settings_service()):
+        named = await client.get(f"api/v1/projects/audits?project_id={victim_id}&limit=200", headers=auditor)
+        feed = await client.get("api/v1/projects/audits?limit=200", headers=auditor)
+
+    assert named.status_code == status.HTTP_200_OK, named.text
+    assert secret_name not in {item["project_name"] for item in named.json()["items"]}, named.json()["items"]
+    assert [item["operation"] for item in named.json()["items"]] == ["create"]
+    assert feed.status_code == status.HTTP_200_OK, feed.text
+    assert secret_name in {item["project_name"] for item in feed.json()["items"]}
+
+
 async def test_with_a_plugin_the_dedicated_permission_decides(client, logged_in_headers):
     from tests.unit.services.authorization._policy_double import assign_role, install_policy_authz
 
