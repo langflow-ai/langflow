@@ -81,6 +81,7 @@ CHANGES = {"/api/v1/connections/oauth/{provider}/browser", "/api/v1/connections/
 #   new instance gives them the same at their first request there.
 # - The authorization audit log, when it is turned on: one row for each decision on a read. The row tells
 #   what happened on this instance after the copy.
+# - The audit trail of flows and projects is read here and never written: reading a trail adds nothing to it.
 # - A value that is worked out again from what is kept: GET /api/v1/flows/ fills in is_component where a
 #   flow lacks it.
 # - What lives in this process or in a cache: the health checks, and the MCP composer of a project.
@@ -101,6 +102,9 @@ READS = frozenset(
         "/api/v1/agentic/mcp/",
         "/api/v1/all",
         "/api/v1/api_key/",
+        "/api/v1/audits",
+        "/api/v1/audits/",
+        "/api/v1/audits/export",
         "/api/v1/authz/audit",
         "/api/v1/authz/audit/",
         "/api/v1/authz/capabilities",
@@ -145,6 +149,7 @@ READS = frozenset(
         "/api/v1/files/profile_pictures/list",
         "/api/v1/files/profile_pictures/{folder_name}/{file_name}",
         "/api/v1/flows/",
+        "/api/v1/flows/audits",
         "/api/v1/flows/basic_examples/",
         "/api/v1/flows/public_flow/{flow_id}",
         "/api/v1/flows/{flow_id}",
@@ -210,6 +215,7 @@ READS = frozenset(
         "/api/v1/policy-bundle/",
         "/api/v1/policy-bundle/history",
         "/api/v1/projects/",
+        "/api/v1/projects/audits",
         "/api/v1/projects/download/{project_id}",
         "/api/v1/projects/{project_id}",
         "/api/v1/projects/{project_id}/deployment-snapshot",
