@@ -1,5 +1,4 @@
 import abc
-from collections.abc import Iterable
 from uuid import UUID
 
 from pydantic import SecretStr
@@ -52,18 +51,6 @@ class VariableService(Service):
         Returns:
             The value of the variable.
         """
-
-    async def get_variables(
-        self, user_id: UUID | str, names: Iterable[str], field: str, session: AsyncSession
-    ) -> dict[str, str | SecretStr | None]:
-        """Resolve a batch; external stores may override this compatibility implementation."""
-        values = {}
-        for name in set(names):
-            try:
-                values[name] = await self.get_variable(user_id, name, field, session)
-            except ValueError:
-                values[name] = None
-        return values
 
     @abc.abstractmethod
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
