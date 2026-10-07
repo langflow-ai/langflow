@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 from lfx.services.authorization.base import ResourceVisibilityScope
 from sqlalchemy import Select, and_, false
-from sqlmodel import col, or_
+from sqlmodel import col, or_, select
 
 from langflow.services.authorization.actions import FlowAction
 from langflow.services.authorization.guards import (
@@ -247,6 +247,32 @@ async def apply_owned_or_visible_prefilter(
     return stmt.where(col(id_column).in_(list(visible_ids)))
 
 
+def _project_scope_exclusion_clause(
+    *,
+    project_column: InstrumentedAttribute,
+    excluded_project_ids: Sequence[UUID],
+    exclude_personal_projects: bool,
+) -> ColumnElement[bool] | None:
+    """Exclude projects from broad grants without binding personal-project IDs."""
+    allowed: list[ColumnElement[bool]] = []
+    if excluded_project_ids:
+        allowed.append(col(project_column).not_in(excluded_project_ids))
+    if exclude_personal_projects:
+        from langflow.services.database.models.folder.model import Folder
+
+        # Match the parent by its primary key without binding personal-project
+        # IDs as parameters. The alias also handles outer queries selecting Folder.
+        personal_project = Folder.__table__.alias("personal_project")
+        is_personal_project = (
+            select(personal_project.c.id)
+            .where(personal_project.c.id == col(project_column), personal_project.c.is_personal.is_(True))
+            .correlate_except(personal_project)
+            .exists()
+        )
+        allowed.append(~is_personal_project)
+    return or_(col(project_column).is_(None), and_(*allowed)) if allowed else None
+
+
 def restrict_to_owned_or_visible_scope(
     stmt: StatementT,
     *,
@@ -259,19 +285,22 @@ def restrict_to_owned_or_visible_scope(
 ) -> StatementT:
     """Apply owner, concrete-ID, workspace, and project visibility before pagination."""
     if visibility.all_resources:
-        if project_column is None or not visibility.excluded_global_project_ids:
+        if project_column is None:
             return stmt
-        # Global role access can exclude reserved projects without enumerating
-        # every visible resource. Ownership and concrete grants remain additive,
-        # so users retain their own resources and directly shared resources in
-        # an otherwise excluded project. Folderless resources remain global.
-        global_clauses: list[ColumnElement[bool]] = [
-            owner_clause,
-            col(project_column).is_(None),
-            col(project_column).not_in(visibility.excluded_global_project_ids),
-        ]
+        global_project_allowed = _project_scope_exclusion_clause(
+            project_column=project_column,
+            excluded_project_ids=visibility.excluded_global_project_ids,
+            exclude_personal_projects=visibility.exclude_personal_projects,
+        )
+        if global_project_allowed is None:
+            return stmt
+        # Ownership, exact grants, and explicit project roles remain additive.
+        # Folderless resources remain visible through a global role.
+        global_clauses: list[ColumnElement[bool]] = [owner_clause, global_project_allowed]
         if visibility.resource_ids:
             global_clauses.append(col(id_column).in_(visibility.resource_ids))
+        if visibility.project_ids:
+            global_clauses.append(col(project_column).in_(visibility.project_ids))
         return stmt.where(or_(*global_clauses))
 
     clauses: list[ColumnElement[bool]] = [owner_clause]
@@ -280,16 +309,15 @@ def restrict_to_owned_or_visible_scope(
     resolved_workspace = workspace_expression
     if resolved_workspace is None and workspace_column is not None:
         resolved_workspace = col(workspace_column)
-    workspace_project_allowed: ColumnElement[bool] | None = None
-    if project_column is not None and visibility.excluded_workspace_project_ids:
-        # A workspace-only resource has no project to exclude. Keep it visible
-        # for an explicit workspace grant while excluding resources attached to
-        # reserved projects. The explicit ``IS NULL`` branch also keeps SQL's
-        # three-valued NULL semantics aligned with ``resource_visible_in_scope``.
-        workspace_project_allowed = or_(
-            col(project_column).is_(None),
-            col(project_column).not_in(visibility.excluded_workspace_project_ids),
+    workspace_project_allowed = (
+        _project_scope_exclusion_clause(
+            project_column=project_column,
+            excluded_project_ids=visibility.excluded_workspace_project_ids,
+            exclude_personal_projects=visibility.exclude_personal_projects,
         )
+        if project_column is not None
+        else None
+    )
     if resolved_workspace is not None and visibility.workspace_ids:
         workspace_clause = resolved_workspace.in_(visibility.workspace_ids)
         if workspace_project_allowed is not None:
@@ -302,11 +330,8 @@ def restrict_to_owned_or_visible_scope(
         # with direct authorization, which resolves this scope through the
         # resource's project relation.
         unassigned_project_allowed = col(project_column).is_not(None)
-        if visibility.excluded_workspace_project_ids:
-            unassigned_project_allowed = and_(
-                unassigned_project_allowed,
-                col(project_column).not_in(visibility.excluded_workspace_project_ids),
-            )
+        if workspace_project_allowed is not None:
+            unassigned_project_allowed = and_(unassigned_project_allowed, workspace_project_allowed)
         workspace_clause = and_(resolved_workspace.is_(None), unassigned_project_allowed)
         clauses.append(workspace_clause)
     if project_column is not None and visibility.project_ids:
@@ -343,13 +368,25 @@ def resource_visible_in_scope(
     visibility: ResourceVisibilityScope,
     workspace_id: UUID | None = None,
     project_id: UUID | None = None,
+    project_is_personal: bool | None = None,
 ) -> bool:
-    """Evaluate a compact visibility scope for an already-loaded resource."""
-    globally_visible = visibility.all_resources and (
-        project_id is None or project_id not in visibility.excluded_global_project_ids
+    """Evaluate a scope, requiring project privacy metadata when exclusion is enabled.
+
+    Missing metadata fails closed for broad grants to project-backed resources.
+    Explicit resource and project grants do not require that metadata.
+    """
+    personal_project_allowed = (
+        not visibility.exclude_personal_projects or project_id is None or project_is_personal is False
     )
-    workspace_project_allowed = project_id is None or project_id not in visibility.excluded_workspace_project_ids
-    unassigned_project_allowed = project_id is not None and project_id not in visibility.excluded_workspace_project_ids
+    globally_visible = (
+        visibility.all_resources
+        and personal_project_allowed
+        and (project_id is None or project_id not in visibility.excluded_global_project_ids)
+    )
+    workspace_project_allowed = personal_project_allowed and (
+        project_id is None or project_id not in visibility.excluded_workspace_project_ids
+    )
+    unassigned_project_allowed = project_id is not None and workspace_project_allowed
     return bool(
         globally_visible
         or resource_id in visibility.resource_ids
