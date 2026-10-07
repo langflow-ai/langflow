@@ -158,6 +158,17 @@ class RuntimeSettings(BaseModel):
     ``trigger_lease`` row, so N replicas still produce one tick per schedule and
     one run per event. Turn it off on replicas that must never execute triggers
     (and when TRG-3's dedicated listener process hosts the loops instead)."""
+    data_subject_response_days: int = Field(default=30, ge=1, le=90)
+    """Days an administrator has to approve or refuse a data subject request
+    (LANGFLOW_DATA_SUBJECT_RESPONSE_DAYS). Sets the due date of each new request;
+    open requests keep the due date they were created with. GDPR Art. 12(3)
+    allows one month, extendable by two, hence the 90-day ceiling."""
+    data_subject_auto_erase_on_expiry: bool = False
+    """Approve and erase every deletion request still waiting for review once its
+    due date passes (LANGFLOW_DATA_SUBJECT_AUTO_ERASE_ON_EXPIRY). Off by default:
+    nothing is erased until an administrator approves. The same guards as a
+    manual approval apply, so a blocked request stays open for an administrator.
+    Requires LANGFLOW_FEATURE_DATA_SUBJECT_REQUESTS."""
     trigger_dispatcher_poll_interval_s: float = Field(default=5.0, gt=0)
     """How often the dispatcher scans the ledger for claimable events. The lower
     bound on scheduling latency for an event that arrives just after a scan."""

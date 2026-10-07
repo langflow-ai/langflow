@@ -218,8 +218,20 @@ def postgres_env_configured() -> bool:
 
 
 def resolve_default_kb_backend() -> str:
-    """Return the backend for a new KB when the client omits a selection."""
-    return BackendType.POSTGRES.value if postgres_env_configured() else BackendType.SQLITE.value
+    """Return the backend for a new KB when the client omits a selection.
+
+    pgVector is the default whenever it is provisioned. A deployment that
+    provisions only OpenSearch (``OPENSEARCH_URL``) defaults to that instead, so
+    headless and multi-replica KBs land on a shared store. With neither
+    configured the fallback is host-local SQLite (dev).
+    """
+    from lfx.base.knowledge_bases.backends.opensearch import opensearch_env_configured
+
+    if postgres_env_configured():
+        return BackendType.POSTGRES.value
+    if opensearch_env_configured():
+        return BackendType.OPENSEARCH.value
+    return BackendType.SQLITE.value
 
 
 def _coerce_embedding(raw: Any) -> list[float] | None:
