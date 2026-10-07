@@ -823,7 +823,18 @@ async def test_the_pause_is_refused_while_a_change_let_in_before_it_is_still_goi
     refused = await client.post(PAUSE, headers=headers)
 
     assert refused.status_code == 409, refused.text
-    assert refused.json()["detail"] == {"code": "requests_active"}
+    detail = refused.json()["detail"]
+    # The admin is told what the pause waited for, and since when.
+    [change] = detail.pop("changes")
+    assert detail == {"code": "requests_active", "jobs": [], "listeners": [], "elsewhere": False}
+    assert {**change, "since": None} == {
+        "kind": "request",
+        "method": "POST",
+        "path": "/api/v2/files/",
+        "name": None,
+        "since": None,
+    }
+    assert datetime.fromisoformat(change["since"]) <= datetime.now(timezone.utc)
     assert "pause" not in (await _migration(client, headers))["record"]
 
     release.set()
@@ -887,6 +898,61 @@ async def test_a_job_started_by_a_change_that_was_still_going_stops_the_pause(
     assert [job["id"] for job in refused.json()["detail"]["jobs"]] == [str(job_id)]
     assert "pause" not in (await _migration(client, headers))["record"]
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 201
+
+
+async def test_a_run_that_ends_with_its_request_does_not_stop_the_pause(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    headers, flow_id, job_id = logged_in_headers_super_user, uuid4(), uuid4()
+    _checked(config_dir, [PASSING], **PREPARED)
+    # What a request that runs a flow has in the table for as long as it runs.
+    await _add(
+        Flow(id=flow_id, name="asked for over the API", data={}, user_id=active_super_user.id),
+        Job(job_id=job_id, flow_id=flow_id, user_id=active_super_user.id, status=JobStatus.IN_PROGRESS),
+    )
+    written, _ = _tell_when_the_pause_is_written(monkeypatch)
+    arrived, release = asyncio.Event(), asyncio.Event()
+    running = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
+    await arrived.wait()
+    pausing = asyncio.create_task(client.post(PAUSE, headers=headers))
+    await written.wait()
+
+    # The request ends within the wait, and its run with it.
+    await get_job_service().update_job_status(job_id, JobStatus.COMPLETED)
+    release.set()
+
+    assert await running == 201
+    # A busy instance always has such a run going. The pause waits for it and then begins.
+    assert (await pausing).status_code == 200
+
+
+async def test_a_job_is_named_together_with_a_change_that_outlasts_the_wait(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    headers, flow_id, job_id = logged_in_headers_super_user, uuid4(), uuid4()
+    _checked(config_dir, [PASSING], **PREPARED)
+    monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
+    await _add(
+        Flow(id=flow_id, name="nightly report", data={}, user_id=active_super_user.id),
+        Job(job_id=job_id, flow_id=flow_id, user_id=active_super_user.id, status=JobStatus.QUEUED),
+    )
+    arrived, release = asyncio.Event(), asyncio.Event()
+    uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
+    await arrived.wait()
+    try:
+        refused = await client.post(PAUSE, headers=headers)
+    finally:
+        release.set()
+
+    assert refused.status_code == 409, refused.text
+    detail = refused.json()["detail"]
+    # Both are still in the way, so both are named in one answer.
+    assert detail["code"] == "jobs_active"
+    assert [job["id"] for job in detail["jobs"]] == [str(job_id)]
+    assert [(change["kind"], change["method"], change["path"]) for change in detail["changes"]] == [
+        ("request", "POST", "/api/v2/files/")
+    ]
+    assert await uploading == 201
 
 
 async def test_a_refused_pause_leaves_a_pause_that_another_request_made(
@@ -962,7 +1028,14 @@ async def test_the_pause_is_refused_while_another_worker_has_a_change_going(
         refused = await client.post(PAUSE, headers=headers)
 
         assert refused.status_code == 409, refused.text
-        assert refused.json()["detail"] == {"code": "requests_active"}
+        # The lock says that a place is held and never whose, so this worker can name none of it.
+        assert refused.json()["detail"] == {
+            "code": "requests_active",
+            "jobs": [],
+            "listeners": [],
+            "changes": [],
+            "elsewhere": True,
+        }
         assert "pause" not in (await _migration(client, headers))["record"]
     finally:
         if worker.returncode is None:
@@ -1066,6 +1139,8 @@ async def test_the_pause_is_refused_while_a_job_is_still_writing(
             }
         ],
         "listeners": [],
+        # The job is in the table, so the pause did not wait to learn what else is under way.
+        "changes": [],
     }
     assert "pause" not in (await _migration(client, headers))["record"]
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 201

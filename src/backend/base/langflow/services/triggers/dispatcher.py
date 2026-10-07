@@ -753,7 +753,7 @@ class TriggerDispatcher:
         while not self._stopping.is_set():
             try:
                 # A pass holds a place, so a pause waits for one that is under way.
-                with writing() as let_in:
+                with writing(name="trigger_dispatcher") as let_in:
                     dispatched = await self.tick() if let_in else 0
                 if dispatched >= settings.trigger_max_events_per_poll:
                     # Continue draining full batches without adding a fixed
@@ -851,7 +851,7 @@ class TriggerDispatcher:
     async def _source_loop(self) -> None:
         while not self._stopping.is_set():
             try:
-                with writing() as let_in:
+                with writing(name="trigger_sources") as let_in:
                     if let_in:
                         await self.source_tick()
             except asyncio.CancelledError:

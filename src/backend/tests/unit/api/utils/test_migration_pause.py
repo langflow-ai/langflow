@@ -140,11 +140,13 @@ def _held_open(monkeypatch: pytest.MonkeyPatch, owner: object, its_pass: str) ->
     return began, go_on
 
 
-async def _the_pause_waits_for_it(config_dir: Path, began: asyncio.Event, go_on: asyncio.Event) -> None:
+async def _the_pause_waits_for_it(config_dir: Path, began: asyncio.Event, go_on: asyncio.Event, named: str) -> None:
     await began.wait()
     _write_record(config_dir, PAUSED)
     # The pass was let in before the pause, so the pause waits for it and does not count yet.
     assert not await migration_pause.drained(0.2)
+    # A pause that gives up can say which loop it waited for.
+    assert ("loop", named) in [(change["kind"], change["name"]) for change in migration_pause.under_way()["changes"]]
     go_on.set()
     assert await migration_pause.drained(5)
 
@@ -361,6 +363,54 @@ async def test_a_listener_that_is_running_renews_its_lease_while_a_pause_is_trie
         await listener.stop()
 
 
+async def test_a_pause_waits_for_a_listener_pass_that_began_before_it(client, config_dir, monkeypatch):  # noqa: ARG001
+    listener = ListenerSupervisor()
+    began, go_on = _held_open(monkeypatch, listener, "_reconcile")
+    passing = asyncio.create_task(listener.reconcile())
+    try:
+        await _the_pause_waits_for_it(config_dir, began, go_on, "trigger_listener")
+        await passing
+    finally:
+        go_on.set()
+        await asyncio.gather(passing, return_exceptions=True)
+        await listener.stop()
+
+
+async def test_a_live_connection_is_named_by_the_path_it_was_routed_to(client, config_dir):  # noqa: ARG001
+    opened, closing = asyncio.Event(), asyncio.Event()
+
+    async def a_session_that_stays_open(scope, receive, send):  # noqa: ARG001
+        opened.set()
+        await closing.wait()
+
+    scope = {
+        "type": "websocket",
+        "path": "/langflow/api/v1/voice/ws/flow_tts/handbook",
+        "root_path": "/langflow",
+        # Left out of what is told: a query can carry a key.
+        "query_string": b"api_key=sk-not-for-the-admin",
+    }
+    session = asyncio.create_task(MigrationPauseMiddleware(a_session_that_stays_open)(scope, None, None))
+    await opened.wait()
+    try:
+        under_way = migration_pause.under_way()
+        [connection] = [change for change in under_way["changes"] if change["kind"] == "websocket"]
+        assert datetime.fromisoformat(connection.pop("since")) <= datetime.now(timezone.utc)
+        assert connection == {
+            "kind": "websocket",
+            "method": None,
+            "path": "/api/v1/voice/ws/flow_tts/handbook",
+            "name": None,
+        }
+        assert "sk-not-for-the-admin" not in json.dumps(under_way)
+        # This worker names what it holds itself, so it does not point at another worker.
+        assert under_way["elsewhere"] is False
+    finally:
+        closing.set()
+        await session
+    assert [change for change in migration_pause.under_way()["changes"] if change["kind"] == "websocket"] == []
+
+
 async def test_a_schedule_that_comes_due_during_the_pause_fires_after_it_ends(active_user, config_dir):
     async with session_scope() as session:
         flow = Flow(name="scheduled", user_id=active_user.id, data={"nodes": [], "edges": []})
@@ -560,6 +610,8 @@ async def test_a_pause_waits_for_a_flow_sync_pass_that_began_before_it(active_us
 
         # The pass was let in before the pause, so the pause waits for it and does not count yet.
         assert not await migration_pause.drained(0.2)
+        under_way = migration_pause.under_way()["changes"]
+        assert ("loop", "flow_sync") in [(change["kind"], change["name"]) for change in under_way]
 
         go_on.set()
 
@@ -573,15 +625,18 @@ async def test_a_pause_waits_for_a_flow_sync_pass_that_began_before_it(active_us
         await asyncio.gather(sync, return_exceptions=True)
 
 
-@pytest.mark.parametrize(("loop", "its_pass"), [("_loop", "tick"), ("_source_loop", "source_tick")])
+@pytest.mark.parametrize(
+    ("loop", "its_pass", "named"),
+    [("_loop", "tick", "trigger_dispatcher"), ("_source_loop", "source_tick", "trigger_sources")],
+)
 async def test_a_pause_waits_for_a_trigger_dispatcher_pass_that_began_before_it(
-    config_dir, monkeypatch, loop, its_pass
+    config_dir, monkeypatch, loop, its_pass, named
 ):
     dispatcher = TriggerDispatcher(owner="pause-test")
     began, go_on = _held_open(monkeypatch, dispatcher, its_pass)
     running = asyncio.create_task(getattr(dispatcher, loop)())
     try:
-        await _the_pause_waits_for_it(config_dir, began, go_on)
+        await _the_pause_waits_for_it(config_dir, began, go_on, named)
     finally:
         go_on.set()
         running.cancel()
@@ -594,14 +649,18 @@ async def test_a_pause_waits_for_an_audit_log_cleanup_that_began_before_it(confi
     began, go_on = _held_open(monkeypatch, worker, "_run_once")
     await worker.start()
     try:
-        await _the_pause_waits_for_it(config_dir, began, go_on)
+        await _the_pause_waits_for_it(config_dir, began, go_on, "audit_cleanup")
     finally:
         go_on.set()
         await worker.stop()
 
 
-@pytest.mark.parametrize("its_pass", ["_flush", "_run_retention_pass"])
-async def test_a_pause_waits_for_a_telemetry_write_that_began_before_it(active_user, config_dir, monkeypatch, its_pass):
+@pytest.mark.parametrize(
+    ("its_pass", "named"), [("_flush", "telemetry_flush"), ("_run_retention_pass", "telemetry_retention")]
+)
+async def test_a_pause_waits_for_a_telemetry_write_that_began_before_it(
+    active_user, config_dir, monkeypatch, its_pass, named
+):
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "telemetry_writer_enabled", True)
     monkeypatch.setattr(settings, "telemetry_writer_outbox_dir", str(config_dir / "outbox"))
@@ -618,7 +677,7 @@ async def test_a_pause_waits_for_a_telemetry_write_that_began_before_it(active_u
     try:
         # Something for the writer to flush. The sweep runs whether or not anything was written.
         assert writer.enqueue_transaction(row.model_dump(mode="python"))
-        await _the_pause_waits_for_it(config_dir, began, go_on)
+        await _the_pause_waits_for_it(config_dir, began, go_on, named)
     finally:
         go_on.set()
         await writer.teardown()

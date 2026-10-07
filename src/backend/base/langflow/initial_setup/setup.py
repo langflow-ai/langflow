@@ -1624,7 +1624,7 @@ async def sync_flows_from_fs():
             # a pause is waited for and does not write after it.
             place = contextlib.ExitStack()
             try:
-                if not place.enter_context(writing()):
+                if not place.enter_context(writing(name="flow_sync")):
                     place.close()
                     await asyncio.sleep(fs_flows_polling_interval)
                     continue

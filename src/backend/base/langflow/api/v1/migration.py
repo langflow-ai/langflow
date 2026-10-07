@@ -31,7 +31,7 @@ from sqlalchemy.engine import make_url
 from sqlmodel import select
 
 from langflow.api.utils.migration_jobs import active_jobs, live_listeners
-from langflow.api.utils.migration_pause import drained
+from langflow.api.utils.migration_pause import drained, under_way
 from langflow.cli.migration_preflight import check_target_version
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.file.model import File
@@ -417,11 +417,26 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
 
 
 async def _still_writing(admin: User) -> dict[str, Any] | None:
-    """What still writes now that no new change is let in: the refusal to answer with, or None."""
+    """What still writes now that no new change is let in: the refusal to answer with, or None.
+
+    A refusal says what the admin can act on. Jobs and listeners are read from the database, which
+    every worker shares. Changes are what this worker let in before the pause, and so can name.
+    """
     # The changes that were let in before the pause end first. Only then is it known what writes
-    # without a request: a job that one of those changes queued is in the table by now.
-    if not await drained(_DRAIN_SECONDS):
-        return {"code": "requests_active"}
+    # without a request: a job that one of those changes queued is in the table by now, and the job
+    # of a run that ended with its request is no longer live. Looking at the table first would refuse
+    # every pause that comes while a request runs a flow, which on a busy instance is every pause.
+    waited_for = None if await drained(_DRAIN_SECONDS) else under_way()
+    if refusal := await _jobs_and_listeners(admin):
+        # A change that outlasted the wait is a long one, such as an upload, and is told with them.
+        return {**refusal, "changes": waited_for["changes"] if waited_for else []}
+    if waited_for:
+        return {"code": "requests_active", "jobs": [], "listeners": [], **waited_for}
+    return None
+
+
+async def _jobs_and_listeners(admin: User) -> dict[str, Any] | None:
+    """The refusal for what writes without a request and is known to every worker, or None."""
     async with session_scope() as session:
         jobs, listeners = await active_jobs(session, admin.id), await live_listeners(session)
     return {"code": "jobs_active", "jobs": jobs, "listeners": listeners} if jobs or listeners else None

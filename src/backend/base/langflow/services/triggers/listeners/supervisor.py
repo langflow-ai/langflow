@@ -360,7 +360,7 @@ class ListenerSupervisor:
         # A paused instance takes no events: a listener that starts during a pause announces and
         # claims nothing until it ends. The place is held for the pass, so a pause that is written
         # meanwhile waits for it and then finds this listener's lease.
-        with writing() as let_in:
+        with writing(name="trigger_listener") as let_in:
             if let_in:
                 await self._reconcile()
             elif self.last_reconcile_at is not None:

@@ -727,7 +727,7 @@ class TelemetryWriterService(Service):
             # A paused instance flushes nothing. The rows wait in memory, and teardown spills them to disk.
             # A flush holds a place from here until it is over, so a pause waits for one that is under way.
             place = ExitStack()
-            paused = not place.enter_context(writing())
+            paused = not place.enter_context(writing(name="telemetry_flush"))
             tx_batch = [] if paused else self._drain_batch("transactions", batch_size, batch_size_bytes)
             vb_batch = [] if paused else self._drain_batch("vertex_builds", batch_size, batch_size_bytes)
 
@@ -800,7 +800,7 @@ class TelemetryWriterService(Service):
                 return
             self._heartbeat_owner_file()
             try:
-                with writing() as let_in:
+                with writing(name="telemetry_retention") as let_in:
                     if let_in:
                         await self._run_retention_pass()
             except Exception:  # noqa: BLE001

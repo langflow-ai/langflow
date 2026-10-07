@@ -14,20 +14,25 @@ there would travel to the new instance, which would then boot refusing writes.
 
 A pause counts only once every change that was let in before it has ended. Each such
 change holds a place, writing(), from before it asks about the pause until it is over,
-and the pause waits in drained() until no place is held. Places are counted in this
+and the pause waits in drained() until no place is held. Places are kept in this
 worker and, for the other workers, held as a shared lock on CONFIG_DIR/migrations/pause.lock,
 which the kernel lets go of when a process dies.
+
+Each place says what holds it, so that a pause that gives up waiting can tell the admin
+what is still under way: under_way().
 """
 
 from __future__ import annotations
 
 import asyncio
 import contextlib
+import itertools
 import json
 import os
 import time
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from starlette.responses import JSONResponse
@@ -52,8 +57,9 @@ _ALLOWED_PREFIX = "/api/v1/migration/"
 # Which record file was last read, and what it said.
 _seen: tuple[str, int, int, int] | None = None
 _paused = False
-# How many changes this worker let in that have not ended.
-_in_flight = 0
+# The changes this worker let in that have not ended: each place, with what holds it and since when.
+_held: dict[int, dict[str, Any]] = {}
+_places = itertools.count()
 # Seconds between two looks at whether every change has ended.
 _DRAIN_POLL = 0.05
 
@@ -92,20 +98,25 @@ def is_paused() -> bool:
 # trigger listeners, the flow sync from disk, the trigger dispatcher, the audit cleanup and the telemetry
 # writer. The background executor holds none: what it starts is a job, and the pause looks for those.
 @contextlib.contextmanager
-def writing() -> Iterator[bool]:
+def writing(
+    kind: str = "loop", *, method: str | None = None, path: str | None = None, name: str | None = None
+) -> Iterator[bool]:
     """Hold a place among the changes a pause waits for, and say whether this one may go ahead.
 
     The place is taken before the pause is asked about. A pause that is written just after
     finds the place held and waits for the change. One that was written just before is seen
     here, and the change does not go ahead. Asking first would leave a gap between the two.
 
+    The arguments say what holds the place: a "request" by its method and path, a "websocket"
+    by its path, a "loop" by its name. They are what under_way() tells.
+
     With the feature off there is no pause to wait, so no place is taken and no lock.
     """
-    global _in_flight  # noqa: PLW0603
     if not FEATURE_FLAGS.instance_migration:
         yield True
         return
-    _in_flight += 1
+    held = next(_places)
+    _held[held] = {"kind": kind, "method": method, "path": path, "name": name, "since": time.time()}
     place = None
     try:
         let_in = True
@@ -123,7 +134,7 @@ def writing() -> Iterator[bool]:
     finally:
         if place is not None:
             os.close(place)
-        _in_flight -= 1
+        del _held[held]
 
 
 async def drained(seconds: float) -> bool:
@@ -137,8 +148,24 @@ async def drained(seconds: float) -> bool:
     return True
 
 
+def under_way() -> dict[str, Any]:
+    """What a pause is still waiting for, to tell the admin when it gives up.
+
+    "changes" are the places this worker holds, the oldest first, each with what holds it and
+    since when. "elsewhere" says that another worker holds one. It shows only once this worker
+    holds none: the lock says that a place is held and never whose.
+    """
+    changes = [
+        {**change, "since": datetime.fromtimestamp(change["since"], timezone.utc).isoformat()}
+        for change in sorted(_held.values(), key=lambda change: change["since"])
+    ]
+    # ponytail: a change in another worker is not named. Give each place a file of its own that says
+    # what holds it, in place of the one shared lock, if admins of several workers need the names.
+    return {"changes": changes, "elsewhere": not changes and not _still()}
+
+
 def _still() -> bool:
-    if _in_flight:
+    if _held:
         return False
     if fcntl is None:
         return True
@@ -183,7 +210,8 @@ class MigrationPauseMiddleware:
             await self.app(scope, receive, send)
             return
         # Held for the whole of the request, its upload and its response included.
-        with writing() as let_in:
+        kind = "request" if scope["type"] == "http" else "websocket"
+        with writing(kind, method=scope.get("method"), path=_path(scope)) as let_in:
             if let_in:
                 await self.app(scope, receive, send)
                 return
@@ -195,8 +223,13 @@ class MigrationPauseMiddleware:
 def _passes_while_paused(scope) -> bool:
     if scope.get("method") in _READ_METHODS:
         return True
-    # The path the router matches, which leaves out a configured root path.
+    path = _path(scope)
+    return path in _ALLOWED_PATHS or f"{path}/".startswith(_ALLOWED_PREFIX)
+
+
+def _path(scope) -> str:
+    """The path the router matches, which leaves out a configured root path. Never the query: it can hold a key."""
     path, root_path = scope["path"], scope.get("root_path", "")
     if root_path and path.startswith(f"{root_path}/"):
         path = path[len(root_path) :]
-    return path in _ALLOWED_PATHS or f"{path}/".startswith(_ALLOWED_PREFIX)
+    return path

@@ -139,7 +139,7 @@ class AuditLogCleanupWorker:
                 break
             # A paused instance prunes nothing. The next sweep removes what this one left.
             # A sweep holds a place, so a pause waits for one that is under way.
-            with writing() as let_in:
+            with writing(name="audit_cleanup") as let_in:
                 if let_in:
                     await self._run_once()
 
