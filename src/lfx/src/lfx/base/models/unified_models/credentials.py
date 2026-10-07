@@ -161,9 +161,8 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     # Try the database-backed variable service first when a user_id is available.
     # Fall through to os.environ regardless so lfx run (no user_id) can still pick
     # up canonical credentials from the shell.
-    has_user = has_user_id(user_id)
     api_key = None
-    if has_user:
+    if has_user_id(user_id):
 
         async def _get_variable():
             async with session_scope() as session:
@@ -474,31 +473,22 @@ async def _fetch_enabled_providers_for_user(
         all_provider_variables = {}
         user_id_uuid = to_user_uuid(user_id)
 
-        for provider in provider_candidates:
-            # Get ALL variables for this provider (not just the primary one)
-            provider_vars = get_provider_all_variables(provider)
-
-            for var_info in provider_vars:
-                var_name = var_info.get("variable_key")
-                if not var_name or var_name not in all_var_names:
-                    # Variable not configured by user
-                    continue
-
-                if var_name in all_provider_variables:
-                    # Already fetched
-                    continue
-
-                try:
-                    # Get the raw Variable object to access the actual value
-                    variable_obj = await variable_service.get_variable_object(
-                        user_id=user_id_uuid, name=var_name, session=session
-                    )
-                    if variable_obj and variable_obj.value:
-                        all_provider_variables[var_name] = _VarWithValue(variable_obj.value)
-                except Exception as e:  # noqa: BLE001
-                    # Variable not found or error accessing it - skip
-                    logger.error(f"Error accessing variable {var_name} for provider {provider}: {e}")
-                    continue
+        variable_names = {
+            variable["variable_key"]
+            for provider in provider_candidates
+            for variable in get_provider_all_variables(provider)
+            if variable.get("variable_key") and variable["variable_key"] in all_var_names
+        }
+        for var_name in sorted(variable_names):
+            try:
+                variable_obj = await variable_service.get_variable_object(
+                    user_id=user_id_uuid, name=var_name, session=session
+                )
+                if variable_obj and variable_obj.value:
+                    all_provider_variables[var_name] = _VarWithValue(variable_obj.value)
+            except Exception:  # noqa: BLE001
+                await logger.aexception(f"Error accessing variable {var_name} for provider configuration")
+                continue
 
         # Use shared helper to validate and get enabled providers
         return _validate_and_get_enabled_providers(all_provider_variables, provider_candidates)
