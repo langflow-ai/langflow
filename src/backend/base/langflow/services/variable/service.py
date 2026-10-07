@@ -10,6 +10,7 @@ from lfx.log.logger import logger
 from lfx.services.authorization.base import ResourceVisibilityScope
 from lfx.services.settings.constants import AGENTIC_VARIABLES
 from lfx.services.variable import VariableNotFoundError
+from lfx.utils.user_id import to_user_uuid
 from sqlmodel import col, select, update
 
 from langflow.services.auth import utils as auth_utils
@@ -359,7 +360,7 @@ class DatabaseVariableService(VariableService, Service):
         names = set(names)
         if not names:
             return {}
-        user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+        user_id = to_user_uuid(user_id)
         rows = (
             await session.exec(select(Variable).where(Variable.user_id == user_id, col(Variable.name).in_(names)))
         ).all()
@@ -502,7 +503,7 @@ class DatabaseVariableService(VariableService, Service):
             Dictionary mapping variable names to decrypted values
         """
         # Convert string to UUID if needed for SQLAlchemy query
-        user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+        user_id_uuid = to_user_uuid(user_id)
         stmt = select(Variable).where(Variable.user_id == user_id_uuid)
         variables = (await session.exec(stmt)).all()
 

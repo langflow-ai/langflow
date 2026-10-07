@@ -34,7 +34,7 @@ from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import unwrap_secret_value
 from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
-from lfx.utils.user_id import has_user_id
+from lfx.utils.user_id import has_user_id, to_user_uuid
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
@@ -507,7 +507,7 @@ async def aget_provider_variable_value(user_id: UUID | str | None, variable_key:
         if variable_service is not None:
             try:
                 value = await variable_service.get_variable(
-                    user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                    user_id=to_user_uuid(user_id),
                     name=variable_key,
                     field="",
                     session=session,
@@ -539,7 +539,7 @@ async def aget_live_model_variables(
             variable_service = get_variable_service()
             if variable_service is not None:
                 values = await variable_service.get_variables(
-                    user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                    user_id=to_user_uuid(user_id),
                     names=keys,
                     field="",
                     session=session,

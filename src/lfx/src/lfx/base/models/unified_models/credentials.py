@@ -7,7 +7,6 @@ import json
 import os
 import re
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
 
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
@@ -17,7 +16,7 @@ from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.env_var_security import safe_getenv
 from lfx.utils.secrets import secret_value_to_str
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
-from lfx.utils.user_id import has_user_id
+from lfx.utils.user_id import has_user_id, to_user_uuid
 
 from .provider_queries import (
     get_model_provider_variable_mapping,
@@ -27,6 +26,8 @@ from .provider_queries import (
 )
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 MODEL_STATUS_KEY_SEPARATOR = "::"
@@ -108,7 +109,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                         return None
                     try:
                         return await variable_service.get_variable(
-                            user_id=(UUID(user_id) if isinstance(user_id, str) else user_id),
+                            user_id=to_user_uuid(user_id),
                             name=var_name,
                             field="",
                             session=session,
@@ -171,7 +172,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                     return None
                 try:
                     return await variable_service.get_variable(
-                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                        user_id=to_user_uuid(user_id),
                         name=variable_name,
                         field="",
                         session=session,
@@ -248,7 +249,7 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                 return {}
 
             values = {}
-            user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+            user_id_uuid = to_user_uuid(user_id)
 
             for var_info in provider_vars:
                 var_key = var_info.get("variable_key")
@@ -402,7 +403,7 @@ async def _get_model_status(user_id: UUID | str) -> tuple[set[str], set[str]]:
         if not isinstance(variable_service, DatabaseVariableService):
             return set(), set()
         all_vars = await variable_service.get_all(
-            user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+            user_id=to_user_uuid(user_id),
             session=session,
         )
         disabled: set[str] = set()
@@ -463,7 +464,7 @@ async def _fetch_enabled_providers_for_user(
     async with session_scope() as session:
         # Get all variable names (VariableRead has value=None for credentials)
         all_vars = await variable_service.get_all(
-            user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+            user_id=to_user_uuid(user_id),
             session=session,
         )
         all_var_names = {var.name for var in all_vars}
@@ -471,7 +472,7 @@ async def _fetch_enabled_providers_for_user(
         # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
         # We need to fetch raw Variable objects because VariableRead has value=None for credentials
         all_provider_variables = {}
-        user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+        user_id_uuid = to_user_uuid(user_id)
 
         for provider in provider_candidates:
             # Get ALL variables for this provider (not just the primary one)
