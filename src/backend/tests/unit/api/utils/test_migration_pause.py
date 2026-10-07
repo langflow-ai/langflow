@@ -36,6 +36,7 @@ from langflow.services.deps import (
 )
 from langflow.services.task.audit_cleanup import AuditLogCleanupWorker
 from langflow.services.telemetry_writer.service import TelemetryWriterService
+from langflow.services.triggers.constants import DISPATCHER_LEASE_NAME, SCHEDULER_LEASE_NAME
 from langflow.services.triggers.dispatcher import TriggerDispatcher
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlmodel import select
@@ -238,6 +239,14 @@ async def test_a_schedule_that_comes_due_during_the_pause_fires_after_it_ends(ac
             next_fire_at=datetime.now(timezone.utc) - timedelta(minutes=2),
         )
         session.add(trigger)
+        # Other background workers share the lease table and may already hold a lease before the pause.
+        session.add(
+            TriggerLease(
+                name="unrelated-background-worker",
+                owner="pause-test-worker",
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=2),
+            )
+        )
 
     async def rows(model) -> list:
         async with session_scope() as session:
@@ -248,9 +257,11 @@ async def test_a_schedule_that_comes_due_during_the_pause_fires_after_it_ends(ac
 
     assert await dispatcher.tick() == 0
     assert await dispatcher.source_tick() == 0
-    # Neither loop wrote: no event, and not even the lease each one takes first.
+    # Neither loop wrote an event or acquired a trigger lease. Unrelated workers share this table.
     assert await rows(TriggerEvent) == []
-    assert await rows(TriggerLease) == []
+    assert {lease.name for lease in await rows(TriggerLease)}.isdisjoint(
+        {SCHEDULER_LEASE_NAME, DISPATCHER_LEASE_NAME, "trigger-source-maintenance"}
+    )
 
     _write_record(config_dir, RECORD)
 
