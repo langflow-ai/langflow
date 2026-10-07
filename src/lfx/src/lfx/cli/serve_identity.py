@@ -381,6 +381,12 @@ class IdentityVerifier:
         if not isinstance(document, dict):
             msg = f"OIDC discovery at {discovery_url} returned a non-object document."
             raise IdentityConfigError(msg)
+        # OIDC Discovery 1.0 section 4.3 requires an exact issuer match before
+        # using the metadata. Endpoint URLs may legitimately use other origins.
+        issuer = document.get("issuer")
+        if not isinstance(issuer, str) or issuer != self._config.jwt_issuer:
+            msg = f"OIDC discovery at {discovery_url} did not return the configured issuer."
+            raise IdentityConfigError(msg)
         jwks_uri = document.get("jwks_uri")
         if not isinstance(jwks_uri, str) or not jwks_uri:
             msg = f"OIDC discovery at {discovery_url} did not return a string jwks_uri."
