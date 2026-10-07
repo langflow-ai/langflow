@@ -11,6 +11,10 @@ class FeatureFlags(BaseSettings):
     """
     Enable Settings > Migration, which guides a superuser through moving this instance to a new one.
     """
+    data_subject_requests: bool = False
+    """
+    Enable GDPR data subject requests: the request queue, find, export and erase APIs.
+    """
 
     class Config:
         env_prefix = "LANGFLOW_FEATURE_"

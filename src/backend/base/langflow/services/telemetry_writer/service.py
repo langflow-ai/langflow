@@ -101,6 +101,15 @@ def _read_owner_file(pid_dir: Path) -> dict[str, Any] | None:
         return None
 
 
+def _uniform_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Give every row the same keys; a multi-row insert binds only the first row's keys.
+
+    Rows restored from an outbox written before a column existed lack that key.
+    """
+    keys = {key for row in rows for key in row}
+    return [{key: row.get(key) for key in keys} for row in rows]
+
+
 def _json_default(value: Any) -> Any:
     if isinstance(value, datetime):
         return {_DATETIME_TAG: value.isoformat()}
@@ -760,13 +769,13 @@ class TelemetryWriterService(Service):
             return
         async with self._session_maker() as session:
             if tx_batch:
-                await session.execute(TransactionTable.__table__.insert(), params=tx_batch)
+                await session.execute(TransactionTable.__table__.insert(), params=_uniform_rows(tx_batch))
                 for row in tx_batch:
                     flow_id = row.get("flow_id")
                     if flow_id is not None:
                         self._dirty_tx_flows.add(str(flow_id))
             if vb_batch:
-                await session.execute(VertexBuildTable.__table__.insert(), params=vb_batch)
+                await session.execute(VertexBuildTable.__table__.insert(), params=_uniform_rows(vb_batch))
                 for row in vb_batch:
                     flow_id = row.get("flow_id")
                     if flow_id is not None:
