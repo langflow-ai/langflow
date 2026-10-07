@@ -62,12 +62,15 @@ def copy_environment(step_id: str, source_env: dict[str, str], secrets: dict[str
     # The other copies work on the database the new instance will run on, which the first copy filled.
     # An instance already on PostgreSQL keeps its own. The destination's address is read with the driver
     # its test and the database copy read it with, whichever one it was typed for.
-    env["LANGFLOW_DATABASE_URL"] = (
-        own_database if own_database.startswith("postgres") else _sync_postgres_url(secrets["database_url"])
-    )
+    on_postgresql = own_database.startswith("postgres")
+    env["LANGFLOW_DATABASE_URL"] = own_database if on_postgresql else _sync_postgres_url(secrets["database_url"])
     if step_id == "copy_knowledge_bases":
-        # The vectors go into the same database, as pgvector tables.
-        env["PGVECTOR_CONNECTION_STRING"] = env["LANGFLOW_DATABASE_URL"]
+        # The vectors go into the same database, as pgvector tables. An instance already on PostgreSQL goes on
+        # serving from its database, and reads a knowledge base in pgvector from the store its own environment
+        # names. So there the copy writes to that store, whichever database it is.
+        env["PGVECTOR_CONNECTION_STRING"] = (
+            source_env["PGVECTOR_CONNECTION_STRING"] if on_postgresql else env["LANGFLOW_DATABASE_URL"]
+        )
         return env
     files = secrets["files"]
     env["AWS_ACCESS_KEY_ID"] = files["access_key_id"]

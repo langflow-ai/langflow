@@ -464,7 +464,8 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
     state = await _state(record)
     _require_unlocked(state, step_id)
     _require_reached(state, step_id)
-    if next(step for step in state["steps"] if step["id"] == step_id)["reason"] == "pgvector_env_missing":
+    if step_id == "copy_knowledge_bases" and _unreadable_here(state["instance"]):
+        # Asked here whatever the step reads: a copy that was made says nothing of how the server was started since.
         raise HTTPException(status_code=409, detail={"code": "pgvector_env_missing"})
     let_in = _lets_in(record, step_id)
     held = _secrets.get("for") or {}
@@ -842,10 +843,7 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
         "backup": ("done", None) if _during_pause(record, backup.get("confirmed_at")) else ("current", None),
         **{step: _copy_step(record, step) for step in COPY_COMMANDS},
     }
-    # On PostgreSQL the knowledge bases go into this instance's own database, and it keeps serving from it. It
-    # reads a knowledge base in pgvector only from the store its own environment names, so without one the
-    # copy would leave it unable to open any of them.
-    unreadable_here = postgresql and not postgres_env_configured()
+    unreadable_here = _unreadable_here(instance)
     steps = [first]
     # The first step neither done nor skipped is the one to do now. A later step that has not started
     # waits for it, and one that has started keeps saying where it stands.
@@ -865,6 +863,15 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
         steps.append({"id": step, "state": state, "reason": reason})
         frontier_open = frontier_open and state in {"done", "skipped"}
     return steps
+
+
+def _unreadable_here(instance: dict[str, Any]) -> bool:
+    """Whether this instance could not open its knowledge bases once they are copied.
+
+    On PostgreSQL it keeps serving from its database, and it reads a knowledge base in pgvector only from the
+    store its own environment names. The copy writes to that store, so without one there is nowhere to copy to.
+    """
+    return instance["database"]["type"] == "postgresql" and not postgres_env_configured()
 
 
 async def _still_writing(admin: User) -> dict[str, Any] | None:
