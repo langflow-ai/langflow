@@ -195,6 +195,10 @@ def _ask(address: str, question: Callable[[sa.Connection], dict[str, Any] | None
             return question(target) or {"ok": True}
     except ImportError:
         return _failed("db_unreachable", "This server has no PostgreSQL driver. Install langflow[postgresql].")
+    except ValueError:
+        # A driver can reject a hostname before it connects, outside SQLAlchemy's exception types.
+        # Its error may contain address details, so return no driver text for these malformed values.
+        return _failed("db_unreachable", "This database address cannot be used.")
     except sa.exc.SQLAlchemyError as exc:
         return _failed("db_unreachable", _without(_first_line(getattr(exc, "orig", None) or exc), url.password))
     finally:

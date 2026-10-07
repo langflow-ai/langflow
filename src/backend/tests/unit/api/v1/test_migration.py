@@ -2199,6 +2199,24 @@ async def test_an_address_that_is_not_postgresql_is_not_opened(
     assert not (tmp_path / "created-by-mistake.db").exists()
 
 
+@pytest.mark.parametrize("hostname", ["a..b", "a" * 64 + ".com"])
+async def test_an_invalid_database_hostname_is_reported_without_exposing_credentials(
+    client, logged_in_headers_super_user, config_dir, server_log, caplog, capfd, hostname
+):
+    pytest.importorskip("psycopg", reason="needs the postgresql extra")
+    caplog.set_level(logging.DEBUG)
+    address = f"postgresql://migrator:{DB_PASSWORD}@{hostname}/langflow"
+
+    response = await client.put(
+        "api/v1/migration/destinations", json={"database_url": address}, headers=logged_in_headers_super_user
+    )
+
+    assert response.status_code == 200
+    assert response.json()["results"]["database"]["code"] == "db_unreachable"
+    assert "database_url" not in migration_module._secrets
+    _nowhere((DB_PASSWORD,), [response], config_dir, server_log, caplog, capfd)
+
+
 async def test_a_server_with_no_postgresql_driver_says_what_to_install(
     client, logged_in_headers_super_user, monkeypatch
 ):
