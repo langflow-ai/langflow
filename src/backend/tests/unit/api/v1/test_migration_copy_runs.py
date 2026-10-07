@@ -508,6 +508,7 @@ async def test_a_copy_start_whose_save_is_refused_every_time_stops_the_command_i
     assert refused.status_code == 409, refused.text
     assert refused.json()["detail"] == {"code": "record_changed"}
     # The record says nothing of the command, so nothing could follow it or stop it later. It was stopped here.
+    await asyncio.wait_for(_to_its_end(saves[0]), _TIMEOUT)
     [run] = migration_runs.list_runs()
     assert run["status"] == "cancelled"
     assert "copy_database" not in (await _migration(client, headers))["record"]["steps"]
@@ -521,7 +522,7 @@ def test_a_save_waits_for_another_worker_that_is_in_the_middle_of_its_save(clien
     # Another worker is between its look at the record and its write: it holds the lock that every save takes.
     theirs = os.open(config_dir / "migrations" / "migration.lock", os.O_RDWR | os.O_CREAT, 0o600)
     fcntl.flock(theirs, fcntl.LOCK_EX)
-    saving = threading.Thread(target=migration_module._write_record, args=(record,))
+    saving = threading.Thread(target=migration_module._write_record, args=(record,), daemon=True)
     try:
         saving.start()
         saving.join(0.5)
