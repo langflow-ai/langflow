@@ -34,6 +34,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from fastapi import HTTPException, Request
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from starlette.responses import JSONResponse
 
@@ -47,7 +48,7 @@ except ImportError:  # Windows
     fcntl = None
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import AsyncIterator, Iterator
 
 _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # What the admin still needs: a session, and the migration steps, which include ending the pause.
@@ -244,7 +245,21 @@ class MigrationPauseMiddleware:
         await response(scope, receive, send)
 
 
+async def changes_the_instance(request: Request) -> AsyncIterator[None]:
+    """The dependency of a route that changes the instance although it answers a GET.
+
+    The middleware lets every GET through as a read. A route that writes on one, such as the
+    callback an OAuth provider sends the browser back to, says so with this dependency. Its
+    request then holds a place like any other change and is refused while the pause is on.
+    """
+    with writing("request", method=request.method, path=_path(request.scope)) as let_in:
+        if not let_in:
+            raise HTTPException(status_code=503, detail=REFUSAL)
+        yield
+
+
 def _passes_while_paused(scope) -> bool:
+    # A read changes nothing. A route that writes on a GET depends on changes_the_instance().
     if scope.get("method") in _READ_METHODS:
         return True
     path = _path(scope)

@@ -15,7 +15,7 @@ import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -29,6 +29,7 @@ from langflow.services.background_execution.executor import InProcessExecutor
 from langflow.services.data_subjects.requests import create_end_user_request
 from langflow.services.data_subjects.worker import LEASE_NAME, DataSubjectEraseWorker, data_subject_erase_worker
 from langflow.services.database.models.auth import AuthzAuditLog
+from langflow.services.database.models.connection import ConnectionSecret
 from langflow.services.database.models.data_subject_request import (
     DataSubjectRequest,
     DataSubjectRequestSource,
@@ -54,6 +55,8 @@ from langflow.services.triggers.dispatcher import TriggerDispatcher
 from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlmodel import select
+
+from tests.unit.api.v1 import test_connection_oauth as oauth
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
@@ -308,6 +311,35 @@ async def test_a_change_takes_its_place_before_it_asks_about_the_pause(
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
     # Asked the other way round, a pause written between the two would count nothing and stop nothing.
     assert place_held_when_asked == [True]
+
+
+@pytest.mark.no_blockbuster
+@pytest.mark.usefixtures("active_user")
+async def test_a_get_that_changes_the_instance_is_refused_while_paused(
+    client, logged_in_headers, config_dir, monkeypatch
+):
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "desktop")
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", json.dumps({"google-work": oauth.registration()}))
+    # Someone began to connect an account before the pause, and is still at the provider's consent screen.
+    row, query = await oauth.begin(client, logged_in_headers)
+    exchanged = oauth.provider_double(monkeypatch, query)
+    _write_record(config_dir, PAUSED)
+
+    # The provider sends the browser back with a GET, which the middleware takes for a read. This one
+    # stores the tokens of the connection.
+    refused = await oauth.callback(client, query)
+
+    assert refused.status_code == 503, refused.text
+    assert refused.json() == {"detail": "This instance is being migrated."}
+    assert exchanged == []
+    async with session_scope() as session:
+        assert await session.get(ConnectionSecret, UUID(row["id"])) is None
+
+    # Nothing of the consent was used up, so the same answer of the provider completes it after the pause.
+    _write_record(config_dir, RECORD)
+    assert (await oauth.callback(client, query)).status_code == 200
+    async with session_scope() as session:
+        assert await session.get(ConnectionSecret, UUID(row["id"])) is not None
 
 
 async def test_a_lock_that_cannot_be_taken_stops_no_change(client, logged_in_headers, config_dir):
