@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from langflow.services.telemetry.schema import ComponentInputsPayload
+from langflow.services.telemetry.schema import MAX_TELEMETRY_PAYLOAD_SIZE, ComponentInputsPayload
 from langflow.services.telemetry.service import TelemetryService
 
 
@@ -12,8 +12,7 @@ async def test_service_splits_large_payload(mock_settings_service):
     """Test that service splits large payload and queues multiple chunks."""
     service = TelemetryService(mock_settings_service)
 
-    # Create large payload with dict[str, Any] type
-    large_inputs = {f"input_{i}": "x" * 100 for i in range(50)}
+    large_inputs = {f"input_{index}": "x" * 100 for index in range(MAX_TELEMETRY_PAYLOAD_SIZE // 50)}
 
     payload = ComponentInputsPayload(
         component_run_id="test-run-id",

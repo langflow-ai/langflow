@@ -98,13 +98,13 @@ async def test_verify_project_auth_honours_presented_api_key_under_auto_login():
         patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
         patch(f"{MODULE}.authenticate_api_key", new=AsyncMock(return_value=api_key_result)),
         patch(f"{MODULE}.AuthCredentialContext.from_api_key_result", return_value=MagicMock()),
-        patch(f"{MODULE}.set_current_telemetry_user", set_telemetry_user),
+        patch(f"{MODULE}.set_authenticated_telemetry_user", set_telemetry_user),
         patch(f"{MODULE}.get_user_by_username", new=AsyncMock()) as mock_lookup,
     ):
         result = await verify_project_auth(project.id, query_param=None, header_param="generated-key")
 
     assert result is owner
-    set_telemetry_user.assert_called_once_with("owner")
+    set_telemetry_user.assert_called_once_with(owner)
     mock_lookup.assert_not_awaited()
 
 

@@ -19,7 +19,7 @@ from langflow.services.telemetry.context import get_current_telemetry_user_id
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from langflow.services.telemetry.run_event_store import append_run_event
 from langflow.services.telemetry.schema import (
-    MAX_TELEMETRY_URL_SIZE,
+    MAX_TELEMETRY_PAYLOAD_SIZE,
     ComponentIndexPayload,
     ComponentInputsPayload,
     ComponentPayload,
@@ -239,8 +239,7 @@ class TelemetryService(Service):
         Args:
             payload: Component inputs payload to log
         """
-        # Split payload if it exceeds URL size limit
-        chunks = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+        chunks = payload.split_if_needed(max_payload_size=MAX_TELEMETRY_PAYLOAD_SIZE)
 
         # Queue each chunk separately
         for chunk in chunks:

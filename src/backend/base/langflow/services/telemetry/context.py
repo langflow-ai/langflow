@@ -25,6 +25,11 @@ def get_current_telemetry_user_id() -> str | None:
     return _current_telemetry_user_id.get()
 
 
+def clear_current_telemetry_user() -> None:
+    """Force installation-level attribution for an unauthenticated caller."""
+    _current_telemetry_user_id.set(None)
+
+
 def reset_current_telemetry_user(token: Token[str | None]) -> None:
     """Restore the previous request-local telemetry user ID."""
     _current_telemetry_user_id.reset(token)

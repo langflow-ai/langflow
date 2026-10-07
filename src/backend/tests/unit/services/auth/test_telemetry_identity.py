@@ -54,6 +54,30 @@ async def test_api_key_user_sets_telemetry_identity(monkeypatch, auth_method) ->
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("auth_method", "service_method"),
+    [
+        (auth_utils.get_current_user_for_websocket, "get_current_user_for_websocket"),
+        (auth_utils.get_current_user_for_sse, "get_current_user_for_sse"),
+    ],
+)
+async def test_streaming_user_sets_telemetry_identity(monkeypatch, auth_method, service_method) -> None:
+    user = SimpleNamespace(username="alice")
+    auth_service = SimpleNamespace(**{service_method: AsyncMock(return_value=user)})
+    monkeypatch.setattr(auth_utils, "_auth_service", lambda: auth_service)
+
+    if auth_method is auth_utils.get_current_user_for_websocket:
+        request = SimpleNamespace(cookies={}, query_params={}, headers={})
+        result = await auth_method(request, AsyncMock())
+    else:
+        request = SimpleNamespace(cookies={}, query_params={}, headers={})
+        result = await auth_method(request, db=AsyncMock())
+
+    assert result is user
+    assert get_current_telemetry_user_id() == get_hashed_user_id("alice")
+
+
+@pytest.mark.asyncio
 async def test_current_user_optional_sets_telemetry_identity(monkeypatch) -> None:
     user = SimpleNamespace(username="alice")
     auth_service = SimpleNamespace(get_current_user_for_sse=AsyncMock(return_value=user))

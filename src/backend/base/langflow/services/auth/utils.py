@@ -22,7 +22,7 @@ from langflow.services.auth.exceptions import (
 )
 from langflow.services.auth.external import extract_external_token
 from langflow.services.deps import get_auth_service, get_settings_service
-from langflow.services.telemetry.context import set_current_telemetry_user
+from langflow.services.telemetry.context import clear_current_telemetry_user, set_current_telemetry_user
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -32,6 +32,11 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.user.model import User, UserRead
+
+
+def set_authenticated_telemetry_user(user: User | UserRead) -> None:
+    """Attribute subsequent telemetry to a user resolved by authentication."""
+    set_current_telemetry_user(user.username)
 
 
 class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
@@ -156,13 +161,13 @@ async def api_key_security(
 ) -> UserRead | None:
     user = await _auth_service().api_key_security(query_param, header_param)
     if user is not None:
-        set_current_telemetry_user(getattr(user, "username", None))
+        set_authenticated_telemetry_user(user)
     return user
 
 
 async def ws_api_key_security(api_key: str | None) -> UserRead:
     user = await _auth_service().ws_api_key_security(api_key)
-    set_current_telemetry_user(getattr(user, "username", None))
+    set_authenticated_telemetry_user(user)
     return user
 
 
@@ -207,7 +212,7 @@ async def get_current_user(
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
     else:
-        set_current_telemetry_user(getattr(user, "username", None))
+        set_authenticated_telemetry_user(user)
         return user
 
 
@@ -254,13 +259,16 @@ async def get_current_user_for_websocket(
     )
 
     try:
-        return await _auth_service().get_current_user_for_websocket(token, api_key, db, external_token=external_token)
+        user = await _auth_service().get_current_user_for_websocket(token, api_key, db, external_token=external_token)
     except AuthBackendUnavailableError as e:
         # The credential was never judged, so closing as a policy violation
         # would tell the client to fix a credential that is not the problem.
         raise WebSocketException(code=status.WS_1013_TRY_AGAIN_LATER, reason=e.message) from e
     except AuthenticationError as e:
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=WS_AUTH_REASON) from e
+    else:
+        set_authenticated_telemetry_user(user)
+        return user
 
 
 async def get_current_user_for_sse(
@@ -279,7 +287,7 @@ async def get_current_user_for_sse(
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
 
     try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
+        user = await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
     except AuthBackendUnavailableError as e:
         raise _auth_error_to_http(e) from e
     except AuthenticationError as e:
@@ -287,6 +295,9 @@ async def get_current_user_for_sse(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Missing or invalid credentials (cookie or API key).",
         ) from e
+    else:
+        set_authenticated_telemetry_user(user)
+        return user
 
 
 async def get_current_user_for_workflow(
@@ -317,7 +328,7 @@ async def get_current_user_for_workflow(
                 detail="User account is inactive",
             )
         user_read = UserRead.model_validate(active_user, from_attributes=True)
-        set_current_telemetry_user(user_read.username)
+        set_authenticated_telemetry_user(user_read)
         return user_read
 
 
@@ -341,7 +352,7 @@ async def get_optional_user(
         return None
     else:
         if user and user.is_active:
-            set_current_telemetry_user(user.username)
+            set_authenticated_telemetry_user(user)
             return user
         return None
 
@@ -365,7 +376,10 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     user = await _auth_service().get_webhook_user(flow_id, request)
     # Public webhooks execute as the owner without authenticating their caller.
     authenticated = get_settings_service().auth_settings.WEBHOOK_AUTH_ENABLE
-    set_current_telemetry_user(user.username if authenticated else None)
+    if authenticated:
+        set_authenticated_telemetry_user(user)
+    else:
+        clear_current_telemetry_user()
     return user
 
 
@@ -396,7 +410,7 @@ async def get_current_user_optional(
     except (AuthenticationError, HTTPException):
         return None
     else:
-        set_current_telemetry_user(user.username)
+        set_authenticated_telemetry_user(user)
         return user
 
 

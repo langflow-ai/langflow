@@ -1826,12 +1826,15 @@ async def test_apikey_folder_accepts_owner_key(client: AsyncClient, active_user,
     flow_id = await _apikey_flow(active_user, echo_flow_data)
     key = await _create_api_key(active_user.id)
     set_telemetry_user = Mock()
-    monkeypatch.setattr("langflow.api.v1.a2a.set_current_telemetry_user", set_telemetry_user)
+    monkeypatch.setattr("langflow.api.v1.a2a.set_authenticated_telemetry_user", set_telemetry_user)
 
     resp = await _jsonrpc(client, flow_id, "message/send", _text_message("hello a2a"), headers={"x-api-key": key})
 
     assert resp.status_code == 200
-    set_telemetry_user.assert_called_once_with(active_user.username)
+    set_telemetry_user.assert_called_once()
+    telemetry_user = set_telemetry_user.call_args.args[0]
+    assert telemetry_user.id == active_user.id
+    assert telemetry_user.username == active_user.username
     result = resp.json()["result"]
     assert result["status"]["state"] == "completed"
     assert result["artifacts"][0]["parts"][0]["text"] == "hello a2a"
