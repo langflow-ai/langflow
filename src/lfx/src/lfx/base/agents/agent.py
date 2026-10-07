@@ -378,6 +378,7 @@ class LCToolsAgentComponent(LCAgentComponent):
         return self._executor_from_runnable(agent)
 
     async def abuild_agent(self) -> AgentExecutor:
+        self.resolve_duplicate_tool_names()
         self.validate_tool_names()
         agent = await async_call_method(self, "create_agent_runnable")
         return self._executor_from_runnable(agent)
