@@ -73,16 +73,20 @@ _READY_TABLES: set[tuple[str, str, int]] = set()
 # run from a temporary loop (``run_until_complete``, ``asyncio.run`` or
 # ``Graph.start`` in a script) gets its own engine and pool. Once that loop is
 # closed and collected its entry is dropped, and the garbage collector closes its
-# connections without ``dispose()``. A new synchronous caller awaits the async
-# API on its own loop, or pops its loop's engines and awaits ``dispose()``
-# before that loop closes.
+# connections without ``dispose()``. The server disposes its loop's engines at
+# shutdown with ``dispose_shared_engines``; a synchronous caller that owns a
+# loop awaits it before closing that loop.
 _ENGINES: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, dict[tuple[int, str], Any]] = weakref.WeakKeyDictionary()
 _ENGINE_POOL_SIZE = 5
 
 
 def _shared_engine(connection_string: str):
     """Return this event loop's engine for ``connection_string``, creating it once."""
-    from sqlalchemy.ext.asyncio import create_async_engine
+    try:
+        from sqlalchemy.ext.asyncio import create_async_engine
+    except ImportError as exc:  # pragma: no cover
+        msg = "PostgresBackend requires SQLAlchemy async support (install the pgvector extra)."
+        raise RuntimeError(msg) from exc
 
     loop = asyncio.get_running_loop()
     engines = _ENGINES.setdefault(loop, {})
@@ -94,6 +98,18 @@ def _shared_engine(connection_string: str):
         )
         engines[key] = engine
     return engine
+
+
+async def dispose_shared_engines() -> None:
+    """Dispose this process's shared engines for the running event loop.
+
+    The server calls this at shutdown, so pooled connections close cleanly
+    instead of waiting for the garbage collector.
+    """
+    engines = _ENGINES.pop(asyncio.get_running_loop(), {})
+    for key, engine in tuple(engines.items()):
+        if key[0] == os.getpid():
+            await engine.dispose()
 
 
 # Collection tables are always ``lf_`` + 24 lowercase hex chars derived from a
@@ -421,9 +437,10 @@ class PostgresBackend(BaseVectorStoreBackend):
     def _ensure_async_engine(self):
         """Return the async engine used for writes, count/scan/delete and ping.
 
-        Inside a running event loop this is the process-wide engine for this
-        loop and connection string, so jobs reuse pooled connections instead of
-        building and disposing an engine each.
+        This is the process-wide engine for the running event loop and
+        connection string, so jobs reuse pooled connections instead of building
+        and disposing an engine each. Every caller is a coroutine, so a loop is
+        always running here.
         """
         engine = getattr(self, "_pg_engine", None)
         if engine is not None:
@@ -432,17 +449,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         if not connection_string:
             msg = "PostgresBackend.ensure_ready() must be awaited before touching the database."
             raise RuntimeError(msg)
-        try:
-            from sqlalchemy.ext.asyncio import create_async_engine
-        except ImportError as exc:  # pragma: no cover
-            msg = "PostgresBackend requires SQLAlchemy async support (install the pgvector extra)."
-            raise RuntimeError(msg) from exc
-        try:
-            engine = _shared_engine(connection_string)
-            self._pg_engine_shared = True
-        except RuntimeError:  # no running event loop: an engine of this instance's own
-            engine = create_async_engine(connection_string, pool_pre_ping=True)
-            self._pg_engine_shared = False
+        engine = _shared_engine(connection_string)
         self._pg_engine = engine
         return engine
 
@@ -728,6 +735,8 @@ class PostgresBackend(BaseVectorStoreBackend):
         )
 
         try:
+            # Autocommit is safe here: the upsert is one statement, so it is atomic on its own.
+            # A write that needs several statements to apply together must use a transaction.
             await self._execute_write(statement)
         except Exception as exc:
             # The memo can be stale when another process dropped the table or
@@ -958,14 +967,10 @@ class PostgresBackend(BaseVectorStoreBackend):
         )
 
     async def teardown(self) -> None:
-        """Dispose this backend's engine and drop its vector-store facade."""
-        engine = getattr(self, "_pg_engine", None)
-        # The shared engine outlives this instance; only an engine of its own is disposed.
-        if engine is not None and not getattr(self, "_pg_engine_shared", False):
-            try:
-                await engine.dispose()
-            except Exception as exc:  # noqa: BLE001
-                await logger.awarning("Postgres engine.dispose failed for %s: %s", self.kb_name, exc)
+        """Release this backend's engine reference and drop its vector-store facade.
+
+        The engine is shared by every backend on this event loop, so it stays
+        open; ``dispose_shared_engines`` closes the pools at shutdown.
+        """
         self._pg_engine = None
-        self._pg_engine_shared = False
         self._vector_store = None

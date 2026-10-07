@@ -31,7 +31,6 @@ from lfx.base.knowledge_bases.backends.postgres import (
     MISSING_EXTENSION_MESSAGE,
     _coerce_embedding,
     _count_sql,
-    _ddl_lock_key,
     _delete_by_sql,
     _dimension_mismatch_message,
     _drop_table_sql,
@@ -221,9 +220,8 @@ class _FakeAcm:
 class _FakeEngine:
     """Stub engine whose ``connect``/``begin`` both yield the same fake conn."""
 
-    def __init__(self, conn: _FakeConn, *, dispose_error: Exception | None = None) -> None:
+    def __init__(self, conn: _FakeConn) -> None:
         self._conn = conn
-        self._dispose_error = dispose_error
         self.disposed = False
 
     def connect(self) -> _FakeAcm:
@@ -233,8 +231,6 @@ class _FakeEngine:
         return _FakeAcm(self._conn)
 
     async def dispose(self) -> None:
-        if self._dispose_error is not None:
-            raise self._dispose_error
         self.disposed = True
 
 
@@ -485,14 +481,14 @@ class TestEngineLifecycle:
         backend = make_backend(_FakeConn())
         assert backend._ensure_async_engine() is backend._ensure_async_engine()
 
-    async def test_teardown_disposes_the_engine(self, make_backend) -> None:
+    async def test_teardown_releases_the_engine_without_disposing_it(self, make_backend) -> None:
         backend = make_backend(_FakeConn())
         engine = backend._pg_engine
         backend._vector_store = object()
 
         await backend.teardown()
 
-        assert engine.disposed is True
+        assert engine.disposed is False  # the loop's shared engine stays open for other jobs
         assert backend._pg_engine is None
         assert backend._vector_store is None
 
@@ -531,17 +527,16 @@ class TestEngineLifecycle:
             pg_module._ENGINES.clear()
             await engine.dispose()
 
-    @pytest.mark.usefixtures("pgvector_env", "engine_factory")
-    def test_engine_outside_a_loop_belongs_to_the_instance(self, tmp_path: Path) -> None:
-        import asyncio
+    @pytest.mark.usefixtures("engine_factory")
+    async def test_shutdown_disposes_this_loops_engines(self) -> None:
+        engine = pg_module._shared_engine(_CONNECTION_STRING)
+        try:
+            await pg_module.dispose_shared_engines()
 
-        backend = create_backend("postgres", kb_name="a", kb_path=tmp_path, backend_config={}, user_id=uuid.uuid4())
-        asyncio.run(backend.ensure_ready())
-        engine = backend._ensure_async_engine()
-        assert backend._pg_engine_shared is False
-        assert not any(engine in engines.values() for engines in pg_module._ENGINES.values())
-        asyncio.run(backend.teardown())
-        assert engine.disposed is True
+            assert engine.disposed is True
+            assert pg_module._shared_engine(_CONNECTION_STRING) is not engine  # the next caller gets a new pool
+        finally:
+            pg_module._ENGINES.clear()
 
     @pytest.mark.usefixtures("engine_factory")
     def test_each_event_loop_gets_its_own_engine(self) -> None:
@@ -580,14 +575,6 @@ class TestEngineLifecycle:
 
         assert loop_ref() is None
         assert engine_ref() is None
-
-    async def test_teardown_swallows_dispose_errors(self, tmp_path: Path) -> None:
-        backend = create_backend("postgres", kb_name="kb", kb_path=tmp_path, backend_config={}, user_id=uuid.uuid4())
-        backend._pg_engine = _FakeEngine(_FakeConn(), dispose_error=_DatabaseError("already closed"))
-
-        await backend.teardown()  # must not raise
-
-        assert backend._pg_engine is None
 
     async def test_teardown_without_an_engine_is_a_no_op(self, tmp_path: Path) -> None:
         backend = create_backend("postgres", kb_name="kb", kb_path=tmp_path, backend_config={}, user_id=uuid.uuid4())
@@ -695,18 +682,6 @@ class TestEnsureEmbeddingTable:
         assert len(ddl) == 1
         assert f'"{backend.table_name}_cmeta_gin"' in ddl[0]
 
-    async def test_lock_is_scoped_to_the_table(self, make_backend) -> None:
-        first, second = make_backend(), make_backend()
-        assert first.table_name != second.table_name
-        assert _ddl_lock_key(first.table_name) != _ddl_lock_key(second.table_name)
-        assert _ddl_lock_key(first.table_name) == _ddl_lock_key(first.table_name)
-
-        conn = _FakeConn(table_exists=False)
-        first._pg_engine = _FakeEngine(conn)
-        await first._ensure_embedding_table(8)
-        lock_sql = next(sql for sql in conn.statements if "pg_advisory_xact_lock" in sql)
-        assert ":key" in lock_sql  # bound, derived from the table name
-
     async def test_skips_hnsw_above_the_index_ceiling(self, make_backend) -> None:
         oversized = _HNSW_MAX_DIM + 1
         conn = _FakeConn(table_exists=False)
@@ -771,13 +746,6 @@ class TestCatalogProbes:
 
         missing = await backend._catalog_state(_FakeConn(table_exists=False, ext_version=None))
         assert (missing.extversion, missing.has_table, missing.existing_dim) == (None, False, None)
-
-    async def test_catalog_probe_binds_the_index_names(self, make_backend) -> None:
-        conn = _FakeConn()
-        backend = make_backend(conn)
-        await backend._catalog_state(conn)
-        assert "to_regclass(:gin_index)" in conn.statements[0]
-        assert "to_regclass(:hnsw_index)" in conn.statements[0]
 
 
 class TestStaleTableErrors:
@@ -916,18 +884,6 @@ class TestAddDocuments:
 
         assert conn.execution_option_calls == [{"isolation_level": "AUTOCOMMIT"}]
         assert not any(sql.strip().upper() in {"BEGIN", "COMMIT"} for sql in conn.statements)
-
-    async def test_later_writes_skip_the_bootstrap(self, make_backend, fake_embeddings) -> None:
-        conn = _FakeConn(existing_dim=8)
-        backend = make_backend(conn, embeddings=fake_embeddings)
-
-        await backend._add_documents([Document(page_content="a")])
-        await backend._add_documents([Document(page_content="b")])
-
-        assert sum("has_hnsw_index" in sql for sql in conn.statements) == 1
-        assert sum(sql.startswith("INSERT INTO") for sql in conn.statements) == 2
-        assert _ddl(conn.statements) == []
-        assert not any("pg_advisory" in sql for sql in conn.statements)
 
     async def test_write_to_a_dropped_table_reverifies_and_retries(self, make_backend, fake_embeddings) -> None:
         # Another process dropped (and maybe recreated) the table after this

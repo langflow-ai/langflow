@@ -89,10 +89,11 @@ async def test_environment_import_failure_does_not_abort_worker_startup(monkeypa
     assert _STATE.environment_variables_initialized is False
 
 
-@pytest.mark.parametrize("failure", ["migration", "pools"])
+@pytest.mark.parametrize("failure", ["migration", "pools", "pgvector"])
 async def test_storage_shutdown_failure_does_not_skip_later_cleanup(monkeypatch, failure):
     """Drive the real lifespan's finally block with a failing storage shutdown step."""
     from langflow.services.knowledge_base_storage import coordinator, runtime
+    from lfx.base.knowledge_bases.backends import postgres
 
     warning_logger = structlog.make_filtering_bound_logger(logging.WARNING)(structlog.ReturnLogger(), [], {})
     monkeypatch.setattr(main_module, "logger", warning_logger)
@@ -112,6 +113,8 @@ async def test_storage_shutdown_failure_does_not_skip_later_cleanup(monkeypatch,
     close_pools = AsyncMock(side_effect=RuntimeError("dispose failed") if failure == "pools" else None)
     monkeypatch.setattr(coordinator, "stop_upgrade", stop_upgrade)
     monkeypatch.setattr(runtime, "close_coordination_pools", close_pools)
+    dispose_engines = AsyncMock(side_effect=RuntimeError("dispose failed") if failure == "pgvector" else None)
+    monkeypatch.setattr(postgres, "dispose_shared_engines", dispose_engines)
 
     with pytest.raises(RuntimeError) as exc:
         async with main_module.get_lifespan()(object()):
@@ -119,6 +122,7 @@ async def test_storage_shutdown_failure_does_not_skip_later_cleanup(monkeypatch,
     assert exc.value is sentinel
     stop_upgrade.assert_awaited_once()
     close_pools.assert_awaited_once()
+    dispose_engines.assert_awaited_once()
     lag_monitor.assert_awaited_once()
     teardown.assert_awaited_once()
     sandbox.assert_called_once()
