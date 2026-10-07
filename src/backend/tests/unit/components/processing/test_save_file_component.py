@@ -974,13 +974,17 @@ def test_end_user_segment_none_when_absent():
     assert _save_component_with_end_user(None)._serving_end_user_segment() is None
 
 
-def test_end_user_segment_readable_id_preserved():
-    assert _save_component_with_end_user("alice")._serving_end_user_segment() == "alice"
+@pytest.mark.parametrize("end_user", ["alice", "0c870455-b9e3-480c-bc84-0794de978f51", "a/b\\c", "...", "CON", "café"])
+def test_end_user_segment_preserves_the_full_identity(end_user):
+    """The lowercase encoding must round-trip every byte without unsafe filename characters."""
+    from base64 import b32decode
 
-
-def test_end_user_segment_uuid_preserved():
-    uid = "0c870455-b9e3-480c-bc84-0794de978f51"
-    assert _save_component_with_end_user(uid)._serving_end_user_segment() == uid
+    segment = _save_component_with_end_user(end_user)._serving_end_user_segment()
+    assert segment.startswith("end_user-")
+    encoded = segment.removeprefix("end_user-")
+    assert encoded == encoded.lower()
+    assert b32decode(encoded.upper() + "=" * (-len(encoded) % 8)).decode("utf-8") == end_user
+    assert _save_component_with_end_user(end_user)._serving_end_user_segment() == segment
 
 
 def test_end_user_segment_blocks_path_traversal():
@@ -989,10 +993,6 @@ def test_end_user_segment_blocks_path_traversal():
     # single path component -> cannot escape the root
     assert "/" not in seg
     assert "\\" not in seg
-
-
-def test_end_user_segment_sanitizes_separators():
-    assert _save_component_with_end_user("a/b\\c")._serving_end_user_segment() == "a_b_c"
 
 
 def _restricted_settings(config_dir: Path) -> MagicMock:
@@ -1005,10 +1005,10 @@ def _restricted_settings(config_dir: Path) -> MagicMock:
     return service
 
 
-async def _save_as_end_user(end_user: str, config_dir: Path, file_name: str) -> None:
+async def _save_as_end_user(end_user: str, config_dir: Path, file_name: str, content: str = "hello") -> Path:
     component = _save_component_with_end_user(end_user)
     component.set_attributes(
-        {"input": Message(text="hello"), "file_name": file_name, "storage_location": [{"name": "Local"}]}
+        {"input": Message(text=content), "file_name": file_name, "storage_location": [{"name": "Local"}]}
     )
     service = _restricted_settings(config_dir)
     with (
@@ -1017,24 +1017,67 @@ async def _save_as_end_user(end_user: str, config_dir: Path, file_name: str) -> 
         patch.object(SaveToFileComponent, "_upload_file", new=AsyncMock(return_value=None)),
     ):
         await component._save_to_local()
+    return config_dir / component._serving_end_user_segment() / f"{file_name}.json"
+
+
+@pytest.mark.parametrize("end_users", [("a/b", "a?b"), ("a@b", "a_b"), ("Alice", "alice"), (".alice", "alice")])
+async def test_should_keep_same_named_files_separate_for_distinct_end_users(tmp_path, end_users):
+    """Saving another user's report must preserve the first report and its ownership."""
+    from lfx.utils.end_user_storage import end_user_folder_owners
+
+    first = await _save_as_end_user(end_users[0], tmp_path, "report", "first user's content")
+    second = await _save_as_end_user(end_users[1], tmp_path, "report", "second user's content")
+
+    assert first != second
+    assert json.loads(first.read_text(encoding="utf-8"))["message"] == "first user's content"
+    assert json.loads(second.read_text(encoding="utf-8"))["message"] == "second user's content"
+    assert end_user_folder_owners(tmp_path, first.parent.name) == frozenset({end_users[0]})
+    assert end_user_folder_owners(tmp_path, second.parent.name) == frozenset({end_users[1]})
 
 
 async def test_should_record_the_end_user_as_owner_of_their_save_folder(tmp_path):
     from lfx.utils.end_user_storage import end_user_folder_owners
 
-    await _save_as_end_user("alice@example.com", tmp_path, "notes")
+    saved_file = await _save_as_end_user("alice@example.com", tmp_path, "notes")
 
-    assert [path.stem for path in (tmp_path / "alice_example.com").iterdir()] == ["notes"]
-    assert end_user_folder_owners(tmp_path, "alice_example.com") == frozenset({"alice@example.com"})
+    assert [path.stem for path in saved_file.parent.iterdir()] == ["notes"]
+    assert end_user_folder_owners(tmp_path, saved_file.parent.name) == frozenset({"alice@example.com"})
 
 
-async def test_should_record_every_end_user_that_shares_a_sanitized_folder(tmp_path):
-    from lfx.utils.end_user_storage import end_user_folder_owners
+@pytest.mark.parametrize("end_user", ["a" * 145, "é" * 72 + "a"])
+async def test_should_save_the_longest_supported_end_user_identity(tmp_path, end_user):
+    """The folder, lock, registry entry and atomic temporary filename must all fit."""
+    saved_file = await _save_as_end_user(end_user, tmp_path, "report")
 
-    await _save_as_end_user("a@b", tmp_path, "one")
-    await _save_as_end_user("a_b", tmp_path, "two")
+    assert json.loads(saved_file.read_text(encoding="utf-8"))["message"] == "hello"
 
-    assert end_user_folder_owners(tmp_path, "a_b") == frozenset({"a@b", "a_b"})
+
+@pytest.mark.parametrize("end_user", ["a" * 146, "é" * 73])
+async def test_should_reject_overlong_end_user_identity_before_writing(tmp_path, end_user):
+    """Reject oversized UTF-8 identities without truncating or falling back to a shared scope."""
+    with pytest.raises(ValueError, match="1 to 145 UTF-8 bytes"):
+        await _save_as_end_user(end_user, tmp_path, "report")
+
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize("previous_owner", [None, "another-user"])
+async def test_should_not_overwrite_an_existing_encoded_folder_without_sole_ownership(tmp_path, previous_owner):
+    """An encoded name may already exist as another user's legacy folder."""
+    from lfx.utils.end_user_storage import record_end_user_folder
+
+    segment = _save_component_with_end_user("alice")._serving_end_user_segment()
+    if previous_owner:
+        record_end_user_folder(tmp_path, segment, previous_owner)
+    directory = tmp_path / segment
+    directory.mkdir(exist_ok=True)
+    report = directory / "report.json"
+    report.write_text("existing content", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Cannot save to an end-user folder"):
+        await _save_as_end_user("alice", tmp_path, "report")
+
+    assert report.read_text(encoding="utf-8") == "existing content"
 
 
 async def test_should_not_claim_a_preexisting_unmarked_directory(tmp_path):
