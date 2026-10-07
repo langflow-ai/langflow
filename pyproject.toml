@@ -256,6 +256,7 @@ opensearch = [
 [tool.uv]
 constraint-dependencies = [
     # Security floors for every workspace dependency path, including optional bundles.
+    "fsspec>=2026.6.0",  # CVE-2026-104851
     "oauthlib>=4.0.0,<5.0.0",  # CVE-2026-49264, CVE-2026-49265
     "pymongo>=4.18.2,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
     "tornado>=6.5.10,<7.0.0",  # 6.5.8/6.5.9 security fixes plus Jupyter compatibility fix
