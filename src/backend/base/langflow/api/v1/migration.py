@@ -571,6 +571,8 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
     except Exception:
         # The record says nothing of the command, so nothing could follow it or stop it later.
         await cancel_run(run_id)
+        why = "its run could not be saved, so it was stopped"
+        await logger.ainfo(f"Migration: user_id={admin.id} started {_copy(step_id)} and {why} (run {run_id})")
         raise
     if not still_let_in:
         # Changes were turned back on, or another destination was saved, between the check above and the
