@@ -217,7 +217,6 @@ async def aget_language_model_options(
     if user_id:
         with contextlib.suppress(Exception):
             enabled_providers = await _fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy)
-    enabled_providers = {provider for provider in enabled_providers if provider_policy.allows(provider)}
 
     if enabled_providers:
         # Resolve saved connection settings and credentials on this loop. The
