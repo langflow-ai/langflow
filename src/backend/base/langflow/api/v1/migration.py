@@ -567,10 +567,11 @@ def _lift(pause: dict[str, Any]) -> None:
 def _connect_step(record: dict[str, Any], needed: list[str]) -> tuple[str, str | None]:
     """Where connecting stands. It is done once every part this instance needs was saved and passed its test."""
     saved = record.get("destinations") or {}
-    if any(part not in saved for part in needed):
-        return "current", None
-    failed = [saved["results"][part]["code"] for part in needed if not saved["results"][part]["ok"]]
-    return ("blocked", failed[0]) if failed else ("done", None)
+    # A part that was saved and failed decides first, so its reason is not lost behind one that is still missing.
+    failed = [saved["results"][part]["code"] for part in needed if part in saved and not saved["results"][part]["ok"]]
+    if failed:
+        return "blocked", failed[0]
+    return ("done", None) if all(part in saved for part in needed) else ("current", None)
 
 
 def _pause_step(record: dict[str, Any], blocking: list[str]) -> tuple[str, str | None]:
