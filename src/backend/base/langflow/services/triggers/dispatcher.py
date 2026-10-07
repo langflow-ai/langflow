@@ -521,7 +521,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
     Slack Events API or inbound-webhook run is ``trigger_push``, the rest
     ``trigger_listener``.
     """
-    from langflow.services.database.models.user.model import UserRead
+    from langflow.services.database.models.user.model import User, UserRead
     from langflow.services.deps import get_background_execution_service
 
     trigger = await session.get(Trigger, event.trigger_id)
@@ -548,6 +548,11 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
 
     if trigger.state not in _DISPATCHABLE_TRIGGER_STATES:
         await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=f"trigger_{trigger.state}")
+        return
+
+    owner = await session.get(User, trigger.user_id)
+    if owner is None or not owner.is_active:
+        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error="owner_inactive")
         return
 
     if (event.payload or {}).get(SOURCE_HINT_FIELD):

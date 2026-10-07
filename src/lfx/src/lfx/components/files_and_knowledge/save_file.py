@@ -17,6 +17,7 @@ from lfx.io import BoolInput, DropdownInput, SecretStrInput, StrInput
 from lfx.schema import Data, DataFrame, Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.template.field.base import Output
+from lfx.utils.end_user_storage import record_end_user_folder
 from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 from lfx.utils.validate_cloud import is_astra_cloud_environment
 
@@ -653,12 +654,16 @@ class SaveToFileComponent(Component):
         id can never traverse out of the storage root. ``None`` off / editor / anonymous, so
         the destination falls back to the SID scope exactly as before (strict BC).
         """
-        graph = getattr(getattr(self, "_vertex", None), "graph", None)
-        end_user = getattr(graph, "end_user_id", None)
+        end_user = self._serving_end_user_id()
         if not end_user:
             return None
-        safe = re.sub(r"[^A-Za-z0-9_.-]", "_", str(end_user)).strip("._")
+        safe = re.sub(r"[^A-Za-z0-9_.-]", "_", end_user).strip("._")
         return safe or None
+
+    def _serving_end_user_id(self) -> str:
+        graph = getattr(getattr(self, "_vertex", None), "graph", None)
+        end_user = getattr(graph, "end_user_id", None)
+        return str(end_user) if end_user else ""
 
     async def _save_to_local(self) -> Message:
         """Save file to local storage (original functionality)."""
@@ -682,13 +687,18 @@ class SaveToFileComponent(Component):
         if end_user_segment:
             scope_ids = (end_user_segment, *scope_ids)
         file_path = Path(self._get_safe_local_file_name()).expanduser()
+        in_end_user_folder = False
         if settings.restrict_local_file_access and not file_path.is_absolute():
             # New files belong to the authenticated user's storage namespace. If no
             # user/flow scope exists, ``enforce_local_file_access`` below fails closed.
             scope_root = Path(scope_ids[0]) if scope_ids else Path()
             file_path = Path(settings.config_dir) / scope_root / file_path
+            in_end_user_folder = end_user_segment is not None
         file_path = self._adjust_file_path_with_format(file_path, file_format)
         file_path = enforce_local_file_access(file_path, scope_ids=scope_ids)
+        if in_end_user_folder:
+            # Erasure deletes this folder only for the end users recorded as its owners.
+            record_end_user_folder(Path(settings.config_dir), end_user_segment, self._serving_end_user_id())
         if not file_path.parent.exists():
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
