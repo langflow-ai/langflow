@@ -1027,7 +1027,7 @@ async def test_a_check_from_an_earlier_pause_does_not_count_for_the_next_one(
     assert (await _steps(client, headers))["pause"] == ("blocked", "recheck_pending")
 
 
-@pytest.mark.parametrize("status", [JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED])
+@pytest.mark.parametrize("status", [JobStatus.QUEUED, JobStatus.IN_PROGRESS])
 async def test_the_pause_is_refused_while_a_job_is_still_writing(
     client, logged_in_headers_super_user, active_super_user, config_dir, status
 ):
@@ -1065,13 +1065,40 @@ async def test_the_pause_is_refused_while_a_job_is_still_writing(
     assert (await client.post(PAUSE, headers=headers)).status_code == 200
 
 
+async def test_a_run_that_waits_for_a_person_does_not_hold_the_pause(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers, owner = logged_in_headers_super_user, active_super_user.id
+    _checked(config_dir, [PASSING], **PREPARED)
+    flow_id, waiting_id, running_id = uuid4(), uuid4(), uuid4()
+    await _add(
+        Flow(id=flow_id, name="needs a sign-off", data={}, user_id=owner),
+        Job(job_id=waiting_id, flow_id=flow_id, user_id=owner, status=JobStatus.SUSPENDED),
+        Job(job_id=running_id, flow_id=flow_id, user_id=owner, status=JobStatus.IN_PROGRESS),
+    )
+
+    refused = await client.post(PAUSE, headers=headers)
+
+    # Next to a job that is running, the one that waits is not listed.
+    assert refused.status_code == 409
+    assert [job["id"] for job in refused.json()["detail"]["jobs"]] == [str(running_id)]
+
+    await get_job_service().update_job_status(running_id, JobStatus.COMPLETED)
+
+    assert (await client.post(PAUSE, headers=headers)).status_code == 200
+    # It cannot write while changes are paused: the answer it waits for is a change, and that is refused.
+    answer = {"request_id": "sign-off", "decision": {"approved": True}}
+    answered = await client.post(f"api/v2/workflows/{waiting_id}/resume", json=answer, headers=headers)
+    assert answered.status_code == 503
+
+
 async def test_the_refusal_says_who_owns_each_job_and_how_to_cancel_it(
     client, logged_in_headers_super_user, active_super_user, config_dir
 ):
     _checked(config_dir, [PASSING], **PREPARED)
     admin, bob, flow_id, kb_id, ingestion_id = active_super_user.id, uuid4(), uuid4(), uuid4(), uuid4()
     background_id = uuid4()
-    background = {"status": JobStatus.SUSPENDED, "job_metadata": {"request": {"mode": "background"}}}
+    background = {"status": JobStatus.QUEUED, "job_metadata": {"request": {"mode": "background"}}}
     started = [datetime(2026, 10, 1, hour, tzinfo=timezone.utc) for hour in (9, 10, 11, 12)]
     await _add(
         User(id=bob, username="bob", password="never signs in"),  # noqa: S106  # pragma: allowlist secret
@@ -1101,12 +1128,12 @@ async def test_the_refusal_says_who_owns_each_job_and_how_to_cancel_it(
     cancel_ingestion = {"method": "POST", "url": "/api/v1/knowledge_bases/q%26a_handbook/cancel", "body": None}
     shown = ("flow_name", "knowledge_base", "owner", "state", "cancel")
     assert [tuple(job[key] for key in shown) for job in refused.json()["detail"]["jobs"]] == [
-        ("weekly digest", None, "activeuser", "suspended", stop),
+        ("weekly digest", None, "activeuser", "queued", stop),
         # It ends with the request that started it, so there is no route to stop it.
         ("weekly digest", None, "activeuser", "in_progress", None),
         (None, "q&a_handbook", "activeuser", "queued", cancel_ingestion),
         # A cancel route answers only the job's owner, so the admin is told whose job it is.
-        ("weekly digest", None, "bob", "suspended", None),
+        ("weekly digest", None, "bob", "queued", None),
     ]
 
 
@@ -1117,12 +1144,12 @@ async def test_a_job_cancelled_with_the_request_it_came_with_no_longer_holds_the
     headers, owner = logged_in_headers_super_user, active_super_user.id
     _checked(config_dir, [PASSING], **PREPARED)
     flow_id, kb_id, job_id = uuid4(), uuid4(), uuid4()
-    waiting = {"status": JobStatus.SUSPENDED, "job_metadata": {"request": {"mode": "background"}}}
+    queued = {"status": JobStatus.QUEUED, "job_metadata": {"request": {"mode": "background"}}}
     ingesting = {"status": JobStatus.IN_PROGRESS, "type": JobType.INGESTION, "asset_type": "knowledge_base"}
     rows = {
         "a background run": [
-            Flow(id=flow_id, name="waiting on a person", data={}, user_id=owner),
-            Job(job_id=job_id, flow_id=flow_id, user_id=owner, **waiting),
+            Flow(id=flow_id, name="queued in the background", data={}, user_id=owner),
+            Job(job_id=job_id, flow_id=flow_id, user_id=owner, **queued),
         ],
         "an ingestion": [
             KnowledgeBaseRecord(id=kb_id, user_id=owner, name="handbook", backend_type="postgres"),

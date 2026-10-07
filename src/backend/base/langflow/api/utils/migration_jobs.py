@@ -1,8 +1,8 @@
 """What is still writing to an instance, which the migration pause waits for.
 
 The pause refuses to start while any of this is live, because a write that lands
-after the copy began is lost without a report. Nothing here stops anything: a
-suspended job holds a person's pending decision, so the admin decides what to cancel.
+after the copy began is lost without a report. Nothing here stops anything: the
+admin decides what to cancel.
 """
 
 from __future__ import annotations
@@ -25,12 +25,13 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-# A suspended job waits on a person and writes again when they answer.
-_LIVE = (JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED)
+# A suspended run waits for a person and is left out. It writes again only when someone answers
+# it, the pause refuses that answer like any other change, and the run is copied with the rest.
+_LIVE = (JobStatus.QUEUED, JobStatus.IN_PROGRESS)
 
 
 async def active_jobs(session: AsyncSession, admin_id: UUID) -> list[dict[str, Any]]:
-    """Each job that is queued, running or suspended, and each knowledge base marked as ingesting.
+    """Each job that is queued or running, and each knowledge base marked as ingesting.
 
     A job's cancel route answers only the job's owner. The admin gets the request that cancels
     each of their own jobs, and for every other job the name of the owner to ask.
