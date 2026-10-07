@@ -1485,7 +1485,7 @@ async def test_an_instance_on_postgresql_keeps_its_knowledge_bases_in_its_own_da
 
 
 async def test_knowledge_bases_cannot_be_tested_without_the_database_address(
-    client, logged_in_headers_super_user, active_super_user, monkeypatch
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
 ):
     await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
 
@@ -1496,7 +1496,11 @@ async def test_knowledge_bases_cannot_be_tested_without_the_database_address(
 
     # Without the package the copy cannot write to pgvector, wherever it is.
     monkeypatch.setitem(sys.modules, "pgvector", None)
-    monkeypatch.setitem(migration_module._secrets, "database_url", f"postgresql://{NOWHERE}/langflow")
+    # A database that passed its test: named in the record, and held in this worker.
+    address = f"postgresql://{NOWHERE}/langflow"
+    part = {"location": location(address), "identity": database_identity(address)}
+    _checked(config_dir, [PASSING], destinations={"database": part, "results": {"database": {"ok": True}}})
+    monkeypatch.setitem(migration_module._secrets, "database_url", address)
     unable = await _connect(client, logged_in_headers_super_user, vectors={"kind": "pgvector"})
 
     assert unable["results"]["vectors"]["code"] == "pgvector_missing"
@@ -1704,6 +1708,39 @@ async def test_a_new_database_does_not_keep_what_knowledge_bases_found_in_the_ol
     # The database that was just saved failed its test. The step says so, and does not wait as if nothing had.
     steps = {step["id"]: (step["state"], step["reason"]) for step in saved["steps"]}
     assert steps["connect_target"] == ("blocked", "db_unreachable")
+
+
+async def test_knowledge_bases_tested_in_a_database_that_is_replaced_meanwhile_keep_no_result(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    await _add_file_without_bytes(active_super_user.id)
+    # What an earlier save left: a database that passed, named in the record and held in this worker.
+    earlier = f"postgresql://migrator:{DB_PASSWORD}@{NOWHERE}/earlier"
+    part = {"location": f"{NOWHERE}/earlier", "identity": database_identity(earlier)}
+    _checked(config_dir, [PASSING], destinations={"database": part, "results": {"database": {"ok": True}}})
+    monkeypatch.setitem(migration_module._secrets, "database_url", earlier)
+    monkeypatch.setitem(migration_module._secrets, "for", {"database": part})
+    endpoint, arrived, answer, server = await _bucket_that_keeps_waiting()
+    # Sent with no database, the knowledge bases are tested in the one this worker holds. Then the bucket
+    # keeps the save waiting.
+    body = {"vectors": {"kind": "pgvector"}, "files": {**FILES, "endpoint_url": endpoint}}
+    saving = asyncio.create_task(client.put("api/v1/migration/destinations", json=body, headers=headers))
+    await asyncio.wait_for(arrived.wait(), timeout=10)
+
+    # Meanwhile another save names another database.
+    await _connect(client, headers, database_url=f"postgresql://{NOWHERE}/another")
+    answer.set()
+    saved = (await saving).json()
+    server.close()
+
+    # What they found, they found in a database that is no longer the saved one. It is not kept.
+    destinations = saved["record"]["destinations"]
+    assert destinations["database"]["location"] == f"{NOWHERE}/another"
+    assert "vectors" not in destinations
+    assert "vectors" not in destinations["results"]
+    assert "vectors" not in saved["results"]
 
 
 async def test_the_same_database_saved_again_keeps_what_knowledge_bases_found_in_it(
