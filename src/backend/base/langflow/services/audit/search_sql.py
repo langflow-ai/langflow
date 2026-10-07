@@ -1,11 +1,16 @@
 r"""Search expressions that ignore case the same way on SQLite and PostgreSQL.
 
 PostgreSQL's ``ILIKE`` folds every letter, but SQLite folds only ASCII, so a
-search for "äöü" missed "ÄÖÜ" there. SQLite also reads the stored ``details``
-JSON with its non-ASCII letters escaped (``\u00c4``), which no typed word
-matches. On SQLite both sides are therefore folded by Python functions that
-:func:`register_sqlite_search_functions` installs on every connection;
-PostgreSQL keeps the plain ``ILIKE`` and its index-friendly plan.
+search for "äöü" missed "ÄÖÜ" there. On SQLite both sides are therefore folded
+by Python functions that :func:`register_sqlite_search_functions` installs on
+every connection; PostgreSQL keeps the plain ``ILIKE``.
+
+Both backends also store the ``details`` JSON with its non-ASCII letters
+escaped (``\u00c4``), which no typed word matches: the column is ``sa.JSON``,
+whose serializer escapes them, and PostgreSQL's ``json`` keeps the text it was
+handed. So neither backend may read that column as plain text -- SQLite
+re-renders the JSON through ``lf_json_text`` and PostgreSQL through ``jsonb``,
+whose output writes the letters themselves.
 """
 
 from __future__ import annotations
@@ -48,6 +53,13 @@ def _folded_sqlite(element: folded, compiler: Any, **kw: Any) -> str:
 @compiles(json_text)
 def _json_text_default(element: json_text, compiler: Any, **kw: Any) -> str:
     return f"CAST({compiler.process(element.clauses, **kw)} AS TEXT)"
+
+
+@compiles(json_text, "postgresql")
+def _json_text_postgresql(element: json_text, compiler: Any, **kw: Any) -> str:
+    # ``json`` keeps the text it was given, so casting it straight to text
+    # searches the escapes; ``jsonb`` is re-rendered from its parsed form.
+    return f"CAST(CAST({compiler.process(element.clauses, **kw)} AS JSONB) AS TEXT)"
 
 
 @compiles(json_text, "sqlite")
