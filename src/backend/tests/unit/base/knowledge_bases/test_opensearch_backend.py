@@ -15,14 +15,19 @@ guard.
 
 from __future__ import annotations
 
+import asyncio
+import re
+import threading
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import UUID, uuid4
 
 import pytest
-from lfx.base.knowledge_bases.backends import OpenSearchBackend
+from lfx.base.knowledge_bases.backends import OpenSearchBackend, PostgresBackend
 from lfx.base.knowledge_bases.backends.opensearch import (
     DEFAULT_TEXT_FIELD,
     DEFAULT_VECTOR_FIELD,
+    LEGACY_SHARED_INDEX_KEY,
     derive_index_name,
 )
 
@@ -48,6 +53,169 @@ def _make_backend(
     backend._resolved_password = "secret"  # noqa: S105 — test fixture  # pragma: allowlist secret
     backend._secrets_resolved = True
     return backend
+
+
+class _OpenSearchReadError(Exception):
+    """The transport error fields exposed by opensearch-py."""
+
+    def __init__(self, status_code: int, error: str) -> None:
+        super().__init__(error)
+        self.status_code = status_code
+        self.error = error
+
+
+@pytest.mark.parametrize("operation", ["count", "iter_documents"])
+@pytest.mark.parametrize(
+    "error",
+    [
+        OSError("remote unavailable"),
+        _OpenSearchReadError(401, "security_exception"),
+        _OpenSearchReadError(403, "security_exception"),
+        _OpenSearchReadError(404, "Not Found"),
+        _OpenSearchReadError(404, "search_context_missing_exception"),
+    ],
+)
+async def test_remote_read_propagates_failure(tmp_path, operation, error):
+    backend = _make_backend(tmp_path)
+    backend._os_client = MagicMock()
+    backend._os_client.count.side_effect = error
+    backend._os_index = "test_index"
+    backend._os_vector_field = DEFAULT_VECTOR_FIELD
+    backend._os_text_field = DEFAULT_TEXT_FIELD
+    if operation == "count":
+        with pytest.raises(type(error), match=str(error)):
+            await backend.count()
+    else:
+        with patch("opensearchpy.helpers.scan", side_effect=error), pytest.raises(type(error), match=str(error)):
+            _ = [batch async for batch in backend.iter_documents()]
+
+
+async def test_missing_index_is_an_empty_store(tmp_path):
+    backend = _make_backend(tmp_path)
+    error = _OpenSearchReadError(404, "index_not_found_exception")
+    backend._os_client = MagicMock()
+    backend._os_client.count.side_effect = error
+    backend._os_index = "test_index"
+    backend._os_vector_field = DEFAULT_VECTOR_FIELD
+    backend._os_text_field = DEFAULT_TEXT_FIELD
+    assert await backend.count() == 0
+    with patch("opensearchpy.helpers.scan", side_effect=error):
+        assert [batch async for batch in backend.iter_documents()] == []
+
+
+@pytest.mark.parametrize("batch_size", [1, 2])
+async def test_scan_failure_after_a_hit_is_not_successful_completion(tmp_path, batch_size):
+    backend = _make_backend(tmp_path)
+    backend._os_client = MagicMock()
+    backend._os_index = "test_index"
+    backend._os_vector_field = DEFAULT_VECTOR_FIELD
+    backend._os_text_field = DEFAULT_TEXT_FIELD
+    closed = threading.Event()
+
+    def interrupted_scan(*_args, **_kwargs):
+        try:
+            yield {"_id": "first", "_source": {"text": "first chunk"}}
+            raise _OpenSearchReadError(404, "index_not_found_exception")
+        finally:
+            closed.set()
+
+    with (
+        patch("opensearchpy.helpers.scan", side_effect=interrupted_scan),
+        pytest.raises(_OpenSearchReadError, match="index_not_found_exception"),
+    ):
+        _ = [batch async for batch in backend.iter_documents(batch_size=batch_size)]
+    assert closed.is_set()
+
+
+async def test_count_rejects_partial_shard_failure(tmp_path):
+    backend = _make_backend(tmp_path)
+    backend._os_client = MagicMock()
+    backend._os_client.count.return_value = {"count": 0, "_shards": {"total": 2, "successful": 1, "failed": 1}}
+    backend._os_index = "test_index"
+    with pytest.raises(RuntimeError, match="did not complete"):
+        await backend.count()
+
+
+@pytest.mark.no_blockbuster
+@pytest.mark.parametrize("operation", ["delete_by", "delete_collection", "embedded_write"])
+async def test_cancelled_remote_mutation_drains_native_worker(tmp_path, operation):
+    from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+    backend = _make_backend(tmp_path)
+    started = threading.Event()
+    release = threading.Event()
+    completed = threading.Event()
+
+    def blocked_request(*_args, **_kwargs):
+        started.set()
+        assert release.wait(5)
+        completed.set()
+        return {"acknowledged": True, "deleted": 1, "failures": [], "timed_out": False}
+
+    client = MagicMock()
+    client.indices.delete.side_effect = blocked_request
+    client.delete_by_query.side_effect = blocked_request
+    backend._os_client = client
+    backend._os_index = "test_index"
+    backend._vector_store = MagicMock(bulk_size=500)
+    backend._vector_store.add_embeddings.side_effect = blocked_request
+    if operation == "embedded_write":
+        pending = backend._write_embedded(["id"], [IngestedDocument(id="id", content="text", embedding=[1.0])])
+    elif operation == "delete_by":
+        pending = backend.delete_by({"session_id": "session"})
+    else:
+        pending = backend.delete_collection()
+    task = asyncio.create_task(pending)
+    try:
+        assert await asyncio.to_thread(started.wait, 2)
+        task.cancel()
+        await asyncio.sleep(0.05)
+        assert not task.done(), "The native request must drain before the coroutine releases its fence"
+        assert not completed.is_set()
+    finally:
+        release.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert completed.is_set()
+
+
+@pytest.mark.parametrize("operation", ["delete_by", "delete_collection"])
+async def test_remote_delete_propagates_transport_failure(tmp_path, operation):
+    backend = _make_backend(tmp_path)
+    client = MagicMock()
+    client.indices.delete.side_effect = OSError("remote unavailable")
+    client.delete_by_query.side_effect = OSError("remote unavailable")
+    backend._os_client = client
+    backend._os_index = "test_index"
+    pending = backend.delete_by({"session_id": "session"}) if operation == "delete_by" else backend.delete_collection()
+    with pytest.raises(OSError, match="remote unavailable"):
+        await pending
+
+
+@pytest.mark.parametrize("result", [{"timed_out": True}, {"failures": [{}]}, {"version_conflicts": 1}])
+async def test_document_delete_rejects_partial_success(tmp_path, result):
+    backend = _make_backend(tmp_path)
+    backend._os_client = MagicMock()
+    backend._os_client.delete_by_query.return_value = result
+    backend._os_index = "test_index"
+    with pytest.raises(RuntimeError, match="did not complete"):
+        await backend.delete_by({"session_id": "session"})
+
+
+async def test_collection_delete_initializes_fresh_client_and_requires_acknowledgement(tmp_path):
+    backend = OpenSearchBackend(kb_name="test", kb_path=tmp_path)
+    client = MagicMock()
+    client.indices.delete.return_value = {"acknowledged": False}
+
+    async def initialize():
+        backend._os_client = client
+        backend._os_index = "test_index"
+
+    backend.ensure_ready = AsyncMock(side_effect=initialize)
+    with pytest.raises(RuntimeError, match="did not acknowledge"):
+        await backend.delete_collection()
+    backend.ensure_ready.assert_awaited_once()
+    client.indices.delete.assert_called_once_with(index="test_index", ignore_unavailable=True)
 
 
 class TestOpenSearchBackendVectorFieldDefault:
@@ -107,18 +275,132 @@ class TestOpenSearchBackendVectorFieldDefault:
         assert backend._os_vector_field == "embedding"
 
 
-class TestOpenSearchIndexIsolation:
-    """Each KB / Memory Base must get its own index.
+class TestOpenSearchDistanceMetric:
+    """Relocation must compare the actual index metric, including legacy indexes."""
 
-    Before this, every base copied the single global ``OPENSEARCH_INDEX_NAME``
-    into ``backend_config`` and shared one index — mixing vectors across bases
-    and making collection-level deletion drop everyone's data. The index is now
-    derived from ``kb_name`` (mirroring the Chroma backends' ``collection_name``)
-    unless an explicit ``index_name`` override is configured.
+    @pytest.mark.parametrize(
+        ("field", "expected"),
+        [
+            ({"method": {"space_type": "l2"}}, "l2"),
+            ({"method": {"space_type": "cosinesimil"}}, "cosine"),
+            ({"space_type": "innerproduct", "method": {"name": "hnsw"}}, "inner_product"),
+            ({"space_type": "l1"}, "l1"),
+        ],
+    )
+    async def test_existing_mapping_overrides_config(self, tmp_path, field, expected):
+        backend = _make_backend(
+            tmp_path, {"index_name": "test_index", "space_type": "cosinesimil", "vector_field": "legacy_field"}
+        )
+        client = MagicMock()
+        client.indices.get_mapping.return_value = {
+            "test_index": {"mappings": {"properties": {"vector_field": {"type": "knn_vector", **field}}}}
+        }
+        with (
+            patch("opensearchpy.OpenSearch", return_value=client),
+            patch("langchain_community.vectorstores.OpenSearchVectorSearch", MagicMock()),
+        ):
+            assert await backend.get_distance_metric() == expected
+        client.indices.get_mapping.assert_called_once_with(index="test_index")
+
+    async def test_missing_index_uses_configured_metric(self, tmp_path):
+        from opensearchpy.exceptions import NotFoundError
+
+        backend = _make_backend(tmp_path, {"index_name": "test_index", "space_type": "innerproduct"})
+        backend._os_client = MagicMock()
+        backend._os_index = "test_index"
+        backend._os_client.indices.get_mapping.side_effect = NotFoundError(404, "index_not_found_exception", {})
+        assert await backend.get_distance_metric() == "inner_product"
+
+    @pytest.mark.parametrize("error", ["Not Found", "search_context_missing_exception"])
+    async def test_unrelated_404_does_not_use_configured_metric(self, tmp_path, error):
+        from opensearchpy.exceptions import NotFoundError
+
+        backend = _make_backend(tmp_path, {"index_name": "test_index", "space_type": "innerproduct"})
+        backend._os_client = MagicMock()
+        backend._os_index = "test_index"
+        backend._os_client.indices.get_mapping.side_effect = NotFoundError(404, error, {})
+        with pytest.raises(NotFoundError, match=error):
+            await backend.get_distance_metric()
+
+    @pytest.mark.parametrize(
+        "mapping",
+        [
+            {},
+            {"mappings": {"properties": {"vector_field": {"type": "float"}}}},
+            {"mappings": {"properties": {"vector_field": {"type": "knn_vector", "model_id": "trained"}}}},
+            {
+                "mappings": {
+                    "properties": {
+                        "vector_field": {
+                            "type": "knn_vector",
+                            "space_type": "l2",
+                            "method": {"space_type": "cosinesimil"},
+                        }
+                    }
+                }
+            },
+        ],
+    )
+    async def test_indeterminate_existing_mapping_is_rejected(self, tmp_path, mapping):
+        backend = _make_backend(tmp_path)
+        backend._os_client = MagicMock()
+        backend._os_index = "test_index"
+        backend._os_client.indices.get_mapping.return_value = {"test_index": mapping}
+        with pytest.raises(ValueError, match="Cannot determine"):
+            await backend.get_distance_metric()
+
+    async def test_mapping_transport_error_is_not_a_missing_index(self, tmp_path):
+        backend = _make_backend(tmp_path)
+        backend._os_client = MagicMock()
+        backend._os_index = "test_index"
+        backend._os_client.indices.get_mapping.side_effect = OSError("remote unavailable")
+        with pytest.raises(OSError, match="remote unavailable"):
+            await backend.get_distance_metric()
+
+
+@pytest.mark.parametrize("write", ["ingest", "copy"])
+async def test_writes_pass_configured_metric_even_after_store_was_built(tmp_path, write):
+    from langchain_core.documents import Document
+    from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+    backend = _make_backend(tmp_path, {"index_name": "test_index", "space_type": "cosinesimil"})
+    store = MagicMock(bulk_size=500)
+    store.aadd_documents = AsyncMock()
+    backend._vector_store = store
+    if write == "ingest":
+        docs = [Document(page_content="doc")]
+        await backend.add_documents(docs)
+        store.aadd_documents.assert_awaited_once_with(docs, space_type="cosinesimil")
+    else:
+        docs = [IngestedDocument(id="chunk", content="doc", embedding=[1.0, 0.0])]
+        await backend.add_embedded_documents(docs)
+        store.add_embeddings.assert_called_once_with(
+            [("doc", [1.0, 0.0])], metadatas=[{}], ids=["chunk"], space_type="cosinesimil"
+        )
+
+
+# OpenSearch index names: lowercase, none of ``\\ / * ? " < > | , # :`` or
+# whitespace, no leading ``- _ + .``, at most 255 bytes.
+_VALID_INDEX_NAME = re.compile(r"^(?![-_+.])[^A-Z\\/*?\"<>|,#:\s]{1,255}$")
+
+
+class TestOpenSearchIndexIsolation:
+    """Each owner's Knowledge Base / Memory Base must get its own index.
+
+    KB names are unique per user, not globally. Deriving the index from
+    ``kb_name`` alone made two users' same-named KBs share one index, so each
+    could read, count, and delete the other's chunks. The index is now scoped
+    by owner (the same name pgvector gives the KB's table) unless an explicit
+    ``index_name`` override is configured.
     """
 
-    def _make(self, kb_path: Path, kb_name: str, backend_config: dict) -> OpenSearchBackend:
-        backend = OpenSearchBackend(kb_name=kb_name, kb_path=kb_path, backend_config=backend_config)
+    def _make(self, kb_path: Path, kb_name: str, backend_config: dict, user_id: UUID | str | None) -> OpenSearchBackend:
+        backend = OpenSearchBackend(
+            kb_name=kb_name,
+            kb_path=kb_path,
+            backend_config=backend_config,
+            user_id=user_id,
+        )
         backend._resolved_url = "https://example.local:9200"
         backend._resolved_username = "admin"
         backend._resolved_password = "secret"  # noqa: S105 — test fixture  # pragma: allowlist secret
@@ -134,44 +416,106 @@ class TestOpenSearchIndexIsolation:
             _ = backend.vector_store
         return fake_wrapper.call_args.kwargs["index_name"]
 
-    def test_index_derived_from_kb_name_when_unset(self, tmp_path: Path) -> None:
-        # No ``index_name`` in config → derive from kb_name so the base is
-        # isolated in its own index rather than the shared global one.
-        backend = self._make(tmp_path, "chat_memory_a1b2c3d4", {"url_variable": "OPENSEARCH_URL"})
-        assert self._built_index(backend) == "chat_memory_a1b2c3d4"
-        assert backend._os_index == "chat_memory_a1b2c3d4"
+    def test_same_kb_name_for_different_owners_gets_different_indexes(self, tmp_path: Path) -> None:
+        index_a = self._built_index(self._make(tmp_path, "docs", {}, uuid4()))
+        index_b = self._built_index(self._make(tmp_path, "docs", {}, uuid4()))
+        assert index_a != index_b
 
-    def test_distinct_kb_names_get_distinct_indexes(self, tmp_path: Path) -> None:
-        idx_a = self._built_index(self._make(tmp_path, "mem_aaaa1111", {}))
-        idx_b = self._built_index(self._make(tmp_path, "mem_bbbb2222", {}))
-        assert idx_a != idx_b
+    def test_index_is_owner_scoped_when_unset(self, tmp_path: Path) -> None:
+        owner = uuid4()
+        backend = self._make(tmp_path, "chat_memory_a1b2c3d4", {"url_variable": "OPENSEARCH_URL"}, owner)
+        index = self._built_index(backend)
+        assert index == derive_index_name("chat_memory_a1b2c3d4", owner)
+        assert backend._os_index == index
+        assert re.fullmatch(r"lf_[0-9a-f]{24}", index)
 
-    def test_uppercase_kb_name_is_sanitized(self, tmp_path: Path) -> None:
-        # OpenSearch index names must be lowercase; a user-supplied KB name
-        # ("My KB" → "My_KB") would otherwise be an invalid index.
-        backend = self._make(tmp_path, "My_KB", {})
-        assert self._built_index(backend) == "my_kb"
+    def test_string_and_uuid_owner_ids_resolve_to_the_same_index(self, tmp_path: Path) -> None:
+        owner = uuid4()
+        from_uuid = self._built_index(self._make(tmp_path, "docs", {}, owner))
+        from_string = self._built_index(self._make(tmp_path, "docs", {}, str(owner).upper()))
+        assert from_uuid == from_string
+
+    def test_matches_pgvector_collection_name(self, tmp_path: Path) -> None:
+        owner = uuid4()
+        postgres = PostgresBackend(kb_name="Team Docs", user_id=owner)
+        assert self._built_index(self._make(tmp_path, "Team Docs", {}, owner)) == postgres.collection_name
+
+    def test_missing_owner_fails_closed(self, tmp_path: Path) -> None:
+        # No owner must never fall back to a name other users could also get.
+        with pytest.raises(ValueError, match="valid user_id"):
+            self._built_index(self._make(tmp_path, "docs", {}, None))
 
     def test_explicit_index_name_overrides_derivation(self, tmp_path: Path) -> None:
-        # Operators pointing a KB at an externally-managed index keep control.
-        backend = _make_backend(tmp_path, backend_config={"index_name": "external_index"})
+        # Operators pointing a KB at an externally-managed index keep control,
+        # and migrated KBs keep reading the index they already wrote to.
+        backend = self._make(tmp_path, "docs", {"index_name": "external_index"}, uuid4())
         assert self._built_index(backend) == "external_index"
         assert backend._os_index == "external_index"
 
+    def test_explicit_index_name_does_not_require_an_owner(self, tmp_path: Path) -> None:
+        backend = _make_backend(tmp_path, backend_config={"index_name": "external_index"})
+        assert self._built_index(backend) == "external_index"
+
+    def test_override_cannot_target_another_owners_scoped_index(self, tmp_path: Path) -> None:
+        victim_index = derive_index_name("docs", uuid4())
+        backend = self._make(tmp_path, "docs", {"index_name": victim_index}, uuid4())
+        with pytest.raises(ValueError, match="reserved for owner-scoped"):
+            self._built_index(backend)
+
+    def test_override_cannot_target_scoped_index_without_an_owner(self, tmp_path: Path) -> None:
+        backend = self._make(tmp_path, "docs", {"index_name": derive_index_name("docs", uuid4())}, None)
+        with pytest.raises(ValueError, match="reserved for owner-scoped"):
+            self._built_index(backend)
+
+    def test_override_naming_its_own_scoped_index_is_allowed(self, tmp_path: Path) -> None:
+        # A migration downgrade pins KBs to their own owner-scoped index.
+        owner = uuid4()
+        own_index = derive_index_name("docs", owner)
+        backend = self._make(tmp_path, "docs", {"index_name": own_index}, owner)
+        assert self._built_index(backend) == own_index
+
+    def test_shared_legacy_index_marker_warns(self, tmp_path: Path) -> None:
+        owner = uuid4()
+        backend = self._make(tmp_path, "docs", {LEGACY_SHARED_INDEX_KEY: "docs"}, owner)
+        with patch("lfx.base.knowledge_bases.backends.opensearch.logger") as fake_logger:
+            index = self._built_index(backend)
+        assert index == derive_index_name("docs", owner)
+        fake_logger.warning.assert_called_once()
+        assert "docs" in fake_logger.warning.call_args.args
+
+    def test_no_warning_without_the_marker(self, tmp_path: Path) -> None:
+        backend = self._make(tmp_path, "docs", {}, uuid4())
+        with patch("lfx.base.knowledge_bases.backends.opensearch.logger") as fake_logger:
+            self._built_index(backend)
+        fake_logger.warning.assert_not_called()
+
 
 @pytest.mark.parametrize(
-    ("kb_name", "expected"),
+    "kb_name",
     [
-        ("chat_memory_a1b2c3d4", "chat_memory_a1b2c3d4"),
-        ("My-KB!", "my-kb_"),
-        ("  Docs 2024  ", "docs_2024"),
-        ("_leading", "leading"),
-        ("", "kb"),
-        ("..", "kb"),
+        "docs",
+        "Docs",
+        "My KB!",
+        "  Docs 2024  ",
+        "_leading",
+        "..",
+        "",
+        "日本語のナレッジ",
+        pytest.param("a" * 1000, id="1000-chars"),
+        'bad\\/*?"<>|,#: name',
     ],
 )
-def test_derive_index_name_table(kb_name: str, expected: str) -> None:
-    assert derive_index_name(kb_name) == expected
+def test_derived_index_name_is_always_a_valid_opensearch_name(kb_name: str) -> None:
+    index = derive_index_name(kb_name, uuid4())
+    assert _VALID_INDEX_NAME.fullmatch(index), index
+    assert len(index.encode()) <= 255
+
+
+def test_kb_names_that_sanitized_to_one_legacy_index_now_differ() -> None:
+    # "Docs" and "docs" (or "a:b" and "a#b") used to share an index even for one owner.
+    owner = uuid4()
+    assert derive_index_name("Docs", owner) != derive_index_name("docs", owner)
+    assert derive_index_name("a:b", owner) != derive_index_name("a#b", owner)
 
 
 @pytest.mark.parametrize(
@@ -371,6 +715,30 @@ class TestOpenSearchIterDocumentsEmbeddings:
 
         assert captured.get("_source_excludes") == ["chunk_embedding", "vector_field"]
 
+    @pytest.mark.asyncio
+    async def test_iter_documents_asks_for_source_when_embeddings_are_requested(self, tmp_path: Path) -> None:
+        # OpenSearch 3.8+ can strip knn_vector fields from every response (the
+        # knn_default_excludes processor) unless the request sets _source itself,
+        # so a read that needs the vectors must send _source=true.
+        backend = _make_backend(tmp_path)
+        fake_hits = [{"_id": "x", "_source": {"text": "c", "metadata": {}, "vector_field": [0.1]}}]
+        captured: dict = {}
+
+        def _fake_scan(_client, **kwargs):
+            captured.update(kwargs)
+            return (hit for hit in fake_hits)
+
+        with (
+            patch("opensearchpy.OpenSearch", return_value=MagicMock()),
+            patch("langchain_community.vectorstores.OpenSearchVectorSearch", MagicMock()),
+            patch("opensearchpy.helpers.scan", side_effect=_fake_scan),
+        ):
+            _ = backend.vector_store
+            _ = [batch async for batch in backend.iter_documents(include_embeddings=True)]
+
+        assert captured.get("_source") is True
+        assert "_source_excludes" not in captured
+
 
 class TestOpenSearchSimilaritySearchFilterHandling:
     """Pin the ``filter`` kwarg behaviour of ``similarity_search``.
@@ -462,3 +830,180 @@ class TestOpenSearchSimilaritySearchFilterHandling:
         kwargs = fake_vs.asimilarity_search_with_score.call_args.kwargs
         assert kwargs == {"query": "hi", "k": 2}
         assert "filter" not in kwargs
+
+
+class TestOpenSearchSSRFProtection:
+    """The cluster URL is tenant-controlled, so the backend must not dial it blindly.
+
+    Regression guard for the KB OpenSearch SSRF (CWE-918): the URL comes from a
+    per-user Langflow variable whose value is stored verbatim, and
+    ``OpenSearch(hosts=[url]).info()`` otherwise fetches whatever host:port/path
+    the tenant chose — including loopback, RFC1918, and the cloud-metadata
+    address — even with ``LANGFLOW_SSRF_PROTECTION_ENABLED=true``. The backend
+    now applies the same connector SSRF policy the vector-store components use,
+    inside ``_resolve_secrets`` so every path (test-connection, ingestion,
+    retrieval) is covered.
+    """
+
+    @pytest.fixture
+    def ssrf_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Pin the destination knobs so the tests don't depend on ambient settings.
+
+        ``LANGFLOW_KB_ALLOWED_HOSTS`` is opened up to the hosts these tests use so
+        the exclusive destination gate lets them through and the *address* policy
+        is what each assertion is actually measuring. The gate itself is covered
+        by ``TestOpenSearchDestinationPolicy`` below.
+        """
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+        monkeypatch.setenv(
+            "LANGFLOW_KB_ALLOWED_HOSTS",
+            "169.254.169.254,10.0.0.5,opensearch.internal",
+        )
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+        monkeypatch.delenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", raising=False)
+
+    def _backend(self, tmp_path: Path, url: str, source: str = "variable") -> OpenSearchBackend:
+        backend = OpenSearchBackend(
+            kb_name="kb_ssrf",
+            kb_path=tmp_path,
+            backend_config={"index_name": "test_index"},
+        )
+        # The URL is resolved with its provenance; username/password follow via
+        # the plain resolve_secret wrapper, which delegates to the same hook.
+        backend.resolve_secret_with_source = AsyncMock(
+            side_effect=[(url, source), (None, "missing"), (None, "missing")]
+        )
+        return backend
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_resolve_secrets_blocks_cloud_metadata_url(self, tmp_path: Path) -> None:
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        backend = self._backend(tmp_path, "http://169.254.169.254/latest/meta-data/")
+        with pytest.raises(SSRFProtectionError, match="blocked"):
+            await backend._resolve_secrets()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_resolve_secrets_blocks_rfc1918_url(self, tmp_path: Path) -> None:
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        backend = self._backend(tmp_path, "http://10.0.0.5:9200")
+        with pytest.raises(SSRFProtectionError, match="blocked"):
+            await backend._resolve_secrets()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_resolve_secrets_blocks_hostname_resolving_to_private_ip(self, tmp_path: Path) -> None:
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        backend = self._backend(tmp_path, "http://opensearch.internal:9200")
+        with (
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["10.1.2.3"]),
+            pytest.raises(SSRFProtectionError, match="blocked"),
+        ):
+            await backend._resolve_secrets()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_resolve_secrets_blocks_non_http_scheme(self, tmp_path: Path) -> None:
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        backend = self._backend(tmp_path, "file:///etc/passwd")
+        with pytest.raises(SSRFProtectionError):
+            await backend._resolve_secrets()
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_allowlisted_internal_host_passes(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Operators whose cluster genuinely lives on an internal network keep a
+        # supported escape hatch: LANGFLOW_SSRF_ALLOWED_HOSTS.
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "10.0.0.5")
+        backend = self._backend(tmp_path, "http://10.0.0.5:9200")
+        await backend._resolve_secrets()
+        assert backend._resolved_url == "http://10.0.0.5:9200"
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_test_connection_reports_ssrf_block(self, tmp_path: Path) -> None:
+        # The blocked URL must surface as a failed test-connection result with
+        # an accurate type — never as a dialed connection.
+        backend = self._backend(tmp_path, "http://169.254.169.254:80")
+        result = await backend.test_connection()
+        assert result.ok is False
+        assert result.details["type"] == "SSRFProtectionError"
+        assert "blocked" in result.message
+
+    @pytest.mark.usefixtures("ssrf_env")
+    async def test_blocked_url_is_never_stashed_for_later_paths(self, tmp_path: Path) -> None:
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        backend = self._backend(tmp_path, "http://169.254.169.254:80")
+        with pytest.raises(SSRFProtectionError):
+            await backend._resolve_secrets()
+        # A KB created against a hostile variable must not keep the SSRF alive
+        # on the ingestion/retrieval paths after test-connection.
+        assert getattr(backend, "_resolved_url", None) is None
+
+
+class TestOpenSearchDestinationPolicy:
+    """Only an operator-chosen cluster may be dialed at all.
+
+    The address policy above cannot close DNS rebinding here: langchain's
+    ``OpenSearchVectorSearch`` forwards one ``**kwargs`` dict to both its urllib3
+    and aiohttp clients, so no single ``connection_class`` can pin the sync and
+    async transports to the address that was validated. The destination gate
+    answers the prior question — who chose this host — and refuses anything the
+    tenant supplied that the operator has not named, public-looking or not.
+    """
+
+    @pytest.fixture
+    def destination_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+        monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+        monkeypatch.delenv("LANGFLOW_KB_ALLOWED_HOSTS", raising=False)
+        monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+        monkeypatch.delenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", raising=False)
+
+    def _backend(self, tmp_path: Path, url: str, source: str) -> OpenSearchBackend:
+        backend = OpenSearchBackend(
+            kb_name="kb_dest",
+            kb_path=tmp_path,
+            backend_config={"index_name": "test_index"},
+        )
+        backend.resolve_secret_with_source = AsyncMock(
+            side_effect=[(url, source), (None, "missing"), (None, "missing")]
+        )
+        return backend
+
+    @pytest.mark.usefixtures("destination_env")
+    async def test_tenant_variable_needs_an_approved_host(self, tmp_path: Path) -> None:
+        from lfx.utils.ssrf_protection import SSRFProtectionError
+
+        backend = self._backend(tmp_path, "https://rebind.attacker.example:9200", "variable")
+        with (
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+            pytest.raises(SSRFProtectionError, match="not an approved destination"),
+        ):
+            await backend._resolve_secrets()
+        assert getattr(backend, "_resolved_url", None) is None
+
+    @pytest.mark.usefixtures("destination_env")
+    async def test_operator_env_var_needs_no_approval(self, tmp_path: Path) -> None:
+        backend = self._backend(tmp_path, "https://search.example.com:9200", "environment")
+        with patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]):
+            await backend._resolve_secrets()
+        assert backend._resolved_url == "https://search.example.com:9200"
+
+    @pytest.mark.usefixtures("destination_env")
+    async def test_approved_host_passes(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("LANGFLOW_KB_ALLOWED_HOSTS", "search.corp.example")
+        backend = self._backend(tmp_path, "https://search.corp.example:9200", "variable")
+        with patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]):
+            await backend._resolve_secrets()
+        assert backend._resolved_url == "https://search.corp.example:9200"
+
+    @pytest.mark.usefixtures("destination_env")
+    async def test_test_connection_reports_the_refusal(self, tmp_path: Path) -> None:
+        backend = self._backend(tmp_path, "https://rebind.attacker.example:9200", "variable")
+        with patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]):
+            result = await backend.test_connection()
+        assert result.ok is False
+        assert result.details["type"] == "SSRFProtectionError"
+        assert "not an approved destination" in result.message

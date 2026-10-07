@@ -9,10 +9,10 @@ import pytest
 
 PROBE = """
 import json, os
-from langflow.services.telemetry.opentelemetry import OpenTelemetry
+from lfx.observability import bootstrap_application_telemetry
 from opentelemetry import trace
 
-OpenTelemetry(prometheus_enabled=False)
+bootstrap_application_telemetry(prometheus_enabled=False)
 
 provider = trace.get_tracer_provider()
 result = {"provider": type(provider).__name__}
@@ -26,12 +26,12 @@ print("PROBE_RESULT " + json.dumps(result))
 """
 
 
-def run_probe(env_overrides: dict[str, str]) -> dict:
+def run_probe(env_overrides: dict[str, str], source: str = PROBE) -> dict:
     # Start from a clean slate so the developer's own OTEL_* vars cannot skew the result.
     env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
     env.update(env_overrides)
     completed = subprocess.run(  # noqa: S603
-        [sys.executable, "-c", PROBE],
+        [sys.executable, "-c", source],
         env=env,
         capture_output=True,
         text=True,
@@ -47,6 +47,20 @@ def test_no_endpoint_installs_no_provider():
     """Local and desktop runs set no OTEL_* vars and must stay inert."""
     result = run_probe({})
     assert result["provider"] == "ProxyTracerProvider"
+
+
+def test_langflow_uses_the_shared_provider_bootstrap():
+    # Configuration cases exercise the shared implementation in fresh processes.
+    # Keep an integration probe through Langflow's wrapper, whose cold imports
+    # otherwise cost several seconds for every configuration permutation.
+    source = PROBE.replace(
+        "from lfx.observability import bootstrap_application_telemetry",
+        "from langflow.services.telemetry.opentelemetry import OpenTelemetry",
+    ).replace("bootstrap_application_telemetry(prometheus_enabled=False)", "OpenTelemetry(prometheus_enabled=False)")
+    result = run_probe({"OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318"}, source)
+    assert result["provider"] == "TracerProvider"
+    assert result["service_name"] == "langflow"
+    assert len(result["exporters"]) == 1
 
 
 @pytest.mark.parametrize("endpoint_var", ["OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"])

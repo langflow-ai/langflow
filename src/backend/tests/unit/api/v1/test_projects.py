@@ -19,7 +19,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
-from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.model import Folder, FolderCreate
 from langflow.services.deps import session_scope
 from lfx.services.adapters.deployment.schema import DeploymentType
 from sqlmodel import select
@@ -55,12 +55,17 @@ async def test_project_download_uses_resolved_owner_namespace():
     session = AsyncMock()
     session.exec.side_effect = [project_result, flows_result]
 
-    response = await download_project_flows(
-        session=session,
-        project_id=project_id,
-        current_user=SimpleNamespace(id=actor_id),
-        project_owner_id=owner_id,
-    )
+    with patch(
+        "langflow.api.v1.projects_files._export_variable_names",
+        new_callable=AsyncMock,
+        return_value=frozenset(),
+    ) as export_variable_names:
+        response = await download_project_flows(
+            session=session,
+            project_id=project_id,
+            current_user=SimpleNamespace(id=actor_id),
+            project_owner_id=owner_id,
+        )
 
     assert response.status_code == 200
     project_sql = str(session.exec.await_args_list[0].args[0].compile(compile_kwargs={"literal_binds": True}))
@@ -68,6 +73,8 @@ async def test_project_download_uses_resolved_owner_namespace():
     assert owner_id.hex in project_sql
     assert owner_id.hex in flows_sql
     assert actor_id.hex not in project_sql
+    # Exported bindings are checked against the project owner's variables, not the actor's.
+    export_variable_names.assert_awaited_once_with(session, owner_id)
 
 
 async def test_shared_project_download_filters_flows_by_read_permission():
@@ -87,12 +94,19 @@ async def test_shared_project_download_filters_flows_by_read_permission():
     session = AsyncMock()
     session.exec.side_effect = [project_result, flows_result]
 
-    with patch(
-        "langflow.api.v1.projects_files.filter_visible_resources",
-        new_callable=AsyncMock,
-        create=True,
-        return_value=[allowed_flow],
-    ) as filter_visible:
+    with (
+        patch(
+            "langflow.api.v1.projects_files.filter_visible_resources",
+            new_callable=AsyncMock,
+            create=True,
+            return_value=[allowed_flow],
+        ) as filter_visible,
+        patch(
+            "langflow.api.v1.projects_files._export_variable_names",
+            new_callable=AsyncMock,
+            return_value=frozenset(),
+        ),
+    ):
         response = await download_project_flows(
             session=session,
             project_id=project_id,
@@ -118,6 +132,28 @@ async def test_create_project(client: AsyncClient, logged_in_headers, basic_case
     assert "description" in result, "The dictionary must contain a key called 'description'"
     assert "id" in result, "The dictionary must contain a key called 'id'"
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
+
+
+async def test_new_project_in_caller_transaction_rolls_back_with_mcp_registration(active_user):
+    """A caller that owns the transaction can roll back the project and its MCP server together."""
+    from langflow.api.v1.projects import _new_project
+    from langflow.services.database.models.mcp_server import MCPServer
+    from langflow.services.database.models.user.model import User
+
+    async with session_scope() as session:
+        user = await session.get(User, active_user.id)
+        project = await _new_project(
+            session=session,
+            project=FolderCreate(name="caller_owned_project"),
+            current_user=user,
+            owns_transaction=False,
+        )
+        assert (await session.exec(select(MCPServer).where(MCPServer.user_id == user.id))).all()
+        await session.rollback()
+
+    async with session_scope() as session:
+        assert await session.get(Folder, project.id) is None
+        assert not (await session.exec(select(MCPServer).where(MCPServer.user_id == active_user.id))).all()
 
 
 async def test_create_project_duplicate_name_escapes_like_wildcards(client: AsyncClient, logged_in_headers):
@@ -595,6 +631,91 @@ async def test_delete_project_does_not_leak_sql_on_database_error(
     assert "DELETE FROM folder" not in detail
     assert "sqlalche.me" not in detail
     assert str(project_id) not in detail
+
+
+async def test_lock_project_for_delete_issues_row_lock_on_postgresql():
+    """On PostgreSQL, the Folder row must be locked with FOR UPDATE before any flow is touched.
+
+    Replacement locks the Folder row before its flow rows (see
+    ``_lock_replacement_operation`` and the ``with_for_update()`` load in
+    ``_replace_project_operation_once``). Delete must lock the same row, the same
+    way, so the two operations never take these locks in opposite orders.
+    """
+    from langflow.api.v1 import projects as projects_module
+
+    project_id = uuid4()
+    session = AsyncMock()
+    bind = MagicMock()
+    bind.dialect.name = "postgresql"
+    session.get_bind = MagicMock(return_value=bind)
+
+    await projects_module._lock_project_for_delete(session, project_id)
+
+    session.exec.assert_awaited_once()
+    (statement,), _kwargs = session.exec.call_args
+    compiled = str(statement.compile(compile_kwargs={"literal_binds": True}))
+    assert "FOR UPDATE" in compiled
+    assert "folder" in compiled.lower()
+    assert project_id.hex in compiled.replace("-", "")
+
+
+async def test_lock_project_for_delete_is_a_noop_on_sqlite():
+    """SQLite already serializes writers database-wide, so no explicit lock is issued."""
+    from langflow.api.v1 import projects as projects_module
+
+    session = AsyncMock()
+    bind = MagicMock()
+    bind.dialect.name = "sqlite"
+    session.get_bind = MagicMock(return_value=bind)
+
+    await projects_module._lock_project_for_delete(session, uuid4())
+
+    session.exec.assert_not_awaited()
+
+
+async def test_delete_project_locks_folder_before_flows_are_cascade_deleted(
+    client: AsyncClient, logged_in_headers, basic_case, monkeypatch
+):
+    """The Folder row lock (PostgreSQL deadlock fix) must run before any flow cascade delete.
+
+    Regression for a lock-order deadlock against replacement: replacement locks the
+    Folder row before its flow rows; delete used to remove flows first and the
+    Folder last — the opposite order, which can deadlock (40P01) on PostgreSQL.
+    ``_lock_project_for_delete`` must run first inside the delete operation; this
+    pins that ordering regardless of which dialect the test database uses.
+    """
+    from langflow.api.v1 import projects as projects_module
+
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert create_resp.status_code == status.HTTP_201_CREATED
+    project_id = create_resp.json()["id"]
+
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "lock-order-flow", "folder_id": project_id, "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+
+    call_order: list[str] = []
+    original_lock = projects_module._lock_project_for_delete
+    original_cascade = projects_module.cascade_delete_flow
+
+    async def recording_lock(session, project_id):
+        call_order.append("lock")
+        return await original_lock(session, project_id)
+
+    async def recording_cascade(session, flow_id, *, memory_base_cleanups):
+        call_order.append("cascade")
+        return await original_cascade(session, flow_id, memory_base_cleanups=memory_base_cleanups)
+
+    monkeypatch.setattr(projects_module, "_lock_project_for_delete", recording_lock)
+    monkeypatch.setattr(projects_module, "cascade_delete_flow", recording_cascade)
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert delete_resp.status_code == status.HTTP_204_NO_CONTENT
+
+    assert call_order == ["lock", "cascade"]
 
 
 async def test_read_project_invalid_id_format(client: AsyncClient, logged_in_headers):
@@ -2704,3 +2825,98 @@ async def test_upsert_project_update_rejects_flows_list(client: AsyncClient, log
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST, response.text
     assert "flows_list" in response.json()["detail"]
+
+
+class TestProjectNameValidation:
+    """Names the MCP server name cannot be derived from are refused instead of collapsing."""
+
+    async def test_create_project_with_emoji_name_is_rejected(self, client: AsyncClient, logged_in_headers):
+        response = await client.post(
+            "api/v1/projects/", json={"name": "\U0001f680 rockets", "description": ""}, headers=logged_in_headers
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "emoji" in response.text
+
+    async def test_rename_project_to_emoji_name_is_rejected(self, client: AsyncClient, logged_in_headers, basic_case):
+        created = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+        project_id = created.json()["id"]
+
+        response = await client.patch(
+            f"api/v1/projects/{project_id}", json={"name": "\U0001f389\U0001f389"}, headers=logged_in_headers
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        stored = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+        assert stored.json()["name"] == basic_case["name"]
+
+    async def test_cjk_and_symbol_names_are_still_accepted(self, client: AsyncClient, logged_in_headers):
+        # The GB18030 test string, including a Kangxi radical and 4-byte characters
+        name = "P\u3023\u51c9\u55c0\u9f75\u9f6c\U00024ac9\U0002b1ed\U0002b7a9\U0002ce26\U00020d4d\u2fd5"
+        response = await client.post(
+            "api/v1/projects/", json={"name": name, "description": ""}, headers=logged_in_headers
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json()["name"] == name
+
+    @pytest.mark.parametrize("name", ["\u2b50", "!!!", "   "])
+    async def test_names_without_a_letter_or_number_are_rejected(self, client: AsyncClient, logged_in_headers, name):
+        response = await client.post(
+            "api/v1/projects/", json={"name": name, "description": ""}, headers=logged_in_headers
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "at least one letter or number" in response.text
+
+    async def test_importing_a_project_with_an_emoji_name_is_a_422_not_a_500(
+        self, client: AsyncClient, logged_in_headers
+    ):
+        payload = json.dumps({"folder_name": "\U0001f680 rockets", "folder_description": "", "flows": []}).encode()
+
+        response = await client.post(
+            "api/v1/projects/upload/",
+            files={"file": ("rockets.json", payload, "application/json")},
+            headers=logged_in_headers,
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.json()["detail"] == "Project names cannot contain emoji"
+
+
+class TestCjkProjectsRegisterDistinctMcpServers:
+    """The reported bug: a second all-CJK project used to 409 on the shared lf-unnamed name."""
+
+    async def test_two_cjk_projects_and_a_cjk_rename_do_not_conflict(self, client: AsyncClient, logged_in_headers):
+        with patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = True
+            mock_get_settings.return_value = mock_settings
+
+            first = await client.post(
+                "api/v1/projects/",
+                json={"name": "\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848", "description": ""},
+                headers=logged_in_headers,
+            )
+            second = await client.post(
+                "api/v1/projects/",
+                json={"name": "\u7b80\u4f53\u4e2d\u6587\u9879\u76ee", "description": ""},
+                headers=logged_in_headers,
+            )
+            assert first.status_code == status.HTTP_201_CREATED
+            assert second.status_code == status.HTTP_201_CREATED
+
+            renamed = await client.patch(
+                f"api/v1/projects/{second.json()['id']}",
+                json={"name": "\u65e5\u672c\u8a9e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8"},
+                headers=logged_in_headers,
+            )
+            assert renamed.status_code == status.HTTP_200_OK
+
+        servers = await client.get("api/v2/mcp/servers", headers=logged_in_headers)
+        names = {server["name"] for server in servers.json()}
+        assert "lf-\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848" in names
+        assert "lf-\u65e5\u672c\u8a9e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8" in names
+        assert "lf-\u7b80\u4f53\u4e2d\u6587\u9879\u76ee" not in names
+        assert "lf-unnamed" not in names

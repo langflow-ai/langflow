@@ -1262,3 +1262,135 @@ async def test_handle_call_tool_blocks_hitl_flow(monkeypatch):
             await mcp_utils.handle_call_tool("hitl_tools", {"input_value": "hi"}, server=SimpleNamespace())
     finally:
         mcp_utils.current_user_ctx.reset(token)
+
+
+# ---------------------------------------------------------------------------
+# MCP tool name: what the server publishes
+#
+# These pin the names `tools/list` puts on the wire today. They are a safety net
+# for the name-map refactor, not a description of desired behavior: a client
+# stores the published name in its configuration, so changing it would break
+# every already-configured client.
+# ---------------------------------------------------------------------------
+
+_LONG_FLOW_NAME = "Portfolio Website Code Generator"  # 32 chars: a Langflow starter template
+
+
+def _tool_flow(name: str, *, flow_id: str = "flow-1", action_name: str | None = None) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=flow_id,
+        user_id="user-1",
+        name=name,
+        description="",
+        action_name=action_name,
+        action_description=None,
+        data={"nodes": [], "edges": []},
+    )
+
+
+async def _published_names(monkeypatch, flows, *, project_id=None) -> list[str]:
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(FakeSession(flows=flows, user_files=[])))
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id="user-1"))
+    try:
+        tools = await mcp_utils.handle_list_tools(project_id=project_id)
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+    return [tool.name for tool in tools]
+
+
+@pytest.mark.asyncio
+async def test_published_tool_name_is_truncated_to_the_mcp_limit(monkeypatch):
+    names = await _published_names(monkeypatch, [_tool_flow(_LONG_FLOW_NAME)])
+
+    assert names == ["portfolio_website_code_generat"]
+    assert len(names[0]) == 30
+
+
+@pytest.mark.asyncio
+async def test_published_tool_names_are_deduplicated_with_a_suffix(monkeypatch):
+    flows = [_tool_flow(_LONG_FLOW_NAME, flow_id="flow-1"), _tool_flow(_LONG_FLOW_NAME, flow_id="flow-2")]
+
+    names = await _published_names(monkeypatch, flows)
+
+    assert names == ["portfolio_website_code_generat", "portfolio_website_code_gener_1"]
+
+
+@pytest.mark.asyncio
+async def test_project_scoped_names_prefer_the_action_name(monkeypatch):
+    flows = [_tool_flow("Some Flow", action_name="Renamed Action")]
+    project_id = uuid4()
+
+    names = await _published_names(monkeypatch, flows, project_id=project_id)
+
+    assert names == ["renamed_action"]
+
+
+@pytest.mark.asyncio
+async def test_global_names_ignore_the_action_name(monkeypatch):
+    flows = [_tool_flow("Some Flow", action_name="Renamed Action")]
+
+    names = await _published_names(monkeypatch, flows)
+
+    assert names == ["some_flow"]
+
+
+# ---------------------------------------------------------------------------
+# The round trip: list then call
+#
+# The tool name is the whole of the contract between the two halves -- a client
+# stores the string `tools/list` gave it and sends that string back. These cells
+# publish through the real list path and then call every name it published.
+# ---------------------------------------------------------------------------
+
+_ROUND_TRIP_USER = "123e4567-e89b-12d3-a456-426614174000"
+
+
+def _round_trip_flows() -> list[SimpleNamespace]:
+    return [
+        # Longer than the limit, so it is published truncated.
+        _tool_flow(_LONG_FLOW_NAME, flow_id="flow-long"),
+        # Named exactly what the flow above truncates to, so it takes the suffix
+        # and the bare name belongs to a flow that does not regenerate it.
+        _tool_flow(_LONG_FLOW_NAME[:30], flow_id="flow-collides"),
+        # A second copy of the long name, for the plain de-duplication case.
+        _tool_flow(_LONG_FLOW_NAME, flow_id="flow-long-again"),
+        # Short and unique: the case that already worked.
+        _tool_flow("Simple Flow", flow_id="flow-simple"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_every_globally_published_name_resolves_to_its_own_flow(monkeypatch):
+    flows = _round_trip_flows()
+
+    names = await _published_names(monkeypatch, flows)
+
+    assert len(names) == len(flows)
+    for name, flow in zip(names, flows, strict=True):
+        resolved = await mcp_utils.get_flow_snake_case(name, _ROUND_TRIP_USER, FakeSession(flows=flows, user_files=[]))
+        assert resolved is not None, f"the server published {name!r} and then refused it"
+        assert resolved.id == flow.id, f"{name!r} resolved to {resolved.id}, not the flow it was published for"
+
+
+@pytest.mark.asyncio
+async def test_every_project_published_name_resolves_to_its_own_flow(monkeypatch):
+    flows = _round_trip_flows()
+    # The project surface addresses a flow by its action name when it has one.
+    flows[0].action_name = _LONG_FLOW_NAME
+    flows[1].action_name = _LONG_FLOW_NAME[:30]
+    project_id = uuid4()
+
+    names = await _published_names(monkeypatch, flows, project_id=project_id)
+
+    assert len(names) == len(flows)
+    for name, flow in zip(names, flows, strict=True):
+        resolved = await mcp_utils.get_flow_snake_case(
+            name,
+            _ROUND_TRIP_USER,
+            FakeSession(flows=flows, user_files=[]),
+            is_action=True,
+            project_id=project_id,
+            mcp_enabled_only=True,
+        )
+        assert resolved is not None, f"the server published {name!r} and then refused it"
+        assert resolved.id == flow.id, f"{name!r} resolved to {resolved.id}, not the flow it was published for"

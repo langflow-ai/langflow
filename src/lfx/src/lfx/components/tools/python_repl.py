@@ -1,5 +1,3 @@
-import importlib
-
 from langchain_core.tools import StructuredTool, ToolException
 from pydantic import BaseModel, Field
 
@@ -8,7 +6,12 @@ from lfx.field_typing import Tool
 from lfx.inputs.inputs import StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
-from lfx.utils.python_repl_security import ensure_code_execution_enabled, safe_builtins, validate_code_safety
+from lfx.utils.python_repl_security import (
+    ensure_code_execution_enabled,
+    import_allowed_module,
+    safe_builtins,
+    validate_code_safety,
+)
 from lfx.utils.sandbox import is_sandbox_enabled, run_code_in_sandbox, sanitize_code
 
 
@@ -18,7 +21,7 @@ class PythonREPLToolComponent(LCToolComponent):
     name = "PythonREPLTool"
     icon = "Python"
     legacy = True
-    replacement = ["processing.PythonREPLComponent"]
+    replacement = ["utilities.PythonREPLComponent"]
 
     inputs = [
         StrInput(
@@ -81,8 +84,11 @@ class PythonREPLToolComponent(LCToolComponent):
 
         for module in modules:
             try:
-                imported_module = importlib.import_module(module)
-                global_dict[imported_module.__name__] = imported_module
+                # Inject a sandbox-safe proxy, not the real module object: a module
+                # exposes its transitive import graph publicly (json.codecs.sys),
+                # which reaches sys.modules["os"] past the AST gate.
+                module_name, safe_module = import_allowed_module(module)
+                global_dict[module_name] = safe_module
             except ImportError as e:
                 msg = f"Could not import module {module}"
                 raise ImportError(msg) from e

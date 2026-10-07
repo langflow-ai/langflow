@@ -39,6 +39,20 @@ def variable_service(monkeypatch: pytest.MonkeyPatch) -> VariableService:
     return service
 
 
+@pytest.mark.parametrize("json_wire", [False, True])
+async def test_secretstr_variables_resolve_the_underlying_token(monkeypatch, variable_service, json_wire):
+    from pydantic import SecretStr
+
+    value = json.dumps({"access_token": "underlying", "scopes": []}) if json_wire else "underlying"
+
+    async def get_variable(_key):
+        return SecretStr(value)
+
+    monkeypatch.setattr(variable_service, "get_variable", get_variable)
+    resolved = await EnvConnectionResolver().resolve(_request())
+    assert resolved.access_token.get_secret_value() == "underlying"
+
+
 @pytest.mark.asyncio
 async def test_request_scope_beats_environment(
     monkeypatch: pytest.MonkeyPatch,

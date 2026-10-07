@@ -21,6 +21,7 @@ from langflow.api.v1 import (
     endpoints_router,
     extensions_router,
     files_router,
+    flow_conflict_router,
     flow_events_router,
     flow_version_router,
     flows_router,
@@ -41,10 +42,13 @@ from langflow.api.v1 import (
     starter_projects_router,
     store_router,
     traces_router,
+    trigger_ingress_router,
+    triggers_router,
     users_router,
     validate_router,
     variables_router,
 )
+from langflow.api.v1.knowledge_base_storage import router as knowledge_base_storage_router
 from langflow.api.v1.voice_mode import router as voice_mode_router
 from langflow.api.v2 import files_router as files_router_v2
 from langflow.api.v2 import mcp_router as mcp_router_v2
@@ -56,6 +60,7 @@ from langflow.api.v2.workflow_host import LangflowWorkflowHost
 router_v1 = APIRouter(
     prefix="/v1",
 )
+router_v1.include_router(knowledge_base_storage_router)
 
 router_v2 = APIRouter(
     prefix="/v2",
@@ -70,6 +75,7 @@ def include_deployment_router(target_router: APIRouter) -> None:
         target_router.include_router(deployment_router)
 
 
+router_v1.include_router(flow_conflict_router)
 router_v1.include_router(chat_router)
 router_v1.include_router(connections_router)
 router_v1.include_router(integrations_router)
@@ -111,6 +117,10 @@ router_v1.include_router(authz_role_assignments_router)
 router_v1.include_router(authz_teams_router)
 router_v1.include_router(authz_me_router)
 router_v1.include_router(catalog_policy_router)
+router_v1.include_router(triggers_router)
+# Unauthenticated by design: every route on it is provider-signed and answers
+# 404 for anything it cannot verify. See api/v1/trigger_ingress.py.
+router_v1.include_router(trigger_ingress_router)
 
 
 # Mounted unconditionally: this module imports before load_dotenv(env_file), so the

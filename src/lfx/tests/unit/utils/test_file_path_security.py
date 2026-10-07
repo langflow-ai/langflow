@@ -2,7 +2,7 @@
 
 from contextlib import contextmanager
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from lfx.utils.file_path_security import (
@@ -28,11 +28,59 @@ def mock_settings(*, restricted: bool, config_dir: str, database_url: str = ""):
 
 
 def test_disabled_is_noop(tmp_path):
-    """When restriction is off, any path is allowed (single-tenant default)."""
+    """When restriction is off, ordinary paths outside storage are allowed."""
     with mock_settings(restricted=False, config_dir=str(tmp_path)):
         assert is_local_file_access_restricted() is False
         # An obviously-outside path is returned unchanged.
         assert enforce_local_file_access("/etc/passwd") == Path("/etc/passwd")
+
+
+@pytest.mark.parametrize("restricted", [True, False])
+@pytest.mark.parametrize(
+    "path",
+    [
+        r"\\server\share\video.mp4",
+        "//server/share/video.mp4",
+        r"\/server/share/video.mp4",
+        r"/\server/share/video.mp4",
+        r"\\?\UNC\server\share\video.mp4",
+        r"\\.\C:\video.mp4",
+    ],
+)
+def test_unc_and_device_paths_are_denied_before_resolve(tmp_path, restricted, path):
+    with (
+        mock_settings(restricted=restricted, config_dir=str(tmp_path)),
+        patch(
+            "lfx.utils.file_path_security.Path.resolve", side_effect=AssertionError("resolved network path")
+        ) as resolve,
+        pytest.raises(LocalFileAccessError, match="UNC and device"),
+    ):
+        enforce_local_file_access(path, scope_ids=["user-id"])
+
+    resolve.assert_not_called()
+
+
+def test_settings_unavailable_fails_closed():
+    """A settings read failure must not silently disable containment.
+
+    ``get_settings_service()`` returns None when service creation fails, so the read raises.
+    The setting defaults to True, so answering False there would hand back the opposite of the
+    configured default and let any absolute path through without an operator opting out.
+    """
+    with patch("lfx.utils.file_path_security.get_settings_service", return_value=None):
+        assert is_local_file_access_restricted() is True
+        with pytest.raises(LocalFileAccessError, match="storage directory could not be resolved"):
+            enforce_local_file_access("/etc/passwd", scope_ids=["flow-id"])
+
+
+def test_settings_raising_fails_closed(tmp_path):
+    """A settings service that raises on attribute access is denied the same way."""
+    settings = MagicMock()
+    type(settings).settings = PropertyMock(side_effect=RuntimeError("boom"))
+    with patch("lfx.utils.file_path_security.get_settings_service", return_value=settings):
+        assert is_local_file_access_restricted() is True
+        with pytest.raises(LocalFileAccessError):
+            enforce_local_file_access(str(tmp_path / "anything.txt"), scope_ids=["flow-id"])
 
 
 def test_component_scopes_include_trusted_public_source_flow():

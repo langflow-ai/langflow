@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import datetime, timezone
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import ANY, AsyncMock, Mock
 from uuid import uuid4
@@ -16,8 +17,11 @@ from langflow.api.v1 import policy_bundle as policy_api
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.policy_bundle import (
     PolicyBundleApplicationNotSupportedError,
+    PolicyBundleNotInitializedError,
     PolicyBundleRevisionConflictError,
 )
+from lfx.extension.loader._types import LoadedIntegration
+from lfx.integrations.capabilities import IntegrationCapabilityManifest
 from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
 from lfx.services.policy_bundle import PolicyBundleSnapshot
 
@@ -58,6 +62,9 @@ def _client(monkeypatch, *, superuser: bool = True):
     monkeypatch.setattr(policy_api, "_managed_externally", lambda: False)
     monkeypatch.setattr(policy_api, "ensure_policy_bundle_application_supported", lambda: None)
     monkeypatch.setattr(policy_api, "audit_decision", AsyncMock())
+    # Whatever bundles this process happened to load must not decide which
+    # action keys a test may block; tests that need a provider install one.
+    monkeypatch.setattr(policy_api, "loaded_integrations", lambda: ())
     return TestClient(app), admin, read_state, replace_state, list_history, rollback_state, apply_state
 
 
@@ -252,6 +259,141 @@ def test_put_rejects_malformed_integration_action_keys_without_writing(monkeypat
     )
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+_LOADED_PROVIDER = "google"
+_DECLARED_KEYS = ("integrations.google.drive.search", "integrations.google.drive.delete")
+
+
+def _load_provider(monkeypatch, provider_id: str = _LOADED_PROVIDER, keys: tuple[str, ...] = _DECLARED_KEYS) -> None:
+    """Report one loaded integration whose capabilities declare exactly ``keys``."""
+    manifest = IntegrationCapabilityManifest(
+        schema_version=1,
+        provider_id=provider_id,
+        display_name=provider_id.title(),
+        auth_profiles=[
+            {"id": "user", "kind": "oauth2_authorization_code", "identity": "user_delegated", "default_scopes": []}
+        ],
+        capabilities=[
+            {
+                "id": f"{provider_id}.action_{index}",
+                "display_name": f"Action {index}",
+                "auth_profile_id": "user",
+                "identity": "user_delegated",
+                "required_scopes": [],
+                "policy_keys": [key],
+                "substrate": "sdk",
+                "maturity": "ga",
+                "deployment_contexts": ["hosted"],
+                "risk": "read",
+                "component_ref": f"TestAction{index}Component",
+            }
+            for index, key in enumerate(keys)
+        ],
+    )
+    integration = LoadedIntegration(
+        extension_id=f"lfx-{provider_id}-test",
+        extension_version="1.13.0",
+        bundle=f"{provider_id}_test",
+        provider_id=provider_id,
+        manifest_path=Path("capabilities.v1.json"),
+        capability_manifest=manifest,
+    )
+    monkeypatch.setattr(policy_api, "loaded_integrations", lambda: (integration,))
+
+
+def _integration_put(client, blocked_integration_action_keys: list[str], **overrides):
+    return client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 7,
+            "approved_provider_ids": [],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+            "blocked_integration_action_keys": blocked_integration_action_keys,
+            **overrides,
+        },
+    )
+
+
+def test_put_rejects_a_newly_blocked_key_its_loaded_provider_does_not_declare(monkeypatch):
+    """A typo under a loaded provider would never match an action, so it must not persist as dead policy."""
+    client, _admin, read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    _load_provider(monkeypatch)
+    read_state.return_value = replace(
+        _snapshot(revision=7), blocked_integration_action_keys=frozenset({"integrations.google.drive.old_typo"})
+    )
+
+    response = _integration_put(
+        client,
+        ["integrations.google.drive.search", "integrations.google.drive.old_typo", "Integrations.Google.Drive.Serch"],
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    detail = response.json()["detail"]
+    assert "integrations.google.drive.serch" in detail
+    assert "'google'" in detail
+    assert all(key in detail for key in _DECLARED_KEYS)
+    # The persisted entry is grandfathered, so the refusal names only what this write introduced.
+    assert "old_typo" not in detail
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+def test_put_accepts_a_declared_key_of_a_loaded_provider_without_reading_the_active_bundle(monkeypatch):
+    client, _admin, read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    _load_provider(monkeypatch)
+    replace_state.return_value = _snapshot(revision=8)
+
+    response = _integration_put(client, ["Integrations.Google.Drive.Delete"])
+
+    assert response.status_code == status.HTTP_200_OK
+    assert replace_state.await_args.kwargs["blocked_integration_action_keys"] == ["integrations.google.drive.delete"]
+    read_state.assert_not_awaited()
+    apply_state.assert_called_once()
+
+
+def test_put_accepts_a_key_for_a_provider_that_is_not_loaded(monkeypatch):
+    """Operators may block an action before installing the provider's bundle."""
+    client, _admin, read_state, replace_state, _list_history, _rollback_state, _apply_state = _client(monkeypatch)
+    _load_provider(monkeypatch)
+    replace_state.return_value = _snapshot(revision=8)
+
+    response = _integration_put(client, ["integrations.notinstalled.files.delete"])
+
+    assert response.status_code == status.HTTP_200_OK
+    assert replace_state.await_args.kwargs["blocked_integration_action_keys"] == [
+        "integrations.notinstalled.files.delete"
+    ]
+    read_state.assert_not_awaited()
+
+
+def test_put_retains_a_persisted_undeclared_key_on_an_unrelated_save(monkeypatch):
+    """A catalog or model-policy save carries every list through; an old typo must not block it."""
+    client, _admin, read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    _load_provider(monkeypatch)
+    persisted = "integrations.google.drive.old_typo"
+    read_state.return_value = replace(_snapshot(revision=7), blocked_integration_action_keys=frozenset({persisted}))
+    replace_state.return_value = _snapshot(revision=8)
+
+    response = _integration_put(client, [persisted], approved_provider_ids=["openai"])
+
+    assert response.status_code == status.HTTP_200_OK
+    assert replace_state.await_args.kwargs["blocked_integration_action_keys"] == [persisted]
+    assert replace_state.await_args.kwargs["approved_provider_ids"] == ["openai"]
+    apply_state.assert_called_once()
+
+
+def test_put_maps_an_uninitialized_bundle_during_key_validation_to_unavailable(monkeypatch):
+    client, _admin, read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    _load_provider(monkeypatch)
+    read_state.side_effect = PolicyBundleNotInitializedError("Active policy bundle is missing")
+
+    response = _integration_put(client, ["integrations.google.drive.serch"])
+
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
     replace_state.assert_not_awaited()
     apply_state.assert_not_called()
 

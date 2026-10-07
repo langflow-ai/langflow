@@ -14,6 +14,7 @@ from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.session import NoopSession
 from lfx.utils.env_var_security import safe_getenv
+from lfx.utils.flow_validation import is_protected_tweak_field
 
 TABLE_LOAD_FROM_DB_FIELDS = "__load_from_db_fields"
 
@@ -75,6 +76,7 @@ async def get_instance_results(
     fallback_to_env_vars: bool = False,
     base_type: str = "component",
 ):
+    """Build a component within trusted message and attachment scopes, then restore them."""
     custom_params = await update_params_with_load_from_db_fields(
         custom_component,
         custom_params,
@@ -82,18 +84,28 @@ async def get_instance_results(
         fallback_to_env_vars=fallback_to_env_vars,
     )
     from lfx.memory.flow_context import (
+        coerce_flow_id,
         reset_current_flow_id,
+        reset_current_message_executor_id,
+        reset_current_message_owner_id,
         reset_messages_persist,
+        resolve_message_owner_id,
         set_current_flow_id,
+        set_current_message_executor_id,
+        set_current_message_owner_id,
         set_messages_persist,
         should_persist_messages,
     )
+    from lfx.utils.file_path_security import component_file_access_scopes, file_access_scope
 
     graph = getattr(vertex, "graph", None)
     flow_id = getattr(graph, "flow_id", None)
     # Always bind — including None — so a graph without flow_id shadows any outer
-    # flow scope instead of inheriting it (nested runs must stay legacy-unscoped).
+    # flow scope instead of inheriting it (nested runs without a flow fail closed).
     flow_scope_token = set_current_flow_id(flow_id)
+    owner_id = resolve_message_owner_id(graph)
+    owner_scope_token = set_current_message_owner_id(owner_id)
+    executor_scope_token = set_current_message_executor_id(coerce_flow_id(getattr(graph, "user_id", None)))
     # Bind the run's message-persistence flag here too (defaults True) so
     # astore_message can skip the DB write for an anonymous serving run. Reading it
     # off the graph and binding in the component's own task sidesteps any
@@ -102,9 +114,14 @@ async def get_instance_results(
     # nested graphs built with Graph.from_payload (Run Flow, Sub Flow, Flow as
     # Tool, A2A) default persist_messages=True and would otherwise overwrite the
     # outer run's no-persist decision.
-    persist_token = set_messages_persist(should_persist_messages() and bool(getattr(graph, "persist_messages", True)))
+    persist_token = set_messages_persist(
+        should_persist_messages()
+        and bool(getattr(graph, "persist_messages", True))
+        and coerce_flow_id(flow_id) is not None
+        and owner_id is not None
+    )
     try:
-        with warnings.catch_warnings():
+        with file_access_scope(component_file_access_scopes(custom_component)), warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
             if base_type == "custom_components":
                 return await build_custom_component(params=custom_params, custom_component=custom_component)
@@ -114,6 +131,8 @@ async def get_instance_results(
             raise ValueError(msg)
     finally:
         reset_current_flow_id(flow_scope_token)
+        reset_current_message_owner_id(owner_scope_token)
+        reset_current_message_executor_id(executor_scope_token)
         reset_messages_persist(persist_token)
 
 
@@ -150,7 +169,7 @@ def convert_kwargs(params):
     return params
 
 
-def load_from_env_vars(params, load_from_db_fields, context=None):
+def load_from_env_vars(params, load_from_db_fields, context=None, *, component_type: str | None = None):
     no_env_fallback = bool(context and context.get("no_env_fallback"))
     for field in load_from_db_fields:
         if field not in params or not params[field]:
@@ -159,7 +178,7 @@ def load_from_env_vars(params, load_from_db_fields, context=None):
         key = None
 
         # Check request_variables in context first
-        if context and "request_variables" in context:
+        if context and "request_variables" in context and not is_protected_tweak_field(component_type, field):
             request_variables = context["request_variables"]
             if variable_name in request_variables:
                 key = request_variables[variable_name]
@@ -324,7 +343,9 @@ async def update_params_with_load_from_db_fields(
             context = None
             if hasattr(custom_component, "graph") and hasattr(custom_component.graph, "context"):
                 context = custom_component.graph.context
-            return load_from_env_vars(params, load_from_db_fields, context=context)
+            return load_from_env_vars(
+                params, load_from_db_fields, context=context, component_type=type(custom_component).__name__
+            )
         for field in load_from_db_fields:
             # Check if this is a table field (using our naming convention)
             if field.startswith("table:"):

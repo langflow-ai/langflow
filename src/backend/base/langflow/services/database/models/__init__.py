@@ -32,15 +32,26 @@ from .flow_version import FlowVersion
 from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
 from .ingestion_run import IngestionRun, IngestionRunStatus
-from .jobs import ExecutionSignal, Job, JobCheckpoint, JobEvent, SignalType
+from .jobs import ExecutionSignal, Job, JobCheckpoint, JobEvent, JobMetricTotals, SignalType
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
+from .knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from .mcp_server import MCPServer
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
 from .model_provider_policy import ModelProviderPolicy
 from .policy_bundle import PolicyBundleActive, PolicyBundleRevision
+from .project_replacement_operation import ProjectReplacementOperation
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
+from .trigger import (
+    Trigger,
+    TriggerCleanup,
+    TriggerEvent,
+    TriggerLease,
+    TriggerListenerLease,
+    TriggerSourceVersion,
+    TriggerSubscription,
+)
 from .user import User
 from .variable import Variable
 
@@ -77,8 +88,10 @@ __all__ = [
     "Job",
     "JobCheckpoint",
     "JobEvent",
+    "JobMetricTotals",
     "KnowledgeBaseRecord",
     "KnowledgeBaseStatus",
+    "KnowledgeBaseStorageMigration",
     "MCPServer",
     "MemoryBase",
     "MemoryBaseSession",
@@ -88,6 +101,7 @@ __all__ = [
     "ModelProviderPolicy",
     "PolicyBundleActive",
     "PolicyBundleRevision",
+    "ProjectReplacementOperation",
     "SSOConfig",
     "SSOConfigCreate",
     "SSOConfigRead",
@@ -99,6 +113,13 @@ __all__ = [
     "SpanTable",
     "TraceTable",
     "TransactionTable",
+    "Trigger",
+    "TriggerCleanup",
+    "TriggerEvent",
+    "TriggerLease",
+    "TriggerListenerLease",
+    "TriggerSourceVersion",
+    "TriggerSubscription",
     "User",
     "Variable",
     "decrypt_sso_client_secret",

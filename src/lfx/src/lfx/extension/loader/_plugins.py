@@ -387,7 +387,9 @@ def filter_plugin_entry_points(
     output list.  Entry points whose owning distribution cannot be
     determined are kept (we err on the side of compatibility).
     """
-    skip_set = frozenset(skip) if skip is not None else manifest_owning_distributions()
+    # Discovery walks installed package files. Defer it until an entry point
+    # has an owner to match; most app starts have no legacy plugins at all.
+    skip_set = frozenset(skip) if skip is not None else None
 
     kept: list[importlib_metadata.EntryPoint] = []
     skipped: list[importlib_metadata.EntryPoint] = []
@@ -400,6 +402,8 @@ def filter_plugin_entry_points(
         if canonical is None:
             kept.append(ep)
             continue
+        if skip_set is None:
+            skip_set = manifest_owning_distributions()
         if canonical in skip_set:
             skipped.append(ep)
         else:
@@ -484,7 +488,9 @@ def filter_component_entry_points(
     Returns:
         ``(kept, skipped)``. Stable ordering preserved within each list.
     """
-    skip_set = frozenset(skip) if skip is not None else manifest_owning_distributions()
+    # Keep discovery lazy here too: route loading calls this on every app start,
+    # even when there are no legacy entry points to filter.
+    skip_set = frozenset(skip) if skip is not None else None
     is_component_fn = is_component if is_component is not None else _entry_point_loads_to_component
 
     kept: list[importlib_metadata.EntryPoint] = []
@@ -498,6 +504,8 @@ def filter_component_entry_points(
         if canonical is None:
             kept.append(ep)
             continue
+        if skip_set is None:
+            skip_set = manifest_owning_distributions()
         if canonical in skip_set and is_component_fn(ep):
             skipped.append(ep)
         else:

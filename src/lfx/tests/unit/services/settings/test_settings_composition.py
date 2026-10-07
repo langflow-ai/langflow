@@ -24,6 +24,8 @@ from lfx.services.settings.base import (
     save_settings_to_yaml,
 )
 from lfx.services.settings.constants import AGENTIC_VARIABLES
+from lfx.services.settings.groups.runtime import RuntimeSettings
+from pydantic import ValidationError
 
 
 def test_voice_mode_requires_openai_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -52,6 +54,8 @@ EXPECTED_FIELDS = {
     # PathSettings
     "config_dir",
     "knowledge_bases_dir",
+    "knowledge_base_auto_migrate",
+    "knowledge_base_storage_pool_size",
     # ServerSettings
     "deployment_profile",
     "host",
@@ -125,6 +129,7 @@ EXPECTED_FIELDS = {
     # ObservabilitySettings
     "prometheus_enabled",
     "prometheus_port",
+    "background_metrics_interval",
     "max_transactions_to_keep",
     "max_vertex_builds_to_keep",
     "max_vertex_builds_per_vertex",
@@ -138,6 +143,8 @@ EXPECTED_FIELDS = {
     "ssrf_allowed_hosts",
     "connector_ssrf_validation_enabled",
     "connector_ssrf_allow_loopback",
+    "provider_credential_allowed_hosts",
+    "kb_allowed_hosts",
     "disable_track_apikey_usage",
     "remove_api_keys",
     "allow_custom_components",
@@ -178,6 +185,8 @@ EXPECTED_FIELDS = {
     "fs_flows_polling_interval",
     "health_check_max_retries",
     "max_file_size_upload",
+    "url_component_max_response_bytes",
+    "url_component_max_total_bytes",
     "celery_enabled",
     # VariablesSettings
     "variable_store",
@@ -205,6 +214,8 @@ EXPECTED_FIELDS = {
     "rate_limit_storage_uri",
     "rate_limit_trust_proxy",
     "public_flow_rate_limit_per_minute",
+    "connection_metadata_rate_limit_per_minute",
+    "connection_write_rate_limit_per_minute",
     "custom_component_admin_only",
     "allow_components_paths_override",
     # RuntimeSettings
@@ -248,12 +259,51 @@ EXPECTED_FIELDS = {
     "background_lease_ttl_s",
     "background_heartbeat_interval_s",
     "background_watchdog_interval_s",
+    "background_retention_days",
     "test_redis_url",
+    # Triggers (TRG-2)
+    "trigger_dispatcher_enabled",
+    "trigger_dispatcher_poll_interval_s",
+    "trigger_lease_ttl_s",
+    "trigger_max_events_per_poll",
+    "trigger_retry_backoff_base_s",
+    "trigger_retry_backoff_cap_s",
+    "trigger_replay_window_days",
+    "trigger_event_retention_days",
+    "trigger_purge_interval_s",
+    # Triggers (TRG-3): the listener process
+    "listeners_mode",
+    "listeners_health_host",
+    "listeners_health_port",
+    "listener_lease_ttl_s",
+    "listener_heartbeat_interval_s",
+    "listener_reconcile_interval_s",
+    "listener_poll_interval_s",
+    "listener_backoff_base_s",
+    "listener_backoff_cap_s",
+    "listener_failure_threshold",
+    # Triggers (TRG-4): provider push ingress and subscription renewal.
+    "trigger_ingress_enabled",
+    "trigger_ingress_max_body_bytes",
+    "trigger_ingress_rate_limit_per_minute",
+    "trigger_ingress_unknown_rate_limit_per_minute",
+    "trigger_ingress_signature_tolerance_s",
+    "trigger_ingress_slack_app_rate_limit_per_minute",
+    "trigger_ingress_slack_team_rate_limit_per_hour",
+    "trigger_slack_socket_max_connections",
+    "trigger_subscription_renew_fraction",
+    "trigger_subscription_renew_lead_cap_s",
+    "trigger_subscription_renew_interval_s",
+    "trigger_subscription_max_per_poll",
+    "trigger_subscription_retry_backoff_base_s",
+    "trigger_subscription_retry_backoff_cap_s",
+    "trigger_subscription_failure_threshold",
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",
     "block_code_interpreter_components",
     "restrict_local_file_access",
+    "database_tls_files_dir",
     "mcp_server_docker_hardening",
     "mcp_server_allowed_packages",
     "mcp_server_interpreter_hardening",
@@ -301,6 +351,7 @@ def test_critical_defaults_unchanged():
     assert settings.host == "localhost"
     assert settings.port == 7860
     assert settings.workers == 1
+    assert settings.knowledge_base_auto_migrate is True
     assert settings.cache_type == "async"
     assert settings.storage_type == "local"
     assert settings.event_delivery == "streaming"
@@ -312,7 +363,8 @@ def test_critical_defaults_unchanged():
     assert settings.allow_custom_components is True
     assert settings.block_code_interpreter_components is False
     assert settings.substitute_outdated_component_code is True
-    assert settings.restrict_local_file_access is False
+    assert settings.restrict_local_file_access is True
+    assert settings.database_tls_files_dir is None
     assert settings.mcp_server_docker_hardening is False
     assert settings.mcp_server_interpreter_hardening is False
     assert settings.mcp_server_allowed_packages is None
@@ -330,6 +382,12 @@ def test_critical_defaults_unchanged():
     assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
     assert settings.dangerously_allow_multi_worker_without_shared_queue is False
+    assert settings.knowledge_base_storage_pool_size == 20
+
+
+def test_database_tls_files_dir_reads_operator_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("LANGFLOW_DATABASE_TLS_FILES_DIR", str(tmp_path))
+    assert Settings(_env_file=None).database_tls_files_dir == tmp_path
 
 
 def test_dict_defaults_unchanged():
@@ -363,6 +421,32 @@ def test_multi_worker_forces_direct_event_delivery(monkeypatch):
     settings = Settings()
     assert settings.workers == 4
     assert settings.event_delivery == "direct"
+
+
+@pytest.mark.parametrize(("retention", "replay"), [(1, 7), (6, 7), (30, 31)])
+def test_trigger_retention_cannot_shorten_the_replay_window(retention, replay):
+    with pytest.raises(ValidationError, match=r"trigger_event_retention_days.*trigger_replay_window_days"):
+        RuntimeSettings(trigger_event_retention_days=retention, trigger_replay_window_days=replay)
+
+
+@pytest.mark.parametrize(("retention", "replay"), [(1, 1), (7, 7), (30, 7)])
+def test_trigger_retention_may_equal_or_exceed_the_replay_window(retention, replay):
+    settings = RuntimeSettings(trigger_event_retention_days=retention, trigger_replay_window_days=replay)
+    assert (settings.trigger_event_retention_days, settings.trigger_replay_window_days) == (retention, replay)
+
+
+def test_trigger_retention_validates_environment_configuration(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_TRIGGER_EVENT_RETENTION_DAYS", "1")
+    monkeypatch.setenv("LANGFLOW_TRIGGER_REPLAY_WINDOW_DAYS", "7")
+    with pytest.raises(ValidationError, match=r"trigger_event_retention_days.*trigger_replay_window_days"):
+        Settings()
+
+
+@pytest.mark.parametrize("field", ["trigger_event_retention_days", "trigger_replay_window_days"])
+@pytest.mark.parametrize("value", [0, -1])
+def test_trigger_windows_must_remain_positive(field, value):
+    with pytest.raises(ValidationError, match="greater than 0"):
+        RuntimeSettings(**{field: value})
 
 
 def test_single_worker_keeps_explicit_event_delivery(monkeypatch):
@@ -462,6 +546,7 @@ def test_yaml_round_trip():
         ("LANGFLOW_HOST", "0.0.0.0", "host", "0.0.0.0"),
         ("LANGFLOW_PORT", "8080", "port", 8080),
         ("LANGFLOW_WORKERS", "2", "workers", 2),
+        ("LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE", "false", "knowledge_base_auto_migrate", False),
         ("LANGFLOW_LOG_LEVEL", "info", "log_level", "info"),
         ("LANGFLOW_CACHE_TYPE", "memory", "cache_type", "memory"),
         ("LANGFLOW_STORAGE_TYPE", "s3", "storage_type", "s3"),
@@ -558,3 +643,23 @@ def test_serving_end_user_env_vars_bind_to_fields(monkeypatch):
     assert settings.serving_end_user_header == "X-End-User-Id"
     assert settings.serving_trust_proxy_headers is True
     assert settings.serving_end_user_required is True
+
+
+def test_background_metrics_interval_default(monkeypatch):
+    """A default collector tick is fifteen seconds."""
+    monkeypatch.delenv("LANGFLOW_BACKGROUND_METRICS_INTERVAL", raising=False)
+    assert Settings().background_metrics_interval == 15
+
+
+def test_background_metrics_interval_from_environment(monkeypatch):
+    """The documented environment variable controls the positive tick interval."""
+    monkeypatch.setenv("LANGFLOW_BACKGROUND_METRICS_INTERVAL", "27")
+    assert Settings().background_metrics_interval == 27
+
+
+@pytest.mark.parametrize("value", ["0", "-1"])
+def test_background_metrics_interval_rejects_nonpositive_environment(monkeypatch, value):
+    """Invalid intervals cannot turn the collector into a database busy loop."""
+    monkeypatch.setenv("LANGFLOW_BACKGROUND_METRICS_INTERVAL", value)
+    with pytest.raises(ValidationError, match="background_metrics_interval"):
+        Settings()

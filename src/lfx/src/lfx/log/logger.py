@@ -1042,9 +1042,8 @@ def configure(
     # Fingerprint of every caller-supplied input that changes the resulting
     # setup. Stored on the wrapper_class (below) so structlog.reset_defaults()
     # -- used between tests -- invalidates it automatically and the next call
-    # rebuilds from scratch. Env-only toggles (e.g. LANGFLOW_PRETTY_LOGS) are not
-    # part of the fingerprint: the four env-backed args above are already folded
-    # into their resolved values, and the remainder are process-stable.
+    # rebuilds from scratch. The pretty-output toggle also changes the renderer
+    # and stdlib routing, so changes to it must invalidate the cached setup.
     config_fingerprint = (
         numeric_level,
         log_env,
@@ -1054,6 +1053,7 @@ def configure(
         log_rotation,
         cache if cache is not None else True,
         output_file,
+        os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() == "true",
     )
     cfg = structlog.get_config() if structlog.is_configured() else {}
     if getattr(cfg.get("wrapper_class"), "config_fingerprint", None) == config_fingerprint:
@@ -1107,8 +1107,8 @@ def configure(
     # dropping the exception or rendering its repr. ConsoleRenderer formats
     # exc_info itself, so we don't add a tracebacks processor on that path.
     #
-    # `show_locals` is OFF by default in JSON output because frame locals can
-    # leak secrets (API keys, env, request bodies). Opt in with
+    # `show_locals` is OFF by default in JSON and pretty console output because frame
+    # locals can leak secrets (API keys, env, request bodies). Opt in with
     # LANGFLOW_LOG_TRACE_LOCALS=true when you need it for local debugging.
     show_locals = os.getenv("LANGFLOW_LOG_TRACE_LOCALS", "false").lower() == "true"
     json_traceback = structlog.processors.ExceptionRenderer(
@@ -1178,7 +1178,14 @@ def configure(
                 processors.append(structlog.processors.format_exc_info)
                 processors.append(structlog.processors.KeyValueRenderer())
             else:
-                processors.append(structlog.dev.ConsoleRenderer(colors=True))
+                # structlog's default rich formatter renders frame locals, so pass the
+                # same opt-in gate as the JSON tracebacks above.
+                processors.append(
+                    structlog.dev.ConsoleRenderer(
+                        colors=True,
+                        exception_formatter=structlog.dev.RichTracebackFormatter(show_locals=show_locals),
+                    )
+                )
         else:
             _append_json_tail()
 
@@ -1253,13 +1260,10 @@ def configure(
     )
     if json_mode and not log_file:
         _install_stdlib_intercept(numeric_level)
-    elif log_file:
-        # From here structlog resolves back into the stdlib tree, so a root
-        # intercept left over from an earlier stdout-mode configure() would feed
-        # every record back into the logger it just came from. The guard in
-        # ``InterceptHandler.emit`` keeps that from looping, but the record would
-        # still be written twice -- once by the intercept's structlog call and
-        # once by the original record reaching the file handler.
+    else:
+        # Pretty output must remove an intercept left by JSON stdout mode.
+        # File output resolves back into the stdlib tree, where that intercept
+        # would duplicate records by feeding them back into the same logger.
         _remove_stdlib_intercept()
 
     # Apply per-logger level overrides last so user env beats library defaults.

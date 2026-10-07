@@ -63,6 +63,24 @@ class TestVllmMultivectorSSRF:
         assert result == [[0.1, 0.2]]
         assert mock_post.call_args.kwargs["headers"]["Authorization"] == f"Bearer {_FAKE_VLLM_API_KEY}"
 
+    @pytest.fixture
+    def _plaintext_endpoint_allowed(self, monkeypatch):
+        """Exercise the pinning layer with a plaintext endpoint.
+
+        Credential-bearing provider endpoints must otherwise use https, but these
+        two tests are about *where the connection lands*, not the scheme: they use
+        a public-looking host over http so the mocked TCP backend can return a
+        plain HTTP response without a TLS handshake. A real self-hosted vLLM is on
+        a private address, which already needs an ssrf_allowed_hosts entry to pass
+        the host check, and that entry permits http - so nothing here is asking for
+        a relaxation that a deployment would need.
+        """
+        monkeypatch.setattr(
+            "lfx.base.models.provider_ssrf._require_https_for_credentialed_endpoint",
+            lambda _url: None,
+        )
+
+    @pytest.mark.usefixtures("_plaintext_endpoint_allowed")
     def test_should_pin_the_request_ip_after_revalidation(self):
         call_count = 0
         connected_to_ip = None
@@ -102,6 +120,7 @@ class TestVllmMultivectorSSRF:
         assert call_count == 2
         assert connected_to_ip == "93.184.216.34"
 
+    @pytest.mark.usefixtures("_plaintext_endpoint_allowed")
     def test_should_block_a_rebind_before_sending_the_credential(self):
         call_count = 0
 

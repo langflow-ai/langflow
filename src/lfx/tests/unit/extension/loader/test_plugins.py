@@ -20,6 +20,7 @@ from __future__ import annotations
 from importlib import metadata as importlib_metadata
 from pathlib import Path
 
+import pytest
 from lfx.extension import (
     filter_component_entry_points,
     filter_plugin_entry_points,
@@ -389,3 +390,52 @@ def test_component_filter_handles_unloadable_entry_point(tmp_path: Path) -> None
     )
     assert [ep.name for ep in kept] == ["Boom"]
     assert skipped == []
+
+
+@pytest.mark.parametrize("filter_entries", [filter_plugin_entry_points, filter_component_entry_points])
+@pytest.mark.parametrize("as_iterator", [False, True])
+def test_empty_entry_points_do_not_scan_installed_packages(monkeypatch, filter_entries, as_iterator) -> None:
+    """App startup without legacy plugins must not inspect every installed file."""
+
+    def unexpected_discovery():
+        pytest.fail("Empty entry points should not trigger installed-package discovery")
+
+    monkeypatch.setattr(importlib_metadata, "distributions", unexpected_discovery)
+    entries = iter(()) if as_iterator else []
+    assert filter_entries(entries) == ([], [])
+
+
+@pytest.mark.parametrize("filter_entries", [filter_plugin_entry_points, filter_component_entry_points])
+def test_unowned_entry_points_do_not_scan_installed_packages(monkeypatch, filter_entries) -> None:
+    """An entry point without distribution metadata cannot match a manifest owner."""
+
+    def unexpected_discovery():
+        pytest.fail("Unowned entry points should not trigger installed-package discovery")
+
+    monkeypatch.setattr(importlib_metadata, "distributions", unexpected_discovery)
+    entry = FakeEntryPoint("unowned", None)
+    assert filter_entries(iter([entry])) == ([entry], [])
+
+
+@pytest.mark.parametrize("filter_entries", [filter_plugin_entry_points, filter_component_entry_points])
+def test_lazy_discovery_preserves_manifest_precedence(tmp_path, monkeypatch, filter_entries) -> None:
+    """Discover once per filter call, including when the first entry has no owner."""
+    manifest_dist = make_installed_extension(tmp_path, "lfx-pilot")
+    unowned = FakeEntryPoint("unowned", None)
+    component = FakeEntryPoint("component", manifest_dist, loaded_value=_LegacyPluginComponent)
+    route = FakeEntryPoint("route", manifest_dist, loaded_value=_route_register)
+    discoveries = []
+
+    def installed_distributions():
+        discoveries.append(True)
+        return iter([manifest_dist])
+
+    monkeypatch.setattr(importlib_metadata, "distributions", installed_distributions)
+    kept, skipped = filter_entries(iter([unowned, component, route]))
+    if filter_entries is filter_component_entry_points:
+        assert kept == [unowned, route]
+        assert skipped == [component]
+    else:
+        assert kept == [unowned]
+        assert skipped == [component, route]
+    assert len(discoveries) == 1

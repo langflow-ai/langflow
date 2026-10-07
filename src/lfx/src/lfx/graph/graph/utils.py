@@ -128,18 +128,18 @@ def update_template(template, g_nodes) -> None:
         field, id_ = proxy_dict["field"], proxy_dict["id"]
         node_index = next((i for i, n in enumerate(g_nodes) if n["id"] == id_), -1)
         if node_index != -1:
-            display_name = None
-            show = g_nodes[node_index]["data"]["node"]["template"][field]["show"]
-            advanced = g_nodes[node_index]["data"]["node"]["template"][field]["advanced"]
-            if "display_name" in g_nodes[node_index]["data"]["node"]["template"][field]:
-                display_name = g_nodes[node_index]["data"]["node"]["template"][field]["display_name"]
-            else:
-                display_name = g_nodes[node_index]["data"]["node"]["template"][field]["name"]
+            child_template = g_nodes[node_index]["data"]["node"]["template"]
+            child_field = child_template[field]
+            show = child_field["show"]
+            advanced = child_field["advanced"]
+            display_name = child_field["display_name"] if "display_name" in child_field else child_field["name"]
 
-            g_nodes[node_index]["data"]["node"]["template"][field] = value
-            g_nodes[node_index]["data"]["node"]["template"][field]["show"] = show
-            g_nodes[node_index]["data"]["node"]["template"][field]["advanced"] = advanced
-            g_nodes[node_index]["data"]["node"]["template"][field]["display_name"] = display_name
+            # The group's UI field can use a different type, but it must not
+            # downgrade an executable child field before tweak validation.
+            child_template[field] = {**value, "type": "code"} if child_field.get("type") == "code" else value
+            child_template[field]["show"] = show
+            child_template[field]["advanced"] = advanced
+            child_template[field]["display_name"] = display_name
 
 
 def update_target_handle(new_edge, g_nodes):

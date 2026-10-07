@@ -91,6 +91,7 @@ class TestRoundTripsWithRichBody:
             "session_id": "session-123",
             "mode": "stream",
             "stream_protocol": "agui",
+            "expose_graph_state": False,
             "data": {"nodes": [], "edges": []},
             "files": ["/tmp/a.txt", "/tmp/b.png"],
             "start_component_id": "ChatInput-abc",

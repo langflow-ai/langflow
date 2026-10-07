@@ -3,7 +3,7 @@ import atexit
 import hashlib
 import hmac
 import os
-import pickle
+import secrets
 import tempfile
 import threading
 import time
@@ -14,6 +14,7 @@ from typing import Generic, Union
 import dill
 from lfx.log.logger import logger
 from lfx.services.cache.utils import CACHE_MISS
+from lfx.services.settings.utils import read_secret_from_file, set_secure_permissions
 from typing_extensions import override
 
 from langflow.services.cache.base import (
@@ -26,6 +27,115 @@ from langflow.services.cache.base import (
 
 _redis_cache_experimental_warning_lock = threading.Lock()
 _redis_cache_experimental_warning_emitted = False
+
+# File (inside the Langflow config dir) holding the dedicated secret used to
+# sign Redis cache payloads. Kept separate from the auth ``secret_key`` file so
+# that disclosure of SECRET_KEY alone does not let an attacker forge cache
+# integrity tags (H1-3982189).
+_CACHE_SIGNING_SECRET_FILENAME = "cache_secret_key"  # noqa: S105 - file name, not a secret  # pragma: allowlist secret
+
+
+# How long a process that lost the first-use race waits for the winner to finish
+# writing the secret file. The winner creates the file and writes immediately, so
+# this only has to cover a single small write.
+_CACHE_SECRET_CLAIM_ATTEMPTS = 20
+_CACHE_SECRET_CLAIM_DELAY_S = 0.05
+
+
+def _read_existing_cache_signing_secret(secret_path: Path) -> str | None:
+    """Return the persisted secret, or None if it is absent or not yet written."""
+    try:
+        if not secret_path.exists():
+            return None
+        return read_secret_from_file(secret_path).strip() or None
+    except OSError:
+        return None
+
+
+def _claim_cache_signing_secret(secret_path: Path) -> str | None:
+    """Create the secret file exclusively, or read whichever process won.
+
+    ``exists()`` then ``write`` is not atomic: two workers starting together both
+    see the file missing, both generate a secret, and both keep their own in
+    memory even though only one write survives. Entries signed by one worker
+    then fail verification in the other, which shows up as a cache that never
+    hits rather than as an error.
+
+    ``O_CREAT | O_EXCL`` makes exactly one process the writer. A loser may still
+    observe the file after creation but before the write lands, so it retries
+    for a bounded time rather than treating an empty file as "no secret".
+    """
+    for _ in range(_CACHE_SECRET_CLAIM_ATTEMPTS):
+        if (existing := _read_existing_cache_signing_secret(secret_path)) is not None:
+            return existing
+        candidate = secrets.token_urlsafe(32)
+        try:
+            descriptor = os.open(secret_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            # Another process created it between the read above and here; it is
+            # writing now, so loop and read what it wrote.
+            time.sleep(_CACHE_SECRET_CLAIM_DELAY_S)
+            continue
+        except OSError:
+            logger.exception("RedisCache: could not persist the cache signing secret, using an ephemeral one")
+            return None
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                handle.write(candidate)
+        except OSError:
+            logger.exception("RedisCache: could not persist the cache signing secret, using an ephemeral one")
+            Path(secret_path).unlink(missing_ok=True)
+            return None
+        try:
+            set_secure_permissions(secret_path)
+        except Exception:  # noqa: BLE001 - permissions are best-effort, the secret is already written
+            logger.exception("RedisCache: failed to set secure permissions on the cache signing secret")
+        return candidate
+    # Every attempt saw a file that never became readable.
+    return _read_existing_cache_signing_secret(secret_path)
+
+
+def _load_or_create_cache_signing_secret() -> str:
+    """Return the dedicated secret used to sign external cache payloads.
+
+    Resolution order:
+
+    1. ``LANGFLOW_CACHE_SIGNING_KEY``. This is the only source that works across
+       *replicas*: separate pods share Redis but not a config directory, so a
+       file-derived key differs per replica and entries written by one are
+       unverifiable by the others. Operators running more than one instance
+       against one cache must set it.
+    2. A key persisted in ``CONFIG_DIR``, claimed atomically on first use so all
+       workers sharing that directory agree on it.
+    3. An ephemeral per-process key, when neither is available. Existing entries
+       then become misses rather than errors.
+
+    It is kept separate from the auth ``secret_key`` so that disclosure of
+    SECRET_KEY alone does not let an attacker forge cache integrity tags.
+    """
+    from langflow.services.deps import get_settings_service
+
+    auth_settings = get_settings_service().auth_settings
+    configured = getattr(auth_settings, "CACHE_SIGNING_KEY", None)
+    if configured is not None:
+        configured_value = configured.get_secret_value() if hasattr(configured, "get_secret_value") else configured
+        # isinstance, not truthiness: a settings stub can hand back a non-string
+        # sentinel, and treating that as the key would silently sign with it.
+        if isinstance(configured_value, str) and configured_value.strip():
+            return configured_value.strip()
+
+    config_dir = auth_settings.CONFIG_DIR
+    if not config_dir:
+        logger.warning(
+            "RedisCache: no CONFIG_DIR and no LANGFLOW_CACHE_SIGNING_KEY; using a per-process cache signing "
+            "key. Cached entries will not be shared between processes."
+        )
+        return secrets.token_urlsafe(32)
+
+    secret_path = Path(config_dir) / _CACHE_SIGNING_SECRET_FILENAME
+    if (secret := _claim_cache_signing_secret(secret_path)) is not None:
+        return secret
+    return secrets.token_urlsafe(32)
 
 
 def _warn_redis_experimental_once() -> None:
@@ -110,8 +220,10 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
             if self.expiration_time is None or time.time() - item["time"] < self.expiration_time:
                 # Move the key to the end to make it recently used
                 self._cache.move_to_end(key)
-                # Check if the value is pickled
-                return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
+                # Return the value exactly as stored. Bytes must never be fed to
+                # pickle.loads here: the cache has no integrity protection, so
+                # deserializing them would be unauthenticated CWE-502 (H1-3982189).
+                return item["value"]
             self.delete(key)
         return CACHE_MISS
 
@@ -132,7 +244,6 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
             elif self.max_size and len(self._cache) >= self.max_size:
                 # Remove least recently used item
                 self._cache.popitem(last=False)
-            # pickle locally to mimic Redis
 
             self._cache[key] = {"value": value, "time": time.time()}
 
@@ -264,15 +375,16 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         return f"{self.KEY_PREFIX}{key}"
 
     def _get_signing_key(self) -> bytes:
-        """Derive the HMAC key for cache payload integrity from the server secret.
+        """Derive the HMAC key for cache payload integrity from a dedicated secret.
 
-        Bound to the same ``SECRET_KEY`` used elsewhere, so no extra config is
-        required. Cached after first use (the secret does not change at runtime).
+        The secret is generated and stored separately from the auth
+        ``SECRET_KEY`` (see ``_load_or_create_cache_signing_secret``), so
+        disclosure of ``SECRET_KEY`` alone does not allow forging cache
+        integrity tags (H1-3982189). Cached after first use (the secret does
+        not change at runtime).
         """
         if self._signing_key is None:
-            from langflow.services.deps import get_settings_service
-
-            secret = get_settings_service().auth_settings.SECRET_KEY.get_secret_value()
+            secret = _load_or_create_cache_signing_secret()
             self._signing_key = hashlib.sha256(b"langflow-redis-cache-hmac:" + secret.encode()).digest()
         return self._signing_key
 
@@ -434,7 +546,10 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         if item:
             if time.time() - item["time"] < self.expiration_time:
                 self.cache.move_to_end(key)
-                return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
+                # Return the value exactly as stored. Bytes must never be fed to
+                # pickle.loads here: the cache has no integrity protection, so
+                # deserializing them would be unauthenticated CWE-502 (H1-3982189).
+                return item["value"]
             await logger.ainfo(f"Cache item for key '{key}' has expired and will be deleted.")
             await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS

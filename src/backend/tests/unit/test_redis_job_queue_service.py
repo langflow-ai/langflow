@@ -2526,6 +2526,28 @@ async def test_register_public_job_raises_backend_unavailable_when_marker_write_
 
 
 @pytest.mark.asyncio
+async def test_public_job_lookup_raises_when_redis_fails_after_owner_lookup() -> None:
+    """A failed public marker read cannot turn an accessible job into a false 404."""
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+    from redis.exceptions import ConnectionError as RedisConnectionError
+
+    class OwnerReadThenMarkerFailure:
+        async def get(self, _key):
+            return None
+
+        async def exists(self, _key):
+            raise RedisConnectionError
+
+    service = RedisJobQueueService()
+    service._client = OwnerReadThenMarkerFailure()
+    job_id = str(uuid.uuid4())
+
+    assert await service.get_job_owner(job_id) is None
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.is_public_job_async(job_id)
+
+
+@pytest.mark.asyncio
 async def test_register_public_job_is_noop_success_for_in_memory_backend() -> None:
     """The in-memory base class stays a pure no-op success (no shared marker to persist).
 

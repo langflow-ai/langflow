@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
@@ -88,6 +89,7 @@ function AssistantInputWithScroll({
 }
 
 export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
+  const { t } = useTranslation();
   const { hasEnabledModels, isCatalogReady, isModelEnabled } =
     useEnabledModels();
   const agenticExperienceEnabled = useUtilityStore(
@@ -406,6 +408,9 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     <div
       ref={panelRef}
       data-testid="assistant-panel"
+      // A named landmark so the panel's controls are not orphaned outside every region.
+      role="complementary"
+      aria-label={t("assistant.title")}
       className={containerClasses}
       style={containerStyle}
     >

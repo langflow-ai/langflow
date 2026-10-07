@@ -7,6 +7,7 @@ import json
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Literal
+from urllib.parse import urlencode, urlsplit
 from uuid import uuid4
 
 from sqlalchemy import update
@@ -14,11 +15,13 @@ from sqlmodel import col
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
+from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection.oauth import providers
 from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
 from langflow.services.connection.oauth.locking import lock_connection
-from langflow.services.database.models.connection import ConnectionSecret
+from langflow.services.database.models.connection import Connection, ConnectionSecret
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
+from langflow.services.database.models.connection.schemas import ConnectionStatusReason
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 
@@ -27,11 +30,14 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    from langflow.services.database.models.connection import Connection
-
 
 def digest(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
+
+
+def _handoff_digest(value: str) -> str:
+    # A handoff nonce must never work as a callback cookie before redemption.
+    return digest("desktop-handoff:" + value)
 
 
 def _aware(value: datetime) -> datetime:
@@ -70,13 +76,73 @@ async def start(
     binding.registration_id = registration_id
     binding.config_digest = registration.fingerprint()
     binding.state_digest = digest(state)
-    binding.browser_digest = digest(browser)
+    binding.browser_digest = _handoff_digest(browser) if registration.context == "desktop" else digest(browser)
     binding.encrypted_verifier = auth_utils.encrypt_api_key(verifier)
     binding.scopes = scopes
     binding.expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     session.add(binding)
     await session.flush()
-    return providers.authorization_url(registration, state=state, verifier=verifier, scopes=scopes), state, browser
+    if registration.context == "desktop":
+        # Use the configured loopback origin, never a browser-supplied Host or
+        # redirect target. Desktop opens this URL in its separate cookie store.
+        url = (
+            urlsplit(registration.redirect_uri)
+            ._replace(
+                path=f"/api/v1/connections/oauth/{registration.provider}/browser",
+                query=urlencode({"state": state, "handoff": browser}),
+            )
+            .geturl()
+        )
+    else:
+        url = providers.authorization_url(registration, state=state, verifier=verifier, scopes=scopes)
+    return url, state, browser
+
+
+async def bind_desktop_browser(*, provider: str, state: str, handoff: str) -> tuple[str, str, bool]:
+    """Redeem a Desktop handoff once and bind consent to the system browser."""
+    browser = secrets.token_urlsafe(32)
+    async with session_scope() as session:
+        # An atomic rotation both reserves the SQLite write transaction and
+        # prevents a second worker or replay from obtaining a binding cookie.
+        consumed = await session.execute(
+            update(ConnectionOAuth)
+            .where(
+                col(ConnectionOAuth.state_digest) == digest(state),
+                col(ConnectionOAuth.browser_digest) == _handoff_digest(handoff),
+                col(ConnectionOAuth.expires_at) > datetime.now(timezone.utc),
+            )
+            .values(browser_digest=digest(browser))
+            .returning(ConnectionOAuth)
+        )
+        binding = consumed.scalar_one_or_none()
+        if binding is None:
+            msg = "OAuth browser handoff is invalid, expired, or already used."
+            raise OAuthError(msg)
+        registration = get_oauth_settings().registration(binding.registration_id)
+        if (
+            registration.context != "desktop"
+            or registration.provider != provider
+            or registration.fingerprint() != binding.config_digest
+        ):
+            msg = "OAuth registration changed or is not configured for this handoff."
+            raise OAuthError(msg)
+        # The callback rechecks and locks this row before storing credentials.
+        # Do not invert revoke's connection-then-binding lock order here.
+        row = await session.get(Connection, binding.connection_id)
+        user = await session.get(User, binding.user_id)
+        if row is None or user is None or not user.is_active:
+            msg = "OAuth initiating connection or user is no longer available."
+            raise OAuthError(msg)
+        async with audit_guard_in_transaction(session):
+            await ensure_connection_permission(
+                user, ConnectionAction.WRITE, connection_id=row.id, connection_owner_id=row.owner_id
+            )
+        verifier = auth_utils.decrypt_api_key(binding.encrypted_verifier)
+        if not verifier:
+            msg = "OAuth verifier is unavailable. Start again."
+            raise OAuthError(msg)
+        url = providers.authorization_url(registration, state=state, verifier=verifier, scopes=binding.scopes)
+    return url, browser, registration.redirect_uri.startswith("https:")
 
 
 async def complete(*, provider: str, state: str, browser: str, code: str | None, denied: bool) -> None:
@@ -99,42 +165,68 @@ async def complete(*, provider: str, state: str, browser: str, code: str | None,
         values = binding.model_dump()
         binding.encrypted_verifier = None
         session.add(binding)
-    if denied or not code or _aware(values["expires_at"]) <= datetime.now(timezone.utc):
-        msg = "OAuth authorization was denied or expired. Start again."
-        raise OAuthError(msg)
-    registration = get_oauth_settings().registration(values["registration_id"])
-    if registration.provider != provider or registration.fingerprint() != values["config_digest"]:
-        msg = "OAuth registration changed or is not configured for this provider."
-        raise OAuthError(msg)
-    async with session_scope() as session:
-        row = await lock_connection(session, values["connection_id"])
-        binding = await session.get(ConnectionOAuth, values["connection_id"])
-        if row is None or binding is None or binding.generation != values["generation"]:
-            msg = "OAuth authorization was superseded or revoked. Start again."
+    reason = ConnectionStatusReason.OAUTH_FAILED
+    try:
+        if denied:
+            reason = ConnectionStatusReason.OAUTH_DENIED
+            msg = "OAuth authorization was denied. Start again."
             raise OAuthError(msg)
-        user = await session.get(User, values["user_id"])
-        if user is None or not user.is_active:
-            msg = "OAuth initiating user is no longer active."
+        if not code or _aware(values["expires_at"]) <= datetime.now(timezone.utc):
+            reason = ConnectionStatusReason.OAUTH_EXPIRED
+            msg = "OAuth authorization expired. Start again."
             raise OAuthError(msg)
-        await ensure_connection_permission(
-            user, ConnectionAction.WRITE, connection_id=row.id, connection_owner_id=row.owner_id
-        )
-        verifier = auth_utils.decrypt_api_key(values["encrypted_verifier"])
-        if not verifier:
-            msg = "OAuth verifier is unavailable. Start again."
+        registration = get_oauth_settings().registration(values["registration_id"])
+        if registration.provider != provider or registration.fingerprint() != values["config_digest"]:
+            msg = "OAuth registration changed or is not configured for this provider."
             raise OAuthError(msg)
-        payload, scopes, account = await providers.exchange(
-            registration, code=code, verifier=verifier, previous_scopes=values["scopes"]
-        )
-        payload["oauth"] = {
-            "registration_id": binding.registration_id,
-            "config_digest": binding.config_digest,
-            "generation": str(binding.generation),
-        }
-        await store_tokens(session, row, payload, scopes)
-        if account:
+        async with session_scope() as session:
+            row = await lock_connection(session, values["connection_id"])
+            binding = await session.get(ConnectionOAuth, values["connection_id"])
+            if row is None or binding is None or binding.generation != values["generation"]:
+                msg = "OAuth authorization was superseded or revoked. Start again."
+                raise OAuthError(msg)
+            user = await session.get(User, values["user_id"])
+            if user is None or not user.is_active:
+                msg = "OAuth initiating user is no longer active."
+                raise OAuthError(msg)
+            await ensure_connection_permission(
+                user, ConnectionAction.WRITE, connection_id=row.id, connection_owner_id=row.owner_id
+            )
+            verifier = auth_utils.decrypt_api_key(values["encrypted_verifier"])
+            if not verifier:
+                msg = "OAuth verifier is unavailable. Start again."
+                raise OAuthError(msg)
+            payload, scopes, account = await providers.exchange(
+                registration, code=code, verifier=verifier, previous_scopes=values["scopes"]
+            )
+            payload["oauth"] = {
+                "registration_id": binding.registration_id,
+                "config_digest": binding.config_digest,
+                "generation": str(binding.generation),
+            }
+            await store_tokens(session, row, payload, scopes)
+            # A new consent may belong to a different account. Clear stale
+            # metadata when this authorization does not provide identity.
             row.executing_identity = {**row.executing_identity, "account": account}
             session.add(row)
+    except OAuthError:
+        await _record_failed_authorization(values["connection_id"], values["generation"], reason)
+        raise
+
+
+async def _record_failed_authorization(connection_id: UUID, generation: UUID, reason: ConnectionStatusReason) -> None:
+    """Report a consumed attempt without clobbering a newer one or old tokens."""
+    async with session_scope() as session:
+        row = await lock_connection(session, connection_id)
+        binding = await session.get(ConnectionOAuth, connection_id)
+        if row is None or binding is None or binding.generation != generation:
+            return
+        if await session.get(ConnectionSecret, connection_id) is None:
+            row.status = "error"
+        row.status_reason = reason.value
+        now = datetime.now(timezone.utc)
+        row.updated_at = max(now, _aware(row.updated_at) + timedelta(microseconds=1)) if row.updated_at else now
+        session.add(row)
 
 
 async def store_tokens(session: AsyncSession, row: Connection, payload: dict, scopes: list[str]) -> None:

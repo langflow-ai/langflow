@@ -281,7 +281,7 @@ export function ModelSelector({
       {modelStrength === "weak" && (
         <span
           data-testid="assistant-model-weak-hint"
-          className="select-none text-xs italic text-muted-foreground/70"
+          className="select-none text-xs italic text-muted-foreground"
           title="This model may underperform on agent tasks"
         >
           This model may underperform on agent tasks

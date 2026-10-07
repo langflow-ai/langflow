@@ -15,6 +15,7 @@ from lfx.io import (
     SecretStrInput,
 )
 from lfx.schema.data import Data
+from lfx_datastax.components.cassandra._ssrf import validate_cassandra_connection
 
 
 class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
@@ -140,11 +141,12 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
                 cluster_kwargs=self.cluster_kwargs,
             )
         else:
+            cluster_kwargs = validate_cassandra_connection(database_ref, self.cluster_kwargs)
             cassio.init(
                 contact_points=database_ref,
                 username=self.username,
                 password=self.token,
-                cluster_kwargs=self.cluster_kwargs,
+                cluster_kwargs=cluster_kwargs,
             )
 
         self.ingest_data = self._prepare_ingest_data()

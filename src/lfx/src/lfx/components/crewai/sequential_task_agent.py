@@ -10,7 +10,7 @@ class SequentialTaskAgentComponent(Component):
     documentation = "https://docs.crewai.com/how-to/LLM-Connections/"
     icon = "CrewAI"
     legacy = True
-    replacement = "agents.Agent"
+    replacement = ["models_and_agents.Agent"]
 
     inputs = [
         # Agent inputs

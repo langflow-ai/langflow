@@ -23,6 +23,8 @@ interface IPatchUpdateFlow {
   a2a_card_overrides?: Record<string, unknown> | null;
   /** Internal signal; stripped before PATCHing the API. */
   providerScopeChanged?: boolean;
+  /** Sent as If-Match so the server refuses a save built on a version someone replaced. */
+  versionToken?: string | null;
 }
 
 const isFlowScopedProviderQuery = (
@@ -66,10 +68,13 @@ export const usePatchUpdateFlow: useMutationFunctionType<
   const PatchUpdateFlowFn = async ({
     id,
     providerScopeChanged: _providerScopeChanged,
+    versionToken,
     ...payload
     // biome-ignore lint/suspicious/noExplicitAny: legacy
   }: IPatchUpdateFlow): Promise<any> => {
-    const response = await api.patch(`${getURL("FLOWS")}/${id}`, payload);
+    const response = await api.patch(`${getURL("FLOWS")}/${id}`, payload, {
+      headers: versionToken ? { "If-Match": versionToken } : undefined,
+    });
 
     return response.data;
   };

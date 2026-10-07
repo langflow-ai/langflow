@@ -26,13 +26,16 @@ class PersistedConnectionStatus(str, Enum):
 
 
 class ConnectionStatusReason(str, Enum):
-    """Why a connection is in the ``error`` status; every other status carries no reason."""
+    """A credential error or the result of the most recent failed OAuth attempt."""
 
     # The connection had credentials, and its encrypted envelope is gone.
     CREDENTIAL_MISSING = "credential-missing"
     # The envelope exists but does not decrypt or decode with the server's
     # current key. One key change puts every connection in this state.
     CREDENTIAL_UNDECRYPTABLE = "credential-undecryptable"
+    OAUTH_DENIED = "oauth-denied"
+    OAUTH_EXPIRED = "oauth-expired"
+    OAUTH_FAILED = "oauth-failed"
 
 
 class ConnectionHealth(str, Enum):

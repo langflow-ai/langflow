@@ -611,6 +611,10 @@ class MCPProjectResponse(BaseModel):
 
     tools: list[MCPSettings]
     auth_settings: AuthSettings | None = None
+    # The MCP server name the backend derives for this project, which client installs use
+    # unless another project already holds it there. Sent so clients show it instead of
+    # deriving their own and disagreeing about non-Latin names.
+    server_name: str | None = None
 
 
 class ComposerUrlResponse(BaseModel):

@@ -120,3 +120,111 @@ class TestEventTypeForwarding:
         [evt] = list(adapter.translate(event_type, {"k": "v"}))
         assert evt.type == event_type
         assert json.loads(evt.data_json)["event"] == event_type
+
+
+class TestExposeGraphState:
+    """``expose_graph_state=False`` narrows the passthrough to the conversation."""
+
+    @staticmethod
+    def _narrowed() -> StreamAdapterContext:
+        return StreamAdapterContext(run_id="run-1", thread_id="thread-1", expose_graph_state=False)
+
+    _TERMINAL_VERTEX = {
+        "build_data": {"id": "ChatOutput-j7k8l", "valid": True, "data": {"outputs": {"message": "hi"}}},
+        "output_meta": {
+            "is_terminal": True,
+            "is_output": True,
+            "component_id": "ChatOutput-j7k8l",
+            "vertex_type": "ChatOutput",
+            "display_name": "Chat Output",
+        },
+    }
+
+    def test_graph_state_events_are_dropped(self):
+        adapter = get_stream_adapter("langflow", self._narrowed())
+        frames = list(adapter.translate("vertices_sorted", {"to_run": ["ChatInput-a1b2c"]}))
+        frames += list(adapter.translate("build_start", {"id": "Agent-d3e4f"}))
+        frames += list(adapter.translate("log", {"message": "internal"}))
+        assert frames == []
+
+    _DATA_SINK_VERTEX = {
+        "build_data": {
+            "id": "VectorStoreSearch-p9q0r",
+            "valid": True,
+            "data": {"outputs": {"dataframe": {"message": [{"text": "INTERNAL: margin floor is 22%"}]}}},
+        },
+        "output_meta": {
+            # Terminal because nothing consumes it, but not an output component.
+            "is_terminal": True,
+            "is_output": False,
+            "component_id": "VectorStoreSearch-p9q0r",
+            "vertex_type": "VectorStoreSearch",
+            "display_name": "Vector Store Search",
+            "output_types": ["dataframe"],
+        },
+    }
+
+    def test_non_output_sink_reports_nothing(self):
+        """A dangling retriever is terminal without being the flow's answer.
+
+        ``is_terminal`` is every vertex with no successors, and
+        ``build_component_output`` puts a ``data``/``dataframe`` vertex's content
+        in the event, so without this the narrowed stream would carry the
+        component's own output and its display name.
+        """
+        adapter = get_stream_adapter("langflow", self._narrowed())
+        assert list(adapter.translate("end_vertex", self._DATA_SINK_VERTEX)) == []
+
+    def test_non_output_sink_still_reports_with_graph_state_on(self):
+        """Sync parity is unchanged for a caller that did not opt out."""
+        adapter = get_stream_adapter("langflow", _ctx())
+        frames = list(adapter.translate("end_vertex", self._DATA_SINK_VERTEX))
+        assert [f.type for f in frames] == ["end_vertex", "output"]
+
+    def test_end_vertex_is_dropped_but_the_answer_survives(self):
+        """The terminal ``output`` event is the flow's answer, not graph state."""
+        adapter = get_stream_adapter("langflow", self._narrowed())
+        frames = list(adapter.translate("end_vertex", self._TERMINAL_VERTEX))
+        assert [f.type for f in frames] == ["output"]
+        assert json.loads(frames[0].data_json)["data"]["component_id"] == "ChatOutput-j7k8l"
+
+    def test_non_terminal_end_vertex_emits_nothing(self):
+        """A mid-graph component has no answer to report, so nothing reaches the wire."""
+        adapter = get_stream_adapter("langflow", self._narrowed())
+        frames = list(
+            adapter.translate(
+                "end_vertex",
+                {"build_data": {"id": "Store-g5h6i", "valid": True, "data": {"outputs": {"documents": "secret"}}}},
+            )
+        )
+        assert frames == []
+
+    def test_component_tool_build_events_are_dropped(self):
+        """``ComponentToolkit`` emits ``build_end`` carrying the wrapped component's id.
+
+        A flow whose agent calls a component-tool would otherwise name that
+        component on the narrowed stream, the public one included.
+        """
+        adapter = get_stream_adapter("langflow", self._narrowed())
+        frames = list(adapter.translate("build_start", {"id": "CalculatorComponent-x1y2z"}))
+        frames += list(adapter.translate("build_end", {"id": "CalculatorComponent-x1y2z"}))
+        assert frames == []
+
+    def test_component_tool_build_events_survive_with_graph_state_on(self):
+        adapter = get_stream_adapter("langflow", _ctx())
+        frames = list(adapter.translate("build_end", {"id": "CalculatorComponent-x1y2z"}))
+        assert [f.type for f in frames] == ["build_end"]
+
+    def test_graph_level_build_start_and_conversation_survive(self):
+        """The run-beginning marker carries no component id, so it stays."""
+        adapter = get_stream_adapter("langflow", self._narrowed())
+        frames = list(adapter.translate("build_start", {}))
+        frames += list(adapter.translate("token", {"id": "msg-1", "chunk": "Hi"}))
+        frames += list(adapter.translate("end", {}))
+        assert [f.type for f in frames] == ["build_start", "token", "end"]
+
+    def test_default_context_is_unchanged(self):
+        """Without the flag the adapter passes everything through, as before."""
+        adapter = get_stream_adapter("langflow", _ctx())
+        frames = list(adapter.translate("end_vertex", self._TERMINAL_VERTEX))
+        assert [f.type for f in frames] == ["end_vertex", "output"]

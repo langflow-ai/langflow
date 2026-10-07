@@ -95,6 +95,7 @@ tavily
 textsplitters
 toolkits
 tools
+triggers
 twelvelabs
 unstructured
 upstash

@@ -21,7 +21,7 @@ class CrewAIAgentComponent(Component):
     documentation: str = "https://docs.crewai.com/how-to/LLM-Connections/"
     icon = "CrewAI"
     legacy = True
-    replacement = "agents.Agent"
+    replacement = ["models_and_agents.Agent"]
 
     inputs = [
         MultilineInput(name="role", display_name="Role", info="The role of the agent."),

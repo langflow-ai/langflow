@@ -490,6 +490,8 @@ def _normalize_package_name(package_spec: str) -> str:
 
 def _validate_interpreter_invocation(base_command: str, args: list[str], *, hardened: bool) -> None:
     """Reject tenant-selected interpreter code while preserving validated wrappers/internal code."""
+    # Baseline Node option/subcommand checks live in source_policy's validator,
+    # which validate_mcp_stdio_config also calls when hardening is disabled.
     if not hardened:
         return
     if base_command in SHELL_WRAPPERS:

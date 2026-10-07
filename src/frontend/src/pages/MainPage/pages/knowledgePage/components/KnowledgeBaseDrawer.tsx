@@ -1,9 +1,12 @@
 import { useEffect, useId, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { StorageUpgradePanel } from "@/components/common/storageUpgradeNotice";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import { useGetKnowledgeBases } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import { STATUS_CONFIG } from "../config/statusConfig";
 import {
   getKnowledgeBaseBackendLabel,
   getKnowledgeBaseBackendTarget,
@@ -19,9 +22,13 @@ interface KnowledgeBaseDrawerProps {
 const KnowledgeBaseDrawer = ({
   isOpen,
   onClose,
-  knowledgeBase,
+  knowledgeBase: selectedKnowledgeBase,
 }: KnowledgeBaseDrawerProps) => {
   const { t } = useTranslation();
+  const { data: knowledgeBases } = useGetKnowledgeBases({ enabled: isOpen });
+  const knowledgeBase =
+    knowledgeBases?.find((kb) => kb.id === selectedKnowledgeBase?.id) ??
+    selectedKnowledgeBase;
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const headingId = useId();
 
@@ -39,7 +46,7 @@ const KnowledgeBaseDrawer = ({
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, knowledgeBase, onClose]);
+  }, [isOpen, knowledgeBase?.id, onClose]);
 
   if (!isOpen || !knowledgeBase) {
     return null;
@@ -79,6 +86,10 @@ const KnowledgeBaseDrawer = ({
             <div className="text-sm text-muted-foreground">
               {t("knowledge.noDescription")}
             </div>
+          </div>
+
+          <div className="px-4">
+            <StorageUpgradePanel kbId={knowledgeBase.id} />
           </div>
 
           <Separator />
@@ -126,7 +137,10 @@ const KnowledgeBaseDrawer = ({
               {t("knowledge.statusLabel")}
             </div>
             <div className="text-sm font-medium text-muted-foreground">
-              {knowledgeBase.status || t("knowledge.unknown")}
+              {t(
+                STATUS_CONFIG[knowledgeBase.status ?? "empty"]?.label ??
+                  "knowledge.unknown",
+              )}
             </div>
           </div>
 

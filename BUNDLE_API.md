@@ -61,6 +61,14 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `Component.select_integration_capabilities(capability_ids)` | `lfx.custom.custom_component.component.Component` |
 | `BaseConnectionResolverService`, `ConnectionAccessPolicy` | `lfx.services.connection` |
 
+### Triggers
+
+| Symbol | Source |
+| --- | --- |
+| `BaseTriggerComponent` (`trigger_kind`, `provider`, `needs_connection`, `trigger_config()`, `build_event()`) | `lfx.base.triggers.base` |
+| `TRIGGER_EVENT_FIELD` (the input the server writes the firing event into) | `lfx.base.triggers.base` |
+| `TriggerDefinition` | `lfx.base.triggers.base` |
+
 ### Preset MCP components
 
 | Symbol | Source |
@@ -216,6 +224,61 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Knowledge storage provider defaults.** `DBProviderInput` defaults to the
+  application-provided SQLite backend. Its public name, fields and signature
+  remain unchanged, so `BUNDLE_API_VERSION` remains `1`. Recognized historical
+  Knowledge and Memory sources resolve to current implementations without
+  loading the retired Chroma SDKs. Custom component source remains untouched.
+  Extension backends that implement only `add_documents` retain their guarded
+  ingestion path. Writing precomputed embeddings remains optional for ordinary
+  ingestion and required for migration imports.
+
+### 2026-09-24 — Async file loader dispatch
+
+Graph outputs and the Read File tool now await `@delegates_to` coroutine methods
+directly. `BaseFileComponent` provides `aload_files_*` and `aprocess_files` for
+native async loaders; existing sync overrides still run in worker threads. Bundle
+coroutines should await these methods instead of calling their sync wrappers on
+the event loop. The public sync method signatures remain unchanged, and
+`BUNDLE_API_VERSION` remains `1`.
+
+### 2026-09-23 — Slack sources for triggers (TRG-5)
+
+- `ConnectionNotAuthorizedError`'s `reason` additionally accepts
+  `listener-only`: the connection holds a credential that only a trigger
+  listener process may resolve. A Slack app-level token (`xapp-`) opens
+  Socket Mode sockets and has no other use, so the host resolver refuses it
+  everywhere else, including in a triggered run, and a component is told to
+  choose a different connection. The error code and HTTP 403 status are
+  unchanged. This is additive; `BUNDLE_API_VERSION` remains `1`.
+- `lfx.base.triggers` joins the surface: `lfx-slack` 0.2.0 subclasses
+  `BaseTriggerComponent` for its `Slack: On Message` and `Slack: On Reaction`
+  nodes, so the base class, `TRIGGER_EVENT_FIELD` and `TriggerDefinition` are
+  now a bundle contract and `check_bundle_api_changelog.py` guards the module.
+  Every lfx 1.13.0 release ships it; nightlies before `1.13.0.dev17` do not.
+  `lfx-slack` 0.2.0 keeps the line-wide `lfx>=1.13.0.dev0` floor the release
+  plan requires and imports its triggers lazily, so on those nightlies its
+  actions still load and only the two trigger modules report an import error.
+
+### 2026-09-22 — Lazy manifest discovery for legacy plugin filtering
+
+`filter_plugin_entry_points()` and `filter_component_entry_points()` inspect
+installed manifests only when an entry point has an identifiable distribution.
+App startup with no legacy plugins avoids scanning installed package files.
+Manifest precedence, entry-point ordering, and public signatures are unchanged;
+`BUNDLE_API_VERSION` remains `1`.
+
+### 2026-09-17 — `ResolvedCredential.identity = None` is not an identity proof
+
+- Clarify the documented meaning of `ResolvedCredential.identity is None`: the
+  resolver does not know the executing identity (the headless
+  `LF_CONNECTION__*` wire format has no place to declare one). It no longer
+  reads as "the operator vouched for this token". A capability that must run as
+  one identity has to establish it another way (`lfx-slack` reads the token's
+  type prefix) or fail closed with `connection-not-authorized`. Documentation
+  only: no symbol, signature, or default changes, and `BUNDLE_API_VERSION`
+  stays `1`.
+
 ### 2026-09-15 — Permanent provider request and resource errors
 
 - Add `InvalidRequestError` (`invalid-request`) and `ResourceNotFoundError`
@@ -340,6 +403,13 @@ the deserialize half is covered by
   its docstring now states that a host must never authorize a share for a
   principal with this flag set to `False`. Additive for bundles and
   resolvers alike; `BUNDLE_API_VERSION` remains `1`.
+
+- **2026-09-05 (`lfx-microsoft`).** First consumer of the bundle-owned
+  integration manifest: `lfx-microsoft` ships eight Microsoft Graph delegated
+  actions and builds its `ConnectionRefInput` scopes *from* its own
+  `capabilities.v1.json`. No surface in this document changed --
+  `BUNDLE_API_VERSION` remains `1` -- the entry is recorded so the contract's
+  history names its first out-of-tree consumer.
 
 - **Optional rejected-token digest for connection refresh.**
   `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only
@@ -768,6 +838,20 @@ the deserialize half is covered by
   messages and winner selection are unchanged, and two physically distinct
   manifests for one canonical name still error.  No public symbol's name or
   signature changed.
+- **`ResolvedCredential.identity` (additive, optional).**
+  `lfx.integrations.models.ResolvedCredential` gained
+  `identity: Literal["user_delegated", "bot", "service"] | None = None`,
+  mirroring `lfx.integrations.capabilities.IntegrationIdentity`.  The
+  database-backed resolver populates it from the connection row's
+  `executing_identity`; the headless environment resolver leaves it `None`
+  because the `LF_CONNECTION__*` wire format has no place to declare one.
+  Providers whose user and bot tokens share scope names — Slack's `chat:write`
+  is both a User Token Scope and a Bot Token Scope — cannot distinguish the two
+  identities from `granted_scopes`, so a bundle capability that must run as a
+  bot compares this field and fails closed with `connection-not-authorized`
+  before its first request.  The field defaults to `None`, no existing field
+  changed name, type, or meaning, and every existing construction site keeps
+  working, so `BUNDLE_API_VERSION` remains `1`.
 
 - **Pinned action-to-tool mode for preset MCP components (additive).**
   `MCPPresetComponent` gains a `_pinned_spec()` hook returning a

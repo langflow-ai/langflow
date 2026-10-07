@@ -2,8 +2,10 @@ import ast
 import contextlib
 import copy
 import importlib
+import importlib.util
 import sys
 import warnings
+from functools import lru_cache
 from types import FunctionType, ModuleType
 from typing import Optional, Union
 
@@ -14,7 +16,7 @@ from lfx.custom.annotation_validation import (
     UnsafeReturnAnnotationError,
     register_compiled_class_method_returns,
     snapshot_trusted_class_method_returns,
-    validate_return_annotations,
+    validate_source_return_annotations,
 )
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
@@ -56,13 +58,22 @@ def validate_code(code):
     add_type_ignores()
     tree.type_ignores = []
 
-    # Evaluate the import statements
+    # Check the import statements WITHOUT importing them.
+    #
+    # Security (H1-3992099): this previously called importlib.import_module()
+    # on every import, which executes the module's top-level code during
+    # "validation". Combined with any file-write primitive, an attacker can
+    # plant a module on a writable sys.path entry and have it executed here.
+    # find_spec() only locates the module; it never executes it. Only the
+    # top-level package is resolved, because find_spec() on a dotted name
+    # imports (executes) its parent packages.
     for node in tree.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 try:
-                    importlib.import_module(alias.name)
-                except ModuleNotFoundError as e:
+                    if importlib.util.find_spec(alias.name.split(".")[0]) is None:
+                        errors["imports"]["errors"].append(f"No module named '{alias.name}'")
+                except (ImportError, AttributeError, ValueError) as e:
                     errors["imports"]["errors"].append(str(e))
 
     # Validate each function definition WITHOUT executing it.
@@ -245,6 +256,17 @@ def _trusted_vector_store_decorator_alias(module: ast.Module, class_name: str) -
     raise UnsafeReturnAnnotationError(msg)
 
 
+def _future_annotations_import() -> ast.ImportFrom:
+    """Build a located ``from __future__ import annotations`` for the top of a parsed module."""
+    location = {"lineno": 1, "col_offset": 0, "end_lineno": 1, "end_col_offset": 0}
+    return ast.ImportFrom(
+        module="__future__",
+        names=[ast.alias(name="annotations", **location)],
+        level=0,
+        **location,
+    )
+
+
 def create_class(code, class_name):
     """Dynamically create a class from a string of code and a specified class name.
 
@@ -302,19 +324,19 @@ def create_class(code, class_name):
         module = ast.parse(code)
         # Return annotations are evaluated by Python during class creation and
         # later by typing.get_type_hints. Reject active syntax before imports,
-        # compilation, or component construction can execute it.
-        validate_return_annotations(module)
+        # compilation, or component construction can execute it. The result
+        # depends only on the source text, so it is computed once per source.
+        validate_source_return_annotations(code, module)
         if not any(
             isinstance(node, ast.ImportFrom)
             and node.module == "__future__"
             and any(alias.name == "annotations" for alias in node.names)
             for node in module.body
         ):
-            module.body.insert(
-                0,
-                ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0),
-            )
-            ast.fix_missing_locations(module)
+            # Only the inserted nodes lack positions; give them the ones
+            # ast.fix_missing_locations would (line 1, column 0) instead of
+            # walking the whole tree.
+            module.body.insert(0, _future_annotations_import())
         trusted_vector_store_alias = _trusted_vector_store_decorator_alias(module, class_name)
         runtime_module = copy.deepcopy(module) if trusted_vector_store_alias is not None else module
         if trusted_vector_store_alias is not None:
@@ -732,8 +754,14 @@ def extract_function_name(code):
     raise ValueError(msg)
 
 
+# Keep this small: each cache key retains the full component source string.
+@lru_cache(maxsize=128)
 def extract_class_name(code: str) -> str:
     """Extract the name of the first Component subclass found in the code.
+
+    The result depends only on the exact source text, so it is cached per
+    source; every request otherwise re-parses each component's code. Errors
+    are not cached, so invalid source raises on every call.
 
     Args:
         code (str): The source code to parse

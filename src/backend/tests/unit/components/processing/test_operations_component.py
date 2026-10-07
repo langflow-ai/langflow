@@ -18,11 +18,13 @@ from lfx.components.processing.operations import (
     TEXT_OPERATIONS,
     OperationsComponent,
 )
+from lfx.components.processing.parse_json_data import ParseJSONDataComponent
 from lfx.components.processing.text_operations import TextOperations
 from lfx.schema import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
+from lfx.utils.jq_security import validate_jq_program
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -160,6 +162,72 @@ class TestJsonOperations:
             component.as_data()
 
 
+class TestJqProgramSecurity:
+    """jq programs must never reach the server environment (H1-3977755 / LE-2550).
+
+    The JQ Expression / Path Selection operations and the legacy Parse JSON /
+    JSON Operations components evaluate a user-supplied jq program with the
+    in-process libjq binding, where ``$ENV`` / ``env`` expose the whole server
+    process environment (LANGFLOW_SECRET_KEY, database URL, provider API keys).
+    """
+
+    CANARY = "le-2550-canary-secret"
+
+    @pytest.fixture(autouse=True)
+    def _canary_env(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SECRET_KEY", self.CANARY)
+
+    @pytest.mark.parametrize("payload", ["$ENV", "env", "env.LANGFLOW_SECRET_KEY", '"\\(env)"'])
+    def test_operations_json_query_rejects_env_access(self, payload):
+        component = OperationsComponent(
+            data=Data(data={"key1": "value1"}),
+            operation=[{"name": "JQ Expression"}],
+            query=payload,
+        )
+        with pytest.raises(ValueError, match="not allowed"):
+            component.json_query()
+
+    @pytest.mark.parametrize("payload", ["$ENV", "env.LANGFLOW_SECRET_KEY"])
+    def test_operations_json_path_rejects_env_access(self, payload):
+        component = OperationsComponent(
+            data=Data(data={"key1": "value1"}),
+            operation=[{"name": "Path Selection"}],
+            selected_key=payload,
+        )
+        result = component.json_path()
+        assert "error" in result.data
+        assert "not allowed" in result.data["error"]
+        assert self.CANARY not in str(result.data)
+
+    def test_operations_json_query_still_allows_normal_queries(self):
+        component = OperationsComponent(
+            data=Data(data={"key1": "value1"}),
+            operation=[{"name": "JQ Expression"}],
+            query=".key1",
+        )
+        result = component.json_query()
+        assert result.data == {"result": "value1"}
+
+    @pytest.mark.parametrize("payload", ["$ENV", "env"])
+    def test_legacy_data_operations_json_query_rejects_env_access(self, payload):
+        component = DataOperationsComponent(
+            data=Data(data={"key1": "value1"}),
+            operations=[{"name": "JQ Expression"}],
+            query=payload,
+        )
+        with pytest.raises(ValueError, match="not allowed"):
+            component.json_query()
+
+    @pytest.mark.parametrize("payload", ["$ENV", "env.LANGFLOW_SECRET_KEY"])
+    def test_legacy_parse_json_data_rejects_env_access(self, payload):
+        component = ParseJSONDataComponent(
+            input_value=Data(data={"key1": "value1"}),
+            query=payload,
+        )
+        with pytest.raises(ValueError, match="not allowed"):
+            component.filter_data()
+
+
 class TestTableOperations:
     @pytest.fixture
     def sample_dataframe(self):
@@ -181,6 +249,21 @@ class TestTableOperations:
         result = component.as_dataframe()
         assert len(result) == 2
         assert all(result["department"] == "IT")
+
+    @pytest.mark.parametrize(
+        ("operator", "expected_names"),
+        [("equals", ["Bob", "Carol"]), ("not equals", ["Ann"])],
+    )
+    def test_filter_numeric_column_by_text_value(self, operator, expected_names):
+        component = OperationsComponent(
+            df=DataFrame(pd.DataFrame({"name": ["Ann", "Bob", "Carol"], "score": [2.5, 7.0, 7.0]})),
+            operation=[{"name": "Filter"}],
+            column_name="score",
+            filter_operator=operator,
+            filter_value="7",
+        )
+        result = component.as_dataframe()
+        assert result["name"].tolist() == expected_names
 
     def test_filter_contains(self, sample_dataframe):
         component = OperationsComponent(
@@ -243,6 +326,49 @@ class TestTableOperations:
         assert "name" in result.columns
         assert "city" in result.columns
 
+    @pytest.mark.parametrize(
+        ("component_class", "output_method"),
+        [(OperationsComponent, "as_dataframe"), (DataFrameOperationsComponent, "perform_operation")],
+    )
+    @pytest.mark.parametrize("merge_on", ["id", ""])
+    @pytest.mark.parametrize("overlapping_value", [False, True])
+    def test_merge_preserves_original_suffix_columns(self, component_class, output_method, merge_on, overlapping_value):
+        left = DataFrame({"id": [1, 2], "value": [None, "left"], "value_right": ["metadata", "keep"]})
+        right = DataFrame({"id": [1, 2], "value_right_right": ["source", "keep too"]})
+        if overlapping_value:
+            right["value"] = ["right", "ignored"]
+        left_before, right_before = left.copy(), right.copy()
+        component = component_class(
+            operation=[{"name": "Merge"}],
+            left_dataframe=left,
+            right_dataframe=right,
+            merge_on_column=merge_on,
+        )
+
+        result = getattr(component, output_method)()
+
+        assert result.to_dict(orient="list") == {
+            "id": [1, 2],
+            "value": ["right" if overlapping_value else None, "left"],
+            "value_right": ["metadata", "keep"],
+            "value_right_right": ["source", "keep too"],
+        }
+        pd.testing.assert_frame_equal(left, left_before)
+        pd.testing.assert_frame_equal(right, right_before)
+
+    @pytest.mark.parametrize("component_class", [OperationsComponent, DataFrameOperationsComponent])
+    def test_merge_preserves_distinct_column_label_types(self, component_class):
+        left = DataFrame({1: [None, "left number"], "1": ["left string", None]})
+        right = DataFrame({1: ["right number", "ignored"], "1": ["ignored", "right string"]})
+        component = component_class(left_dataframe=left, right_dataframe=right)
+
+        result = component.merge_dataframes()
+
+        assert result.to_dict(orient="list") == {
+            1: ["right number", "left number"],
+            "1": ["left string", "right string"],
+        }
+
 
 class TestTextOperations:
     def test_word_count_returns_data(self):
@@ -297,6 +423,43 @@ class TestTextOperations:
         assert isinstance(result, DataFrame)
         assert list(result.columns) == ["name", "age"]
         assert len(result) == 2
+
+    def test_text_to_dataframe_skips_markdown_delimiter_row(self):
+        component = OperationsComponent(
+            text_input="| name | age |\n|:-----|----:|\n| Alice | 30 |\n| Bob | 25 |",
+            operation=[{"name": "Text to DataFrame"}],
+            table_separator="|",
+            has_header=True,
+        )
+        result = component.as_dataframe()
+        assert list(result.columns) == ["name", "age"]
+        assert result["name"].tolist() == ["Alice", "Bob"]
+        assert result["age"].tolist() == [30, 25]
+
+    def test_text_to_dataframe_preserves_headerless_delimiter_like_rows(self):
+        component = OperationsComponent(
+            text_input="Alice|30\n---|:--\nBob|25",
+            operation=[{"name": "Text to DataFrame"}],
+            table_separator="|",
+            has_header=False,
+        )
+
+        result = component.as_dataframe()
+
+        assert result.to_numpy().tolist() == [["Alice", "30"], ["---", ":--"], ["Bob", "25"]]
+
+    def test_text_to_dataframe_handles_empty_markdown_table(self):
+        component = OperationsComponent(
+            text_input="| name | age |\n|---|---|",
+            operation=[{"name": "Text to DataFrame"}],
+            table_separator="|",
+            has_header=True,
+        )
+
+        result = component.as_dataframe()
+
+        assert result.empty
+        assert list(result.columns) == ["name", "age"]
 
     def test_text_clean(self):
         component = OperationsComponent(
@@ -502,3 +665,75 @@ class TestDynamicOutputs:
 
 if __name__ == "__main__":
     pytest.main([__file__])
+
+
+class TestJqGuardLibjqConformance:
+    """The guard's allow/deny sets are checked against the real libjq compiler.
+
+    These live in the backend suite rather than beside ``jq_security`` because
+    ``jq`` is a ``langflow-base`` dependency: the lfx-only test environment has
+    no libjq, so a conformance test there would silently skip.
+    """
+
+    ALLOWED = [
+        # Object keys that merely share a name with a builtin (LE-2550 follow-up).
+        "{env: .a}",
+        "{input: .a}",
+        "{inputs: .a}",
+        "{env : .a}",
+        '{"env": .a}',
+        "{env}",
+        "{input}",
+        "{a: .x, env: .y}",
+        "{outer: {env: .a}}",
+        ". as {env: $e} | $e",
+        # getpath only indexes the value it is applied to.
+        'getpath(["nested", "id"])',
+        'getpath(["data", "id"])',
+        # Ordinary selections.
+        ".env",
+        ".data",
+    ]
+
+    # Programs that demonstrably emit server environment data.
+    REJECTED = ["env", "$ENV", "{a: env}", "{(env.LF_JQ_CANARY_2550): 1}", "{$ENV}", '{"\\(env)": 1}']
+
+    # Programs the guard must reject that libjq evaluates but cannot emit --
+    # ``{(env): 1}`` resolves the builtin and then fails on "object as object
+    # key", so it proves reachability of the call, not of the output.
+    REJECTED_UNEMITTABLE = ["{(env): 1}", "{(env): .a}"]
+
+    @pytest.mark.parametrize("program", ALLOWED)
+    def test_allowed_programs_compile_and_read_only_their_input(self, program, monkeypatch):
+        import jq
+
+        validate_jq_program(program)
+        monkeypatch.setenv("LF_JQ_CANARY_2550", "canary-value")
+        document = {
+            "a": 1,
+            "x": 2,
+            "y": 3,
+            "env": "from-input",
+            "input": "from-input",
+            "data": {"id": 7},
+            "nested": {"id": 9},
+        }
+        # Compiles under real libjq, and its output carries nothing from the
+        # process environment.
+        assert "canary-value" not in str(jq.compile(program).input(document).all())
+
+    @pytest.mark.parametrize("program", REJECTED)
+    def test_rejected_programs_really_reach_the_environment(self, program, monkeypatch):
+        """Each negative case is rejected because it leaks, not by coincidence."""
+        import jq
+
+        monkeypatch.setenv("LF_JQ_CANARY_2550", "canary-value")
+        assert "canary-value" in str(jq.compile(program).input({"a": 1}).all())
+        with pytest.raises(ValueError, match="not allowed"):
+            validate_jq_program(program)
+
+    @pytest.mark.parametrize("program", REJECTED_UNEMITTABLE)
+    def test_computed_key_builtin_calls_are_rejected(self, program):
+        """A builtin inside a computed key ``{(expr): v}`` is a call, not a key name."""
+        with pytest.raises(ValueError, match="not allowed"):
+            validate_jq_program(program)

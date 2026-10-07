@@ -11,6 +11,7 @@
 import { type BaseEvent, EventType } from "@ag-ui/client";
 import {
   type BridgeContext,
+  buildBackgroundRunRequest,
   handleAGUIEvent,
 } from "@/controllers/API/agui/run-flow-bridge";
 
@@ -208,6 +209,25 @@ describe("handleAGUIEvent non-terminal contract", () => {
 
     expect(terminal).toBe(false);
     expect(calls).toEqual([]);
+  });
+});
+
+describe("buildBackgroundRunRequest", () => {
+  it("asks for graph state, which the canvas and playground both render from", () => {
+    const body = buildBackgroundRunRequest({ flowId: "flow-1" });
+
+    expect(body.expose_graph_state).toBe(true);
+    expect(body.stream_protocol).toBe("agui");
+    expect(body.mode).toBe("background");
+  });
+
+  it("forwards an explicit opt-out", () => {
+    const body = buildBackgroundRunRequest({
+      flowId: "flow-1",
+      exposeGraphState: false,
+    });
+
+    expect(body.expose_graph_state).toBe(false);
   });
 });
 

@@ -31,7 +31,7 @@
         {
           "distribution": "lfx-ibm",
           "extras": [],
-          "version": ">=0.2.4,<1.0.0",
+          "version": ">=0.2.6,<1.0.0",
           "providers": [
             "lfx-ibm"
           ]
@@ -47,7 +47,7 @@
         {
           "distribution": "lfx-datastax",
           "extras": [],
-          "version": ">=0.1.8,<1.0.0",
+          "version": ">=0.1.9,<1.0.0",
           "providers": [
             "lfx-datastax"
           ]
@@ -63,7 +63,7 @@
         {
           "distribution": "lfx-openai",
           "extras": [],
-          "version": ">=0.1.4,<1.0.0",
+          "version": ">=0.1.5,<1.0.0",
           "providers": [
             "lfx-openai"
           ]
@@ -71,7 +71,7 @@
         {
           "distribution": "lfx-anthropic",
           "extras": [],
-          "version": ">=0.1.7,<1.0.0",
+          "version": ">=0.1.8,<1.0.0",
           "providers": [
             "lfx-anthropic"
           ]
@@ -79,7 +79,7 @@
         {
           "distribution": "lfx-azure",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-azure"
           ]
@@ -95,7 +95,7 @@
         {
           "distribution": "lfx-amazon",
           "extras": [],
-          "version": ">=0.1.6,<1.0.0",
+          "version": ">=0.2.0,<1.0.0",
           "providers": [
             "lfx-amazon"
           ]
@@ -135,9 +135,25 @@
         {
           "distribution": "lfx-google",
           "extras": [],
-          "version": ">=0.2.0,<1.0.0",
+          "version": ">=0.3.1,<1.0.0",
           "providers": [
             "lfx-google"
+          ]
+        },
+        {
+          "distribution": "lfx-microsoft",
+          "extras": [],
+          "version": ">=0.1.2,<1.0.0",
+          "providers": [
+            "lfx-microsoft"
+          ]
+        },
+        {
+          "distribution": "lfx-slack",
+          "extras": [],
+          "version": ">=0.2.0,<1.0.0",
+          "providers": [
+            "lfx-slack"
           ]
         }
       ]

@@ -1,11 +1,14 @@
 from lfx.base.models.groq_constants import GROQ_MODELS
 from lfx.base.models.groq_model_discovery import get_groq_models
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, openai_compatible_client_kwargs
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from lfx.log.logger import logger
 from pydantic.v1 import SecretStr
+
+DEFAULT_GROQ_API_BASE = "https://api.groq.com"
 
 
 class GroqModel(LCModelComponent):
@@ -132,12 +135,17 @@ class GroqModel(LCModelComponent):
             msg = "langchain-groq is not installed. Please install it with `pip install langchain-groq`."
             raise ImportError(msg) from e
 
+        api_key = SecretStr(self.api_key).get_secret_value() if self.api_key else None
+        ensure_credential_endpoint_allowed(
+            api_key, self.base_url, default_url=DEFAULT_GROQ_API_BASE, sdk_env_fallback="GROQ_API_KEY"
+        )
         return ChatGroq(
             model=self.model_name,
             max_tokens=self.max_tokens or None,
             temperature=self.temperature,
             base_url=self.base_url,
             n=self.n or 1,
-            api_key=SecretStr(self.api_key).get_secret_value(),
+            api_key=api_key,
             streaming=self.stream,
+            **openai_compatible_client_kwargs(self.base_url, default_url=DEFAULT_GROQ_API_BASE),
         )

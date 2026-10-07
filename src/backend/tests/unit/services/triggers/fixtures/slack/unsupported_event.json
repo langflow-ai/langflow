@@ -1,0 +1,26 @@
+{
+  "api_app_id": "A0APP00001",
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "is_bot": true,
+      "is_enterprise_install": false,
+      "team_id": "T0TEAM0001",
+      "user_id": "U0BOT00001"
+    }
+  ],
+  "event": {
+    "channel": {
+      "created": 1700001000,
+      "creator": "U0ALICE001",
+      "id": "C0NEWCHAN1",
+      "name": "brand-new"
+    },
+    "type": "channel_created"
+  },
+  "event_id": "Ev0UNS00001",
+  "event_time": 1700001000,
+  "is_ext_shared_channel": false,
+  "team_id": "T0TEAM0001",
+  "type": "event_callback"
+}

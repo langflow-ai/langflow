@@ -8,6 +8,14 @@ from lfx.components.langchain_utilities.json_agent import JsonAgentComponent
 
 
 class TestJsonAgentComponent:
+    @pytest.fixture(autouse=True)
+    def _unrestricted_file_access(self):
+        """These tests exercise agent mechanics with local paths; opt out of file containment."""
+        settings = MagicMock()
+        settings.settings.restrict_local_file_access = False
+        with patch("lfx.utils.file_path_security.get_settings_service", return_value=settings):
+            yield
+
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
