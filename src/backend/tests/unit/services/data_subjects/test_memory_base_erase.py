@@ -30,7 +30,7 @@ class _RemoteStore:
         self.reachable = False
         self.deleted: list[tuple[str, dict]] = []
 
-    def build(self, backend_type, *, kb_name, backend_config, user_id):  # noqa: ARG002
+    def build(self, *, backend_type, kb_name, backend_config, **_kwargs):  # noqa: ARG002
         store = self
 
         class _Backend:
@@ -82,7 +82,7 @@ async def _make_retry_due(request_id) -> None:
 @pytest.mark.usefixtures("client")
 async def test_should_keep_the_request_open_until_the_remote_collection_is_deleted(monkeypatch):
     store = _RemoteStore()
-    monkeypatch.setattr("langflow.services.data_subjects.memory_base_storage.create_backend", store.build)
+    monkeypatch.setattr("langflow.services.knowledge_base_storage.runtime.create_backend", store.build)
     request_id, uid = await _seed_builder_with_remote_memory_base("mb-outage")
 
     first = await run_request(request_id)

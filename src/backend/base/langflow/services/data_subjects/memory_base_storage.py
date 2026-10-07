@@ -1,9 +1,9 @@
 """Durable teardown of the vector stores behind the Memory Bases of erased flows.
 
-Deleting a flow drops its Memory Base rows, and with them the routing to the remote collection. The
-erase engine therefore stores each handle in the request's storage plan in the same transaction as
-the row delete, and this step must succeed before the item leaves the plan: a failure is retried and
-holds the request open, unlike the best-effort cleanup of an ordinary flow delete.
+Deleting a flow drops its Memory Base rows and leaves the backing knowledge base fenced until its
+storage is gone. The erase engine stores each handle in the request's storage plan in the same
+transaction as the row delete, and this step must succeed before the item leaves the plan: a failure
+is retried and holds the request open, unlike the best-effort cleanup of an ordinary flow delete.
 """
 
 from __future__ import annotations
@@ -11,8 +11,6 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
-
-from lfx.base.knowledge_bases.backends import create_backend, is_local_chroma
 
 if TYPE_CHECKING:
     from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup
@@ -35,17 +33,12 @@ def memory_base_items(handles: list[FlowMemoryBaseCleanup]) -> list[dict[str, An
 
 
 async def _drop_remote_collection(item: dict[str, Any]) -> None:
-    backend_type, backend_config = str(item["backend_type"]), dict(item.get("backend_config") or {})
-    if is_local_chroma(backend_type, backend_config):
-        return
-    backend = create_backend(
-        backend_type, kb_name=str(item["value"]), backend_config=backend_config, user_id=UUID(str(item["user_id"]))
-    )
-    try:
-        await backend.ensure_ready()
-        await backend.delete_collection()
-    finally:
-        await backend.teardown()
+    # The KB service drains writers and raises when the store is unreachable, so the item is retried.
+    from langflow.api.utils import knowledge_base_service
+
+    record = await knowledge_base_service.get_by_user_and_name(UUID(str(item["user_id"])), str(item["value"]))
+    if record is not None:
+        await knowledge_base_service.delete_record(record.id)
 
 
 class MemoryBaseDirectoryNotDeletedError(RuntimeError):

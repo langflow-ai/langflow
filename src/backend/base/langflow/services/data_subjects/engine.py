@@ -16,7 +16,7 @@ from langflow.services.data_subjects.builder_account_steps import BUILDER_ACCOUN
 from langflow.services.data_subjects.builder_flow_steps import erase_owned_flows
 from langflow.services.data_subjects.end_user_steps import END_USER_STEPS
 from langflow.services.data_subjects.errors import DataSubjectError
-from langflow.services.data_subjects.knowledge_base_steps import erase_knowledge_bases
+from langflow.services.data_subjects.knowledge_base_steps import erase_knowledge_base_upgrades, erase_knowledge_bases
 from langflow.services.data_subjects.memory_base_storage import memory_base_items
 from langflow.services.data_subjects.requests import close_request, erase_context
 from langflow.services.data_subjects.storage_steps import run_storage_item
@@ -38,6 +38,7 @@ if TYPE_CHECKING:
 BUILDER_STEPS = (
     ("flows", erase_owned_flows),
     ("knowledge_bases", erase_knowledge_bases),
+    ("knowledge_base_upgrades", erase_knowledge_base_upgrades),
     *BUILDER_ACCOUNT_STEPS,
 )
 PHASE_ROWS = "rows"
