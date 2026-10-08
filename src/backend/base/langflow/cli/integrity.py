@@ -23,7 +23,7 @@ from cryptography.fernet import InvalidToken
 from sqlmodel import func, select
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -77,29 +77,39 @@ def open_instance() -> None:
         get_settings_service()
 
 
-async def check_instance() -> IntegrityReport:
-    """Run every check against the running instance's configuration."""
+async def check_instance(on_check: Callable[[CheckResult], None] | None = None) -> IntegrityReport:
+    """Run every check against the running instance's configuration.
+
+    ``on_check`` is called with each result as its check finishes, so a caller can
+    show progress on an instance where the checks take minutes.
+    """
     from langflow.services.deps import session_scope
+
+    report = IntegrityReport([])
+
+    def add(check: CheckResult) -> None:
+        report.checks.append(check)
+        if on_check:
+            on_check(check)
 
     # One session, and it never commits: everything here is a read.
     async with session_scope() as session:
         schema = await check_schema(session)
+        add(schema)
         if schema.status != "ok":
             # The other checks read through this Langflow's models, which on another
             # schema would misread rows or fail on a missing column.
             await session.rollback()
-            return IntegrityReport([schema])
-        checks = [
-            schema,
-            await check_credentials(session),
-            await check_files(session),
-        ]
+            return report
+        add(await check_credentials(session))
+        add(await check_files(session))
         kb_checks, vector_counts = await _check_knowledge_bases(session)
-        checks += kb_checks
-        checks.append(await check_memory_bases(session, vector_counts))
-        checks.append(await check_authorization(session))
+        for check in kb_checks:
+            add(check)
+        add(await check_memory_bases(session, vector_counts))
+        add(await check_authorization(session))
         await session.rollback()
-    return IntegrityReport(checks)
+    return report
 
 
 async def check_schema(session: AsyncSession) -> CheckResult:
