@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.37"
+version = "1.1.38"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -77,6 +77,7 @@ nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<26.
 olivya = []
 ollama = ["lfx-ollama>=0.1.0,<1.0.0"]
 openrouter = ["langchain-openai>=1.1.6"]
+opper = ["langchain-openai>=1.1.6"]
 orcarouter = ["langchain-openai>=1.1.6"]
 perplexity = ["langchain-perplexity>=1.0.0,<2.0.0"]
 pgvector = ["pgvector>=0.4.2", "langchain-community>=0.4.1,<1.0.0"]
@@ -149,6 +150,7 @@ all = [
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
     "lfx-bundles[openrouter]",
+    "lfx-bundles[opper]",
     "lfx-bundles[orcarouter]",
     "lfx-bundles[perplexity]",
     "lfx-bundles[pgvector]",
@@ -220,6 +222,7 @@ all-no-torch = [
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
     "lfx-bundles[openrouter]",
+    "lfx-bundles[opper]",
     "lfx-bundles[orcarouter]",
     "lfx-bundles[perplexity]",
     "lfx-bundles[pgvector]",

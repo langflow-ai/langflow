@@ -9177,7 +9177,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.1.37"
+version = "1.1.38"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -9463,6 +9463,9 @@ ollama = [
 openrouter = [
     { name = "langchain-openai" },
 ]
+opper = [
+    { name = "langchain-openai" },
+]
 orcarouter = [
     { name = "langchain-openai" },
 ]
@@ -9612,6 +9615,7 @@ requires-dist = [
     { name = "langchain-openai", marker = "extra == 'lmstudio'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'novita'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'openrouter'", specifier = ">=1.1.6" },
+    { name = "langchain-openai", marker = "extra == 'opper'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'orcarouter'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'xai'", specifier = ">=1.1.6" },
     { name = "langchain-perplexity", marker = "extra == 'perplexity'", specifier = ">=1.0.0,<2.0.0" },
@@ -9708,6 +9712,8 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["olivya"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["openrouter"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["openrouter"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["opper"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["opper"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["orcarouter"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["orcarouter"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["perplexity"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9804,7 +9810,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "opper", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
 
 [[package]]
 name = "lfx-cohere"

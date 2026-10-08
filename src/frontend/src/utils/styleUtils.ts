@@ -504,6 +504,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Ollama", name: "ollama", icon: "Ollama" },
   { display_name: "OpenAI", name: "openai", icon: "OpenAI" },
   { display_name: "OpenRouter", name: "openrouter", icon: "OpenRouter" },
+  { display_name: "Opper", name: "opper", icon: "Opper" },
   { display_name: "Oracle", name: "oracle", icon: "Oracle" },
   { display_name: "OrcaRouter", name: "orcarouter", icon: "OrcaRouter" },
   { display_name: "PaddleOCR", name: "paddle", icon: "FileSearch" },
