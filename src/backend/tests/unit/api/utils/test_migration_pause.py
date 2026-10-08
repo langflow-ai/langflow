@@ -30,6 +30,7 @@ from langflow.services.data_subjects.requests import create_end_user_request
 from langflow.services.data_subjects.worker import LEASE_NAME, DataSubjectEraseWorker, data_subject_erase_worker
 from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.connection import ConnectionSecret
+from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.data_subject_request import (
     DataSubjectRequest,
     DataSubjectRequestSource,
@@ -339,6 +340,38 @@ async def test_a_get_that_changes_the_instance_is_refused_while_paused(
     assert (await oauth.callback(client, query)).status_code == 200
     async with session_scope() as session:
         assert await session.get(ConnectionSecret, UUID(row["id"])) is not None
+
+
+@pytest.mark.no_blockbuster
+@pytest.mark.usefixtures("active_user")
+async def test_the_desktop_browser_handoff_is_refused_while_paused(client, logged_in_headers, config_dir, monkeypatch):
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "desktop")
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", json.dumps({"google-work": oauth.registration()}))
+    # Desktop began to connect an account before the pause and opens the handoff in the system browser.
+    row, started = await oauth.begin(client, logged_in_headers, handoff=True)
+    handoff_url = started.json()["authorization_url"]
+
+    async def browser_digest() -> str | None:
+        async with session_scope() as session:
+            return (await session.get(ConnectionOAuth, UUID(row["id"]))).browser_digest
+
+    before = await browser_digest()
+    _write_record(config_dir, PAUSED)
+
+    # The handoff is a GET, which the middleware takes for a read. It binds the browser in the database.
+    refused = await client.get(handoff_url, follow_redirects=False)
+
+    assert refused.status_code == 503, refused.text
+    assert refused.json() == REFUSAL
+    assert "set-cookie" not in refused.headers
+    assert await browser_digest() == before
+
+    # The handoff was not used up, so the same URL binds the browser after the pause.
+    _write_record(config_dir, RECORD)
+    bound = await client.get(handoff_url, follow_redirects=False)
+    assert bound.status_code == 303, bound.text
+    assert "set-cookie" in bound.headers
+    assert await browser_digest() != before
 
 
 @pytest.mark.parametrize(
