@@ -5,7 +5,13 @@ import traceback
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from langflow.services.telemetry.schema import ExceptionPayload
+from langflow.services.telemetry.schema import (
+    ComponentPayload,
+    DeploymentPayload,
+    ExceptionPayload,
+    PlaygroundPayload,
+    RunPayload,
+)
 from langflow.services.telemetry.service import TelemetryService
 from lfx.services.telemetry.identity import get_hashed_user_id
 
@@ -117,11 +123,11 @@ class TestExceptionTelemetry:
 
         body = call_args[1]["json"]
         assert body["anonymousId"] == "test-installation"
-        assert body["userId"] == user_id
+        assert body["userId"] == get_hashed_user_id(f"test-installation:{user_id}")
         assert body["event"] == "Ended Process"
         assert body["messageId"]
         assert body["properties"]["exceptionType"] == "ValueError"
-        assert body["properties"]["exceptionMessage"] == "Test error"
+        assert "exceptionMessage" not in body["properties"]
         assert body["properties"]["exceptionContext"] == "handler"
         assert body["properties"]["stackTraceHash"] == "abc123"
         assert body["properties"]["clientType"] == "oss"
@@ -139,6 +145,104 @@ class TestExceptionTelemetry:
         assert body["properties"]["object"] == "exception"
         assert body["properties"]["processType"] == "Langflow Exception"
         assert "timestamp" in body
+
+    @pytest.mark.asyncio
+    async def test_named_user_id_is_scoped_to_installation(self):
+        telemetry_service = TelemetryService.__new__(TelemetryService)
+        telemetry_service.base_url = "https://api.segment.test/v1/track"
+        telemetry_service.segment_write_key = "segment-test-key"
+        telemetry_service.anonymous_id = "installation-a"
+        telemetry_service.do_not_track = False
+        telemetry_service.client_type = "oss"
+        telemetry_service.common_telemetry_fields = {}
+        telemetry_service.client = AsyncMock()
+        telemetry_service.client.post.return_value.status_code = 200
+        payload = RunPayload(run_seconds=1, run_success=True)
+        opaque_user_id = get_hashed_user_id("alice@example.com")
+
+        await telemetry_service.send_telemetry_data(payload, "run", opaque_user_id)
+        first_user_id = telemetry_service.client.post.call_args.kwargs["json"]["userId"]
+        telemetry_service.anonymous_id = "installation-b"
+        await telemetry_service.send_telemetry_data(payload, "run", opaque_user_id)
+        second_user_id = telemetry_service.client.post.call_args.kwargs["json"]["userId"]
+
+        assert first_user_id == get_hashed_user_id(f"installation-a:{opaque_user_id}")
+        assert second_user_id == get_hashed_user_id(f"installation-b:{opaque_user_id}")
+        assert first_user_id != second_user_id
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("payload", "path", "message_field", "retained_field"),
+        [
+            (
+                RunPayload(run_seconds=1, run_success=False, run_error_message="user input"),
+                "run",
+                "runErrorMessage",
+                "runSuccess",
+            ),
+            (
+                DeploymentPayload(
+                    deployment_action="create",
+                    deployment_provider="test",
+                    deployment_seconds=1,
+                    deployment_success=False,
+                    deployment_error_message="SQL parameters",
+                ),
+                "deployment",
+                "deploymentErrorMessage",
+                "deploymentSuccess",
+            ),
+            (
+                PlaygroundPayload(
+                    playground_seconds=1,
+                    playground_success=False,
+                    playground_error_message="prompt text",
+                ),
+                "playground",
+                "playgroundErrorMessage",
+                "playgroundSuccess",
+            ),
+            (
+                ComponentPayload(
+                    component_name="Test",
+                    component_id="test-id",
+                    component_seconds=1,
+                    component_success=False,
+                    component_error_message="stored value",
+                ),
+                "component",
+                "componentErrorMessage",
+                "componentSuccess",
+            ),
+            (
+                ExceptionPayload(
+                    exception_type="ValueError",
+                    exception_message="SQL statement and parameters",
+                    exception_context="handler",
+                    stack_trace_hash="abc123",
+                ),
+                "exception",
+                "exceptionMessage",
+                "exceptionType",
+            ),
+        ],
+    )
+    async def test_send_telemetry_data_removes_free_form_error_text(self, payload, path, message_field, retained_field):
+        telemetry_service = TelemetryService.__new__(TelemetryService)
+        telemetry_service.base_url = "https://api.segment.test/v1/track"
+        telemetry_service.segment_write_key = "segment-test-key"
+        telemetry_service.anonymous_id = "test-installation"
+        telemetry_service.do_not_track = False
+        telemetry_service.client_type = "oss"
+        telemetry_service.common_telemetry_fields = {}
+        telemetry_service.client = AsyncMock()
+        telemetry_service.client.post.return_value.status_code = 200
+
+        await telemetry_service.send_telemetry_data(payload, path)
+
+        properties = telemetry_service.client.post.call_args.kwargs["json"]["properties"]
+        assert message_field not in properties
+        assert retained_field in properties
 
     @pytest.mark.asyncio
     async def test_send_telemetry_data_respects_do_not_track(self):
@@ -215,77 +319,7 @@ class TestExceptionTelemetry:
         assert hash1 == hash2
 
     @pytest.mark.asyncio
-    async def test_large_message_is_sent_in_json_body(self):
-        telemetry_service = TelemetryService.__new__(TelemetryService)
-        telemetry_service.base_url = "https://mock-telemetry.example.com"
-        telemetry_service.segment_write_key = "segment-test-key"
-        telemetry_service.anonymous_id = "test-installation"
-        telemetry_service.do_not_track = False
-        telemetry_service.client_type = "oss"
-        telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
-            "platform": "python_package",
-            "os": "linux",
-        }
-
-        # Create payload with very long message
-        long_message = "A" * 2000  # Very long message
-        payload = ExceptionPayload(
-            exception_type="ValueError",
-            exception_message=long_message,
-            exception_context="handler",
-            stack_trace_hash="abc123",
-        )
-
-        mock_client = AsyncMock()
-        mock_client.post.return_value.status_code = 200
-        telemetry_service.client = mock_client
-
-        await telemetry_service.send_telemetry_data(payload, "exception")
-
-        # Verify HTTP call was made
-        mock_client.post.assert_called_once()
-        call_args = mock_client.post.call_args
-
-        assert call_args[1]["json"]["properties"]["exceptionMessage"] == long_message
-
-    @pytest.mark.asyncio
-    async def test_special_characters_are_preserved_in_json_body(self):
-        telemetry_service = TelemetryService.__new__(TelemetryService)
-        telemetry_service.base_url = "https://mock-telemetry.example.com"
-        telemetry_service.segment_write_key = "segment-test-key"
-        telemetry_service.anonymous_id = "test-installation"
-        telemetry_service.do_not_track = False
-        telemetry_service.client_type = "oss"
-        telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
-            "platform": "python_package",
-            "os": "linux",
-        }
-
-        # Create payload with special characters
-        special_message = "Error with special chars: &?=#@!$%^&*()"
-        payload = ExceptionPayload(
-            exception_type="ValueError",
-            exception_message=special_message,
-            exception_context="handler",
-            stack_trace_hash="abc123",
-        )
-
-        mock_client = AsyncMock()
-        mock_client.post.return_value.status_code = 200
-        telemetry_service.client = mock_client
-
-        await telemetry_service.send_telemetry_data(payload, "exception")
-
-        # Verify HTTP call was made
-        mock_client.post.assert_called_once()
-        call_args = mock_client.post.call_args
-
-        assert call_args[1]["json"]["properties"]["exceptionMessage"] == special_message
-
-    @pytest.mark.asyncio
-    async def test_event_properties_are_not_exposed_in_url(self):
+    async def test_sensitive_error_text_is_not_exported(self):
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.segment_write_key = "segment-test-key"
@@ -317,43 +351,6 @@ class TestExceptionTelemetry:
         mock_client.post.assert_called_once()
         call_args = mock_client.post.call_args
 
-        # Check that sensitive data is not in URL (should be in request body instead)
-        full_url = call_args[0][0]
         sensitive_patterns = ["secret123", "sk-abc123", "xyz789"]
         for pattern in sensitive_patterns:
-            assert pattern not in full_url, f"Sensitive data '{pattern}' found in URL"
-
-    @pytest.mark.asyncio
-    async def test_unicode_characters_are_preserved_in_json_body(self):
-        telemetry_service = TelemetryService.__new__(TelemetryService)
-        telemetry_service.base_url = "https://mock-telemetry.example.com"
-        telemetry_service.segment_write_key = "segment-test-key"
-        telemetry_service.anonymous_id = "test-installation"
-        telemetry_service.do_not_track = False
-        telemetry_service.client_type = "oss"
-        telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
-            "platform": "python_package",
-            "os": "linux",
-        }
-
-        # Create payload with unicode characters
-        unicode_message = "Error with unicode: 世界, 🚀, émojis"
-        payload = ExceptionPayload(
-            exception_type="ValueError",
-            exception_message=unicode_message,
-            exception_context="handler",
-            stack_trace_hash="abc123",
-        )
-
-        mock_client = AsyncMock()
-        mock_client.post.return_value.status_code = 200
-        telemetry_service.client = mock_client
-
-        await telemetry_service.send_telemetry_data(payload, "exception")
-
-        # Verify HTTP call was made
-        mock_client.post.assert_called_once()
-        call_args = mock_client.post.call_args
-
-        assert call_args[1]["json"]["properties"]["exceptionMessage"] == unicode_message
+            assert pattern not in str(call_args), f"Sensitive data '{pattern}' found in telemetry request"

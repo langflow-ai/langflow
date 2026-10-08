@@ -76,7 +76,7 @@ class TestExceptionTelemetryIntegration:
         assert body["event"] == "Ended Process"
         assert body["messageId"]
         assert body["properties"]["exceptionType"] == "ValueError"
-        assert "Integration test exception" in body["properties"]["exceptionMessage"]
+        assert "exceptionMessage" not in body["properties"]
         assert body["properties"]["exceptionContext"] == "lifespan"
         assert len(body["properties"]["stackTraceHash"]) == 16
         assert "timestamp" in body

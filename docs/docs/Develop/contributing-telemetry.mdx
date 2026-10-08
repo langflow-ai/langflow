@@ -13,7 +13,8 @@ This helps prioritize development efforts on the most impactful changes and popu
 The Langflow team respects your privacy, and the team is committed to protecting your data.
 
 Langflow telemetry doesn't send raw operating-system or authenticated Langflow user names, or raw authenticated user IDs.
-Authenticated Langflow user names are represented by a one-way SHA256 hash and used solely for product analytics.
+Authenticated Langflow user names are represented by an installation-scoped, one-way SHA256 pseudonym and used solely
+for product analytics.
 The data collected by each event, including fields that can contain user-provided values, is documented below.
 
 Product-usage events are delivered through Segment. Langflow uses a persistent anonymous installation identifier
@@ -34,11 +35,16 @@ Every Segment event includes the IBM Common Schema product properties `UT30: 30A
 The persistent installation identifier is used for `anonymousId`, `properties.instanceId`, and
 `properties.subscriptionId`.
 
-For authenticated requests, the top-level `userId` is `lf-` followed by the SHA256 hash of the Langflow username.
-Langflow captures this opaque ID before handing an event to the telemetry worker. Lifecycle events and standalone LFX
-events don't have a Langflow username, so they use `lf-` followed by the SHA256 hash of the installation identifier.
+For authenticated requests, the top-level `userId` is `lf-` followed by a SHA256 pseudonym derived from both the
+installation identifier and the Langflow username. The same username therefore produces different IDs on different
+installations. Langflow captures an intermediate opaque ID before handing an event to the telemetry worker. Lifecycle
+events and standalone LFX events don't have a Langflow username, so they use `lf-` followed by the SHA256 hash of the installation identifier.
 The shared default `langflow` account and unauthenticated webhook callers also use this installation fallback.
 Background workflow jobs retain only the opaque telemetry user ID and restore it during execution and resume.
+
+Free-form error messages are removed at the outbound telemetry boundary. Events retain success flags, exception types,
+exception contexts, stack trace hashes, and structured integration error codes without exporting user input, stored
+values, SQL statements, or parameters that an error message might contain.
 
 ## Opt out of telemetry
 
@@ -58,7 +64,6 @@ This telemetry event is sent every time a flow is executed.
 - **IsWebhook**: Indicates whether the operation was triggered with a webhook.
 - **Seconds**: Duration in seconds for how long the operation lasted, providing insights into performance.
 - **Success**: Boolean value indicating whether the operation was successful, helping identify potential errors or issues.
-- **ErrorMessage**: Provides error message details if the operation was unsuccessful, aiding in troubleshooting and enhancements.
 
 ### Shutdown
 
@@ -111,7 +116,6 @@ This telemetry event is sent for each component execution.
 - **Name**: Identifies the component, providing data on which components are most utilized or prone to issues.
 - **Seconds**: Time taken by the component to execute, offering performance metrics.
 - **Success**: Whether the component operated successfully, which helps in quality control.
-- **ErrorMessage**: Details of any errors encountered, crucial for debugging and improvement.
 
 ### Component inputs
 
@@ -147,7 +151,6 @@ It does not include user or flow data.
 This telemetry event is sent when an unhandled exception is captured by Langflow's lifecycle or global exception handler.
 
 - **Type**: The exception class name, such as `ValueError`.
-- **Message**: The exception message that was raised.
 - **Context**: Additional contextual information related to where the exception occurred, such as route, component, or operation details, when available.
 - **StackTraceHash**: A hash of the stack trace used to group similar exceptions for easier analysis.
 
@@ -159,7 +162,6 @@ This telemetry event is sent for various lifecycle operations on deployment prov
 - **DeploymentProvider**: The deployment provider used, such as `watsonx-orchestrate`.
 - **DeploymentSeconds**: Duration in seconds for the operation, providing performance insights.
 - **DeploymentSuccess**: Boolean value indicating whether the operation was successful.
-- **DeploymentErrorMessage**: Error message details if the operation was unsuccessful.
 - **WxoTenantId**: A unique identifier for the tenant, populated only for `watsonx-orchestrate` deployments, used to understand multi-tenant usage patterns without collecting personal information.
 
 ### Deployment
@@ -170,5 +172,4 @@ This telemetry event is sent for various lifecycle operations on deployment reso
 - **DeploymentProvider**: The deployment provider used, such as `watsonx-orchestrate`.
 - **DeploymentSeconds**: Duration in seconds for the operation, providing performance insights.
 - **DeploymentSuccess**: Boolean value indicating whether the operation was successful.
-- **DeploymentErrorMessage**: Error message details if the operation was unsuccessful.
 - **WxoTenantId**: A unique identifier for the tenant, populated only for `watsonx-orchestrate` deployments, used to understand multi-tenant usage patterns without collecting personal information.

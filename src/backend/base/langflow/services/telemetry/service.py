@@ -40,6 +40,15 @@ if TYPE_CHECKING:
     from langflow.services.telemetry.schema import IntegrationActionPayload
 
 
+_FREE_FORM_ERROR_FIELDS = {
+    "componentErrorMessage",
+    "deploymentErrorMessage",
+    "exceptionMessage",
+    "playgroundErrorMessage",
+    "runErrorMessage",
+}
+
+
 def database_dialect(database_url: str | None) -> str:
     """Return only the engine name of a database URL, such as ``sqlite`` or ``postgresql``.
 
@@ -116,6 +125,8 @@ class TelemetryService(Service):
 
         try:
             payload_dict = payload.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
+            for field in _FREE_FORM_ERROR_FIELDS:
+                payload_dict.pop(field, None)
 
             # Add common fields to all payloads except VersionPayload
             if not isinstance(payload, VersionPayload):
@@ -131,7 +142,11 @@ class TelemetryService(Service):
                 payload_dict.update({"action": "registered", "name": "Email", "namespace": "Langflow"})
             body = {
                 "anonymousId": self.anonymous_id,
-                "userId": user_id or get_hashed_user_id(self.anonymous_id),
+                "userId": (
+                    get_hashed_user_id(f"{self.anonymous_id}:{user_id}")
+                    if user_id
+                    else get_hashed_user_id(self.anonymous_id)
+                ),
                 "event": event,
                 "messageId": str(uuid.uuid4()),
                 "properties": payload_dict,
