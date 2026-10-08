@@ -39,6 +39,7 @@ from langflow.services.base import Service
 from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
 from langflow.services.deps import get_job_service
 from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.telemetry.context import get_current_telemetry_user_id
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
@@ -374,6 +375,11 @@ class BackgroundExecutionService(Service):
         # authenticated override envelope together; no worker can claim a row in
         # the old create-then-patch gap.
         initial_metadata = self._persisted_request_metadata(job_id=job_id, flow_id=flow_id, request=request)
+        # Persist only the opaque attribution ID so execution and resume on a
+        # worker do not depend on the submitting request's context or credentials.
+        telemetry_user_id = get_current_telemetry_user_id()
+        if telemetry_user_id is not None:
+            initial_metadata["telemetry_user_id"] = telemetry_user_id
         try:
             await job_service.create_job(
                 job_id=job_id,

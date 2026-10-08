@@ -553,7 +553,7 @@ async def _stream_event_frames(
             await run_task
         await queue.aclose()
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
-        # Scarf telemetry pipeline both see every v2 workflow run.
+        # Product telemetry pipeline both see every v2 workflow run.
         # Mirrors the v1 endpoints.py instrumentation for the streaming path.
         # Skip on: pause (run is resumable), client disconnect (not a failure).
         if not stream_paused and not _stream_cancelled:
@@ -1018,7 +1018,7 @@ async def execute_sync_workflow(
         return error_response
     finally:
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
-        # Scarf telemetry pipeline both see every v2 sync workflow run.
+        # Product telemetry pipeline both see every v2 sync workflow run.
         # Mirrors the _stream_event_frames instrumentation for the SSE path.
         if not _sync_run_paused:
             try:
