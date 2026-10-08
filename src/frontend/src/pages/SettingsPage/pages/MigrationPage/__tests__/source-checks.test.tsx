@@ -33,7 +33,7 @@ const migration: MigrationState = {
   },
   steps: [{ id: "check_source", state: "done" }],
   blocking_findings: [],
-  acceptable_findings: [],
+  acceptable_checks: [],
 };
 
 function Subject() {

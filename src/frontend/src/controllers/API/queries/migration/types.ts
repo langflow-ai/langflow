@@ -60,7 +60,7 @@ export interface MigrationState {
   };
   steps: MigrationStepState[];
   blocking_findings: string[];
-  acceptable_findings: string[];
+  acceptable_checks: string[];
 }
 
 /** The `detail` of a request the server refused. */

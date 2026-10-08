@@ -87,7 +87,7 @@ export function CheckStep({ migration }: { migration: MigrationState }) {
   const busy = !running && run?.status === "running";
   const blocked = migration.blocking_findings.length > 0;
   const checks = running ? streamed : (run?.report?.checks ?? []);
-  const groups = groupChecks(checks, migration.acceptable_findings);
+  const groups = groupChecks(checks, migration.acceptable_checks);
   const lastRun =
     run &&
     t("settings.migration.check.lastRun", {

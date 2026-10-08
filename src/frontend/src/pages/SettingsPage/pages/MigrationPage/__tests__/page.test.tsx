@@ -26,7 +26,7 @@ const state = (
     reason,
   })) as MigrationStepState[],
   blocking_findings: [],
-  acceptable_findings: [],
+  acceptable_checks: [],
 });
 
 /** Opens the page on a state the server would send. Fresh for ever, so the page never asks a server for another. */
