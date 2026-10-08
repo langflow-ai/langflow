@@ -40,7 +40,6 @@
     },
     "hono": "^4.12.34",
     "@hono/node-server": "^2.0.5",
-    "playwright": "1.60.0",
     "brace-expansion": "^5.0.12",
     "basic-ftp": "^6.2.1",
     "source-map-js": "^1.2.2",
