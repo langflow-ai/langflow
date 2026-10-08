@@ -54,6 +54,21 @@ def test_workspace_security_overrides_enforce_patched_versions() -> None:
     _assert_floor(h2, "4.4.1")
 
 
+def test_workspace_security_constraints_enforce_patched_versions() -> None:
+    uv_settings = _load_pyproject("pyproject.toml")["tool"]["uv"]
+    constraints = uv_settings["constraint-dependencies"]
+
+    _assert_floor(_requirement(constraints, "fsspec"), "2026.6.0")
+    _assert_floor(_requirement(constraints, "multidict"), "6.9.1")
+    _assert_floor(_requirement(constraints, "langgraph-sdk"), "0.4.4")
+
+    # An override replaces every requirement on the package, dropping caps such as
+    # aiohttp's multidict<7.0 and langgraph's langgraph-sdk<0.5.0. Keep these floors
+    # as constraints so `uv pip compile` (the Mend export) cannot resolve past them.
+    override_names = {Requirement(spec).name.lower() for spec in uv_settings["override-dependencies"]}
+    assert not {"multidict", "langgraph-sdk"} & override_names
+
+
 def test_managed_dependency_graph_excludes_opendsstar_and_diskcache() -> None:
     """Even opt-in extras and test groups must not reintroduce the retired dependency."""
     with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
@@ -87,6 +102,17 @@ def test_published_packages_enforce_patched_pypdf_floor() -> None:
     pypdf_extra = _requirement(base_extras["pypdf"], "pypdf")
     _assert_floor(pypdf_extra, "6.19.0")
     _assert_specifier(pypdf_extra, "<", "7.0.0")
+
+
+def test_published_packages_enforce_patched_mcp_floor() -> None:
+    for relative_path in ("src/backend/base/pyproject.toml", "src/lfx/pyproject.toml"):
+        dependencies = _load_pyproject(relative_path)["project"]["dependencies"]
+        mcp = _requirement(dependencies, "mcp")
+        _assert_floor(mcp, "1.30.0")
+        _assert_specifier(mcp, "<", "2.0.0")
+
+    base_extras = _load_pyproject("src/backend/base/pyproject.toml")["project"]["optional-dependencies"]
+    _assert_floor(_requirement(base_extras["mcp"], "mcp"), "1.30.0")
 
 
 def test_published_extras_enforce_patched_gitpython_floor() -> None:
