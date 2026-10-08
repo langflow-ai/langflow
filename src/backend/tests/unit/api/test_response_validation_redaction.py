@@ -23,8 +23,6 @@ from fastapi.exceptions import ResponseValidationError
 from httpx import ASGITransport, AsyncClient
 from langflow import main as langflow_main
 from langflow.services.database.models.variable.model import VariableRead
-from langflow.services.deps import get_telemetry_service
-from langflow.services.telemetry.schema import ExceptionPayload
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from pydantic import BaseModel
 
@@ -131,31 +129,6 @@ async def test_response_validation_logs_the_full_errors_server_side(app_client: 
     assert isinstance(kwargs["exc_info"], ResponseValidationError)
     assert CANARY in str(kwargs["exc_info"])
     assert CANARY not in event
-
-
-async def test_response_validation_telemetry_names_locations_not_values(app_client: AsyncClient, monkeypatch):
-    # Telemetry leaves the server (DO_NOT_TRACK only stops the send), so the event
-    # carries the error types, their locations and the route, not str(exc).
-    queued: list[Any] = []
-
-    async def record(event: Any) -> None:
-        queued.append(event)
-
-    monkeypatch.setattr(get_telemetry_service(), "_queue_event", record)
-
-    await app_client.get(VARIABLE_PROBE)
-
-    payloads = [event[1] for event in queued if isinstance(event[1], ExceptionPayload)]
-    assert len(payloads) == 1
-    payload = payloads[0]
-    assert payload.exception_type == "ResponseValidationError"
-    assert payload.exception_context == "handler"
-    assert CANARY not in payload.exception_message
-    assert "'missing'" in payload.exception_message
-    assert "('response', 'id')" in payload.exception_message
-    assert f"GET {VARIABLE_PROBE}" in payload.exception_message
-    # The endpoint's source file is a server path; the probe is defined in this file.
-    assert __file__ not in payload.exception_message
 
 
 async def test_other_unhandled_errors_keep_their_500_shape(app_client: AsyncClient):

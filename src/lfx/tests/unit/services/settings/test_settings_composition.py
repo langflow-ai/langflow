@@ -378,6 +378,7 @@ def test_critical_defaults_unchanged():
     assert settings.mcp_sdk_constraint == "mcp~=1.28"
     assert settings.load_flows_preserve_variable_bindings is True
     assert settings.do_not_track is False
+    assert settings.telemetry_base_url is None
     assert settings.warm_registry_enabled is False
     assert settings.warm_registry_preload_limit == 0
     assert settings.warm_registry_max_entries == 128

@@ -53,7 +53,7 @@ class FieldTypes(str, Enum):
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
 
-# Field types that should never be tracked in telemetry due to sensitive data
+# Historical field-type privacy metadata retained for serialized-flow compatibility.
 SENSITIVE_FIELD_TYPES = {
     FieldTypes.PASSWORD,
     FieldTypes.AUTH,
@@ -126,10 +126,10 @@ class BaseInputMixin(CrossModuleModel, validate_assignment=True):  # type: ignor
     """Specifies if the field should be displayed in title case. Defaults to True."""
 
     track_in_telemetry: CoalesceBool = False
-    """Specifies if the field value should be tracked in telemetry.
+    """Deprecated metadata retained for saved-flow compatibility.
 
-    Defaults to False (opt-in). Automatically disabled for sensitive field types.
-    Individual input types can explicitly enable tracking for safe, useful data.
+    LFX no longer collects product analytics, so this field is inert regardless
+    of its value. Defaults to False for compatibility with existing flows.
     """
 
     def to_dict(self):

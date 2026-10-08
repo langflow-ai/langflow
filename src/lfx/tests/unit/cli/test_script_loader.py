@@ -245,7 +245,7 @@ class TestLoadGraphFromScript:
             else:
                 assert await load_graph_from_script(Path("cold-cache-script.py")) is graph
 
-        load.assert_awaited_once_with(settings_service, None)
+        load.assert_awaited_once_with(settings_service)
         assert cache.all_types_ready
         assert cache.component_identity_index is not None
 

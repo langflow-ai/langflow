@@ -275,7 +275,6 @@ async def test_enabled_lifespan_warms_and_cancels_loop(monkeypatch, tmp_path):
     monkeypatch.setenv("LANGFLOW_WARM_REGISTRY_ENABLED", "true")
     monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
-    monkeypatch.setenv("DO_NOT_TRACK", "true")
 
     def _init():
         # Fresh service stack booted from the env above.
@@ -318,7 +317,6 @@ async def test_enabled_lifespan_survives_warm_failure(monkeypatch, tmp_path):
     monkeypatch.setenv("LANGFLOW_WARM_REGISTRY_ENABLED", "true")
     monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
-    monkeypatch.setenv("DO_NOT_TRACK", "true")
 
     def _init():
         get_service_manager().factories.clear()

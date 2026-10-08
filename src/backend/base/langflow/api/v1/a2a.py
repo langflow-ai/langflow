@@ -23,6 +23,7 @@ table so they survive restart and are visible across workers.
 import asyncio
 import hashlib
 import time
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -411,8 +412,8 @@ async def _log_a2a_resume_run(
     (the run is not over yet). Resume is the other half of that contract: it is the call
     that actually finishes a HITL run, and it runs through ``run_graph_internal`` rather
     than through ``execute_sync_workflow``, so without this the whole run was never
-    metered. ``log_package_run`` appends to ``run_event_store`` before the do-not-track
-    gate, so enterprise metering sees it even when outbound telemetry is off.
+    metered. ``log_package_run`` appends to ``run_event_store`` so enterprise consumers
+    receive the completed event without any outbound analytics transport.
 
     ``run_id`` is the A2A task id, normalized the way ``_run_flow`` derives its ``job_id``
     (a UUID-shaped task id becomes its canonical string), so the two A2A segments of one
@@ -438,6 +439,7 @@ async def _log_a2a_resume_run(
                 run_success=success,
                 run_error_message="" if success else (error_message or "workflow error"),
                 run_id=run_id,
+                run_completed_at=datetime.now(timezone.utc),
             )
         )
     except Exception:  # noqa: BLE001

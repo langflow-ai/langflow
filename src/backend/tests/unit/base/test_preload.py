@@ -136,9 +136,6 @@ def _preload_env(
         stack.enter_context(
             patch("langflow.services.deps.get_settings_service", return_value=settings_service),
         )
-        stack.enter_context(
-            patch("langflow.services.deps.get_telemetry_service", return_value=MagicMock()),
-        )
         stack.enter_context(patch("langflow.services.deps.get_db_service", return_value=db_service))
         stack.enter_context(patch("langflow.services.deps.get_service", return_value=cache_service))
         stack.enter_context(

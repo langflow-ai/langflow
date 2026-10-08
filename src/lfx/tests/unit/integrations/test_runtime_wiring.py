@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import copy
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
@@ -106,37 +105,23 @@ def test_headless_preflight_reports_missing_connection(monkeypatch: pytest.Monke
 
 
 @pytest.mark.asyncio
-async def test_integration_telemetry_excludes_connection_identifiers(monkeypatch: pytest.MonkeyPatch) -> None:
-    captured = []
+async def test_integration_action_logs_without_product_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
+    logs = []
 
-    class Telemetry:
-        async def log_integration_action(self, payload):
-            captured.append((payload, "integration_action"))
-
-    manager = SimpleNamespace(services={ServiceType.TELEMETRY_SERVICE: Telemetry()})
+    manager = SimpleNamespace(services={ServiceType.TELEMETRY_SERVICE: SimpleNamespace()})
     monkeypatch.setattr("lfx.services.manager.get_service_manager", lambda: manager)
     component = SimpleNamespace(
         graph=SimpleNamespace(execution_principal=ExecutionPrincipal(kind="headless_operator")),
-        log=lambda *_args, **_kwargs: None,
+        log=lambda *args, **kwargs: logs.append((args, kwargs)),
     )
 
     async with integration_action(component, provider="google", capability="drive.read", owner_kind="env"):
         pass
 
-    payload, event_name = captured[0]
-    rendered = payload.model_dump()
-    assert event_name == "integration_action"
-    assert set(rendered) == {
-        "client_type",
-        "provider",
-        "capability",
-        "ms",
-        "success",
-        "error_code",
-        "owner_kind",
-        "principal_kind",
-    }
-    assert "connection" not in rendered
+    assert logs
+    assert logs[0][0][0]["provider"] == "google"
+    assert logs[0][0][0]["capability"] == "drive.read"
+    assert logs[0][0][0]["success"] is True
 
 
 @pytest.mark.parametrize("write", [False, True])
@@ -205,37 +190,15 @@ def test_malformed_preflight_never_echoes_field_value() -> None:
     assert raw not in repr(vars(errors[0]))
 
 
-async def test_integration_action_does_not_wait_for_telemetry_transport(monkeypatch: pytest.MonkeyPatch) -> None:
-    from lfx.services.telemetry.service import TelemetryService
+async def test_integration_action_does_not_access_telemetry_service(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_if_called():
+        pytest.fail("product telemetry service must not be resolved")
 
-    service = TelemetryService(do_not_track=False)
-    entered = asyncio.Event()
-    release = asyncio.Event()
-    sent = []
-
-    async def send(payload, path):
-        sent.append((payload, path))
-        entered.set()
-        await release.wait()
-
-    monkeypatch.setattr(service, "send_telemetry_data", send)
-    manager = SimpleNamespace(services={ServiceType.TELEMETRY_SERVICE: service})
-    monkeypatch.setattr("lfx.services.manager.get_service_manager", lambda: manager)
+    monkeypatch.setattr("lfx.services.manager.get_service_manager", fail_if_called)
     component = SimpleNamespace(graph=None, log=lambda *_args, **_kwargs: None)
 
-    async def action():
-        async with integration_action(component, provider="google", capability="drive.read", owner_kind="env"):
-            pass
-
-    service.start()
-    try:
-        await asyncio.wait_for(action(), timeout=1)
-        await asyncio.wait_for(entered.wait(), timeout=1)
-        assert sent[0][1] == "integration_action"
-        assert not release.is_set()
-    finally:
-        release.set()
-        await service.stop()
+    async with integration_action(component, provider="google", capability="drive.read", owner_kind="env"):
+        pass
 
 
 async def test_run_flow_uses_configured_resolver_without_environment(

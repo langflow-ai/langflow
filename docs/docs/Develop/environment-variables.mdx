@@ -84,7 +84,6 @@ If it detects a supported environment variable, then it automatically adopts the
     <summary>Example: .env</summary>
 
     ```text
-    DO_NOT_TRACK=True
     LANGFLOW_AUTO_LOGIN=False
     LANGFLOW_AUTO_SAVING=True
     LANGFLOW_AUTO_SAVING_INTERVAL=5000
@@ -163,7 +162,6 @@ Create or edit a `.env` file in the root directory of your application or Langfl
 <summary>Example: .env</summary>
 
 ```text title=".env"
-DO_NOT_TRACK=True
 LANGFLOW_AUTO_LOGIN=False
 LANGFLOW_AUTO_SAVING=True
 LANGFLOW_AUTO_SAVING_INTERVAL=5000
@@ -209,7 +207,6 @@ To add environment variables, create or edit a service configuration file and ad
 
 ```ini title="override.conf"
 [Service]
-Environment="DO_NOT_TRACK=true"
 Environment="LANGFLOW_AUTO_LOGIN=false"
 Environment="LANGFLOW_AUTO_SAVING=true"
 Environment="LANGFLOW_AUTO_SAVING_INTERVAL=5000"
@@ -262,7 +259,6 @@ Create or edit the `.vscode/tasks.json` file in your project root.
     "version": "2.0.0",
     "options": {
         "env": {
-            "DO_NOT_TRACK": "true",
             "LANGFLOW_AUTO_LOGIN": "false",
             "LANGFLOW_AUTO_SAVING": "true",
             "LANGFLOW_AUTO_SAVING_INTERVAL": "5000",
@@ -448,14 +444,14 @@ For database environment variables, including PostgreSQL configuration, see [Mem
 
 ### Telemetry {#telemetry}
 
-Anonymous product usage telemetry is separate from OpenTelemetry export.
-
-See [Telemetry](/contributing-telemetry) to opt out with `DO_NOT_TRACK`.
+Scarf product analytics has been removed. No opt-out is required.
+`DO_NOT_TRACK` and `LANGFLOW_DO_NOT_TRACK` remain accepted as no-op compatibility flags. Their values have no current effect and are reserved for a future telemetry integration. `LANGFLOW_TELEMETRY_BASE_URL` remains accepted for configuration compatibility, but is obsolete and unused. None of these settings can enable analytics or disable Enterprise metering.
+See [Telemetry](/contributing-telemetry) for details.
 
 ### OpenTelemetry {#opentelemetry}
 
 Langflow can export service-health traces, metrics, and logs over OTLP to **your** backend.
-This is not LLM tracing and is not the anonymous product telemetry above.
+This is separate from LLM tracing and the removed Scarf product analytics integration.
 
 Set `OTEL_EXPORTER_OTLP_ENDPOINT` to enable export. If it is unset, Langflow installs no providers.
 

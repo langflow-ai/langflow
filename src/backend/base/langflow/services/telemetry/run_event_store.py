@@ -1,11 +1,10 @@
 """In-process store of completed-run events for enterprise metering.
 
-TelemetryService.log_package_run appends every RunPayload here before the
-do-not-track gate: metering consumers must see every run even when outbound
-telemetry is disabled. Nothing in OSS reads the store — enterprise builds
-drain it periodically via pop_all() — and events never leave the process
-unless such a consumer is installed. The store is bounded so a deployment
-without a consumer holds at most _MAX_EVENTS payloads.
+TelemetryService.log_package_run appends every RunPayload here. Nothing in OSS
+reads the store; enterprise builds can drain it periodically via pop_all(),
+and events never leave the process unless such a consumer is installed. The
+store is bounded so a deployment without a consumer holds at most _MAX_EVENTS
+payloads.
 """
 
 from __future__ import annotations

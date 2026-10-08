@@ -187,7 +187,7 @@ class TestRegistryParityAcrossModes:
     async def test_lazy_and_full_registries_agree_on_built_ins(self):
         from lfx.interface.components import import_langflow_components
 
-        builtin = (await import_langflow_components(None, None))["components"]
+        builtin = (await import_langflow_components(None))["components"]
 
         async def registry(*, lazy: bool) -> dict[str, Any]:
             service = _SettingsService(_Settings(lazy=lazy, components_path=[BASE_COMPONENTS_PATH]))

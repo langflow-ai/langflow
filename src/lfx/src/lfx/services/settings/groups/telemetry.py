@@ -11,10 +11,12 @@ class TelemetrySettings(BaseModel):
     sentry_traces_sample_rate: float | None = 1.0
     sentry_profiles_sample_rate: float | None = 1.0
 
-    # Telemetry
+    # Product analytics compatibility settings. Product analytics are removed;
+    # these fields remain accepted for existing deployments but are inert.
     do_not_track: bool = False
-    """If set to True, Langflow will not track telemetry."""
-    telemetry_base_url: str = "https://langflow.gateway.scarf.sh"
+    """No-op compatibility flag reserved for a future telemetry integration."""
+    telemetry_base_url: str | None = None
+    """Deprecated compatibility setting; no product telemetry transport uses it."""
 
     transactions_storage_enabled: bool = True
     """If set to True, Langflow will track transactions between flows."""

@@ -3,128 +3,86 @@ import subprocess
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
+from types import SimpleNamespace
 
+import httpx
 import pytest
 from langflow.services.telemetry.opentelemetry import (
     MetricType,
     OpenTelemetry,
     ThreadSafeSingletonMetaUsingWeakref,
 )
-from langflow.services.telemetry.schema import DeploymentPayload, IntegrationActionPayload, RunPayload
+from langflow.services.telemetry.run_event_store import pop_all
+from langflow.services.telemetry.schema import RunPayload
 from langflow.services.telemetry.service import TelemetryService
 
 
 @pytest.fixture
-def mock_settings_service(mocker):
-    settings = mocker.MagicMock()
-    settings.settings.telemetry_base_url = "http://test.telemetry"
-    settings.settings.prometheus_enabled = False
-    settings.settings.do_not_track = False
-    return settings
-
-
-@pytest.fixture
-def telemetry_service(mock_settings_service):
-    return TelemetryService(mock_settings_service)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("do_not_track", [False, True])
-async def test_run_completion_is_recorded_before_tracking_consent(telemetry_service, do_not_track):
-    from langflow.services.telemetry.run_event_store import pop_all
-
+def telemetry_service():
+    service = TelemetryService(SimpleNamespace(settings=SimpleNamespace(prometheus_enabled=False)))
     pop_all()
-    telemetry_service.do_not_track = do_not_track
-    payload = RunPayload(run_seconds=1, run_success=True)
+    yield service
+    pop_all()
+
+
+async def test_run_completion_is_recorded_without_network_io(telemetry_service):
+    payload = RunPayload(run_seconds=1, run_success=True, run_id="run-1")
+
     await telemetry_service.log_package_run(payload)
-    events = pop_all()
-    assert len(events) == 1
-    assert events[0].run_completed_at is not None
-    assert telemetry_service.telemetry_queue.empty() is do_not_track
+
+    assert pop_all() == [payload]
 
 
-@pytest.mark.asyncio
-async def test_log_package_deployment(telemetry_service):
-    payload = DeploymentPayload(
-        deployment_action="deployment.create",
-        deployment_provider="test_provider",
-        deployment_seconds=1.0,
-        deployment_success=True,
+@pytest.mark.parametrize("legacy_optout", [None, False, True])
+async def test_run_and_lifecycle_issue_no_http_requests(monkeypatch, legacy_optout):
+    requests = []
+    pop_all()
+    payload = RunPayload(
+        run_seconds=1,
+        run_success=True,
+        run_id="legacy-optout",
+        run_completed_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
-    await telemetry_service.log_package_deployment(payload)
-    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
-    assert func == telemetry_service.send_telemetry_data
-    assert queued_payload == payload
-    assert path == "deployment"
+    settings = SimpleNamespace(prometheus_enabled=False)
+    if legacy_optout is not None:
+        settings.do_not_track = legacy_optout
+    telemetry_service = TelemetryService(SimpleNamespace(settings=settings))
+
+    async def fail_send(*args, **kwargs):
+        requests.append((args, kwargs))
+        raise AssertionError
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", fail_send)
+
+    try:
+        telemetry_service.start()
+        await telemetry_service.log_package_run(payload)
+        await telemetry_service.flush()
+        assert pop_all() == [payload]
+    finally:
+        await telemetry_service.teardown()
+        pop_all()
+
+    assert requests == []
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("do_not_track", [False, True])
-async def test_integration_action_uses_telemetry_queue(telemetry_service, do_not_track):
-    telemetry_service.do_not_track = do_not_track
-    payload = IntegrationActionPayload(
-        provider="google",
-        capability="drive.read",
-        owner_kind="env",
-        principal_kind="headless_operator",
-        ms=1,
-        success=True,
-    )
-    await telemetry_service.log_integration_action(payload)
-    if do_not_track:
-        assert telemetry_service.telemetry_queue.empty()
-    else:
-        send, queued, path = telemetry_service.telemetry_queue.get_nowait()
-        assert send == telemetry_service.send_telemetry_data
-        assert queued == payload
-        assert path == "integration_action"
-        telemetry_service.telemetry_queue.task_done()
-    await telemetry_service.client.aclose()
+async def test_run_completion_preserves_existing_timestamp(telemetry_service):
+    completed_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    payload = RunPayload(run_seconds=1, run_success=True, run_completed_at=completed_at)
+
+    await telemetry_service.log_package_run(payload)
+
+    assert pop_all()[0].run_completed_at == completed_at
 
 
-@pytest.mark.asyncio
-async def test_log_package_deployment_provider(telemetry_service):
-    payload = DeploymentPayload(
-        deployment_action="provider.create",
-        deployment_provider="test_provider",
-        deployment_seconds=1.0,
-        deployment_success=True,
-    )
-    await telemetry_service.log_package_deployment_provider(payload)
-    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
-    assert func == telemetry_service.send_telemetry_data
-    assert queued_payload == payload
-    assert path == "deployment_provider"
+async def test_lifecycle_keeps_open_telemetry_provider(telemetry_service):
+    telemetry_service.start()
+    assert telemetry_service.running
 
-
-@pytest.mark.asyncio
-async def test_log_package_deployment_run(telemetry_service):
-    payload = DeploymentPayload(
-        deployment_action="deployment.run",
-        deployment_provider="test_provider",
-        deployment_seconds=1.0,
-        deployment_success=True,
-    )
-    await telemetry_service.log_package_deployment_run(payload)
-    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
-    assert func == telemetry_service.send_telemetry_data
-    assert queued_payload == payload
-    assert path == "deployment_run"
-
-
-@pytest.mark.asyncio
-async def test_log_package_deployment_do_not_track(telemetry_service):
-    telemetry_service.do_not_track = True
-    payload = DeploymentPayload(
-        deployment_action="deployment.create",
-        deployment_provider="test_provider",
-        deployment_seconds=1.0,
-        deployment_success=True,
-    )
-    await telemetry_service.log_package_deployment(payload)
-    await telemetry_service.log_package_deployment_provider(payload)
-    await telemetry_service.log_package_deployment_run(payload)
-    assert telemetry_service.telemetry_queue.empty()
+    await telemetry_service.flush()
+    await telemetry_service.stop()
+    assert not telemetry_service.running
 
 
 fixed_labels = {"flow_id": "this_flow_id", "service": "this", "user": "that"}

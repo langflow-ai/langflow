@@ -26,7 +26,6 @@ from langflow.cli.preflight import (
     probe_secret_key,
     probe_shared_queue,
     probe_storage,
-    probe_telemetry,
     probe_vector_backend,
     run_production_preflight,
     summarize,
@@ -46,7 +45,6 @@ class _StubSettings:
             "object_storage_prefix": "files",
             "object_storage_tags": None,
             "config_dir": tempfile.gettempdir(),
-            "do_not_track": False,
             "cache_type": "async",
             "job_queue_type": "asyncio",
             "deployment_profile": "prod",
@@ -347,15 +345,6 @@ async def test_storage_external_failure_maps_reason(monkeypatch):
 # ---------------------------------------------------------------------------
 # Degraded checks (warn only)
 # ---------------------------------------------------------------------------
-
-
-async def test_telemetry_enabled_ok():
-    assert (await probe_telemetry(_StubService(do_not_track=False))).status == "ok"
-
-
-async def test_telemetry_disabled_warns():
-    result = await probe_telemetry(_StubService(do_not_track=True))
-    assert result.status == "warn"
 
 
 async def test_cache_in_memory_warns():

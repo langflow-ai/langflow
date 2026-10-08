@@ -34,7 +34,6 @@ async def test_generate_flow_events_sets_source_flow_provenance_for_public_graph
 
     chat_service = MagicMock()
     chat_service.set_cache = AsyncMock()
-    telemetry_service = MagicMock()
 
     @asynccontextmanager
     async def fake_session_scope():
@@ -43,7 +42,6 @@ async def test_generate_flow_events_sets_source_flow_provenance_for_public_graph
     build_from_db = AsyncMock(return_value=graph)
     build_from_data = AsyncMock(return_value=graph)
     monkeypatch.setattr(build_module, "get_chat_service", lambda: chat_service)
-    monkeypatch.setattr(build_module, "get_telemetry_service", lambda: telemetry_service)
     monkeypatch.setattr(build_module, "session_scope", fake_session_scope)
     monkeypatch.setattr(build_module, "build_graph_from_db", build_from_db)
     monkeypatch.setattr(build_module, "build_graph_from_data", build_from_data)
@@ -95,14 +93,12 @@ async def test_generate_flow_events_maps_rejected_file_tweaks_to_bad_request(mon
     graph.vertices = [vertex]
 
     chat_service = MagicMock()
-    telemetry_service = MagicMock()
 
     @asynccontextmanager
     async def fake_session_scope():
         yield MagicMock()
 
     monkeypatch.setattr(build_module, "get_chat_service", lambda: chat_service)
-    monkeypatch.setattr(build_module, "get_telemetry_service", lambda: telemetry_service)
     monkeypatch.setattr(build_module, "session_scope", fake_session_scope)
     monkeypatch.setattr(build_module, "build_graph_from_db", AsyncMock(return_value=graph))
     # The tweak-validation pass only needs to reach the mocked update_raw_params, which

@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, mock_open, patch
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
@@ -205,6 +206,50 @@ class TestAPIEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["email"] == "test@example.com"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("do_not_track", "langflow_do_not_track"),
+        [(None, None), ("false", None), (None, "false"), ("true", None), (None, "true")],
+    )
+    async def test_register_user_does_not_make_outbound_request(
+        self, tmp_path, monkeypatch, do_not_track, langflow_do_not_track
+    ):
+        """Registration persists locally without constructing an outbound HTTP client."""
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from langflow.api.v2 import registration
+        from langflow.services.auth.utils import get_current_active_user
+
+        app = FastAPI()
+        app.include_router(router)
+        app.dependency_overrides[get_current_active_user] = lambda: MagicMock()
+        registration_file = tmp_path / "registration.json"
+        monkeypatch.setattr(registration, "REGISTRATION_FILE", registration_file)
+        monkeypatch.setenv("LANGFLOW_TELEMETRY_BASE_URL", "https://example.invalid/telemetry")
+        if do_not_track is None:
+            monkeypatch.delenv("DO_NOT_TRACK", raising=False)
+        else:
+            monkeypatch.setenv("DO_NOT_TRACK", do_not_track)
+        if langflow_do_not_track is None:
+            monkeypatch.delenv("LANGFLOW_DO_NOT_TRACK", raising=False)
+        else:
+            monkeypatch.setenv("LANGFLOW_DO_NOT_TRACK", langflow_do_not_track)
+        constructor_attempts = []
+
+        class RecordingAsyncClient:
+            def __init__(self, *args, **kwargs):
+                constructor_attempts.append((args, kwargs))
+
+        monkeypatch.setattr(httpx, "AsyncClient", RecordingAsyncClient)
+
+        with TestClient(app) as client:
+            response = client.post("/registration/", json={"email": "local@example.com"})
+
+        assert response.status_code == 200
+        assert registration_file.exists()
+        assert json.loads(registration_file.read_text())["email"] == "local@example.com"
+        assert constructor_attempts == []
 
     @pytest.mark.asyncio
     @patch("langflow.api.v2.registration.save_registration")

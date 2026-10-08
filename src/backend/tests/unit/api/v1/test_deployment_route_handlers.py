@@ -16,7 +16,6 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from langflow.api.v1.deployments import DeploymentTelemetryCtx
 from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
 from langflow.api.v1.schemas.deployments import (
@@ -106,10 +105,6 @@ def _fake_user() -> SimpleNamespace:
     return SimpleNamespace(id=uuid4())
 
 
-def _fake_telemetry() -> DeploymentTelemetryCtx:
-    return DeploymentTelemetryCtx()
-
-
 def _fake_attachment(*, provider_snapshot_id: str | None = None) -> SimpleNamespace:
     return SimpleNamespace(
         flow_version_id=uuid4(),
@@ -185,9 +180,7 @@ class TestCreateDeploymentRollback:
         payload.description = None
 
         with pytest.raises(RuntimeError, match="DB commit failed"):
-            await create_deployment(
-                session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
+            await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         mock_rollback.assert_awaited_once()
         assert mock_rollback.call_args.kwargs["resource_id"] == create_result.id
@@ -243,9 +236,7 @@ class TestCreateDeploymentRollback:
         payload.description = None
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
-        await create_deployment(
-            session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
-        )
+        await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         mock_rollback.assert_not_awaited()
 
@@ -311,9 +302,7 @@ class TestCreateDeploymentExistingAgent:
         payload.description = None
 
         mapper.shape_deployment_create_result.return_value = MagicMock()
-        await create_deployment(
-            session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
-        )
+        await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         _ = (mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
@@ -363,9 +352,7 @@ class TestCreateDeploymentExistingAgent:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_deployment(
-                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
+            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
 
         assert exc_info.value.status_code == 422
         assert "cannot include fields that update the wxO agent" in str(exc_info.value.detail)
@@ -415,9 +402,7 @@ class TestCreateDeploymentExistingAgent:
         payload.description = None
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_deployment(
-                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
+            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
 
         assert exc_info.value.status_code == 409
         mock_create_db.assert_not_awaited()
@@ -466,9 +451,7 @@ class TestCreateDeploymentExistingAgent:
         payload.description = None
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_deployment(
-                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
+            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
 
         assert exc_info.value.status_code == 403
         adapter.get.assert_not_awaited()
@@ -1314,7 +1297,6 @@ class TestUpdateSnapshotRoute:
             body=SnapshotUpdateRequest(flow_version_id=target_flow_version_id),
             session=session,
             current_user=user,
-            telemetry=_fake_telemetry(),
         )
 
         assert response.flow_version_id == target_flow_version_id
@@ -1401,7 +1383,6 @@ class TestUpdateSnapshotRoute:
                 body=SnapshotUpdateRequest(flow_version_id=target_flow_version_id),
                 session=session,
                 current_user=user,
-                telemetry=_fake_telemetry(),
             )
 
         session.commit.assert_awaited_once()
@@ -1454,7 +1435,6 @@ class TestUpdateSnapshotRoute:
                 body=SnapshotUpdateRequest(flow_version_id=target_flow_version_id),
                 session=session,
                 current_user=user,
-                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 404
@@ -1532,7 +1512,6 @@ class TestUpdateSnapshotRoute:
                 body=SnapshotUpdateRequest(flow_version_id=uuid4()),
                 session=AsyncMock(),
                 current_user=user,
-                telemetry=_fake_telemetry(),
             )
         assert exc_info.value.status_code == 404
         # UUID-privacy: the response must NOT distinguish "no such snapshot"
@@ -1624,7 +1603,6 @@ class TestUpdateSnapshotRoute:
             body=SnapshotUpdateRequest(flow_version_id=target_flow_version_id),
             session=session,
             current_user=user,
-            telemetry=_fake_telemetry(),
         )
         assert response.provider_snapshot_id == "tool-1"
         # Mutation must run inside the OWNER's namespace (Alice's), not the actor's.
@@ -1691,7 +1669,6 @@ class TestUpdateSnapshotRoute:
                 body=SnapshotUpdateRequest(flow_version_id=uuid4()),
                 session=AsyncMock(),
                 current_user=user,
-                telemetry=_fake_telemetry(),
             )
         assert exc_info.value.status_code == 409
         assert "multiple owners" in exc_info.value.detail.lower()
@@ -1752,7 +1729,6 @@ class TestUpdateSnapshotRoute:
                 body=SnapshotUpdateRequest(flow_version_id=uuid4()),
                 session=AsyncMock(),
                 current_user=user,
-                telemetry=_fake_telemetry(),
             )
         assert exc_info.value.status_code == 409
         assert "provider accounts" in exc_info.value.detail.lower()
@@ -1876,7 +1852,6 @@ class TestProviderAccountRoutes:
                 session=AsyncMock(),
                 payload=SimpleNamespace(provider_key="test-provider"),
                 current_user=user,
-                telemetry=_fake_telemetry(),
             )
         assert create_error.value.status_code == 403
         mapper.assert_not_called()
@@ -1915,7 +1890,6 @@ class TestProviderAccountRoutes:
                 session=AsyncMock(),
                 payload=DeploymentProviderAccountUpdateRequest(name="renamed"),
                 current_user=user,
-                telemetry=_fake_telemetry(),
             )
         assert update_error.value.status_code == 404
         mapper.assert_not_called()
@@ -1929,7 +1903,6 @@ class TestProviderAccountRoutes:
                 provider_id=account.id,
                 session=AsyncMock(),
                 current_user=user,
-                telemetry=_fake_telemetry(),
             )
         assert delete_error.value.status_code == 404
         reconcile.assert_not_awaited()
@@ -1963,7 +1936,6 @@ class TestProviderAccountRoutes:
             session=session,
             payload=DeploymentProviderAccountUpdateRequest(name="renamed"),
             current_user=_fake_user(),
-            telemetry=_fake_telemetry(),
         )
 
         mapper.resolve_verify_credentials_for_update.assert_not_called()
@@ -2005,7 +1977,6 @@ class TestProviderAccountRoutes:
                 session=AsyncMock(),
                 payload=DeploymentProviderAccountUpdateRequest(provider_data={"api_key": "new-api-key"}),
                 current_user=_fake_user(),
-                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 401
@@ -2047,7 +2018,6 @@ class TestProviderAccountRoutes:
                 session=AsyncMock(),
                 payload=payload,
                 current_user=_fake_user(),
-                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 409
@@ -2086,7 +2056,6 @@ class TestProviderAccountRoutes:
                 session=AsyncMock(),
                 payload=DeploymentProviderAccountUpdateRequest(name="prod"),
                 current_user=_fake_user(),
-                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 409
@@ -2131,7 +2100,6 @@ class TestProviderAccountRoutes:
                 session=AsyncMock(),
                 payload=DeploymentProviderAccountUpdateRequest(provider_data={"tenant_id": "tenant-renamed"}),
                 current_user=_fake_user(),
-                telemetry=_fake_telemetry(),
             )
 
     @pytest.mark.asyncio
@@ -2172,7 +2140,6 @@ class TestProviderAccountRoutes:
                 session=AsyncMock(),
                 payload=DeploymentProviderAccountUpdateRequest(provider_data={"tenant_id": "tenant-renamed"}),
                 current_user=_fake_user(),
-                telemetry=_fake_telemetry(),
             )
 
     @pytest.mark.asyncio
@@ -2204,7 +2171,6 @@ class TestProviderAccountRoutes:
                 provider_id=existing_account.id,
                 session=AsyncMock(),
                 current_user=_fake_user(),
-                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 409
@@ -2241,7 +2207,6 @@ class TestProviderAccountRoutes:
             provider_id=existing_account.id,
             session=session,
             current_user=_fake_user(),
-            telemetry=_fake_telemetry(),
         )
 
         assert response.status_code == 204
@@ -2296,7 +2261,6 @@ class TestProviderAccountRoutes:
             provider_id=existing_account.id,
             session=AsyncMock(),
             current_user=_fake_user(),
-            telemetry=_fake_telemetry(),
         )
 
         assert response.status_code == 204
@@ -2344,7 +2308,6 @@ class TestProviderAccountRoutes:
                 provider_id=existing_account.id,
                 session=AsyncMock(),
                 current_user=_fake_user(),
-                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 409
@@ -2379,7 +2342,6 @@ class TestProviderAccountRoutes:
             provider_id=existing_account.id,
             session=session,
             current_user=_fake_user(),
-            telemetry=_fake_telemetry(),
         )
 
         assert response.status_code == 204
@@ -2441,7 +2403,6 @@ class TestUpdateDeploymentRollback:
                 session=session,
                 payload=payload,
                 current_user=_fake_user(),
-                telemetry=_fake_telemetry(),
             )
 
         mock_rollback.assert_awaited_once()
@@ -2498,7 +2459,6 @@ class TestUpdateDeploymentRollback:
                 session=session,
                 payload=payload,
                 current_user=actor,
-                telemetry=_fake_telemetry(),
             )
 
         assert actor.id != owner_id
@@ -2548,7 +2508,6 @@ class TestUpdateDeploymentRollback:
             session=session,
             payload=payload,
             current_user=_fake_user(),
-            telemetry=_fake_telemetry(),
         )
 
         mock_rollback.assert_not_awaited()
@@ -2616,7 +2575,6 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
             session=session,
             payload=payload,
             current_user=_fake_user(),
-            telemetry=_fake_telemetry(),
         )
 
         mock_resolve_snap.assert_called_once()
@@ -2679,7 +2637,6 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
             session=session,
             payload=payload,
             current_user=_fake_user(),
-            telemetry=_fake_telemetry(),
         )
 
         resolved_fv_ids = mock_resolve_snap.call_args.kwargs["added_flow_version_ids"]
@@ -2734,7 +2691,6 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
             session=session,
             payload=payload,
             current_user=_fake_user(),
-            telemetry=_fake_telemetry(),
         )
 
         resolved_fv_ids = mock_resolve_snap.call_args.kwargs["added_flow_version_ids"]
@@ -2798,7 +2754,6 @@ class TestUpdateDeploymentMetadataPersistence:
             session=session,
             payload=payload,
             current_user=_fake_user(),
-            telemetry=_fake_telemetry(),
         )
 
         mock_update_db.assert_awaited_once()
@@ -3270,9 +3225,7 @@ class TestDeleteDeployment:
         user = _fake_user()
         session = AsyncMock()
 
-        response = await delete_deployment(
-            deployment_id=dep_row.id, session=session, current_user=user, telemetry=_fake_telemetry()
-        )
+        response = await delete_deployment(deployment_id=dep_row.id, session=session, current_user=user)
 
         assert response.status_code == 204
         mock_delete_row.assert_awaited_once_with(session, user_id=dep_row.user_id, deployment_id=dep_row.id)
@@ -3298,9 +3251,7 @@ class TestDeleteDeployment:
         session = AsyncMock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_deployment(
-                deployment_id=dep_row.id, session=session, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
+            await delete_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
         assert exc_info.value.status_code == 401
         mock_delete_row.assert_not_awaited()
@@ -3325,9 +3276,7 @@ class TestDeleteDeployment:
         session.commit.side_effect = [RuntimeError("commit failed"), None]
         mock_delete_row.return_value = 1
 
-        response = await delete_deployment(
-            deployment_id=dep_row.id, session=session, current_user=user, telemetry=_fake_telemetry()
-        )
+        response = await delete_deployment(deployment_id=dep_row.id, session=session, current_user=user)
 
         assert response.status_code == 204
         assert mock_delete_row.await_count == 2
@@ -3353,9 +3302,7 @@ class TestDeleteDeployment:
         mock_delete_row.return_value = 1
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_deployment(
-                deployment_id=dep_row.id, session=session, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
+            await delete_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
         assert exc_info.value.status_code == 500
         assert mock_delete_row.await_count == 2
@@ -3385,7 +3332,6 @@ class TestDeleteDeployment:
             session=session,
             current_user=user,
             include_provider=True,
-            telemetry=_fake_telemetry(),
         )
 
         assert response.status_code == 204
@@ -3415,7 +3361,6 @@ class TestDeleteDeployment:
             session=session,
             current_user=user,
             include_provider=False,
-            telemetry=_fake_telemetry(),
         )
 
         assert response.status_code == 204
@@ -3440,9 +3385,7 @@ class TestDeleteDeployment:
         adapter = AsyncMock()
         mock_resolve.return_value = (dep_row, adapter, "watsonx-orchestrate", "tenant-1")
         session = AsyncMock()
-        response = await delete_deployment(
-            deployment_id=dep_row.id, session=session, current_user=actor, telemetry=_fake_telemetry()
-        )
+        response = await delete_deployment(deployment_id=dep_row.id, session=session, current_user=actor)
 
         assert response.status_code == 204
         assert actor.id != owner_id
@@ -3468,9 +3411,7 @@ class TestDeleteDeployment:
         session = AsyncMock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_deployment(
-                deployment_id=dep_row.id, session=session, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
+            await delete_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
         assert exc_info.value.status_code == 404
         mock_delete_row.assert_awaited_once()
@@ -3495,9 +3436,7 @@ class TestDeleteDeployment:
         session = AsyncMock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_deployment(
-                deployment_id=dep_row.id, session=session, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
+            await delete_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
         assert exc_info.value.status_code == 500
         mock_delete_row.assert_awaited_once()
@@ -3550,9 +3489,7 @@ class TestCreateDeploymentProjectValidation:
         payload.provider_id = pa.id
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_deployment(
-                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
+            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
 
         assert exc_info.value.status_code == 404
         mock_validate_fv.assert_awaited_once()
@@ -3605,9 +3542,7 @@ class TestCreateDeploymentProjectValidation:
             patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock),
         ):
             mapper.shape_deployment_create_result.return_value = MagicMock()
-            await create_deployment(
-                session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
+            await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         mock_validate_fv.assert_awaited_once()
         assert mock_validate_fv.call_args.kwargs["flow_version_ids"] == []
@@ -3653,9 +3588,7 @@ class TestCreateDeploymentSchemaValidation:
         payload.provider_id = pa.id
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_deployment(
-                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
+            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
 
         assert exc_info.value.status_code == 422
         mock_validate_fv.assert_awaited_once()
@@ -3701,7 +3634,6 @@ class TestUpdateDeploymentProjectValidation:
                 session=AsyncMock(),
                 payload=payload,
                 current_user=_fake_user(),
-                telemetry=_fake_telemetry(),
             )
 
         assert exc_info.value.status_code == 404
@@ -4025,7 +3957,7 @@ class TestCreateDeploymentFlowDeploy:
         payload.type = "agent"
         payload.description = None
 
-        await create_deployment(session=session, payload=payload, current_user=user, telemetry=_fake_telemetry())
+        await create_deployment(session=session, payload=payload, current_user=user)
 
         mock_ensure_deploy.assert_awaited_once_with(
             user=user,
@@ -4072,9 +4004,7 @@ class TestCreateDeploymentFlowDeploy:
         payload.description = None
 
         with pytest.raises(HTTPException) as exc_info:
-            await create_deployment(
-                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
+            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
 
         assert exc_info.value.status_code == 403
         adapter.create.assert_not_awaited()
@@ -4127,7 +4057,6 @@ class TestUpdateDeploymentFlowDeploy:
             session=session,
             payload=payload,
             current_user=actor,
-            telemetry=_fake_telemetry(),
         )
 
         mock_ensure_deploy.assert_awaited_once_with(

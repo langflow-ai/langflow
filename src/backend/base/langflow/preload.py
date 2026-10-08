@@ -226,7 +226,6 @@ async def _run_master_preload() -> None:
     from langflow.services.deps import (
         get_db_service,
         get_settings_service,
-        get_telemetry_service,
         session_scope,
     )
     from langflow.services.utils import initialize_services
@@ -258,7 +257,7 @@ async def _run_master_preload() -> None:
         mark_step_complete(PreloadStep.BUNDLES)
 
         await logger.ainfo("[preload] building component types cache")
-        await get_and_cache_all_types_dict(settings_service, get_telemetry_service())
+        await get_and_cache_all_types_dict(settings_service)
         mark_step_complete(PreloadStep.TYPES_CACHED)
 
         all_types_dict = component_cache.all_types_dict

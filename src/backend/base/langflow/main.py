@@ -119,15 +119,6 @@ async def _run_enterprise_lifespan_hooks(phase: str) -> None:
             await logger.awarning(f"Enterprise lifespan {phase} hook {hook_name} failed: {e}")
 
 
-async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
-    """Helper to safely log exceptions to telemetry without raising."""
-    try:
-        telemetry_service = get_telemetry_service()
-        await telemetry_service.log_exception(exc, context)
-    except (httpx.HTTPError, asyncio.QueueFull):
-        await logger.awarning(f"Failed to log {context} exception to telemetry")
-
-
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
     def __init__(self, app) -> None:
         """Initialize middleware that tracks client disconnections."""
@@ -499,11 +490,11 @@ def get_lifespan(*, fix_migration=False, version=None):
                         "Component types cache is empty but preload marked types cached; "
                         "rebuilding cache in this worker."
                     )
-                    all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
+                    all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             else:
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Caching types")
-                all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
+                all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
                 await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             # Gate: Create/update starter projects
@@ -789,7 +780,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             if "langflow migration --fix" not in str(exc):
                 logger.exception(exc)
 
-                await log_exception_to_telemetry(exc, "lifespan")
             raise
         finally:
             # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
@@ -987,7 +977,6 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await logger.adebug("Teardown cancelled during shutdown.")
             except Exception as e:  # noqa: BLE001
                 await logger.aexception(f"Unhandled error during cleanup: {e}")
-                await log_exception_to_telemetry(e, "lifespan_cleanup")
 
     return lifespan
 
@@ -1284,14 +1273,6 @@ def create_app():
         # exc_info renders the full errors to the console and log file; the message is the
         # field OTel log export can carry, so it names the failure without the values.
         await logger.aerror("Response validation failed", exc_info=exc)
-        # Telemetry leaves the server. Send a copy that keeps the type, the traceback and
-        # the route template, and reduces each error to its type and location. A location
-        # is field names, list indexes and dict keys, never the value.
-        located = ResponseValidationError(
-            [{"type": error.get("type"), "loc": error.get("loc")} for error in exc.errors()],
-            endpoint_ctx={"path": exc.endpoint_path} if exc.endpoint_path else None,
-        )
-        await log_exception_to_telemetry(located.with_traceback(exc.__traceback__), "handler")
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             content={"message": "Internal server error: the response failed validation"},
@@ -1307,8 +1288,6 @@ def create_app():
                 content={"message": str(exc.detail)},
             )
         await logger.aerror(f"unhandled error: {exc}", exc_info=exc)
-
-        await log_exception_to_telemetry(exc, "handler")
 
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,

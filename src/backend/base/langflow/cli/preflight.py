@@ -11,10 +11,10 @@ infrastructure checks in the CLI parent process *before* any worker is spawned:
   (pgVector or OpenSearch): each backend configured via the environment is
   actively probed, and the check fails only when nothing is configured or every
   configured backend is unreachable.
-- **Degraded** checks (telemetry, cache, shared queue) surface reduced
-  capabilities. Telemetry only ever warns. Cache and shared queue warn when they
-  fall back to their in-process default, but *abort* when an external backend is
-  explicitly selected (e.g. LANGFLOW_CACHE_TYPE=redis) yet is unreachable — a
+- **Degraded** checks (cache, shared queue) surface reduced capabilities. Cache
+  and shared queue warn when they fall back to their in-process default, but
+  *abort* when an external backend is explicitly selected (e.g.
+  LANGFLOW_CACHE_TYPE=redis) yet is unreachable — a
   deployment that asked for a shared backend and did not get one is misconfigured,
   not merely degraded. The operator can unset the backend to boot degraded.
 
@@ -555,16 +555,6 @@ async def probe_mcp_posture(settings_service: SettingsService) -> CheckResult:
     )
 
 
-async def probe_telemetry(settings_service: SettingsService) -> CheckResult:
-    """Config-only telemetry check (no outbound network call at boot)."""
-    if settings_service.settings.do_not_track:
-        return CheckResult(
-            "warn",
-            "disabled (LANGFLOW_DO_NOT_TRACK) — usage analytics will not be reported",
-        )
-    return CheckResult("ok", "enabled")
-
-
 async def probe_cache(settings_service: SettingsService) -> CheckResult:
     """Cache reachability.
 
@@ -667,7 +657,6 @@ REQUIRED_CHECKS: list[PreflightCheck] = [
 
 DEGRADED_CHECKS: list[PreflightCheck] = [
     PreflightCheck("mcp_posture", "MCP serving posture", "degraded", probe_mcp_posture),
-    PreflightCheck("telemetry", "Telemetry", "degraded", probe_telemetry),
     PreflightCheck("cache", "Cache service", "degraded", probe_cache),
     PreflightCheck("shared_queue", "Shared queue (Redis)", "degraded", probe_shared_queue),
 ]

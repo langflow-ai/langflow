@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import time
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
@@ -24,6 +25,18 @@ class _FakeGraph:
 
     def get_terminal_nodes(self) -> list[str]:
         return ["output-1"]
+
+
+def _freeze_completion(monkeypatch, wf_exec):
+    completed_at = datetime(2026, 9, 14, 23, 59, 59, tzinfo=timezone.utc)
+
+    class CompletionClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return completed_at if tz is None else completed_at.astimezone(tz)
+
+    monkeypatch.setattr(wf_exec, "datetime", CompletionClock)
+    return completed_at
 
 
 def _patch_sync_dependencies(monkeypatch, *, execute_side_effect=None, persist_side_effect=None):
@@ -78,6 +91,7 @@ async def test_live_stream_uses_one_run_id_for_adapter_graph_and_telemetry(monke
     from langflow.services import deps
 
     captured: dict[str, object] = {}
+    completed_at = _freeze_completion(monkeypatch, wf_exec)
     telemetry = SimpleNamespace(log_package_run=AsyncMock())
     original_get_stream_adapter = workflow_api.get_stream_adapter
 
@@ -109,6 +123,43 @@ async def test_live_stream_uses_one_run_id_for_adapter_graph_and_telemetry(monke
     payload = telemetry.log_package_run.await_args.args[0]
     assert captured["adapter_run_id"] == captured["graph_run_id"] == payload.run_id
     assert captured["log_builds"] is False
+    assert payload.run_success is True
+    assert payload.run_completed_at == completed_at
+
+
+async def test_stream_failure_emits_failed_run_with_completion_timestamp(monkeypatch):
+    from langflow.api.v2 import workflow_execution as wf_exec
+    from langflow.services import deps
+
+    async def failing_generate_flow_events(**_kwargs):
+        raise RuntimeError
+
+    telemetry = SimpleNamespace(log_package_run=AsyncMock())
+    completed_at = _freeze_completion(monkeypatch, wf_exec)
+    monkeypatch.setattr(wf_exec, "generate_flow_events", failing_generate_flow_events)
+    monkeypatch.setattr(deps, "get_telemetry_service", lambda: telemetry)
+
+    adapter = get_stream_adapter(
+        "langflow",
+        StreamAdapterContext(run_id="job-failed", thread_id="thread-failed"),
+    )
+    async for _frame, _event_type in wf_exec._stream_event_frames(
+        adapter=adapter,
+        flow_id=uuid4(),
+        flow_name="flow",
+        background_tasks=BackgroundTasks(),
+        parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
+        current_user=SimpleNamespace(id=uuid4()),
+        run_id="job-failed",
+        job_id=uuid4(),
+        protocol="langflow",
+        execution_family="workflow_v2",
+    ):
+        pass
+
+    payload = telemetry.log_package_run.await_args.args[0]
+    assert payload.run_success is False
+    assert payload.run_completed_at == completed_at
 
 
 async def test_stream_pause_does_not_emit_terminal_run_telemetry(monkeypatch):
@@ -247,18 +298,22 @@ async def test_sync_persistence_failure_emits_failed_run_telemetry(monkeypatch):
         monkeypatch,
         persist_side_effect=RuntimeError("persist failed"),
     )
+    completed_at = _freeze_completion(monkeypatch, wf_exec)
 
     response = await _execute_sync(wf_exec)
 
     assert response == "error-response"
     payload = telemetry.log_package_run.await_args.args[0]
     assert payload.run_success is False
+    assert payload.run_completed_at == completed_at
 
 
 async def test_sync_success_emits_successful_run_telemetry(monkeypatch):
     wf_exec, telemetry = _patch_sync_dependencies(monkeypatch)
+    completed_at = _freeze_completion(monkeypatch, wf_exec)
 
     await _execute_sync(wf_exec)
 
     payload = telemetry.log_package_run.await_args.args[0]
     assert payload.run_success is True
+    assert payload.run_completed_at == completed_at

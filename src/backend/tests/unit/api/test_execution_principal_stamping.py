@@ -460,7 +460,6 @@ async def _principal_from_a_build(monkeypatch: pytest.MonkeyPatch, **kwargs) -> 
     chat_service = MagicMock()
     chat_service.set_cache = AsyncMock()
     monkeypatch.setattr(build_module, "get_chat_service", lambda: chat_service)
-    monkeypatch.setattr(build_module, "get_telemetry_service", lambda: MagicMock())
     monkeypatch.setattr(build_module, "session_scope", _fake_session_scope)
     monkeypatch.setattr(build_module, "build_graph_from_db", build_from_db)
 

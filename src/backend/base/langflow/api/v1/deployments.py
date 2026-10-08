@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import time
-from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
@@ -117,57 +114,7 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
     list_deployment_attachments_for_flow_version_ids,
     update_flow_version_by_provider_snapshot_id,
 )
-from langflow.services.deps import get_authorization_service, get_telemetry_service
-from langflow.services.telemetry.schema import DeploymentPayload
-
-
-@dataclass
-class DeploymentTelemetryCtx:
-    """Mutable context that routes write into; passed via Depends."""
-
-    provider: str = "unknown"
-    wxo_tenant_id: str | None = None
-
-
-def _make_telemetry_dep(action: str, log_method_name: str):
-    async def _dep() -> AsyncIterator[DeploymentTelemetryCtx]:
-        ctx = DeploymentTelemetryCtx()
-        started_at = time.perf_counter()
-        success: bool = True
-        error_message: str = ""
-        try:
-            yield ctx
-        except Exception as exc:
-            success = False
-            error_message = str(exc)
-            raise
-        finally:
-            try:
-                ts = get_telemetry_service()
-                payload = DeploymentPayload(
-                    deployment_action=action,
-                    deployment_provider=ctx.provider,
-                    deployment_seconds=time.perf_counter() - started_at,
-                    deployment_success=success,
-                    deployment_error_message=error_message,
-                    wxo_tenant_id=ctx.wxo_tenant_id,
-                )
-                await getattr(ts, log_method_name)(payload)
-            except Exception:  # noqa: BLE001
-                logger.debug("deployment telemetry emit failed", exc_info=True)
-
-    return _dep
-
-
-deployment_create_telemetry = _make_telemetry_dep("deployment.create", "log_package_deployment")
-deployment_update_telemetry = _make_telemetry_dep("deployment.update", "log_package_deployment")
-deployment_delete_telemetry = _make_telemetry_dep("deployment.delete", "log_package_deployment")
-deployment_run_telemetry = _make_telemetry_dep("deployment.run", "log_package_deployment_run")
-provider_create_telemetry = _make_telemetry_dep("provider.create", "log_package_deployment_provider")
-provider_update_telemetry = _make_telemetry_dep("provider.update", "log_package_deployment_provider")
-provider_delete_telemetry = _make_telemetry_dep("provider.delete", "log_package_deployment_provider")
-snapshot_update_telemetry = _make_telemetry_dep("snapshot.update", "log_package_deployment")
-
+from langflow.services.deps import get_authorization_service
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"], include_in_schema=False)
 
@@ -352,14 +299,12 @@ async def create_provider_account(
     session: DbSession,
     payload: DeploymentProviderAccountCreateRequest,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(provider_create_telemetry)],
 ):
     await ensure_provider_account_permission(
         current_user,
         ProviderAccountAction.CREATE,
         provider_account_user_id=current_user.id,
     )
-    telemetry.provider = payload.provider_key
     deployment_mapper = get_deployment_mapper(payload.provider_key)
     deployment_adapter = resolve_deployment_adapter(payload.provider_key)
 
@@ -381,7 +326,6 @@ async def create_provider_account(
         )
     except ValueError as exc:
         _raise_http_for_provider_account_value_error(exc)
-    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     return deployment_mapper.resolve_provider_account_response(provider_account)
 
 
@@ -445,7 +389,6 @@ async def delete_provider_account(
     provider_id: DeploymentProviderAccountIdPath,
     session: DbSession,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(provider_delete_telemetry)],
 ):
     provider_account = await get_owned_provider_account_or_404(
         provider_id=provider_id,
@@ -461,8 +404,6 @@ async def delete_provider_account(
         )
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Deployment provider account not found.") from exc
-    telemetry.provider = provider_account.provider_key
-    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     deployment_count = await _count_provider_deployments_after_reconciliation(
         session=session,
         provider_account=provider_account,
@@ -490,7 +431,6 @@ async def update_provider_account(
     session: DbSession,
     payload: DeploymentProviderAccountUpdateRequest,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(provider_update_telemetry)],
 ):
     provider_account = await get_owned_provider_account_or_404(
         provider_id=provider_id,
@@ -506,9 +446,6 @@ async def update_provider_account(
         )
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Deployment provider account not found.") from exc
-    telemetry.provider = provider_account.provider_key
-    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
-
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     verify_input = None
     if _field_was_explicitly_set(payload, "provider_data"):
@@ -552,7 +489,6 @@ async def create_deployment(
     session: DbSession,
     payload: DeploymentCreateRequest,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_create_telemetry)],
 ):
     provider_id = payload.provider_id
     provider_account = await get_owned_provider_account_or_404(
@@ -560,9 +496,6 @@ async def create_deployment(
         user_id=current_user.id,
         db=session,
     )
-    telemetry.provider = provider_account.provider_key
-    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
-
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
 
@@ -948,14 +881,13 @@ async def create_deployment_run(
     session: DbSession,
     payload: RunCreateRequest,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_run_telemetry)],
 ):
     (
         deployment_row,
         deployment_adapter,
         deployment_mapper,
         _provider_key,
-        provider_tenant_id,
+        _provider_tenant_id,
     ) = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
@@ -972,8 +904,6 @@ async def create_deployment_run(
         )
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Deployment not found.") from exc
-    telemetry.provider = _provider_key
-    telemetry.wxo_tenant_id = provider_tenant_id
     adapter_execution_payload = await deployment_mapper.resolve_execution_create(
         deployment_resource_key=deployment_row.resource_key,
         db=session,
@@ -1211,7 +1141,6 @@ async def update_snapshot(
     body: SnapshotUpdateRequest,
     session: DbSession,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(snapshot_update_telemetry)],
 ):
     """Replace an existing provider snapshot's content with a new flow version.
 
@@ -1403,8 +1332,6 @@ async def update_snapshot(
         user_id=owner_id,
         db=session,
     )
-    telemetry.provider = provider_account.provider_key
-    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
 
@@ -1585,14 +1512,13 @@ async def update_deployment(
     session: DbSession,
     payload: DeploymentUpdateRequest,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_update_telemetry)],
 ):
     (
         deployment_row,
         deployment_adapter,
         deployment_mapper,
         provider_key,
-        provider_tenant_id,
+        _provider_tenant_id,
     ) = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
@@ -1609,8 +1535,6 @@ async def update_deployment(
         )
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Deployment not found.") from exc
-    telemetry.provider = provider_key
-    telemetry.wxo_tenant_id = provider_tenant_id
     deployment_row_id = deployment_row.id
     deployment_resource_key = deployment_row.resource_key
     deployment_provider_account_id = deployment_row.deployment_provider_account_id
@@ -1718,11 +1642,10 @@ async def delete_deployment(
     deployment_id: DeploymentIdPath,
     session: DbSession,
     current_user: CurrentActiveUser,
-    telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_delete_telemetry)],
     *,
     include_provider: IncludeProviderDeleteQuery = True,
 ):
-    deployment_row, deployment_adapter, _provider_key, provider_tenant_id = await resolve_adapter_from_deployment(
+    deployment_row, deployment_adapter, _provider_key, _provider_tenant_id = await resolve_adapter_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -1738,8 +1661,6 @@ async def delete_deployment(
         )
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Deployment not found.") from exc
-    telemetry.provider = _provider_key
-    telemetry.wxo_tenant_id = provider_tenant_id
     if include_provider:
         try:
             with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):

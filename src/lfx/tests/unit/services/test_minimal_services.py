@@ -91,7 +91,7 @@ class TestTelemetryService:
 
     @pytest.fixture
     def telemetry(self):
-        """Create a telemetry service with do_not_track so it doesn't hit the network."""
+        """Create the inert compatibility telemetry service."""
         return TelemetryService(do_not_track=True)
 
     def test_service_ready(self, telemetry):
@@ -99,46 +99,44 @@ class TestTelemetryService:
         assert telemetry.ready is True
         assert telemetry.name == "telemetry_service"
 
-    def test_do_not_track_from_env(self):
-        """Test DO_NOT_TRACK env var is respected."""
-        os.environ["DO_NOT_TRACK"] = "1"
-        try:
-            svc = TelemetryService()
-            assert svc.do_not_track is True
-        finally:
-            del os.environ["DO_NOT_TRACK"]
+    def test_legacy_options_are_inert(self):
+        """Legacy settings cannot enable outbound product telemetry."""
+        svc = TelemetryService(base_url="https://example.invalid", do_not_track=False)
+        svc.start()
+        assert svc.base_url == "https://example.invalid"
+        assert svc.do_not_track is False
+        assert svc._running is False
+        assert not hasattr(svc, "_client")
 
-    def test_start_skipped_when_do_not_track(self, telemetry):
-        """Start is a no-op when do_not_track is set."""
+    def test_start_is_inert(self, telemetry):
+        """Starting the compatibility service creates no worker or client."""
         telemetry.start()
         assert telemetry._running is False
-        assert telemetry._worker_task is None
-        assert telemetry._client is None
+        assert not hasattr(telemetry, "_worker_task")
+        assert not hasattr(telemetry, "_client")
 
     @pytest.mark.asyncio
     async def test_start_and_stop_lifecycle(self):
-        """Test that start creates worker/client and stop cleans them up."""
+        """The compatibility lifecycle remains safe and inert."""
         svc = TelemetryService(base_url="http://localhost:0")
         svc.start()
-        assert svc._running is True
-        assert svc._worker_task is not None
-        assert svc._client is not None
+        assert svc._running is False
+        assert not hasattr(svc, "_worker_task")
+        assert not hasattr(svc, "_client")
 
         await svc.stop()
         assert svc._running is False
-        assert svc._client is None
 
     @pytest.mark.asyncio
-    async def test_enqueue_skipped_when_do_not_track(self, telemetry):
-        """Enqueue is a no-op when do_not_track is set."""
+    async def test_log_mcp_tool_is_noop(self, telemetry):
+        """Historical event methods are no-ops."""
         from lfx.services.telemetry.schema import MCPToolPayload
 
         await telemetry.log_mcp_tool(MCPToolPayload(tool="test", success=True, ms=5))
-        assert telemetry._queue.empty()
 
     @pytest.mark.asyncio
-    async def test_flush_when_do_not_track(self, telemetry):
-        """Flush should not raise when do_not_track is set."""
+    async def test_flush_is_noop(self, telemetry):
+        """Flush should not raise for the compatibility service."""
         await telemetry.flush()
 
     @pytest.mark.asyncio
@@ -162,10 +160,9 @@ class TestTelemetryService:
         """Test that teardown properly stops a started service."""
         svc = TelemetryService(base_url="http://localhost:0")
         svc.start()
-        assert svc._running is True
+        assert svc._running is False
         await svc.teardown()
         assert svc._running is False
-        assert svc._client is None
 
 
 class TestTracingService:

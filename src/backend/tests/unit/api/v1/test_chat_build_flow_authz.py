@@ -599,12 +599,10 @@ async def test_legacy_vertices_route_passes_only_sanitized_inline_data(monkeypat
     monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", sanitize)
     monkeypatch.setattr(chat_module, "build_and_cache_graph_from_data", build_from_data)
     monkeypatch.setattr(chat_module, "get_chat_service", lambda: chat_service)
-    monkeypatch.setattr(chat_module, "get_telemetry_service", MagicMock)
     monkeypatch.setattr(chat_module, "get_top_level_vertices", lambda *_args: [])
 
     await chat_module.retrieve_vertices_order(
         flow_id=flow.id,
-        background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
         data=original,
         session=_FakeSession([[flow]]),
         current_user=owner,
