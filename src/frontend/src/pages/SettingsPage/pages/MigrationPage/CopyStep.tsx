@@ -216,11 +216,16 @@ export function CopyStep({
               <ul className="list-disc pl-5">
                 {asked.details.orphans.map((orphan) => (
                   <li key={`${orphan.table}.${orphan.column}`}>
-                    {t("settings.migration.copyDb.orphans.row", {
-                      table: orphan.table,
-                      parent: orphan.parent,
-                      rows: count(orphan.rows),
-                    })}
+                    {/* A SET NULL row is copied with its key cleared, not left out. */}
+                    {t(
+                      `settings.migration.copyDb.orphans.${orphan.ondelete === "SET NULL" ? "rowCleared" : "row"}`,
+                      {
+                        table: orphan.table,
+                        column: orphan.column,
+                        parent: orphan.parent,
+                        rows: count(orphan.rows),
+                      },
+                    )}
                   </li>
                 ))}
               </ul>

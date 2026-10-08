@@ -644,7 +644,7 @@ describe("the steps after the check", () => {
     });
   });
 
-  it("says how many rows a database copy left out on the admin's word", () => {
+  it("says how many rows a database copy left out on the admin's word, and counts no row it kept with the key cleared", () => {
     open(
       state(
         { ...copied, copy_database: ["done"] },
@@ -657,8 +657,28 @@ describe("the steps after the check", () => {
                 tables_copied: 59,
                 rows_copied: 57,
                 orphans: [
-                  { table: "span", parent: "trace", rows: 2 },
-                  { table: "message", parent: "flow", rows: 1200 },
+                  {
+                    table: "span",
+                    column: "trace_id",
+                    parent: "trace",
+                    ondelete: "CASCADE",
+                    rows: 2,
+                  },
+                  {
+                    table: "message",
+                    column: "flow_id",
+                    parent: "flow",
+                    ondelete: "CASCADE",
+                    rows: 1200,
+                  },
+                  // Copied with the key cleared, so already among the rows copied.
+                  {
+                    table: "authz_role_assignment",
+                    column: "assigned_by",
+                    parent: "user",
+                    ondelete: "SET NULL",
+                    rows: 5,
+                  },
                 ],
               },
             },
