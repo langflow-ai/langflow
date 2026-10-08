@@ -25,6 +25,7 @@ from .auth import (
 from .catalog_policy import CatalogPolicyMode, CatalogPolicyRule, CatalogPolicyScope, CatalogResourceKind
 from .connection import Connection, ConnectionSecret
 from .connection.oauth import ConnectionOAuth
+from .data_subject_request import DataSubjectRequest
 from .deployment import Deployment
 from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
@@ -77,6 +78,7 @@ __all__ = [
     "Connection",
     "ConnectionOAuth",
     "ConnectionSecret",
+    "DataSubjectRequest",
     "Deployment",
     "DeploymentProviderAccount",
     "ExecutionSignal",
