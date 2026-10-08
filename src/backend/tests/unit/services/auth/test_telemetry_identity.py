@@ -116,7 +116,7 @@ def test_default_or_missing_user_uses_installation_fallback(username) -> None:
 
 @pytest.mark.asyncio
 async def test_public_webhook_does_not_attribute_the_owner(monkeypatch) -> None:
-    owner = SimpleNamespace(id="owner-id", username="alice")
+    owner = SimpleNamespace(id="owner-id", username="alice", is_active=True)
     settings = SimpleNamespace(auth_settings=SimpleNamespace(WEBHOOK_AUTH_ENABLE=False))
     auth_service = AuthService(settings)
     monkeypatch.setattr(auth_utils, "_auth_service", lambda: auth_service)
