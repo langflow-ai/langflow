@@ -20770,7 +20770,7 @@
                 },
                 {
                   "name": "langgraph",
-                  "version": "1.2.9"
+                  "version": "1.2.14"
                 },
                 {
                   "name": "lfx",
@@ -31988,6 +31988,6 @@
     "num_components": 128,
     "num_modules": 16
   },
-  "sha256": "ff0fdbbaa435e63b6c4754c38586f46e0d68b92e0134e6f8fb692fefdcc9db7e",
+  "sha256": "bf051ad396ed2aa31da9a9511b415fdc95ee19f445c9a416d5e4fed8dbe5503c",
   "version": "1.12.5"
 }
