@@ -5057,6 +5057,26 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "UploadPostPhotosComponent",
+      "target": "ext:uploadpost:UploadPostPhotosComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "UploadPostStatusComponent",
+      "target": "ext:uploadpost:UploadPostStatusComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "UploadPostTextComponent",
+      "target": "ext:uploadpost:UploadPostTextComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "UploadPostVideoComponent",
+      "target": "ext:uploadpost:UploadPostVideoComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
       "bare_class_name": "GmailSendComponent",
       "target": "ext:google:GmailSendComponent@official",
       "added_in": "1.13.0"

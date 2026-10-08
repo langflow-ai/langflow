@@ -1,0 +1,69 @@
+---
+title: Upload-Post
+slug: /bundles-uploadpost
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="uploadpost" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Upload-Post** bundle.
+
+[Upload-Post](https://upload-post.com) publishes one video, set of photos, or text post to TikTok, Instagram, YouTube, LinkedIn, Facebook, X, Threads, Pinterest, and Bluesky in a single call.
+To use these components, create an Upload-Post account, create a profile, connect the social accounts you want to post from, and create an API key.
+For details on the underlying API, see the [Upload-Post API documentation](https://docs.upload-post.com).
+
+Every publish component returns a [`JSON`](/data-types#json) object with the overall `status`, the `request_id` (and `job_id` for scheduled posts), a `success` flag, and a `results` list with one entry per platform: `platform`, `status` (`completed`, `failed`, or `skipped` when the profile has no account for that platform), `url`, `post_id`, `note`, and `error`.
+Its `text` summarizes the result in one line per platform.
+If the request can't be sent, for example because the API key is missing or invalid, the output contains an `error` field that describes the problem.
+
+Within one run, a component uploads only once: each upload carries its own `request_id`, sent as an `Idempotency-Key`, and a network error during the upload is followed by a status check instead of a second upload.
+Running the component again is a new request and a new post. If a run reports an unconfirmed upload (`status` of `submitted`, `unknown`, or `not_found` together with an `error`), check its `request_id` with **Upload-Post Status** before running it again.
+
+## Upload-Post Publish Video
+
+This component publishes a video, from an uploaded file or a public URL, to the selected platforms.
+YouTube uploads default to `private`.
+
+### Upload-Post Publish Video parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Upload-Post API Key (`upload_post_api_key`) | SecretString | Input parameter. Your Upload-Post API key. |
+| Profile (`user`) | String | Input parameter. The Upload-Post profile whose connected accounts post the video. |
+| Platforms (`platforms`) | List | Input parameter. Any of `tiktok`, `instagram`, `youtube`, `linkedin`, `facebook`, `x`, `threads`, `pinterest`, `bluesky`. |
+| Video File (`video_file`) | File | Input parameter. The video to publish. |
+| Video URL (`video_url`) | String | Input parameter. Public URL of the video, used when no file is set. |
+| Title / Caption (`title`) | String | Input parameter. Caption on TikTok, Instagram, X, and Threads; title on YouTube (maximum 100 characters). |
+| Description (`description`) | String | Input parameter. Longer text for YouTube, LinkedIn, Facebook, and Pinterest. |
+| YouTube Privacy (`youtube_privacy`) | String | Input parameter. `private`, `unlisted`, or `public`. Default: `private`. |
+| TikTok Privacy (`tiktok_privacy`) | String | Input parameter. A TikTok privacy level, or `account default` to keep the account's setting. |
+
+## Upload-Post Publish Photos
+
+This component publishes one or more photos, from uploaded files or public URLs. Several photos make a carousel.
+It accepts the same profile, platform, and scheduling parameters as **Upload-Post Publish Video**, except YouTube.
+
+## Upload-Post Publish Text
+
+This component publishes a text post to `x`, `linkedin`, `facebook`, `threads`, or `bluesky`.
+Set **Link URL** to show a link preview card on LinkedIn, Bluesky, and Facebook.
+
+## Upload-Post Status
+
+This component returns the per-platform result of an earlier upload.
+Set **Request or Job ID** to the `request_id` returned by a publish component, or to the `job_id` of a scheduled post.
+
+## Shared advanced parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Schedule At (`scheduled_date`) | String | Input parameter. ISO-8601 date and time to publish later, at most 365 days ahead. |
+| Timezone (`timezone`) | String | Input parameter. IANA timezone for **Schedule At**. Default: UTC. |
+| Facebook Page ID (`facebook_page_id`) | String | Input parameter. The Facebook Page to post to. Defaults to the profile's page. |
+| Pinterest Board ID (`pinterest_board_id`) | String | Input parameter. Required when publishing to Pinterest. |
+| Wait for Result (`wait_for_result`) | Boolean | Input parameter. Poll until every platform finishes. Default: `true`. |
+| Wait Timeout (`wait_timeout`) | Integer | Input parameter. Seconds to wait for results. The upload keeps going on Upload-Post after this. Default: `300`. |

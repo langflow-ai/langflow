@@ -129,6 +129,7 @@ lfx-google = { workspace = true }
 lfx-confluent = { workspace = true }
 lfx-serply = { workspace = true }
 lfx-serpingapi = { workspace = true }
+lfx-uploadpost = { workspace = true }
 lfx-microsoft = { workspace = true }
 lfx-slack = { workspace = true }
 # langflow-extensions:bundle-sources-end
@@ -169,6 +170,7 @@ members = [
     "src/bundles/confluent",
     "src/bundles/serply",
     "src/bundles/serpingapi",
+    "src/bundles/uploadpost",
     "src/bundles/microsoft",
     "src/bundles/slack",
     # langflow-extensions:bundle-members-end
@@ -194,6 +196,7 @@ bundles = [
     "lfx-paddle>=0.1.5,<1.0.0",
     "lfx-serpingapi>=0.1.0,<1.0.0",
     "lfx-serply>=0.1.0,<1.0.0",
+    "lfx-uploadpost>=0.1.0,<1.0.0",
     "lfx-valkey>=0.1.5,<1.0.0",
 ]
 
