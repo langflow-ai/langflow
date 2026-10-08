@@ -10,8 +10,10 @@ from langchain_core.messages import AIMessageChunk
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
+from lfx.schema.properties import Usage
 
 GetPendingInterrupt = Callable[[], Awaitable[dict[str, Any] | None]]
+GetFinalUsage = Callable[[], Usage | None]
 
 
 class ExceptionWithMessageError(Exception):
@@ -127,11 +129,11 @@ def _extract_output_text(output: str | list) -> str:
 async def handle_on_chain_end(
     event: dict[str, Any],
     agent_message: Message,
-    send_message_callback: SendMessageFunctionType,
+    send_message_callback: SendMessageFunctionType,  # noqa: ARG001
     send_token_callback: OnTokenFunctionType | None,  # noqa: ARG001
     start_time: float,
     *,
-    had_streaming: bool = False,
+    had_streaming: bool = False,  # noqa: ARG001
     message_id: str | None = None,  # noqa: ARG001
 ) -> tuple[Message, float]:
     data_output = event["data"].get("output")
@@ -148,12 +150,9 @@ async def handle_on_chain_end(
         # data["text"] so legacy consumers reading message.data["text"]
         # still see the final answer.
         agent_message.data[agent_message.text_key] = _extract_output_text(output) or ""
-        agent_message.properties.state = "complete"
-
-        # Only send final message if we didn't have streaming chunks
-        # If we had streaming, frontend already accumulated the chunks
-        if not had_streaming:
-            agent_message = await send_message_callback(message=agent_message)
+        # process_agent_events owns completion: it attaches final usage before
+        # the first complete message is stored/published. Keep this partial while
+        # the stream can still deliver events or report a pending interruption.
         start_time = perf_counter()
     return agent_message, start_time
 
@@ -514,6 +513,7 @@ async def process_agent_events(
     send_message_callback: SendMessageFunctionType,
     send_token_callback: OnTokenFunctionType | None = None,
     get_pending_interrupt: GetPendingInterrupt | None = None,
+    get_final_usage: GetFinalUsage | None = None,
 ) -> Message:
     """Process agent events and return the final output."""
     if isinstance(agent_message.properties, dict):
@@ -577,6 +577,14 @@ async def process_agent_events(
                 raise AgentPausedError(pending, agent_message)
 
         agent_message.properties.state = "complete"
+        # Call only after the event stream finishes: an Agent can invoke its
+        # model repeatedly, and the last callback totals include every call.
+        # Attach usage before the existing final store/event to avoid a second
+        # usage-only write. Paused and failed runs never reach this boundary.
+        if get_final_usage is not None:
+            usage = get_final_usage()
+            if usage is not None:
+                agent_message.properties.usage = usage
         # Final DB update with the complete message (skip_db_update=False by default)
         agent_message = await send_message_callback(message=agent_message)
     except AgentPausedError:
