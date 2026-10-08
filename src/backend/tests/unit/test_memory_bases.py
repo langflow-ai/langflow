@@ -3224,7 +3224,25 @@ class TestMemoriesAPIHandlers:
         from fastapi_pagination import Params
         from langflow.api.v1.memories import list_memory_base_messages
 
-        with pytest.raises(HTTPException) as exc_info:
+        mock_db = AsyncMock()
+        result_mock = MagicMock()
+        result_mock.first = MagicMock(return_value=None)
+        mock_db.exec = AsyncMock(return_value=result_mock)
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *a):
+                pass
+
+        memory_base_service = MagicMock()
+        memory_base_service.get = AsyncMock(return_value=None)
+        with (
+            patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=memory_base_service),
+            pytest.raises(HTTPException) as exc_info,
+        ):
             await list_memory_base_messages(
                 memory_base_id=uuid.uuid4(),
                 session_id="s1",
@@ -3240,7 +3258,25 @@ class TestMemoriesAPIHandlers:
         from fastapi_pagination import Params
         from langflow.api.v1.memories import list_memory_base_messages
 
-        with pytest.raises(HTTPException) as exc_info:
+        mock_db = AsyncMock()
+        result_mock = MagicMock()
+        result_mock.first = MagicMock(return_value=None)
+        mock_db.exec = AsyncMock(return_value=result_mock)
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *a):
+                pass
+
+        memory_base_service = MagicMock()
+        memory_base_service.get = AsyncMock(return_value=None)
+        with (
+            patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=memory_base_service),
+            pytest.raises(HTTPException) as exc_info,
+        ):
             await list_memory_base_messages(
                 memory_base_id=uuid.uuid4(),
                 current_user=active_user,
