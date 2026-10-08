@@ -46,50 +46,23 @@ export function CopyStep({
       step: destinations,
     });
   const refusal = start.error?.response?.data?.detail?.code ?? "";
-
-  if (run?.status === "running") {
-    const [key, counts] = progress
-      ? copyProgress(step, progress, i18n.language)
-      : ["copy.starting", {}];
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p aria-live="polite" className="text-sm text-muted-foreground">
-          {t(`settings.migration.${key}`, counts)}
-        </p>
-        {stop.isError && (
-          <p role="alert" className="text-sm text-destructive">
-            {t("settings.migration.failed")}
-          </p>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          loading={stop.isPending}
-          onClick={() => setConfirming(true)}
-          ignoreTitleCase
-        >
-          {t("settings.migration.check.stop")}
-        </Button>
-        <ConfirmationModal
-          open={confirming}
-          onClose={() => setConfirming(false)}
-          onCancel={() => setConfirming(false)}
-          title={t("settings.migration.copy.stopTitle")}
-          cancelText={t("modal.cancelButton")}
-          confirmationText={t("settings.migration.check.stop")}
-          onConfirm={() => {
-            setConfirming(false);
-            stop.mutate(run.run_id);
-          }}
-          size="x-small"
-        >
-          <ConfirmationModal.Content>
-            {t(`settings.migration.${slug}.stopBody`)}
-          </ConfirmationModal.Content>
-        </ConfirmationModal>
-      </div>
-    );
-  }
+  const running = run?.status === "running";
+  const [key, counts] = progress
+    ? copyProgress(step, progress, i18n.language)
+    : ["copy.starting", {}];
+  // Whether this page watched the run, so it has an end to announce.
+  const [followed, setFollowed] = useState(false);
+  useEffect(() => {
+    if (running) setFollowed(true);
+  }, [running]);
+  // The step's row shows the result. This says it too, to a screen reader that waited on the copy.
+  const finished =
+    followed && step === "copy_database" && state.state === "done"
+      ? t("settings.migration.copyDb.done", {
+          tables: run?.report?.tables_copied?.toLocaleString(i18n.language),
+          rows: run?.report?.rows_copied?.toLocaleString(i18n.language),
+        })
+      : "";
 
   // The command's own words for a run that did not count.
   const said =
@@ -97,35 +70,83 @@ export function CopyStep({
     run?.report?.problems?.map((problem) => problem.message).join("\n");
   // A copy that ended in a step that waits again no longer counts, so it is history.
   const stale = state.state === "current" && Boolean(run);
+
   return (
     <div className="flex flex-col items-start gap-3">
-      <p className="text-sm text-muted-foreground">
-        {t(`settings.migration.${slug}.body`)}
-      </p>
-      {stale && <p className="text-sm">{t("settings.migration.copy.stale")}</p>}
-      {state.state === "blocked" && (
-        <div role="alert" className="flex flex-col gap-1 text-sm">
-          <p className="text-destructive">{line(state.reason)}</p>
-          {said && <Details text={said} />}
-        </div>
-      )}
-      {start.isError && (
-        <p role="alert" className="text-sm text-destructive">
-          {refusal in COPY_CODES
-            ? line(refusal)
-            : t("settings.migration.failed")}
-        </p>
-      )}
-      <Button
-        className="w-full sm:w-fit"
-        loading={start.isPending}
-        onClick={() => start.mutate()}
-        ignoreTitleCase
+      {/* One region for both states, so the end of a run is announced as well as its progress. */}
+      <p
+        role="status"
+        className={running ? "text-sm text-muted-foreground" : "sr-only"}
       >
-        {run
-          ? t("settings.migration.copy.again")
-          : t(`settings.migration.step.${STEP_SLUGS[step]}.title`)}
-      </Button>
+        {running ? t(`settings.migration.${key}`, counts) : finished}
+      </p>
+      {running ? (
+        <>
+          {stop.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              {t("settings.migration.failed")}
+            </p>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            loading={stop.isPending}
+            onClick={() => setConfirming(true)}
+            ignoreTitleCase
+          >
+            {t("settings.migration.check.stop")}
+          </Button>
+          <ConfirmationModal
+            open={confirming}
+            onClose={() => setConfirming(false)}
+            onCancel={() => setConfirming(false)}
+            title={t("settings.migration.copy.stopTitle")}
+            cancelText={t("modal.cancelButton")}
+            confirmationText={t("settings.migration.check.stop")}
+            onConfirm={() => {
+              setConfirming(false);
+              stop.mutate(run.run_id);
+            }}
+            size="x-small"
+          >
+            <ConfirmationModal.Content>
+              {t(`settings.migration.${slug}.stopBody`)}
+            </ConfirmationModal.Content>
+          </ConfirmationModal>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground">
+            {t(`settings.migration.${slug}.body`)}
+          </p>
+          {stale && (
+            <p className="text-sm">{t("settings.migration.copy.stale")}</p>
+          )}
+          {state.state === "blocked" && (
+            <div role="alert" className="flex flex-col gap-1 text-sm">
+              <p className="text-destructive">{line(state.reason)}</p>
+              {said && <Details text={said} />}
+            </div>
+          )}
+          {start.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              {refusal in COPY_CODES
+                ? line(refusal)
+                : t("settings.migration.failed")}
+            </p>
+          )}
+          <Button
+            className="w-full sm:w-fit"
+            loading={start.isPending}
+            onClick={() => start.mutate()}
+            ignoreTitleCase
+          >
+            {run
+              ? t("settings.migration.copy.again")
+              : t(`settings.migration.step.${STEP_SLUGS[step]}.title`)}
+          </Button>
+        </>
+      )}
     </div>
   );
 }

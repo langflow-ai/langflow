@@ -210,9 +210,10 @@ export async function followCopy({
       refused = { status };
     },
     onData: async (data) => {
-      // A refusal answers with one JSON error body in place of the events.
+      // A refusal answers with one JSON error body in place of the events. Let it end on its own:
+      // returning false would abort the caller's controller, which every later attempt shares.
       if (!refused) onEvent(data as CopyEvent);
-      return !refused;
+      return true;
     },
     onNetworkError: () => {
       if (!controller.signal.aborted) refused ??= { status: 0 };
