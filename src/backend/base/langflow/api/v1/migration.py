@@ -802,8 +802,12 @@ async def _stream_checks(step: dict[str, Any]) -> AsyncIterator[bytes]:
     stderr: deque[str] = deque(maxlen=_STDERR_LINES)
     process = drain = None
 
-    def keep(record: dict[str, Any]) -> None:
+    def keep(record: dict[str, Any]) -> bool:
+        # A run that ends after another run took the record leaves that run's step alone.
+        if (record["steps"].get("check_source") or {}).get("started_at") != step["started_at"]:
+            return False
         record["steps"]["check_source"] = step
+        return True
 
     try:
         process = await asyncio.create_subprocess_exec(
