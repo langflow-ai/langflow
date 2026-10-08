@@ -26,6 +26,7 @@ from bundle_release_plan import (
     PyPIClient,
     _admits_lfx_series,
     _lfx_range_is_compatible,
+    _lfx_series_admission,
     _lfx_specifiers,
     build_artifact_plan,
     build_change_plan,
@@ -433,6 +434,39 @@ def test_prerelease_restamp_rejects_reusing_a_release_with_unknown_lfx_range(tmp
 
     with pytest.raises(PlanError, match=r"lfx-alpha 0\.1\.1: already published for lfx range unknown"):
         restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+
+@pytest.mark.parametrize("lfx_requirement", ["lfx==1.12.0", "lfx~=1.12.0", "lfx"])
+def test_prerelease_restamp_rejects_reusing_a_release_whose_lfx_range_cannot_be_evaluated(
+    tmp_path: Path, lfx_requirement: str
+) -> None:
+    # The newer-release guard treats these as admitting so it blocks; reuse must not treat them as safe.
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1"})
+    index = FakeIndex()
+    index.queue("lfx-alpha", "0.1.1", _release_requiring(lfx_requirement))
+
+    with pytest.raises(
+        PlanError,
+        match=r"lfx-alpha 0\.1\.1: already published for .*, which this check cannot confirm admits lfx 1\.11\.0rc3",
+    ):
+        restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+
+@pytest.mark.parametrize(
+    ("specifier", "admission"),
+    [
+        (">=1.12.0.dev0,<2.0.0", True),
+        ("<2.0.0,>=1.13.0.dev0", False),
+        ("==1.13.0", None),
+        ("~=1.12.0", None),
+        ("!=1.12.4", None),
+        ("", None),  # A bare ``lfx`` requirement.
+        ("==1.11.5,<1.12.0.dev0", False),  # An excluding bound wins over an unevaluable clause.
+        (">=1.12.0.dev0,==1.12.4", None),
+    ],
+)
+def test_lfx_series_admission_reports_unevaluable_ranges(specifier: str, *, admission: bool | None) -> None:
+    assert _lfx_series_admission(specifier, "1.12.4") is admission
 
 
 @pytest.mark.parametrize(
