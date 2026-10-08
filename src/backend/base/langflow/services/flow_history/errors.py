@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
+    from datetime import datetime
     from uuid import UUID
 
     from lfx.services.flow_operations import GraphViolation
@@ -30,6 +31,35 @@ class FlowRevisionMismatchError(FlowHistoryError):
         self.flow_id = flow_id
         self.current_revision = current_revision
         self.latest_revision = latest_revision
+
+
+class FlowVersionConflictError(FlowHistoryError):
+    """The write's ``If-Match`` names a version someone has since replaced.
+
+    Multi-edit safety's conflict: the caller resolves it in the conflict
+    dialog. Raised only when the submitted graph differs from the stored one;
+    a stale token whose graph already equals the stored graph loses nothing.
+    """
+
+    code = "flow_version_conflict"
+
+    def __init__(
+        self,
+        flow_id: UUID,
+        *,
+        expected: UUID,
+        current: UUID | None,
+        author_id: UUID | None,
+        author_name: str | None,
+        modified_at: datetime | None,
+    ) -> None:
+        super().__init__(f"Flow {flow_id} was changed after version {expected} was read")
+        self.flow_id = flow_id
+        self.expected = expected
+        self.current = current
+        self.author_id = author_id
+        self.author_name = author_name
+        self.modified_at = modified_at
 
 
 class FlowGraphInvalidError(FlowHistoryError):

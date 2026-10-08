@@ -13,7 +13,7 @@ import copy
 import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import HTTPException
 from lfx.log.logger import logger
@@ -27,7 +27,6 @@ from langflow.agentic.services.assistant_service import execute_flow_with_valida
 from langflow.agentic.services.flow_types import LANGFLOW_ASSISTANT_FLOW
 from langflow.api.utils.core import release_db_transaction
 from langflow.api.utils.flow_history import history_http_error
-from langflow.api.v1.flow_conflict import claim_version_token
 from langflow.api.v1.flows import _new_flow, _save_flow_to_fs, _validate_catalog_policy_for_write
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
@@ -270,13 +269,6 @@ async def run_assistant_and_persist(
         await lock_flow_for_update(session, flow)
         if not created_new:
             ensure_flow_unlocked(flow)
-            # Take the writer's turn against the version this run started from.
-            # A run can take minutes, and without this the assistant wrote over
-            # whatever a person saved in the meantime and told nobody -- measured:
-            # a human saved, the run finished, and the human's edit was simply
-            # gone. Refusing instead turns silent loss into something the caller
-            # can see and re-run.
-            claimed = await claim_version_token(session, flow, reviewed_version_token)
         flow_data = working_snapshot["data"] if working_snapshot else canvas.data
         # Headless MCP has no UI to apply an edit_field review proposal, so apply
         # each to the working flow here or the text edit is dropped (Bug #13641).
@@ -291,12 +283,19 @@ async def run_assistant_and_persist(
                 snapshot=get_catalog_policy_service().snapshot,
             )
             try:
+                # Take the writer's turn against the version this run started from.
+                # A run can take minutes, and without this the assistant wrote over
+                # whatever a person saved in the meantime and told nobody -- measured:
+                # a human saved, the run finished, and the human's edit was simply
+                # gone. Refusing instead turns silent loss into something the caller
+                # can see and re-run.
                 await write_flow_graph(
                     session,
                     flow,
                     flow_data,
                     actor_id=user_id,
                     options=FlowGraphWriteOptions(cause=ASSISTANT_CAUSE),
+                    expected_version_token=reviewed_version_token,
                 )
             except FlowHistoryError as exc:
                 raise history_http_error(exc) from exc
@@ -309,14 +308,6 @@ async def run_assistant_and_persist(
                 await session.commit()
             raise
         flow.updated_at = datetime.now(timezone.utc)
-        # Take the writer's turn like any other graph write. Persisting without
-        # rotating leaves every open editor holding a token that still matches,
-        # so their next save silently overwrites what the assistant just wrote
-        # and no one is told -- the lost update the token exists to prevent.
-        # ``claimed`` is None for a flow this run created, or a legacy row with no
-        # token to compare; either way a fresh one is what the editors need.
-        flow.version_token = claimed if not created_new and claimed else uuid4()
-        flow.last_modified_by = user_id
         if created_new and canvas.name:
             flow.name = canvas.name
         session.add(flow)
