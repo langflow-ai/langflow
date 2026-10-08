@@ -2476,8 +2476,10 @@ async def test_a_bucket_is_tested_with_what_the_admin_gave_and_nothing_of_the_se
     assert unreachable["results"]["files"]["code"] == "bucket_unreachable"
     assert NOWHERE in unreachable["results"]["files"]["reason"]
 
-    unusable = await _connect(client, headers, files={**FILES, "endpoint_url": "not an address"})
+    unusable = await _connect(client, headers, files={**FILES, "endpoint_url": "http://-"})
 
+    # It has the shape of an endpoint, and the client refuses it before it asks anyone. That comes back the
+    # same way.
     assert unusable["results"]["files"]["code"] == "bucket_unreachable"
     assert "Invalid endpoint" in unusable["results"]["files"]["reason"]
 
@@ -2836,6 +2838,87 @@ async def test_a_password_with_an_at_sign_in_it_gives_no_part_of_itself_away(
     # Nothing tells the rest of the password from a real host, so no location is kept for the address.
     assert responses[1].json()["record"]["destinations"]["database"] == {"location": None, "identity": ""}
     _nowhere(tuple(re.split("[@/?]", password)), responses, config_dir, server_log, caplog, capfd)
+
+
+# Each of these holds a made-up user, password or token in a place where an endpoint has none.
+ENDPOINTS_WITH_MORE_IN_THEM = {
+    "a user and a password": (
+        "http://proxyuser:Pq4Harbor-Xk2Tail@HOST",  # pragma: allowlist secret
+        ("proxyuser", "Pq4Harbor-Xk2Tail"),
+    ),
+    "a password that ends the host early": (
+        "http://proxyuser:Pq4Harbor/Xk2Tail@HOST",
+        ("proxyuser", "Pq4Harbor", "Xk2Tail"),
+    ),
+    "a user alone": ("http://proxyuser@HOST", ("proxyuser",)),
+    "a full-width at sign": (
+        "http://proxyuser:Pq4Harbor-Xk2Tail\uff20HOST",
+        ("proxyuser", "Pq4Harbor-Xk2Tail"),
+    ),
+    "an at sign written as %40": (
+        "http://proxyuser:Pq4Harbor-Xk2Tail%40HOST",
+        ("proxyuser", "Pq4Harbor-Xk2Tail"),
+    ),
+    "a user and a password written into the path": (
+        "http://HOST/proxyuser%3APq4Harbor-Xk2Tail%40x",
+        ("proxyuser", "Pq4Harbor-Xk2Tail"),
+    ),
+    "a question mark written as %3F": (
+        "http://HOST/%3Fapi_key%3DPq4Harbor-Xk2Tail",
+        ("Pq4Harbor-Xk2Tail",),
+    ),
+    "a token after a question mark": (
+        "http://HOST/?api_key=Pq4Harbor-Xk2Tail",
+        ("Pq4Harbor-Xk2Tail",),
+    ),
+    "a token after a hash": ("http://HOST/#Pq4Harbor-Xk2Tail", ("Pq4Harbor-Xk2Tail",)),
+    "no scheme": ("proxyuser:Pq4Harbor-Xk2Tail", ("proxyuser", "Pq4Harbor-Xk2Tail")),
+}
+
+
+@pytest.mark.parametrize("shape", list(ENDPOINTS_WITH_MORE_IN_THEM))
+async def test_a_bucket_endpoint_with_more_than_an_address_in_it_is_neither_tested_nor_kept(
+    client, logged_in_headers_super_user, active_super_user, config_dir, server_log, caplog, capfd, shape
+):
+    headers = logged_in_headers_super_user
+    caplog.set_level(logging.DEBUG)
+    await _add_file_without_bytes(active_super_user.id)
+    endpoint, secrets = ENDPOINTS_WITH_MORE_IN_THEM[shape]
+
+    responses = [
+        await client.put(
+            "api/v1/migration/destinations",
+            json={"files": {**FILES, "endpoint_url": endpoint.replace("HOST", NOWHERE)}},
+            headers=headers,
+        ),
+        await client.get("api/v1/migration", headers=headers),
+    ]
+
+    assert [response.status_code for response in responses] == [200, 200]
+    files = responses[0].json()["results"]["files"]
+    assert files["code"] == "bucket_unreachable"
+    # The admin is told how to enter it. The bucket's client is not asked, since it repeats what it is given.
+    assert "http(s)://host:port" in files["reason"]
+    assert responses[1].json()["record"]["destinations"]["files"] == {
+        "bucket": "acme",
+        "prefix": "files",
+        "endpoint_url": None,
+    }
+    _nowhere(secrets, responses, config_dir, server_log, caplog, capfd)
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "https://s3.eu-west-1.amazonaws.com",
+        "http://minio:9000",
+        "HTTP://127.0.0.1:9000/",
+        "https://[2001:db8::1]:9000",
+        "https://gateway.example/s3/",
+    ],
+)
+def test_an_endpoint_that_is_only_an_address_is_plain(endpoint):
+    assert migration_module._PLAIN_ENDPOINT.fullmatch(endpoint)
 
 
 def test_a_user_name_with_an_at_sign_in_it_is_still_read():

@@ -95,6 +95,13 @@ class VectorsDestination(BaseModel):
     kind: Literal["pgvector"]
 
 
+# The one shape of a bucket's endpoint that is tested and kept: http or https, a host, and at most a port and
+# a path. The path takes no "%", which could spell the "@" and the "?" that are refused before it.
+_PLAIN_ENDPOINT = re.compile(
+    r"https?://(\[[0-9a-f:.]+\]|[a-z0-9.-]+)(:[0-9]{1,5})?(/[a-z0-9._~/+-]*)?", re.ASCII | re.IGNORECASE
+)
+
+
 class FilesDestination(BaseModel):
     bucket: str
     prefix: str
@@ -317,13 +324,29 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
         )
         parts["vectors"] = {"kind": request.vectors.kind}
     if files := request.files:
+        endpoint = files.endpoint_url or None
+        # An endpoint in any other shape can hold a user, a password or a token. The record would keep them and
+        # the bucket's client repeats what it is given, so it is neither tested nor kept. Nothing can tell a
+        # token from a host name or from a path, so those are kept as typed.
+        plain = endpoint is None or bool(_PLAIN_ENDPOINT.fullmatch(endpoint))
         keys = brought["files"] = {
             "access_key_id": files.access_key_id.get_secret_value(),
             "secret_access_key": files.secret_access_key.get_secret_value(),
-            "endpoint_url": files.endpoint_url or None,
+            "endpoint_url": endpoint if plain else None,
             "ca_bundle": files.ca_bundle or None,
         }
-        results["files"] = await probe_files(bucket=files.bucket, prefix=files.prefix, **keys)
+        results["files"] = (
+            await probe_files(bucket=files.bucket, prefix=files.prefix, **keys)
+            if plain
+            else {
+                "ok": False,
+                "code": "bucket_unreachable",
+                "reason": "Enter the endpoint as http(s)://host:port, with a path if the store needs one, and "
+                "nothing else. A host name has only the letters a to z, digits, dots and hyphens. A user, a "
+                "password or a query in it is not accepted. The access key and the secret key have their own "
+                "fields.",
+            }
+        )
         parts["files"] = {"bucket": files.bucket, "prefix": files.prefix, "endpoint_url": keys["endpoint_url"]}
     # A test can take seconds. The record is read only now, so that what other requests saved meanwhile is kept.
     record = _read_record()
