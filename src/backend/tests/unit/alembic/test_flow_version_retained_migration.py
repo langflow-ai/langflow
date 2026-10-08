@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, inspect, text
 
 from .test_migration_execution import _engine_url, _make_alembic_cfg, db_url  # noqa: F401
 
-_PRIOR_REVISION = "d42f18a9b760"  # pragma: allowlist secret -- migration revision identifier
+_PRIOR_REVISION = "d4f1a6c8e2b7"  # pragma: allowlist secret -- migration revision identifier
 _REVISION = "e5a7c9b1d3f2"  # pragma: allowlist secret -- migration revision identifier
 
 

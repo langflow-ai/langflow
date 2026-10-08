@@ -1,7 +1,7 @@
 """Add retained flag to flow_version.
 
 Revision ID: e5a7c9b1d3f2
-Revises: d42f18a9b760
+Revises: d4f1a6c8e2b7
 Create Date: 2026-10-07
 
 Phase: EXPAND
@@ -15,7 +15,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "e5a7c9b1d3f2"  # pragma: allowlist secret -- migration revision identifier
-down_revision: str | None = "d42f18a9b760"  # pragma: allowlist secret -- migration revision identifier
+down_revision: str | None = "d4f1a6c8e2b7"  # pragma: allowlist secret -- migration revision identifier
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
