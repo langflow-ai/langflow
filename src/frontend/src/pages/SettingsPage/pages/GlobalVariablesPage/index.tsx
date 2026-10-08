@@ -130,6 +130,7 @@ function GlobalVariablesPageContent({
       suppressKeyboardEvent: suppressRowActionKeys,
     },
     {
+      headerName: t("globalVars.columnValue"),
       field: "value",
       valueFormatter: (params: ValueFormatterParams<GlobalVariable>) => {
         return formatVariableValue(
