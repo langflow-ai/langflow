@@ -243,6 +243,7 @@ opensearch = [
 
 [tool.uv]
 constraint-dependencies = [
+    "fsspec>=2026.6.0",  # CVE-2026-104851
     # Security floors for every workspace dependency path, including optional bundles.
     "oauthlib>=4.0.0,<5.0.0",  # CVE-2026-49264, CVE-2026-49265
     "pymongo>=4.18.2,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
