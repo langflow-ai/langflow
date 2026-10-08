@@ -1515,6 +1515,85 @@ describe("Copy knowledge bases and files", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("sends one start at a time", async () => {
+    // The first start is still on its way.
+    const post = jest
+      .spyOn(api, "post")
+      .mockImplementation(() => new Promise(() => {}));
+    show(
+      <CopyStep
+        migration={ended("copy_files")}
+        state={step("copy_files", "current")}
+        step="copy_files"
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Copy files" }));
+    const test = screen.getByRole("button", { name: "Test run" });
+    expect(test).toBeDisabled();
+    await userEvent.click(test);
+
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledWith(
+      expect.stringContaining("steps/copy_files/runs"),
+      { dry_run: false },
+    );
+  });
+
+  it("reads out what a test run found, in the node that read its progress", () => {
+    // The run's progress never comes.
+    global.fetch = jest.fn(() => new Promise<Response>(() => {}));
+    const running = { status: "running" as const, dry_run: true };
+    const { rerender } = show(
+      <CopyStep
+        migration={ended("copy_knowledge_bases", running)}
+        state={step("copy_knowledge_bases", "current")}
+        step="copy_knowledge_bases"
+      />,
+    );
+    const said = screen.getByRole("status");
+    expect(said).toHaveTextContent("Starting…");
+
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <CopyStep
+          migration={ended("copy_knowledge_bases", {
+            dry_run: true,
+            report: { ok: true, counts: { would_relocate: 3 } },
+          })}
+          state={step("copy_knowledge_bases", "current")}
+          step="copy_knowledge_bases"
+        />
+      </QueryClientProvider>,
+    );
+
+    // A screen reader reads a change to a live region it already knows, not a new one.
+    expect(screen.getByRole("status")).toBe(said);
+    expect(said).toHaveAttribute("aria-live", "polite");
+    expect(said).toHaveTextContent(
+      /^Test run: nothing was copied\. To copy: 3\./,
+    );
+  });
+
+  it("offers no test run once the copy is done, since one would take the copy's place", () => {
+    show(
+      <CopyStep
+        migration={ended("copy_knowledge_bases", {
+          report: { ok: true, counts: { relocated: 1 } },
+        })}
+        state={step("copy_knowledge_bases", "done")}
+        step="copy_knowledge_bases"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Copy again" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Test run" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("lists each knowledge base a copy left, with the page's line and the tool's words", () => {
     show(
       <CopyStep
