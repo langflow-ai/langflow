@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING
 import httpx
 from lfx.log.logger import logger
 from lfx.services.telemetry.constants import IBM_PRODUCT_PROPERTIES, get_ibm_common_event
-from lfx.services.telemetry.identity import get_hashed_user_id, get_or_create_anonymous_id
+from lfx.services.telemetry.identity import get_hashed_user_id, get_or_create_anonymous_id, is_installation_user_id
+from lfx.services.telemetry.privacy import get_safe_payload_properties
 
 from langflow.services.base import Service
 from langflow.services.telemetry.context import get_current_telemetry_user_id
@@ -38,15 +39,6 @@ if TYPE_CHECKING:
     from pydantic import BaseModel
 
     from langflow.services.telemetry.schema import IntegrationActionPayload
-
-
-_FREE_FORM_ERROR_FIELDS = {
-    "componentErrorMessage",
-    "deploymentErrorMessage",
-    "exceptionMessage",
-    "playgroundErrorMessage",
-    "runErrorMessage",
-}
 
 
 def database_dialect(database_url: str | None) -> str:
@@ -124,9 +116,7 @@ class TelemetryService(Service):
             payload.client_type = self.client_type
 
         try:
-            payload_dict = payload.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
-            for field in _FREE_FORM_ERROR_FIELDS:
-                payload_dict.pop(field, None)
+            payload_dict = get_safe_payload_properties(payload)
 
             # Add common fields to all payloads except VersionPayload
             if not isinstance(payload, VersionPayload):
@@ -142,11 +132,7 @@ class TelemetryService(Service):
                 payload_dict.update({"action": "registered", "name": "Email", "namespace": "Langflow"})
             body = {
                 "anonymousId": self.anonymous_id,
-                "userId": (
-                    get_hashed_user_id(f"{self.anonymous_id}:{user_id}")
-                    if user_id
-                    else get_hashed_user_id(self.anonymous_id)
-                ),
+                "userId": user_id if is_installation_user_id(user_id) else get_hashed_user_id(self.anonymous_id),
                 "event": event,
                 "messageId": str(uuid.uuid4()),
                 "properties": payload_dict,

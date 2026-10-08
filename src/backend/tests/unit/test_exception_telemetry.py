@@ -3,6 +3,7 @@
 import hashlib
 import traceback
 from unittest.mock import AsyncMock, MagicMock
+from uuid import UUID, uuid4
 
 import pytest
 from langflow.services.telemetry.schema import (
@@ -13,7 +14,7 @@ from langflow.services.telemetry.schema import (
     RunPayload,
 )
 from langflow.services.telemetry.service import TelemetryService
-from lfx.services.telemetry.identity import get_hashed_user_id
+from lfx.services.telemetry.identity import get_installation_user_id
 
 
 class TestExceptionTelemetry:
@@ -110,7 +111,7 @@ class TestExceptionTelemetry:
         )
 
         # Send telemetry
-        user_id = get_hashed_user_id("alice")
+        user_id = get_installation_user_id(UUID(int=1), telemetry_service.anonymous_id)
         await telemetry_service.send_telemetry_data(payload, "exception", user_id)
 
         # Verify HTTP call was made
@@ -123,7 +124,7 @@ class TestExceptionTelemetry:
 
         body = call_args[1]["json"]
         assert body["anonymousId"] == "test-installation"
-        assert body["userId"] == get_hashed_user_id(f"test-installation:{user_id}")
+        assert body["userId"] == user_id
         assert body["event"] == "Ended Process"
         assert body["messageId"]
         assert body["properties"]["exceptionType"] == "ValueError"
@@ -158,16 +159,18 @@ class TestExceptionTelemetry:
         telemetry_service.client = AsyncMock()
         telemetry_service.client.post.return_value.status_code = 200
         payload = RunPayload(run_seconds=1, run_success=True)
-        opaque_user_id = get_hashed_user_id("alice@example.com")
+        database_user_id = uuid4()
+        opaque_user_id = get_installation_user_id(database_user_id, "installation-a")
 
         await telemetry_service.send_telemetry_data(payload, "run", opaque_user_id)
         first_user_id = telemetry_service.client.post.call_args.kwargs["json"]["userId"]
         telemetry_service.anonymous_id = "installation-b"
-        await telemetry_service.send_telemetry_data(payload, "run", opaque_user_id)
+        second_opaque_user_id = get_installation_user_id(database_user_id, "installation-b")
+        await telemetry_service.send_telemetry_data(payload, "run", second_opaque_user_id)
         second_user_id = telemetry_service.client.post.call_args.kwargs["json"]["userId"]
 
-        assert first_user_id == get_hashed_user_id(f"installation-a:{opaque_user_id}")
-        assert second_user_id == get_hashed_user_id(f"installation-b:{opaque_user_id}")
+        assert first_user_id == opaque_user_id
+        assert second_user_id == second_opaque_user_id
         assert first_user_id != second_user_id
 
     @pytest.mark.asyncio

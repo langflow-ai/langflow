@@ -13,8 +13,10 @@ This helps prioritize development efforts on the most impactful changes and popu
 The Langflow team respects your privacy, and the team is committed to protecting your data.
 
 Langflow telemetry doesn't send raw operating-system or authenticated Langflow user names, or raw authenticated user IDs.
-Authenticated Langflow user names are represented by an installation-scoped, one-way SHA256 pseudonym and used solely
-for product analytics.
+Authenticated product-usage IDs are derived from the installation identifier and the user's random database UUID.
+Usernames and SSO email addresses are not used to derive these IDs, and the same user UUID produces different IDs
+on different installations. Free-form error messages are omitted from outgoing telemetry because they can contain
+user inputs, SQL parameters, or credentials. Error types, stack hashes, success flags, and timings are retained.
 The data collected by each event, including fields that can contain user-provided values, is documented below.
 
 Product-usage events are delivered through Segment. Langflow uses a persistent anonymous installation identifier
@@ -35,12 +37,13 @@ Every Segment event includes the IBM Common Schema product properties `UT30: 30A
 The persistent installation identifier is used for `anonymousId`, `properties.instanceId`, and
 `properties.subscriptionId`.
 
-For authenticated requests, the top-level `userId` is `lf-` followed by a SHA256 pseudonym derived from both the
-installation identifier and the Langflow username. The same username therefore produces different IDs on different
-installations. Langflow captures an intermediate opaque ID before handing an event to the telemetry worker. Lifecycle
-events and standalone LFX events don't have a Langflow username, so they use `lf-` followed by the SHA256 hash of the installation identifier.
+For authenticated requests, the top-level `userId` is `lf-user-` followed by the SHA256 hash of the installation
+identifier, a separator, and the user's random database UUID. Langflow captures this opaque ID before handing an event
+to the telemetry worker. Lifecycle events and standalone LFX events use `lf-` followed by the SHA256 hash of the
+installation identifier.
 The shared default `langflow` account and unauthenticated webhook callers also use this installation fallback.
 Background workflow jobs retain only the opaque telemetry user ID and restore it during execution and resume.
+Jobs saved with the previous username-hash scheme use installation fallback when resumed.
 
 Free-form error messages are removed at the outbound telemetry boundary. Events retain success flags, exception types,
 exception contexts, stack trace hashes, and structured integration error codes without exporting user input, stored

@@ -18,6 +18,7 @@ from lfx.log.logger import logger
 from lfx.services.telemetry.base import BaseTelemetryService
 from lfx.services.telemetry.constants import DEFAULT_SEGMENT_WRITE_KEY, IBM_PRODUCT_PROPERTIES, get_ibm_common_event
 from lfx.services.telemetry.identity import get_hashed_user_id, get_or_create_anonymous_id
+from lfx.services.telemetry.privacy import get_safe_payload_properties
 from lfx.services.telemetry.schema import (
     ExceptionPayload,
     MCPToolPayload,
@@ -112,7 +113,7 @@ class TelemetryService(BaseTelemetryService):
         if self.do_not_track or not self.write_key or self._client is None:
             return
         try:
-            properties = payload.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
+            properties = get_safe_payload_properties(payload)
             if not isinstance(payload, VersionPayload):
                 properties.update(self._common_fields)
             properties.update(IBM_PRODUCT_PROPERTIES)
