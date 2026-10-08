@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS, get_provider_param_mapping
-from lfx.base.models.model_utils import apply_metadata_filters, inject_custom_enabled_models, replace_with_live_models
+from lfx.base.models.model_utils import (
+    aget_live_model_variables,
+    apply_metadata_filters,
+    inject_custom_enabled_models,
+    replace_with_live_models,
+)
 from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
@@ -155,6 +161,28 @@ def get_language_model_options(
     ``ModelInput(filters=...)``. The legacy ``tool_calling`` kwarg is kept
     for back-compat and merged into ``filters`` when present.
     """
+    return run_until_complete(
+        aget_language_model_options(
+            user_id, tool_calling=tool_calling, filters=filters, provider_policy=provider_policy
+        )
+    )
+
+
+async def aget_language_model_options(
+    user_id: UUID | str | None = None,
+    *,
+    tool_calling: bool | None = None,
+    filters: dict[str, Any] | None = None,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+) -> list[dict[str, Any]]:
+    """Return available language model providers with their configuration.
+
+    ``filters`` is a dict of metadata key/value constraints forwarded to
+    ``get_unified_models_detailed`` (e.g. ``{"tool_calling": True}``,
+    ``{"reasoning": True}``). It is the declarative path used by
+    ``ModelInput(filters=...)``. The legacy ``tool_calling`` kwarg is kept
+    for back-compat and merged into ``filters`` when present.
+    """
     # Get all LLM models (excluding embeddings, deprecated, and unsupported by default)
     metadata_filters: dict[str, Any] = dict(filters or {})
     if tool_calling is not None:
@@ -168,9 +196,9 @@ def get_language_model_options(
     )
 
     if provider_policy is None:
-        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
 
-        provider_policy = resolve_model_provider_policy(
+        provider_policy = await aresolve_model_provider_policy(
             user_id=user_id,
             providers=get_model_providers(),
             purpose=ModelProviderPolicyPurpose.USE,
@@ -182,21 +210,52 @@ def get_language_model_options(
     explicitly_enabled_models: set[str] = set()
     if user_id:
         with contextlib.suppress(Exception):
-            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status(user_id))
+            disabled_models, explicitly_enabled_models = await _get_model_status(user_id)
 
     # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
     if user_id:
         with contextlib.suppress(Exception):
-            enabled_providers = run_until_complete(
-                _fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy)
-            )
-    enabled_providers = {provider for provider in enabled_providers if provider_policy.allows(provider)}
+            enabled_providers = await _fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy)
 
+    if enabled_providers:
+        # Resolve saved connection settings and credentials on this loop. The
+        # existing discovery callbacks can then run network/SDK work in a thread
+        # without sharing the database pool across event loops.
+        variables = await aget_live_model_variables(user_id, enabled_providers, model_provider_metadata)
+        await asyncio.to_thread(
+            replace_with_live_models,
+            all_models,
+            user_id,
+            enabled_providers,
+            "llm",
+            model_provider_metadata,
+            provider_variables=variables,
+        )
+    return _language_model_options_from_models(
+        all_models,
+        user_id,
+        metadata_filters,
+        provider_policy,
+        disabled_models,
+        explicitly_enabled_models,
+        enabled_providers,
+    )
+
+
+def _language_model_options_from_models(
+    all_models,
+    user_id,
+    metadata_filters,
+    provider_policy,
+    disabled_models,
+    explicitly_enabled_models,
+    enabled_providers,
+):
     # Replace static defaults with actual available models from configured instances
+    # The existing filtering/formatting below is shared by both lookup entry points.
     suppressed: dict[str, set[tuple[str, str]]] = {}
     if enabled_providers:
-        replace_with_live_models(all_models, user_id, enabled_providers, "llm", model_provider_metadata)
         # Live rows replace the statically filtered catalog wholesale — re-apply the
         # metadata filters so e.g. the Agent picker can't see no-tool live models.
         suppressed = apply_metadata_filters(all_models, metadata_filters)
@@ -259,47 +318,61 @@ def get_language_model_options(
             if not provider_policy.allows_model(provider, model_name, model_type=row_model_type):
                 continue
 
-            # Get parameter mapping for this provider
-            param_mapping = get_provider_param_mapping(provider)
-
-            # Build the option dict
-            # Get provider-level metadata for max_tokens field name
-            provider_meta = model_provider_metadata.get(provider, {})
-            option_metadata = {
-                "context_length": 128000,  # Default, can be overridden
-                "model_class": param_mapping.get("model_class", "ChatOpenAI"),
-                "model_name_param": param_mapping.get("model_param", "model"),
-                "api_key_param": param_mapping.get("api_key_param", "api_key"),
-            }
-            if "max_tokens_field_name" in provider_meta:
-                option_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
-
-            option = {
-                "name": model_name,
-                "icon": icon,
-                "category": provider,
-                "provider": provider,
-                "metadata": option_metadata,
-            }
-
-            # Propagate catalog ``reasoning`` for every provider (not just
-            # OpenAI) so get_llm can suppress unsupported sampling parameters
-            # consistently while preserving independently supported token caps.
-            if metadata.get("reasoning"):
-                option["metadata"]["reasoning"] = True
-                option["metadata"]["reasoning_models"] = [model_name]
-
-            # Add provider-specific params from mapping
-            if "base_url_param" in param_mapping:
-                option["metadata"]["base_url_param"] = param_mapping["base_url_param"]
-            if "url_param" in param_mapping:
-                option["metadata"]["url_param"] = param_mapping["url_param"]
-            if "project_id_param" in param_mapping:
-                option["metadata"]["project_id_param"] = param_mapping["project_id_param"]
-
-            options.append(option)
+            options.append(_format_language_model_option(provider, model_name, icon, metadata))
 
     return options
+
+
+def get_language_model_option(provider: str, model_name: str) -> dict[str, Any] | None:
+    """Return catalog metadata for one language model by provider and name."""
+    groups = get_unified_models_detailed(providers=[provider], model_name=model_name, model_type="llm")
+    if not groups or not groups[0]["models"]:
+        return None
+    group = groups[0]
+    return _format_language_model_option(provider, model_name, group.get("icon", "Bot"), group["models"][0]["metadata"])
+
+
+def _format_language_model_option(provider, model_name, icon, metadata) -> dict[str, Any]:
+    """Share model-option metadata between catalog lists and named lookup."""
+    # Get parameter mapping for this provider
+    param_mapping = get_provider_param_mapping(provider)
+
+    # Build the option dict
+    # Get provider-level metadata for max_tokens field name
+    provider_meta = model_provider_metadata.get(provider, {})
+    option_metadata = {
+        "context_length": 128000,  # Default, can be overridden
+        "model_class": param_mapping.get("model_class", "ChatOpenAI"),
+        "model_name_param": param_mapping.get("model_param", "model"),
+        "api_key_param": param_mapping.get("api_key_param", "api_key"),
+    }
+    if "max_tokens_field_name" in provider_meta:
+        option_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
+
+    option = {
+        "name": model_name,
+        "icon": icon,
+        "category": provider,
+        "provider": provider,
+        "metadata": option_metadata,
+    }
+
+    # Propagate catalog ``reasoning`` for every provider (not just
+    # OpenAI) so get_llm can suppress unsupported sampling parameters
+    # consistently while preserving independently supported token caps.
+    if metadata.get("reasoning"):
+        option["metadata"]["reasoning"] = True
+        option["metadata"]["reasoning_models"] = [model_name]
+
+    # Add provider-specific params from mapping
+    if "base_url_param" in param_mapping:
+        option["metadata"]["base_url_param"] = param_mapping["base_url_param"]
+    if "url_param" in param_mapping:
+        option["metadata"]["url_param"] = param_mapping["url_param"]
+    if "project_id_param" in param_mapping:
+        option["metadata"]["project_id_param"] = param_mapping["project_id_param"]
+
+    return option
 
 
 def get_embedding_model_options(
@@ -339,7 +412,6 @@ def get_embedding_model_options(
             enabled_providers = run_until_complete(
                 _fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy)
             )
-    enabled_providers = {provider for provider in enabled_providers if provider_policy.allows(provider)}
 
     # Replace static defaults with actual available models from configured instances
     if enabled_providers:

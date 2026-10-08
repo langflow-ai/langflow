@@ -18,13 +18,7 @@ from lfx.services.model_provider_policy import (
 
 async def test_enabled_provider_lookup_always_intersects_configure_policy(monkeypatch):
     class FakeDatabaseVariableService:
-        get_all = AsyncMock(
-            return_value=[
-                SimpleNamespace(name="OPENAI_API_KEY"),
-                SimpleNamespace(name="ANTHROPIC_API_KEY"),
-            ]
-        )
-        get_variable_object = AsyncMock(return_value=SimpleNamespace(value="encrypted"))
+        get_variable_objects = AsyncMock(return_value={"OPENAI_API_KEY": SimpleNamespace(value="encrypted")})
 
     variable_module = ModuleType("langflow.services.variable.service")
     variable_module.DatabaseVariableService = FakeDatabaseVariableService
@@ -97,5 +91,5 @@ async def test_enabled_provider_lookup_always_intersects_configure_policy(monkey
     assert resolved_purposes == [ModelProviderPolicyPurpose.CONFIGURE]
     assert resolved_attributes == [caller_policy.context.attributes]
     assert call_order == ["policy", "session"]
-    service.get_variable_object.assert_awaited_once()
-    assert service.get_variable_object.await_args.kwargs["name"] == "OPENAI_API_KEY"
+    service.get_variable_objects.assert_awaited_once()
+    assert service.get_variable_objects.await_args.kwargs["names"] == {"OPENAI_API_KEY"}

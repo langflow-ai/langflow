@@ -1025,7 +1025,8 @@ def test_model_options_filter_denied_dynamic_sources(option_builder, model_type,
     ]
     live_enabled_providers = []
     policy = _restricted_snapshot("openai")
-    fetch_enabled = AsyncMock(return_value={"OpenAI", "Anthropic"})
+    # Availability applies the supplied policy before returning providers.
+    fetch_enabled = AsyncMock(return_value={"OpenAI"})
 
     def _replace_with_live_models(groups, _user_id, enabled_providers, *_args, **_kwargs):
         live_enabled_providers.append(set(enabled_providers))

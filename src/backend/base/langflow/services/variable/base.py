@@ -1,6 +1,9 @@
 import abc
+from collections.abc import Iterable
 from uuid import UUID
 
+from lfx.log.logger import logger
+from lfx.services.variable import VariableNotFoundError
 from pydantic import SecretStr
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -51,6 +54,40 @@ class VariableService(Service):
         Returns:
             The value of the variable.
         """
+
+    async def get_variables(
+        self, user_id: UUID | str, names: Iterable[str], field: str, session: AsyncSession
+    ) -> dict[str, str | SecretStr | None]:
+        """Resolve a batch; external stores may override this compatibility implementation."""
+        names = set(names)
+        if names:
+            await logger.awarning(
+                f"{type(self).__name__} uses individual variable reads because batch lookup is not implemented"
+            )
+        values = {}
+        for name in names:
+            try:
+                values[name] = await self.get_variable(user_id, name, field, session)
+            except ValueError:
+                values[name] = None
+        return values
+
+    async def get_variable_objects(
+        self, user_id: UUID | str, names: Iterable[str], session: AsyncSession
+    ) -> dict[str, Variable]:
+        """Read named objects; external stores can override this compatibility fallback."""
+        names = set(names)
+        if names:
+            await logger.awarning(
+                f"{type(self).__name__} uses individual variable object reads; batch lookup is not implemented"
+            )
+        variables = {}
+        for name in names:
+            try:
+                variables[name] = await self.get_variable_object(user_id, name, session)
+            except VariableNotFoundError:
+                continue
+        return variables
 
     @abc.abstractmethod
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
