@@ -18,6 +18,7 @@ from lfx.schema.message import Message
 from lfx.schema.properties import Usage
 from lfx.schema.token_usage import extract_usage_from_message
 from lfx.template.field.base import Output
+from lfx.utils.async_helpers import async_call_method
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 # Enabled detailed thinking for NVIDIA reasoning models.
@@ -117,7 +118,7 @@ class LCModelComponent(Component):
                 raise ValueError(msg)
 
     async def text_response(self) -> Message:
-        output = self.build_model()
+        output = await async_call_method(self, "build_model")
         result = await self.get_chat_result(
             runnable=output, stream=self.stream, input_value=self.input_value, system_message=self.system_message
         )

@@ -23,6 +23,7 @@ from lfx.schema.data import Data
 from lfx.schema.log import OnTokenFunctionType
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
+from lfx.utils.async_helpers import async_call_method, delegates_to
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
@@ -96,7 +97,7 @@ class LCAgentComponent(Component):
 
     async def message_response(self) -> Message:
         """Run the agent and return the response."""
-        agent = self.build_agent()
+        agent = await async_call_method(self, "build_agent")
         message = await self.run_agent(agent=agent)
 
         self.status = message
@@ -369,10 +370,20 @@ class LCToolsAgentComponent(LCAgentComponent):
         *LCAgentComponent.get_base_inputs(),
     ]
 
+    @delegates_to("abuild_agent")
     def build_agent(self) -> AgentExecutor:
         self.resolve_duplicate_tool_names()
         self.validate_tool_names()
         agent = self.create_agent_runnable()
+        return self._executor_from_runnable(agent)
+
+    async def abuild_agent(self) -> AgentExecutor:
+        self.resolve_duplicate_tool_names()
+        self.validate_tool_names()
+        agent = await async_call_method(self, "create_agent_runnable")
+        return self._executor_from_runnable(agent)
+
+    def _executor_from_runnable(self, agent) -> AgentExecutor:
         return AgentExecutor.from_agent_and_tools(
             agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),
             tools=self.tools,
