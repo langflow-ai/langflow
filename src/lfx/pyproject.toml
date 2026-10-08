@@ -56,7 +56,7 @@ dependencies = [
     "sqlalchemy>=2.0.38,<2.1.0",
     "validators>=0.34.0,<1.0.0",
     "filelock>=3.20.1,<4.0.0",
-    "pypdf>=6.16.1,<7.0.0",
+    "pypdf>=6.19.0,<7.0.0",
     "cryptography>=50.0.0",
     "pyjwt>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
     "ag-ui-protocol>=0.1.10",
@@ -64,7 +64,7 @@ dependencies = [
     "markitdown>=0.1.4,<2.0.0",
     "setuptools>=83.0.0,<84.0.0",
     "wheel>=0.46.2,<1.0.0",
-    "mcp>=1.17.0,<2.0.0",
+    "mcp>=1.30.0,<2.0.0",
     "psutil>=5.9.0,<8.0.0",  # pre-fork TCP connection check (lfx.fork.find_ghost_connections)
     # HTML/XML parsing for the core data_source components (url, web_search, rss,
     # news_search), which import bs4 at module top. Previously reached these
