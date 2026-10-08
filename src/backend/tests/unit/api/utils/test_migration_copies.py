@@ -145,6 +145,19 @@ def test_an_instance_already_on_postgresql_keeps_its_database_and_the_copies_wor
         copy_environment("copy_knowledge_bases", unnamed, {})
 
 
+def test_a_copy_from_sqlite_has_the_command_count_a_knowledge_base_before_it_skips_it():
+    # The database copy brings a row that says pgvector as it is, and the knowledge base copy is given the
+    # destination as its pgvector store. So the row names the destination, whichever store holds its chunks.
+    moved = {"database": {"location": "db.internal:5432/langflow"}, "vectors": {"kind": "pgvector"}}
+    command = [*LANGFLOW, "relocate-kb", "--to", "postgres", "--json", "--verify-skipped"]
+
+    assert copy_command("copy_knowledge_bases", moved) == command
+    assert copy_command("copy_knowledge_bases", moved, dry_run=True) == [*command, "--dry-run"]
+    # An instance on PostgreSQL names no database to move to. Its copy reads the server's own store, where such
+    # a row is, so the command is asked for nothing more there.
+    assert "--verify-skipped" not in copy_command("copy_knowledge_bases", {"vectors": {"kind": "pgvector"}})
+
+
 @pytest.mark.parametrize(
     ("step", "held"),
     [
