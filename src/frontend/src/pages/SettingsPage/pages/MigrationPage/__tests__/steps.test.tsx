@@ -1657,6 +1657,76 @@ describe("Copy knowledge bases and files", () => {
     ).toBeInTheDocument();
   });
 
+  it("moves the focus to its line when the state closes the gate under a focused start", () => {
+    // A copy that ran, and every step before it done: the start is offered.
+    const at = (check: MigrationStepState) => (
+      <CopyStep
+        migration={{
+          ...ended("copy_knowledge_bases", {
+            report: { ok: true, counts: { relocated: 3 }, attention: [] },
+          }),
+          steps: [
+            ...above(check),
+            step("copy_knowledge_bases", "done"),
+            step("copy_files", "done"),
+          ],
+        }}
+        state={step("copy_knowledge_bases", "done")}
+        step="copy_knowledge_bases"
+      />
+    );
+    const client = new QueryClient();
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        {at(step("check_source", "done"))}
+      </QueryClientProvider>,
+    );
+    act(() => screen.getByRole("button", { name: "Copy again" }).focus());
+
+    // A read of the state, after a refused start or on the poll, finds the check open again.
+    rerender(
+      <QueryClientProvider client={client}>
+        {at(step("check_source", "blocked", "blocking_findings"))}
+      </QueryClientProvider>,
+    );
+
+    // The button is gone, and the keyboard lands on the line that says why, which is announced.
+    // What the copy found is a status too, so the line is found by its words.
+    const line = screen.getByText("Finish the steps above first.");
+    expect(line).toHaveAttribute("role", "status");
+    expect(line).toHaveFocus();
+  });
+
+  it("leaves the focus alone when the gate closes while it is elsewhere", () => {
+    const at = (check: MigrationStepState) => (
+      <CopyStep
+        migration={{
+          ...ended("copy_knowledge_bases"),
+          steps: [
+            ...above(check),
+            step("copy_knowledge_bases", "current"),
+            step("copy_files", "locked", "earlier_step"),
+          ],
+        }}
+        state={step("copy_knowledge_bases", "current")}
+        step="copy_knowledge_bases"
+      />
+    );
+    const client = new QueryClient();
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        {at(step("check_source", "done"))}
+      </QueryClientProvider>,
+    );
+    rerender(
+      <QueryClientProvider client={client}>
+        {at(step("check_source", "blocked", "blocking_findings"))}
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("Finish the steps above first.")).not.toHaveFocus();
+  });
+
   it("offers the start when every step before it is done or not needed, whatever comes after it", () => {
     show(
       <CopyStep
@@ -1999,7 +2069,10 @@ describe("Copy knowledge bases and files", () => {
         step="copy_knowledge_bases"
       />,
     );
-    // No note stands above this one, so it says why as well, and what follows here is a copy.
+    // The note above says the store changes but not which one, so this line names it before it asks for the variable.
+    expect(
+      screen.getByText(/^This instance uses PostgreSQL, so it switches/),
+    ).toBeInTheDocument();
     const line =
       "This instance already uses PostgreSQL, so its knowledge bases are copied to the store this server reads them from. Set PGVECTOR_CONNECTION_STRING on this server to that database and restart Langflow, then copy again.";
 
