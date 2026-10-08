@@ -212,7 +212,8 @@ export const COPY_CODES: Record<string, string> = {
   crashed: "error.crashed",
   destination_changed: "error.destinationChanged",
   // The knowledge bases test of "Where your data goes" refuses for the same reason. Its line follows a note
-  // that says where they go, and this one stands alone.
+  // that names the store, so it asks only for the variable. The note above this one, kb.postgresNote, says the
+  // store changes but not which one, so this line names it before "that database" can refer to it.
   pgvector_env_missing: "kb.postgresEnv",
   target_unreachable: "error.targetUnreachable",
   target_not_empty: "error.dbTargetNotEmpty",
