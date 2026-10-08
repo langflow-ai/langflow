@@ -26,6 +26,7 @@ from langflow.cli.preflight import (
     probe_secret_key,
     probe_shared_queue,
     probe_storage,
+    probe_vector_backend,
     run_production_preflight,
     summarize,
 )
@@ -146,6 +147,111 @@ async def test_pgvector_unset_fails(monkeypatch):
     result = await probe_pgvector(_StubService())
     assert result.status == "fail"
     assert "PGVECTOR_CONNECTION_STRING" in result.detail
+
+
+# ---------------------------------------------------------------------------
+# probe_vector_backend: at-least-one-configured semantics
+# ---------------------------------------------------------------------------
+
+# A DSN that refuses immediately so the active pgVector probe fails fast.
+_UNREACHABLE_PGVECTOR = "postgresql://user:{}@127.0.0.1:1/nope".format("testpw")
+# An OpenSearch URL that refuses immediately -> fast "unreachable" for probes.
+_UNREACHABLE_OPENSEARCH = "http://127.0.0.1:1"
+
+
+async def test_vector_backend_none_configured_fails(monkeypatch):
+    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+    monkeypatch.delenv("OPENSEARCH_URL", raising=False)
+    result = await probe_vector_backend(_StubService())
+    assert result.status == "fail"
+    assert "no vector backend configured" in result.detail
+    # Remediation names every supported backend so the operator has a choice.
+    assert "PGVECTOR_CONNECTION_STRING" in result.remediation
+    assert "OPENSEARCH_URL" in result.remediation
+
+
+async def test_vector_backend_pgvector_only_unreachable_fails(monkeypatch):
+    monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", _UNREACHABLE_PGVECTOR)
+    monkeypatch.delenv("OPENSEARCH_URL", raising=False)
+    result = await probe_vector_backend(_StubService())
+    assert result.status == "fail"
+    assert "all configured vector backends are unreachable" in result.detail
+    assert "pgVector" in result.detail
+
+
+async def test_vector_backend_all_unreachable_fails(monkeypatch):
+    # Configured but every backend's active probe fails -> abort with an
+    # aggregated detail naming each broken backend.
+    pytest.importorskip("opensearchpy")
+    monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", _UNREACHABLE_PGVECTOR)
+    monkeypatch.setenv("OPENSEARCH_URL", _UNREACHABLE_OPENSEARCH)
+    result = await probe_vector_backend(_StubService())
+    assert result.status == "fail"
+    assert "all configured vector backends are unreachable" in result.detail
+    assert "pgVector" in result.detail
+    assert "OpenSearch" in result.detail
+
+
+async def test_vector_backend_opensearch_only_unreachable_fails(monkeypatch):
+    # A sole configured-but-unreachable backend aborts the boot. Needs the real
+    # client so the failure is a connection error, not "client not installed".
+    pytest.importorskip("opensearchpy")
+    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+    monkeypatch.setenv("OPENSEARCH_URL", _UNREACHABLE_OPENSEARCH)
+    result = await probe_vector_backend(_StubService())
+    assert result.status == "fail"
+    assert "all configured vector backends are unreachable" in result.detail
+    assert "could not reach OpenSearch" in result.detail
+
+
+async def test_vector_backend_blank_env_is_not_configured(monkeypatch):
+    # A present-but-empty env var must not count as a configured backend.
+    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+    monkeypatch.setenv("OPENSEARCH_URL", "   ")
+    result = await probe_vector_backend(_StubService())
+    assert result.status == "fail"
+    assert "no vector backend configured" in result.detail
+
+
+async def test_vector_backend_opensearch_only_healthy_passes(monkeypatch):
+    # OpenSearch alone satisfies the check (probe stubbed: no live cluster needed).
+    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+    monkeypatch.setenv("OPENSEARCH_URL", "https://opensearch.internal:9200")
+
+    async def _healthy_opensearch():
+        return CheckResult("ok", "OpenSearch reachable")
+
+    monkeypatch.setattr(preflight, "probe_opensearch", _healthy_opensearch)
+    result = await probe_vector_backend(_StubService())
+    assert result.status == "ok"
+    assert "OpenSearch" in result.detail
+
+
+async def test_vector_backend_healthy_alternative_warns_on_broken_sibling(monkeypatch):
+    # pgVector unreachable but OpenSearch healthy -> warn (boot continues on the
+    # working backend, broken sibling surfaced).
+    monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", _UNREACHABLE_PGVECTOR)
+    monkeypatch.setenv("OPENSEARCH_URL", "https://opensearch.internal:9200")
+
+    async def _healthy_opensearch():
+        return CheckResult("ok", "OpenSearch reachable")
+
+    monkeypatch.setattr(preflight, "probe_opensearch", _healthy_opensearch)
+    result = await probe_vector_backend(_StubService())
+    assert result.status == "warn"
+    assert "OpenSearch reachable" in result.detail
+    assert "pgVector unhealthy" in result.detail
+
+
+async def test_probe_opensearch_unset_returns_none(monkeypatch):
+    monkeypatch.delenv("OPENSEARCH_URL", raising=False)
+    assert await preflight.probe_opensearch() is None
+
+
+def test_vector_backend_is_a_required_check():
+    keys = {c.key: c.severity for c in preflight.ALL_CHECKS}
+    assert keys["vector_backend"] == "required"
+    assert "pgvector" not in keys
 
 
 async def test_database_unreachable_fails():
@@ -414,7 +520,7 @@ def _clear_preflight_sentinel():
     runs to completion before any fixture teardown); the assertion then catches any
     *future* test that forgets to.
     """
-    guarded = ("LANGFLOW_SECRET_KEY", "PGVECTOR_CONNECTION_STRING")
+    guarded = ("LANGFLOW_SECRET_KEY", "PGVECTOR_CONNECTION_STRING", "OPENSEARCH_URL")
     saved = {key: os.environ.pop(key, None) for key in guarded}
     os.environ.pop(PREFLIGHT_COMPLETED_ENV, None)
     try:

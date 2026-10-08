@@ -4,13 +4,17 @@ When Langflow boots with ``--deployment-profile prod`` (or
 ``LANGFLOW_DEPLOYMENT_PROFILE=prod``), this module runs a set of fail-loud
 infrastructure checks in the CLI parent process *before* any worker is spawned:
 
-- **Required** checks (database, file storage, encryption secret key, pgVector)
-  abort the boot when they fail — the process exits non-zero and no worker
-  starts, so a misconfigured production deployment never comes up "half working".
+- **Required** checks (database, file storage, encryption secret key, vector
+  backend) abort the boot when they fail — the process exits non-zero and no
+  worker starts, so a misconfigured production deployment never comes up "half
+  working". The vector-backend check is satisfied by *any* reachable backend
+  (pgVector or OpenSearch): each backend configured via the environment is
+  actively probed, and the check fails only when nothing is configured or every
+  configured backend is unreachable.
 - **Degraded** checks (cache, shared queue) surface reduced capabilities. Cache
-  and shared queue warn when they
-  fall back to their in-process default, but *abort* when an external backend is
-  explicitly selected (e.g. LANGFLOW_CACHE_TYPE=redis) yet is unreachable — a
+  and shared queue warn when they fall back to their in-process default, but
+  *abort* when an external backend is explicitly selected (e.g.
+  LANGFLOW_CACHE_TYPE=redis) yet is unreachable — a
   deployment that asked for a shared backend and did not get one is misconfigured,
   not merely degraded. The operator can unset the backend to boot degraded.
 
@@ -38,6 +42,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import click
+from lfx.base.knowledge_bases.backends.opensearch import read_opensearch_url_from_env
 from lfx.log.logger import logger
 
 from langflow.cli.progress import ProgressIndicator
@@ -355,6 +360,148 @@ async def probe_pgvector(_settings_service: SettingsService) -> CheckResult:
     return CheckResult("ok", "reachable, 'vector' extension present")
 
 
+class _OptionalDependencyMissingError(Exception):
+    """Raised when an env-configured backend's client library is not installed.
+
+    Carries the pip-installable name so the probe can render a precise
+    remediation ("configured but the client isn't installed").
+    """
+
+
+async def probe_opensearch() -> CheckResult | None:
+    """Active probe of an OpenSearch cluster configured via env, or ``None``.
+
+    Returns ``None`` when ``OPENSEARCH_URL`` is unset — the orchestrator reads
+    that as "not configured". When it is set, a throwaway ``opensearch-py``
+    client runs ``client.info()`` (the same liveness call the backend's
+    ``test_connection`` uses) and is closed before returning, so no socket is
+    inherited across the gunicorn fork.
+
+    Only the default env-var names are read (``OPENSEARCH_URL`` +
+    ``OPENSEARCH_USERNAME`` / ``OPENSEARCH_PASSWORD``): the variable service and
+    per-KB ``backend_config`` overrides do not exist this early in boot. TLS
+    verification is fixed to the URL scheme (``https`` verifies certificates), so
+    a cluster behind a private CA that is only reachable through a per-KB
+    ``verify_certs`` override cannot pass this probe.
+    """
+    url = read_opensearch_url_from_env()
+    if not url:
+        return None
+
+    username = os.environ.get("OPENSEARCH_USERNAME", "").strip() or None
+    password = os.environ.get("OPENSEARCH_PASSWORD", "").strip() or None
+    # Mirror the backend's default: the URL scheme implies SSL, and cert
+    # verification tracks SSL. There is no backend_config to override it here.
+    scheme = url.split("://", 1)[0].lower() if "://" in url else ""
+    use_ssl = scheme != "http"
+
+    def _probe() -> None:
+        try:
+            from opensearchpy import OpenSearch
+            from opensearchpy.exceptions import AuthorizationException
+        except ImportError as exc:
+            msg = "opensearch-py"
+            raise _OptionalDependencyMissingError(msg) from exc
+
+        http_auth = (username, password) if username and password else None
+        client = OpenSearch(
+            hosts=[url],
+            http_auth=http_auth,
+            use_ssl=use_ssl,
+            verify_certs=use_ssl,
+            timeout=_PROBE_CONNECT_TIMEOUT,
+        )
+        try:
+            # A 403 on cluster:monitor/main (AuthorizationException) still proves
+            # DNS, TLS, the connection, and credential auth all succeeded — a
+            # least-privilege, index-scoped account is reachable. A bad password
+            # raises AuthenticationException instead, which propagates as a fail.
+            with contextlib.suppress(AuthorizationException):
+                client.info()
+        finally:
+            with contextlib.suppress(Exception):
+                client.close()
+
+    try:
+        await asyncio.wait_for(asyncio.to_thread(_probe), timeout=_PROBE_TIMEOUT)
+    except _OptionalDependencyMissingError as exc:
+        return CheckResult(
+            "fail",
+            f"OPENSEARCH_URL is set but the OpenSearch client is not installed ({exc})",
+            "Install the 'opensearch' extras (opensearch-py), or unset OPENSEARCH_URL if this "
+            "deployment does not use OpenSearch.",
+        )
+    except asyncio.TimeoutError:
+        return CheckResult(
+            "fail",
+            f"could not reach OpenSearch (timed out after {_PROBE_TIMEOUT}s)",
+            "Verify OPENSEARCH_URL (host, port, network) and the OPENSEARCH_USERNAME/PASSWORD credentials.",
+        )
+    except Exception as exc:  # noqa: BLE001 — any driver/network/TLS error is a failed check
+        return CheckResult(
+            "fail",
+            f"could not reach OpenSearch ({_short_exc(exc)})",
+            "Verify OPENSEARCH_URL, credentials, and the TLS configuration (scheme and certificates; the "
+            "preflight verifies certificates for https and cannot use a per-KB verify_certs override).",
+        )
+    return CheckResult("ok", "OpenSearch reachable")
+
+
+async def probe_vector_backend(settings_service: SettingsService) -> CheckResult:
+    """Require at least one *reachable* vector-store backend in prod.
+
+    pgVector is Langflow's default production vector store, but a deployment that
+    provisions OpenSearch instead should boot without a pgVector connection
+    string (new KBs then default to OpenSearch — see ``resolve_default_kb_backend``).
+    Every backend configured via the server environment is actively probed
+    (throwaway client, torn down before returning), and the verdict is:
+
+    - **No backend configured** → ``fail``: a prod boot with no vector backend is
+      a misconfiguration (and would leave new KBs on host-local SQLite).
+    - **At least one configured backend reachable** → ``ok``, or ``warn`` when
+      another configured backend failed its probe (the boot proceeds on the
+      working one, but the operator still sees the broken sibling).
+    - **All configured backends unreachable** → ``fail``.
+
+    Detection is env-only: the probe runs before the database — and therefore the
+    variable service — exists, so DB-stored credentials and per-KB
+    ``backend_config`` variable-name overrides are invisible here. A backend
+    provisioned only through the UI variable store must still keep its default
+    env var set (or keep another backend configured) to be verified at boot.
+    """
+    from lfx.base.knowledge_bases.backends.postgres import read_connection_string_from_env
+
+    # (display name, CheckResult) for each backend that is configured via env.
+    results: list[tuple[str, CheckResult]] = []
+    if read_connection_string_from_env():
+        results.append(("pgVector", await probe_pgvector(settings_service)))
+    opensearch_result = await probe_opensearch()
+    if opensearch_result is not None:
+        results.append(("OpenSearch", opensearch_result))
+
+    if not results:
+        return CheckResult(
+            "fail",
+            "no vector backend configured",
+            "Configure at least one vector backend before booting in prod: set "
+            "PGVECTOR_CONNECTION_STRING (pgVector, the default) or OPENSEARCH_URL (OpenSearch).",
+        )
+
+    healthy = [name for name, result in results if result.status == "ok"]
+    unhealthy = [(name, result) for name, result in results if result.status != "ok"]
+    remediation = " ".join(dict.fromkeys(result.remediation for _, result in unhealthy if result.remediation))
+
+    if not healthy:
+        detail = "; ".join(f"{name} ({result.detail})" for name, result in unhealthy)
+        return CheckResult("fail", f"all configured vector backends are unreachable: {detail}", remediation)
+
+    if unhealthy:
+        broken = "; ".join(f"{name} unhealthy ({result.detail})" for name, result in unhealthy)
+        return CheckResult("warn", f"{', '.join(healthy)} reachable; {broken}", remediation)
+
+    return CheckResult("ok", f"{', '.join(healthy)} reachable")
+
+
 # ---------------------------------------------------------------------------
 # Degraded checks (warn only)
 # ---------------------------------------------------------------------------
@@ -505,7 +652,7 @@ REQUIRED_CHECKS: list[PreflightCheck] = [
     PreflightCheck("database", "Database service", "required", probe_database),
     PreflightCheck("storage", "File storage", "required", probe_storage),
     PreflightCheck("secret_key", "Encryption secret key", "required", probe_secret_key),
-    PreflightCheck("pgvector", "Vector backend (pgVector)", "required", probe_pgvector),
+    PreflightCheck("vector_backend", "Vector backend", "required", probe_vector_backend),
 ]
 
 DEGRADED_CHECKS: list[PreflightCheck] = [
