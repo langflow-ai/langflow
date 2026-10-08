@@ -92,12 +92,46 @@ export function CopyStep({
 
   return (
     <div className="flex flex-col items-start gap-3">
-      {/* One region for both states, so the end of a run is announced as well as its progress. */}
+      {!running && (
+        <>
+          <p className="text-sm text-muted-foreground">
+            {t(`settings.migration.${body}`)}
+          </p>
+          {step === "copy_knowledge_bases" &&
+            migration.instance.database.type === "postgresql" && (
+              <p className="text-sm">
+                {t("settings.migration.kb.postgresNote")}
+              </p>
+            )}
+          {stale && (
+            <p className="text-sm">{t("settings.migration.copy.stale")}</p>
+          )}
+        </>
+      )}
+      {/* One region for both states, so what a run found is read out as well as its progress. */}
       <p
         role="status"
-        className={running ? "text-sm text-muted-foreground" : "sr-only"}
+        aria-live="polite"
+        className={
+          running
+            ? "text-sm text-muted-foreground"
+            : report?.counts
+              ? "text-sm"
+              : "sr-only"
+        }
       >
-        {running ? t(`settings.migration.${key}`, counts) : finished}
+        {running
+          ? t(`settings.migration.${key}`, counts)
+          : report?.counts
+            ? t(
+                `settings.migration.copy.${run?.dry_run ? "testCounts" : "counts"}`,
+                {
+                  copied: count(counted.copied),
+                  skipped: count(counted.skipped),
+                  failed: count(counted.failed),
+                },
+              )
+            : finished}
       </p>
       {running ? (
         <>
@@ -135,30 +169,6 @@ export function CopyStep({
         </>
       ) : (
         <>
-          <p className="text-sm text-muted-foreground">
-            {t(`settings.migration.${body}`)}
-          </p>
-          {step === "copy_knowledge_bases" &&
-            migration.instance.database.type === "postgresql" && (
-              <p className="text-sm">
-                {t("settings.migration.kb.postgresNote")}
-              </p>
-            )}
-          {stale && (
-            <p className="text-sm">{t("settings.migration.copy.stale")}</p>
-          )}
-          {report?.counts && (
-            <p className="text-sm">
-              {t(
-                `settings.migration.copy.${run?.dry_run ? "testCounts" : "counts"}`,
-                {
-                  copied: count(counted.copied),
-                  skipped: count(counted.skipped),
-                  failed: count(counted.failed),
-                },
-              )}
-            </p>
-          )}
           {code && (
             <div role="alert" className="flex flex-col gap-1 text-sm">
               <p className="text-destructive">
@@ -216,6 +226,8 @@ export function CopyStep({
           <div className="flex w-full flex-col gap-2 sm:flex-row">
             <Button
               className="w-full sm:w-fit"
+              // One start at a time: a second one while the first is on its way is refused as running elsewhere.
+              disabled={start.isPending}
               loading={start.isPending && !start.variables}
               onClick={() => start.mutate(false)}
               ignoreTitleCase
@@ -225,10 +237,12 @@ export function CopyStep({
                 ? t("settings.migration.copy.again")
                 : t(`settings.migration.step.${STEP_SLUGS[step]}.title`)}
             </Button>
-            {testRun && (
+            {/* A test run takes the copy's place in the record, so a done step offers none. */}
+            {testRun && state.state !== "done" && (
               <Button
                 variant="outline"
                 className="w-full sm:w-fit"
+                disabled={start.isPending}
                 loading={start.isPending && start.variables}
                 onClick={() => start.mutate(true)}
                 ignoreTitleCase
