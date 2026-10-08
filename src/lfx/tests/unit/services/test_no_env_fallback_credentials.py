@@ -8,8 +8,8 @@ assistant rejecting requests). That loop must honor the request's
 isolated from process-wide credentials.
 
 These tests drive the ``user_id``-not-None path (the only one reaching the
-post-async fallback) with a forced DB miss by monkeypatching ``run_until_complete``
-to return an empty mapping, so no real database is required.
+post-async fallback) with an empty variable service, preserving the real async
+resolver and synchronous bridge.
 """
 
 import uuid
@@ -23,11 +23,11 @@ from lfx.services.variable.request_scope import activate_no_env_fallback, reset_
 def _force_db_miss(monkeypatch):
     """Make the in-function DB lookup return a miss without touching a database."""
 
-    def _fake_run(coro):
-        coro.close()  # avoid "coroutine was never awaited" warnings
-        return {}
+    class MissingVariables:
+        async def get_variable(self, **_kwargs):
+            return None
 
-    monkeypatch.setattr(credentials, "run_until_complete", _fake_run)
+    monkeypatch.setattr(credentials, "get_variable_service", MissingVariables)
 
 
 def test_post_db_miss_fallback_respects_no_env_fallback(monkeypatch):

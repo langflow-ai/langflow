@@ -30,6 +30,18 @@ if TYPE_CHECKING:
     from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 
+_LLM_CONNECTION_VARIABLE_PROVIDERS = frozenset(
+    {
+        "IBM WatsonX",
+        "IBM watsonx.ai",
+        "Ollama",
+        "OpenAI",
+        "OpenRouter",
+        "Azure AI Foundry",
+    }
+)
+
+
 def _env_if_allowed(key: str) -> str | None:
     """Return ``os.environ.get(key)`` unless the active request disables env fallback.
 
@@ -42,7 +54,13 @@ def _env_if_allowed(key: str) -> str | None:
     return os.environ.get(key)
 
 
-def _apply_registered_provider_connection(provider: str, user_id: UUID | str | None, kwargs: dict[str, Any]) -> None:
+def _apply_registered_provider_connection(
+    provider: str,
+    user_id: UUID | str | None,
+    kwargs: dict[str, Any],
+    *,
+    provider_vars: dict[str, str] | None = None,
+) -> None:
     """Apply a bundle-registered provider's non-secret connection variables to ``kwargs``.
 
     Core providers keep their explicit per-provider branches in ``get_llm`` /
@@ -59,7 +77,8 @@ def _apply_registered_provider_connection(provider: str, user_id: UUID | str | N
     from lfx.utils.util import transform_localhost_url
 
     provider_meta = model_provider_metadata.get(provider, {})
-    provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+    if provider_vars is None:
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
     default_headers: dict[str, str] = {}
     for var in provider_meta.get("variables", []):
         if var.get("is_secret"):
@@ -121,25 +140,12 @@ def _protect_model_connection(
     validate_url_for_ssrf_or_raise(effective_url)
 
 
-def get_llm(
-    model,
-    user_id: UUID | str | None,
-    api_key=None,
-    temperature=None,
-    *,
-    stream=False,
-    max_tokens=None,
-    watsonx_url=None,
-    watsonx_project_id=None,
-    ollama_base_url=None,
-    overrides: dict[str, Any] | None = None,
-    provider_policy: ModelProviderPolicySnapshot | None = None,
-) -> Any:
-    # Coerce provider-specific string params (Message/Data may leak through StrInput)
-    ollama_base_url = _to_str(ollama_base_url)
-    watsonx_url = _to_str(watsonx_url)
-    watsonx_project_id = _to_str(watsonx_project_id)
+def _select_llm(model):
+    """Validate selection shape without reading credentials or importing a provider SDK.
 
+    This is the selection validation formerly at the start of ``get_llm``.
+    Connected model objects keep their existing pass-through behavior.
+    """
     # List-shaped selections carry the provider identity needed for policy
     # enforcement. Gate that common runtime path before importing even the
     # LangChain base class, provider SDKs, or credential-resolution helpers.
@@ -161,10 +167,7 @@ def get_llm(
         msg = "A model selection is required"
         raise ValueError(msg)
 
-    # Extract model configuration from metadata
-    model_name = model.get("name")
     provider = model.get("provider")
-    metadata = model.get("metadata", {})
 
     if not isinstance(provider, str) or not provider.strip():
         msg = (
@@ -172,23 +175,21 @@ def get_llm(
             "so the component knows which provider to use."
         )
         raise ValueError(msg)
-    if provider_policy is None:
-        from lfx.base.models.provider_registry import get_registry_snapshot
-        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+    return model
 
-        provider_policy = resolve_model_provider_policy(
-            user_id=user_id,
-            providers=(*get_registry_snapshot().provider_ids, provider),
-            purpose=ModelProviderPolicyPurpose.USE,
-        )
+
+def _require_llm_provider(model, provider_policy: ModelProviderPolicySnapshot) -> str:
+    """Enforce policy against the saved identity, then return its canonical provider.
+
+    Saved metadata is not trusted to select a provider class or parameter names.
+    Policy and registry normalization already existed in ``get_llm``; keeping
+    them together ensures both factories reject a provider before any key read.
+    """
+    provider = model["provider"]
     provider_policy.require(provider)
+    model_name = model.get("name")
     if isinstance(model_name, str) and model_name:
         provider_policy.require_model(provider, model_name, model_type="llm")
-
-    # Resolve helpers through the package namespace only after policy passes so
-    # tests can patch lfx.base.models.unified_models.<name> and denied requests
-    # cannot trigger runtime integration imports.
-    from lfx.base.models import unified_models as unified_models_module
 
     # Policy is evaluated against the submitted identity, then all runtime
     # wiring for a known provider is resolved from its canonical registry
@@ -198,46 +199,23 @@ def get_llm(
     # metadata fallback under the OSS allow-all policy.
     from lfx.base.models.provider_registry import provider_name_for_id, resolve_provider_id
 
-    provider_id = resolve_provider_id(provider)
-    canonical_provider = provider_name_for_id(provider_id)
-    provider_is_known = canonical_provider is not None
-    provider = canonical_provider or provider
+    return provider_name_for_id(resolve_provider_id(provider)) or provider
 
-    # Stored selections sourced from ``get_unified_models_detailed`` (e.g. the
-    # ``GET /api/v1/models`` catalog the frontend uses to augment its dropdown
-    # right after a provider is configured, before the backend repopulates
-    # ``template[model]["options"]``) carry only the raw ``create_model_metadata``
-    # fields — none of the enriched ``*_param`` keys. Derive those param names
-    # from the provider mapping (the same source ``get_language_model_options``
-    # uses) so provider-specific names are honored instead of the generic
-    # ``model`` / ``api_key`` defaults. This matters for IBM WatsonX: passing a
-    # foundation-model id under the generic ``model`` kwarg routes ChatWatsonx to
-    # the Model Gateway (a different, OpenAI-style catalog), surfacing as
-    # "model <id> not found" / IAM "Provided user not found or active" even
-    # though the dropdown, connection test, and standalone component all work.
-    from lfx.base.models.model_metadata import get_provider_param_mapping
 
-    provider_param_mapping = get_provider_param_mapping(provider)
+def _validate_llm_api_key(provider, api_key, original_api_key):
+    """Apply the existing missing-key errors and optional-provider placeholder.
 
-    # Get model class and parameter names from metadata
-    api_key_param = (
-        provider_param_mapping.get("api_key_param", "api_key")
-        if provider_is_known
-        else metadata.get("api_key_param") or "api_key"
-    )
+    ``original_api_key`` is the component input, which may be a variable name;
+    keep it separate from the resolved secret so errors identify a missing
+    reference without displaying the secret itself.
+    """
+    from lfx.base.models import unified_models as unified_models_module
 
-    # Capture the user-supplied api_key BEFORE resolution so we can name
-    # it back in the error message if it was a Global Variable reference
-    # the resolver couldn't find — see PR-12575 Bug 2.
-    original_api_key_input = api_key.strip() if isinstance(api_key, str) else None
-
-    # Get API key from user input or global variables
-    api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
-
+    original_api_key_input = original_api_key.strip() if isinstance(original_api_key, str) else None
     # Validate API key. Ollama needs none; extension-bundle providers that
     # declare api_key_required=False (e.g. local OpenAI-compatible servers such
     # as vLLM) also opt out via provider_registry.
-    from lfx.base.models.provider_registry import is_api_key_optional, is_registered
+    from lfx.base.models.provider_registry import is_api_key_optional
 
     if not api_key and provider != "Ollama" and not is_api_key_optional(provider):
         # Bug 2 [P1] — Defensive guard: provider arriving as empty / None /
@@ -286,6 +264,74 @@ def get_llm(
     # a local vLLM endpoint without auth.
     if not api_key and is_api_key_optional(provider):
         api_key = "EMPTY"  # pragma: allowlist secret
+
+    return api_key
+
+
+def _needs_llm_connection_variables(provider: str) -> bool:
+    from lfx.base.models.provider_registry import is_registered
+
+    # Core providers have explicit connection-setting branches below. Bundles
+    # supply their own variable declarations, so registry membership is live.
+    return provider in _LLM_CONNECTION_VARIABLE_PROVIDERS or is_registered(provider)
+
+
+def _build_llm(
+    model,
+    user_id: UUID | str | None,
+    provider: str,
+    api_key: str | None,
+    provider_vars: dict[str, str],
+    temperature=None,
+    *,
+    stream=False,
+    max_tokens=None,
+    watsonx_url=None,
+    watsonx_project_id=None,
+    ollama_base_url=None,
+    overrides: dict[str, Any] | None = None,
+) -> Any:
+    """Construct a client using the provider-specific wiring formerly in ``get_llm``.
+
+    The caller has checked policy and resolved owner-scoped credentials and
+    connection variables. This function performs no database lookups. Keeping
+    it shared prevents sync and async factories from differing in parameter
+    mapping, retry overrides, or final endpoint protection.
+    """
+    # Coerce provider-specific string params (Message/Data may leak through StrInput)
+    ollama_base_url = _to_str(ollama_base_url)
+    watsonx_url = _to_str(watsonx_url)
+    watsonx_project_id = _to_str(watsonx_project_id)
+
+    from lfx.base.models import unified_models as unified_models_module
+    from lfx.base.models.provider_registry import is_registered, provider_name_for_id, resolve_provider_id
+
+    model_name = model.get("name")
+    metadata = model.get("metadata", {})
+    provider_is_known = provider_name_for_id(resolve_provider_id(provider)) is not None
+
+    # Stored selections sourced from ``get_unified_models_detailed`` (e.g. the
+    # ``GET /api/v1/models`` catalog the frontend uses to augment its dropdown
+    # right after a provider is configured, before the backend repopulates
+    # ``template[model]["options"]``) carry only the raw ``create_model_metadata``
+    # fields — none of the enriched ``*_param`` keys. Derive those param names
+    # from the provider mapping (the same source ``get_language_model_options``
+    # uses) so provider-specific names are honored instead of the generic
+    # ``model`` / ``api_key`` defaults. This matters for IBM WatsonX: passing a
+    # foundation-model id under the generic ``model`` kwarg routes ChatWatsonx to
+    # the Model Gateway (a different, OpenAI-style catalog), surfacing as
+    # "model <id> not found" / IAM "Provided user not found or active" even
+    # though the dropdown, connection test, and standalone component all work.
+    from lfx.base.models.model_metadata import get_provider_param_mapping
+
+    provider_param_mapping = get_provider_param_mapping(provider)
+
+    # Get model class and parameter names from metadata
+    api_key_param = (
+        provider_param_mapping.get("api_key_param", "api_key")
+        if provider_is_known
+        else metadata.get("api_key_param") or "api_key"
+    )
 
     # Get model class from metadata, falling back to the provider-level
     # mapping when the stored model value was sourced from
@@ -377,9 +423,6 @@ def get_llm(
             else metadata.get("project_id_param") or provider_param_mapping.get("project_id_param", "project_id")
         )
 
-        # Get all provider variables from database
-        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
-
         # Priority: component value > database value > env var
         watsonx_url_value = (
             watsonx_url if watsonx_url else provider_vars.get("WATSONX_URL") or _env_if_allowed("WATSONX_URL")
@@ -417,9 +460,6 @@ def get_llm(
             else metadata.get("base_url_param", "base_url")
         )
 
-        # Get all provider variables from database
-        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
-
         # Priority: component value > database value > env var > default fallback (localhost)
         ollama_base_url_value = (
             ollama_base_url
@@ -432,7 +472,6 @@ def get_llm(
     elif provider == "OpenAI":
         from lfx.utils.util import transform_localhost_url
 
-        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
         openai_base_url_value = provider_vars.get("OPENAI_BASE_URL") or _env_if_allowed("OPENAI_BASE_URL")
         if openai_base_url_value:
             kwargs["base_url"] = transform_localhost_url(openai_base_url_value)
@@ -447,7 +486,6 @@ def get_llm(
         if base_url_value:
             kwargs["base_url"] = base_url_value
 
-        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
         default_headers: dict[str, str] = {}
         for var in provider_meta.get("variables", []):
             if not var.get("is_header"):
@@ -464,7 +502,6 @@ def get_llm(
     elif provider == "Azure AI Foundry":
         from lfx.base.models.model_utils import AZURE_AI_FOUNDRY_REQUEST_TIMEOUT, normalize_azure_ai_foundry_endpoint
 
-        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
         endpoint_value = provider_vars.get("AZURE_AI_FOUNDRY_ENDPOINT") or _env_if_allowed("AZURE_AI_FOUNDRY_ENDPOINT")
         if not endpoint_value:
             msg = (
@@ -479,7 +516,7 @@ def get_llm(
     elif is_registered(provider):
         # Bundle-contributed provider: apply its declared connection variables
         # (base_url, attribution headers, etc.) generically from its metadata.
-        _apply_registered_provider_connection(provider, user_id, kwargs)
+        _apply_registered_provider_connection(provider, user_id, kwargs, provider_vars=provider_vars)
         if kwargs.get("base_url"):
             connection_url_param = "base_url"
 
@@ -516,6 +553,119 @@ def get_llm(
             raise ValueError(msg) from e
         # Re-raise the original exception for other cases
         raise
+
+
+def get_llm(
+    model,
+    user_id: UUID | str | None,
+    api_key=None,
+    temperature=None,
+    *,
+    stream=False,
+    max_tokens=None,
+    watsonx_url=None,
+    watsonx_project_id=None,
+    ollama_base_url=None,
+    overrides: dict[str, Any] | None = None,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+) -> Any:
+    """Resolve policy and credentials, then construct the provider client."""
+    if not isinstance(model, list):
+        return _select_llm(model)
+    model = _select_llm(model)
+    if provider_policy is None:
+        from lfx.base.models.provider_registry import get_registry_snapshot
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+        provider_policy = resolve_model_provider_policy(
+            user_id=user_id,
+            providers=(*get_registry_snapshot().provider_ids, model["provider"]),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    provider = _require_llm_provider(model, provider_policy)
+
+    from lfx.base.models import unified_models as unified_models_module
+
+    resolved_api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
+    resolved_api_key = _validate_llm_api_key(provider, resolved_api_key, api_key)
+    provider_vars = (
+        unified_models_module.get_all_variables_for_provider(user_id, provider)
+        if _needs_llm_connection_variables(provider)
+        else {}
+    )
+    return _build_llm(
+        model=model,
+        user_id=user_id,
+        provider=provider,
+        api_key=resolved_api_key,
+        provider_vars=provider_vars,
+        temperature=temperature,
+        stream=stream,
+        max_tokens=max_tokens,
+        watsonx_url=watsonx_url,
+        watsonx_project_id=watsonx_project_id,
+        ollama_base_url=ollama_base_url,
+        overrides=overrides,
+    )
+
+
+async def aget_llm(
+    model,
+    user_id: UUID | str | None,
+    api_key=None,
+    temperature=None,
+    *,
+    stream=False,
+    max_tokens=None,
+    watsonx_url=None,
+    watsonx_project_id=None,
+    ollama_base_url=None,
+    overrides: dict[str, Any] | None = None,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+) -> Any:
+    """Await setup on the caller loop, then use the shared provider constructor.
+
+    Resolve policy before touching secrets. Database waits stay on this loop
+    so other tasks can release connections, and cancellation unwinds the
+    lookup's session scope before a provider client is allocated.
+    """
+    if not isinstance(model, list):
+        return _select_llm(model)
+    model = _select_llm(model)
+    if provider_policy is None:
+        from lfx.base.models.provider_registry import get_registry_snapshot
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
+
+        provider_policy = await aresolve_model_provider_policy(
+            user_id=user_id,
+            providers=(*get_registry_snapshot().provider_ids, model["provider"]),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    provider = _require_llm_provider(model, provider_policy)
+
+    from lfx.base.models import unified_models as unified_models_module
+
+    resolved_api_key = await unified_models_module.aget_api_key_for_provider(user_id, provider, api_key)
+    resolved_api_key = _validate_llm_api_key(provider, resolved_api_key, api_key)
+    provider_vars = (
+        await unified_models_module.aget_all_variables_for_provider(user_id, provider)
+        if _needs_llm_connection_variables(provider)
+        else {}
+    )
+    return _build_llm(
+        model=model,
+        user_id=user_id,
+        provider=provider,
+        api_key=resolved_api_key,
+        provider_vars=provider_vars,
+        temperature=temperature,
+        stream=stream,
+        max_tokens=max_tokens,
+        watsonx_url=watsonx_url,
+        watsonx_project_id=watsonx_project_id,
+        ollama_base_url=ollama_base_url,
+        overrides=overrides,
+    )
 
 
 def _get_provider_catalog_models(
