@@ -2012,7 +2012,7 @@
   "settings.migration.check.schema.title": "Version de la base de données",
   "settings.migration.check.schema.body": "La vérification n'a pas pu lire la base de données de cette instance, les autres vérifications ne se sont donc pas exécutées. La raison est indiquée dans « Détails ». Si une autre version de Langflow a mis à jour la base de données en dernier, redémarrez cette instance, puis relancez la vérification.",
   "settings.migration.check.defaultSuperuser.title": "Le compte « langflow »",
-  "settings.migration.check.defaultSuperuser.body": "Il possède du contenu mais ne s'est jamais connecté. La nouvelle instance le conserve uniquement comme compte administrateur, configuré par l'étape « Démarrer la nouvelle instance ».",
+  "settings.migration.check.defaultSuperuser.body": "Cette instance connecte tout le monde automatiquement, il se peut donc que personne ne connaisse le mot de passe de ce compte. La nouvelle instance conserve ce mot de passe et peut le demander. Avant de suspendre les modifications, vérifiez qu'un mot de passe que vous connaissez permet de se connecter, ou définissez-en un. « Détails » indique la marche à suivre et pourquoi ce point reste affiché ensuite.",
   "settings.migration.check.defaultSuperuser.accept": "Accepter. La nouvelle instance le conserve comme administrateur.",
   "settings.migration.check.embeddingModels.title": "Modèles d'intégration",
   "settings.migration.check.embeddingModels.body": "Certaines bases de connaissances n'indiquent pas quel modèle les a créées. La recherche sur la nouvelle instance peut utiliser un autre modèle. Si les résultats y semblent incorrects, recréez-les.",

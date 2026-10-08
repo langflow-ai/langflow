@@ -2012,7 +2012,7 @@
   "settings.migration.check.schema.title": "数据库版本",
   "settings.migration.check.schema.body": "检查未能读取此实例的数据库，因此其他检查没有运行。原因见“详细信息”。如果数据库最近一次是由另一个 Langflow 版本更新的，请重启此实例，然后再次运行检查。",
   "settings.migration.check.defaultSuperuser.title": "“langflow” 账户",
-  "settings.migration.check.defaultSuperuser.body": "该账户拥有一些内容，但从未登录过。新实例只会将它保留为管理员账户，由“启动新实例”步骤进行设置。",
+  "settings.migration.check.defaultSuperuser.body": "此实例会自动为用户登录，因此该账户的密码可能无人知晓。新实例会保留该密码，并可能要求输入密码。请在暂停更改之前，确认您知道的密码可以登录，或者设置一个密码。操作方法以及处理后此项仍会列出的原因，见“详细信息”。",
   "settings.migration.check.defaultSuperuser.accept": "接受。新实例会将它保留为管理员。",
   "settings.migration.check.embeddingModels.title": "嵌入模型",
   "settings.migration.check.embeddingModels.body": "部分知识库没有记录构建它们所用的模型。新实例上的搜索可能会使用不同的模型。如果那里的结果看起来不对，请重新构建这些知识库。",

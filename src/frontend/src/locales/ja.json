@@ -2012,7 +2012,7 @@
   "settings.migration.check.schema.title": "データベースのバージョン",
   "settings.migration.check.schema.body": "確認でこのインスタンスのデータベースを読み取れなかったため、ほかの確認は実行されませんでした。理由は「詳細」に表示されます。データベースを最後に更新したのが別の Langflow バージョンの場合は、このインスタンスを再起動してから、もう一度確認を実行してください。",
   "settings.migration.check.defaultSuperuser.title": "'langflow' アカウント",
-  "settings.migration.check.defaultSuperuser.body": "このアカウントは作業を所有していますが、一度もサインインしていません。新しいインスタンスでは管理者アカウントとしてのみ残ります。管理者アカウントは「新しいインスタンスを起動」で設定されます。",
+  "settings.migration.check.defaultSuperuser.body": "このインスタンスでは自動的にサインインが行われるため、このアカウントのパスワードは誰も知らないものである可能性があります。新しいインスタンスはそのパスワードを引き継ぎ、場合によってはその入力を求めます。変更を一時停止する前に、わかっているパスワードでサインインできることを確認するか、パスワードを設定してください。手順と、対処後もこの項目が表示され続ける理由は「詳細」に表示されます。",
   "settings.migration.check.defaultSuperuser.accept": "承認します。新しいインスタンスの管理者として残ります。",
   "settings.migration.check.embeddingModels.title": "埋め込みモデル",
   "settings.migration.check.embeddingModels.body": "一部のナレッジベースには、作成に使われたモデルが記録されていません。新しいインスタンスでの検索では別のモデルが使われる可能性があります。そこで結果がおかしい場合は、ナレッジベースを再構築してください。",

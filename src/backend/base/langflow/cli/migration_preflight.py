@@ -201,17 +201,49 @@ async def check_default_superuser(session: AsyncSession, target_revision: str | 
     for LANGFLOW_SUPERUSER or deactivates it, and setting last_login_at skips both.
     A target revision that includes the fix's migration passes. Without one, nothing
     here tells which kind of target this is, so the advice covers both.
+
+    An account that has signed in is kept, with the password it has unless that
+    is the old default. While AUTO_LOGIN is on that password can be one Langflow
+    made, so the check says to set one before the move. It reads AUTO_LOGIN as
+    this command sees it, so the command has to run with the server's environment.
     """
     from lfx.services.settings.constants import DEFAULT_SUPERUSER
 
     from langflow.services.database.models.user.model import User
+    from langflow.services.deps import get_settings_service
 
     name = "default superuser"
     user = (
         await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER, User.is_superuser == True))  # noqa: E712
     ).first()
-    if user is None or user.last_login_at is not None:
+    if user is None:
         return CheckResult(name, "ok", f"no never-signed-in superuser named {DEFAULT_SUPERUSER!r}")
+    if user.last_login_at is not None:
+        if not get_settings_service().auth_settings.AUTO_LOGIN:
+            # What was read is said, because a run by hand without the server's variables can read it wrong.
+            return CheckResult(
+                name,
+                "ok",
+                f"{DEFAULT_SUPERUSER!r} has signed in and AUTO_LOGIN is off for this command, so the check takes its "
+                "password as known",
+            )
+        return CheckResult(
+            name,
+            "warn",
+            f"{DEFAULT_SUPERUSER!r} has signed in and AUTO_LOGIN is on, so its password can be one that nobody knows; "
+            "a target with AUTO_LOGIN off keeps that password, and replaces it with LANGFLOW_SUPERUSER_PASSWORD only "
+            "when LANGFLOW_SUPERUSER names the account and it still has the old default password",
+            [
+                "before the move, while AUTO_LOGIN is still on, check that a password you know signs in as "
+                f"{DEFAULT_SUPERUSER!r}: send POST /api/v1/login with the form fields username and password; if none "
+                f"does, set one: send PATCH /api/v1/users/{user.id} with only the password field, with an API key or "
+                "your session's token, and check again",
+                "on the target, set LANGFLOW_SUPERUSER_PASSWORD to that password and sign in as "
+                f"{DEFAULT_SUPERUSER!r} with it",
+                "the check cannot tell a password you set from one Langflow made, so this warning stays while "
+                "AUTO_LOGIN is on; go on once the sign-in works",
+            ],
+        )
 
     owned = await _rows_owned_by(session, user.id)
     if not owned:
@@ -237,8 +269,8 @@ async def check_default_superuser(session: AsyncSession, target_revision: str | 
             "stops them. Setting last_login_at on such a target skips both",
             f"otherwise, before attaching, run against the target database: {_SUPERUSER_WORKAROUND} The account "
             "stays active with its current password, so API keys minted while AUTO_LOGIN was on keep working. Set "
-            f"LANGFLOW_SUPERUSER to another name and, after the first boot, deactivate {DEFAULT_SUPERUSER!r} from "
-            "the Admin page",
+            f"LANGFLOW_SUPERUSER to another name and, after the first boot, deactivate {DEFAULT_SUPERUSER!r} as that "
+            f"superuser: send PATCH /api/v1/users/{user.id} with is_active false",
         ],
     )
 

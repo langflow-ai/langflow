@@ -639,7 +639,7 @@
   "settings.migration.check.schema.title": "Database version",
   "settings.migration.check.schema.body": "The check couldn't read this instance's database, so the other checks didn't run. Details says why. If another Langflow version last updated it, restart this instance, then run the check again.",
   "settings.migration.check.defaultSuperuser.title": "The 'langflow' account",
-  "settings.migration.check.defaultSuperuser.body": "It owns work but has never signed in. The new instance keeps it only as its admin account, which 'Start the new instance' sets up.",
+  "settings.migration.check.defaultSuperuser.body": "This instance signs people in automatically, so this account's password may be one that nobody knows. The new instance keeps that password and may ask for it. Before you pause changes, check that you can sign in with a password you know, or set one. Details says how, and why this stays listed after you do.",
   "settings.migration.check.defaultSuperuser.accept": "Accept. The new instance keeps it as its admin.",
   "settings.migration.check.embeddingModels.title": "Embedding models",
   "settings.migration.check.embeddingModels.body": "Some knowledge bases don't record which model built them. Search on the new instance may use a different model. If results look wrong there, rebuild them.",

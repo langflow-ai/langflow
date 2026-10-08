@@ -1635,6 +1635,9 @@ def migration_preflight(
     their vectors need. Then runs check-integrity against this instance.
 
     Read-only. Exits non-zero if any check fails.
+
+    Run it with the environment the server runs with: the database, the secret
+    key and AUTO_LOGIN are read from it.
     """
     configure(log_level=log_level, output_file=sys.stderr if as_json else None)
     # Not stripped: a Secret made from this file with --from-file carries its whitespace, so the key is tested with it.

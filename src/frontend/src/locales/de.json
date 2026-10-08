@@ -2012,7 +2012,7 @@
   "settings.migration.check.schema.title": "Datenbankversion",
   "settings.migration.check.schema.body": "Die Prüfung konnte die Datenbank dieser Instanz nicht lesen. Deshalb wurden die anderen Prüfungen nicht ausgeführt. Der Grund steht unter „Details“. Falls die Datenbank zuletzt von einer anderen Langflow-Version aktualisiert wurde, starten Sie diese Instanz neu und führen Sie die Prüfung dann erneut aus.",
   "settings.migration.check.defaultSuperuser.title": "Das Konto „langflow“",
-  "settings.migration.check.defaultSuperuser.body": "Ihm gehören Inhalte, aber es hat sich nie angemeldet. Die neue Instanz behält es nur als Administratorkonto. Das richtet der Schritt „Neue Instanz starten“ ein.",
+  "settings.migration.check.defaultSuperuser.body": "Diese Instanz meldet alle automatisch an. Deshalb kann das Passwort dieses Kontos eines sein, das niemand kennt. Die neue Instanz behält dieses Passwort und fragt möglicherweise danach. Bevor Sie Änderungen pausieren, prüfen Sie, ob die Anmeldung mit einem Passwort gelingt, das Sie kennen, oder legen Sie eines fest. Unter „Details“ steht, wie das geht und warum dieser Befund danach weiter aufgeführt wird.",
   "settings.migration.check.defaultSuperuser.accept": "Akzeptieren. Die neue Instanz behält es als Administratorkonto.",
   "settings.migration.check.embeddingModels.title": "Einbettungsmodelle",
   "settings.migration.check.embeddingModels.body": "Bei einigen Wissensdatenbanken ist nicht festgehalten, mit welchem Modell sie erstellt wurden. Die Suche in der neuen Instanz nutzt möglicherweise ein anderes Modell. Wenn die Ergebnisse dort falsch wirken, erstellen Sie diese Wissensdatenbanken neu.",

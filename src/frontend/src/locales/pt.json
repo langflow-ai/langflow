@@ -2012,7 +2012,7 @@
   "settings.migration.check.schema.title": "Versão do banco de dados",
   "settings.migration.check.schema.body": "A verificação não conseguiu ler o banco de dados desta instância, então as outras verificações não rodaram. O motivo está em Detalhes. Se outra versão do Langflow foi a última a atualizar o banco de dados, reinicie esta instância e execute a verificação novamente.",
   "settings.migration.check.defaultSuperuser.title": "A conta 'langflow'",
-  "settings.migration.check.defaultSuperuser.body": "Ela tem trabalhos salvos, mas nunca fez login. A nova instância a mantém só como conta de administrador, que 'Iniciar a nova instância' configura.",
+  "settings.migration.check.defaultSuperuser.body": "Esta instância faz o login das pessoas automaticamente, então a senha desta conta pode ser uma que ninguém conhece. A nova instância mantém essa senha e pode pedi-la. Antes de pausar as alterações, verifique se você consegue fazer login com uma senha que conhece, ou defina uma. Em Detalhes está como fazer isso e por que este item continua na lista depois.",
   "settings.migration.check.defaultSuperuser.accept": "Aceitar. A nova instância a mantém como conta de administrador.",
   "settings.migration.check.embeddingModels.title": "Modelos de incorporação",
   "settings.migration.check.embeddingModels.body": "Algumas bases de conhecimento não registram qual modelo as criou. A busca na nova instância pode usar outro modelo. Se os resultados parecerem errados lá, recrie essas bases.",
