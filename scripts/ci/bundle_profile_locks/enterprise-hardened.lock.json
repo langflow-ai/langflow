@@ -68,9 +68,9 @@
       "providers": [
         "lfx-docling"
       ],
-      "requested": ">=0.1.7,<1.0.0",
-      "requirement": "lfx-docling==0.1.7",
-      "resolved_version": "0.1.7"
+      "requested": ">=0.1.8,<1.0.0",
+      "requirement": "lfx-docling==0.1.8",
+      "resolved_version": "0.1.8"
     },
     {
       "distribution": "lfx-google",
@@ -160,7 +160,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:f5f147b0447eacbb",
+  "profile_digest": "sha256:cca6ffb26ffea088",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",

@@ -1,6 +1,6 @@
 [project]
 name = "lfx-docling"
-version = "0.1.7"
+version = "0.1.8"
 description = "Docling document processing components as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -22,7 +22,7 @@ dependencies = [
 [project.optional-dependencies]
 local = [
     # Older Docling releases cap Transformers below the CVE-2026-9856 fix on macOS.
-    "docling>=2.125.0,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "docling>=2.132.0,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
