@@ -56,7 +56,8 @@
     "browserslist": "^4.28.8",
     "body-parser": "^2.3.0",
     "file-type": "^21.3.4",
-    "path-to-regexp": "^8.4.2"
+    "path-to-regexp": "^8.4.2",
+    "katex": "0.18.2"
   },
   "dependencies": {
     "@ag-ui/client": "1.0.0",
