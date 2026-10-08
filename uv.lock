@@ -37,6 +37,7 @@ members = [
     "lfx-bundles",
     "lfx-cohere",
     "lfx-confluent",
+    "lfx-darkmoon-findings",
     "lfx-datastax",
     "lfx-docling",
     "lfx-duckduckgo",
@@ -7683,6 +7684,7 @@ bundles = [
     { name = "lfx-arxiv" },
     { name = "lfx-bundles", extra = ["all-no-torch"] },
     { name = "lfx-confluent" },
+    { name = "lfx-darkmoon-findings" },
     { name = "lfx-duckduckgo" },
     { name = "lfx-empiriolabs" },
     { name = "lfx-exa" },
@@ -7795,6 +7797,7 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["all-no-torch"], marker = "extra == 'bundles'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-cohere", editable = "src/bundles/cohere" },
     { name = "lfx-confluent", marker = "extra == 'bundles'", editable = "src/bundles/confluent" },
+    { name = "lfx-darkmoon-findings", marker = "extra == 'bundles'", editable = "src/bundles/darkmoon_findings" },
     { name = "lfx-datastax", editable = "src/bundles/datastax" },
     { name = "lfx-docling", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["chunking"], marker = "extra == 'docling-chunking'", editable = "src/bundles/docling" },
@@ -9841,6 +9844,17 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=17" },
     { name = "pyiceberg", specifier = ">=0.10,<1" },
 ]
+
+[[package]]
+name = "lfx-darkmoon-findings"
+version = "0.1.0"
+source = { editable = "src/bundles/darkmoon_findings" }
+dependencies = [
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "lfx", editable = "src/lfx" }]
 
 [[package]]
 name = "lfx-datastax"

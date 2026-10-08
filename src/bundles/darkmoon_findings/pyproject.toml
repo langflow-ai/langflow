@@ -1,0 +1,54 @@
+[project]
+name = "lfx-darkmoon-findings"
+version = "0.1.0"
+description = "Darkmoon findings parser component as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "darkmoon", "pentest", "security", "findings"]
+
+# Runtime deps: lfx only (the BUNDLE_API surface).  The component is pure
+# computation over a findings file you already have, so it needs no vendor SDK
+# and no HTTP client.
+# lfx is floored at the current major.minor line and capped below the next lfx
+# major; the floor is read from src/lfx/pyproject.toml at port time and
+# re-synced on ``make patch`` via scripts/ci/sync_bundle_lfx_pin.py.
+# Fine-grained BUNDLE_API compatibility is enforced via extension.json's
+# lfx.compat list against BUNDLE_API_VERSION.
+dependencies = [
+    "lfx>=1.13.0.dev0,<2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point.  Editable installs whose
+# ``dist.files`` only surfaces dist-info entries fall back to this
+# entry-point to find the manifest.
+[project.entry-points."langflow.extensions"]
+lfx-darkmoon-findings = "lfx_darkmoon_findings"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components live inside the lfx_darkmoon_findings package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_darkmoon_findings"]
+include = ["src/lfx_darkmoon_findings/extension.json", "src/lfx_darkmoon_findings/components/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_darkmoon_findings",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]
