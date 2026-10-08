@@ -23,6 +23,7 @@ OPT_IN_STANDALONE_EXTENSIONS = {
     "lfx-empiriolabs",
     "lfx-exa",
     "lfx-firecrawl",
+    "lfx-getyoutubetranscript",
     "lfx-nextplaid",
     "lfx-paddle",
     "lfx-serpingapi",

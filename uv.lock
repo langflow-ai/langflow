@@ -43,6 +43,7 @@ members = [
     "lfx-empiriolabs",
     "lfx-exa",
     "lfx-firecrawl",
+    "lfx-getyoutubetranscript",
     "lfx-google",
     "lfx-ibm",
     "lfx-microsoft",
@@ -7687,6 +7688,7 @@ bundles = [
     { name = "lfx-empiriolabs" },
     { name = "lfx-exa" },
     { name = "lfx-firecrawl" },
+    { name = "lfx-getyoutubetranscript" },
     { name = "lfx-nextplaid" },
     { name = "lfx-paddle" },
     { name = "lfx-serpingapi" },
@@ -7804,6 +7806,7 @@ requires-dist = [
     { name = "lfx-empiriolabs", marker = "extra == 'bundles'", editable = "src/bundles/empiriolabs" },
     { name = "lfx-exa", marker = "extra == 'bundles'", editable = "src/bundles/exa" },
     { name = "lfx-firecrawl", marker = "extra == 'bundles'", editable = "src/bundles/firecrawl" },
+    { name = "lfx-getyoutubetranscript", marker = "extra == 'bundles'", editable = "src/bundles/getyoutubetranscript" },
     { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-microsoft", editable = "src/bundles/microsoft" },
@@ -10007,6 +10010,21 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "firecrawl-py", specifier = ">=4.0.0,<5.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-getyoutubetranscript"
+version = "0.1.0"
+source = { editable = "src/bundles/getyoutubetranscript" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
 

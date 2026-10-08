@@ -129,6 +129,7 @@ lfx-google = { workspace = true }
 lfx-confluent = { workspace = true }
 lfx-serply = { workspace = true }
 lfx-serpingapi = { workspace = true }
+lfx-getyoutubetranscript = { workspace = true }
 lfx-microsoft = { workspace = true }
 lfx-slack = { workspace = true }
 # langflow-extensions:bundle-sources-end
@@ -169,6 +170,7 @@ members = [
     "src/bundles/confluent",
     "src/bundles/serply",
     "src/bundles/serpingapi",
+    "src/bundles/getyoutubetranscript",
     "src/bundles/microsoft",
     "src/bundles/slack",
     # langflow-extensions:bundle-members-end
@@ -190,6 +192,7 @@ bundles = [
     "lfx-empiriolabs>=0.1.3,<1.0.0",
     "lfx-exa>=0.1.3,<1.0.0",
     "lfx-firecrawl>=0.1.3,<1.0.0",
+    "lfx-getyoutubetranscript>=0.1.0,<1.0.0",
     "lfx-nextplaid>=0.1.6,<1.0.0",
     "lfx-paddle>=0.1.5,<1.0.0",
     "lfx-serpingapi>=0.1.0,<1.0.0",

@@ -212,6 +212,10 @@ export const lazyIconsMapping = {
     import("@/icons/GitBook").then((mod) => ({ default: mod.GitBookIcon })),
   GitLoader: () =>
     import("@/icons/GitLoader").then((mod) => ({ default: mod.GitLoaderIcon })),
+  GetYouTubeTranscript: () =>
+    import("@/icons/GetYouTubeTranscript").then((mod) => ({
+      default: mod.GetYouTubeTranscriptIcon,
+    })),
   Github: () =>
     import("@/icons/github").then((mod) => ({ default: mod.GithubIcon })),
   GithubComposio: () =>

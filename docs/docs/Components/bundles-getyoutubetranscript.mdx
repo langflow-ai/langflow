@@ -1,0 +1,37 @@
+---
+title: GetYouTubeTranscript
+slug: /bundles-getyoutubetranscript
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="getyoutubetranscript" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the Components that are available in the **GetYouTubeTranscript** bundle.
+
+## GetYouTubeTranscript
+
+This Component fetches the transcript of a YouTube video through the [GetYouTubeTranscript API](https://getyoutubetranscript.com).
+
+Get an API key from [getyoutubetranscript.com](https://getyoutubetranscript.com). For details on the underlying API, see the [GetYouTubeTranscript documentation](https://getyoutubetranscript.com/docs).
+
+The Component has two outputs:
+
+* **Transcript**: A [`Message`](/data-types#message) with the transcript text. If **Include Timestamps** is enabled, each line starts with its start time, such as `[01:23] text`, or `[1:02:05] text` for videos longer than an hour.
+* **Transcript Data**: A [`JSON`](/data-types#json) object with the transcript and the video metadata (`video_id`, `title`, `author_name`, `language_code`, `word_count`). If **Include Timestamps** is enabled, it also has a `segments` list of `{start, duration, text}` items, in seconds.
+
+If the request fails, for example because the API key is missing or invalid or the video has no captions, the **Transcript** output contains the error message and the **Transcript Data** output has an `error` key that describes the problem.
+
+In [tool mode](/agents-tools), the Component exposes a single tool named `get_youtube_transcript` that an [**Agent** component](/agents) can call with a video URL or ID.
+
+### GetYouTubeTranscript parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Video (`video`) | String | Input parameter. A YouTube video URL or 11-character video ID. |
+| GetYouTubeTranscript API Key (`getyoutubetranscript_api_key`) | SecretString | Input parameter. Your GetYouTubeTranscript API key. |
+| Language (`language`) | String | Input parameter. Caption language code, for example `en` or `es`. Optional. Leave empty for the API default. |
+| Include Timestamps (`include_timestamps`) | Boolean | Input parameter. Add start times to the transcript text and a `segments` list to the **Transcript Data** output. Default: `false`. |
