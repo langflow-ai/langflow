@@ -117,13 +117,14 @@ class TelemetryService(Service):
 
         try:
             payload_dict = get_safe_payload_properties(payload)
+            event_anonymous_id = str(uuid.uuid4()) if isinstance(payload, EmailPayload) else self.anonymous_id
 
             # Add common fields to all payloads except VersionPayload
             if not isinstance(payload, VersionPayload):
                 payload_dict.update(self.common_telemetry_fields)
             payload_dict.update(IBM_PRODUCT_PROPERTIES)
-            payload_dict["instanceId"] = self.anonymous_id
-            payload_dict["subscriptionId"] = self.anonymous_id
+            payload_dict["instanceId"] = event_anonymous_id
+            payload_dict["subscriptionId"] = event_anonymous_id
             event, process_type, legacy_event = get_ibm_common_event(path)
             payload_dict["object"] = legacy_event
             if process_type is not None:
@@ -131,13 +132,14 @@ class TelemetryService(Service):
             else:
                 payload_dict.update({"action": "registered", "name": "Email", "namespace": "Langflow"})
             body = {
-                "anonymousId": self.anonymous_id,
-                "userId": user_id if is_installation_user_id(user_id) else get_hashed_user_id(self.anonymous_id),
+                "anonymousId": event_anonymous_id,
                 "event": event,
                 "messageId": str(uuid.uuid4()),
                 "properties": payload_dict,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
+            if not isinstance(payload, EmailPayload):
+                body["userId"] = user_id if is_installation_user_id(user_id) else get_hashed_user_id(self.anonymous_id)
             response = await self.client.post(self.base_url, auth=(self.segment_write_key, ""), json=body)
             if not response.is_success:
                 await logger.awarning(f"Telemetry request failed with status {response.status_code}")

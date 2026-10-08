@@ -19,8 +19,10 @@ on different installations. Free-form error messages are omitted from outgoing t
 user inputs, SQL parameters, or credentials. Error types, stack hashes, success flags, and timings are retained.
 The data collected by each event, including fields that can contain user-provided values, is documented below.
 
-Product-usage events are delivered through Segment. Langflow uses a persistent anonymous installation identifier
-and doesn't send operating-system user names or raw authenticated Langflow user IDs.
+Product-usage events are delivered through Segment. Langflow generally uses a persistent anonymous installation
+identifier and doesn't send operating-system user names or raw authenticated Langflow user IDs. Desktop email
+registration events use a fresh one-time identifier instead, so the registered address cannot be linked to the
+installation's other telemetry.
 
 ## Configure Segment
 
@@ -34,8 +36,9 @@ Use separate write keys for test and production sources.
 
 Every Segment event includes the IBM Common Schema product properties `UT30: 30AS5`, `productCode: WW3151`,
 `productCodeType: WWPC`, `productPlanName: opensource`, `productPlanType: freemium`, and `productTitle: Langflow`.
-The persistent installation identifier is used for `anonymousId`, `properties.instanceId`, and
-`properties.subscriptionId`.
+Except for Desktop email registration events, the persistent installation identifier is used for `anonymousId`,
+`properties.instanceId`, and `properties.subscriptionId`. Each email registration event uses a fresh UUID for these
+three fields and omits `userId`.
 
 For authenticated requests, the top-level `userId` is `lf-user-` followed by the SHA256 hash of the installation
 identifier, a separator, and the user's random database UUID. Langflow captures this opaque ID before handing an event

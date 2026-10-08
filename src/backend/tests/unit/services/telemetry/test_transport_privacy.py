@@ -2,7 +2,7 @@
 
 import json
 from types import SimpleNamespace
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -11,6 +11,7 @@ from langflow.services.telemetry.context import get_current_telemetry_user_id, t
 from langflow.services.telemetry.schema import (
     ComponentPayload,
     DeploymentPayload,
+    EmailPayload,
     ExceptionPayload,
     PlaygroundPayload,
     RunPayload,
@@ -111,6 +112,45 @@ async def test_outbound_errors_are_removed_without_mutating_local_payload(
     before.pop("client_type")
     after.pop("client_type")
     assert after == before
+
+
+@pytest.mark.asyncio
+async def test_email_event_is_not_linked_to_installation_or_user(tmp_path):
+    settings = SimpleNamespace(
+        settings=SimpleNamespace(
+            config_dir=str(tmp_path),
+            segment_api_url="https://segment.example.test/v1/track",
+            segment_write_key="test-key",
+            do_not_track=False,
+            prometheus_enabled=False,
+        )
+    )
+    service = TelemetryService(settings)
+    requests = []
+
+    def capture(request):
+        requests.append(request)
+        return httpx.Response(200)
+
+    user_id = get_installation_user_id(uuid4(), service.anonymous_id)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(capture)) as client:
+        service.client = client
+        await service.send_telemetry_data(EmailPayload(email="registered@example.com"), "email", user_id)
+        await service.send_telemetry_data(EmailPayload(email="registered@example.com"), "email", user_id)
+
+    bodies = [json.loads(request.content) for request in requests]
+    assert len(bodies) == 2
+    assert bodies[0]["anonymousId"] != bodies[1]["anonymousId"]
+    for body in bodies:
+        assert body["properties"]["email"] == "registered@example.com"
+        assert "userId" not in body
+        assert body["anonymousId"] != service.anonymous_id
+        assert body["properties"]["instanceId"] == body["anonymousId"]
+        assert body["properties"]["subscriptionId"] == body["anonymousId"]
+        UUID(body["anonymousId"])
+    outbound = b"".join(request.content for request in requests).decode()
+    assert service.anonymous_id not in outbound
+    assert user_id not in outbound
 
 
 def test_identity_uses_database_uuid_and_is_scoped_to_installation(monkeypatch):
