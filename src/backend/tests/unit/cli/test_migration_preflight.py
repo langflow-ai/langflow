@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 # The test database is at this Langflow's head, which moves with every migration; PARENT is older than it.
 HEAD = script_directory().get_current_head()
 PARENT = "9d7e2a6c4b81"  # pragma: allowlist secret
-# The alembic head of Langflow 1.12.0, which the IBM Langflow 1.12.0-dev image runs.
+# The alembic head of Langflow 1.12.0.
 LANGFLOW_1_12_0 = "a3f8b1c9d7e2"  # pragma: allowlist secret
 # The revision that c3e1d5a7f902, which adds user.retired_at, revises: the last one that deletes the default superuser.
 BEFORE_RETIRED_AT = "f9d3b7a5c201"  # pragma: allowlist secret
@@ -276,7 +276,7 @@ class TestTargetKey:
 
         assert check.status == "ok"
 
-    async def test_a_different_key_is_refused_with_the_operator_instruction(self, safe_superuser):
+    async def test_a_different_key_is_refused_with_what_to_do_about_it(self, safe_superuser):
         await _add(
             Variable(
                 name=f"KEY_{uuid.uuid4().hex[:6]}",
@@ -289,7 +289,7 @@ class TestTargetKey:
         check = _check(await run_preflight(target_secret_key=Fernet.generate_key().decode()), "target key")
 
         assert check.status == "fail"
-        assert "-langflow-secret-key" in check.summary
+        assert "before its first start" in check.summary
         assert any(p.startswith("variable.value row ") for p in check.problems)
 
     async def test_no_target_key_is_a_warning(self, safe_superuser):  # noqa: ARG002

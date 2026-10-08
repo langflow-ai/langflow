@@ -5,8 +5,7 @@ questions that need a source and a target together: will the target's migrations
 run forward from the source's schema, will the target's key open the source's
 credentials, will the default superuser survive the target's first boot, and will
 the role grants be enforced once it has.
-Several of these failed silently in a rehearsal against the IBM Langflow operator,
-so each is checked here instead.
+Several of these failed silently in a rehearsal, so each is checked here instead.
 
 Read-only, like the integrity check it runs against the source.
 """
@@ -142,8 +141,8 @@ async def check_version_direction(session: AsyncSession, target_revision: str | 
 async def check_default_superuser(session: AsyncSession, target_revision: str | None = None) -> CheckResult:
     """Will the default superuser survive the target's first boot?
 
-    With AUTO_LOGIN off, which IBM Langflow requires, Langflow deletes the default
-    superuser when it has never signed in, and on Postgres the delete takes
+    With AUTO_LOGIN off, Langflow deletes the default superuser when it has never
+    signed in, and on Postgres the delete takes
     everything that user owns with it. The fix keeps the user: it claims the account
     for LANGFLOW_SUPERUSER or deactivates it, and setting last_login_at skips both.
     A target revision that includes the fix's migration passes. Without one, nothing
@@ -197,12 +196,12 @@ async def check_target_key(session: AsyncSession, target_secret_key: str | None)
     target boots cleanly and every flow fails at run time.
     """
     name = "target key"
-    operator_note = (
-        "On the IBM Langflow operator, create <instance>-langflow-secret-key holding the source key before applying "
-        "the LangflowInstance; a key passed through envFrom is overridden by the one the operator generates"
+    key_note = (
+        "Give the new instance this instance's secret key before its first start; an instance that starts "
+        "without one makes its own, which cannot open these values"
     )
     if not target_secret_key:
-        return CheckResult(name, "warn", f"not checked: pass --target-secret-key-file. {operator_note}")
+        return CheckResult(name, "warn", f"not checked: pass --target-secret-key-file. {key_note}")
 
     # Tested as the file holds it, trailing newline and all: a Secret created from the
     # file with --from-file carries it to the target, which reads the key as it is.
@@ -220,7 +219,7 @@ async def check_target_key(session: AsyncSession, target_secret_key: str | None)
             "Remove it from the file, or create the Secret with --from-literal",
             result.problems,
         )
-    return CheckResult(name, "fail", f"{summary}. {operator_note}", result.problems)
+    return CheckResult(name, "fail", f"{summary}. {key_note}", result.problems)
 
 
 async def check_embedding_models(session: AsyncSession) -> CheckResult:
@@ -264,8 +263,8 @@ async def check_role_assignments(session: AsyncSession) -> CheckResult:
 
     Grants live in authz_role_assignment and move with the database, but they are
     enforced from casbin_rule, which an authorization plugin compiles from them. Some
-    IBM Langflow builds compile only when a role changes, so adopted grants do nothing
-    until a superuser asks for a sync.
+    plugins compile only when a role changes, so adopted grants do nothing until a
+    superuser asks for a sync.
     """
     from langflow.services.database.models.auth.authz import AuthzRoleAssignment
 
