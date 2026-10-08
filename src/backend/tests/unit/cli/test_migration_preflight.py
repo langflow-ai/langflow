@@ -309,7 +309,9 @@ class TestTargetKey:
                 user_id=safe_superuser.id,
             )
         )
-        monkeypatch.setattr(get_settings_service().auth_settings, "SECRET_KEY", SecretStr(malformed))
+        # Set in the object's __dict__, because assigning the field makes the settings write the key to
+        # CONFIG_DIR/secret_key, and every test worker builds its settings from that file.
+        monkeypatch.setitem(get_settings_service().auth_settings.__dict__, "SECRET_KEY", SecretStr(malformed))
 
         report = await run_preflight(target_secret_key=malformed)
 
