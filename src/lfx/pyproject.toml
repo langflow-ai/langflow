@@ -64,7 +64,7 @@ dependencies = [
     "markitdown>=0.1.4,<2.0.0",
     "setuptools>=83.0.0,<84.0.0",
     "wheel>=0.46.2,<1.0.0",
-    "mcp>=1.17.0,<2.0.0",
+    "mcp>=1.30.0,<2.0.0",
     "psutil>=5.9.0,<8.0.0",  # pre-fork TCP connection check (lfx.fork.find_ghost_connections)
     # HTML/XML parsing for the core data_source components (url, web_search, rss,
     # news_search), which import bs4 at module top. Previously reached these
