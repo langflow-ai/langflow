@@ -77,6 +77,10 @@ async def update_job_status(
         Updated Job object or None if not found
     """
     values = {"status": status}
+    if status == JobStatus.COMPLETED:
+        # A completed run has no error. Clear one an orphan sweep wrote while the
+        # run was still going (worker_lost), so the row does not contradict itself.
+        values["error"] = None
     if finished_timestamp is not None:
         values["finished_timestamp"] = finished_timestamp
 

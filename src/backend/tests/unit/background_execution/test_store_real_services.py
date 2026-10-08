@@ -111,7 +111,8 @@ async def test_sweep_orphans_reconciles_in_progress(real_services_job_service) -
     await service.update_job_status(orphan, JobStatus.IN_PROGRESS)
     await service.create_job(job_id=queued, flow_id=uuid4(), user_id=uuid4())
 
-    swept = await service.sweep_orphans()
+    # The row never heartbeated (sync/stream), so it is only an orphan past the grace.
+    swept = await service.sweep_orphans(no_heartbeat_grace_s=0.0)
     assert orphan in swept
     assert queued not in swept
 
