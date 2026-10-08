@@ -22,7 +22,8 @@ from langflow.api.utils.migration_pause import MigrationPauseMiddleware, is_paus
 from langflow.initial_setup.setup import sync_flows_from_fs
 from langflow.main import create_app
 from langflow.services.background_execution.executor import InProcessExecutor
-from langflow.services.data_subjects.worker import DataSubjectEraseWorker, data_subject_erase_worker
+from langflow.services.data_subjects.requests import create_end_user_request
+from langflow.services.data_subjects.worker import LEASE_NAME, DataSubjectEraseWorker, data_subject_erase_worker
 from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.data_subject_request import (
     DataSubjectRequest,
@@ -472,6 +473,42 @@ async def test_an_erase_pass_that_the_pause_overtakes_starts_no_other_erase(conf
     assert await one_pass == 1
     assert await _erase_status(first) == DataSubjectRequestStatus.DONE.value
     assert await _erase_status(second) == DataSubjectRequestStatus.APPROVED.value
+
+
+async def test_a_paused_erase_pass_neither_approves_overdue_requests_nor_takes_the_lease(config_dir, monkeypatch):
+    monkeypatch.setattr(FEATURE_FLAGS, "data_subject_requests", True)
+    monkeypatch.setattr(get_settings_service().settings, "data_subject_auto_erase_on_expiry", True)
+    await data_subject_erase_worker.stop()
+    async with session_scope() as session:
+        if (lease := await session.get(TriggerLease, LEASE_NAME)) is not None:
+            await session.delete(lease)
+        request, _ = await create_end_user_request(
+            session,
+            end_user_id=f"overdue-{uuid4()}",
+            scope_flow_ids=None,
+            requested_by=None,
+            source=DataSubjectRequestSource.ADMIN,
+        )
+        request.due_at = datetime.now(timezone.utc) - timedelta(days=1)
+        session.add(request)
+        request_id = request.id
+
+    async def lease_owner() -> str | None:
+        async with session_scope() as session:
+            lease = await session.get(TriggerLease, LEASE_NAME)
+            return lease.owner if lease is not None else None
+
+    _write_record(config_dir, PAUSED)
+    worker = DataSubjectEraseWorker()
+    assert await worker.run_once() == 0
+    # Approving would stop the end user and audit it, and the pass would also renew the lease.
+    assert await _erase_status(request_id) == DataSubjectRequestStatus.REQUESTED.value
+    assert await lease_owner() is None
+
+    _write_record(config_dir, RECORD)
+    await worker.run_once()
+    assert await _erase_status(request_id) != DataSubjectRequestStatus.REQUESTED.value
+    assert await lease_owner() == worker._owner
 
 
 async def test_the_telemetry_writer_neither_flushes_nor_prunes_while_paused(active_user, config_dir, monkeypatch):
