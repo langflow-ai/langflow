@@ -10,17 +10,21 @@ import asyncio
 import io
 import json
 import os
+import socket
 import subprocess
 import sys
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import langflow.api.router as api_router_module
 import pytest
 import structlog
+import uvicorn
 from anyio import Path as AsyncPath
-from fastapi import APIRouter
+from fastapi import APIRouter, FastAPI, Request
+from httpx import ASGITransport, AsyncClient
 from langflow.api.utils import migration_pause
 from langflow.api.v1 import migration as migration_module
 from langflow.api.v1.migration import _source_env
@@ -43,7 +47,7 @@ from langflow.utils.version import get_version_info
 from lfx.log.logger import configure
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import AsyncIterator, Awaitable, Callable
     from pathlib import Path
 
 VERSION = get_version_info()["version"]
@@ -1631,7 +1635,8 @@ async def test_a_pause_request_that_is_cut_off_while_it_waits_leaves_no_pause_be
     pausing = asyncio.create_task(client.post(PAUSE, headers=headers))
     await written.wait()
 
-    # The admin's browser gives up while the pause waits for the upload. Nobody checked that pause.
+    # The request itself is cancelled while the pause waits for the upload. Nobody checked that pause.
+    # A caller that hangs up does not cancel it on a server: that is the next test.
     pausing.cancel()
     with pytest.raises(asyncio.CancelledError):
         await pausing
@@ -1639,6 +1644,129 @@ async def test_a_pause_request_that_is_cut_off_while_it_waits_leaves_no_pause_be
     assert not {"pause", "pausing"} & (await _migration(client, headers))["record"].keys()
     release.set()
     assert await uploading == 201
+
+
+@pytest.fixture
+async def served(client) -> AsyncIterator[str]:
+    """The address of the app behind a real server.
+
+    Only a server shows the app a caller that hangs up: it keeps the request going, and the app has to notice.
+    """
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    # A test that fails with a request still open must not keep the server from stopping.
+    config = uvicorn.Config(client._transport.app, lifespan="off", log_level="warning", timeout_graceful_shutdown=5)
+    server = uvicorn.Server(config)
+    serving = asyncio.create_task(server.serve(sockets=[sock]))
+    while not server.started:  # noqa: ASYNC110
+        await asyncio.sleep(0.05)
+    yield f"http://127.0.0.1:{sock.getsockname()[1]}"
+    server.should_exit = True
+    await serving
+
+
+async def _record_once(client, headers, settled: Callable[[dict], bool]) -> dict:
+    """The record, read until it is as asked. A request that goes on without its caller tells the test nothing else."""
+
+    async def read() -> dict:
+        while not settled(record := (await _migration(client, headers))["record"]):  # noqa: ASYNC110
+            await asyncio.sleep(0.02)
+        return record
+
+    return await asyncio.wait_for(read(), timeout=30)
+
+
+async def test_a_pause_request_whose_caller_hangs_up_while_it_waits_leaves_no_pause_behind(
+    client, served, logged_in_headers_super_user, config_dir
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    arrived, release = asyncio.Event(), asyncio.Event()
+    uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
+    await arrived.wait()
+    async with AsyncClient(base_url=served) as browser:
+        pausing = asyncio.create_task(browser.post(PAUSE, headers=headers))
+        await _record_once(client, headers, lambda record: "pausing" in record)
+        # The admin's browser gives up while the pause waits for the upload. The server keeps the request going.
+        pausing.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await pausing
+    # The upload ends after the server has seen the caller leave, as it does when a person gives up on a wait.
+    await asyncio.sleep(0.2)
+    release.set()
+    assert await uploading == 201
+
+    # The pause that waited refuses changes until the wait is over, at most _DRAIN_SECONDS after the caller left.
+    record = await _record_once(client, headers, lambda record: "pausing" not in record)
+    # Nobody was there to read that changes are paused, so nobody would know to turn them back on.
+    assert "pause" not in record
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 201
+
+
+async def test_a_caller_that_stays_through_the_wait_is_answered_with_the_pause(
+    client, served, logged_in_headers_super_user, config_dir
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    arrived, release = asyncio.Event(), asyncio.Event()
+    uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
+    await arrived.wait()
+    async with AsyncClient(base_url=served) as browser:
+        pausing = asyncio.create_task(browser.post(PAUSE, headers=headers))
+        await _record_once(client, headers, lambda record: "pausing" in record)
+        release.set()
+        assert await uploading == 201
+        paused = await pausing
+
+    assert paused.status_code == 200, paused.text
+    assert "pause" in paused.json()["record"]
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 503
+
+
+async def test_a_caller_that_hangs_up_after_the_pause_was_written_leaves_changes_paused(
+    client, served, logged_in_headers_super_user, config_dir
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    address = urlparse(served)
+    _, caller = await asyncio.open_connection(address.hostname, address.port)
+    lines = [f"POST /{PAUSE} HTTP/1.1", "Host: testserver", "Content-Length: 0"]
+    lines += [f"{name}: {value}" for name, value in headers.items()]
+    caller.write("\r\n".join([*lines, "", ""]).encode())
+    try:
+        await caller.drain()
+        await _record_once(client, headers, lambda record: "pause" in record)
+    finally:
+        # It was decided while the caller was there. The caller leaves without reading the answer.
+        caller.close()
+        await caller.wait_closed()
+    await asyncio.sleep(0.2)
+
+    assert "pause" in (await _migration(client, headers))["record"]
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 503
+
+
+async def test_the_listener_for_the_caller_ends_at_whatever_moment_the_wait_is_over():
+    # Behind as many middlewares as the app has, a task group there can take one cancel() for its own.
+    # The listener then goes on, and a route that waits for it to end never answers.
+    for turns in range(40):
+        app = FastAPI()
+        for _ in range(6):
+
+            @app.middleware("http")
+            async def pass_on(request, call_next):
+                return await call_next(request)
+
+        @app.post("/wait")
+        async def wait(request: Request, turns: int) -> None:
+            listener = asyncio.create_task(migration_module._hung_up(request))
+            for _ in range(turns):
+                await asyncio.sleep(0)
+            await migration_module._end(listener)
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as caller:
+            answered = await asyncio.wait_for(caller.post("/wait", params={"turns": turns}), timeout=5)
+        assert answered.status_code == 200, f"after {turns} turns: {answered.text}"
 
 
 async def test_the_pause_is_refused_while_another_worker_has_a_change_going(

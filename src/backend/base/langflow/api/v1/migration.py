@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 import psutil
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from lfx.base.knowledge_bases.backends import is_local_backend
 from lfx.log.logger import logger
@@ -164,7 +164,7 @@ async def withdraw_finding(name: str, admin: Superuser) -> dict[str, Any]:
 
 
 @router.post("/pause")
-async def pause_changes(admin: Superuser) -> dict[str, Any]:
+async def pause_changes(request: Request, admin: Superuser) -> dict[str, Any]:
     """Stop changes to this instance, so that what is copied next is all of it.
 
     Nothing is cancelled here. The admin ends what is still writing, then asks again.
@@ -188,15 +188,25 @@ async def pause_changes(admin: Superuser) -> dict[str, Any]:
             _write_record(record)
     # One that another request still waits on, or that a stopped worker left behind, is waited on here as well.
     pausing = record["pausing"]
+    # A server keeps a request going after its caller hangs up, so the wait listens for that itself.
+    leaving = asyncio.create_task(_hung_up(request))
     try:
         refusal = await _still_writing(admin)
     except BaseException:
         # A request that is cut off while it waits must not leave a pause that nobody checked.
         _lift(pausing)
         raise
+    finally:
+        left = leaving.done()
+        await _end(leaving)
     if refusal:
         _lift(pausing)
         raise HTTPException(status_code=409, detail=refusal)
+    if left:
+        # Nobody is there to read that changes are paused, so nobody would know to turn them back on.
+        # ponytail: the pause that waited is lifted when the wait ends, so it refuses changes for at most
+        # _DRAIN_SECONDS after the caller left. Race the wait against the listener to lift it at once.
+        _lift(pausing)
     record = _read_record()
     # Another request may have resumed, or finished this pause, while this one waited. Its word stands.
     if record.get("pausing") == pausing:
@@ -455,6 +465,25 @@ async def _jobs_and_listeners(admin: User) -> dict[str, Any] | None:
     async with session_scope() as session:
         jobs, listeners = await active_jobs(session, admin.id), await live_listeners(session)
     return {"code": "jobs_active", "jobs": jobs, "listeners": listeners} if jobs or listeners else None
+
+
+async def _hung_up(request: Request) -> None:
+    """Return once the caller of this request is gone.
+
+    request.is_disconnected() is not used: on a real server it still answered False here after the caller had gone.
+    """
+    while (await request.receive())["type"] != "http.disconnect":
+        pass
+
+
+async def _end(listener: asyncio.Task) -> None:
+    """End the task that listens for the caller, so that it does not outlive the request.
+
+    It is asked until it ends: under the app's middleware a task group can take one cancel() for its own.
+    """
+    while not listener.done():
+        listener.cancel()
+        await asyncio.sleep(0)
 
 
 def _lift(pausing: dict[str, Any]) -> None:
