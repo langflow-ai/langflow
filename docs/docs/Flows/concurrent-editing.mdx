@@ -1,0 +1,71 @@
+---
+title: Concurrent editing
+slug: /concurrent-editing
+---
+
+import Icon from "@site/src/components/icon";
+
+When you edit the same flow in more than one place, Langflow prevents one save from silently replacing another.
+If the flow changed after you opened it, your edits stay on the canvas until you review both versions and choose how to continue.
+
+## Prerequisites
+
+* Langflow 1.13 or later.
+* A flow you can edit.
+  If the flow is locked, [unlock it first](/concepts-flows#lock-a-flow).
+* To follow the example on this page, open the flow in two browser tabs before making any changes.
+
+## Try concurrent editing
+
+To demonstrate how Langflow protects concurrent work, do the following:
+
+1. Open the same flow in two browser tabs.
+2. In the first tab, change the canvas, and then wait for [auto-save](/environment-variables#visual-editor-and-playground-behavior) or press <kbd>Ctrl</kbd>+<kbd>S</kbd> (<kbd>Cmd</kbd>+<kbd>S</kbd> on macOS).
+3. In the second tab, make a different canvas change and save it.
+4. The **Review changes** banner appears, and the second save is refused because it was based on the older flow.
+    Your edits remain on the canvas and auto-save pauses.
+    The first tab's saved version is not overwritten.
+
+    If another account saved last, the **Review changes** banner displays the username.
+    If both tabs use your account, the banner reads **A newer version of this flow is available**.
+
+5. Click **Review changes**.
+   The **Review Version Changes** dialog opens.
+6. Review **Your changes**.
+   Under **Available changes**, select any changes from the saved version that you want to include.
+   If you select no available changes, the result contains only your changes.
+7. Resolve each row marked **Conflict**.
+   A conflict means both versions changed the same component.
+   You can select **Keep my version**, or the version named for the user who saved it.
+8. Select an option for saving the changes:
+
+    * Click **Update Current Flow** to save the selected result to the original flow.
+      Langflow first puts the version being replaced in <Icon name="History" aria-hidden="true" /> **Version History**, and then auto-save resumes.
+    * Click **Duplicate Flow** to create a private copy with the selected result.
+      The original flow remains unchanged.
+      The copy has no endpoint name, MCP exposure, webhook, or lock.
+    * Click **Load Latest** if you no longer want your current canvas to be the active version.
+      Langflow saves your canvas in **Version History**, and then loads the version on the server.
+
+To decide later, click **Cancel**.
+The banner remains and auto-save remains paused until you resolve the changes.
+
+## Restore your work after closing the tab
+
+Langflow stores refused edits in your browser so they can survive a reload or a closed tab.
+
+To restore your work in a flow, do the following::
+
+1. Open the flow again.
+2. In the **Unsaved changes from** banner, click **Restore**.
+3. Re-enter any secret values.
+   Saved edits do not save secrets.
+
+To remove the stored copy, click **Discard**.
+
+## See also
+
+* [Update a flow with the API](/api-flows#update-flow)
+* [Save and restore flow versions](/concepts-flows#save-and-restore-flow-versions)
+* [Build flows](/concepts-flows)
+* [Authorization](/authorization)
