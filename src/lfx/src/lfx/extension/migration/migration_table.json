@@ -5052,6 +5052,16 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "PubloraListConnectionsComponent",
+      "target": "ext:publora:PubloraListConnectionsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "PubloraCreatePostComponent",
+      "target": "ext:publora:PubloraCreatePostComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
       "bare_class_name": "SerpingApiSearchComponent",
       "target": "ext:serpingapi:SerpingApiSearchComponent@official",
       "added_in": "1.13.0"

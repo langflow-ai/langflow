@@ -52,6 +52,7 @@ members = [
     "lfx-openai-compatible",
     "lfx-oracle",
     "lfx-paddle",
+    "lfx-publora",
     "lfx-serpingapi",
     "lfx-serply",
     "lfx-slack",
@@ -7689,6 +7690,7 @@ bundles = [
     { name = "lfx-firecrawl" },
     { name = "lfx-nextplaid" },
     { name = "lfx-paddle" },
+    { name = "lfx-publora" },
     { name = "lfx-serpingapi" },
     { name = "lfx-serply" },
     { name = "lfx-valkey" },
@@ -7813,6 +7815,7 @@ requires-dist = [
     { name = "lfx-openai-compatible", editable = "src/bundles/openai-compatible" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "lfx-paddle", marker = "extra == 'bundles'", editable = "src/bundles/paddle" },
+    { name = "lfx-publora", marker = "extra == 'bundles'", editable = "src/bundles/publora" },
     { name = "lfx-serpingapi", marker = "extra == 'bundles'", editable = "src/bundles/serpingapi" },
     { name = "lfx-serply", marker = "extra == 'bundles'", editable = "src/bundles/serply" },
     { name = "lfx-slack", editable = "src/bundles/slack" },
@@ -10181,6 +10184,21 @@ requires-dist = [
 name = "lfx-paddle"
 version = "0.1.5"
 source = { editable = "src/bundles/paddle" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-publora"
+version = "0.1.0"
+source = { editable = "src/bundles/publora" }
 dependencies = [
     { name = "httpx" },
     { name = "lfx" },
