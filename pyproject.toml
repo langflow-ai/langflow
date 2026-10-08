@@ -103,6 +103,7 @@ langflow = { workspace = true }
 lfx = { workspace = true }
 langflow-sdk = { workspace = true }
 # langflow-extensions:bundle-sources-start
+lfx-acedatacloud = { workspace = true }
 lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
 lfx-ibm = { workspace = true }
@@ -143,6 +144,7 @@ members = [
     "src/langflow-stepflow",
     "src/sdk",
     # langflow-extensions:bundle-members-start
+    "src/bundles/acedatacloud",
     "src/bundles/duckduckgo",
     "src/bundles/arxiv",
     "src/bundles/ibm",
@@ -184,6 +186,7 @@ Documentation = "https://docs.langflow.org"
 [project.optional-dependencies]
 bundles = [
     "lfx-bundles[all-no-torch]>=1.2.0,<2.0",
+    "lfx-acedatacloud>=0.1.0,<1.0.0",
     "lfx-arxiv>=0.2.0,<1.0.0",
     "lfx-confluent>=0.2.0,<1.0.0",
     "lfx-duckduckgo>=0.2.0,<1.0.0",

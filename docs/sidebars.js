@@ -522,6 +522,7 @@ module.exports = {
             "Components/bundles-agentics",
             "Components/bundles-aiml",
             "Components/bundles-altk",
+            "Components/bundles-acedatacloud",
             "Components/bundles-amazon",
             "Components/bundles-anthropic",
             "Components/bundles-apify",

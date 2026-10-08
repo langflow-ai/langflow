@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lfx-acedatacloud"
+version = "0.1.0"
+description = "Ace Data Cloud model provider and service components for Langflow"
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = "MIT"
+authors = [{name = "Ace Data Cloud", email = "dev@acedata.cloud"}]
+keywords = ["langflow", "lfx", "extension", "bundle", "acedatacloud"]
+dependencies = [
+  "lfx>=1.13.0.dev0,<2.0.0",
+  "langchain-openai>=1.1.6",
+  "httpx>=0.24.0,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://platform.acedata.cloud"
+Documentation = "https://docs.langflow.org/bundles-acedatacloud"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-acedatacloud = "lfx_acedatacloud"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_acedatacloud"]
+include = ["src/lfx_acedatacloud/**/*.py", "src/lfx_acedatacloud/extension.json", "src/lfx_acedatacloud/chat_models.json"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/lfx_acedatacloud", "README.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

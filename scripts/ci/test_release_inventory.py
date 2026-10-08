@@ -17,6 +17,7 @@ CONTRACT_PATH = REPO_ROOT / "scripts" / "ci" / "release_inventory_contract.json"
 RELEASE_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release.yml"
 GATE_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release-inventory-gate.yml"
 OPT_IN_STANDALONE_EXTENSIONS = {
+    "lfx-acedatacloud",
     "lfx-arxiv",
     "lfx-confluent",
     "lfx-duckduckgo",
@@ -83,6 +84,7 @@ def test_bundles_extra_owns_the_opt_in_standalone_extensions() -> None:
 def test_contract_required_files_exist_in_sources() -> None:
     source_roots = {
         "langflow-base": REPO_ROOT / "src" / "backend" / "base",
+        "lfx-acedatacloud": REPO_ROOT / "src" / "bundles" / "acedatacloud" / "src",
         "lfx-azure": REPO_ROOT / "src" / "bundles" / "azure" / "src",
         "lfx-datastax": REPO_ROOT / "src" / "bundles" / "datastax" / "src",
         "lfx-google": REPO_ROOT / "src" / "bundles" / "google" / "src",

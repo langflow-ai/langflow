@@ -30,6 +30,7 @@ members = [
     "langflow-sdk",
     "langflow-stepflow",
     "lfx",
+    "lfx-acedatacloud",
     "lfx-amazon",
     "lfx-anthropic",
     "lfx-arxiv",
@@ -7680,6 +7681,7 @@ audio = [
     { name = "langflow-base", extra = ["audio"] },
 ]
 bundles = [
+    { name = "lfx-acedatacloud" },
     { name = "lfx-arxiv" },
     { name = "lfx-bundles", extra = ["all-no-torch"] },
     { name = "lfx-confluent" },
@@ -7788,6 +7790,7 @@ requires-dist = [
     { name = "langflow-base", extras = ["pgvector"], marker = "extra == 'pgvector'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["sandbox"], marker = "extra == 'sandbox'", editable = "src/backend/base" },
+    { name = "lfx-acedatacloud", marker = "extra == 'bundles'", editable = "src/bundles/acedatacloud" },
     { name = "lfx-amazon", editable = "src/bundles/amazon" },
     { name = "lfx-anthropic", editable = "src/bundles/anthropic" },
     { name = "lfx-arxiv", marker = "extra == 'bundles'", editable = "src/bundles/arxiv" },
@@ -9107,6 +9110,23 @@ integration = [
     { name = "langchain-qdrant", specifier = ">=1.1.0" },
     { name = "langchain-weaviate", specifier = ">=0.0.6" },
     { name = "lxml", specifier = ">=5.0.0" },
+]
+
+[[package]]
+name = "lfx-acedatacloud"
+version = "0.1.0"
+source = { editable = "src/bundles/acedatacloud" }
+dependencies = [
+    { name = "httpx" },
+    { name = "langchain-openai" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "langchain-openai", specifier = ">=1.1.6" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]

@@ -1,0 +1,46 @@
+---
+title: Ace Data Cloud
+slug: /bundles-acedatacloud
+---
+
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="acedatacloud" />
+
+The **Ace Data Cloud** Extension Bundle adds a named chat model provider and independent image, video, audio, search, and face service components. It uses one `ace_data_cloud` bundle. Installing the package makes the components available under **Components → Ace Data Cloud** after a Langflow restart. It is not part of the default curated installation.
+
+## Model provider
+
+After installation, open **Settings → Model Providers → Ace Data Cloud**. Create an application API key in the [Ace Data Cloud Console](https://platform.acedata.cloud/console/applications), then save it as a Langflow **Credential** global variable named `ACEDATACLOUD_API_KEY`. The provider uses Ace Data Cloud's fixed OpenAI-compatible endpoint and discovers chat model IDs from its authenticated model list. Select a model your account may use; availability and price can change.
+
+The [no-key chat model flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/main/examples/chat_model.json) selects `gpt-4.1-mini` and connects Language Model to Chat Output. Configure the Credential variable before running it.
+
+## Service components
+
+Every service has a named first-run action. An asynchronous action has a separate **Retrieve Task** component; Google Search and Face keypoints return synchronously.
+
+| Service | First-run action | Task reader |
+| --- | --- | --- |
+| GPT Image | Generate an image | Yes |
+| Suno | Generate audio | Yes |
+| Seedance | Generate video | Yes |
+| Fish Audio | Text-to-speech | Yes, when run asynchronously |
+| Seedream | Generate an image | Yes |
+| Happy Horse | Generate video | Yes |
+| Qwen Image | Generate an image | Yes |
+| Veo | Generate video | Yes |
+| Google Search | Search the web | No |
+| Grok Video | Generate video | Yes |
+| Face Transform | Analyze keypoints | No |
+| Midjourney | Imagine an image | Yes |
+| Flux | Generate an image | Yes |
+| MiniMax H3 | Generate video | Yes |
+| Wan | Generate video | Yes |
+| Kling | Generate video | Yes |
+| Nano Banana | Generate an image | Yes |
+
+To use a service component, bind its **Ace Data Cloud API key** field to the Credential global variable. Ensure the key is allowed to call both the selected service's submit route and its task-query route. Inspect current pricing and balance before running a paid action.
+
+For a first image, import the [no-key GPT Image flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/main/examples/gpt_image.json). It connects **GPT Image Generate → GPT Image Retrieve Task → Chat Output**. Run Chat Output once. The query component uses the returned task ID and waits up to 240 seconds. A pending result is not a completed image. If it remains pending, import the separate [retrieve-only flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/main/examples/retrieve_only/gpt_image.json) and query the same ID without submitting another generation.
+
+The [English and Chinese step-by-step guides](https://github.com/AceDataCloud/LangflowAceDataCloud) include actual Langflow screenshots, no-key flows for all 17 services, a completed media result, and a matching Credits usage readback. The bundle does not automatically retry paid submissions. The first-run components do not cover every advanced Ace Data Cloud API action.
