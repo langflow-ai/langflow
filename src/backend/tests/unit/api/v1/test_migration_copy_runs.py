@@ -597,6 +597,33 @@ async def test_a_run_whose_files_are_gone_reads_as_interrupted(client, logged_in
     assert saved["steps"]["copy_database"]["status"] == "interrupted"
 
 
+async def test_how_a_copy_ended_is_not_saved_over_a_newer_run_that_another_worker_started(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _ready_to_copy(config_dir)
+    older, newer = "a" * 32, "b" * 32
+    _ran(config_dir, run_id=older, status="running", finished_at=None, report=None)
+    started = []
+
+    def read_run_after_another_worker_started_a_copy(run_id: str) -> dict:
+        # After this request read the record, another worker found the older run over and started a newer one.
+        if not started:
+            theirs = migration_module._read_record()
+            theirs["steps"]["copy_database"] = {**theirs["steps"]["copy_database"], "run_id": newer}
+            migration_module._write_record(theirs)
+            started.append(newer)
+        raise migration_runs.RunNotFoundError(run_id)
+
+    monkeypatch.setattr(migration_module, "read_run", read_run_after_another_worker_started_a_copy)
+    await _migration(client, headers)
+
+    assert started
+    saved = migration_module._read_record()["steps"]["copy_database"]
+    # The newer run is still the one the record names, so a page can still follow it and stop it.
+    assert (saved["run_id"], saved["status"]) == (newer, "running")
+
+
 async def test_while_a_copy_runs_a_second_one_is_refused(
     client, logged_in_headers_super_user, config_dir, monkeypatch, unanswering
 ):
