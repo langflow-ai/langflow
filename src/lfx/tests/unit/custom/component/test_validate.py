@@ -553,3 +553,18 @@ def test_extract_class_name_allows_helpers_with_one_component_subclass():
     )
 
     assert extract_class_name(code) == "OnlyComponent"
+
+
+@pytest.mark.parametrize("helper_base", ["SQLConnection", "HTMLConverter", "SSLContext"])
+def test_extract_class_name_ignores_helpers_whose_base_only_contains_lc(helper_base):
+    code = dedent(
+        f"""
+        class OnlyComponent(Component):
+            pass
+
+        class Helper({helper_base}):
+            pass
+        """
+    )
+
+    assert extract_class_name(code) == "OnlyComponent"

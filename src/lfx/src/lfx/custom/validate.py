@@ -754,7 +754,7 @@ def extract_class_name(code: str) -> str:
             # Check bases for Component inheritance
             # TODO: Build a more robust check for Component inheritance
             if any(
-                isinstance(base, ast.Name) and any(pattern in base.id for pattern in ["Component", "LC"])
+                isinstance(base, ast.Name) and ("Component" in base.id or base.id.startswith("LC"))
                 for base in node.bases
             ):
                 component_classes.append(node.name)
