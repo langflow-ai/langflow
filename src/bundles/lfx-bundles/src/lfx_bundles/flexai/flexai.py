@@ -8,6 +8,16 @@ from pydantic.v1 import SecretStr
 
 FLEXAI_API_BASE = "https://api.flex.ai/v1"
 FLEXAI_DEFAULT_MODEL = "DeepSeek-V4-Flash-0731"
+# Catalog categories served through /chat/completions; used only when a model omits ``supports``.
+FLEXAI_CHAT_CATEGORIES = frozenset({"text", "code", "reasoning", "vision"})
+
+
+def _is_chat_model(model: dict) -> bool:
+    """Return True when a catalog entry can be called through /chat/completions."""
+    supports = model.get("supports")
+    if supports is not None:
+        return "chat" in supports
+    return model.get("category") in FLEXAI_CHAT_CATEGORIES
 
 
 class FlexAIModelComponent(LCModelComponent):
@@ -65,7 +75,7 @@ class FlexAIModelComponent(LCModelComponent):
                     }
                     for m in models
                     # The catalog also lists embedding, speech and image models; keep chat models only.
-                    if m.get("id") and "chat" in m.get("supports", ["chat"])
+                    if m.get("id") and _is_chat_model(m)
                 ],
                 key=lambda x: x["name"],
             )
@@ -73,8 +83,15 @@ class FlexAIModelComponent(LCModelComponent):
             self.log(f"Error fetching models: {e}")
             return []
 
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:  # noqa: ARG002
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Update model options."""
+        if field_name == "api_key" and not field_value:
+            # Key cleared: drop the previous key's catalog instead of leaving stale models selectable.
+            build_config["model_name"]["options"] = [FLEXAI_DEFAULT_MODEL]
+            build_config["model_name"]["value"] = FLEXAI_DEFAULT_MODEL
+            build_config["model_name"].pop("tooltips", None)
+            return build_config
+        # On a transient catalog error fetch_models returns [], so the last valid options are kept.
         models = self.fetch_models()
         if models:
             ids = [m["id"] for m in models]
