@@ -45,6 +45,7 @@ from lfx.services.variable.request_scope import (
     reset_no_env_fallback,
     reset_request_variables,
 )
+from lfx.utils.async_helpers import RUN_CANCEL_GRACE_SECONDS, cancel_and_wait
 from lfx.workflow.actions import WorkflowAction
 from lfx.workflow.adapters import (
     STREAM_ADAPTERS,
@@ -417,11 +418,12 @@ async def stream_workflow_frames(
                 yield _format_sse(event.data_json, seq)
                 seq += 1
     finally:
-        if not run_task.done():
-            run_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await run_task
-        await queue.aclose()
+        # One cancel, not one per event-loop tick from a cancelled response scope; see
+        # cancel_and_wait for why a bare ``await run_task`` here re-cancels the run.
+        try:
+            await cancel_and_wait(run_task, grace_seconds=RUN_CANCEL_GRACE_SECONDS)
+        finally:
+            await queue.aclose()
 
 
 def create_workflow_router(

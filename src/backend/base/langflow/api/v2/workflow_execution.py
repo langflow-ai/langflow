@@ -39,6 +39,7 @@ from lfx.log.logger import logger
 from lfx.observability import execution_protocol, extract_trace_link, queued_trace_link, tracing_is_available
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
+from lfx.utils.async_helpers import RUN_CANCEL_GRACE_SECONDS, cancel_and_wait
 from lfx.utils.flow_validation import prepare_flow_build_for_user_from_cache
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
 from lfx.workflow.adapters.langflow import (
@@ -547,11 +548,13 @@ async def _stream_event_frames(
         _stream_cancelled = True
         raise
     finally:
-        if not run_task.done():
-            run_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await run_task
-        await queue.aclose()
+        # One cancel, not one per event-loop tick from the cancelled response scope a
+        # client disconnect leaves this in; see cancel_and_wait for why a bare
+        # ``await run_task`` here re-cancels every running component.
+        try:
+            await cancel_and_wait(run_task, grace_seconds=RUN_CANCEL_GRACE_SECONDS)
+        finally:
+            await queue.aclose()
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
         # Product telemetry pipeline both see every v2 workflow run.
         # Mirrors the v1 endpoints.py instrumentation for the streaming path.
