@@ -38,7 +38,7 @@ Every Segment event includes the IBM Common Schema product properties `UT30: 30A
 `productCodeType: WWPC`, `productPlanName: opensource`, `productPlanType: freemium`, and `productTitle: Langflow`.
 Except for Desktop email registration events, the persistent installation identifier is used for `anonymousId`,
 `properties.instanceId`, and `properties.subscriptionId`. Each email registration event uses a fresh UUID for these
-three fields and omits `userId`.
+three fields and a one-time `lf-` custom-realm `userId` derived from that UUID.
 
 For authenticated requests, the top-level `userId` is `lf-user-` followed by the SHA256 hash of the installation
 identifier, a separator, and the user's random database UUID. Langflow captures this opaque ID before handing an event

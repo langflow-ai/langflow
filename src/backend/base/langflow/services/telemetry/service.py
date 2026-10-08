@@ -138,8 +138,13 @@ class TelemetryService(Service):
                 "properties": payload_dict,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
-            if not isinstance(payload, EmailPayload):
-                body["userId"] = user_id if is_installation_user_id(user_id) else get_hashed_user_id(self.anonymous_id)
+            body["userId"] = (
+                get_hashed_user_id(event_anonymous_id)
+                if isinstance(payload, EmailPayload)
+                else user_id
+                if is_installation_user_id(user_id)
+                else get_hashed_user_id(self.anonymous_id)
+            )
             response = await self.client.post(self.base_url, auth=(self.segment_write_key, ""), json=body)
             if not response.is_success:
                 await logger.awarning(f"Telemetry request failed with status {response.status_code}")

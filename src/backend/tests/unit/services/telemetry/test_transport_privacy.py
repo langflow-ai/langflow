@@ -143,7 +143,8 @@ async def test_email_event_is_not_linked_to_installation_or_user(tmp_path):
     assert bodies[0]["anonymousId"] != bodies[1]["anonymousId"]
     for body in bodies:
         assert body["properties"]["email"] == "registered@example.com"
-        assert "userId" not in body
+        assert body["userId"] == get_hashed_user_id(body["anonymousId"])
+        assert body["userId"] != user_id
         assert body["anonymousId"] != service.anonymous_id
         assert body["properties"]["instanceId"] == body["anonymousId"]
         assert body["properties"]["subscriptionId"] == body["anonymousId"]
