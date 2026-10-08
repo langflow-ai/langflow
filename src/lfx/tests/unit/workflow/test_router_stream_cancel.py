@@ -169,3 +169,38 @@ async def test_closing_the_stream_cancels_the_run_task_once(monkeypatch):
 
     assert component.cancels == 1
     assert component.cleanup_steps_done == _CLEANUP_STEPS
+
+
+async def test_closing_the_stream_with_a_full_queue_does_not_pin_the_run_task(monkeypatch):
+    """The run's terminal sentinel must not block on a queue its consumer will never read again."""
+    monkeypatch.setattr(workflow_router, "RUN_CANCEL_GRACE_SECONDS", _SWALLOWER_GIVES_UP_AFTER)
+    filled = asyncio.Event()
+    run_task: asyncio.Task | None = None
+
+    async def fill_queue_then_block(_graph, _input_value, *, event_manager, **_kwargs) -> None:
+        nonlocal run_task
+        run_task = asyncio.current_task()
+        for index in range(event_manager.queue.maxsize):
+            event_manager.queue.put_nowait((f"event-{index}", b"{}", time.time()))
+        filled.set()
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(workflow_router, "execute_graph_with_capture", fill_queue_then_block)
+    # The agui adapter opens with RUN_STARTED, so the first frame arrives without reading the queue.
+    adapter = get_stream_adapter("agui", StreamAdapterContext(run_id="run-1", thread_id="thread-1"))
+    parsed = ParsedWorkflowRun(flow_id="flow-1", input_value="", mode="stream")
+    stream = workflow_router.stream_workflow_frames(SimpleNamespace(context={}), parsed, adapter)
+
+    await stream.__anext__()
+    await filled.wait()
+    try:
+        started_at = time.monotonic()
+        await stream.aclose()
+
+        assert time.monotonic() - started_at < _SWALLOWER_GIVES_UP_AFTER / 2
+        assert run_task is not None
+        assert run_task.done()
+    finally:
+        if run_task is not None and not run_task.done():
+            run_task.cancel()
+            await asyncio.wait({run_task}, timeout=_SWALLOWER_GIVES_UP_AFTER)

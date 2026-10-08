@@ -20,6 +20,7 @@ Only ``generate_flow_events`` (the build loop) is replaced by a stand-in compone
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -92,13 +93,13 @@ class _Component:
                 self.cancels += 1
 
 
-def _patch_build_loop(monkeypatch, run) -> None:
+def _patch_build_loop(monkeypatch, run, *, receives_event_manager: bool = False) -> None:
     from langflow.api.v2 import workflow as workflow_api
     from langflow.api.v2 import workflow_execution as wf_exec
     from langflow.services import deps
 
-    async def fake_generate_flow_events(**_kwargs) -> None:
-        await run()
+    async def fake_generate_flow_events(*, event_manager, **_kwargs) -> None:
+        await (run(event_manager) if receives_event_manager else run())
 
     monkeypatch.setattr(workflow_api, "_apply_execution_gates", lambda parsed, *_args: parsed)
     monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
@@ -231,3 +232,52 @@ async def test_cancelling_a_plain_asyncio_consumer_cancels_the_run_task_once(mon
         await consumer
     assert component.cancels == 1
     assert component.cleanup_steps_done == _CLEANUP_STEPS
+
+
+async def test_closing_the_stream_with_a_full_queue_releases_a_run_that_swallowed_its_cancel(monkeypatch):
+    """A run that outlives its one cancel must not block on a queue its consumer will never read again."""
+    from langflow.api.v2 import workflow_execution as wf_exec
+
+    monkeypatch.setattr(wf_exec, "RUN_CANCEL_GRACE_SECONDS", _SWALLOWER_GIVES_UP_AFTER)
+    filled = asyncio.Event()
+    run_task: asyncio.Task | None = None
+
+    async def fill_queue_then_finish_despite_cancel(event_manager) -> None:
+        nonlocal run_task
+        run_task = asyncio.current_task()
+        for index in range(event_manager.queue.maxsize):
+            event_manager.queue.put_nowait((f"event-{index}", b"{}", time.time()))
+        filled.set()
+        with contextlib.suppress(asyncio.CancelledError):
+            await asyncio.Event().wait()
+        # generate_flow_events ends a successful build with this sentinel put.
+        await event_manager.queue.put((None, None, time.time()))
+
+    _patch_build_loop(monkeypatch, fill_queue_then_finish_despite_cancel, receives_event_manager=True)
+    # The agui adapter opens with RUN_STARTED, so the first frame arrives without reading the queue.
+    adapter = get_stream_adapter("agui", StreamAdapterContext(run_id="run-1", thread_id="thread-1"))
+    stream = wf_exec._stream_event_frames(
+        adapter=adapter,
+        flow_id=uuid4(),
+        flow_name="flow",
+        background_tasks=BackgroundTasks(),
+        parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
+        current_user=SimpleNamespace(id=uuid4()),
+        run_id="run-1",
+        protocol="v2",
+        execution_family="workflow_v2",
+    )
+
+    await stream.__anext__()
+    await filled.wait()
+    try:
+        started_at = time.monotonic()
+        await stream.aclose()
+
+        assert time.monotonic() - started_at < _SWALLOWER_GIVES_UP_AFTER / 2
+        assert run_task is not None
+        assert run_task.done()
+    finally:
+        if run_task is not None and not run_task.done():
+            run_task.cancel()
+            await asyncio.wait({run_task}, timeout=_SWALLOWER_GIVES_UP_AFTER)

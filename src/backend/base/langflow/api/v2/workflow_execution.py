@@ -173,6 +173,7 @@ class _WorkflowEventQueue:
     def __init__(self, maxsize: int) -> None:
         self._queue: asyncio.Queue[_QueueItem] = asyncio.Queue(maxsize=maxsize)
         self._overflowed = False
+        self._closed = False
         self._loop = asyncio.get_running_loop()
         self._overflow_task: asyncio.Task[None] | None = None
 
@@ -184,12 +185,12 @@ class _WorkflowEventQueue:
         return await self._queue.get()
 
     async def put(self, item: _QueueItem) -> None:
-        if self._overflowed:
+        if self._overflowed or self._closed:
             return
         await self._queue.put(item)
 
     def put_nowait(self, item: _QueueItem) -> None:
-        if self._overflowed:
+        if self._overflowed or self._closed:
             return
         try:
             self._queue.put_nowait(item)
@@ -206,6 +207,16 @@ class _WorkflowEventQueue:
         }
         await self._queue.put((f"error-{uuid4()}", json.dumps(payload).encode("utf-8"), time.time()))
         await self._queue.put((None, None, time.time()))
+
+    def close(self) -> None:
+        """Mark the consumer gone: later puts return at once and a blocked put is released.
+
+        Nothing reads the queue after the consumer stops, so the run's terminal sentinel
+        ``put`` on a full queue would otherwise block forever and pin the run task.
+        """
+        self._closed = True
+        while not self._queue.empty():
+            self._queue.get_nowait()
 
     async def aclose(self) -> None:
         if self._overflow_task is not None and not self._overflow_task.done():
@@ -548,6 +559,7 @@ async def _stream_event_frames(
         _stream_cancelled = True
         raise
     finally:
+        queue.close()
         # One cancel, not one per event-loop tick from the cancelled response scope a
         # client disconnect leaves this in; see cancel_and_wait for why a bare
         # ``await run_task`` here re-cancels every running component.
