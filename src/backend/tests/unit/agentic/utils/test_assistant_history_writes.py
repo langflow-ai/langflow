@@ -147,3 +147,29 @@ async def test_a_table_the_assistant_writes_keeps_the_ids_of_rows_it_still_holds
     assert rows[1]["_pos"] > "a0"
     assert operations
     assert {operation.cause for operation in operations} == {"assistant"}
+
+
+async def test_the_flow_tool_takes_the_writers_turn_like_any_other_graph_write(
+    client: AsyncClient, logged_in_headers, active_user
+):
+    """A write that does not rotate the token is invisible to every open editor.
+
+    Reproduced against a running assistant: the tool edited the flow, the token
+    stayed put, and a human holding the pre-edit token then saved with 200,
+    overwriting the agent's work with nobody told.
+    """
+    flow_id = await _create_flow(
+        client, logged_in_headers, {"nodes": [_api_request_node("APIRequest-1", [])], "edges": []}
+    )
+    async with session_scope() as session:
+        before = (await session.get(Flow, UUID(flow_id))).version_token
+
+    result = await update_component_field_value(
+        flow_id, "APIRequest-1", "url_input", "https://example.com", user_id=str(active_user.id)
+    )
+
+    assert result["success"] is True, result
+    async with session_scope() as session:
+        flow = await session.get(Flow, UUID(flow_id))
+    assert flow.version_token != before
+    assert flow.last_modified_by == active_user.id

@@ -1,7 +1,7 @@
 import copy
 from datetime import datetime, timezone
 from typing import Annotated
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import APIRouter, Header, HTTPException, Query, status
 from lfx.log import logger
@@ -15,7 +15,7 @@ from langflow.api.utils.author_names import attach_usernames
 from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.utils.flow_history import history_http_error, history_write_summary
 from langflow.api.v1.authz_route_dependencies import get_authorized_flow_for_read
-from langflow.api.v1.flow_conflict import claim_version_token, ensure_version_precondition, parse_if_match
+from langflow.api.v1.flow_conflict import parse_if_match, require_repaired_flow_token
 from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
@@ -302,8 +302,8 @@ async def activate_version(
     repair_invalid_graph: Annotated[bool, Query()] = False,
 ) -> FlowWriteRead:
     flow = await _get_user_flow(session, flow_id, current_user)
-    expected = parse_if_match(if_match)
-    await ensure_version_precondition(session, flow, expected)
+    expected_version_token = parse_if_match(if_match)
+    await require_repaired_flow_token(session, flow, expected_version_token)
     # The write below shares this transaction; a decision the audit writer commits
     # first would invalidate its SQLite snapshot, so decisions wait for the write.
     async with audit_guard_in_transaction(session):
@@ -373,7 +373,6 @@ async def activate_version(
         # If the flow update fails, the auto-snapshot is also rolled back.
         try:
             async with session.begin_nested():
-                claimed = await claim_version_token(session, flow, expected)
                 if save_draft and current_data is not None:
                     await create_flow_version_entry(
                         session,
@@ -385,13 +384,14 @@ async def activate_version(
                     )
 
                 graph_write = await write_flow_graph(
-                    session, flow, target_data, actor_id=current_user.id, options=options
+                    session,
+                    flow,
+                    target_data,
+                    actor_id=current_user.id,
+                    options=options,
+                    expected_version_token=expected_version_token,
                 )
                 flow.updated_at = datetime.now(timezone.utc)
-                # Not routed through _patch_flow, so it rotates the token itself: otherwise a
-                # restore leaves open editors holding a token that still looks current.
-                flow.version_token = claimed or uuid4()
-                flow.last_modified_by = current_user.id
 
                 session.add(flow)
                 await session.flush()

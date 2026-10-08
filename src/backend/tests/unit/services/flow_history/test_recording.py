@@ -568,10 +568,13 @@ async def test_deleting_a_flow_deletes_its_history(client: AsyncClient, logged_i
     assert await _checkpoints(flow["id"]) == []
 
 
-async def test_an_overwrite_records_the_merge_and_keeps_the_replaced_graph_on_its_revision(
+async def test_an_overwrite_records_the_merge_without_copying_the_replaced_graph(
     client: AsyncClient, logged_in_headers
 ):
-    """The conflict dialog's overwrite is a graph write like any other, and what it replaced stays on its entry."""
+    """The conflict dialog's overwrite is a graph write like any other.
+
+    What it replaced is the revision before its operations, so no version copy is kept.
+    """
     flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
     saved = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "theirs")))
     assert saved.status_code == status.HTTP_200_OK, saved.text
@@ -584,7 +587,86 @@ async def test_an_overwrite_records_the_merge_and_keeps_the_replaced_graph_on_it
     )
 
     assert response.status_code == status.HTTP_200_OK, response.text
-    assert response.json()["history"]["end_revision"] == replaced_revision + 1
+    assert response.json()["history"]["start_revision"] == replaced_revision + 1
+    assert graphs_equal(await _reconstruct(flow["id"], replaced_revision), _graph(_node("a", "theirs")))
     versions = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
-    (archived,) = [entry for entry in versions.json()["entries"] if entry["description"] == "Replaced by a newer edit"]
-    assert archived["operation_revision"] == replaced_revision
+    assert versions.json()["entries"] == []
+
+
+async def test_a_retry_returns_its_original_result_although_its_token_is_now_stale(
+    client: AsyncClient, logged_in_headers
+):
+    """The retry check comes before If-Match: the first attempt is what made the token stale."""
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    body = {"data": _graph(_node("a", "x")), "request_id": str(uuid4())}
+    headers = {**logged_in_headers, "If-Match": flow["version_token"]}
+    first = await client.patch(f"api/v1/flows/{flow['id']}", json=body, headers=headers)
+    assert first.status_code == status.HTTP_200_OK, first.text
+
+    retry = await client.patch(f"api/v1/flows/{flow['id']}", json=body, headers=headers)
+
+    assert retry.status_code == status.HTTP_200_OK, retry.text
+    assert retry.json()["history"]["deduplicated"] is True
+    assert retry.json()["history"]["start_revision"] == first.json()["history"]["start_revision"]
+    assert len(await _rows(flow["id"])) == 1
+
+
+async def test_a_stale_token_whose_graph_equals_the_stored_one_loses_nothing(client: AsyncClient, logged_in_headers):
+    """A save whose response was lost must not open the conflict dialog against its own change."""
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    saved = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")))
+    current_token = saved.json()["version_token"]
+
+    resent = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"data": _graph(_node("a", "x"))},
+        headers={**logged_in_headers, "If-Match": flow["version_token"]},
+    )
+
+    assert resent.status_code == status.HTTP_200_OK, resent.text
+    assert resent.json()["version_token"] == current_token
+    assert resent.json()["history"] is None
+    assert len(await _rows(flow["id"])) == 1
+
+
+async def test_a_stale_token_with_a_different_graph_is_a_conflict_and_records_nothing(
+    client: AsyncClient, logged_in_headers
+):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "theirs")))
+
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"data": _graph(_node("a", "mine"))},
+        headers={**logged_in_headers, "If-Match": flow["version_token"]},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"]["code"] == "flow_version_conflict"
+    assert len(await _rows(flow["id"])) == 1
+
+
+async def test_saving_only_view_state_keeps_the_token(client: AsyncClient, logged_in_headers):
+    """History ignores view state, so the token does too: panning must not make other editors stale."""
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    moved_view = {**_graph(_node("a", selected=True)), "viewport": {"x": 40, "y": 10, "zoom": 2}}
+
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"data": moved_view},
+        headers={**logged_in_headers, "If-Match": flow["version_token"]},
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["version_token"] == flow["version_token"]
+    assert response.json()["data"]["viewport"] == {"x": 40, "y": 10, "zoom": 2}
+    assert await _rows(flow["id"]) == []
+
+
+async def test_a_graph_write_takes_the_writers_turn(client: AsyncClient, logged_in_headers, active_user):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+
+    response = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")))
+
+    assert response.json()["version_token"] != flow["version_token"]
+    assert (await _flow(flow["id"])).last_modified_by == active_user.id

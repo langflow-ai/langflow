@@ -51,7 +51,6 @@ from langflow.api.v1.authz_route_dependencies import (
     RequireFlowCreate,
 )
 from langflow.api.v1.flow_conflict import (
-    ensure_version_precondition,
     parse_if_match,
 )
 from langflow.api.v1.flow_validation import flow_validation_error
@@ -774,10 +773,6 @@ async def update_flow(
             )
             if not db_flow_for_attempt:
                 raise HTTPException(status_code=404, detail="Flow not found")
-            # Compared against the row we just re-read under lock, so a writer that
-            # committed between the client's read and this attempt is still caught.
-            if flow.data is not None and flow.data != db_flow_for_attempt.data:
-                await ensure_version_precondition(session, db_flow_for_attempt, expected_version_token)
             # TOCTOU: a concurrent PATCH could have moved this flow to a
             # different workspace/folder between the destination check above
             # and this retry attempt. Re-authorize against the freshly
@@ -1042,8 +1037,6 @@ async def upsert_flow(
                         raise deny_to_404(exc, detail="Flow not found") from exc
                 effective_flow_data = flow.data if flow.data is not None else existing_flow_for_attempt.data
                 _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
-                if flow.data is not None and flow.data != existing_flow_for_attempt.data:
-                    await ensure_version_precondition(session, existing_flow_for_attempt, expected_version_token)
                 await stage_mcp_secrets(
                     carried_secrets, secret_variables, writer_id, session, masked_targets=masked_targets
                 )
