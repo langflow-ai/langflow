@@ -250,8 +250,6 @@ constraint-dependencies = [
     "tornado>=6.5.10,<7.0.0",  # 6.5.8/6.5.9 security fixes plus Jupyter compatibility fix
 ]
 override-dependencies = [
-    # temporary force a newer python-pptx
-    "python-pptx>=1.0.2",
     # z3-solver 4.15.7 dropped Linux wheels, pin until codeflash is removed
     "z3-solver<4.15.7",
     # Security: Force upgraded versions to prevent transitive deps from pulling older vulnerable versions
@@ -261,8 +259,6 @@ override-dependencies = [
     "cryptography>=50.0.0",  # GHSA-g6cj-pr64-35w5 is fixed in 50.0.0
     "nltk>=3.10.3",
     "Markdown>=3.8.0",
-    "dynaconf>=3.2.13",
-    "pillow>=12.3.0",  # Force Pillow 12.3.0+ to prevent CVE-vulnerable versions
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
     "authlib>=1.8.0,<2.0.0",  # Scanner reported authlib 1.7.2; use the latest compatible release.
     "PyJWT>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
