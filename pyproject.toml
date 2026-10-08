@@ -186,7 +186,7 @@ Documentation = "https://docs.langflow.org"
 [project.optional-dependencies]
 bundles = [
     "lfx-bundles[all-no-torch]>=1.2.0,<2.0",
-    "lfx-acedatacloud>=0.1.0,<1.0.0",
+    "lfx-acedatacloud>=0.1.1,<1.0.0",
     "lfx-arxiv>=0.2.0,<1.0.0",
     "lfx-confluent>=0.2.0,<1.0.0",
     "lfx-duckduckgo>=0.2.0,<1.0.0",

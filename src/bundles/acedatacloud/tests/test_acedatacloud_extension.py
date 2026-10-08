@@ -6,16 +6,19 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
-from lfx.custom.utils import create_component_template
-from lfx.extension.loader import load_extension
-from lfx.extension.manifest import load_manifest
-from lfx.schema.data import Data
 from lfx_acedatacloud.client import AceAPIError, normalize, post_json, scrub
+from lfx_acedatacloud.components.acedatacloud.fish_audio_task import (
+    FishAudioRetrieveTaskComponent,
+)
 from lfx_acedatacloud.components.acedatacloud.gpt_image import GPTImageGenerateComponent
 from lfx_acedatacloud.components.acedatacloud.gpt_image_task import (
     GPTImageRetrieveTaskComponent,
 )
-from lfx_acedatacloud.components.base import _payload
+from lfx_acedatacloud.components.acedatacloud.midjourney_task import (
+    MidjourneyRetrieveTaskComponent,
+)
+from lfx_acedatacloud.components.acedatacloud.suno_task import SunoRetrieveTaskComponent
+from lfx_acedatacloud.components.base import _payload, generation_inputs
 from lfx_acedatacloud.provider import (
     API_BASE,
     ChatAceDataCloud,
@@ -24,6 +27,11 @@ from lfx_acedatacloud.provider import (
     load_catalog,
 )
 from lfx_acedatacloud.specs import SERVICES
+
+from lfx.custom.utils import create_component_template
+from lfx.extension.loader import load_extension
+from lfx.extension.manifest import load_manifest
+from lfx.schema.data import Data
 
 ROOT = Path(__file__).resolve().parents[1] / "src" / "lfx_acedatacloud"
 
@@ -66,6 +74,10 @@ def test_branded_chat_model_cannot_change_api_host() -> None:
 
 
 def test_protocol_special_cases() -> None:
+    assert generation_inputs("gpt_image")[-1].value == {"async": True}
+    assert generation_inputs("fish_audio")[-1].value == {"async": True}
+    assert generation_inputs("google_search")[-1].value == {}
+
     def sample(slug: str, **values: object) -> tuple[str, dict, dict]:
         return _payload(SERVICES[slug], SimpleNamespace(**values))
 
@@ -153,6 +165,70 @@ def test_task_reader_rejects_cross_service_task_before_http() -> None:
         asyncio.run(query.run())
 
 
+def test_completed_synchronous_fish_result_passes_through_without_task_lookup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fail_post(*_args: object, **_kwargs: object) -> None:
+        msg = "A completed result must not trigger task lookup"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr("lfx_acedatacloud.components.base.post_json", fail_post)
+    submitted = {
+        "service": "fish_audio",
+        "status": "succeeded",
+        "success": True,
+        "task_id": "",
+        "media_urls": ["https://example.org/audio.mp3"],
+    }
+    query = FishAudioRetrieveTaskComponent()
+    query.api_key = "test-secret"
+    query.submitted_task = Data(data=submitted)
+    assert asyncio.run(query.run()).data == submitted
+
+
+def test_trace_recovery_reads_existing_task_without_resubmitting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, dict]] = []
+
+    async def fake_post(path: str, key: str, body: dict, *, headers: dict | None = None) -> dict:
+        assert key == "test-secret"
+        assert headers in (None, {})
+        calls.append((path, body))
+        return {
+            "id": "recovered-task",
+            "finished_at": "2026-10-09T00:00:00Z",
+            "response": {
+                "status": "succeeded",
+                "data": {"image_url": "https://example.org/result.png"},
+            },
+        }
+
+    monkeypatch.setattr("lfx_acedatacloud.components.base.post_json", fake_post)
+    query = MidjourneyRetrieveTaskComponent()
+    query.api_key = "test-secret"
+    query.trace_id = "known-trace"
+    query.wait_seconds = 0
+    result = asyncio.run(query.run()).data
+    assert calls == [("/midjourney/tasks", {"action": "retrieve", "trace_id": "known-trace"})]
+    assert result["task_id"] == "recovered-task"
+    assert result["status"] == "succeeded"
+    assert result["trace_id"] == "known-trace"
+    assert "trace_id" not in {field.name for field in SunoRetrieveTaskComponent.inputs}
+
+
+def test_pending_trace_without_task_id_remains_queryable() -> None:
+    result = normalize(
+        {"finished_at": None, "response": None},
+        service="midjourney",
+        retrieved=True,
+        requested_trace_id="known-trace",
+    )
+    assert result["status"] == "pending"
+    assert result["task_id"] == ""
+    assert result["trace_id"] == "known-trace"
+
+
 def test_pending_preview_is_not_a_completed_result() -> None:
     result = normalize(
         {
@@ -201,6 +277,10 @@ def test_http_errors_never_include_token_or_service_body(
     original_client = httpx.AsyncClient
 
     def make_client(**kwargs: object) -> httpx.AsyncClient:
+        timeout = kwargs["timeout"]
+        assert isinstance(timeout, httpx.Timeout)
+        assert timeout.connect == 10
+        assert timeout.read == 75
         return original_client(transport=transport, **kwargs)
 
     monkeypatch.setattr("lfx_acedatacloud.client.httpx.AsyncClient", make_client)

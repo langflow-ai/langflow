@@ -7,6 +7,8 @@ import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-ins
 
 <GraduatedBundleInstall packageName="acedatacloud" />
 
+Until `lfx-acedatacloud` is published on PyPI, install the [public v0.1.1 GitHub wheel](https://github.com/AceDataCloud/LangflowAceDataCloud/releases/tag/v0.1.1) in the same Python environment as Langflow.
+
 The **Ace Data Cloud** Extension Bundle adds a named chat model provider and independent image, video, audio, search, and face service components. It uses one `ace_data_cloud` bundle. Installing the package makes the components available under **Components → Ace Data Cloud** after a Langflow restart. It is not part of the default curated installation.
 
 ## Model provider
@@ -41,6 +43,8 @@ Every service has a named first-run action. An asynchronous action has a separat
 
 To use a service component, bind its **Ace Data Cloud API key** field to the Credential global variable. Ensure the key is allowed to call both the selected service's submit route and its task-query route. Inspect current pricing and balance before running a paid action.
 
-For a first image, import the [no-key GPT Image flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/main/examples/gpt_image.json). It connects **GPT Image Generate → GPT Image Retrieve Task → Chat Output**. Run Chat Output once. The query component uses the returned task ID and waits up to 240 seconds. A pending result is not a completed image. If it remains pending, import the separate [retrieve-only flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/main/examples/retrieve_only/gpt_image.json) and query the same ID without submitting another generation.
+For a first image, import the [no-key GPT Image flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/main/examples/gpt_image.json). It connects **GPT Image Generate → GPT Image Retrieve Task → Chat Output**. Media generation components prefill `{"async": true}` in **Additional route parameters** so the submit call can return a task ID promptly. Run Chat Output once. The query component uses the returned task ID and waits up to 240 seconds. A pending result is not a completed image. If it remains pending, import the separate [retrieve-only flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/main/examples/retrieve_only/gpt_image.json) and query the same ID without submitting another generation.
+
+If a paid submission times out before returning a task ID, check request history before submitting again. GPT Image, Midjourney, and Veo task readers accept the original trace ID for a read-only lookup. Fish Audio can return a completed synchronous result; its connected task reader passes that result through without another API call.
 
 The [English and Chinese step-by-step guides](https://github.com/AceDataCloud/LangflowAceDataCloud) include actual Langflow screenshots, no-key flows for all 17 services, a completed media result, and a matching Credits usage readback. The bundle does not automatically retry paid submissions. The first-run components do not cover every advanced Ace Data Cloud API action.

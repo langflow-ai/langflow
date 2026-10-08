@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lfx-acedatacloud"
-version = "0.1.0"
+version = "0.1.1"
 description = "Ace Data Cloud model provider and service components for Langflow"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"

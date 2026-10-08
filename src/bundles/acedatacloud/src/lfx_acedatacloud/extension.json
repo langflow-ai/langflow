@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.langflow.org/extension/v1.json",
   "id": "lfx-acedatacloud",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "Ace Data Cloud",
   "description": "Ace Data Cloud chat models and independent image, video, music, audio, search, and face service components.",
   "lfx": {"compat": ["1"]},

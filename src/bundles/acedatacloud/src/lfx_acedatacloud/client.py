@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 
 API_BASE = "https://api.acedata.cloud"
+REQUEST_TIMEOUT_SECONDS = 75
 _FAILED = {"failed", "error", "cancelled", "canceled", "rejected"}
 _DONE = {"complete", "completed", "succeeded", "succeed", "success", "finished"}
 _MEDIA_KEYS = {
@@ -64,7 +65,11 @@ async def post_json(
     if headers:
         request_headers.update(headers)
     try:
-        async with httpx.AsyncClient(base_url=API_BASE, timeout=45, follow_redirects=False) as client:
+        async with httpx.AsyncClient(
+            base_url=API_BASE,
+            timeout=httpx.Timeout(REQUEST_TIMEOUT_SECONDS, connect=10),
+            follow_redirects=False,
+        ) as client:
             response = await client.post(path, json=body, headers=request_headers)
         response.raise_for_status()
         payload = response.json()
@@ -134,6 +139,7 @@ def normalize(
     service: str,
     retrieved: bool = False,
     requested_task_id: str = "",
+    requested_trace_id: str = "",
 ) -> dict[str, Any]:
     """Only report success after a terminal task or a synchronous result."""
     task_id = requested_task_id or _task_id(body)
@@ -176,7 +182,7 @@ def normalize(
         status = "failed"
     elif completed_by_state or completed_by_record or completed_by_url:
         status = "succeeded"
-    elif task_id:
+    elif task_id or requested_trace_id:
         status = "pending"
     elif response:
         status = "succeeded"
@@ -189,7 +195,7 @@ def normalize(
         "status": status,
         "success": status == "succeeded",
         "task_id": task_id,
-        "trace_id": str(trace_id or ""),
+        "trace_id": str(trace_id or requested_trace_id),
         "media_urls": urls if status == "succeeded" else [],
         "result": safe,
     }
