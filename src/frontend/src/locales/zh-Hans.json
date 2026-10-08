@@ -2166,7 +2166,7 @@
   "settings.migration.kb.ranking.body": "新实例对此知识库的搜索结果采用不同的排序方式。",
   "settings.migration.files.progress": "文件：{{done}} / {{total}}。已复制：{{bytes}}。",
   "settings.migration.files.conflict": "存储桶中已有同名的其他文件。不会覆盖任何内容。",
-  "settings.migration.files.badName": "S3 不允许使用此名称。请在 Langflow 中重命名该文件，然后再次复制。",
+  "settings.migration.files.badName": "此文件的存储名称包含反斜杠或“..”，Langflow 的文件存储不接受这样的名称，因此无法复制。",
   "settings.migration.files.noFile": "此名称下没有存储任何内容，因此没有可复制的内容。它将显示为缺失。",
   "settings.migration.error.bucket": "无法写入存储桶。请检查“{{step}}”，然后重试。",
   "settings.migration.error.notCopied": "未复制。",

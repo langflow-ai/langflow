@@ -793,7 +793,7 @@
   "settings.migration.kb.ranking.body": "새 인스턴스는 이 Knowledge Base의 검색 결과 순위를 다른 방식으로 매깁니다.",
   "settings.migration.files.progress": "파일: {{done}} / {{total}}. 지금까지 복사한 양: {{bytes}}.",
   "settings.migration.files.conflict": "버킷에 같은 이름의 다른 파일이 이미 있습니다. 덮어쓰지 않습니다.",
-  "settings.migration.files.badName": "S3에서 쓸 수 없는 이름입니다. Langflow에서 파일 이름을 바꾼 뒤 다시 복사하세요.",
+  "settings.migration.files.badName": "이 파일의 저장된 이름에 백슬래시 또는 \"..\"가 들어 있어 Langflow 파일 저장소에서 사용할 수 없으므로 복사할 수 없습니다.",
   "settings.migration.files.noFile": "이 이름으로 저장된 것이 없어 복사할 것이 없습니다. 누락된 파일로 표시됩니다.",
   "settings.migration.error.bucket": "버킷에 쓸 수 없습니다. '{{step}}' 단계를 확인한 뒤 다시 시도하세요.",
   "settings.migration.error.notCopied": "복사되지 않았습니다.",

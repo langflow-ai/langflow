@@ -1592,7 +1592,7 @@ describe("Copy knowledge bases and files", () => {
       .map((item) => item.textContent);
     expect(lines).toEqual([
       "cat.txt (u-1)The bucket already holds a different file with this name. Nothing is overwritten.",
-      "a\\b.txt (u-1)S3 doesn't allow this name. Rename the file in Langflow, then copy again.",
+      "a\\b.txt (u-1)This file's stored name has a backslash or \"..\" in it, which Langflow's file storage refuses, so it can't be copied.",
       "gone.txt (u-1)Nothing is stored for this name, so there is nothing to copy. It will show as missing.",
       "big.bin (u-1)Can't write to the bucket. Check 'Where your data goes', then try again.Details, big.binSlowDown",
     ]);

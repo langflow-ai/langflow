@@ -2166,7 +2166,7 @@
   "settings.migration.kb.ranking.body": "La nueva instancia ordena los resultados de búsqueda de otra forma en esta.",
   "settings.migration.files.progress": "Archivos: {{done}} de {{total}}. Copiado hasta ahora: {{bytes}}.",
   "settings.migration.files.conflict": "El bucket ya contiene un archivo distinto con este nombre. No se sobrescribe nada.",
-  "settings.migration.files.badName": "S3 no admite este nombre. Cambia el nombre del archivo en Langflow y copia de nuevo.",
+  "settings.migration.files.badName": "El nombre guardado de este archivo contiene una barra invertida o \"..\", que el almacenamiento de archivos de Langflow rechaza, así que no se puede copiar.",
   "settings.migration.files.noFile": "No hay nada guardado con este nombre, así que no hay nada que copiar. Aparecerá como ausente.",
   "settings.migration.error.bucket": "No se puede escribir en el bucket. Revisa '{{step}}' y vuelve a intentarlo.",
   "settings.migration.error.notCopied": "No se ha copiado.",

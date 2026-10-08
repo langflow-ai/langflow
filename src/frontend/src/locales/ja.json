@@ -2166,7 +2166,7 @@
   "settings.migration.kb.ranking.body": "新しいインスタンスでは、このナレッジベースの検索結果の順位付けが変わります。",
   "settings.migration.files.progress": "ファイル: {{done}} / {{total}}。これまでにコピーした量: {{bytes}}。",
   "settings.migration.files.conflict": "バケットには同じ名前の別のファイルがすでにあります。上書きはしません。",
-  "settings.migration.files.badName": "S3 ではこの名前を使用できません。Langflow でファイル名を変更してから、もう一度コピーしてください。",
+  "settings.migration.files.badName": "このファイルの保存名にはバックスラッシュまたは「..」が含まれており、Langflow のファイルストレージでは使用できないため、コピーできません。",
   "settings.migration.files.noFile": "この名前で保存されているものがないため、コピーするものがありません。見つからないファイルとして表示されます。",
   "settings.migration.error.bucket": "バケットに書き込めません。「{{step}}」を確認して、もう一度お試しください。",
   "settings.migration.error.notCopied": "コピーされませんでした。",

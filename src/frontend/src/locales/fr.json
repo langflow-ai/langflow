@@ -2166,7 +2166,7 @@
   "settings.migration.kb.ranking.body": "La nouvelle instance classe différemment les résultats de recherche de celle-ci.",
   "settings.migration.files.progress": "Fichiers : {{done}} sur {{total}}. Déjà copié : {{bytes}}.",
   "settings.migration.files.conflict": "Le bucket contient déjà un autre fichier portant ce nom. Rien n'est écrasé.",
-  "settings.migration.files.badName": "S3 n'accepte pas ce nom. Renommez le fichier dans Langflow, puis copiez à nouveau.",
+  "settings.migration.files.badName": "Le nom enregistré de ce fichier contient une barre oblique inverse ou « .. », que le stockage de fichiers de Langflow refuse : il ne peut donc pas être copié.",
   "settings.migration.files.noFile": "Rien n'est stocké sous ce nom : il n'y a donc rien à copier. Il apparaîtra comme manquant.",
   "settings.migration.error.bucket": "Impossible d'écrire dans le bucket. Vérifiez « {{step}} », puis réessayez.",
   "settings.migration.error.notCopied": "Non copié.",
