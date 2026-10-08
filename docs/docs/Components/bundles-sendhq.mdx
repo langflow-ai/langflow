@@ -51,7 +51,8 @@ The **SendHQ List Emails** component lists email newest first, with a short snip
 
 ## SendHQ Read Email
 
-The **SendHQ Read Email** component reads one email in full, or the whole conversation it belongs to.
+The **SendHQ Read Email** component reads one email, or the whole conversation it belongs to.
+Bodies longer than 20,000 characters are cut to that length and the message is marked `body_truncated: true`.
 
 1. Add the **SendHQ Read Email** component to your flow, and then configure it as follows:
 
@@ -61,7 +62,7 @@ The **SendHQ Read Email** component reads one email in full, or the whole conver
 
 2. Connect the component to other components in your flow, or use it in **Tool Mode** as described above.
 
-    The component returns the message body, sender, recipients, and attachment names, or the thread's `messages`, in Langflow's [`Data` type](/data-types).
+    The component returns the message body (truncated past 20,000 characters, with `body_truncated` set), sender, recipients, and attachment names, or the thread's `messages`, in Langflow's [`Data` type](/data-types).
 
 ## SendHQ Reply to Email
 

@@ -16,7 +16,7 @@ from lfx_bundles.sendhq import (
     SendHQSendEmailComponent,
 )
 from lfx_bundles.sendhq import send_email as send_email_module
-from lfx_bundles.sendhq.sendhq_common import MAX_BODY_CHARS, split_addresses
+from lfx_bundles.sendhq.sendhq_common import MAX_BODY_CHARS, path_id, split_addresses
 
 API = "https://sendhq.cc/api/v1"
 API_KEY = "re_test_key"  # pragma: allowlist secret
@@ -227,6 +227,24 @@ async def test_read_whole_thread_follows_thread_id() -> None:
     value = result.data["value"]
     assert value["thread_id"] == "em_out0"
     assert [message["id"] for message in value["messages"]] == ["em_out0", "em_in1"]
+
+
+def test_path_id_keeps_ids_inside_one_path_segment() -> None:
+    assert path_id("em_in1") == "em_in1"
+    assert path_id("em_/../em_other?x=1") == "em_%2F..%2Fem_other%3Fx%3D1"
+    assert path_id("..") == "%2E%2E"
+    assert path_id(".") == "%2E"
+
+
+@respx.mock
+async def test_read_email_cannot_escape_the_emails_path() -> None:
+    route = respx.route(method="GET").mock(
+        return_value=httpx.Response(404, json={"error": {"message": "Email not found"}})
+    )
+
+    await SendHQReadEmailComponent(api_key=API_KEY, email_id="em_/../em_other").build_output()
+
+    assert route.calls.last.request.url.raw_path == b"/api/v1/emails/em_%2F..%2Fem_other"
 
 
 @respx.mock

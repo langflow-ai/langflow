@@ -4,12 +4,12 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, MessageTextInput, Output, SecretStrInput
 from lfx.schema.data import Data
 
-from lfx_bundles.sendhq.sendhq_common import detail, request
+from lfx_bundles.sendhq.sendhq_common import detail, path_id, request
 
 
 class SendHQReadEmailComponent(Component):
     display_name = "SendHQ Read Email"
-    description = "Read one SendHQ email in full, or its whole conversation."
+    description = "Read one SendHQ email, or its whole conversation."
     documentation: str = "https://sendhq.cc/docs/api-reference/emails"
     icon = "SendHQ"
     name = "SendHQReadEmailComponent"
@@ -48,14 +48,14 @@ class SendHQReadEmailComponent(Component):
         if not email_id:
             result = {"error": "Provide an email ID."}
         else:
-            ok, email = await request(api_key, "GET", f"/emails/{email_id}")
+            ok, email = await request(api_key, "GET", f"/emails/{path_id(email_id)}")
             if not ok:
                 result = email
             elif not self.whole_thread:
                 result = detail(email)
             else:
                 thread_id = email.get("threadId") or email_id
-                ok, thread = await request(api_key, "GET", f"/threads/{thread_id}")
+                ok, thread = await request(api_key, "GET", f"/threads/{path_id(thread_id)}")
                 result = (
                     {
                         "thread_id": thread.get("id"),

@@ -5,7 +5,7 @@ from lfx.io import MessageTextInput, MultilineInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 
-from lfx_bundles.sendhq.sendhq_common import reply_route, request
+from lfx_bundles.sendhq.sendhq_common import path_id, reply_route, request
 
 
 class SendHQReplyToEmailComponent(Component):
@@ -63,7 +63,7 @@ class SendHQReplyToEmailComponent(Component):
         elif not (self.body or "").strip():
             result = {"error": "Provide a reply."}
         else:
-            ok, parent = await request(api_key, "GET", f"/emails/{email_id}")
+            ok, parent = await request(api_key, "GET", f"/emails/{path_id(email_id)}")
             if not ok:
                 result = parent
             else:

@@ -8,6 +8,7 @@ live here rather than being re-derived in each component.
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -17,6 +18,13 @@ TIMEOUT_SECONDS = 30.0
 # the full message stays available through the API.
 MAX_BODY_CHARS = 20_000
 SNIPPET_CHARS = 200
+
+
+def path_id(value: str) -> str:
+    """Encode an ID as one URL path segment so it cannot change the request path."""
+    if value in {".", ".."}:
+        return value.replace(".", "%2E")
+    return quote(value, safe="")
 
 
 def split_addresses(value: str | None) -> list[str]:
