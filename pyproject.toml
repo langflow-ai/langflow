@@ -280,6 +280,7 @@ override-dependencies = [
     "python-liquid>=2.2.0,<3.0.0",  # CVE-2026-45017
     "GitPython>=3.1.58",  # GHSA-wvpp-8hx9-p66j, GHSA-jm78-9fvv-mhgr, GHSA-hmq2-w58f-27jc, GHSA-4gmw-gg2m-w46p, GHSA-9rj7-rf2p-w77r, GHSA-hh9p-6wh2-4mfc
     "h2>=4.4.1",  # CVE-2026-71554
+    "multidict>=6.9.1",  # GHSA-54p9-h82j-f925 / CVE-2026-104874
 ]
 
 [tool.codespell]
