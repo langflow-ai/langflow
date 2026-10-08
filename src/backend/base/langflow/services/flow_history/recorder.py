@@ -12,6 +12,9 @@ the revision head safe to extend across workers.
 
 1. A retry of a request already recorded returns that request's revisions and
    writes nothing.
+   Then multi-edit safety's ``If-Match`` check runs against the locked flow:
+   a stale token is refused with a conflict, unless the submitted graph
+   already equals the stored one, which loses nothing and writes nothing.
 2. The stored graph must be the graph its revision replays to. Otherwise the
    write is refused, or with ``repair_revision_mismatch`` the stored graph is
    reset to the latest recorded revision first.
@@ -22,6 +25,10 @@ the revision head safe to extend across workers.
 4. The change is derived as operations, verified by exact replay, numbered
    from the flow's latest revision, and stored in rows that respect the
    configured size limits.
+5. The version token rotates, naming the writer, whenever the write changed
+   the graph the history holds: operations were recorded, or a repair
+   rewrote the stored graph. A save that only changes view state does not
+   rotate it, so it never makes other open editors stale.
 """
 
 from __future__ import annotations
@@ -49,10 +56,12 @@ from lfx.services.flow_operations import (
     graphs_equal,
     repair_flow_data,
 )
+from sqlmodel import select
 
 from langflow.services.database.models.flow_operation import FlowOperation as FlowOperationRow
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_flow_operation_service, get_settings_service
 from langflow.services.flow_history.envelope import (
     RecordedOperation,
@@ -66,6 +75,7 @@ from langflow.services.flow_history.errors import (
     FlowHistoryCorruptionError,
     FlowHistoryError,
     FlowRevisionMismatchError,
+    FlowVersionConflictError,
 )
 from langflow.services.flow_history.replay import reconstruct_graph, replay_from
 from langflow.services.flow_history.store import has_anchor, latest_anchor_at_or_before, rows_with_request
@@ -118,8 +128,12 @@ async def write_flow_graph(
     *,
     actor_id: UUID,
     options: FlowGraphWriteOptions | None = None,
+    expected_version_token: UUID | None = None,
 ) -> GraphWriteResult:
-    """Replace ``flow.data`` with ``target``, recording the change in the flow's history."""
+    """Replace ``flow.data`` with ``target``, recording the change in the flow's history.
+
+    ``expected_version_token`` is the request's ``If-Match``; None writes unconditionally.
+    """
     request_id = (options.request_id if options else None) or uuid4()
     repair_mismatch = bool(options and options.repair_revision_mismatch)
     repair_invalid = bool(options and options.repair_invalid_graph)
@@ -142,6 +156,23 @@ async def write_flow_graph(
             original.current_revision = flow.current_revision
             return original
 
+    if (
+        expected_version_token is not None
+        and flow.version_token is not None
+        and flow.version_token != expected_version_token
+    ):
+        if graphs_equal(normalize_absent_graph(target), normalize_absent_graph(flow.data)):
+            return result
+        raise FlowVersionConflictError(
+            flow.id,
+            expected=expected_version_token,
+            current=flow.version_token,
+            author_id=flow.last_modified_by,
+            author_name=await _username(session, flow.last_modified_by),
+            modified_at=flow.updated_at,
+        )
+
+    stored_repaired = False
     started = flow.latest_revision > 0 or await has_anchor(session, flow.id)
     if started:
         if not await projection_matches(session, flow):
@@ -165,6 +196,7 @@ async def write_flow_graph(
             await _keep_repaired_original(session, flow)
             repaired = repair_flow_data(base)
             base = repaired.flow_data
+            stored_repaired = True
             result.graph_repairs.extend(_fix_entry("stored", fix) for fix in repaired.fixes)
 
     target = normalize_absent_graph(target)
@@ -187,6 +219,9 @@ async def write_flow_graph(
         raise FlowHistoryError(msg) from exc
 
     flow.data = target
+    if derived.operations or result.flow_repaired or stored_repaired:
+        flow.version_token = uuid4()
+        flow.last_modified_by = actor_id
     if not derived.operations:
         return result
 
@@ -219,6 +254,12 @@ async def write_flow_graph(
     result.latest_revision = flow.latest_revision
     result.current_revision = flow.current_revision
     return result
+
+
+async def _username(session: AsyncSession, user_id: UUID | None) -> str | None:
+    if user_id is None:
+        return None
+    return (await session.exec(select(User.username).where(User.id == user_id))).first()
 
 
 async def projection_matches(session: AsyncSession, flow: Flow) -> bool:

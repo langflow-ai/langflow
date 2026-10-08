@@ -29,7 +29,7 @@ from langflow.api.utils import (
     strip_flow_secrets,
 )
 from langflow.api.utils.flow_history import history_http_error, history_write_summary
-from langflow.api.v1.flow_conflict import claim_version_token
+from langflow.api.v1.flow_conflict import ensure_version_precondition
 from langflow.services.audit import vocabulary as audit_vocab
 from langflow.services.audit.operations import stage_flow_succeeded
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
@@ -173,12 +173,25 @@ async def _write_graph(
     *,
     actor_id: UUID,
     options: FlowCreate | FlowUpdate,
+    expected_version_token: UUID | None,
 ) -> GraphWriteResult | None:
-    """Move ``data`` out of *update_data* and write it through the flow's history."""
+    """Move ``data`` out of *update_data* and write it through the flow's history.
+
+    A write without a graph takes no writer's turn; it only passes multi-edit
+    safety's ``If-Match`` check, as before history existed.
+    """
     if "data" not in update_data:
+        await ensure_version_precondition(session, flow, expected_version_token)
         return None
     try:
-        return await write_flow_graph(session, flow, update_data.pop("data"), actor_id=actor_id, options=options)
+        return await write_flow_graph(
+            session,
+            flow,
+            update_data.pop("data"),
+            actor_id=actor_id,
+            options=options,
+            expected_version_token=expected_version_token,
+        )
     except FlowHistoryError as exc:
         raise history_http_error(exc) from exc
 
@@ -809,19 +822,17 @@ async def _update_existing_flow(
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
-    graph_changed = "data" in update_data and update_data["data"] != existing_flow.data
     # Taken before the graph moves into its history write, which removes ``data``.
     written_fields = update_data.keys() & _UPDATABLE_FLOW_FIELDS
-    graph_write = await _write_graph(session, existing_flow, update_data, actor_id=actor_user_id, options=flow)
+    graph_write = await _write_graph(
+        session,
+        existing_flow,
+        update_data,
+        actor_id=actor_user_id,
+        options=flow,
+        expected_version_token=expected_version_token,
+    )
     _apply_update_data(existing_flow, update_data)
-
-    if graph_changed:
-        # PUT and the import upsert replace the graph exactly like a PATCH does, so they
-        # take the writer's turn the same way. Leaving the token alone here let an editor
-        # that was open before the import save straight over it and be told nothing.
-        claimed = await claim_version_token(session, existing_flow, expected_version_token)
-        existing_flow.version_token = claimed or uuid4()
-        existing_flow.last_modified_by = actor_user_id
 
     await _validate_and_assign_folder(
         session,
@@ -949,20 +960,17 @@ async def _patch_flow(
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
-    # Only a graph change takes the writer's turn. A rename or a no-op save leaves
-    # the token alone on purpose — see the scope note in ``flow_conflict``.
-    graph_changed = "data" in update_data and update_data["data"] != db_flow.data
     # Taken before the graph moves into its history write, which removes ``data``.
     written_fields = update_data.keys() & _UPDATABLE_FLOW_FIELDS
-    graph_write = await _write_graph(session, db_flow, update_data, actor_id=user_id, options=flow)
+    graph_write = await _write_graph(
+        session,
+        db_flow,
+        update_data,
+        actor_id=user_id,
+        options=flow,
+        expected_version_token=expected_version_token,
+    )
     _apply_update_data(db_flow, update_data)
-
-    if graph_changed:
-        # Claimed here, not before: only a graph change takes the write turn, and the
-        # claim has to be the same indivisible step that grants it.
-        claimed = await claim_version_token(session, db_flow, expected_version_token)
-        db_flow.version_token = claimed or uuid4()
-        db_flow.last_modified_by = user_id
 
     # Validate fs_path if it was changed (will raise HTTPException if invalid).
     # fs_path lives under the owner's storage namespace, so the owner id

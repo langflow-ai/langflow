@@ -12,6 +12,7 @@ from langflow.services.flow_history.errors import (
     FlowHistoryError,
     FlowRevisionMismatchError,
     FlowRevisionNotFoundError,
+    FlowVersionConflictError,
 )
 from langflow.services.flow_history.recorder import GraphWriteResult
 
@@ -25,6 +26,22 @@ def history_http_error(exc: FlowHistoryError) -> HTTPException:
     resolves them. Damaged history is logged with where it was found, never
     with graph values, and reported without detail.
     """
+    if isinstance(exc, FlowVersionConflictError):
+        # Imported here: importing the v1 routes package from this module is circular.
+        from langflow.api.v1.flow_conflict import build_conflict_detail
+
+        # Multi-edit safety's own refusal, so its conflict dialog handles it unchanged.
+        return HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=build_conflict_detail(
+                flow_id=exc.flow_id,
+                expected=exc.expected,
+                current=exc.current,
+                author_id=exc.author_id,
+                author_name=exc.author_name,
+                modified_at=exc.modified_at,
+            ),
+        )
     if isinstance(exc, FlowRevisionMismatchError):
         return HTTPException(
             status_code=status.HTTP_409_CONFLICT,

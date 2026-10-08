@@ -11,6 +11,8 @@ import uuid
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from langflow.services.deps import session_scope
+from langflow.services.flow_history.replay import reconstruct_graph
 
 
 def _graph(label: str) -> dict:
@@ -293,23 +295,31 @@ async def test_overwrite_replaces_the_flow_with_the_merged_graph(client: AsyncCl
 
 
 async def test_overwrite_keeps_the_replaced_version_in_history(client: AsyncClient, logged_in_headers):
-    """The archive is what makes overwriting safe to offer at all."""
+    """The replaced version is what makes overwriting safe to offer at all.
+
+    It is the revision just before the overwrite in the flow's history, not a copy.
+    """
     flow = await _create_flow(client, logged_in_headers)
     theirs = await client.patch(
         f"api/v1/flows/{flow['id']}", json={"data": _graph("theirs")}, headers=logged_in_headers
     )
 
-    await client.post(
+    response = await client.post(
         f"api/v1/flows/{flow['id']}/overwrite",
         json={"data": _graph("merged")},
         headers={**logged_in_headers, "If-Match": theirs.json()["version_token"]},
     )
 
-    versions = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
-    entries = versions.json()["entries"]
-    assert entries, "the replaced version must be recoverable"
-    archived = await client.get(f"api/v1/flows/{flow['id']}/versions/{entries[0]['id']}", headers=logged_in_headers)
-    assert archived.json()["data"]["nodes"][0]["id"] == "n-theirs"
+    assert response.status_code == status.HTTP_200_OK, response.text
+    replaced_revision = response.json()["history"]["start_revision"] - 1
+    async with session_scope() as session:
+        replaced = await reconstruct_graph(
+            session,
+            uuid.UUID(flow["id"]),
+            replaced_revision,
+            latest_revision=response.json()["history"]["end_revision"],
+        )
+    assert replaced["nodes"][0]["id"] == "n-theirs"
 
 
 async def test_overwrite_is_still_refused_when_the_flow_moved_again(client: AsyncClient, logged_in_headers):
@@ -357,33 +367,22 @@ async def test_version_history_names_the_author(client: AsyncClient, logged_in_h
     assert versions.json()["entries"][0]["username"]
 
 
-async def test_a_failed_archive_does_not_take_the_writers_turn(client: AsyncClient, logged_in_headers, monkeypatch):
-    """Claiming the token is only worth anything if the write that follows happens.
+async def test_a_refused_overwrite_does_not_take_the_writers_turn(client: AsyncClient, logged_in_headers):
+    """The token only moves with a write that happens.
 
-    The claim runs before the archive so a stale caller is refused before any row
-    is written. That leaves a window the other way: if archiving fails, the token
-    has already moved, and the caller's own next save would be refused for a write
-    that never landed.
+    Otherwise the caller's own next save would be refused for a write that never landed.
     """
-    from langflow.api.v1 import flow_conflict_routes
-    from langflow.services.database.models.flow_version.exceptions import FlowVersionError
-
     flow = await _create_flow(client, logged_in_headers)
     reviewed = flow["version_token"]
-
-    async def explode(*_args, **_kwargs):
-        msg = "archive unavailable"
-        raise FlowVersionError(msg)
-
-    monkeypatch.setattr(flow_conflict_routes, "create_flow_version_entry", explode)
+    broken = {"nodes": [{"id": "n-broken", "data": {}, "position": {"x": 0, "y": 0}}], "edges": []}
 
     response = await client.post(
         f"api/v1/flows/{flow['id']}/overwrite",
-        json={"data": _graph("merged")},
+        json={"data": broken},
         headers={**logged_in_headers, "If-Match": reviewed},
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
     state = await client.get(f"api/v1/flows/{flow['id']}/version-state", headers=logged_in_headers)
     assert state.json()["version_token"] == reviewed, "a write that never happened must not consume the token"
 

@@ -50,7 +50,6 @@ from langflow.api.v1.authz_route_dependencies import (
     RequireFlowCreate,
 )
 from langflow.api.v1.flow_conflict import (
-    ensure_version_precondition,
     parse_if_match,
 )
 from langflow.api.v1.flows_helpers import (
@@ -714,9 +713,6 @@ async def update_flow(
             )
             if not db_flow_for_attempt:
                 raise HTTPException(status_code=404, detail="Flow not found")
-            # Compared against the row we just re-read under lock, so a writer that
-            # committed between the client's read and this attempt is still caught.
-            await ensure_version_precondition(session, db_flow_for_attempt, expected_version_token)
             # TOCTOU: a concurrent PATCH could have moved this flow to a
             # different workspace/folder between the destination check above
             # and this retry attempt. Re-authorize against the freshly
@@ -982,7 +978,6 @@ async def upsert_flow(
                 await stage_mcp_secrets(
                     carried_secrets, secret_variables, writer_id, session, masked_targets=masked_targets
                 )
-                await ensure_version_precondition(session, existing_flow_for_attempt, expected_version_token)
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,

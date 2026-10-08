@@ -6,7 +6,6 @@ before this feature, and these endpoints share no state with it.
 
 from __future__ import annotations
 
-import copy
 from typing import Annotated
 from uuid import UUID
 
@@ -20,17 +19,13 @@ from langflow.api.v1.authz_route_dependencies import AuthorizedReadFlow, Authori
 from langflow.api.v1.flow_conflict import (
     FlowVersionState,
     build_version_state,
-    claim_version_token,
     parse_if_match,
 )
 from langflow.api.v1.flow_fork import FlowFork, build_fork_payload
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.flows_helpers import _new_flow, _patch_flow
 from langflow.services.database.models.flow.model import FlowRead, FlowUpdate, FlowWriteRead
-from langflow.services.database.models.flow_version.crud import create_flow_version_entry
-from langflow.services.database.models.flow_version.exceptions import FlowVersionError
 from langflow.services.deps import get_catalog_policy_service, get_storage_service
-from langflow.services.flow_history.recorder import checkpoint_fields
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -104,7 +99,7 @@ async def overwrite_flow(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ):
-    """Replace a flow with a merged graph, keeping the replaced version in history.
+    """Replace a flow with a merged graph; the replaced version stays in its history.
 
     This is the deliberate half of the conflict dialog, and it is still guarded.
     The caller sends the token it *reviewed*, not the stale one it was refused on
@@ -113,16 +108,9 @@ async def overwrite_flow(
     the whole feature exists to close. So the meaning is "replace the version I
     just looked at", and a flow that moved again is refused with a fresh 409.
 
-    The archived entry is attributed to whoever last wrote the flow rather than to
-    the caller, because it is their work being replaced -- attributing it here
-    would put the caller's name on someone else's version and defeat the point of
-    keeping it.
-
-    The write right is claimed before anything is archived. Archiving first and
-    letting the refusal roll it back does not work: version entries are written in
-    a ``begin_nested()`` savepoint that survives the outer rollback, so a refused
-    overwrite left an orphan version in someone's history. Claiming first means a
-    stale caller is turned away before a single row is written.
+    Nothing is archived as a copy. The replaced graph is the revision just before
+    the overwrite's operations, recoverable from the flow's history while it is
+    retained, and the operations that produced it keep their own authors.
     """
     expected = parse_if_match(if_match)
     if expected is None:
@@ -135,30 +123,6 @@ async def overwrite_flow(
         )
     _validate_catalog_policy_for_write(overwrite.data, snapshot=get_catalog_policy_service().snapshot)
 
-    try:
-        replaced_data = copy.deepcopy(flow.data)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=422,
-            detail="Flow data could not be copied before overwriting. The data may be corrupted.",
-        ) from exc
-
-    claimed = await claim_version_token(session, flow, expected)
-
-    try:
-        await create_flow_version_entry(
-            session,
-            flow_id=flow.id,
-            user_id=flow.last_modified_by or flow.user_id,
-            data=replaced_data,
-            description="Replaced by a newer edit",
-            # The replaced graph is the stored one, so it anchors the history at
-            # the revision it holds and shows on that entry of the timeline.
-            **await checkpoint_fields(session, flow),
-        )
-    except FlowVersionError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
     await persist_and_strip_mcp_secrets(overwrite.data, current_user.id, session)
     return await _patch_flow(
         session=session,
@@ -166,5 +130,5 @@ async def overwrite_flow(
         flow=FlowUpdate(data=overwrite.data),
         user_id=current_user.id,
         storage_service=storage_service,
-        expected_version_token=claimed,
+        expected_version_token=expected,
     )
