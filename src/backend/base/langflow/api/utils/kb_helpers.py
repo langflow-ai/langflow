@@ -103,6 +103,19 @@ def chunk_text_for_ingestion(
     return splitter.split_text(text)
 
 
+def status_before_ingestion(kb_record) -> tuple[KnowledgeBaseStatus, str | None]:
+    """Return the status a cancelled ingestion restores on its KB row.
+
+    Cancelling rolls the run's chunks back, so the KB is again what it was
+    before the run started. Only an earlier failure is worth keeping; ready,
+    the in-flight states, and "empty" (a ready KB with no chunks) all restore
+    to READY.
+    """
+    if kb_record is not None and kb_record.status == KnowledgeBaseStatus.FAILED.value:
+        return KnowledgeBaseStatus.FAILED, kb_record.failure_reason
+    return KnowledgeBaseStatus.READY, None
+
+
 def _coerce_backend_config_value(value: Any) -> dict[str, Any]:
     """Normalize a stored ``backend_config`` into a plain dict."""
     if isinstance(value, dict):
@@ -590,6 +603,7 @@ class KBIngestionHelper:
         # row keeps pointing at ``kb_name`` for N-1 compatibility.
         kb_record = await knowledge_base_service.get_by_user_and_name(owner.id, kb_name)
         kb_record_id = kb_record.id if kb_record is not None else None
+        restored_status, restored_failure_reason = status_before_ingestion(kb_record)
         run_id = await ingestion_run_service.create_run(
             kb_name=kb_name,
             user_metadata=dict(source_metadata or {}),
@@ -826,11 +840,11 @@ class KBIngestionHelper:
                 try:
                     await knowledge_base_service.update_status(
                         kb_record_id,
-                        status=KnowledgeBaseStatus.FAILED,
-                        failure_reason=final_error,
+                        status=restored_status,
+                        failure_reason=restored_failure_reason,
                     )
                 except Exception as status_exc:  # noqa: BLE001
-                    await logger.awarning("KB status update to FAILED (cancel) lagged for %s: %s", kb_name, status_exc)
+                    await logger.awarning("KB status restore after cancel lagged for %s: %s", kb_name, status_exc)
             return {"message": "Job cancelled", "ingestion_run_id": str(run_id)}
         except Exception as exc:
             final_status = IngestionRunStatus.FAILED
