@@ -83,6 +83,7 @@ class ArizePhoenixTracer(BaseTracer):
         self.flow_id = trace_name.rsplit(" - ", maxsplit=1)[-1]
         self.chat_input_value = ""
         self.chat_output_value = ""
+        self.langchain_callback: BaseCallbackHandler | None = None
 
         try:
             self._ready = self.setup_arize_phoenix()
@@ -206,12 +207,10 @@ class ArizePhoenixTracer(BaseTracer):
             return False
 
         try:
-            from openinference.instrumentation.langchain import LangChainInstrumentor
-
-            LangChainInstrumentor().instrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
+            self.langchain_callback = self._create_langchain_callback()
         except ImportError:
             logger.exception(
-                "[Arize/Phoenix] Could not import LangChainInstrumentor."
+                "[Arize/Phoenix] Could not import LangChain instrumentation."
                 "Please install it with `pip install openinference-instrumentation-langchain`."
             )
             return False
@@ -326,15 +325,6 @@ class ArizePhoenixTracer(BaseTracer):
 
             self._set_span_status(self.root_span, error)
             self.root_span.end(end_time=self._get_current_timestamp())
-        try:
-            from openinference.instrumentation.langchain import LangChainInstrumentor
-
-            LangChainInstrumentor().uninstrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
-        except ImportError:
-            logger.exception(
-                "[Arize/Phoenix] Could not import LangChainInstrumentor."
-                "Please install it with `pip install openinference-instrumentation-langchain`."
-            )
 
         from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
 
@@ -420,8 +410,27 @@ class ArizePhoenixTracer(BaseTracer):
 
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
-        """Returns the LangChain callback handler if applicable."""
-        return None
+        """Returns the OpenInference callback handler bound to this tracer's provider."""
+        return self.langchain_callback
+
+    def _create_langchain_callback(self) -> BaseCallbackHandler:
+        """Creates a LangChain callback handler bound to this tracer's span provider.
+
+        ``LangChainInstrumentor`` is a process-wide singleton: instrumenting it once per
+        workflow routes every concurrent workflow's spans to whichever provider registered
+        first, and uninstrumenting tears it down while other workflows are still running
+        (see https://github.com/langflow-ai/langflow/issues/15555). Building a handler bound
+        to this workflow's provider and handing it to the run through
+        ``get_langchain_callback`` keeps each workflow's spans isolated.
+        """
+        from openinference.instrumentation import OITracer, TraceConfig
+        from openinference.instrumentation.langchain._tracer import OpenInferenceTracer
+
+        tracer = OITracer(
+            self.tracer_provider.get_tracer(__name__),
+            config=TraceConfig(),
+        )
+        return OpenInferenceTracer(tracer, separate_trace_from_runtime_context=False)
 
     def close(self):
         """Flush tracer provider spans safely before shutdown."""
