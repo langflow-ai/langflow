@@ -219,6 +219,8 @@ class TestTargetVersion:
 
         assert check.status == "ok"
         assert "newer" in check.summary
+        # This instance has no list of the releases after its own, and the result has to say so.
+        assert "cannot confirm that 99.0.0 was released" in check.summary
 
     async def test_an_older_target_is_refused(self, safe_superuser):  # noqa: ARG002
         check = _check(await run_preflight(target_version="1.12.0"), "version")

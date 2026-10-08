@@ -188,7 +188,8 @@ def check_target_version(target_version: str) -> CheckResult:
     return CheckResult(
         name,
         "ok",
-        f"the target runs Langflow {target}, newer than this instance's {source}; attaching migrates forward",
+        f"the target runs Langflow {target}, newer than this instance's {source}; attaching migrates forward. "
+        f"This instance cannot confirm that {target} was released, so check the number",
     )
 
 
