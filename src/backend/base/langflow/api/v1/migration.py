@@ -240,6 +240,8 @@ def _source_env() -> dict[str, str]:
         "LANGFLOW_CONFIG_DIR": str(settings.config_dir),
         "LANGFLOW_KNOWLEDGE_BASES_DIR": str(settings.knowledge_bases_dir),
         "LANGFLOW_SECRET_KEY": settings_service.auth_settings.SECRET_KEY.get_secret_value(),
+        # The default superuser check reads it, so the run reports on the value this server runs with.
+        "LANGFLOW_AUTO_LOGIN": str(settings_service.auth_settings.AUTO_LOGIN).lower(),
     }
 
 

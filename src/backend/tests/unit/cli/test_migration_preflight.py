@@ -24,10 +24,11 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
-from langflow.services.deps import get_settings_service, get_storage_service, session_scope
+from langflow.services.deps import get_auth_service, get_settings_service, get_storage_service, session_scope
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.utils.version import get_version_info
-from lfx.services.settings.constants import DEFAULT_SUPERUSER
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
+from pydantic import SecretStr
 from sqlmodel import select
 
 if TYPE_CHECKING:
@@ -358,6 +359,8 @@ class TestDefaultSuperuser:
         # AUTO_LOGIN signs everyone in as this account, and its password can be one that Langflow made. The
         # target keeps the account with the password it has.
         monkeypatch.setattr(get_settings_service().auth_settings, "AUTO_LOGIN", True)
+        # No password is given to the command, so none is known.
+        monkeypatch.setattr(get_settings_service().auth_settings, "SUPERUSER_PASSWORD", SecretStr(""))
 
         report = await run_preflight(target_revision=HEAD)
         check = _check(report, "default superuser")
@@ -369,10 +372,48 @@ class TestDefaultSuperuser:
         async with session_scope() as session:
             default = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).one()
         assert f"PATCH /api/v1/users/{default.id} " in check.problems[0]
-        # Nothing it reads changes when the password is set, so it says that it stays.
+        # It says what makes it pass, and that it stays until then.
+        assert "passes once the LANGFLOW_SUPERUSER_PASSWORD it sees signs in" in check.problems[-1]
         assert "stays while AUTO_LOGIN is on" in check.problems[-1]
         # It is advice, so it does not refuse the migration.
         assert report.ok
+
+    @pytest.mark.parametrize(
+        ("stored", "given", "status"),
+        [
+            # The password the command is given signs in, so it is known and the target can be given it.
+            ("a password somebody set", "a password somebody set", "ok"),
+            ("a password somebody set", "another password", "warn"),
+            # The sign-in refuses the old default, so it is not a known password even where the hash matches.
+            (
+                LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value(),
+                LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value(),
+                "warn",
+            ),
+        ],
+    )
+    async def test_a_default_superuser_under_auto_login_passes_when_the_given_password_signs_in(
+        self,
+        safe_superuser,  # noqa: ARG002
+        monkeypatch,
+        stored,
+        given,
+        status,
+    ):
+        auth_settings = get_settings_service().auth_settings
+        monkeypatch.setattr(auth_settings, "AUTO_LOGIN", True)
+        monkeypatch.setattr(auth_settings, "SUPERUSER_PASSWORD", SecretStr(given))
+        async with session_scope() as session:
+            default = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).one()
+            default.password = get_auth_service().get_password_hash(stored)
+            session.add(default)
+            await session.commit()
+
+        check = _check(await run_preflight(target_revision=HEAD), "default superuser")
+
+        assert check.status == status
+        if status == "ok":
+            assert "LANGFLOW_SUPERUSER_PASSWORD this command sees signs in" in check.summary
 
     async def test_a_default_superuser_that_never_signed_in_under_auto_login_keeps_its_own_answer(
         self,

@@ -17,6 +17,7 @@ import langflow.api.router as api_router_module
 import pytest
 from anyio import Path as AsyncPath
 from fastapi import APIRouter
+from langflow.api.v1.migration import _source_env
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
@@ -349,6 +350,15 @@ async def test_the_source_checks_stream_each_check_then_the_report(
     assert (target["version"], target["set_by"]) == (VERSION, "activeuser")
     assert target["set_at"] == step["started_at"]
     assert migration["steps"][0] == {"id": "check_source", "state": "done", "reason": None}
+
+
+async def test_the_source_checks_read_auto_login_as_this_server_runs_with_it(monkeypatch: pytest.MonkeyPatch):
+    # The default superuser check reads AUTO_LOGIN, so the run is given this server's value, whatever the
+    # environment it inherits says.
+    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTO_LOGIN", True)
+
+    assert _source_env()["LANGFLOW_AUTO_LOGIN"] == "true"
 
 
 @pytest.mark.parametrize(

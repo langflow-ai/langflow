@@ -204,8 +204,9 @@ async def check_default_superuser(session: AsyncSession, target_revision: str | 
 
     An account that has signed in is kept, with the password it has unless that
     is the old default. While AUTO_LOGIN is on that password can be one Langflow
-    made, so the check says to set one before the move. It reads AUTO_LOGIN as
-    this command sees it, so the command has to run with the server's environment.
+    made, so the check says to set one before the move, and passes once the
+    LANGFLOW_SUPERUSER_PASSWORD it sees signs in as the account. It reads both as
+    this command sees them, so the command has to run with the server's environment.
     """
     from lfx.services.settings.constants import DEFAULT_SUPERUSER
 
@@ -217,7 +218,7 @@ async def check_default_superuser(session: AsyncSession, target_revision: str | 
         await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER, User.is_superuser == True))  # noqa: E712
     ).first()
     if user is None:
-        return CheckResult(name, "ok", f"no never-signed-in superuser named {DEFAULT_SUPERUSER!r}")
+        return CheckResult(name, "ok", f"no superuser named {DEFAULT_SUPERUSER!r}")
     if user.last_login_at is not None:
         if not get_settings_service().auth_settings.AUTO_LOGIN:
             # What was read is said, because a run by hand without the server's variables can read it wrong.
@@ -226,6 +227,13 @@ async def check_default_superuser(session: AsyncSession, target_revision: str | 
                 "ok",
                 f"{DEFAULT_SUPERUSER!r} has signed in and AUTO_LOGIN is off for this command, so the check takes its "
                 "password as known",
+            )
+        if _configured_password_signs_in(user):
+            return CheckResult(
+                name,
+                "ok",
+                f"{DEFAULT_SUPERUSER!r} has signed in and AUTO_LOGIN is on, and the LANGFLOW_SUPERUSER_PASSWORD this "
+                "command sees signs in as it; give the target that password",
             )
         return CheckResult(
             name,
@@ -240,8 +248,9 @@ async def check_default_superuser(session: AsyncSession, target_revision: str | 
                 "your session's token, and check again",
                 "on the target, set LANGFLOW_SUPERUSER_PASSWORD to that password and sign in as "
                 f"{DEFAULT_SUPERUSER!r} with it",
-                "the check cannot tell a password you set from one Langflow made, so this warning stays while "
-                "AUTO_LOGIN is on; go on once the sign-in works",
+                "the check passes once the LANGFLOW_SUPERUSER_PASSWORD it sees signs in as "
+                f"{DEFAULT_SUPERUSER!r}; until then this warning stays while AUTO_LOGIN is on, so go on once the "
+                "sign-in works",
             ],
         )
 
@@ -377,6 +386,19 @@ def _keeps_default_superuser(target_revision: str | None) -> bool:
         return any(revision.revision == _KEEPS_DEFAULT_SUPERUSER for revision in ancestry)
     except Exception:  # noqa: BLE001 - an unknown revision raises one of several alembic errors
         return False
+
+
+def _configured_password_signs_in(user) -> bool:
+    """Does the LANGFLOW_SUPERUSER_PASSWORD this command sees sign in as this account?"""
+    from lfx.services.settings.constants import LEGACY_DEFAULT_SUPERUSER_PASSWORD
+
+    from langflow.services.deps import get_auth_service, get_settings_service
+
+    configured = get_settings_service().auth_settings.SUPERUSER_PASSWORD.get_secret_value()
+    # The sign-in refuses the old default, whatever the stored hash says.
+    if not configured or configured == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value() or not user.password:
+        return False
+    return get_auth_service().verify_password(configured, user.password)
 
 
 async def _rows_owned_by(session: AsyncSession, user_id) -> dict[str, int]:
