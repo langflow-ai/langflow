@@ -108,6 +108,7 @@ async def relocate_knowledge_bases(
     dry_run: bool = False,
     batch_size: int = 500,
     allow_metric_change: bool = False,
+    verify_skipped: bool = False,
     on_result: Callable[[KBRelocationResult], None] | None = None,
     on_progress: Callable[[KBRelocationResult], None] | None = None,
 ) -> list[KBRelocationResult]:
@@ -118,6 +119,10 @@ async def relocate_knowledge_bases(
 
     ``on_result`` is called with each result as its knowledge base finishes, and
     ``on_progress`` with the result so far after each batch of chunks is copied.
+
+    ``verify_skipped`` counts a knowledge base whose row already names the target
+    before it is skipped, and fails it when the store holds fewer chunks than the
+    row records.
     """
     validate_relocation_target_config(target_backend_type, target_backend_config)
     async with session_scope() as session:
@@ -136,6 +141,7 @@ async def relocate_knowledge_bases(
             dry_run=dry_run,
             batch_size=batch_size,
             allow_metric_change=allow_metric_change,
+            verify_skipped=verify_skipped,
             on_progress=on_progress,
         )
         results.append(result)
@@ -153,6 +159,7 @@ async def _relocate_one(
     dry_run: bool,
     batch_size: int,
     allow_metric_change: bool,
+    verify_skipped: bool,
     on_progress: Callable[[KBRelocationResult], None] | None = None,
 ) -> KBRelocationResult:
     source_config = record.backend_config or {}
@@ -166,6 +173,9 @@ async def _relocate_one(
         source_count=record.chunks,
     )
     if record.backend_type == target_backend_type and source_config == target_backend_config:
+        if verify_skipped and (short := await _short_on_the_target(record, result)):
+            result.reason = short
+            return result
         result.status = "skipped"
         result.reason = "already on the target backend"
         return result
@@ -195,6 +205,9 @@ async def _relocate_one(
             with _failing_as(result, "kb_target_unreachable"):
                 await target.ensure_ready()
             if source.store_location is not None and source.store_location == target.store_location:
+                if verify_skipped and (short := await _short_on_the_target(record, result)):
+                    result.reason = short
+                    return result
                 result.status = "skipped"
                 result.reason = "already on the target backend"
                 return result
@@ -335,6 +348,41 @@ def _storage_not_ready(record: KnowledgeBaseRecord) -> str | None:
     if state != "ready":
         return f"its storage is not ready (storage_state {state}); not relocating"
     return None
+
+
+async def _short_on_the_target(record: KnowledgeBaseRecord, result: KBRelocationResult) -> str | None:
+    """Why a knowledge base whose row already names the target cannot be skipped, or None when it can.
+
+    A row names its store through this process's environment, and pgvector's is one
+    variable for the whole deployment. Run under another value of it, a row names a
+    store its chunks never reached. So the store is counted, and it has to hold what
+    the row records. Each reason sets its own code.
+    """
+    # ponytail: the row's count is all there is to hold the store to. A row that records no chunks passes
+    # unseen, and so does a store that holds as many chunks of something else. A row the app does not
+    # serve (detached, or on its way out) is not counted, as in check-integrity.
+    if not record.chunks or record.storage_state != "ready":
+        return None
+    store: BaseVectorStoreBackend | None = None
+    try:
+        store = unfenced_backend(record)
+        # Read without creating the store or anything in it, so a dry run can ask too.
+        held = await store.read_only_count() or 0
+    except Exception as exc:  # noqa: BLE001 - reported per knowledge base
+        result.code = "kb_target_unreachable"
+        return f"could not count it on the target: {_describe(exc)}"
+    finally:
+        if store is not None:
+            await store.teardown()
+    result.target_count = held
+    if held >= record.chunks:
+        return None
+    # Not kb_short: there the knowledge base's own store lost chunks. Here the store may hold all of them.
+    result.code = "kb_target_short"
+    return (
+        f"its row already names {record.backend_type}, but the store this run reads holds {held} of its "
+        f"{record.chunks} recorded chunks; if they are kept in another store, this run does not copy them from there"
+    )
 
 
 def _build_backend(

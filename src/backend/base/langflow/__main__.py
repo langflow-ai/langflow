@@ -1319,6 +1319,11 @@ def relocate_kb(
         default=False,
         help="Move knowledge bases whose search rankings would change because the target ranks by another metric.",
     ),
+    verify_skipped: bool = typer.Option(  # noqa: FBT001
+        default=False,
+        help="Before skipping a knowledge base whose row already names the target, count its chunks there, and "
+        "fail it when the store cannot be read or holds fewer than the row records.",
+    ),
     as_json: bool = typer.Option(  # noqa: FBT001
         False,  # noqa: FBT003
         "--json",
@@ -1342,6 +1347,12 @@ def relocate_kb(
     Safe to re-run: chunks keep their ids, so a second run upserts, and knowledge
     bases already on the target are skipped. Nothing is deleted from the source.
     Exits non-zero if any knowledge base could not be moved.
+
+    A knowledge base whose row already names the target is skipped without a look
+    at the store. With --verify-skipped its chunks are counted there first, if
+    the row records any, and it fails when the store cannot be read or holds
+    fewer chunks than the row records, as it does when PGVECTOR_CONNECTION_STRING
+    names another database than the one the chunks were written to.
 
     With --json, stdout carries one JSON object per line and logs go to stderr:
     "progress" as a knowledge base's chunks are copied, an "item" as each one
@@ -1375,6 +1386,7 @@ def relocate_kb(
             dry_run=dry_run,
             batch_size=batch_size,
             allow_metric_change=allow_metric_change,
+            verify_skipped=verify_skipped,
             as_json=as_json,
         )
     )
@@ -1520,6 +1532,7 @@ async def _relocate_kb(
     dry_run: bool,
     batch_size: int,
     allow_metric_change: bool = False,
+    verify_skipped: bool = False,
     as_json: bool = False,
 ) -> int:
     from langflow.api.utils.knowledge_base_relocation import relocate_knowledge_bases
@@ -1540,6 +1553,7 @@ async def _relocate_kb(
         dry_run=dry_run,
         batch_size=batch_size,
         allow_metric_change=allow_metric_change,
+        verify_skipped=verify_skipped,
         on_result=events.item if as_json else None,
         on_progress=events.progress if as_json else None,
     )

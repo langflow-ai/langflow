@@ -959,6 +959,8 @@ async def test_on_postgresql_the_knowledge_bases_are_copied_only_when_this_serve
         # The copy writes where this server reads: it is given the server's own store, and the database to work on.
         given = psutil.Process(migration_runs.read_run(started.json()["run_id"])["child"]["pid"]).environ()
         assert (given["LANGFLOW_DATABASE_URL"], given["PGVECTOR_CONNECTION_STRING"]) == (own, store)
+        # It reads that store as the server does, so it is not asked to count what it skips.
+        assert "--verify-skipped" not in _command_line(started.json()["run_id"])
 
     assert (steps["copy_database"], steps["copy_knowledge_bases"]) == (("skipped", "already_postgresql"), step)
     status, refusal = answer
@@ -1061,6 +1063,43 @@ async def test_a_copy_that_dies_without_reporting_blocks_the_step_as_crashed(
         caplog,
         capfd,
     )
+
+
+async def test_a_knowledge_base_kept_in_this_servers_own_pgvector_store_blocks_the_step(
+    client, logged_in_headers_super_user, active_super_user, config_dir, scratch_database, monkeypatch
+):
+    pytest.importorskip("pgvector", reason="needs the pgvector extra")
+    headers, user = logged_in_headers_super_user, active_super_user.id
+    # This server keeps "remote" in a pgvector store of its own, which no copy is given.
+    monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", f"postgresql://{NOWHERE}/vectors")
+    remote = uuid4()
+    await _add(KnowledgeBaseRecord(id=remote, user_id=user, name="remote", backend_type="postgres", chunks=36))
+    await _knowledge_base(user, "local", 5)
+    _sql(scratch_database, "CREATE EXTENSION vector")
+    address = scratch_database.render_as_string(hide_password=False)
+    await _connected(client, headers, config_dir, database_url=address, vectors={"kind": "pgvector"})
+    await _copy(client, headers, "copy_database")
+
+    # A test run says so before anything is copied.
+    *_, tested, _ = await _copy(client, headers, "copy_knowledge_bases", dry_run=True)
+    assert (tested["ok"], tested["counts"]) == (False, {"would_relocate": 1, "failed": 1})
+
+    *_, report, end = await _copy(client, headers, "copy_knowledge_bases")
+
+    assert (report["ok"], report["counts"]) == (False, {"relocated": 1, "failed": 1})
+    # The command ended as it should, with one item failed. The step waits on that item.
+    assert (end["status"], end["exit_code"]) == ("done", 1)
+    migration = await _migration(client, headers)
+    [left] = migration["record"]["steps"]["copy_knowledge_bases"]["report"]["attention"]
+    assert (left["kb_id"], left["kb_name"], left["code"]) == (str(remote), "remote", "kb_target_short")
+    assert "0 of its 36" in left["reason"]
+    steps = {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}
+    assert steps["copy_knowledge_bases"] == ("blocked", "kb_target_short")
+
+    # "local" is in the destination by now, so a second copy skips it. "remote" is still not there.
+    *_, again, _ = await _copy(client, headers, "copy_knowledge_bases")
+    assert (again["ok"], again["counts"]) == (False, {"skipped": 1, "failed": 1})
+    assert (await _steps(client, headers))["copy_knowledge_bases"] == ("blocked", "kb_target_short")
 
 
 async def test_knowledge_bases_are_copied_into_the_destination_and_this_instance_keeps_its_own(
