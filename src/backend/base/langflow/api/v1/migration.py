@@ -261,7 +261,7 @@ async def _state(record: dict[str, Any]) -> dict[str, Any]:
         "record": record,
         "steps": _steps(instance, record, blocking),
         "blocking_findings": blocking,
-        "acceptable_findings": sorted(ACCEPTABLE_FINDINGS),
+        "acceptable_checks": sorted(ACCEPTABLE_FINDINGS),
     }
 
 

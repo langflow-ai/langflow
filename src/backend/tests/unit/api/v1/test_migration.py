@@ -477,7 +477,7 @@ async def test_a_failing_check_that_is_safe_to_move_can_be_accepted(
 
     migration = await _migration(client, headers)
     assert "source: files" in migration["blocking_findings"]
-    assert "source: files" in migration["acceptable_findings"]
+    assert "source: files" in migration["acceptable_checks"]
 
     accepted = await client.post("api/v1/migration/accepted-findings", json={"name": "source: files"}, headers=headers)
     assert accepted.status_code == 200
