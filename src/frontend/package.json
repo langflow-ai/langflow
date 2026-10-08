@@ -57,7 +57,10 @@
     "body-parser": "^2.3.0",
     "file-type": "^21.3.4",
     "path-to-regexp": "^8.4.2",
-    "katex": "0.18.2"
+    "katex": "0.18.2",
+    "@modelcontextprotocol/server-everything": {
+      "@modelcontextprotocol/sdk": "^1.32.1"
+    }
   },
   "dependencies": {
     "@ag-ui/client": "1.0.0",
