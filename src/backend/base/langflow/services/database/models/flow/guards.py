@@ -29,18 +29,33 @@ def ensure_flow_unlocked(flow: Flow) -> None:
         raise LockedFlowError(LOCKED_FLOW_DETAIL)
 
 
-def ensure_flow_update_allowed(flow: Flow, update_data: Mapping[str, Any]) -> None:
+def ensure_flow_update_allowed(
+    flow: Flow,
+    update_data: Mapping[str, Any],
+    *,
+    persisted_values: Mapping[str, Any] | None = None,
+) -> None:
     """Allow updates to unlocked flows and safe updates to locked flows.
 
     API clients commonly send the full current flow when toggling the lock. We
     therefore compare payload values with the persisted row and allow no-op
     requests or requests where ``locked=False`` is the only effective change.
+
+    ``persisted_values`` overrides ``flow``'s in-memory attribute for the
+    fields it names when computing the diff. Atomic project replacement
+    temporarily renames a flow (to free its name/endpoint_name for the
+    requested set) before this guard runs; without the override, that
+    in-memory rename would make ``name``/``endpoint_name`` look changed on
+    every request to a locked flow, even one that changes nothing.
     """
     if getattr(flow, "locked", False) is not True:
         return
 
+    persisted_values = persisted_values or {}
     changed_fields = {
-        field_name for field_name, new_value in update_data.items() if getattr(flow, field_name, None) != new_value
+        field_name
+        for field_name, new_value in update_data.items()
+        if persisted_values.get(field_name, getattr(flow, field_name, None)) != new_value
     }
     if not changed_fields or (changed_fields == {"locked"} and update_data.get("locked") is False):
         return

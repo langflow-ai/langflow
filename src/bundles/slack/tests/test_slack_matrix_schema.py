@@ -53,7 +53,14 @@ def _matrix_rows() -> dict[str, dict]:
 
 
 def _capabilities() -> list[dict]:
-    return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))["capabilities"]
+    """The action capabilities.
+
+    Trigger capabilities (``slack.trigger.*``) are described by the triggers
+    gate's event-transport matrix, not the action matrix, and are checked in
+    ``test_slack_capability_manifest.py``.
+    """
+    capabilities = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))["capabilities"]
+    return [capability for capability in capabilities if not capability["id"].startswith("slack.trigger.")]
 
 
 def test_component_inputs_match_the_frozen_matrix() -> None:

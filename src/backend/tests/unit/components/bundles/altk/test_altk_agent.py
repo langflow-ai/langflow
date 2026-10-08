@@ -1,167 +1,78 @@
-import os
-from uuid import uuid4
+"""Retired ALTK nodes remain inspectable without installing the former SDK."""
+
+import importlib
+import sys
+from importlib.abc import MetaPathFinder
 
 import pytest
-
-try:
-    import altk  # noqa: F401
-except ImportError:
-    # agent-lifecycle-toolkit is an optional extra (langflow-base[altk]); skip if
-    # not installed. (Upstream dropped its <3.14 cap in 0.10.1, now requires >=3.10.)
-    pytest.skip("altk (agent-lifecycle-toolkit) not available", allow_module_level=True)
-
-pytest.importorskip("lfx_bundles")
-
-from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
-from lfx.components.tools.calculator import CalculatorToolComponent
-from lfx_bundles.altk.altk_agent import ALTKAgentComponent
-
-from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
-from tests.unit.mock_language_model import MockLanguageModel
-
-# ALTKAgent supports the following model providers
-MODEL_PROVIDERS = ["Anthropic", "OpenAI"]
+from lfx.components.altk.altk_agent import ALTKAgentComponent
 
 
-class TestAgentComponent(ComponentTestBaseWithoutClient):
-    @pytest.fixture
-    def component_class(self):
-        return ALTKAgentComponent
-
-    @pytest.fixture
-    def file_names_mapping(self):
-        return []
-
-    @pytest.fixture
-    def skipped_outputs(self):
-        return {
-            "response": "runs the agent loop, which needs a chat model that supports tool calling",
-        }
-
-    @pytest.fixture
-    def default_kwargs(self):
-        return {
-            "_type": "Agent",
-            "add_current_date_tool": True,
-            "agent_llm": MockLanguageModel(),
-            "handle_parsing_errors": True,
-            "input_value": "",
-            "max_iterations": 10,
-            "system_prompt": "You are a helpful assistant.",
-            "tools": [],
-            "verbose": True,
-            "n_messages": 100,
-            "format_instructions": "You are an AI that extracts structured JSON objects from unstructured text.",
-            "output_schema": [],
-        }
+class RejectALTKImports(MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):  # noqa: ARG002 - import hook interface
+        if fullname == "altk" or fullname.startswith("altk."):
+            pytest.fail(f"Retired integration attempted to import {fullname}")
 
 
-class TestAgentComponentWithClient(ComponentTestBaseWithClient):
-    @pytest.fixture
-    def component_class(self):
-        return ALTKAgentComponent
+def test_discovery_without_altk_sdk(monkeypatch):
+    for name in list(sys.modules):
+        if name == "altk" or name.startswith("altk."):
+            monkeypatch.delitem(sys.modules, name)
+    monkeypatch.setattr(sys, "meta_path", [RejectALTKImports(), *sys.meta_path])
+    for name in (
+        "lfx.base.agents.altk_base_agent",
+        "lfx.base.agents.altk_tool_wrappers",
+        "lfx.components.altk.altk_agent",
+    ):
+        module = importlib.import_module(name)
+        importlib.reload(module)
+    from lfx.components.altk import ALTKAgentComponent as DiscoveredComponent
 
-    @pytest.fixture
-    def file_names_mapping(self):
-        return []
+    component = DiscoveredComponent()
+    assert component.name == "ALTK Agent"
+    assert type(component).__name__ == "ALTKAgentComponent"
+    assert "retired" in component.description.lower()
+    assert component.legacy is True
+    assert component.replacement == ["models_and_agents.Agent"]
+    assert not any(name == "altk" or name.startswith("altk.") for name in sys.modules)
 
-    @pytest.fixture
-    def skipped_outputs(self):
-        return {
-            "response": "runs the agent loop, which needs a chat model that supports tool calling",
-        }
 
-    @pytest.mark.api_key_required
-    @pytest.mark.no_blockbuster
-    async def test_agent_component_with_calculator(self):
-        # Now you can access the environment variables
-        api_key = os.getenv("OPENAI_API_KEY")
-        tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
-        input_value = "What is 2 + 2?"
+def test_saved_node_preserves_configuration_and_connections():
+    component = ALTKAgentComponent(
+        input_value="Existing input",
+        agent_llm="OpenAI",
+        tools=[],
+        verbose=False,
+        enable_tool_validation=False,
+        enable_post_tool_reflection=True,
+        response_processing_size_threshold=400,
+    )
+    assert component.input_value == "Existing input"
+    assert component.response_processing_size_threshold == 400
+    assert component.enable_tool_validation is False
+    assert component.enable_post_tool_reflection is True
+    input_names = {field.name for field in component.inputs}
+    assert {"agent_llm", "tools", "input_value", "verbose", "enable_tool_validation"} <= input_names
+    assert [(output.name, output.method) for output in component.outputs] == [("response", "message_response")]
 
-        temperature = 0.1
 
-        # Initialize the agent with mocked inputs
-        agent = ALTKAgentComponent(
-            tools=tools,
-            input_value=input_value,
-            api_key=api_key,
-            model_name="gpt-4o",
-            agent_llm="OpenAI",
-            temperature=temperature,
-            _session_id=str(uuid4()),
-            response_processing_size_threshold=1,
-        )
+@pytest.mark.parametrize(("validation", "reflection"), [(True, True), (False, False)])
+async def test_execution_reports_retirement_before_loading_model(validation, reflection):
+    component = ALTKAgentComponent(
+        agent_llm="OpenAI",
+        api_key="",
+        enable_tool_validation=validation,
+        enable_post_tool_reflection=reflection,
+    )
+    with pytest.raises(RuntimeError, match=r"ALTK.*retired.*1\.13\.0.*Agent"):
+        await component.message_response()
 
-        response = await agent.message_response()
-        response_text = str(response.data.get("text", ""))
-        assert "4" in response_text
 
-    @pytest.mark.api_key_required
-    @pytest.mark.no_blockbuster
-    @pytest.mark.slow
-    async def test_agent_component_with_all_openai_models(self):
-        # Mock inputs
-        api_key = os.getenv("OPENAI_API_KEY")
-        input_value = "What is 2 + 2?"
-
-        # Iterate over all OpenAI models
-        failed_models = []
-        openai_chat_model_names = ["gpt-4", "gpt-4o", "gpt-4o-mini"]
-        for model_name in openai_chat_model_names:
-            # Initialize the agent with mocked inputs
-            tools = [CalculatorToolComponent().build_tool()]
-            agent = ALTKAgentComponent(
-                tools=tools,
-                input_value=input_value,
-                api_key=api_key,
-                model_name=model_name,
-                agent_llm="OpenAI",
-                _session_id=str(uuid4()),
-                response_processing_size_threshold=1,
-                verbose=True,
-            )
-
-            response = await agent.message_response()
-            response_text = str(response.data.get("text", ""))
-            if "4" not in response_text:
-                failed_models.append(model_name)
-        assert not failed_models, f"The following models failed the test: {failed_models}"
-
-    @pytest.mark.api_key_required
-    @pytest.mark.no_blockbuster
-    @pytest.mark.slow
-    async def test_agent_component_with_all_anthropic_models(self):
-        # Mock inputs
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        input_value = "What is 2 + 2?"
-
-        # Iterate over all Anthropic models
-        failed_models = {}
-
-        for model_name in ANTHROPIC_MODELS:
-            try:
-                # Initialize the agent with mocked inputs
-                tools = [CalculatorToolComponent().build_tool()]
-                agent = ALTKAgentComponent(
-                    tools=tools,
-                    input_value=input_value,
-                    api_key=api_key,
-                    model_name=model_name,
-                    agent_llm="Anthropic",
-                    _session_id=str(uuid4()),
-                    response_processing_size_threshold=1,
-                )
-
-                response = await agent.message_response()
-                response_text = response.data.get("text", "")
-
-                if "4" not in response_text:
-                    failed_models[model_name] = f"Expected '4' in response but got: {response_text}"
-
-            except Exception as e:
-                failed_models[model_name] = f"Exception occurred: {e!s}"
-
-        assert not failed_models, "The following models failed the test:\n" + "\n".join(
-            f"{model}: {error}" for model, error in failed_models.items()
-        )
+async def test_direct_execution_entrypoints_report_retirement():
+    component = ALTKAgentComponent()
+    with pytest.raises(RuntimeError, match="retired"):
+        component.create_agent_runnable()
+    with pytest.raises(RuntimeError, match="retired"):
+        await component.run_agent(None)
+    with pytest.raises(RuntimeError, match="retired"):
+        await component.json_response()

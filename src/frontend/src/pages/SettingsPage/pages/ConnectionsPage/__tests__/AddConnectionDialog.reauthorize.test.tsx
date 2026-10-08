@@ -42,7 +42,9 @@ jest.mock("@/controllers/API/queries/connections", () => ({
   useDeleteConnectionMutation: () => ({ mutate: mockRemove }),
   useStartOAuthMutation: () => ({ mutateAsync: mockStartOAuth }),
   useOAuthRegistrationsQuery: () => mockRegistrations,
-  usePendingConnectionPoll: () => ({ data: mockPolledConnection }),
+  usePendingConnectionPoll: (baseline: ConnectionPollBaseline | null) => ({
+    data: baseline ? mockPolledConnection : undefined,
+  }),
 }));
 
 jest.mock("@/controllers/API/queries/flows/use-get-types", () => ({
@@ -363,6 +365,36 @@ describe("AddConnectionDialog re-authorize", () => {
       CALENDAR,
       GMAIL_SEND,
     ]);
+  });
+
+  it("waits for a new callback when retrying after a failed consent", async () => {
+    const row = connection();
+    const { rerender } = render(dialog(row));
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+    await waitFor(() => expect(mockStartOAuth).toHaveBeenCalledTimes(1));
+
+    mockPolledConnection = connection({
+      status_reason: "oauth-failed",
+      updated_at: "2026-09-16T10:01:00",
+    });
+    rerender(dialog(row));
+    expect(
+      await screen.findByText("Authorization did not complete."),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId("connection-try-again"));
+    await waitFor(() => expect(mockStartOAuth).toHaveBeenCalledTimes(2));
+    expect(
+      screen.getByText("Waiting for consent in the provider's window…"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Authorization did not complete."),
+    ).not.toBeInTheDocument();
+
+    mockPolledConnection = connection({ updated_at: "2026-09-16T10:02:00" });
+    rerender(dialog(row));
+    expect(await screen.findByText("Connected")).toBeInTheDocument();
+    expect(mockRemove).not.toHaveBeenCalled();
   });
 
   it("checks a requestable Graph scope the connection holds in its short form", async () => {

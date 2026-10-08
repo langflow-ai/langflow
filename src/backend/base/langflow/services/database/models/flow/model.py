@@ -42,6 +42,22 @@ def _validate_endpoint_name_value(v: str | None) -> str | None:
     return v
 
 
+def _serialize_flow_datetime(value):
+    """Serialize a flow timestamp to whole-second ISO-8601 with an explicit offset.
+
+    Shared by ``FlowBase`` (and therefore ``FlowRead``) and ``FlowHeader`` so the
+    two shapes put the same string on the wire for the same instant.
+    """
+    if isinstance(value, datetime):
+        # I'm getting 2024-05-29T17:57:17.631346
+        # and I want 2024-05-29T17:57:17-05:00
+        value = value.replace(microsecond=0)
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.isoformat()
+    return value
+
+
 class AccessTypeEnum(str, Enum):
     PRIVATE = "PRIVATE"
     PUBLIC = "PUBLIC"
@@ -140,9 +156,6 @@ class FlowBase(SQLModel):
     @field_validator("icon")
     @classmethod
     def validate_icon_atr(cls, v):
-        #   const emojiRegex = /\p{Emoji}/u;
-        # const isEmoji = emojiRegex.test(data?.node?.icon!);
-        # emoji pattern in Python
         if v is None:
             return v
         # we are going to use the emoji library to validate the emoji
@@ -199,14 +212,7 @@ class FlowBase(SQLModel):
     # updated_at can be serialized to JSON
     @field_serializer("updated_at")
     def serialize_datetime(self, value):
-        if isinstance(value, datetime):
-            # I'm getting 2024-05-29T17:57:17.631346
-            # and I want 2024-05-29T17:57:17-05:00
-            value = value.replace(microsecond=0)
-            if value.tzinfo is None:
-                value = value.replace(tzinfo=timezone.utc)
-            return value.isoformat()
-        return value
+        return _serialize_flow_datetime(value)
 
     @field_validator("updated_at", mode="before")
     @classmethod
@@ -228,6 +234,20 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     workspace_id: UUID | None = Field(default=None, nullable=True, index=True)
     fs_path: str | None = Field(default=None, nullable=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
+    version_token: UUID | None = Field(
+        default=None,
+        nullable=True,
+        description="Rotated whenever data changes. NULL means the row predates preconditions.",
+    )
+    last_modified_by: UUID | None = Field(
+        default=None,
+        nullable=True,
+        index=True,
+        description=(
+            "Author of the last data change. Not a foreign key: a second path to user.id would "
+            "make the Flow.user relationship ambiguous to SQLAlchemy."
+        ),
+    )
 
     def to_data(self):
         serialized = self.model_dump()
@@ -248,10 +268,8 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
 
 
 class FlowCreate(FlowBase):
-    # Optional stable ID.  When present on upload, the flow is upserted
-    # (created with that ID, or updated if the ID already belongs to the
-    # current user).  Flows without an id get a generated UUID — backward
-    # compatible with all existing import paths.
+    # Present on upload means upsert (that ID, if it already belongs to the caller); absent
+    # means a generated UUID, so every existing import path keeps working unchanged.
     id: UUID | None = None
     user_id: UUID | None = None
     folder_id: UUID | None = None
@@ -266,6 +284,7 @@ class FlowRead(FlowBase):
     workspace_id: UUID | None = Field(default=None)
     tags: list[str] | None = Field(None, description="The tags of the flow")
     name_key: str | None = Field(None, description="Stable i18n key derived from the original English name")
+    version_token: UUID | None = Field(None, description="Token identifying the version this response carries")
 
 
 class FlowHeader(BaseModel):
@@ -289,6 +308,13 @@ class FlowHeader(BaseModel):
     a2a_card_overrides: dict | None = Field(None, description="User overrides for the served A2A agent card")
     action_name: str | None = Field(None, description="The name of the action associated with the flow")
     action_description: str | None = Field(None, description="The description of the action associated with the flow")
+    updated_at: datetime | None = Field(None, description="The timestamp of the last update to the flow")
+
+    # Serialized exactly like ``FlowBase.updated_at`` so a header and a full read
+    # of the same flow carry an identical timestamp string.
+    @field_serializer("updated_at")
+    def serialize_datetime(self, value):
+        return _serialize_flow_datetime(value)
 
     @field_validator("data", mode="before")
     @classmethod

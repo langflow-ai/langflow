@@ -77,7 +77,11 @@ class OAuthRegistration(BaseModel):
         if self.context == "self_managed" and self.owner != "customer":
             msg = "Self-managed OAuth uses customer-owned registrations"
             raise OAuthError(msg)
-        if self.client_type == "public" and (self.client_secret or self.private_key):
+        # Google Desktop credentials can require client_secret at the token
+        # endpoint even though installed apps cannot keep it confidential.
+        # This provider parameter does not replace public-client PKCE.
+        google_desktop = self.provider == "google" and self.context == "desktop"
+        if self.client_type == "public" and (self.private_key or (self.client_secret and not google_desktop)):
             msg = "Public clients cannot contain registration secrets"
             raise OAuthError(msg)
         if self.client_type == "confidential" and bool(self.client_secret) == bool(self.private_key):
@@ -200,3 +204,17 @@ def get_oauth_settings() -> OAuthSettings:
     except ValueError:
         msg = "OAuth instance configuration is invalid."
         raise OAuthError(msg, reason="registration-unavailable") from None
+
+
+def deployment_context() -> Literal["self_managed", "hosted", "desktop"]:
+    """Which deployment this process is, as ``LANGFLOW_CONNECTION_OAUTH_CONTEXT`` says.
+
+    Hosted must set it: Langflow-owned registrations are only valid in the
+    ``hosted`` context, so a hosted deployment that left it unset could not
+    connect anything. An unreadable configuration answers ``self_managed``,
+    the context with no hosted-only restriction to wrongly apply.
+    """
+    try:
+        return get_oauth_settings().context
+    except OAuthError:
+        return "self_managed"

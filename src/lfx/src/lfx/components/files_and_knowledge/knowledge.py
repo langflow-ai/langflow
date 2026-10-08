@@ -20,14 +20,16 @@ import hashlib
 import json
 import uuid
 from collections.abc import Mapping
+from contextlib import aclosing
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
+import anyio
 import pandas as pd
-from langchain_chroma import Chroma
 
-from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend, create_backend, is_local_chroma
+from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend
+from lfx.base.knowledge_bases.backends.base import BackendConfigurationError, IngestedDocument
 from lfx.base.knowledge_bases.backends.naming import ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.ingestion_sources.base import (
     IngestionItemResult,
@@ -40,11 +42,7 @@ from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.knowledge_bases.validation import (
     is_valid_collection_name as is_valid_kb_collection_name,
 )
-from lfx.base.knowledge_bases.validation import (
-    validate_collection_name,
-)
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
-from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
 from lfx.helpers.base_model import coalesce_bool
@@ -137,13 +135,6 @@ _DEFAULT_OPENSEARCH_CONFIG = {
     "text_field": "text",
 }
 
-_DEFAULT_CHROMA_CLOUD_CONFIG = {
-    "mode": "cloud",
-    "tenant_variable": "CHROMA_TENANT",
-    "database_variable": "CHROMA_DATABASE",
-    "api_key_variable": "CHROMA_API_KEY",  # pragma: allowlist secret
-}
-
 
 class KnowledgeComponent(Component):
     """One component for both writing into and reading from a Langflow knowledge base.
@@ -185,6 +176,21 @@ class KnowledgeComponent(Component):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._cached_kb_path: Path | None = None
+        self._knowledge_output_result: Data | DataFrame | None = None
+
+    def _pre_run_setup(self) -> None:
+        self._knowledge_output_result = None
+
+    async def _get_output_result(self, output: Output):
+        # Both legacy handles dispatch to the selected mode. Terminal nodes
+        # evaluate both handles, but must execute the storage operation once.
+        if output.method not in {"build_kb_info", "retrieve_data"}:
+            return await super()._get_output_result(output)
+        if self._knowledge_output_result is None:
+            raw_output = output.model_copy(update={"options": None})
+            self._knowledge_output_result = await super()._get_output_result(raw_output)
+        output.value = output.apply_options(self._knowledge_output_result)
+        return output.value
 
     @staticmethod
     def _embedding_provider_from_selection(selection: Any) -> str | None:
@@ -594,7 +600,6 @@ class KnowledgeComponent(Component):
                 if not current_user:
                     msg = f"User with ID {self.user_id} not found."
                     raise ValueError(msg)
-                kb_user = current_user.username
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
                 model_selection = field_value["02_embedding_model"]
                 if isinstance(model_selection, dict):
@@ -605,12 +610,12 @@ class KnowledgeComponent(Component):
                 )
                 ensure_storage_routing_allowed(backend_config, is_superuser=bool(current_user.is_superuser))
                 new_kb_name = field_value["01_new_kb_name"]
-                if backend_type == BackendType.CHROMA.value:
-                    validate_collection_name(
-                        new_kb_name,
-                        resource="Knowledge base",
-                        local=is_local_chroma(backend_type, backend_config),
-                    )
+                from langflow.api.utils.kb_helpers import local_chroma_rejection_reason, validate_kb_name
+
+                validate_kb_name(new_kb_name)
+                rejection = local_chroma_rejection_reason(backend_type, backend_config)
+                if rejection:
+                    raise ValueError(rejection)
 
                 embed_model = get_embeddings(
                     model=model_selection,
@@ -628,18 +633,6 @@ class KnowledgeComponent(Component):
                 except Exception as e:
                     msg = f"Embedding validation failed: {e!s}"
                     raise ValueError(msg) from e
-
-                # Only local Chroma gets a directory; every remote backend
-                # returns None here and creates its collection on first write.
-                from langflow.api.utils.kb_helpers import resolve_local_store_path
-
-                resolve_local_store_path(
-                    new_kb_name,
-                    kb_user,
-                    backend_type=backend_type,
-                    backend_config=backend_config,
-                    create=True,
-                )
 
                 build_config["knowledge_base"]["value"] = new_kb_name
                 await self._create_knowledge_base_record(
@@ -813,10 +806,11 @@ class KnowledgeComponent(Component):
             chunks = await backend.count()
             characters = 0
             words = 0
-            async for batch in backend.iter_documents():
-                for document in batch:
-                    characters += len(document.content)
-                    words += len(document.content.split())
+            async with aclosing(backend.iter_documents()) as batches:
+                async for batch in batches:
+                    for document in batch:
+                        characters += len(document.content)
+                        words += len(document.content.split())
 
             record = await knowledge_base_service.get_by_id(kb_record_id)
             existing = set(record.source_types or []) if record is not None else set()
@@ -836,15 +830,17 @@ class KnowledgeComponent(Component):
     def _default_backend_selection() -> tuple[str, dict[str, Any]]:
         """Deployment default for a new KB with no explicit backend chosen.
 
-        pgVector is environment-driven: when ``PGVECTOR_CONNECTION_STRING`` is set
-        the deployment snap-configures to Postgres, so an unspecified selection
-        (headless flows, multi-replica) becomes ``postgres``. Otherwise Chroma.
+        Environment-driven: pgVector when ``PGVECTOR_CONNECTION_STRING`` is set,
+        else OpenSearch when ``OPENSEARCH_URL`` is set, else SQLite. An
+        unspecified selection (headless flows, multi-replica) therefore lands on
+        the deployment's shared store.
         """
-        from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
+        from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 
-        if postgres_env_configured():
-            return BackendType.POSTGRES.value, {}
-        return BackendType.CHROMA.value, {}
+        backend_type = resolve_default_kb_backend()
+        if backend_type == BackendType.OPENSEARCH.value:
+            return backend_type, dict(_DEFAULT_OPENSEARCH_CONFIG)
+        return backend_type, {}
 
     @classmethod
     def _normalize_backend_selection(cls, value: Any) -> tuple[str, dict[str, Any]]:
@@ -852,34 +848,24 @@ class KnowledgeComponent(Component):
         if not value:
             return cls._default_backend_selection()
 
+        backend_config: dict[str, Any]
         if isinstance(value, str):
-            if value == BackendType.OPENSEARCH.value:
-                return BackendType.OPENSEARCH.value, _DEFAULT_OPENSEARCH_CONFIG.copy()
-            if value == BackendType.POSTGRES.value:
-                return BackendType.POSTGRES.value, {}
-            return BackendType.CHROMA.value, {}
-
-        if not isinstance(value, dict):
-            return BackendType.CHROMA.value, {}
-
-        backend_type = str(value.get("backend_type") or value.get("id") or BackendType.CHROMA.value)
-
+            backend_type, backend_config = value, {}
+        elif isinstance(value, dict):
+            backend_type = str(value.get("backend_type") or value.get("id") or BackendType.SQLITE.value)
+            backend_config = value.get("backend_config") or value.get("config") or {}
+        else:
+            msg = "Invalid vector-store backend selection."
+            raise TypeError(msg)
+        if not isinstance(backend_config, dict):
+            msg = "Vector-store backend configuration must be an object."
+            raise TypeError(msg)
         if backend_type == BackendType.OPENSEARCH.value:
-            backend_config = value.get("backend_config") or value.get("config") or {}
-            if not isinstance(backend_config, dict):
-                backend_config = {}
-            return BackendType.OPENSEARCH.value, {**_DEFAULT_OPENSEARCH_CONFIG, **backend_config}
-
-        if backend_type == BackendType.POSTGRES.value:
-            return BackendType.POSTGRES.value, {}
-
-        if backend_type == "chroma_cloud":
-            backend_config = value.get("backend_config") or value.get("config") or {}
-            if not isinstance(backend_config, dict):
-                backend_config = {}
-            return BackendType.CHROMA.value, {**_DEFAULT_CHROMA_CLOUD_CONFIG, **backend_config}
-
-        return BackendType.CHROMA.value, {}
+            return backend_type, {**_DEFAULT_OPENSEARCH_CONFIG, **backend_config}
+        if backend_type in {BackendType.SQLITE.value, BackendType.POSTGRES.value}:
+            return backend_type, backend_config
+        msg = "Chroma is retired. Choose SQLite, pgVector, or OpenSearch for a new knowledge base."
+        raise ValueError(msg)
 
     async def _create_knowledge_base_record(
         self,
@@ -891,24 +877,16 @@ class KnowledgeComponent(Component):
         backend_config: dict[str, Any],
     ) -> None:
         """Persist the component-created KB in the DB when Langflow is available."""
-        try:
-            from langflow.api.utils import knowledge_base_service
-        except ImportError:
-            return
+        from langflow.api.utils import knowledge_base_service
 
-        try:
-            await knowledge_base_service.create_record(
-                user_id=user_id,
-                name=name,
-                model_selection=model_selection,
-                column_config=_normalize_column_config(self.column_config)
-                if isinstance(self.column_config, list)
-                else [],
-                backend_type=backend_type,
-                backend_config=backend_config,
-            )
-        except Exception as exc:  # noqa: BLE001
-            self.log(f"Warning: could not persist knowledge base record: {exc}")
+        await knowledge_base_service.create_record(
+            user_id=user_id,
+            name=name,
+            model_selection=model_selection,
+            column_config=_normalize_column_config(self.column_config) if isinstance(self.column_config, list) else [],
+            backend_type=backend_type,
+            backend_config=backend_config,
+        )
 
     def _build_column_metadata(self, config_list: list[dict[str, Any]], df_source: pd.DataFrame) -> dict[str, Any]:
         """Build detailed column metadata."""
@@ -947,30 +925,41 @@ class KnowledgeComponent(Component):
         embedding_function,
     ) -> BaseVectorStoreBackend:
         """Create vector store using the configured DB provider."""
-        backend_type, backend_config = await self._resolve_backend_config()
-        # ``None`` for every remote backend — nothing to create on this box.
-        vector_store_dir = self._resolve_store_path(await self._kb_username(), backend_type, backend_config)
-        if vector_store_dir is not None:
-            vector_store_dir.mkdir(parents=True, exist_ok=True)
+        from langflow.api.utils.kb_helpers import backend_for_name
 
-        backend = create_backend(
-            backend_type,
-            kb_name=self.knowledge_base,
-            kb_path=vector_store_dir,
-            backend_config=backend_config,
-            embedding_function=embedding_function,
-            user_id=self.user_id,
-        )
+        owner_id = self._user_uuid
+        if owner_id is None:
+            msg = "User ID is required for knowledge base storage."
+            raise ValueError(msg)
+        backend = await backend_for_name(owner_id, self.knowledge_base, embedding_function=embedding_function)
+        try:
+            return await self._ingest_into_backend(backend, df_source, config_list, embedding_function)
+        except BaseException:
+            with anyio.CancelScope(shield=True):
+                await backend.teardown()
+            raise
+
+    async def _ingest_into_backend(
+        self,
+        backend: BaseVectorStoreBackend,
+        df_source: pd.DataFrame,
+        config_list: list[dict[str, Any]],
+        embedding_function,
+    ) -> BaseVectorStoreBackend:
         await backend.ensure_ready()
 
-        existing_ids = None
-        if backend_type != BackendType.CHROMA.value and not self.allow_duplicates:
+        from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
+
+        record = await resolve_record(self._user_uuid, self.knowledge_base)
+        async with operation(record, shared=True):
             existing_ids = set()
-            async for batch in backend.iter_documents():
-                for document in batch:
-                    doc_id = document.metadata.get("_id")
-                    if doc_id:
-                        existing_ids.add(doc_id)
+            if not self.allow_duplicates:
+                async with aclosing(backend.iter_documents()) as batches:
+                    async for batch in batches:
+                        for document in batch:
+                            doc_id = document.metadata.get("_id")
+                            if doc_id:
+                                existing_ids.add(doc_id)
 
         data_objects = await self._convert_df_to_data_objects(df_source, config_list, existing_ids=existing_ids)
 
@@ -982,10 +971,38 @@ class KnowledgeComponent(Component):
             if user_metadata_tag:
                 doc.metadata["source_metadata"] = user_metadata_tag
             documents.append(doc)
+        if not documents:
+            return backend
 
-        if documents:
-            await backend.add_documents(documents)
-            self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
+        # No storage lease may surround the provider call. The write lease
+        # below rechecks routing and IDs after concurrent operations finish.
+        vectors = await embedding_function.aembed_documents([doc.page_content for doc in documents])
+        if len(vectors) != len(documents):
+            msg = "Embedding provider returned an incorrect number of vectors"
+            raise BackendConfigurationError(msg)
+        embedded = [
+            IngestedDocument(doc.page_content, doc.metadata, vector, id=doc.id)
+            for doc, vector in zip(documents, vectors, strict=True)
+        ]
+        async with operation(record):
+            if not self.allow_duplicates:
+                current_ids = set()
+                async with aclosing(backend.iter_documents()) as batches:
+                    async for batch in batches:
+                        current_ids.update(doc.metadata["_id"] for doc in batch if doc.metadata.get("_id"))
+                unique = []
+                for doc in embedded:
+                    doc_id = doc.metadata.get("_id")
+                    if doc_id and doc_id in current_ids:
+                        continue
+                    if doc_id:
+                        current_ids.add(doc_id)
+                    unique.append(doc)
+                embedded = unique
+
+            if embedded:
+                await backend.add_embedded_documents(embedded)
+                self.log(f"Added {len(embedded)} documents to vector store '{self.knowledge_base}'")
 
         return backend
 
@@ -999,22 +1016,7 @@ class KnowledgeComponent(Component):
         data_objects: list[Data] = []
 
         if existing_ids is None:
-            # Local-Chroma-only branch: every other backend collects its existing
-            # ids through ``iter_documents`` in ``_create_vector_store`` and
-            # passes them in, so ``kb_path`` is guaranteed non-None here.
-            kb_path = await self._kb_path()
-            if kb_path is None:
-                existing_ids = set()
-            else:
-                chroma = Chroma(
-                    persist_directory=str(kb_path),
-                    collection_name=self.knowledge_base,
-                    **chroma_langchain_collection_kwargs(),
-                )
-
-                all_docs = chroma.get()
-
-                existing_ids = {metadata.get("_id") for metadata in all_docs["metadatas"] if metadata.get("_id")}
+            existing_ids = set()
 
         content_cols = []
         identifier_cols = []
@@ -1157,6 +1159,8 @@ class KnowledgeComponent(Component):
         run_status: IngestionRunStatus = IngestionRunStatus.SUCCEEDED
         run_error: str | None = None
         kb_record_id: uuid.UUID | None = None
+        previous_kb_status = "ready"
+        previous_failure_reason: str | None = None
         try:
             input_value = self.input_df[0] if isinstance(self.input_df, list) else self.input_df
             df_source: DataFrame = convert_to_dataframe(input_value, auto_parse=False)
@@ -1168,6 +1172,11 @@ class KnowledgeComponent(Component):
             # authority. No sidecar is read, so ingestion resolves the same model
             # on any replica.
             stored_metadata = await self._get_kb_metadata()
+            previous_kb_status = stored_metadata.get("status", "ready")
+            # Empty is an API projection of a ready KB with no chunks.
+            if previous_kb_status in {"empty", "ingesting"}:
+                previous_kb_status = "ready"
+            previous_failure_reason = stored_metadata.get("failure_reason")
             model_selection = stored_metadata.get("model_selection")
             if model_selection:
                 model_selection = [model_selection] if isinstance(model_selection, dict) else list(model_selection)
@@ -1242,14 +1251,15 @@ class KnowledgeComponent(Component):
                 # when projecting onto the DataFrame.
                 source_types = self._extract_source_types_from_input(input_value)
                 source_types |= self._extract_source_types_from_df(df_source)
-                if isinstance(backend, BaseVectorStoreBackend):
-                    await self._refresh_kb_stats(
-                        kb_record_id=kb_record_id,
-                        backend=backend,
-                        extensions=source_types,
-                    )
+                # Storage routing returns a guarded proxy with the backend's
+                # methods, so a concrete-class check would skip the refresh.
+                await self._refresh_kb_stats(
+                    kb_record_id=kb_record_id,
+                    backend=backend,
+                    extensions=source_types,
+                )
             finally:
-                if isinstance(backend, BaseVectorStoreBackend):
+                with anyio.CancelScope(shield=True):
                     await backend.teardown()
 
             meta: dict[str, Any] = {
@@ -1280,6 +1290,10 @@ class KnowledgeComponent(Component):
 
             return Data(data=meta)
 
+        except asyncio.CancelledError:
+            run_status = IngestionRunStatus.CANCELLED
+            run_error = "Flow ingestion was cancelled."
+            raise
         except (OSError, ValueError, RuntimeError, KeyError) as e:
             run_status = IngestionRunStatus.FAILED
             run_error = str(e) or e.__class__.__name__
@@ -1290,16 +1304,24 @@ class KnowledgeComponent(Component):
             run_error = str(e) or e.__class__.__name__
             raise
         finally:
-            if run_id is not None and run_summary is not None:
-                await self._finalize_ingestion_run(
-                    run_id=run_id,
-                    job_id=run_job_id,
-                    summary=run_summary,
-                    status=run_status,
-                    error_message=run_error,
-                )
-            if kb_record_id is not None and run_status is IngestionRunStatus.FAILED:
-                await self._record_kb_status(kb_record_id, "failed", failure_reason=run_error)
+            # A disconnected canvas can cancel every await in its AnyIO scope,
+            # including the DB writes that make the run terminal.
+            with anyio.CancelScope(shield=True):
+                if run_id is not None and run_summary is not None:
+                    await self._finalize_ingestion_run(
+                        run_id=run_id,
+                        job_id=run_job_id,
+                        summary=run_summary,
+                        status=run_status,
+                        error_message=run_error,
+                    )
+                if kb_record_id is not None:
+                    if run_status is IngestionRunStatus.FAILED:
+                        await self._record_kb_status(kb_record_id, "failed", failure_reason=run_error)
+                    elif run_status is IngestionRunStatus.CANCELLED:
+                        await self._record_kb_status(
+                            kb_record_id, previous_kb_status, failure_reason=previous_failure_reason
+                        )
 
     async def _begin_ingestion_run(
         self,
@@ -1324,6 +1346,9 @@ class KnowledgeComponent(Component):
             self.log(f"Run-history wiring unavailable; ingestion will not be recorded ({exc}).")
             return None, None, None, None
 
+        job_id: uuid.UUID | None = None
+        run_id: uuid.UUID | None = None
+        summary: IngestionSummary | None = None
         try:
             kb_record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
             kb_record_id = kb_record.id if kb_record is not None else None
@@ -1334,6 +1359,22 @@ class KnowledgeComponent(Component):
             job_service = get_job_service()
             raw_flow_id = getattr(self, "flow_id", None)
             flow_id_uuid = uuid.UUID(str(raw_flow_id)) if raw_flow_id else job_id
+            source = FlowComponentSource(
+                user_id=user_uuid,
+                source_config={
+                    "knowledge_base": self.knowledge_base,
+                    "kb_path": str(kb_path),
+                    "flow_id": str(flow_id_uuid),
+                },
+            )
+            summary = IngestionSummary(
+                kb_name=self.knowledge_base,
+                source_type=source.source_type.value,
+                user_id=user_uuid,
+                job_id=job_id,
+                source_config=source.describe().get("config") or {},
+                user_metadata=user_metadata,
+            )
             await job_service.create_job(
                 job_id=job_id,
                 flow_id=flow_id_uuid,
@@ -1343,15 +1384,6 @@ class KnowledgeComponent(Component):
                 user_id=user_uuid,
             )
             await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
-
-            source = FlowComponentSource(
-                user_id=user_uuid,
-                source_config={
-                    "knowledge_base": self.knowledge_base,
-                    "kb_path": str(kb_path),
-                    "flow_id": str(flow_id_uuid),
-                },
-            )
 
             run_id = await ingestion_run_service.create_run(
                 kb_name=self.knowledge_base,
@@ -1365,15 +1397,20 @@ class KnowledgeComponent(Component):
                 return None, job_id, None, kb_record_id
             await ingestion_run_service.mark_running(run_id)
 
-            summary = IngestionSummary(
-                kb_name=self.knowledge_base,
-                source_type=source.source_type.value,
-                user_id=user_uuid,
-                job_id=job_id,
-                source_config=source.describe().get("config") or {},
-                user_metadata=user_metadata,
-            )
             self.log(f"Started ingestion run job_id={job_id} kb_name={self.knowledge_base} kb_id={kb_record_id}")
+        except asyncio.CancelledError:
+            # The caller has not received the run ID yet, so it cannot finalize
+            # a cancellation that arrives while tracking is being initialized.
+            with anyio.CancelScope(shield=True):
+                if job_id is not None and summary is not None:
+                    await self._finalize_ingestion_run(
+                        run_id=run_id or job_id,
+                        job_id=job_id,
+                        summary=summary,
+                        status=IngestionRunStatus.CANCELLED,
+                        error_message="Flow ingestion was cancelled.",
+                    )
+            raise
         except Exception as exc:  # noqa: BLE001 — telemetry must never abort ingestion
             self.log(f"Could not begin ingestion-run tracking: {exc}")
             return None, None, None, None
@@ -1406,7 +1443,10 @@ class KnowledgeComponent(Component):
                 error_message=error_message,
             )
             if job_id is not None:
-                terminal_status = JobStatus.COMPLETED if status is not IngestionRunStatus.FAILED else JobStatus.FAILED
+                terminal_status = {
+                    IngestionRunStatus.FAILED: JobStatus.FAILED,
+                    IngestionRunStatus.CANCELLED: JobStatus.CANCELLED,
+                }.get(status, JobStatus.COMPLETED)
                 await get_job_service().update_job_status(job_id, terminal_status, finished_timestamp=True)
         except Exception as exc:  # noqa: BLE001 — telemetry must never re-raise
             self.log(f"Could not finalize ingestion-run tracking: {exc}")
@@ -1589,21 +1629,25 @@ class KnowledgeComponent(Component):
             return await self.build_kb_info()
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
 
-        # Lazy import: langflow's user/DB models aren't part of lfx's
-        # standalone install, so ``lfx run <starter>.json`` can't resolve
-        # this symbol at module import time. Deferring to use keeps the
-        # component importable in both environments.
-        from langflow.services.database.models.user.crud import get_user_by_id
+        if not self.user_id:
+            msg = "User ID is required for fetching Knowledge Base data."
+            raise ValueError(msg)
+
+        # Saved flows can load in standalone lfx, but knowledge retrieval
+        # requires the application's user database and storage services.
+        try:
+            from langflow.services.database.models.user.crud import get_user_by_id
+        except ModuleNotFoundError as exc:
+            if exc.name != "langflow":
+                raise
+            msg = "Knowledge Base retrieval requires Langflow's application services. Run this flow in Langflow."
+            raise RuntimeError(msg) from None
 
         async with session_scope() as db:
-            if not self.user_id:
-                msg = "User ID is required for fetching Knowledge Base data."
-                raise ValueError(msg)
             current_user = await get_user_by_id(db, self.user_id)
             if not current_user:
                 msg = f"User with ID {self.user_id} not found."
                 raise ValueError(msg)
-            kb_user = current_user.username
 
         metadata = await self._get_kb_metadata()
         if not metadata:
@@ -1616,8 +1660,7 @@ class KnowledgeComponent(Component):
         # Resolve where this KB lives before instantiating embeddings: path
         # containment is a cheap local check, and a request that will be refused
         # shouldn't first pay for a credential lookup and a provider client.
-        backend_type, backend_config = await self._resolve_backend_config()
-        kb_path = self._resolve_store_path(kb_user, backend_type, backend_config)
+        backend_type, _backend_config = await self._resolve_backend_config()
 
         # ``api_key=None`` is not "no credential": ``get_embeddings`` resolves the
         # provider's key from the user's variables table and then the environment,
@@ -1630,28 +1673,29 @@ class KnowledgeComponent(Component):
             chunk_size=chunk_size,
         )
 
-        backend = create_backend(
-            backend_type,
-            kb_name=self.knowledge_base,
-            kb_path=kb_path,
-            backend_config=backend_config,
-            embedding_function=embedding_function,
-            user_id=self.user_id,
-        )
+        from langflow.api.utils.kb_helpers import backend_for_name
+
+        owner_id = self._user_uuid
+        if owner_id is None:
+            msg = "User ID is required for knowledge base storage."
+            raise ValueError(msg)
+        backend = await backend_for_name(owner_id, self.knowledge_base, embedding_function=embedding_function)
         try:
             user_metadata_filter = _parse_metadata_filter(getattr(self, "metadata_filter", None))
             use_scores = bool(self.search_query)
-            search_k = self.top_k * 4 if user_metadata_filter else self.top_k
+            exact_filter = backend_type == BackendType.SQLITE.value
+            search_k = self.top_k if exact_filter or not user_metadata_filter else self.top_k * 4
+            search_options = {"source_filter": user_metadata_filter} if exact_filter else {}
             results = await backend.similarity_search(
                 query=self.search_query or "",
                 k=search_k,
                 with_scores=use_scores,
+                **search_options,
             )
-            if user_metadata_filter:
+            if user_metadata_filter and not exact_filter:
                 results = [
                     (doc, score) for doc, score in results if _chunk_matches_filter(doc.metadata, user_metadata_filter)
-                ]
-                results = results[: self.top_k]
+                ][: self.top_k]
 
             embeddings_by_key: dict[tuple[str, str], list[float]] = {}
             if self.include_embeddings and results:
@@ -1660,21 +1704,22 @@ class KnowledgeComponent(Component):
                 # so KBs populated by direct file upload — whose chunks carry no
                 # ``_id`` — still resolve. See ``_embedding_match_key``.
                 wanted_keys = {_embedding_match_key(doc.page_content, doc.metadata) for doc, _score in results}
-                async for batch in backend.iter_documents(include_embeddings=True):
-                    for entry in batch:
-                        if entry.embedding is None:
-                            continue
-                        key = _embedding_match_key(entry.content, entry.metadata)
-                        if key in wanted_keys:
-                            embeddings_by_key[key] = entry.embedding
-                    if len(embeddings_by_key) == len(wanted_keys):
-                        break
+                async with aclosing(backend.iter_documents(include_embeddings=True)) as batches:
+                    async for batch in batches:
+                        for entry in batch:
+                            if entry.embedding is None:
+                                continue
+                            key = _embedding_match_key(entry.content, entry.metadata)
+                            if key in wanted_keys:
+                                embeddings_by_key[key] = entry.embedding
+                        if wanted_keys <= embeddings_by_key.keys():
+                            break
 
             data_list: list[Data] = []
             for doc, score in results:
                 kwargs: dict[str, Any] = {"content": doc.page_content}
                 if use_scores:
-                    kwargs["_score"] = -1 * score
+                    kwargs["_score"] = backend.normalize_score(score)
                 if self.include_metadata:
                     kwargs.update(doc.metadata)
                 if self.include_embeddings:

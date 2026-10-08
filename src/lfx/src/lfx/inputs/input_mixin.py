@@ -371,6 +371,7 @@ class ConnectionRefMixin(BaseModel):
     required_scopes: list[str] = Field(default_factory=list)
     conditional_scopes: list[ConditionalScopeRequirement] = Field(default_factory=list)
     identity_kind: Literal["user", "instance", "any"] = "any"
+    ownership_mode: Literal["user", "instance", "any"] = "any"
     capabilities: list[str] = Field(default_factory=list)
 
 

@@ -193,48 +193,11 @@ All other vector store components can be found within their respective provider-
 <details>
 <summary>Local DB</summary>
 
-Replace the **Local DB** component with the **Chroma DB** vector store component (in the **Chroma** bundle) or another vector store component.
-
-The **Local DB** component reads and writes to a persistent, in-memory Chroma DB instance intended for use with Langflow.
-It has separate modes for reads and writes, automatic collection management, and default persistence in your Langflow cache directory.
-
-Set the **Mode** parameter to reflect the operation you want the component to perform, and then configure the other parameters accordingly.
-Some parameters are only available for one mode.
-
-<Tabs>
-<TabItem value="ingest" label="Ingest">
-
-To create or write to your local Chroma vector store, use **Ingest** mode.
-
-The following parameters are available in **Ingest** mode:
-
-| Name | Type | Description |
-|------|------|-------------|
-| **Name Your Collection** (`collection_name`) | String | Input parameter. The name for your Chroma vector store collection. Default: `langflow`. Only available in **Ingest** mode. |
-| **Persist Directory** (`persist_directory`) | String | Input parameter. The base directory where you want to create and persist the vector store. If you use the **Local DB** component in multiple flows or to create multiple collections, collections are stored at `$PERSISTENT_DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, the default location is your Langflow configuration directory. For more information, see [Memory management options](/memory). |
-| **Embedding** (`embedding`) | Embeddings | Input parameter. The embedding function to use for the vector store. |
-| **Allow Duplicates** (`allow_duplicates`) | Boolean | Input parameter. If `true` (default), writes don't check for existing duplicates in the collection, allowing you to store multiple copies of the same content. If `false`, writes won't add documents that match existing documents already present in the collection. If `false`, it can strictly enforce deduplication by searching the entire collection or only search the number of records, specified in `limit`. Only available in **Ingest** mode. |
-| **Ingest Data** (`ingest_data`) | JSON or Table | Input parameter. The records to write to the collection. Records are embedded and indexed for semantic search. Only available in **Ingest** mode. |
-| **Limit** (`limit`) | Integer | Input parameter. Limit the number of records to compare when **Allow Duplicates** is `false`. This can help improve performance when writing to large collections, but it can result in some duplicate records. Only available in **Ingest** mode. |
-
-</TabItem>
-<TabItem value="retrieve" label="Retrieve">
-
-To read from your local Chroma vector store, use **Retrieve** mode.
-
-The following parameters are available in **Retrieve** mode:
-
-| Name | Type | Description |
-|------|------|-------------|
-| **Persist Directory** (`persist_directory`) | String | Input parameter. The base directory where you want to create and persist the vector store. If you use the **Local DB** component in multiple flows or to create multiple collections, collections are stored at `$PERSISTENT_DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, the default location is your Langflow configuration directory. For more information, see [Memory management options](/memory). |
-| **Existing Collections** (`existing_collections`) | String | Input parameter. Select a previously-created collection to search. Only available in **Retrieve** mode. |
-| **Embedding** (`embedding`) | Embeddings | Input parameter. The embedding function to use for the vector store. |
-| **Search Type** (`search_type`) | String | Input parameter. The type of search to perform, either `Similarity` or `MMR`. Only available in **Retrieve** mode. |
-| **Search Query** (`search_query`) | String | Input parameter. Enter a query for similarity search. Only available in **Retrieve** mode. |
-| **Number of Results** (`number_of_results`) | Integer | Input parameter. Number of search results to return. Default: 10. Only available in **Retrieve** mode. |
-
-</TabItem>
-</Tabs>
+The **Local DB** and **Chroma DB** components are retired in Langflow 1.13.
+Saved nodes remain available for inspection, but must be replaced before running a flow.
+For local storage, use [Knowledge components](/knowledge#knowledge-bases).
+For remote storage, use a supported vector store component such as [Astra DB](/bundles-datastax) or [pgVector](/bundles-pgvector).
+See [Upgrade Knowledge and Memory storage](../Develop/knowledge-storage-upgrade.mdx) for retained data and recovery options.
 
 </details>
 

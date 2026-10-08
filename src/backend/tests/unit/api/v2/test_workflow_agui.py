@@ -15,6 +15,7 @@ import asyncio
 import contextlib
 import json
 import time
+from collections.abc import Iterator
 from types import SimpleNamespace
 from unittest.mock import ANY, AsyncMock, MagicMock
 from uuid import uuid4
@@ -102,6 +103,26 @@ async def chatbot_flow(created_api_key, json_memory_chatbot_no_llm):
         flow = await session.get(Flow, flow_id)
         if flow:
             await session.delete(flow)
+
+
+@pytest.fixture
+def paused_background_producer(monkeypatch: pytest.MonkeyPatch) -> Iterator[asyncio.Event]:
+    """Hold the real workflow producer until stop tests have exercised an in-flight job."""
+    from langflow.api.v2 import workflow_execution
+
+    started = asyncio.Event()
+    release = asyncio.Event()
+    generate_flow_events = workflow_execution.generate_flow_events
+
+    async def paused_generate_flow_events(*args, **kwargs):
+        """Signal that execution started and wait for cancellation or fixture cleanup."""
+        started.set()
+        await release.wait()
+        await generate_flow_events(*args, **kwargs)
+
+    monkeypatch.setattr(workflow_execution, "generate_flow_events", paused_generate_flow_events)
+    yield started
+    release.set()
 
 
 class TestAGUIRequestContract:
@@ -1466,6 +1487,7 @@ class TestAGUICancellation:
         client: AsyncClient,
         created_api_key,
         chatbot_flow,
+        paused_background_producer,
     ):
         """POST /workflows/stop cancels a background run by its job id."""
         headers = {"x-api-key": created_api_key.api_key}
@@ -1476,6 +1498,7 @@ class TestAGUICancellation:
         )
         assert start.status_code == 200
         job_id = start.json()["job_id"]
+        await asyncio.wait_for(paused_background_producer.wait(), timeout=10)
 
         stop = await client.post("api/v2/workflows/stop", json={"job_id": job_id}, headers=headers)
 
@@ -1750,6 +1773,9 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+        # Synthetic jobs have no trace row. Keep real database latency out of
+        # the cancellation handshake, just like status updates above.
+        monkeypatch.setattr(wf_exec, "_queued_trace_link_for", AsyncMock(return_value=None))
 
         owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="agui")
@@ -1819,6 +1845,7 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_exec, "_queued_trace_link_for", AsyncMock(return_value=None))
 
         owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="langflow")
@@ -1882,6 +1909,7 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_exec, "_queued_trace_link_for", AsyncMock(return_value=None))
         monkeypatch.setattr(wf_bg, "_BACKGROUND_RUNS", {})
 
         owner_id = uuid4()
@@ -2580,6 +2608,7 @@ class TestBackgroundFinalizationGuards:
         client: AsyncClient,
         created_api_key,
         chatbot_flow,
+        paused_background_producer,
     ):
         """A stopped run settles on CANCELLED and is not overwritten by completion.
 
@@ -2605,6 +2634,7 @@ class TestBackgroundFinalizationGuards:
         assert start.status_code == 200
         job_id = start.json()["job_id"]
         job_uuid = _UUID(job_id)
+        await asyncio.wait_for(paused_background_producer.wait(), timeout=10)
 
         stop = await client.post(
             "api/v2/workflows/stop",

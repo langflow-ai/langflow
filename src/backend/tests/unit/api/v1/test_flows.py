@@ -954,6 +954,137 @@ async def test_read_flows_header_mode_filtered_by_flow_type(client: AsyncClient,
     assert all(flow["flow_type"] == "agent" for flow in result)
 
 
+async def test_read_flows_paginated_header_mode_returns_headers(client: AsyncClient, logged_in_headers):
+    """get_all=false + header_flows=true returns a page of data-less headers with updated_at."""
+    created = await client.post(
+        "api/v1/flows/",
+        json={"name": "paginated_header_flow", "data": {"nodes": [], "edges": []}, "is_component": False},
+        headers=logged_in_headers,
+    )
+    assert created.status_code == status.HTTP_201_CREATED
+    flow = created.json()
+
+    response = await client.get(
+        "api/v1/flows/",
+        params={
+            "get_all": False,
+            "header_flows": True,
+            "folder_id": flow["folder_id"],
+            "page": 1,
+            "size": 50,
+        },
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+
+    # Pagination semantics survive the header shape.
+    assert set(result) >= {"items", "total", "page", "size"}
+    assert result["page"] == 1
+    assert result["size"] == 50
+    assert result["total"] >= 1
+
+    headers_by_id = {item["id"]: item for item in result["items"]}
+    assert flow["id"] in headers_by_id
+    header = headers_by_id[flow["id"]]
+
+    # Header shape: no flow payload for a non-component, and none of the
+    # FlowRead-only fields.
+    assert header["data"] is None
+    assert "user_id" not in header
+    assert header["name"] == "paginated_header_flow"
+    assert header["updated_at"] is not None
+
+
+async def test_read_flows_paginated_without_header_flows_unchanged(client: AsyncClient, logged_in_headers):
+    """get_all=false without the flag still returns full FlowRead rows."""
+    created = await client.post(
+        "api/v1/flows/",
+        json={"name": "paginated_full_flow", "data": {"nodes": [], "edges": []}, "is_component": False},
+        headers=logged_in_headers,
+    )
+    assert created.status_code == status.HTTP_201_CREATED
+    flow = created.json()
+
+    response = await client.get(
+        "api/v1/flows/",
+        params={"get_all": False, "folder_id": flow["folder_id"], "page": 1, "size": 50},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+
+    rows_by_id = {item["id"]: item for item in result["items"]}
+    assert flow["id"] in rows_by_id
+    row = rows_by_id[flow["id"]]
+
+    assert "user_id" in row
+    assert row["data"] == {"nodes": [], "edges": []}
+    assert row["updated_at"] == flow["updated_at"]
+
+
+async def test_read_flows_paginated_header_updated_at_matches_flow(client: AsyncClient, logged_in_headers):
+    """A header's updated_at is the flow's updated_at, serialized identically."""
+    created = await client.post(
+        "api/v1/flows/",
+        json={"name": "paginated_header_updated_at_flow", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    assert created.status_code == status.HTTP_201_CREATED
+    flow = created.json()
+
+    full_read = await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
+    assert full_read.status_code == status.HTTP_200_OK
+    expected_updated_at = full_read.json()["updated_at"]
+
+    response = await client.get(
+        "api/v1/flows/",
+        params={
+            "get_all": False,
+            "header_flows": True,
+            "folder_id": flow["folder_id"],
+            "page": 1,
+            "size": 50,
+        },
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    header = next(item for item in response.json()["items"] if item["id"] == flow["id"])
+
+    assert header["updated_at"] == expected_updated_at
+    # Whole seconds, with an explicit offset — the FlowRead wire format.
+    assert "." not in header["updated_at"]
+
+
+async def test_read_flows_paginated_header_mode_keeps_component_data(client: AsyncClient, logged_in_headers):
+    """A component keeps its data on the paginated header path, as it does on get_all."""
+    component_data = {"nodes": [{"id": "n1", "data": {}}], "edges": []}
+    created = await client.post(
+        "api/v1/flows/",
+        json={"name": "paginated_header_component", "data": component_data, "is_component": True},
+        headers=logged_in_headers,
+    )
+    assert created.status_code == status.HTTP_201_CREATED
+    flow = created.json()
+
+    response = await client.get(
+        "api/v1/flows/",
+        params={
+            "get_all": False,
+            "header_flows": True,
+            "folder_id": flow["folder_id"],
+            "page": 1,
+            "size": 50,
+        },
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    header = next(item for item in response.json()["items"] if item["id"] == flow["id"])
+
+    assert header["is_component"] is True
+    assert header["data"] == component_data
+
+
 async def test_create_flows(client: AsyncClient, logged_in_headers):
     amount_flows = 10
     basic_case = {

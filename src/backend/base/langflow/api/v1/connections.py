@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.routing import APIRoute
 from lfx.integrations.errors import IntegrationPolicyBlockedError
 from lfx.integrations.models import PROVIDER_ID_PATTERN
@@ -23,6 +23,7 @@ from langflow.services.connection import ConnectionConflictError, DatabaseConnec
 from langflow.services.connection.oauth import broker as oauth_broker
 from langflow.services.connection.oauth.config import OAuthError, OAuthRegistration, get_oauth_settings
 from langflow.services.connection.service import enforce_integration_policy_for_provider
+from langflow.services.connection.slack_credentials import ManualCredentialError
 from langflow.services.database.models.connection import (
     Connection,
     ConnectionCreate,
@@ -46,8 +47,10 @@ class _ConnectionRoute(APIRoute):
         handler = super().get_route_handler()
 
         async def safe_handler(request: Request) -> Response:
-            if "/connections/oauth/" in request.scope["path"] and request.scope["path"].endswith("/callback"):
-                # Cache the callback parameters for the handler, then remove
+            if "/connections/oauth/" in request.scope["path"] and request.scope["path"].endswith(
+                ("/callback", "/browser")
+            ):
+                # Cache consent parameters for the handler, then remove
                 # them before dependency errors or access logs can render URLs.
                 _ = request.query_params
                 request.scope["query_string"] = b""
@@ -66,7 +69,7 @@ _INSTANCE_OPERATOR_ACTIONS = frozenset({ConnectionAction.WRITE, ConnectionAction
 # Rate-limit counter namespaces. The endpoints that trigger outbound provider
 # calls get their own buckets so a burst of OAuth or health traffic cannot
 # consume a client's budget for ordinary CRUD, and so the unauthenticated
-# callback cannot block a user's ability to start a consent flow.
+# browser handoff or callback cannot block a user's ability to start consent.
 #
 # Metadata reads are split off from the write bucket and sized by
 # connection_metadata_rate_limit_per_minute rather than the login budget: they
@@ -80,14 +83,15 @@ _INSTANCE_OPERATOR_ACTIONS = frozenset({ConnectionAction.WRITE, ConnectionAction
 # Every authenticated route counts per user, not per client IP: current_user is
 # resolved as a dependency before the handler runs, so the caller is known by
 # the time the limiter is consulted, and an IP key would only make users behind
-# one NAT or proxy throttle each other. The OAuth callback is unauthenticated
-# (state replaces login), so it alone stays keyed by client IP.
+# one NAT or proxy throttle each other. The OAuth handoff and callback are
+# unauthenticated (one-time state replaces login), so they count per client IP.
 _SCOPE_CONNECTIONS = "connections"
 _SCOPE_CONNECTIONS_READ = "connections-read"
 _SCOPE_CONNECTION_TEST = "connections-test"
 _SCOPE_CONNECTION_HEALTH = "connections-health"
 _SCOPE_CONNECTION_OAUTH_START = "connections-oauth-start"
 _SCOPE_CONNECTION_OAUTH_CALLBACK = "connections-oauth-callback"
+_SCOPE_CONNECTION_OAUTH_BROWSER = "connections-oauth-browser"
 
 _OAUTH_NONCE_LENGTH = 43
 _OAUTH_MAX_CODE_LENGTH = 8192
@@ -105,7 +109,9 @@ class OAuthStartRequest(BaseModel):
 
 
 class OAuthStartResponse(BaseModel):
-    authorization_url: str
+    authorization_url: str = Field(
+        description="Open in the consent browser, including the loopback handoff on Desktop."
+    )
 
 
 class OAuthRegistrationRead(BaseModel):
@@ -297,6 +303,8 @@ async def create_connection(
         raise _policy_blocked(exc) from exc
     except ConnectionConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except ManualCredentialError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
 
 
 @router.post("/{connection_id}/test", response_model=ConnectionRead)
@@ -486,17 +494,57 @@ async def start_connection_oauth(
     except OAuthError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
     registration = get_oauth_settings().registration(payload.registration_id)
+    if registration.context != "desktop":
+        response.set_cookie(
+            _oauth_cookie(state_value),
+            browser,
+            httponly=True,
+            secure=registration.redirect_uri.startswith("https:"),
+            samesite="lax",
+            max_age=600,
+            path="/api/v1/connections/oauth",
+        )
+    response.headers.update(_OAUTH_RESPONSE_HEADERS)
+    return OAuthStartResponse(authorization_url=url)
+
+
+@router.get("/oauth/{provider}/browser", response_model=None)
+async def bind_connection_oauth_browser(provider: str, request: Request, service: ConnectionService) -> Response:
+    """Set the Desktop binding in the browser which will receive the callback."""
+    _ = service
+    check_rate_limit(request, scope=_SCOPE_CONNECTION_OAUTH_BROWSER)
+    query = request.query_params
+    request.scope["query_string"] = b""
+    state_value, handoff = query.get("state", ""), query.get("handoff", "")
+    try:
+        if (
+            len(state_value) != _OAUTH_NONCE_LENGTH
+            or len(handoff) != _OAUTH_NONCE_LENGTH
+            or len(query.getlist("state")) != 1
+            or len(query.getlist("handoff")) != 1
+        ):
+            msg = "OAuth browser handoff is invalid, expired, or already used."
+            raise OAuthError(msg)
+        url, browser, secure = await oauth_broker.bind_desktop_browser(
+            provider=provider, state=state_value, handoff=handoff
+        )
+    except OAuthError:
+        return HTMLResponse(
+            "OAuth authorization failed. Return to connections and start again.",
+            status_code=400,
+            headers=_OAUTH_RESPONSE_HEADERS,
+        )
+    response = RedirectResponse(url, status_code=303, headers=_OAUTH_RESPONSE_HEADERS)
     response.set_cookie(
         _oauth_cookie(state_value),
         browser,
         httponly=True,
-        secure=registration.redirect_uri.startswith("https:"),
+        secure=secure,
         samesite="lax",
         max_age=600,
         path="/api/v1/connections/oauth",
     )
-    response.headers.update(_OAUTH_RESPONSE_HEADERS)
-    return OAuthStartResponse(authorization_url=url)
+    return response
 
 
 @router.get("/oauth/registrations", response_model=OAuthRegistrationListRead)

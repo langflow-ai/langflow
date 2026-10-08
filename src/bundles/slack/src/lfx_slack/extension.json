@@ -1,9 +1,9 @@
 {
   "$schema": "https://schemas.langflow.org/extension/v1.json",
   "id": "lfx-slack",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "name": "Slack",
-  "description": "Slack Web API actions (user-identity and bot-identity) as a standalone Langflow Extension Bundle backed by connections.",
+  "description": "Slack Web API actions (user-identity and bot-identity) and message and reaction triggers as a standalone Langflow Extension Bundle backed by connections.",
   "lfx": {
     "compat": ["1"]
   },

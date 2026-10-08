@@ -1,6 +1,5 @@
 import {
   type AvailableDBProviderId,
-  CHROMA_CLOUD_VARIABLES,
   OPENSEARCH_VARIABLES,
 } from "@/constants/dbProviderConstants";
 
@@ -15,15 +14,6 @@ export function buildBackendConfigPayload(
   literalFields: Record<string, string>,
   booleanFields: Record<string, boolean>,
 ): Record<string, unknown> {
-  if (providerId === "chroma_cloud") {
-    return {
-      mode: "cloud",
-      tenant_variable: CHROMA_CLOUD_VARIABLES.TENANT,
-      database_variable: CHROMA_CLOUD_VARIABLES.DATABASE,
-      api_key_variable: CHROMA_CLOUD_VARIABLES.API_KEY,
-      cloud_region: literalFields[CHROMA_CLOUD_VARIABLES.REGION] || "us-east-1",
-    };
-  }
   if (providerId !== "opensearch") {
     return {};
   }

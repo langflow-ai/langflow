@@ -10,8 +10,10 @@ from langflow.services.authorization.listing import (
     restrict_to_owned_or_visible_scope,
     visible_scope_prefilter,
 )
+from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
+from lfx.services.adapters.deployment.schema import DeploymentType
 from lfx.services.authorization.base import ResourceVisibilityScope
 from sqlmodel import select
 
@@ -447,3 +449,229 @@ def test_scope_reports_cross_user_access_without_resource_enumeration():
     assert ResourceVisibilityScope(all_resources=True).has_cross_user_access is True
     assert ResourceVisibilityScope(workspace_ids=(uuid4(),)).has_cross_user_access is True
     assert ResourceVisibilityScope(include_unassigned_workspace=True).has_cross_user_access is True
+
+
+@pytest.mark.parametrize("resource_type", ["project", "flow", "deployment"])
+@pytest.mark.parametrize("broad_scope", ["global", "workspace", "unassigned"])
+async def test_personal_project_exclusion_preserves_additive_grants_and_pagination(
+    async_session, resource_type, broad_scope
+):
+    owner_id, other_owner_id = uuid4(), uuid4()
+    workspace_id = uuid4() if broad_scope == "workspace" else None
+    projects = [
+        Folder(name=name, user_id=other_owner_id, workspace_id=workspace_id, is_personal=personal)
+        for name, personal in (
+            ("Ordinary", False),
+            ("Hidden personal", True),
+            ("Owned personal", True),
+            ("Shared personal", True),
+            ("Delegated personal", True),
+            ("Reserved", False),
+        )
+    ]
+    projects[2].user_id = owner_id
+    model, project_column = {
+        "project": (Folder, Folder.id),
+        "flow": (Flow, Flow.folder_id),
+        "deployment": (Deployment, Deployment.project_id),
+    }[resource_type]
+    resources = []
+    for project in projects:
+        if resource_type == "project":
+            resource = project
+        elif resource_type == "flow":
+            resource = Flow(name=project.name, user_id=project.user_id, folder_id=project.id, workspace_id=workspace_id)
+        else:
+            resource = Deployment(
+                resource_key=str(uuid4()),
+                display_name=project.name,
+                user_id=project.user_id,
+                project_id=project.id,
+                workspace_id=workspace_id,
+                deployment_provider_account_id=uuid4(),
+                deployment_type=DeploymentType.AGENT,
+            )
+        resources.append(resource)
+    ids = [resource.id for resource in resources]
+    project_ids = [project.id for project in projects]
+    scope = ResourceVisibilityScope(
+        all_resources=broad_scope == "global",
+        workspace_ids=(workspace_id,) if workspace_id else (),
+        include_unassigned_workspace=broad_scope == "unassigned",
+        project_ids=(project_ids[4],),
+        resource_ids=(ids[3],),
+        excluded_global_project_ids=(project_ids[5],),
+        excluded_workspace_project_ids=(project_ids[5],),
+        exclude_personal_projects=True,
+    )
+    async_session.add_all(projects)
+    if resource_type != "project":
+        async_session.add_all(resources)
+    await async_session.commit()
+    stmt = restrict_to_owned_or_visible_scope(
+        select(model.id),
+        id_column=model.id,
+        owner_clause=model.user_id == owner_id,
+        workspace_column=model.workspace_id,
+        project_column=project_column,
+        visibility=scope,
+    )
+    expected = {ids[0], ids[2], ids[3], ids[4]}
+    assert set((await async_session.exec(stmt)).all()) == expected
+    assert (
+        list((await async_session.exec(stmt.order_by(model.id).offset(1).limit(2))).all())
+        == sorted(expected, key=lambda value: value.hex)[1:3]
+    )
+    for index in (0, 1, 3, 4, 5):
+        assert resource_visible_in_scope(
+            resource_id=ids[index],
+            project_id=project_ids[index],
+            workspace_id=workspace_id,
+            project_is_personal=index in {1, 3, 4},
+            visibility=scope,
+        ) is (ids[index] in expected)
+
+
+@pytest.mark.parametrize("broad_scope", ["global", "workspace", "unassigned"])
+def test_personal_exclusions_require_metadata_but_keep_explicit_grants(broad_scope):
+    resource_id, shared_id, project_id, delegated_id, workspace_id = [uuid4() for _ in range(5)]
+    scope = ResourceVisibilityScope(
+        all_resources=broad_scope == "global",
+        workspace_ids=(workspace_id,) if broad_scope == "workspace" else (),
+        include_unassigned_workspace=broad_scope == "unassigned",
+        resource_ids=(shared_id,),
+        project_ids=(delegated_id,),
+        exclude_personal_projects=True,
+    )
+    workspace = workspace_id if broad_scope == "workspace" else None
+    assert not resource_visible_in_scope(
+        resource_id=resource_id,
+        project_id=project_id,
+        workspace_id=workspace,
+        visibility=scope,
+    )
+    assert not resource_visible_in_scope(
+        resource_id=resource_id,
+        project_id=project_id,
+        workspace_id=workspace,
+        project_is_personal=True,
+        visibility=scope,
+    )
+    assert resource_visible_in_scope(
+        resource_id=resource_id,
+        project_id=project_id,
+        workspace_id=workspace,
+        project_is_personal=False,
+        visibility=scope,
+    )
+    assert resource_visible_in_scope(
+        resource_id=shared_id,
+        project_id=project_id,
+        workspace_id=workspace,
+        visibility=scope,
+    )
+    assert resource_visible_in_scope(
+        resource_id=resource_id,
+        project_id=delegated_id,
+        workspace_id=workspace,
+        visibility=scope,
+    )
+    assert resource_visible_in_scope(
+        resource_id=resource_id,
+        project_id=None,
+        workspace_id=workspace,
+        visibility=scope,
+    ) is (broad_scope != "unassigned")
+
+
+@pytest.mark.parametrize("exclude_personal_projects", [False, True])
+async def test_explicit_project_grant_survives_global_reserved_project_exclusion(
+    async_session, exclude_personal_projects
+):
+    """Reserved-project exclusions restrict broad grants, not explicit delegation."""
+    project_id, flow_id, owner_id = uuid4(), uuid4(), uuid4()
+    async_session.add_all(
+        [
+            Folder(id=project_id, name="Reserved project", is_personal=False),
+            Flow(id=flow_id, name="Reserved flow", folder_id=project_id, user_id=uuid4()),
+        ]
+    )
+    await async_session.commit()
+    for project_ids in ((), (project_id,)):
+        scope = ResourceVisibilityScope(
+            all_resources=True,
+            excluded_global_project_ids=(project_id,),
+            project_ids=project_ids,
+            exclude_personal_projects=exclude_personal_projects,
+        )
+        stmt = restrict_to_owned_or_visible_scope(
+            select(Flow.id),
+            id_column=Flow.id,
+            owner_clause=Flow.user_id == owner_id,
+            project_column=Flow.folder_id,
+            visibility=scope,
+        )
+        assert set((await async_session.exec(stmt)).all()) == ({flow_id} if project_ids else set())
+        assert resource_visible_in_scope(
+            resource_id=flow_id,
+            project_id=project_id,
+            project_is_personal=False,
+            visibility=scope,
+        ) is bool(project_ids)
+
+
+@pytest.mark.parametrize("broad_scope", ["global", "workspace", "unassigned"])
+async def test_resource_exceptions_and_personal_project_exclusion_apply_together(async_session, broad_scope):
+    """Both subtractions hold at once, ownership still wins, and SQL matches the in-memory check."""
+    owner_id, other_owner_id = uuid4(), uuid4()
+    workspace_id = uuid4() if broad_scope == "workspace" else None
+    ordinary = Folder(name="Ordinary", user_id=other_owner_id, workspace_id=workspace_id, is_personal=False)
+    personal = Folder(name="Personal", user_id=other_owner_id, workspace_id=workspace_id, is_personal=True)
+    async_session.add_all([ordinary, personal])
+    await async_session.commit()
+
+    def flow(name: str, project: Folder, user_id) -> Flow:
+        return Flow(name=name, user_id=user_id, folder_id=project.id, workspace_id=workspace_id)
+
+    visible = flow("visible", ordinary, other_owner_id)
+    excepted = flow("excepted", ordinary, other_owner_id)
+    in_personal = flow("in personal", personal, other_owner_id)
+    owned_excepted = flow("owned, excepted, personal", personal, owner_id)
+    granted_but_excepted = flow("concrete grant, excepted", personal, other_owner_id)
+    async_session.add_all([visible, excepted, in_personal, owned_excepted, granted_but_excepted])
+    await async_session.commit()
+
+    scope = ResourceVisibilityScope(
+        all_resources=broad_scope == "global",
+        workspace_ids=(workspace_id,) if workspace_id else (),
+        include_unassigned_workspace=broad_scope == "unassigned",
+        resource_ids=(granted_but_excepted.id,),
+        exclude_personal_projects=True,
+        excluded_resource_ids=(excepted.id, owned_excepted.id, granted_but_excepted.id),
+    )
+    stmt = restrict_to_owned_or_visible_scope(
+        select(Flow.id),
+        id_column=Flow.id,
+        owner_clause=Flow.user_id == owner_id,
+        workspace_column=Flow.workspace_id,
+        project_column=Flow.folder_id,
+        visibility=scope,
+    )
+
+    assert set((await async_session.exec(stmt)).all()) == {visible.id, owned_excepted.id}
+    for resource, project, expected in (
+        (visible, ordinary, True),
+        (excepted, ordinary, False),
+        (in_personal, personal, False),
+        (granted_but_excepted, personal, False),
+    ):
+        assert (
+            resource_visible_in_scope(
+                resource_id=resource.id,
+                project_id=project.id,
+                workspace_id=workspace_id,
+                project_is_personal=project.is_personal,
+                visibility=scope,
+            )
+            is expected
+        )

@@ -363,6 +363,7 @@ class TestRunFlowBaseComponentFlowCaching:
 
         assert result is None
 
+    @pytest.mark.usefixtures("mock_shared_cache")
     def test_flow_cache_call_raises_error_for_unknown_action(self):
         """Test that _flow_cache_call raises ValueError for unknown action."""
         component = RunFlowBaseComponent()

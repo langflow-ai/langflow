@@ -1866,6 +1866,8 @@ class RedisJobQueueService(JobQueueService):
         if self._client:
             try:
                 return bool(await self._client.exists(self._public_job_key(job_id)))
-            except Exception as exc:  # noqa: BLE001
-                await logger.awarning(f"Redis public_job check failed for {job_id}: {exc!r}")
+            except Exception as exc:
+                if _is_backend_connection_error(exc):
+                    raise JobQueueBackendUnavailableError(self._backend_unavailable_message()) from exc
+                raise
         return False

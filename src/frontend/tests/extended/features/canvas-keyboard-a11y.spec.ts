@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { waitForFlowSave } from "../../utils/wait-for-flow-save";
 
 /**
  * WCAG 2.1.1 / 4.1.2 regression tests for canvas keyboard operation
@@ -118,12 +119,13 @@ test(
     // redo the move and let the debounced autosave land, then reload
     await node.click();
     await node.focus();
+    const saved = waitForFlowSave(page);
     for (let i = 0; i < 5; i++) {
       await page.keyboard.press("ArrowRight");
       await page.waitForTimeout(80);
     }
     const target = await node.evaluate((el) => el.style.transform);
-    await page.waitForTimeout(2500);
+    await saved;
 
     await page.reload();
     await page.waitForSelector(".react-flow__node", { timeout: 30000 });

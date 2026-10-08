@@ -7,8 +7,17 @@ import {
 const component = (
   display_name: string,
   template: Record<string, unknown> = {},
+  metadata: Record<string, unknown> = {},
 ): APIClassType =>
-  ({ display_name, description: "", template }) as unknown as APIClassType;
+  ({
+    display_name,
+    description: "",
+    template,
+    metadata,
+  }) as unknown as APIClassType;
+
+const trigger = (display_name: string, trigger_kind: string): APIClassType =>
+  component(display_name, {}, { trigger_kind });
 
 const connectionField = (required: boolean) => ({
   type: "connection_ref",
@@ -177,6 +186,63 @@ describe("applyFeatureFlagFilters", () => {
 
       expect(result).not.toHaveProperty(TRIGGERS_CATEGORY);
       expect(Object.keys(result.google)).toEqual(["GmailLoaderComponent"]);
+    });
+
+    it("hides provider triggers listed in their provider's group, and keeps its actions", () => {
+      const rawData: APIDataType = {
+        ...buildRawData(),
+        slack: {
+          SlackPostAsAppComponent: component("Slack: Post Message (as app)"),
+          SlackOnMessageTriggerComponent: trigger(
+            "Slack: On Message",
+            "slack.message",
+          ),
+          SlackOnReactionTriggerComponent: trigger(
+            "Slack: On Reaction",
+            "slack.reaction",
+          ),
+        },
+      };
+      const snapshot = JSON.parse(JSON.stringify(rawData));
+
+      const result = applyFeatureFlagFilters(rawData, options);
+
+      expect(Object.keys(result.slack)).toEqual(["SlackPostAsAppComponent"]);
+      expect(rawData).toEqual(snapshot);
+    });
+
+    it("drops a group that held nothing but triggers", () => {
+      const rawData: APIDataType = {
+        google: {},
+        slack_triggers_only: {
+          SlackOnMessageTriggerComponent: trigger(
+            "Slack: On Message",
+            "slack.message",
+          ),
+        },
+      };
+
+      const result = applyFeatureFlagFilters(rawData, options);
+
+      expect(result).toEqual({ google: {} });
+    });
+
+    it("keeps provider triggers when triggers are enabled", () => {
+      const rawData: APIDataType = {
+        slack: {
+          SlackOnMessageTriggerComponent: trigger(
+            "Slack: On Message",
+            "slack.message",
+          ),
+        },
+      };
+
+      const result = applyFeatureFlagFilters(rawData, {
+        ...options,
+        enableTriggers: true,
+      });
+
+      expect(result).toBe(rawData);
     });
   });
 });

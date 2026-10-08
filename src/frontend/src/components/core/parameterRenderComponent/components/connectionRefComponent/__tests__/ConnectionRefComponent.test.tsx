@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ConnectionRead } from "@/controllers/API/queries/connections/use-get-connections";
 import { useGetConnections } from "@/controllers/API/queries/connections/use-get-connections";
+import useAuthStore from "@/stores/authStore";
 import ConnectionRefComponent from "../index";
 
 // cmdk scrolls the highlighted item into view; jsdom has no layout.
@@ -74,7 +75,30 @@ function renderPicker(props: Record<string, unknown> = {}) {
 describe("ConnectionRefComponent", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useAuthStore.setState({ userData: { id: "u1" } as never });
     setConnections([connection()]);
+  });
+
+  it("shows an ownership badge for an instance-owned Slack trigger connection", async () => {
+    setConnections([
+      connection({
+        provider_key: "slack",
+        name: "instbot",
+        owner_id: null,
+        ownership_mode: "instance",
+        executing_identity: { identity: "bot" },
+      }),
+    ]);
+    renderPicker({
+      provider: "slack",
+      requiredScopes: [],
+      identityKind: "instance",
+      ownershipMode: "user",
+    });
+    await userEvent.click(screen.getByTestId("connectionref_connection"));
+    expect(
+      await screen.findByTestId("connection-option-slack/instbot"),
+    ).toHaveTextContent("Not owned by the flow owner");
   });
 
   it("asks the API only for the field's provider", () => {

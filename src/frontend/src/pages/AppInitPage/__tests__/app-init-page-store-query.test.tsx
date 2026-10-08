@@ -3,8 +3,6 @@ import type { ReactNode } from "react";
 import { AuthContext } from "@/contexts/authContext";
 
 const mockUseGetTagsQuery = jest.fn();
-const mockRefreshStars = jest.fn();
-const mockRefreshDiscordCount = jest.fn();
 const mockRefetchExamples = jest.fn();
 
 jest.mock("react-router-dom", () => ({
@@ -55,14 +53,6 @@ jest.mock("@/stores/authStore", () => ({
       isAuthenticated: true,
       setIsAuthenticated: jest.fn(),
       setIsAdmin: jest.fn(),
-    }),
-}));
-
-jest.mock("@/stores/darkStore", () => ({
-  useDarkStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      refreshStars: mockRefreshStars,
-      refreshDiscordCount: mockRefreshDiscordCount,
     }),
 }));
 

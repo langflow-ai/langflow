@@ -61,6 +61,14 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `Component.select_integration_capabilities(capability_ids)` | `lfx.custom.custom_component.component.Component` |
 | `BaseConnectionResolverService`, `ConnectionAccessPolicy` | `lfx.services.connection` |
 
+### Triggers
+
+| Symbol | Source |
+| --- | --- |
+| `BaseTriggerComponent` (`trigger_kind`, `provider`, `needs_connection`, `trigger_config()`, `build_event()`) | `lfx.base.triggers.base` |
+| `TRIGGER_EVENT_FIELD` (the input the server writes the firing event into) | `lfx.base.triggers.base` |
+| `TriggerDefinition` | `lfx.base.triggers.base` |
+
 ### Preset MCP components
 
 | Symbol | Source |
@@ -215,6 +223,42 @@ the deserialize half is covered by
 ---
 
 ## Changelog
+
+- **Knowledge storage provider defaults.** `DBProviderInput` defaults to the
+  application-provided SQLite backend. Its public name, fields and signature
+  remain unchanged, so `BUNDLE_API_VERSION` remains `1`. Recognized historical
+  Knowledge and Memory sources resolve to current implementations without
+  loading the retired Chroma SDKs. Custom component source remains untouched.
+  Extension backends that implement only `add_documents` retain their guarded
+  ingestion path. Writing precomputed embeddings remains optional for ordinary
+  ingestion and required for migration imports.
+
+### 2026-09-24 — Async file loader dispatch
+
+Graph outputs and the Read File tool now await `@delegates_to` coroutine methods
+directly. `BaseFileComponent` provides `aload_files_*` and `aprocess_files` for
+native async loaders; existing sync overrides still run in worker threads. Bundle
+coroutines should await these methods instead of calling their sync wrappers on
+the event loop. The public sync method signatures remain unchanged, and
+`BUNDLE_API_VERSION` remains `1`.
+
+### 2026-09-23 — Slack sources for triggers (TRG-5)
+
+- `ConnectionNotAuthorizedError`'s `reason` additionally accepts
+  `listener-only`: the connection holds a credential that only a trigger
+  listener process may resolve. A Slack app-level token (`xapp-`) opens
+  Socket Mode sockets and has no other use, so the host resolver refuses it
+  everywhere else, including in a triggered run, and a component is told to
+  choose a different connection. The error code and HTTP 403 status are
+  unchanged. This is additive; `BUNDLE_API_VERSION` remains `1`.
+- `lfx.base.triggers` joins the surface: `lfx-slack` 0.2.0 subclasses
+  `BaseTriggerComponent` for its `Slack: On Message` and `Slack: On Reaction`
+  nodes, so the base class, `TRIGGER_EVENT_FIELD` and `TriggerDefinition` are
+  now a bundle contract and `check_bundle_api_changelog.py` guards the module.
+  Every lfx 1.13.0 release ships it; nightlies before `1.13.0.dev17` do not.
+  `lfx-slack` 0.2.0 keeps the line-wide `lfx>=1.13.0.dev0` floor the release
+  plan requires and imports its triggers lazily, so on those nightlies its
+  actions still load and only the two trigger modules report an import error.
 
 ### 2026-09-22 — Lazy manifest discovery for legacy plugin filtering
 

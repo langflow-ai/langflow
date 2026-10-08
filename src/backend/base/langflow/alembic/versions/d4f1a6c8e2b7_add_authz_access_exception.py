@@ -2,7 +2,7 @@
 
 Phase: EXPAND
 Revision ID: d4f1a6c8e2b7
-Revises: f2a7c9e4b681
+Revises: b4e8d2f1c9a3
 Create Date: 2026-09-15
 
 A new, empty table — no backfill needed. One row means "this user's
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 revision: str = "d4f1a6c8e2b7"  # pragma: allowlist secret
-down_revision: str | None = "f2a7c9e4b681"  # pragma: allowlist secret
+down_revision: str | None = "b4e8d2f1c9a3"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -8,8 +8,6 @@ the real ledger, and the real unique index.
 
 from __future__ import annotations
 
-import hashlib
-import hmac
 import json
 import time
 from typing import TYPE_CHECKING
@@ -26,10 +24,14 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.no_blockbuster
 
-SLACK_SECRET = "slack-signing-secret"  # noqa: S105 - test fixture  # pragma: allowlist secret
+WEBHOOK_SECRET = "webhook-signing-secret"  # noqa: S105 - test fixture  # pragma: allowlist secret
 
 
 async def _arm_trigger(flow_id, owner_id, *, kind: str, public_id: str, state: str = "active", **fields) -> Trigger:
+    if kind == "inbound_webhook" and "signing_secret_encrypted" not in fields:
+        from langflow.services.auth.utils import encrypt_api_key
+
+        fields["signing_secret_encrypted"] = encrypt_api_key(WEBHOOK_SECRET)
     async with session_scope() as session:
         row = Trigger(
             flow_id=flow_id,
@@ -56,87 +58,18 @@ async def _events(trigger_id) -> list[TriggerEvent]:
         return list((await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == identifier))).all())
 
 
-def _slack_headers(body: bytes, *, secret: str = SLACK_SECRET) -> dict[str, str]:
-    timestamp = str(int(time.time()))
-    basestring = f"v0:{timestamp}:".encode() + body
+def _webhook_headers(body: bytes, *, secret: str = WEBHOOK_SECRET) -> dict[str, str]:
+    timestamp = int(time.time())
     return {
-        "X-Slack-Signature": "v0=" + hmac.new(secret.encode(), basestring, hashlib.sha256).hexdigest(),
-        "X-Slack-Request-Timestamp": timestamp,
+        "X-Langflow-Signature": sign_webhook_payload(secret, timestamp=timestamp, body=body),
+        "X-Langflow-Timestamp": str(timestamp),
         "Content-Type": "application/json",
     }
-
-
-@pytest.fixture
-def slack_registration(monkeypatch):
-    """Stand in for the operator-configured Slack app signing secret."""
-    from langflow.services.triggers.ingress import intake
-
-    async def _secret(_session, _row) -> str:
-        return SLACK_SECRET
-
-    monkeypatch.setattr(intake, "_slack_signing_secret", _secret)
 
 
 # --------------------------------------------------------------------------- #
 # The happy path
 # --------------------------------------------------------------------------- #
-
-
-@pytest.mark.usefixtures("slack_registration")
-async def test_a_valid_slack_delivery_becomes_one_ledger_row(client: AsyncClient, active_user, flow) -> None:
-    public_id = uuid4().hex
-    trigger = await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id)
-    body = json.dumps(
-        {"type": "event_callback", "event_id": "Ev999", "event": {"type": "message", "text": "hello"}}
-    ).encode()
-
-    response = await client.post(
-        f"api/v1/triggers/ingress/slack/{public_id}", content=body, headers=_slack_headers(body)
-    )
-
-    assert response.status_code == 202, response.text
-    rows = await _events(trigger.id)
-    assert len(rows) == 1
-    assert rows[0].dedupe_key == "ingress:slack:Ev999"
-    assert rows[0].payload["delivery"]["event"]["text"] == "hello"
-    # The request ran nothing: the dispatcher does that, afterwards.
-    assert rows[0].state == "pending"
-    assert rows[0].job_id is None
-
-
-@pytest.mark.usefixtures("slack_registration")
-async def test_slack_retries_produce_exactly_one_run(client: AsyncClient, active_user, flow) -> None:
-    """Slack retries at 0, 1 and 5 minutes when it misses an acknowledgement."""
-    public_id = uuid4().hex
-    trigger = await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id)
-    body = json.dumps({"type": "event_callback", "event_id": "Ev-retry", "event": {"ts": "1"}}).encode()
-
-    statuses = []
-    for _ in range(3):
-        response = await client.post(
-            f"api/v1/triggers/ingress/slack/{public_id}", content=body, headers=_slack_headers(body)
-        )
-        statuses.append(response.status_code)
-
-    # Every retry is acknowledged: answering an error would teach Slack to retry forever.
-    assert statuses == [202, 202, 202]
-    assert len(await _events(trigger.id)) == 1
-
-
-@pytest.mark.usefixtures("slack_registration")
-async def test_the_slack_url_verification_challenge_is_echoed(client: AsyncClient, active_user, flow) -> None:
-    public_id = uuid4().hex
-    trigger = await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id)
-    body = json.dumps({"type": "url_verification", "challenge": "chal-123"}).encode()
-
-    response = await client.post(
-        f"api/v1/triggers/ingress/slack/{public_id}", content=body, headers=_slack_headers(body)
-    )
-
-    assert response.status_code == 200
-    assert response.text == "chal-123"
-    # A handshake is not an event.
-    assert await _events(trigger.id) == []
 
 
 async def test_a_signed_webhook_delivery_becomes_a_ledger_row(
@@ -212,43 +145,44 @@ async def test_rotating_the_secret_invalidates_the_old_one_immediately(
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.usefixtures("slack_registration")
 async def test_an_unknown_public_id_is_indistinguishable_from_a_bad_signature(
     client: AsyncClient, active_user, flow
 ) -> None:
     known = uuid4().hex
-    await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=known)
+    await _arm_trigger(flow.id, active_user.id, kind="inbound_webhook", public_id=known)
     body = json.dumps({"type": "event_callback", "event_id": "Ev1"}).encode()
 
     unknown = await client.post(
-        f"api/v1/triggers/ingress/slack/{uuid4().hex}", content=body, headers=_slack_headers(body)
+        f"api/v1/triggers/ingress/webhook/{uuid4().hex}", content=body, headers=_webhook_headers(body)
     )
     forged = await client.post(
-        f"api/v1/triggers/ingress/slack/{known}",
+        f"api/v1/triggers/ingress/webhook/{known}",
         content=body,
-        headers=_slack_headers(body, secret="wrong"),  # noqa: S106 - a deliberately wrong secret
+        headers=_webhook_headers(body, secret="wrong"),  # noqa: S106 - a deliberately wrong secret
     )
 
     assert unknown.status_code == forged.status_code == 404
     assert unknown.json() == forged.json()
 
 
-@pytest.mark.usefixtures("slack_registration")
 async def test_every_rejection_looks_identical_to_the_caller(client: AsyncClient, active_user, flow) -> None:
-    """Unknown id, wrong provider, paused trigger, unsigned body: one answer."""
+    """Unknown id, wrong provider, retired provider, paused trigger, unsigned body: one answer."""
     public_id = uuid4().hex
-    await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id)
+    await _arm_trigger(flow.id, active_user.id, kind="inbound_webhook", public_id=public_id)
     paused_id = uuid4().hex
-    await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=paused_id, state="paused")
+    await _arm_trigger(flow.id, active_user.id, kind="inbound_webhook", public_id=paused_id, state="paused")
     body = json.dumps({"type": "event_callback", "event_id": "Ev1"}).encode()
-    headers = _slack_headers(body)
+    headers = _webhook_headers(body)
 
     answers = [
-        await client.post(f"api/v1/triggers/ingress/slack/{uuid4().hex}", content=body, headers=headers),
-        # A Slack-signed delivery must not be able to drive a Microsoft trigger.
+        await client.post(f"api/v1/triggers/ingress/webhook/{uuid4().hex}", content=body, headers=headers),
+        # A webhook-signed delivery must not be able to drive a Microsoft trigger.
         await client.post(f"api/v1/triggers/ingress/microsoft/{public_id}", content=body, headers=headers),
-        await client.post(f"api/v1/triggers/ingress/slack/{paused_id}", content=body, headers=headers),
-        await client.post(f"api/v1/triggers/ingress/slack/{public_id}", content=body),
+        # Slack no longer has a per-trigger address: its deliveries arrive on
+        # the per-app route and fan out, so this path is simply unknown.
+        await client.post(f"api/v1/triggers/ingress/slack/{public_id}", content=body, headers=headers),
+        await client.post(f"api/v1/triggers/ingress/webhook/{paused_id}", content=body, headers=headers),
+        await client.post(f"api/v1/triggers/ingress/webhook/{public_id}", content=body),
         await client.post(f"api/v1/triggers/ingress/dropbox/{public_id}", content=body, headers=headers),
     ]
 
@@ -256,34 +190,32 @@ async def test_every_rejection_looks_identical_to_the_caller(client: AsyncClient
     assert {answer.text for answer in answers} == {answers[0].text}
 
 
-@pytest.mark.usefixtures("slack_registration")
 async def test_an_oversized_body_is_refused_without_being_stored(client: AsyncClient, active_user, flow) -> None:
     from langflow.services.deps import get_settings_service
 
     public_id = uuid4().hex
-    trigger = await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id)
+    trigger = await _arm_trigger(flow.id, active_user.id, kind="inbound_webhook", public_id=public_id)
     limit = get_settings_service().settings.trigger_ingress_max_body_bytes
     body = json.dumps({"type": "event_callback", "event_id": "Ev1", "pad": "x" * (limit + 1024)}).encode()
 
     response = await client.post(
-        f"api/v1/triggers/ingress/slack/{public_id}", content=body, headers=_slack_headers(body)
+        f"api/v1/triggers/ingress/webhook/{public_id}", content=body, headers=_webhook_headers(body)
     )
 
     assert response.status_code == 404
     assert await _events(trigger.id) == []
 
 
-@pytest.mark.usefixtures("slack_registration")
 async def test_a_paused_trigger_drops_deliveries_rather_than_queueing_them(
     client: AsyncClient, active_user, flow
 ) -> None:
     """A provider may keep pushing; those runs must not happen on re-enable."""
     public_id = uuid4().hex
-    trigger = await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id, state="paused")
+    trigger = await _arm_trigger(flow.id, active_user.id, kind="inbound_webhook", public_id=public_id, state="paused")
     body = json.dumps({"type": "event_callback", "event_id": "Ev1"}).encode()
 
     response = await client.post(
-        f"api/v1/triggers/ingress/slack/{public_id}", content=body, headers=_slack_headers(body)
+        f"api/v1/triggers/ingress/webhook/{public_id}", content=body, headers=_webhook_headers(body)
     )
 
     assert response.status_code == 404
@@ -392,7 +324,6 @@ async def test_a_schedule_trigger_has_no_owner_managed_secret(
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.usefixtures("slack_registration")
 async def test_a_hundred_concurrent_deliveries_are_acknowledged_without_calling_out(
     client: AsyncClient, active_user, flow, monkeypatch
 ) -> None:
@@ -416,7 +347,7 @@ async def test_a_hundred_concurrent_deliveries_are_acknowledged_without_calling_
     monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", _no_outbound)
 
     public_id = uuid4().hex
-    trigger = await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id)
+    trigger = await _arm_trigger(flow.id, active_user.id, kind="inbound_webhook", public_id=public_id)
     deliveries = [
         json.dumps({"type": "event_callback", "event_id": f"Ev-{index}", "event": {"ts": str(index)}}).encode()
         for index in range(100)
@@ -424,7 +355,7 @@ async def test_a_hundred_concurrent_deliveries_are_acknowledged_without_calling_
 
     responses = await asyncio.gather(
         *[
-            client.post(f"api/v1/triggers/ingress/slack/{public_id}", content=body, headers=_slack_headers(body))
+            client.post(f"api/v1/triggers/ingress/webhook/{public_id}", content=body, headers=_webhook_headers(body))
             for body in deliveries
         ]
     )
@@ -438,7 +369,6 @@ async def test_a_hundred_concurrent_deliveries_are_acknowledged_without_calling_
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.usefixtures("slack_registration")
 async def test_a_chunked_oversized_body_is_refused_without_being_buffered(
     client: AsyncClient, active_user, flow
 ) -> None:
@@ -452,7 +382,7 @@ async def test_a_chunked_oversized_body_is_refused_without_being_buffered(
     from langflow.services.deps import get_settings_service
 
     public_id = uuid4().hex
-    trigger = await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id)
+    trigger = await _arm_trigger(flow.id, active_user.id, kind="inbound_webhook", public_id=public_id)
     limit = get_settings_service().settings.trigger_ingress_max_body_bytes
     chunk = b"x" * 65536
     sent = 0
@@ -464,7 +394,7 @@ async def test_a_chunked_oversized_body_is_refused_without_being_buffered(
             yield chunk
 
     response = await client.post(
-        f"api/v1/triggers/ingress/slack/{public_id}",
+        f"api/v1/triggers/ingress/webhook/{public_id}",
         content=_oversized(),
         headers={"Content-Type": "application/json", "Transfer-Encoding": "chunked"},
     )
@@ -473,7 +403,6 @@ async def test_a_chunked_oversized_body_is_refused_without_being_buffered(
     assert await _events(trigger.id) == []
 
 
-@pytest.mark.usefixtures("slack_registration")
 async def test_a_rate_limited_delivery_answers_like_every_other_refusal(
     client: AsyncClient, active_user, flow, monkeypatch
 ) -> None:
@@ -489,15 +418,15 @@ async def test_a_rate_limited_delivery_answers_like_every_other_refusal(
     monkeypatch.setattr(settings, "trigger_ingress_unknown_rate_limit_per_minute", 1)
 
     public_id = uuid4().hex
-    await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id)
+    await _arm_trigger(flow.id, active_user.id, kind="inbound_webhook", public_id=public_id)
     body = json.dumps({"type": "event_callback", "event_id": "Ev-limit"}).encode()
 
     known = [
-        await client.post(f"api/v1/triggers/ingress/slack/{public_id}", content=body, headers=_slack_headers(body))
+        await client.post(f"api/v1/triggers/ingress/webhook/{public_id}", content=body, headers=_webhook_headers(body))
         for _ in range(3)
     ]
     unknown = await client.post(
-        f"api/v1/triggers/ingress/slack/{uuid4().hex}", content=body, headers=_slack_headers(body)
+        f"api/v1/triggers/ingress/webhook/{uuid4().hex}", content=body, headers=_webhook_headers(body)
     )
 
     assert {response.status_code for response in known} == {202, 404}
@@ -518,21 +447,6 @@ async def test_the_graph_handshake_does_not_reveal_whether_a_trigger_exists(
     assert known.status_code == unknown.status_code == 200
     assert known.text == unknown.text == "tok-1"
     assert known.headers["content-type"].startswith("text/plain")
-
-
-async def test_a_slack_request_carrying_a_validation_token_is_still_verified(
-    client: AsyncClient, active_user, flow
-) -> None:
-    """The handshake short-circuit is Microsoft's alone; it is not a bypass."""
-    public_id = uuid4().hex
-    trigger = await _arm_trigger(flow.id, active_user.id, kind="slack.message", public_id=public_id)
-
-    response = await client.post(
-        f"api/v1/triggers/ingress/slack/{public_id}?validationToken=tok-1", content=b'{"type":"event_callback"}'
-    )
-
-    assert response.status_code == 404
-    assert await _events(trigger.id) == []
 
 
 async def test_an_unknown_provider_is_rate_limited_before_it_is_audited(client: AsyncClient, monkeypatch) -> None:

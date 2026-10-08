@@ -103,6 +103,7 @@ def check_rate_limit(
     scope: str | None = None,
     limit_per_minute: int | None = None,
     key: str | None = None,
+    limit_per_hour: int | None = None,
 ) -> None:
     """Enforce the configured rate limit for a request.
 
@@ -118,12 +119,24 @@ def check_rate_limit(
         key: Optional counter key that replaces the client-IP key, such as
             `get_user_limiter_key(user.id)` on an authenticated route. When
             omitted, the limiter's client-IP key is used.
+        limit_per_hour: Optional endpoint-specific limit counted over an hour
+            instead of a minute, for a caller whose own cap is hourly. Mutually
+            exclusive with ``limit_per_minute``.
 
     Raises:
         RateLimitExceeded: If the configured limit has been exceeded.
+        ValueError: If both a per-minute and a per-hour limit are given.
     """
+    if limit_per_minute is not None and limit_per_hour is not None:
+        msg = "Pass limit_per_minute or limit_per_hour, not both"
+        raise ValueError(msg)
     limiter = request.app.state.limiter
-    limit_string = f"{limit_per_minute}/minute" if limit_per_minute is not None else get_rate_limit_string()
+    if limit_per_hour is not None:
+        limit_string = f"{limit_per_hour}/hour"
+    elif limit_per_minute is not None:
+        limit_string = f"{limit_per_minute}/minute"
+    else:
+        limit_string = get_rate_limit_string()
     limit_item = parse(limit_string)
     client_key = key if key is not None else limiter._key_func(request)  # noqa: SLF001
     identifiers = (scope, client_key) if scope is not None else (client_key,)

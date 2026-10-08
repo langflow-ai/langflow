@@ -94,6 +94,24 @@ def _target_env(dockerfile: Path, target: str | None = None) -> dict[str, str]:
     return stage_envs[(target or final_stage).lower()]
 
 
+@pytest.mark.parametrize(
+    "dockerfile",
+    sorted(
+        path
+        for path in (REPO_ROOT / "docker").rglob("*Dockerfile")
+        # The standalone frontend runs Nginx and does not consume backend auth settings.
+        if path != REPO_ROOT / "docker" / "frontend" / "build_and_push_frontend.Dockerfile"
+    ),
+    ids=lambda path: str(path.relative_to(REPO_ROOT / "docker")),
+)
+def test_backend_docker_images_disable_auto_login_by_default(dockerfile: Path) -> None:
+    assert _target_env(dockerfile).get("LANGFLOW_AUTO_LOGIN") == "false"
+
+
+def test_lfx_docker_image_disables_auto_login_by_default() -> None:
+    assert _target_env(REPO_ROOT / "src/lfx/docker/Dockerfile").get("LANGFLOW_AUTO_LOGIN") == "false"
+
+
 @pytest.mark.parametrize(("dockerfile", "target"), PUBLISHED_IMAGES)
 def test_published_images_use_writable_runtime_home(dockerfile: str, target: str | None) -> None:
     assert _target_env(REPO_ROOT / "docker" / dockerfile, target).get("HOME") == "/app/data"
@@ -208,8 +226,8 @@ def test_published_images_pin_hardened_package_managers() -> None:
     assert 'if [ "$actual_npm_version" != "$NPM_VERSION" ]; then' in install_script
 
     for variable, version, package, validation_entry in (
-        ("IP_ADDRESS_VERSION", "10.3.1", "ip-address", '"ip-address": "10.3.1"'),
-        ("BRACE_EXPANSION_VERSION", "5.0.9", "brace-expansion", '"brace-expansion": "5.0.9"'),
+        ("IP_ADDRESS_VERSION", "10.7.1", "ip-address", '"ip-address": "10.7.1"'),
+        ("BRACE_EXPANSION_VERSION", "5.0.12", "brace-expansion", '"brace-expansion": "5.0.12"'),
         ("TAR_VERSION", "7.5.22", "tar", 'tar: "7.5.22"'),
         ("UNDICI_VERSION", "6.28.1", "undici", 'undici: "6.28.1"'),
     ):

@@ -73,6 +73,11 @@ export default function ConnectionsPage() {
   );
 
   const connections = connectionsQuery.data ?? EMPTY_CONNECTIONS;
+  // Integration policy can leave nothing to connect; say so rather than open
+  // a dialog with an empty provider list.
+  const noProviders =
+    integrationsQuery.isSuccess &&
+    (integrationsQuery.data?.providers ?? []).length === 0;
 
   // A superuser lists every user's connections, so "not instance-owned" is not
   // the same as "mine" for them: the rest belong to other people and are only
@@ -239,12 +244,29 @@ export default function ConnectionsPage() {
             setReauthorizing(undefined);
             setDialogOpen(true);
           }}
+          // Until the provider list has loaded, the dialog would open with
+          // no providers and blame policy for a slow or failed request.
+          disabled={!integrationsQuery.isSuccess || noProviders}
           data-testid="add-connection"
         >
           <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
           {t("connections.add.title")}
         </Button>
       </div>
+
+      {/* Always mounted: a status region inserted with its text already in
+          place is not reliably announced. */}
+      <p
+        className={
+          noProviders
+            ? "rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground"
+            : "sr-only"
+        }
+        data-testid="connections-no-providers"
+        role="status"
+      >
+        {noProviders ? t("connections.noProviders") : ""}
+      </p>
 
       {/*
         Every trigger needs a TabsContent with the matching value: Radix points
@@ -308,6 +330,7 @@ export default function ConnectionsPage() {
           providers={integrationsQuery.data?.providers ?? []}
           canCreateInstance={isSuperuser}
           reauthorize={reauthorizing}
+          deploymentContext={integrationsQuery.data?.deployment_context}
         />
       )}
     </div>

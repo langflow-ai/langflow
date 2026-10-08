@@ -1,7 +1,10 @@
 """Azure OpenAI chat model component."""
 
+import os
+
 from langchain_openai import AzureChatOpenAI
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, openai_compatible_client_kwargs
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import MessageTextInput
@@ -72,10 +75,24 @@ class AzureChatOpenAIComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        azure_endpoint = self.azure_endpoint
+        azure_endpoint = self.azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
+        # Azure resources are tenant-specific. Only an operator-configured endpoint or
+        # credential host allowlist may receive server credentials.
+        operator_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        api_key = self.api_key or None
+        ensure_credential_endpoint_allowed(
+            api_key,
+            azure_endpoint,
+            default_url=operator_endpoint,
+            sdk_env_fallback=("AZURE_OPENAI_API_KEY", "OPENAI_API_KEY"),
+        )
+        # The Azure SDK can prefer the operator's AD token even with an explicit API key.
+        ensure_credential_endpoint_allowed(
+            None, azure_endpoint, default_url=operator_endpoint, sdk_env_fallback="AZURE_OPENAI_AD_TOKEN"
+        )
+        ssrf_client_kwargs = openai_compatible_client_kwargs(azure_endpoint)
         azure_deployment = self.azure_deployment
         api_version = self.api_version
-        api_key = self.api_key
         temperature = self.temperature
         max_tokens = self.max_tokens
         stream = self.stream
@@ -89,6 +106,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
                 temperature=temperature,
                 max_tokens=max_tokens or None,
                 streaming=stream,
+                **ssrf_client_kwargs,
             )
         except Exception as e:
             msg = f"Could not connect to AzureOpenAI API: {e}"

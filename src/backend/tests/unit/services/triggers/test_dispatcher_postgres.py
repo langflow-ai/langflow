@@ -59,6 +59,21 @@ async def test_postgres_replicas_share_one_trigger_capacity(monkeypatch):
             async with scope() as session:
                 return await dispatcher.claim_batch(session, owner=owner, limit=10, lease_ttl_s=60)
 
+        # The mailbox lock must also fit PostgreSQL's actual VARCHAR limit;
+        # SQLite would silently accept an overlong name.
+        from types import SimpleNamespace
+
+        from langflow.services.triggers import lease_guard, source_cleanup
+
+        monkeypatch.setattr(source_cleanup, "session_scope", scope)
+        monkeypatch.setattr(lease_guard, "session_scope", scope)
+        monkeypatch.setattr(
+            source_cleanup,
+            "get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(trigger_lease_ttl_s=30)),
+        )
+        assert await source_cleanup.with_mailbox_lease("a" * 64, lambda: asyncio.sleep(0, result=True)) is True
+
         batches = await asyncio.gather(*(claim(f"replica-{index}") for index in range(4)))
         assert sum(map(len, batches)) == 1
         async with scope() as session:

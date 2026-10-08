@@ -54,6 +54,11 @@ _LIST_DEFAULT_LIMIT = 100
 OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
 _LEGACY_SUPERUSER_DENIAL = "Superuser required to administer role assignments."
 
+SCOPE_CONFLICT_DETAIL = (
+    "A role already exists for this user with this scope. "
+    "Please update the existing role or revoke it before assigning a new one."
+)
+
 
 async def _audit_deny(
     *,
@@ -150,7 +155,7 @@ async def _assignment_reads(session, assignments: list[AuthzRoleAssignment]) -> 
     ]
 
 
-def _assignment_match(payload: RoleAssignmentCreate):
+def _scope_match(payload: RoleAssignmentCreate):
     domain_match = (
         AuthzRoleAssignment.domain_id.is_(None)
         if payload.domain_id is None
@@ -158,10 +163,13 @@ def _assignment_match(payload: RoleAssignmentCreate):
     )
     return (
         AuthzRoleAssignment.user_id == payload.user_id,
-        AuthzRoleAssignment.role_id == payload.role_id,
         AuthzRoleAssignment.domain_type == payload.domain_type,
         domain_match,
     )
+
+
+def _assignment_match(payload: RoleAssignmentCreate):
+    return (*_scope_match(payload), AuthzRoleAssignment.role_id == payload.role_id)
 
 
 @router.get("", response_model=list[RoleAssignmentRead])
@@ -246,7 +254,11 @@ async def create_assignment(
         affected_user_ids=(payload.user_id,),
     )
 
-    user = await session.get(User, payload.user_id)
+    # Lock the target user's row (on dialects that support SELECT FOR UPDATE)
+    # so concurrent creates for the same user serialize: the one-role-per-scope
+    # check below is not backed by a unique index, so two requests could
+    # otherwise both find the scope free.
+    user = await session.get(User, payload.user_id, with_for_update=True)
     if user is None:
         await _audit_deny(
             user_id=current_user.id,
@@ -257,6 +269,16 @@ async def create_assignment(
             operation_id=operation_id,
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user_id not found")
+    if not user.is_active:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role_assignment:create",
+            obj="role_assignment:*",
+            status_code=status.HTTP_409_CONFLICT,
+            reason="user_inactive",
+            operation_id=operation_id,
+        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cannot assign roles to an inactive user")
     role = await session.get(AuthzRole, payload.role_id)
     if role is None:
         await _audit_deny(
@@ -280,6 +302,21 @@ async def create_assignment(
     assignment = (await session.exec(select(AuthzRoleAssignment).where(*_assignment_match(payload)))).first()
     effective_assignment_created = assignment is None
     if assignment is None:
+        # A user holds one role per scope (domain type + target) so it is
+        # always clear which role is in effect there. Adding a manual source
+        # to a role the user already has adds no role, so only a new
+        # effective assignment is checked.
+        scope_holder = (await session.exec(select(AuthzRoleAssignment).where(*_scope_match(payload)))).first()
+        if scope_holder is not None:
+            await _audit_deny(
+                user_id=current_user.id,
+                action="role_assignment:create",
+                obj="role_assignment:*",
+                status_code=status.HTTP_409_CONFLICT,
+                reason="role_already_assigned_for_scope",
+                operation_id=operation_id,
+            )
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=SCOPE_CONFLICT_DETAIL)
         assignment = candidate
         session.add(assignment)
     else:

@@ -43,9 +43,12 @@ jobs:
     outputs:
       should_release: ${{ steps.check.outputs.should_release }}
       current_version: ${{ steps.check.outputs.current_version }}
+      release_ref: ${{ steps.release_tag.outputs.sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
@@ -84,6 +87,18 @@ jobs:
 
           echo "✅ Version ${{ github.event.inputs.version }} is valid and not yet released"
           echo "should_release=true" >> $GITHUB_OUTPUT
+
+      - name: Prepare the official source tag
+        id: release_tag
+        if: ${{ inputs.publish_pypi || inputs.build_docker || inputs.create_github_release }}
+        env:
+          RELEASE_TAG: lfx-v${{ inputs.version }}
+        run: |
+          git config user.name "Langflow Release Bot"
+          git config user.email "bot-releases@langflow.org"
+          sha=$(uv run --no-project python scripts/ci/release_auth_defaults.py tag "$RELEASE_TAG")
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          git push origin "refs/tags/$RELEASE_TAG"
 
   run-tests:
     name: Run Tests
@@ -129,6 +144,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate-version.outputs.release_ref }}
 
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
@@ -169,9 +186,11 @@ jobs:
 
       - name: Build distribution
         run: |
+          uv run --no-sync python scripts/ci/release_auth_defaults.py prepare
           cd src/lfx
           rm -rf dist/
           uv build --wheel --out-dir dist
+          uv run --no-sync python ../../scripts/ci/release_auth_defaults.py verify dist/*.whl
 
       - name: Check build artifacts
         run: |
@@ -213,6 +232,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate-version.outputs.release_ref }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -285,6 +306,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate-version.outputs.release_ref }}
 
       - name: Download artifacts
         uses: actions/download-artifact@v8
@@ -340,9 +363,8 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: lfx-v${{ github.event.inputs.version }}
-          # Pin the minted tag to the commit this release was built from;
-          # without it GitHub creates the tag at the default-branch HEAD.
-          target_commitish: ${{ github.sha }}
+          # The tag's release-only commit also disables auto-login in source archives.
+          target_commitish: ${{ needs.validate-version.outputs.release_ref }}
           name: LFX ${{ github.event.inputs.version }}
           body_path: release_notes.md
           draft: false

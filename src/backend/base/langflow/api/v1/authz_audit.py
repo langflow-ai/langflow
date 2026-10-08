@@ -10,7 +10,7 @@ without direct DB access.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -26,6 +26,9 @@ from langflow.services.database.models.user.model import User
 router = APIRouter(prefix="/authz/audit", tags=["Authorization"], include_in_schema=False)
 
 _MAX_PAGE_SIZE = 200
+
+AuditResultFilter = Literal["allow", "deny", "owner_override", "skip"]
+AuditActorTypeFilter = Literal["user", "api_key", "unknown", "anonymous_public"]
 
 
 class AuthzAuditLogRead(BaseModel):
@@ -62,7 +65,7 @@ async def list_audit_log(
     _admin: Annotated[User, Depends(get_current_active_superuser)],
     user_id: Annotated[UUID | None, Query(description="Filter by acting user id.")] = None,
     actor_type: Annotated[
-        str | None,
+        AuditActorTypeFilter | None,
         Query(description="Filter by credential actor type; ``unknown`` also includes legacy rows without a type."),
     ] = None,
     actor_id: Annotated[
@@ -83,7 +86,7 @@ async def list_audit_log(
         Query(description="Exclude rows whose action exactly matches any supplied value."),
     ] = None,
     result: Annotated[
-        str | None,
+        AuditResultFilter | None,
         Query(description="Filter by audit result (``allow`` / ``deny`` / ``owner_override`` / ``skip``)."),
     ] = None,
     event: Annotated[

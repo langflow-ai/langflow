@@ -8,7 +8,6 @@ appropriate user-facing message.
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
@@ -66,43 +65,15 @@ class TestDefaultTestConnection:
         assert result.details.get("type") == "RuntimeError"
 
 
-class TestChromaTestConnection:
-    """Chroma override verifies the kb_path is writable + client opens."""
+@pytest.mark.parametrize("path_name", ["writable", "unwritable"])
+def test_retired_chroma_connection_reports_migration(tmp_path, path_name):
+    """Retired local Chroma must fail before probing or opening the source path."""
+    from lfx.base.knowledge_bases.backends.chroma import ChromaMigrationRequiredError
 
-    @pytest.mark.asyncio
-    async def test_returns_ok_for_writable_path(self, tmp_path: Path) -> None:
-        kb_path = tmp_path / "kb_chroma_ok"
-        backend = ChromaBackend(kb_name="kb_chroma_ok", kb_path=kb_path)
-        try:
-            result = await backend.test_connection()
-        finally:
-            await backend.teardown()
-        assert result.ok is True
-        assert "Chroma" in result.message
-        assert result.details.get("path") == str(kb_path)
-
-    @pytest.mark.asyncio
-    async def test_returns_failure_for_unwritable_path(self, tmp_path: Path) -> None:
-        # Drop a read-only parent directory so mkdir cannot create the
-        # KB subdirectory inside it. ``chmod`` semantics differ on
-        # Windows; gate the test on POSIX where 0o500 reliably blocks
-        # writes for the current user.
-        if os.name != "posix":
-            pytest.skip("Permission semantics rely on POSIX chmod.")
-        parent = tmp_path / "ro_parent"
-        parent.mkdir()
-        parent.chmod(0o500)
-        kb_path = parent / "kb_chroma_fail"
-        backend = ChromaBackend(kb_name="kb_chroma_fail", kb_path=kb_path)
-        try:
-            result = await backend.test_connection()
-        finally:
-            await backend.teardown()
-            # Restore permissions so pytest's tmp_path cleanup succeeds.
-            parent.chmod(0o700)
-        assert result.ok is False
-        assert "not writable" in result.message
-        assert result.details.get("type") in {"PermissionError", "OSError"}
+    kb_path = tmp_path / path_name
+    with pytest.raises(ChromaMigrationRequiredError, match="retired"):
+        ChromaBackend(kb_name="retired", kb_path=kb_path)
+    assert not kb_path.exists()
 
 
 class TestOpenSearchTestConnection:

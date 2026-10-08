@@ -165,3 +165,24 @@ async def _append(trigger_id):
     async with session_scope() as session:
         event, _ = await ledger.append_event(session, trigger_id=trigger_id, dedupe_key=f"e-{uuid4().hex[:8]}")
         return event.id
+
+
+@pytest.mark.parametrize(
+    ("kind", "mechanism", "family"),
+    [
+        ("slack.message", "slack.events_api", "trigger_push"),
+        ("inbound_webhook", None, "trigger_push"),
+        ("slack.message", "slack.socket_mode", "trigger_listener"),
+        ("schedule", None, "trigger_listener"),
+    ],
+)
+async def test_a_pushed_event_runs_as_trigger_push_and_a_listened_one_as_trigger_listener(
+    make_trigger, fake_background_service, kind: str, mechanism: str | None, family: str
+) -> None:
+    """The run's family says where the event came from (trigger contract section 5)."""
+    config = {"mechanism_id": mechanism} if mechanism else {}
+    trigger_id = await make_trigger(kind=kind, config=config)
+    await _append(trigger_id)
+
+    assert await dispatcher.run_once(owner="solo") == 1
+    assert fake_background_service.submits[0]["request"]["execution_family"] == family

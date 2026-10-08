@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from lfx.base.vectorstores.model import LCVectorStoreComponent
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
+from lfx.utils.ssrf_protection import SSRFProtectionError
 from lfx_valkey.components.valkey.valkey import ValkeyVectorStoreComponent
 
 # Create a mock for langchain_aws.vectorstores
@@ -95,6 +96,30 @@ class TestValkeyVectorStoreComponentDecorator:
 
 
 class TestValkeyVectorStoreComponentBehavior:
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "valkey://169.254.169.254:6379",
+            "valkey://user:password@8.8.8.8:6379#@169.254.169.254:6379",  # pragma: allowlist secret
+        ],
+    )
+    def test_blocks_effective_metadata_host_before_sdk(self, url):
+        component = ValkeyVectorStoreComponent()
+        component.valkey_server_url = url
+        settings = MagicMock()
+        settings.settings.ssrf_protection_enabled = True
+        settings.settings.connector_ssrf_validation_enabled = True
+        settings.settings.ssrf_allowed_hosts = []
+
+        with (
+            patch("lfx.utils.ssrf_protection.get_settings_service", return_value=settings),
+            pytest.raises(SSRFProtectionError),
+        ):
+            component.build_vector_store()
+
+        _MockValkeyVectorStore.from_existing_index.assert_not_called()
+        _MockValkeyVectorStore.from_documents.assert_not_called()
+
     def test_no_data_no_index_raises_value_error(self):
         component = ValkeyVectorStoreComponent()
         component.ingest_data = []
