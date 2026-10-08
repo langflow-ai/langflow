@@ -49,6 +49,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies UniRate as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "UniRate",
+          icon: "ArrowRightLeft",
+          name: "unirate",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Microsoft 365 as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([

@@ -27,6 +27,7 @@ OPT_IN_STANDALONE_EXTENSIONS = {
     "lfx-paddle",
     "lfx-serpingapi",
     "lfx-serply",
+    "lfx-unirate",
     "lfx-valkey",
 }
 
