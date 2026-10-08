@@ -31,7 +31,7 @@ To authenticate the CLI, do the following:
 
    - **macOS**: `~/Library/Application Support/langflow/admin-profiles.json`
    - **Linux**: `~/.config/langflow/admin-profiles.json`
-   - **Windows**: `C:\Users\<username>\AppData\Local\langflow\admin-profiles.json`
+   - **Windows**: `C:\Users\<username>\AppData\Local\langflow\langflow\admin-profiles.json`
 
    ```json
    {
@@ -258,7 +258,7 @@ Include the created key in the request's `x-api-key` header.
      -H "x-api-key: $LANGFLOW_API_KEY"
    ```
 
-4. If the request is refused, read the status code and the `X-Langflow-Error-Code` header.
+3. If the request is refused, read the status code and the `X-Langflow-Error-Code` header.
 
    | Response | Header | When |
    |---|---|---|
