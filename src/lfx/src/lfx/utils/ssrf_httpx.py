@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 import httpx
+from httpx import create_ssl_context
 
 from lfx.utils.ssrf_protection import (
     SSRFProtectionError,
@@ -99,14 +100,19 @@ def _httpx_client_kwargs_for_validated_url(
     if not is_ssrf_protection_enabled():
         return {}, {}
 
-    sync_kwargs: dict[str, Any] = {"follow_redirects": False}
-    async_kwargs: dict[str, Any] = {"follow_redirects": False}
+    # HTTPX otherwise loads the same trust roots for each client/transport.
+    # Pass one context to both clients AND their pinned transports: a custom
+    # transport owns the actual TLS pool. Keep it local to this pair so a later
+    # invocation picks up changed SSL_CERT_FILE/SSL_CERT_DIR trust settings.
+    ssl_context = create_ssl_context()
+    sync_kwargs: dict[str, Any] = {"follow_redirects": False, "verify": ssl_context}
+    async_kwargs: dict[str, Any] = {"follow_redirects": False, "verify": ssl_context}
 
     hostname = _transport_host(validated_url)
     if hostname and validated_ips:
         ip_list = list(validated_ips)
-        sync_kwargs["transport"] = SSRFProtectedSyncTransport(pinned_ips={hostname: ip_list})
-        async_kwargs["transport"] = SSRFProtectedTransport(pinned_ips={hostname: ip_list})
+        sync_kwargs["transport"] = SSRFProtectedSyncTransport(pinned_ips={hostname: ip_list}, verify=ssl_context)
+        async_kwargs["transport"] = SSRFProtectedTransport(pinned_ips={hostname: ip_list}, verify=ssl_context)
 
     return sync_kwargs, async_kwargs
 
