@@ -22,7 +22,9 @@ jest.mock("@/components/ui/button", () => ({
 
 jest.mock("@/utils/mcpUtils", () => ({
   AUTH_METHODS: {
-    apikey: { label: "API Key" },
+    // Differs from the translated copy, so the label must come from
+    // authModal.authMethod.apikey rather than this constant.
+    apikey: { label: "apikey constant" },
     oauth: { label: "OAuth" },
   },
 }));
