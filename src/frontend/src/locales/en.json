@@ -793,7 +793,7 @@
   "settings.migration.kb.ranking.body": "The new instance ranks search results a different way for this one.",
   "settings.migration.files.progress": "Files: {{done}} of {{total}}. Copied so far: {{bytes}}.",
   "settings.migration.files.conflict": "The bucket already holds a different file with this name. Nothing is overwritten.",
-  "settings.migration.files.badName": "S3 doesn't allow this name. Rename the file in Langflow, then copy again.",
+  "settings.migration.files.badName": "This file's stored name has a backslash or \"..\" in it, which Langflow's file storage refuses, so it can't be copied.",
   "settings.migration.files.noFile": "Nothing is stored for this name, so there is nothing to copy. It will show as missing.",
   "settings.migration.error.bucket": "Can't write to the bucket. Check '{{step}}', then try again.",
   "settings.migration.error.notCopied": "It wasn't copied.",

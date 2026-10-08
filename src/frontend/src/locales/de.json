@@ -2166,7 +2166,7 @@
   "settings.migration.kb.ranking.body": "Die neue Instanz sortiert die Suchergebnisse dieser Wissensdatenbank anders.",
   "settings.migration.files.progress": "Dateien: {{done}} von {{total}}. Bisher kopiert: {{bytes}}.",
   "settings.migration.files.conflict": "Der Bucket enthält bereits eine andere Datei mit diesem Namen. Es wird nichts überschrieben.",
-  "settings.migration.files.badName": "S3 lässt diesen Namen nicht zu. Benennen Sie die Datei in Langflow um und kopieren Sie erneut.",
+  "settings.migration.files.badName": "Der gespeicherte Name dieser Datei enthält einen Backslash oder „..“, den der Dateispeicher von Langflow ablehnt. Deshalb kann sie nicht kopiert werden.",
   "settings.migration.files.noFile": "Zu diesem Namen ist nichts gespeichert, es gibt also nichts zu kopieren. Die Datei wird als fehlend angezeigt.",
   "settings.migration.error.bucket": "In den Bucket kann nicht geschrieben werden. Prüfen Sie „{{step}}“ und versuchen Sie es erneut.",
   "settings.migration.error.notCopied": "Wurde nicht kopiert.",
