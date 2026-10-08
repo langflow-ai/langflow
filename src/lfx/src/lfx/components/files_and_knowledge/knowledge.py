@@ -25,6 +25,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
+import anyio
 import pandas as pd
 
 from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend
@@ -175,6 +176,21 @@ class KnowledgeComponent(Component):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._cached_kb_path: Path | None = None
+        self._knowledge_output_result: Data | DataFrame | None = None
+
+    def _pre_run_setup(self) -> None:
+        self._knowledge_output_result = None
+
+    async def _get_output_result(self, output: Output):
+        # Both legacy handles dispatch to the selected mode. Terminal nodes
+        # evaluate both handles, but must execute the storage operation once.
+        if output.method not in {"build_kb_info", "retrieve_data"}:
+            return await super()._get_output_result(output)
+        if self._knowledge_output_result is None:
+            raw_output = output.model_copy(update={"options": None})
+            self._knowledge_output_result = await super()._get_output_result(raw_output)
+        output.value = output.apply_options(self._knowledge_output_result)
+        return output.value
 
     @staticmethod
     def _embedding_provider_from_selection(selection: Any) -> str | None:
@@ -814,15 +830,17 @@ class KnowledgeComponent(Component):
     def _default_backend_selection() -> tuple[str, dict[str, Any]]:
         """Deployment default for a new KB with no explicit backend chosen.
 
-        pgVector is environment-driven: when ``PGVECTOR_CONNECTION_STRING`` is set
-        the deployment snap-configures to Postgres, so an unspecified selection
-        (headless flows, multi-replica) becomes ``postgres``. Otherwise SQLite.
+        Environment-driven: pgVector when ``PGVECTOR_CONNECTION_STRING`` is set,
+        else OpenSearch when ``OPENSEARCH_URL`` is set, else SQLite. An
+        unspecified selection (headless flows, multi-replica) therefore lands on
+        the deployment's shared store.
         """
-        from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
+        from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 
-        if postgres_env_configured():
-            return BackendType.POSTGRES.value, {}
-        return BackendType.SQLITE.value, {}
+        backend_type = resolve_default_kb_backend()
+        if backend_type == BackendType.OPENSEARCH.value:
+            return backend_type, dict(_DEFAULT_OPENSEARCH_CONFIG)
+        return backend_type, {}
 
     @classmethod
     def _normalize_backend_selection(cls, value: Any) -> tuple[str, dict[str, Any]]:
@@ -914,11 +932,25 @@ class KnowledgeComponent(Component):
             msg = "User ID is required for knowledge base storage."
             raise ValueError(msg)
         backend = await backend_for_name(owner_id, self.knowledge_base, embedding_function=embedding_function)
+        try:
+            return await self._ingest_into_backend(backend, df_source, config_list, embedding_function)
+        except BaseException:
+            with anyio.CancelScope(shield=True):
+                await backend.teardown()
+            raise
+
+    async def _ingest_into_backend(
+        self,
+        backend: BaseVectorStoreBackend,
+        df_source: pd.DataFrame,
+        config_list: list[dict[str, Any]],
+        embedding_function,
+    ) -> BaseVectorStoreBackend:
         await backend.ensure_ready()
 
         from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
 
-        record = await resolve_record(owner_id, self.knowledge_base)
+        record = await resolve_record(self._user_uuid, self.knowledge_base)
         async with operation(record, shared=True):
             existing_ids = set()
             if not self.allow_duplicates:
@@ -1127,6 +1159,8 @@ class KnowledgeComponent(Component):
         run_status: IngestionRunStatus = IngestionRunStatus.SUCCEEDED
         run_error: str | None = None
         kb_record_id: uuid.UUID | None = None
+        previous_kb_status = "ready"
+        previous_failure_reason: str | None = None
         try:
             input_value = self.input_df[0] if isinstance(self.input_df, list) else self.input_df
             df_source: DataFrame = convert_to_dataframe(input_value, auto_parse=False)
@@ -1138,6 +1172,11 @@ class KnowledgeComponent(Component):
             # authority. No sidecar is read, so ingestion resolves the same model
             # on any replica.
             stored_metadata = await self._get_kb_metadata()
+            previous_kb_status = stored_metadata.get("status", "ready")
+            # Empty is an API projection of a ready KB with no chunks.
+            if previous_kb_status in {"empty", "ingesting"}:
+                previous_kb_status = "ready"
+            previous_failure_reason = stored_metadata.get("failure_reason")
             model_selection = stored_metadata.get("model_selection")
             if model_selection:
                 model_selection = [model_selection] if isinstance(model_selection, dict) else list(model_selection)
@@ -1220,7 +1259,8 @@ class KnowledgeComponent(Component):
                     extensions=source_types,
                 )
             finally:
-                await backend.teardown()
+                with anyio.CancelScope(shield=True):
+                    await backend.teardown()
 
             meta: dict[str, Any] = {
                 "kb_id": str(uuid.uuid4()),
@@ -1250,6 +1290,10 @@ class KnowledgeComponent(Component):
 
             return Data(data=meta)
 
+        except asyncio.CancelledError:
+            run_status = IngestionRunStatus.CANCELLED
+            run_error = "Flow ingestion was cancelled."
+            raise
         except (OSError, ValueError, RuntimeError, KeyError) as e:
             run_status = IngestionRunStatus.FAILED
             run_error = str(e) or e.__class__.__name__
@@ -1260,16 +1304,24 @@ class KnowledgeComponent(Component):
             run_error = str(e) or e.__class__.__name__
             raise
         finally:
-            if run_id is not None and run_summary is not None:
-                await self._finalize_ingestion_run(
-                    run_id=run_id,
-                    job_id=run_job_id,
-                    summary=run_summary,
-                    status=run_status,
-                    error_message=run_error,
-                )
-            if kb_record_id is not None and run_status is IngestionRunStatus.FAILED:
-                await self._record_kb_status(kb_record_id, "failed", failure_reason=run_error)
+            # A disconnected canvas can cancel every await in its AnyIO scope,
+            # including the DB writes that make the run terminal.
+            with anyio.CancelScope(shield=True):
+                if run_id is not None and run_summary is not None:
+                    await self._finalize_ingestion_run(
+                        run_id=run_id,
+                        job_id=run_job_id,
+                        summary=run_summary,
+                        status=run_status,
+                        error_message=run_error,
+                    )
+                if kb_record_id is not None:
+                    if run_status is IngestionRunStatus.FAILED:
+                        await self._record_kb_status(kb_record_id, "failed", failure_reason=run_error)
+                    elif run_status is IngestionRunStatus.CANCELLED:
+                        await self._record_kb_status(
+                            kb_record_id, previous_kb_status, failure_reason=previous_failure_reason
+                        )
 
     async def _begin_ingestion_run(
         self,
@@ -1294,6 +1346,9 @@ class KnowledgeComponent(Component):
             self.log(f"Run-history wiring unavailable; ingestion will not be recorded ({exc}).")
             return None, None, None, None
 
+        job_id: uuid.UUID | None = None
+        run_id: uuid.UUID | None = None
+        summary: IngestionSummary | None = None
         try:
             kb_record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
             kb_record_id = kb_record.id if kb_record is not None else None
@@ -1304,6 +1359,22 @@ class KnowledgeComponent(Component):
             job_service = get_job_service()
             raw_flow_id = getattr(self, "flow_id", None)
             flow_id_uuid = uuid.UUID(str(raw_flow_id)) if raw_flow_id else job_id
+            source = FlowComponentSource(
+                user_id=user_uuid,
+                source_config={
+                    "knowledge_base": self.knowledge_base,
+                    "kb_path": str(kb_path),
+                    "flow_id": str(flow_id_uuid),
+                },
+            )
+            summary = IngestionSummary(
+                kb_name=self.knowledge_base,
+                source_type=source.source_type.value,
+                user_id=user_uuid,
+                job_id=job_id,
+                source_config=source.describe().get("config") or {},
+                user_metadata=user_metadata,
+            )
             await job_service.create_job(
                 job_id=job_id,
                 flow_id=flow_id_uuid,
@@ -1313,15 +1384,6 @@ class KnowledgeComponent(Component):
                 user_id=user_uuid,
             )
             await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
-
-            source = FlowComponentSource(
-                user_id=user_uuid,
-                source_config={
-                    "knowledge_base": self.knowledge_base,
-                    "kb_path": str(kb_path),
-                    "flow_id": str(flow_id_uuid),
-                },
-            )
 
             run_id = await ingestion_run_service.create_run(
                 kb_name=self.knowledge_base,
@@ -1335,15 +1397,20 @@ class KnowledgeComponent(Component):
                 return None, job_id, None, kb_record_id
             await ingestion_run_service.mark_running(run_id)
 
-            summary = IngestionSummary(
-                kb_name=self.knowledge_base,
-                source_type=source.source_type.value,
-                user_id=user_uuid,
-                job_id=job_id,
-                source_config=source.describe().get("config") or {},
-                user_metadata=user_metadata,
-            )
             self.log(f"Started ingestion run job_id={job_id} kb_name={self.knowledge_base} kb_id={kb_record_id}")
+        except asyncio.CancelledError:
+            # The caller has not received the run ID yet, so it cannot finalize
+            # a cancellation that arrives while tracking is being initialized.
+            with anyio.CancelScope(shield=True):
+                if job_id is not None and summary is not None:
+                    await self._finalize_ingestion_run(
+                        run_id=run_id or job_id,
+                        job_id=job_id,
+                        summary=summary,
+                        status=IngestionRunStatus.CANCELLED,
+                        error_message="Flow ingestion was cancelled.",
+                    )
+            raise
         except Exception as exc:  # noqa: BLE001 — telemetry must never abort ingestion
             self.log(f"Could not begin ingestion-run tracking: {exc}")
             return None, None, None, None
@@ -1376,7 +1443,10 @@ class KnowledgeComponent(Component):
                 error_message=error_message,
             )
             if job_id is not None:
-                terminal_status = JobStatus.COMPLETED if status is not IngestionRunStatus.FAILED else JobStatus.FAILED
+                terminal_status = {
+                    IngestionRunStatus.FAILED: JobStatus.FAILED,
+                    IngestionRunStatus.CANCELLED: JobStatus.CANCELLED,
+                }.get(status, JobStatus.COMPLETED)
                 await get_job_service().update_job_status(job_id, terminal_status, finished_timestamp=True)
         except Exception as exc:  # noqa: BLE001 — telemetry must never re-raise
             self.log(f"Could not finalize ingestion-run tracking: {exc}")

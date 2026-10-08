@@ -174,9 +174,9 @@ def local_chroma_rejection_reason(
     name remains for existing callers during the storage transition.
 
     This create-time check is the only enforcement needed. Prod boot already
-    requires a reachable pgVector (``preflight.probe_pgvector`` is a *required*
-    check that aborts startup), so ``resolve_default_kb_backend()`` never falls
-    back to Chroma there — local Chroma can only arrive as an explicit client
+    requires a reachable shared vector backend (``preflight.probe_vector_backend``
+    is a *required* check that aborts startup), so ``resolve_default_kb_backend()``
+    never falls back to a host-local store there — local Chroma can only arrive as an explicit client
     selection.
 
     Returns the message rather than raising so HTTP routes and service-layer
