@@ -1076,6 +1076,12 @@ describe("Copy the database", () => {
       },
     };
   };
+  // A refusal as the server sends one: a status and one JSON error body.
+  const refusedStream = (status: number, detail: object) => ({
+    ...stream([{ detail }]),
+    ok: false,
+    status,
+  });
   // A stream that stays open and says nothing.
   const silent = () => jest.fn(() => new Promise<Response>(() => {}));
 
@@ -1175,7 +1181,9 @@ describe("Copy the database", () => {
     jest.useFakeTimers();
     const fetched = jest
       .fn()
-      .mockResolvedValue({ ok: false, status: 404, body: null });
+      .mockImplementation(async () =>
+        refusedStream(404, { code: "run_not_found" }),
+      );
     global.fetch = fetched;
     const client = new QueryClient();
     const reread = jest.spyOn(client, "invalidateQueries");
@@ -1188,6 +1196,58 @@ describe("Copy the database", () => {
     await waitFor(() => expect(reread).toHaveBeenCalledTimes(1));
     await act(() => jest.advanceTimersByTimeAsync(10000));
     expect(fetched).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Starting…")).toBeInTheDocument();
+  });
+
+  it("asks again after any other refusal, and reads nothing from its body", async () => {
+    jest.useFakeTimers();
+    const fetched = jest
+      .fn()
+      .mockImplementationOnce(async () =>
+        refusedStream(500, { message: "boom" }),
+      )
+      .mockImplementation(() => new Promise<Response>(() => {}));
+    global.fetch = fetched;
+    const client = new QueryClient();
+    const reread = jest.spyOn(client, "invalidateQueries");
+    render(
+      <QueryClientProvider client={client}>
+        {panel({ status: "running", finished_at: null }, "current")}
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(fetched).toHaveBeenCalledTimes(1));
+    await act(() => jest.advanceTimersByTimeAsync(2000));
+
+    expect(fetched).toHaveBeenCalledTimes(2);
+    expect(fetched.mock.calls[1][0]).toContain("events?after=0");
+    expect(reread).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Starting…");
+  });
+
+  it("says when a copy it was following has ended", () => {
+    global.fetch = silent();
+    const client = new QueryClient();
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        {panel({ status: "running", finished_at: null }, "current")}
+      </QueryClientProvider>,
+    );
+    const region = screen.getByRole("status");
+    expect(region).toHaveTextContent("Starting…");
+
+    rerender(
+      <QueryClientProvider client={client}>
+        {panel(
+          { report: { ok: true, tables_copied: 59, rows_copied: 1234 } },
+          "done",
+        )}
+      </QueryClientProvider>,
+    );
+
+    // The same region stays mounted, so a screen reader hears the result.
+    expect(screen.getByRole("status")).toBe(region);
+    expect(region).toHaveTextContent("Tables: 59. Rows: 1,234.");
   });
 
   it("asks before it stops a run, and lets go of the run when the page goes away", async () => {
