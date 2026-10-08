@@ -168,6 +168,8 @@ class TestAgenticMcpReleasesItsDbSession:
         class FakeRequest:
             base_url = "http://testserver/"
             headers = {"x-api-key": "key-1"}
+            cookies: dict = {}
+            query_params: dict = {}
             scope: dict = {}
             receive = None
             _send = None
@@ -241,8 +243,10 @@ class TestAgenticMcpToolDelegation:
         class FakeRequest:
             base_url = "http://localhost:7860/"
             headers = {"Authorization": "Bearer tok-123", "x-api-key": "key-456"}
+            cookies: dict = {}
+            query_params: dict = {}
 
-        client = _loopback_client(FakeRequest())
+        client = await _loopback_client(FakeRequest())
         assert client.server_url == "http://localhost:7860"
         assert client.access_token == "tok-123"  # noqa: S105
-        assert client.api_key == "key-456"
+        assert client.api_key is None

@@ -1723,6 +1723,56 @@ class TestRotationOnAppWrittenDatabase:
             assert conn.execute(text("SELECT auth_settings FROM folder")).scalar() == "null"
         assert migrate_module.read_secret_key_from_file(config_dir) == new_key
 
+    @pytest.mark.parametrize("never_encrypted", ["", "plaintext-store-key"])
+    def test_skips_store_api_keys_that_are_not_encrypted(self, migrate_module, app_db, new_key, never_encrypted):
+        from langflow.services.database.models import User
+        from sqlmodel import Session, select
+
+        engine, config_dir, url, app_key = app_db
+        # auto_login stores "" for a user who never saved a Store API key.
+        with Session(engine) as session:
+            user = session.exec(select(User)).one()
+            user.store_api_key = never_encrypted
+            session.commit()
+
+        migrate_module.migrate(config_dir, url, old_key=app_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            assert conn.execute(text('SELECT store_api_key FROM "user"')).scalar() == never_encrypted
+        assert migrate_module.read_secret_key_from_file(config_dir) == new_key
+
+    def test_rotates_a_store_api_key_the_app_encrypted(self, migrate_module, app_db, new_key):
+        from langflow.services.auth.utils import encrypt_api_key
+        from langflow.services.database.models import User
+        from sqlmodel import Session, select
+
+        engine, config_dir, url, app_key = app_db
+        with Session(engine) as session:
+            user = session.exec(select(User)).one()
+            user.store_api_key = encrypt_api_key("sk-store-key")
+            session.commit()
+
+        migrate_module.migrate(config_dir, url, old_key=app_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            stored = conn.execute(text('SELECT store_api_key FROM "user"')).scalar()
+        assert migrate_module.decrypt_with_key(stored, new_key) == "sk-store-key"
+
+    def test_store_api_key_under_another_key_rolls_back(self, migrate_module, app_db, new_key):
+        from langflow.services.database.models import User
+        from sqlmodel import Session, select
+
+        engine, config_dir, url, app_key = app_db
+        with Session(engine) as session:
+            user = session.exec(select(User)).one()
+            user.store_api_key = migrate_module.encrypt_with_key("foreign", secrets.token_urlsafe(32))
+            session.commit()
+
+        with pytest.raises(SystemExit):
+            migrate_module.migrate(config_dir, url, old_key=app_key, new_key=new_key)
+
+        assert not (config_dir / "secret_key").exists()
+
     def test_env_secret_key_must_be_updated_before_restart(self, migrate_module, app_db, new_key, monkeypatch, capsys):
         _, config_dir, url, app_key = app_db
         # Langflow uses this over the key file and writes it back over the file on start.

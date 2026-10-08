@@ -30,6 +30,8 @@ from langflow.cli.integrity import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 # How to read the revision a target image runs, for --target-revision.
@@ -53,28 +55,37 @@ async def run_preflight(
     *,
     target_revision: str | None = None,
     target_secret_key: str | None = None,
+    on_check: Callable[[CheckResult], None] | None = None,
 ) -> IntegrityReport:
-    """Run the migration checks, then the source's own integrity checks."""
+    """Run the migration checks, then the source's own integrity checks.
+
+    ``on_check`` is called with each result as its check finishes.
+    """
     from langflow.services.deps import session_scope
 
+    report = IntegrityReport([])
+
+    def add(check: CheckResult) -> None:
+        report.checks.append(check)
+        if on_check:
+            on_check(check)
+
     async with session_scope() as session:
-        checks = [await check_version_direction(session, target_revision)]
+        add(await check_version_direction(session, target_revision))
         schema = await check_schema(session)
         if schema.status != "ok":
             # The remaining checks read through this Langflow's models, which on another
             # schema would misread rows. Nothing migrates the source to make them fit.
             await session.rollback()
-            return IntegrityReport([*checks, replace(schema, name="source: schema")])
-        checks += [
-            await check_default_superuser(session, target_revision),
-            await check_target_key(session, target_secret_key),
-            await check_embedding_models(session),
-            await check_role_assignments(session),
-        ]
+            add(replace(schema, name="source: schema"))
+            return report
+        add(await check_default_superuser(session, target_revision))
+        add(await check_target_key(session, target_secret_key))
+        add(await check_embedding_models(session))
+        add(await check_role_assignments(session))
         await session.rollback()
-    source = await check_instance()
-    checks += [replace(check, name=f"source: {check.name}") for check in source.checks]
-    return IntegrityReport(checks)
+    await check_instance(on_check=lambda check: add(replace(check, name=f"source: {check.name}")))
+    return report
 
 
 async def check_version_direction(session: AsyncSession, target_revision: str | None) -> CheckResult:

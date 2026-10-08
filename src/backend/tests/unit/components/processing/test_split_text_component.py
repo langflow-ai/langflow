@@ -223,6 +223,26 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         assert "source" not in data_frame.columns, "Metadata column 'source' should not be present"
         assert "author" not in data_frame.columns, "Metadata column 'author' should not be present"
 
+    @pytest.mark.parametrize("label", [0, ("source", "id"), None])
+    def test_split_text_keeps_non_string_metadata_labels(self, label):
+        """Test that non-string metadata column labels survive the default column ordering."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": DataFrame({"text": ["alpha\nbeta"], label: ["source-1"]}),
+                "text_key": "text",
+                "chunk_overlap": 0,
+                "chunk_size": 6,
+                "separator": "\n",
+                "clean_output": False,
+            }
+        )
+
+        data_frame = component.split_text()
+
+        assert list(data_frame.columns) == ["text", label]
+        assert data_frame.to_numpy().tolist() == [["alpha", "source-1"], ["beta", "source-1"]]
+
     def test_split_text_empty_input(self):
         """Test handling of empty input text."""
         component = SplitTextComponent()
