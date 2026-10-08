@@ -35,8 +35,10 @@ export type CopyStepId =
 /** Rows of one table that point at a row of another that is gone. */
 export interface OrphanRows {
   table: string;
-  column?: string;
+  column: string;
   parent: string;
+  /** The foreign key's ON DELETE rule: `CASCADE` rows are left out, `SET NULL` rows are copied with the key cleared. */
+  ondelete: string;
   rows: number;
 }
 

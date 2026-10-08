@@ -1911,6 +1911,25 @@ describe("What the admin decides about a copy", () => {
   });
   const note = () => screen.queryByText(/^Accepting a finding/);
 
+  it("says a row whose key is cleared is copied, not left out", () => {
+    const asked = orphans(dropOrphans());
+    asked.decision_needed.details.orphans.push({
+      table: "authz_role_assignment",
+      column: "assigned_by",
+      parent: "user",
+      ondelete: "SET NULL",
+      rows: 3,
+    });
+    show(panel("copy_database", asked));
+
+    expect(
+      screen.getAllByRole("listitem").map((item) => item.textContent),
+    ).toEqual([
+      "Rows in span that point at deleted rows of trace: 2",
+      "Rows in authz_role_assignment that point at deleted rows of user: 3. They are copied with assigned_by cleared.",
+    ]);
+  });
+
   it("shows the rows a database copy would leave out, and asks before it does", async () => {
     const post = jest.spyOn(api, "post").mockRejectedValue(unreachable());
     render(
@@ -1949,7 +1968,7 @@ describe("What the admin decides about a copy", () => {
       "Rows in span that point at deleted rows of trace: 2",
     );
     const leaveOut = screen.getByRole("checkbox", {
-      name: "Leave these rows out and copy the rest",
+      name: "Leave out or unlink these rows and copy the rest",
     });
     expect(leaveOut).not.toBeChecked();
     // Nothing says it was decided until it is.
@@ -1994,7 +2013,7 @@ describe("What the admin decides about a copy", () => {
     show(panel("copy_database", orphans(dropOrphans(true))));
 
     const leaveOut = screen.getByRole("checkbox", {
-      name: "Leave these rows out and copy the rest",
+      name: "Leave out or unlink these rows and copy the rest",
     });
     expect(leaveOut).toBeChecked();
     // Who decided and when come with the decision, and the time reads as times do on this page.
