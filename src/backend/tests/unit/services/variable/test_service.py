@@ -631,6 +631,39 @@ async def test_get_variables_batches_shared_visibility_and_preserves_owner_prece
         authz.list_visible_resource_ids.assert_not_awaited()
 
 
+@pytest.mark.parametrize("all_resources", [False, True])
+async def test_runtime_variable_reads_exclude_denied_shared_rows_before_resolving_names(
+    service, session, all_resources
+):
+    actor = uuid4()
+    owned = await service.create_variable(actor, "OWNED", "owned", type_=GENERIC_TYPE, session=session)
+    allowed = await service.create_variable(uuid4(), "SHARED", "allowed-secret", session=session)
+    shadow = await service.create_variable(uuid4(), "SHARED", "excluded-shadow", session=session)
+    denied = await service.create_variable(uuid4(), "DENIED", "excluded-secret", session=session)
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = AsyncMock(
+        return_value=ResourceVisibilityScope(
+            all_resources=all_resources,
+            resource_ids=(allowed.id, shadow.id, denied.id),
+            excluded_resource_ids=(owned.id, shadow.id, denied.id),
+        )
+    )
+
+    with patch("langflow.services.deps.get_authorization_service", return_value=authz):
+        with patch.object(session, "exec", wraps=session.exec) as execute:
+            values = await service.get_variables(actor, {"OWNED", "SHARED", "DENIED"}, "", session)
+        assert values["OWNED"] == "owned"
+        assert values["SHARED"].get_secret_value() == "allowed-secret"
+        assert values["DENIED"] is None
+        assert execute.await_count == 2
+        # The excluded same-name row must not make an allowed single read ambiguous.
+        assert (await service.get_variable(actor, "SHARED", "", session)).get_secret_value() == "allowed-secret"
+        with pytest.raises(VariableNotFoundError):
+            await service.get_variable(actor, "DENIED", "", session)
+
+
 async def test_get_variables_handles_missing_and_unreadable_values_independently(service, session):
     actor = uuid4()
     await service.create_variable(actor, "GOOD", "good", type_=GENERIC_TYPE, session=session)
