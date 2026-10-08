@@ -1,0 +1,3825 @@
+[
+  {
+    "name": "ping",
+    "description": "Quick health check that confirms the FXMacroData API and MCP server are reachable. Use this only if other tools fail unexpectedly — it is not needed before normal calls.",
+    "inputSchema": {
+      "properties": {},
+      "title": "pingArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "mcp_capabilities",
+    "description": "Explain what the FXMacroData MCP server can do, which tools render MCP Apps, which tools return plain rows, what is public versus subscriber-only, and how to choose tools across ChatGPT, Claude, Cursor, Codex, and plain MCP clients. Use this when a user asks what is available, why visuals are not showing, or how to get the same result in a different interface.",
+    "inputSchema": {
+      "properties": {},
+      "title": "mcp_capabilitiesArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "mcp_auth_guide",
+    "description": "Explain which authentication mode to use for FXMacroData MCP across major clients and platforms. Use this when the user asks whether to use OAuth, an API key, a bearer token, ChatGPT/OpenAI Apps, Claude/Anthropic, Microsoft/VS Code/Copilot-style clients, AstrBot, Cursor, Codex, local scripts, or CI.",
+    "inputSchema": {
+      "properties": {},
+      "title": "mcp_auth_guideArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "subscribe_for_mcp_access",
+    "description": "Open subscription options when a user needs to unlock MCP app visuals, charts, and advanced analytical tools. Returns a direct checkout path.",
+    "inputSchema": {
+      "properties": {},
+      "title": "subscribe_for_mcp_accessArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "data_catalogue",
+    "description": "List every macroeconomic indicator FXMacroData publishes for a currency, with units, frequency, and coverage/freshness metadata. ALWAYS call this first when the user asks about a country's macro data — it returns the exact `indicator` slug strings to pass to indicator_query, release_calendar, and indicator_visual_artifact. Check `coverage` before calling indicator_query; stale, partial, or unavailable rows are not suitable for real-time carry or inflation analysis. Supported currencies (lowercase 3-letter codes): AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "include_coverage": {
+          "default": true,
+          "description": "Include coverage/freshness rows with latest_available_date, coverage_quality, has_recent_data, and recent_observation_count. Leave true when deciding whether an indicator is usable before calling indicator_query.",
+          "examples": [
+            true
+          ],
+          "type": "boolean"
+        },
+        "include_capabilities": {
+          "default": false,
+          "description": "Include machine-readable indicator capabilities when the API supports them, such as supported transformations, history availability, and release-calendar linkage.",
+          "examples": [
+            false
+          ],
+          "type": "boolean"
+        },
+        "indicator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional indicator slug to limit coverage calculation, for example `core_inflation`. Use this when you already know the candidate series.",
+          "examples": [
+            "core_inflation"
+          ]
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "data_catalogueArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "risk_sentiment",
+    "description": "Return the global risk-on/risk-off sentiment series used for FX regime analysis. The result includes a derived composite score, regime label, component contributions, pagination, and data_quality metadata. Use this for cross-asset regime context before classifying high-beta, safe-haven, commodity, or USD-defensive FX conditions. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive start date in YYYY-MM-DD format.",
+          "examples": [
+            "2026-06-01"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive end date in YYYY-MM-DD format.",
+          "examples": [
+            "2026-06-30"
+          ]
+        }
+      },
+      "title": "risk_sentimentArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "macro_news",
+    "description": "Return recent official central-bank news and press-release headlines for a currency. Use this when a report needs headline context for central-bank policy, inflation, employment, GDP, trade, fiscal, energy, or commodity narratives. The tool returns official-source headline rows and lightweight keyword-derived affected_indicators and sentiment fields when a headline is classifiable. Supported currencies: AUD, BRL, CAD, CHF, CZK, DKK, EUR, GBP, HKD, INR, JPY, NOK, NZD, PEN, PLN, SEK, USD, ZAR. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CZK, DKK, EUR, GBP, HKD, INR, JPY, NOK, NZD, PEN, PLN, SEK, USD, ZAR.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "lookback_days": {
+          "default": 7,
+          "description": "Maximum age of returned headlines in calendar days when headline timestamps are available.",
+          "examples": [
+            7,
+            30
+          ],
+          "maximum": 90,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "limit": {
+          "default": 20,
+          "description": "Maximum number of headline rows to request.",
+          "examples": [
+            10,
+            20
+          ],
+          "maximum": 50,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "description": "Zero-based headline offset.",
+          "examples": [
+            0
+          ],
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "macro_newsArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "release_calendar",
+    "description": "Get upcoming scheduled macroeconomic release timestamps for a currency. Use this when the user asks 'when is the next CPI/GDP/payrolls/policy decision', or to plan a trade around a known release. Returns ISO-8601 announcement_datetime values in UTC plus market-local timestamps. Pass `timezone` for an additional `announcement_datetime_requested_timezone` field. Each row has a `release` string with the indicator name and a `currency` code. Unbounded calls return future releases only; do not show stale past rows unless the user explicitly asks for historical/past calendar data. Consumer-facing clients should present the returned markdown agenda or render the Release Calendar App resource; do not summarize this tool as only a row count. Pass an optional `indicator` filter to narrow to a single series. Pass optional `start_date` and `end_date` bounds when the user mentions a month, week, day, or explicit date range. Supported currencies: AUD, BRL, CAD, CHF, CNH, CNY, COMM, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD. Call data_catalogue(currency) for the exact indicator slugs; the `indicator` parameter below also lists them. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, COMM, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "indicator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional indicator slug to narrow results. Supported: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "policy_rate",
+            "inflation",
+            "unemployment",
+            "gdp"
+          ]
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "timezone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional IANA timezone for an additional converted timestamp, for example America/Sao_Paulo.",
+          "examples": [
+            "America/Sao_Paulo",
+            "Australia/Sydney"
+          ]
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "release_calendarArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "release_calendar_visual_artifact",
+    "description": "Same payload as release_calendar, but named as an explicit visual artifact tool so compatible MCP Apps clients render the interactive Release Calendar App inline. Prefer this by default when the user asks to show, display, visualize, or render a macro release calendar, especially for prompts like 'show me the AUD release calendar'. Only prefer plain release_calendar when the user explicitly asks for a raw table, JSON, exact rows, or text-only output. Pass optional `indicator`, `start_date`, and `end_date` filters when the user names a specific series, month, week, day, or date range. Pass `timezone` when the user asks for local times in a specific city or region. Supported currencies: AUD, BRL, CAD, CHF, CNH, CNY, COMM, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD. Call data_catalogue(currency) for the exact indicator slugs; the `indicator` parameter below also lists them. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, COMM, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "indicator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional indicator slug to narrow results. Supported: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "policy_rate",
+            "inflation",
+            "unemployment",
+            "gdp"
+          ]
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "timezone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional IANA timezone for an additional converted timestamp, for example America/Sao_Paulo.",
+          "examples": [
+            "America/Sao_Paulo",
+            "Australia/Sydney"
+          ]
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "release_calendar_visual_artifactArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "event_predictions",
+    "description": "Return stored forecasts, consensus-style predictions, central-bank projections, survey forecasts, IMF forecasts, nowcasts, or FXMacroData blended predictions for macro announcements. Use this with release_calendar and indicator_query when a report needs actual-vs-consensus, prior-vs-forecast, or event-surprise context. Rows are keyed by announcement_id/date/indicator and include prediction source metadata. Supported currencies: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD. Call data_catalogue(currency) for the exact indicator slugs; the `indicator` parameter below also lists them. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "indicator": {
+          "description": "Required indicator slug. Currency-wide prediction reads are not supported. Supported: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "policy_rate",
+            "inflation",
+            "unemployment",
+            "gdp"
+          ],
+          "type": "string"
+        },
+        "prediction_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional legacy forecast-type filter, kept for existing clients. Prefer prediction_class: compiled_consensus, forecaster_survey, market_implied, model_nowcast, central_bank_projection, institutional_projection or fxmacrodata.",
+          "examples": [
+            "fxmacrodata"
+          ]
+        },
+        "prediction_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional source slug filter, for example ecb_spf or philly_fed_spf.",
+          "examples": [
+            "ecb_spf",
+            "philly_fed_spf"
+          ]
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive lower bound by reference-period date, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive upper bound by reference-period date, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "limit": {
+          "default": 20,
+          "description": "Maximum prediction groups to return. Defaults to 20; maximum 100.",
+          "examples": [
+            20
+          ],
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "description": "Zero-based prediction-group offset.",
+          "examples": [
+            0,
+            20
+          ],
+          "minimum": 0,
+          "type": "integer"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One-based page number. When supplied, overrides offset.",
+          "examples": [
+            1
+          ]
+        }
+      },
+      "required": [
+        "currency",
+        "indicator"
+      ],
+      "title": "event_predictionsArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "latest_announcements",
+    "description": "Return the latest stored macroeconomic value for every available indicator in one currency. Use this for a compact current macro snapshot after data_catalogue has confirmed the currency coverage. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive).",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "latest_announcementsArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "announcement_changes",
+    "description": "Poll recently ingested macro announcement changes with a resumable cursor. This is the bounded MCP-safe companion to the release-event stream: use the returned next_cursor as since on a later call instead of holding an unbounded streaming tool invocation open. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currencies": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional comma-separated currency codes, `g10`, or `all`. Without subscriber access, results are limited to the public scope.",
+          "examples": [
+            "usd,eur",
+            "g10"
+          ]
+        },
+        "indicators": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional comma-separated announcement indicator slugs.",
+          "examples": [
+            "inflation,policy_rate"
+          ]
+        },
+        "since": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional previous next_cursor, ISO 8601 timestamp, or Unix epoch seconds.",
+          "examples": [
+            "2026-07-21T00:00:00Z"
+          ]
+        },
+        "limit": {
+          "default": 100,
+          "description": "Maximum matching change events to return.",
+          "examples": [
+            50,
+            100
+          ],
+          "maximum": 500,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "payload": {
+          "default": "compact",
+          "description": "Event payload shape: compact trigger rows or full announcement rows.",
+          "examples": [
+            "compact",
+            "full"
+          ],
+          "type": "string"
+        }
+      },
+      "title": "announcement_changesArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "press_releases",
+    "description": "Return the public central-bank press-release archive for a currency without adding derived sentiment or indicator classifications. Use macro_news when a headline summary is useful; use this tool when the original official release rows matter. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive).",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "limit": {
+          "default": 20,
+          "description": "Maximum rows to return.",
+          "maximum": 50,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "description": "Zero-based row offset.",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "press_releasesArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "macro_factor",
+    "description": "Return a precomputed macro factor for one currency, with optional stored component scores and source references. Use this for a documented factor value, not as a substitute for inspecting its underlying macro releases. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive).",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "factor": {
+          "description": "Factor slug, for example monetary_stance.",
+          "examples": [
+            "monetary_stance"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive start date, YYYY-MM-DD."
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive end date, YYYY-MM-DD."
+        },
+        "include_components": {
+          "default": false,
+          "description": "Include stored component scores when available.",
+          "type": "boolean"
+        },
+        "include_sources": {
+          "default": false,
+          "description": "Include public source endpoint references when available.",
+          "type": "boolean"
+        },
+        "limit": {
+          "default": 20,
+          "description": "Maximum rows to return.",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "description": "Zero-based row offset.",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "currency",
+        "factor"
+      ],
+      "title": "macro_factorArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "fx_reference_sources",
+    "description": "List public official FX reference-rate sources and their source policy before requesting a pair-specific intraday reference-rate series. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {},
+      "title": "fx_reference_sourcesArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "fx_reference_universe",
+    "description": "List the public FX reference-rate pair universe, optionally filtered by currency or source id. Call this before requesting an intraday reference-rate series. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional 3-letter currency filter.",
+          "examples": [
+            "usd"
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional official source id filter.",
+          "examples": [
+            "ecb_eurofxref_daily"
+          ]
+        }
+      },
+      "title": "fx_reference_universeArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "fx_intraday_reference_rates",
+    "description": "Return subscriber intraday official FX reference-rate observations for one pair. Call fx_reference_universe first to verify pair and source availability. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "base": {
+          "description": "Base currency code.",
+          "examples": [
+            "eur"
+          ],
+          "type": "string"
+        },
+        "quote": {
+          "description": "Quote currency code.",
+          "examples": [
+            "usd"
+          ],
+          "type": "string"
+        },
+        "start_time": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive RFC 3339 source timestamp.",
+          "examples": [
+            "2026-07-20T00:00:00Z"
+          ]
+        },
+        "end_time": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive RFC 3339 source timestamp.",
+          "examples": [
+            "2026-07-21T00:00:00Z"
+          ]
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "title": "fx_intraday_reference_ratesArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "rate_curve",
+    "description": "Return official government-nominal curve nodes, slopes, or derived forward segments for one currency. This is a subscriber data tool and preserves the endpoint's requested view and method metadata. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter currency code.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "curve_family": {
+          "default": "government_nominal",
+          "description": "Official curve family.",
+          "type": "string"
+        },
+        "metric": {
+          "default": "spot",
+          "description": "Curve metric.",
+          "type": "string"
+        },
+        "view": {
+          "default": "nodes",
+          "description": "Curve view: nodes, slopes, or forwards.",
+          "examples": [
+            "nodes",
+            "slopes",
+            "forwards"
+          ],
+          "type": "string"
+        },
+        "method": {
+          "default": "derived_from_spot_nodes",
+          "description": "Forward derivation method when view is forwards.",
+          "type": "string"
+        },
+        "date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional target date, YYYY-MM-DD."
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "rate_curveArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "rate_differentials",
+    "description": "Return the stored or derived rate differential for one FX pair. Use the returned measure, rate type, curve family, and tenor metadata when explaining the result. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "base": {
+          "description": "Base currency code.",
+          "examples": [
+            "aud"
+          ],
+          "type": "string"
+        },
+        "quote": {
+          "description": "Quote currency code.",
+          "examples": [
+            "usd"
+          ],
+          "type": "string"
+        },
+        "measure": {
+          "default": "auto",
+          "description": "Shared rate measure to compare across the pair.",
+          "examples": [
+            "auto",
+            "policy_rate",
+            "gov_bond_10y"
+          ],
+          "type": "string"
+        },
+        "rate_type": {
+          "default": "spot",
+          "description": "Differential type: spot or forward.",
+          "examples": [
+            "spot",
+            "forward"
+          ],
+          "type": "string"
+        },
+        "curve_family": {
+          "default": "government_nominal",
+          "description": "Curve family when rate_type is forward.",
+          "type": "string"
+        },
+        "start_tenor_years": {
+          "default": 2,
+          "description": "Start tenor in years for forward differentials.",
+          "type": "number"
+        },
+        "end_tenor_years": {
+          "default": 5,
+          "description": "End tenor in years for forward differentials.",
+          "type": "number"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive start date, YYYY-MM-DD."
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive end date, YYYY-MM-DD."
+        },
+        "limit": {
+          "default": 20,
+          "description": "Maximum rows to return.",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "description": "Zero-based row offset.",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "title": "rate_differentialsArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "latest_commodities",
+    "description": "Return the latest stored value for every available commodity indicator in one response. This subscriber tool is the batch counterpart to commodities. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {},
+      "title": "latest_commoditiesArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "forex",
+    "description": "Get raw historical FX spot-rate rows for a currency pair (e.g. EUR/USD, USD/JPY). Prefer this tool when the user explicitly wants a plain-text table, raw rows, exact values, JSON-like data, or technical-indicator series (SMA, EMA, RSI, MACD, Bollinger Bands, etc.) computed from spot without a chart. If the user asks more generally to show/tell/explain the last few weeks or months of a pair, prefer forex_visual_artifact instead so the client can render a chart. Daily granularity from official central-bank reference rates with full multi-year history. Supported currencies (use lowercase 3-letter codes): AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD. Optional `indicators` parameter accepts a comma-separated list of technical indicator slugs to attach to each row. Supported indicator values: adx_14, atr_14, bollinger_bands, cci_20, donchian_20, ema_12, ema_20, ema_200, ema_26, ema_50, macd, macd_histogram, macd_signal, rsi_14, sma_20, sma_200, sma_50, stochastic_14_3, williams_r_14, all. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "base": {
+          "description": "Base currency, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "eur",
+            "gbp",
+            "aud",
+            "usd"
+          ],
+          "type": "string"
+        },
+        "quote": {
+          "description": "Quote currency, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "jpy",
+            "chf"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD. Defaults to ~5 years ago.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD. Defaults to today.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "indicators": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Comma-separated technical-indicator slugs to attach to each row. Supported: adx_14, atr_14, bollinger_bands, cci_20, donchian_20, ema_12, ema_20, ema_200, ema_26, ema_50, macd, macd_histogram, macd_signal, rsi_14, sma_20, sma_200, sma_50, stochastic_14_3, williams_r_14, all.",
+          "examples": [
+            "sma_50,sma_200",
+            "rsi_14",
+            "ema_20,atr_14"
+          ]
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "title": "forexArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "seasonality",
+    "description": "Get monthly return seasonality for an FX pair or XAU/USD. Use this when the user asks for seasonal patterns, month-of-year tendency, historical monthly win rate, or XAUUSD/gold seasonality. Returns monthly average return, median return, win rate, sample size, dispersion, and per-year monthly returns from stored FX or gold series.",
+    "inputSchema": {
+      "properties": {
+        "instrument": {
+          "description": "Six-letter pair such as EURUSD, AUDUSD, USDJPY, or XAUUSD. Slashes and separators are accepted by the REST endpoint only when passed as a single string.",
+          "examples": [
+            "XAUUSD",
+            "EURUSD",
+            "AUDUSD"
+          ],
+          "type": "string"
+        },
+        "lookback_years": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 10,
+          "description": "Number of years to include, 2-30. Defaults to 10.",
+          "examples": [
+            10
+          ]
+        },
+        "month": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional month filter, 1-12 or name such as July.",
+          "examples": [
+            "July"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD. Defaults to today.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "required": [
+        "instrument"
+      ],
+      "title": "seasonalityArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "indicator_query",
+    "description": "Get a paginated historical time series of a single macroeconomic indicator for a currency, sourced directly from the official central bank or statistical agency. Use this for CPI/inflation, GDP, unemployment, policy rates, bond yields, payrolls, retail sales, PCE, PPI, trade balance, current account, money supply, and similar series. Each row returns `date` (value-as-of), `val` (numeric), and `announcement_datetime` (when the value was first published — useful for backtest point-in-time integrity). This plain tool returns raw rows for data workflows. Use `indicator_visual_artifact` when the host should render an MCP App chart. Use `limit`, `offset`, or `page` to page through broad histories; check `pagination.next_offset` and `pagination.page_includes_latest_available` in the result. Responses default to official-source rows only; prohibited private aggregator rows are always removed. Always call data_catalogue(currency) first to get the exact indicator slug. USD indicators are free; non-USD requires API key. Supported currencies: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD. Call data_catalogue(currency) for the exact indicator slugs; the `indicator` parameter below also lists them. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "3-letter ISO currency code (case-insensitive). Optional if `slug` is provided as a `\"usd:cpi\"`-style compound. Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ]
+        },
+        "indicator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Indicator slug for the given currency. Optional if `slug` is provided as a `\"usd:cpi\"`-style compound. Supported: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "policy_rate",
+            "inflation",
+            "unemployment",
+            "gdp"
+          ]
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "limit": {
+          "default": 20,
+          "description": "Maximum rows to return from the existing REST pagination path. Defaults to 20; maximum 100.",
+          "examples": [
+            20,
+            100
+          ],
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "description": "Zero-based row offset after most-recent-first ordering.",
+          "examples": [
+            0,
+            20
+          ],
+          "minimum": 0,
+          "type": "integer"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One-based page number. When supplied, the REST endpoint derives offset as `(page - 1) * limit`.",
+          "examples": [
+            1,
+            2
+          ]
+        },
+        "slug": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional compound `\"<currency>:<indicator>\"` slug (e.g. `\"usd:cpi\"`, `\"jpy:policy_rate\"`). Many small / open tool-calling models concatenate the two parts anyway. When supplied, overrides `currency` and `indicator`.",
+          "examples": [
+            "usd:cpi",
+            "jpy:policy_rate",
+            "eur:gdp"
+          ]
+        },
+        "official_only": {
+          "default": true,
+          "description": "When true, return only official-source rows and remove explicit fallback observations. Prohibited private aggregator rows are always removed.",
+          "examples": [
+            true
+          ],
+          "type": "boolean"
+        }
+      },
+      "title": "indicator_queryArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "plot_visual_artifact",
+    "description": "Build a generic MCP Apps chart from one or more FXMacroData endpoint families. Use this for arbitrary plot requests, multi-series charts, and actual-vs-consensus views that need to combine announcements with event_predictions. Supported series sources are announcements, predictions, forex, commodities, and cot. For example, plot USD policy-rate midpoint actuals against market consensus by passing one announcements series for `usd/policy_rate_midpoint` and one predictions series for `usd/policy_rate_midpoint` with `prediction_class=forecaster_survey`. This tool never fetches arbitrary URLs or runs custom chart code; it only composes approved FXMacroData API surfaces into the comparison chart app. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "query": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional natural-language request to preserve in the payload title/context.",
+          "examples": [
+            "plot USD policy-rate midpoint actual vs market consensus",
+            "compare AUD and USD inflation"
+          ]
+        },
+        "series": {
+          "anyOf": [
+            {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional list of series specs. Each spec supports `source` (announcements, predictions, forex, commodities, cot), `currency`, `indicator`, `base`, `quote`, `label`, `y_key`, `metric`, `prediction_class`, `prediction_source`, `start_date`, `end_date`, `limit`, `offset`, and `page`.",
+          "examples": [
+            [
+              {
+                "currency": "usd",
+                "indicator": "policy_rate_midpoint",
+                "label": "USD policy midpoint actual",
+                "source": "announcements"
+              },
+              {
+                "currency": "usd",
+                "indicator": "policy_rate_midpoint",
+                "label": "Dealer survey median",
+                "prediction_class": "forecaster_survey",
+                "source": "predictions"
+              }
+            ]
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Single-series source when `series` is omitted. Supported values: announcements, predictions, forex, commodities, cot.",
+          "examples": [
+            "announcements",
+            "predictions",
+            "forex"
+          ]
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Single-series currency for announcements, predictions, or COT. Supported macro currencies: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD. Supported COT currencies: AUD, CAD, CHF, EUR, GBP, JPY, MXN, NZD, USD, XAU.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ]
+        },
+        "indicator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Single-series indicator for announcements, predictions, or commodities. Supported macro indicators: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages. Supported commodity indicators: crude_oil_inventories, gold, natural_gas, natural_gas_storage, oil_brent, oil_wti, platinum, silver.",
+          "examples": [
+            "policy_rate",
+            "inflation",
+            "unemployment",
+            "gdp"
+          ]
+        },
+        "base": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Base currency for single-series forex plots. Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "eur",
+            "aud",
+            "usd"
+          ]
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Quote currency for single-series forex plots. Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "jpy",
+            "chf"
+          ]
+        },
+        "prediction_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional legacy prediction-type filter for prediction series. Prefer prediction_class.",
+          "examples": [
+            "fxmacrodata"
+          ]
+        },
+        "prediction_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional prediction source filter for prediction series.",
+          "examples": [
+            "ny_fed_sme",
+            "philly_fed_spf"
+          ]
+        },
+        "x_axis": {
+          "default": "date",
+          "description": "Field to use as the shared x-axis. Supported: date, announcement_datetime, announcement_datetime_local, generated_at, observation_datetime.",
+          "examples": [
+            "date",
+            "announcement_datetime"
+          ],
+          "type": "string"
+        },
+        "y_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Single-series metric field. Defaults by source: val for announcements and commodities, predicted_value for predictions, rate for forex, noncommercial_net for COT.",
+          "examples": [
+            "val",
+            "predicted_value",
+            "rate"
+          ]
+        },
+        "y_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional y-axis label for the chart.",
+          "examples": [
+            "Policy Rate Midpoint",
+            "Value"
+          ]
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional chart title. Defaults to query or an auto-generated title.",
+          "examples": [
+            "USD policy-rate actual vs consensus"
+          ]
+        },
+        "chart_kind": {
+          "default": "line",
+          "description": "Initial chart view. Supported: line, area, bar, dot, step.",
+          "examples": [
+            "line",
+            "step"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "limit": {
+          "default": 20,
+          "description": "Maximum rows per source. Defaults to 20; maximum 100.",
+          "examples": [
+            20,
+            100
+          ],
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "description": "Zero-based row offset per source.",
+          "examples": [
+            0,
+            20
+          ],
+          "minimum": 0,
+          "type": "integer"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One-based page number per source.",
+          "examples": [
+            1
+          ]
+        }
+      },
+      "title": "plot_visual_artifactArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "indicator_visual_artifact",
+    "description": "Same payload as indicator_query, but also returns MCP Apps metadata so compatible clients (Claude Desktop, ChatGPT, Codex, etc.) render an interactive line chart instead of a JSON dump. Prefer this by default for indicator time-series requests, especially when the user asks to show, tell, explain, compare, inspect a trend, or review a recent window. For broad histories, use the existing `limit`, `offset`, or `page` controls and inspect `pagination.next_offset` rather than retrying with arbitrary shorter windows. Only fall back to indicator_query when the user explicitly wants a raw table, plain text list, JSON, exact rows, or minimal structured data. Supported currencies: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD. Call data_catalogue(currency) for the exact indicator slugs; the `indicator` parameter below also lists them. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "indicator": {
+          "description": "Indicator slug. Supported: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "policy_rate",
+            "inflation",
+            "unemployment",
+            "gdp"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "limit": {
+          "default": 20,
+          "description": "Maximum rows to render from the existing REST pagination path. Defaults to 20; maximum 100.",
+          "examples": [
+            20,
+            100
+          ],
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "description": "Zero-based row offset after most-recent-first ordering.",
+          "examples": [
+            0,
+            20
+          ],
+          "minimum": 0,
+          "type": "integer"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One-based page number. When supplied, the REST endpoint derives offset as `(page - 1) * limit`.",
+          "examples": [
+            1,
+            2
+          ]
+        }
+      },
+      "required": [
+        "currency",
+        "indicator"
+      ],
+      "title": "indicator_visual_artifactArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "forex_visual_artifact",
+    "description": "Same payload as forex, but packaged with MCP Apps chart metadata so compatible clients render an interactive spot-rate chart inline. Prefer this by default for FX pair time-series requests, especially for prompts like 'show me AUD/USD', 'tell me the last 30 days', 'how has EUR/USD moved recently', or any request where a trend view is more useful than raw rows. Only prefer plain forex when the user explicitly asks for a table, raw values, JSON, CSV-style output, or exact row-by-row data. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "base": {
+          "description": "Base currency, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "eur",
+            "gbp",
+            "aud",
+            "usd"
+          ],
+          "type": "string"
+        },
+        "quote": {
+          "description": "Quote currency, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "jpy",
+            "chf"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "indicators": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional technical indicators to include in the raw payload. Supported: adx_14, atr_14, bollinger_bands, cci_20, donchian_20, ema_12, ema_20, ema_200, ema_26, ema_50, macd, macd_histogram, macd_signal, rsi_14, sma_20, sma_200, sma_50, stochastic_14_3, williams_r_14, all.",
+          "examples": [
+            "sma_50,sma_200",
+            "rsi_14",
+            "ema_20,atr_14"
+          ]
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "title": "forex_visual_artifactArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "commodities_visual_artifact",
+    "description": "Same payload as commodities, but packaged with MCP Apps chart metadata so compatible clients render an interactive commodity chart inline. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "indicator": {
+          "description": "Commodity indicator slug. Supported: crude_oil_inventories, gold, natural_gas, natural_gas_storage, oil_brent, oil_wti, platinum, silver.",
+          "examples": [
+            "crude_oil_inventories",
+            "gold",
+            "natural_gas",
+            "natural_gas_storage",
+            "oil_brent",
+            "oil_wti"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "required": [
+        "indicator"
+      ],
+      "title": "commodities_visual_artifactArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "cot_visual_artifact",
+    "description": "Same payload as cot_data, but with MCP Apps chart metadata. By default it charts noncommercial net positioning; pass `metric` to chart another COT field. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code for the FX futures contract (case-insensitive). Supported: AUD, CAD, CHF, EUR, GBP, JPY, MXN, NZD, USD, XAU.",
+          "examples": [
+            "eur",
+            "jpy",
+            "gbp",
+            "aud"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "metric": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "noncommercial_net",
+          "description": "Field to plot from each COT row. Typical values: noncommercial_net, noncommercial_net_zscore, noncommercial_long, noncommercial_short, open_interest.",
+          "examples": [
+            "noncommercial_net",
+            "noncommercial_net_zscore",
+            "noncommercial_long",
+            "open_interest"
+          ]
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "cot_visual_artifactArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "policy_rate_differential_visual_artifact",
+    "description": "Build a two-series chart comparing base and quote policy-rate history to visualize the rate differential setup for an FX pair. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "base": {
+          "description": "Base currency, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "eur",
+            "gbp",
+            "aud",
+            "usd"
+          ],
+          "type": "string"
+        },
+        "quote": {
+          "description": "Quote currency, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "jpy",
+            "chf"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "title": "policy_rate_differential_visual_artifactArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "macro_briefing_task",
+    "description": "Build a compact macro briefing for a currency by combining catalogue, key macro series, release-calendar, prediction, news, risk-sentiment, COT, seasonality, and FX technical context. Supports MCP Tasks for async execution when clients send a task-augmented request. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "macro_briefing_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "indicator_intel_task",
+    "description": "Build an intelligence pack for one indicator by combining chart-ready series data, derived analytics, and nearest release timing context. Supports MCP Tasks for async execution when clients send task-augmented requests. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "indicator": {
+          "description": "Indicator slug for the given currency. Supported: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "policy_rate",
+            "inflation",
+            "unemployment",
+            "gdp"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "required": [
+        "currency",
+        "indicator"
+      ],
+      "title": "indicator_intel_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "pair_intel_task",
+    "description": "Build an intelligence pack for an FX pair by combining policy-rate spread context, spot-rate context, and release-timing metadata. Supports MCP Tasks for async execution when clients send task-augmented requests. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "base": {
+          "description": "Base currency, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "eur",
+            "gbp",
+            "aud",
+            "usd"
+          ],
+          "type": "string"
+        },
+        "quote": {
+          "description": "Quote currency, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "jpy",
+            "chf"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "title": "pair_intel_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "macro_heatmap_task",
+    "description": "Build a cross-currency macro heatmap from indicator time series and return a matrix with latest values, recent changes, and z-scores. Supports MCP Tasks for async execution when clients send task-augmented requests.",
+    "inputSchema": {
+      "properties": {
+        "currencies": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Comma-separated 3-letter currency codes (lowercase preferred). Supported values include: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd,eur,gbp,jpy",
+            "aud,cad,chf,nzd",
+            "usd,sek,nok,pln"
+          ]
+        },
+        "indicators": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Comma-separated indicator slugs to include in the matrix. Supported values include: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "policy_rate,inflation,gdp",
+            "inflation,unemployment,retail_sales"
+          ]
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "title": "macro_heatmap_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "policy_scenario_modeler_task",
+    "description": "Run a policy-rate spread what-if scenario for an FX pair and estimate directional spot impact using an explicit heuristic elasticity assumption. Supports MCP Tasks for async execution when clients send task-augmented requests. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "base": {
+          "description": "Base currency, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "eur",
+            "gbp",
+            "aud",
+            "usd"
+          ],
+          "type": "string"
+        },
+        "quote": {
+          "description": "Quote currency, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "jpy",
+            "chf"
+          ],
+          "type": "string"
+        },
+        "shock_leg": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "base",
+          "description": "Which leg receives the policy shock: base or quote.",
+          "examples": [
+            "base",
+            "quote"
+          ]
+        },
+        "shock_bps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 25.0,
+          "description": "Policy shock size in basis points (100 bps = 1.00 percentage point).",
+          "examples": [
+            25.0,
+            50.0,
+            -25.0
+          ]
+        },
+        "policy_shock_bps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional alias for shock_bps for compatibility with host-side app payloads.",
+          "examples": [
+            25.0,
+            50.0
+          ]
+        },
+        "elasticity_per_100bps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 0.8,
+          "description": "Heuristic percent change in FX spot for a 100 bps spread change. Used as a scenario assumption, not a forecast guarantee.",
+          "examples": [
+            0.5,
+            0.8,
+            1.2
+          ]
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "title": "policy_scenario_modeler_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "macro_war_room_task",
+    "description": "Build a multi-panel macro market cockpit that combines FX sessions, upcoming release queue, pair context, and generated risk alerts. Supports MCP Tasks for async execution when clients send task-augmented requests. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "base": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Base currency for pair context, 3-letter ISO code (case-insensitive). Defaults to the release currency when omitted. Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "eur",
+            "gbp",
+            "aud",
+            "usd"
+          ]
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "usd",
+          "description": "Quote currency for pair context, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "jpy",
+            "chf"
+          ]
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "usd",
+          "description": "Release currency used for queue and spotlight indicator. Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp"
+          ]
+        },
+        "indicator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "inflation",
+          "description": "Spotlight indicator slug for release context. Supported examples: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "inflation",
+            "policy_rate",
+            "gdp"
+          ]
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "title": "macro_war_room_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "event_impact_replay_task",
+    "description": "Create a point-in-time replay timeline mapping macro announcements to FX context and heuristic impact markers. Supports MCP Tasks for async execution when clients send task-augmented requests. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "Currency for macro event series, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp"
+          ],
+          "type": "string"
+        },
+        "indicator": {
+          "description": "Indicator slug for event replay. Supported examples: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "inflation",
+            "policy_rate",
+            "gdp"
+          ],
+          "type": "string"
+        },
+        "base": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "eur",
+          "description": "FX base currency for market context, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "eur",
+            "gbp",
+            "aud",
+            "usd"
+          ]
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "usd",
+          "description": "FX quote currency for market context, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "jpy",
+            "chf"
+          ]
+        },
+        "lookback_events": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 12,
+          "description": "Maximum number of recent events to include in replay.",
+          "examples": [
+            6,
+            12,
+            24
+          ]
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "required": [
+        "currency",
+        "indicator"
+      ],
+      "title": "event_impact_replay_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "quant_scenario_lab_task",
+    "description": "Run an expanded quant-style policy scenario for an FX pair with deterministic projection, stress percentiles, and horizon assumptions. Supports MCP Tasks for async execution when clients send task-augmented requests.",
+    "inputSchema": {
+      "properties": {
+        "base": {
+          "description": "Base currency, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "eur",
+            "gbp",
+            "aud",
+            "usd"
+          ],
+          "type": "string"
+        },
+        "quote": {
+          "description": "Quote currency, 3-letter ISO code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "jpy",
+            "chf"
+          ],
+          "type": "string"
+        },
+        "shock_leg": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "base",
+          "description": "Which leg receives the policy shock: base or quote.",
+          "examples": [
+            "base",
+            "quote"
+          ]
+        },
+        "shock_bps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 50.0,
+          "description": "Policy shock size in basis points (100 bps = 1.00 percentage point).",
+          "examples": [
+            25.0,
+            50.0,
+            -25.0
+          ]
+        },
+        "elasticity_per_100bps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 0.8,
+          "description": "Heuristic percent FX move per 100 bps spread change.",
+          "examples": [
+            0.5,
+            0.8,
+            1.2
+          ]
+        },
+        "annualized_volatility_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 8.0,
+          "description": "Annualized volatility assumption (percent) for stress-band construction.",
+          "examples": [
+            6.0,
+            8.0,
+            12.0
+          ]
+        },
+        "horizon_days": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 30,
+          "description": "Scenario horizon in calendar days.",
+          "examples": [
+            7,
+            30,
+            90
+          ]
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "title": "quant_scenario_lab_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "known_at_time_task",
+    "description": "Return the slice of a macro series that would have been known at a specific timestamp, using announcement_datetime as the point-in-time integrity boundary. Supports MCP Tasks for async execution when clients send task-augmented requests. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "indicator": {
+          "description": "Indicator slug for the given currency. Supported: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "policy_rate",
+            "inflation",
+            "unemployment",
+            "gdp"
+          ],
+          "type": "string"
+        },
+        "as_of": {
+          "description": "UTC ISO-8601 timestamp or YYYY-MM-DD cutoff. Only rows with announcement_datetime <= this moment are returned.",
+          "examples": [
+            "2025-01-31T13:30:00Z",
+            "2025-01-31"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "required": [
+        "currency",
+        "indicator",
+        "as_of"
+      ],
+      "title": "known_at_time_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "macro_regime_classifier_task",
+    "description": "Classify a currency's macro regime using policy rate, inflation, GDP, and unemployment context, with explicit assumptions and confidence notes. Supports MCP Tasks for async execution when clients send task-augmented requests. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive). Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "macro_regime_classifier_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "release_risk_score_task",
+    "description": "Score upcoming releases for a currency pair using release-calendar proximity and indicator-level heuristics. Supports MCP Tasks for async execution when clients send task-augmented requests.",
+    "inputSchema": {
+      "properties": {
+        "base": {
+          "description": "Base currency, 3-letter ISO code. Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "eur",
+            "gbp",
+            "usd"
+          ],
+          "type": "string"
+        },
+        "quote": {
+          "description": "Quote currency, 3-letter ISO code. Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "jpy",
+            "chf"
+          ],
+          "type": "string"
+        },
+        "horizon_events": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 6,
+          "description": "Maximum release events per currency to score.",
+          "examples": [
+            4,
+            6,
+            10
+          ]
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "title": "release_risk_score_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "portfolio_risk_engine_task",
+    "description": "Analyze a multi-position FX book for concentration, stress exposure, and event-driven catalyst risk. Supports MCP Tasks for async execution when clients send task-augmented requests.",
+    "inputSchema": {
+      "properties": {
+        "positions_json": {
+          "description": "JSON array of FX positions. Each item should include base, quote, side (long/short), and notional. Example: [{\"base\":\"eur\",\"quote\":\"usd\",\"side\":\"long\",\"notional\":100000}]",
+          "examples": [
+            "[{\"base\":\"eur\",\"quote\":\"usd\",\"side\":\"long\",\"notional\":100000},{\"base\":\"gbp\",\"quote\":\"usd\",\"side\":\"short\",\"notional\":80000}]"
+          ],
+          "type": "string"
+        },
+        "stress_shock_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 1.0,
+          "description": "Stress shock in percent applied to each pair.",
+          "examples": [
+            0.5,
+            1.0,
+            2.0
+          ]
+        },
+        "horizon_events": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 4,
+          "description": "Maximum release events to consider per currency leg.",
+          "examples": [
+            3,
+            4,
+            8
+          ]
+        }
+      },
+      "required": [
+        "positions_json"
+      ],
+      "title": "portfolio_risk_engine_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "fx_trade_setup_task",
+    "description": "Build a trader-oriented FX pair setup using spot context, macro differentials, upcoming catalyst risk, and optional COT positioning. Supports MCP Tasks for async execution when clients send task-augmented requests.",
+    "inputSchema": {
+      "properties": {
+        "base": {
+          "description": "Base currency, 3-letter ISO code. Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "eur",
+            "gbp",
+            "aud"
+          ],
+          "type": "string"
+        },
+        "quote": {
+          "description": "Quote currency, 3-letter ISO code. Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "jpy",
+            "chf"
+          ],
+          "type": "string"
+        },
+        "horizon_events": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 4,
+          "description": "Maximum upcoming catalysts per leg to rank.",
+          "examples": [
+            3,
+            4,
+            6
+          ]
+        },
+        "include_cot": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": false,
+          "description": "When true, attempt to include COT positioning context for both legs.",
+          "examples": [
+            true,
+            false
+          ]
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "title": "fx_trade_setup_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "fx_backtest_task",
+    "description": "Run a transparent rule-based FX backtest on historical spot data using carry and/or momentum signals. Supports MCP Tasks for async execution when clients send task-augmented requests.",
+    "inputSchema": {
+      "properties": {
+        "base": {
+          "description": "Base currency, 3-letter ISO code. Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "eur",
+            "gbp",
+            "aud"
+          ],
+          "type": "string"
+        },
+        "quote": {
+          "description": "Quote currency, 3-letter ISO code. Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "jpy",
+            "chf"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "strategy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "carry_momentum",
+          "description": "Signal mode: carry, momentum, or carry_momentum.",
+          "examples": [
+            "carry_momentum",
+            "carry",
+            "momentum"
+          ]
+        },
+        "momentum_lookback": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 5,
+          "description": "Momentum lookback in observations for the momentum signal.",
+          "examples": [
+            5,
+            10,
+            20
+          ]
+        },
+        "transaction_cost_bps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 2.0,
+          "description": "Per-side transaction cost in basis points applied on position changes.",
+          "examples": [
+            1.0,
+            2.0,
+            5.0
+          ]
+        },
+        "initial_capital": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 100000.0,
+          "description": "Starting capital for equity-curve calculations.",
+          "examples": [
+            10000.0,
+            100000.0
+          ]
+        },
+        "event_gated": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": false,
+          "description": "When true, only allow positions during release-event windows derived from announcement_datetime on base and quote calendars.",
+          "examples": [
+            true,
+            false
+          ]
+        },
+        "event_window_days": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 1,
+          "description": "Event gate window in days around each release date (0 means release-date only).",
+          "examples": [
+            0,
+            1,
+            2
+          ]
+        }
+      },
+      "required": [
+        "base",
+        "quote"
+      ],
+      "title": "fx_backtest_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "macro_research_pack_task",
+    "description": "Bundle catalogue, indicator history, next release timing, and optional FX pair context into one persistent-host-friendly research payload. Supports MCP Tasks for async execution when clients send task-augmented requests. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code. Supported: AUD, BRL, CAD, CHF, CNH, CNY, DKK, EUR, GBP, ILS, JPY, NGN, NOK, NZD, PEN, SEK, THB, USD.",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "indicator": {
+          "description": "Indicator slug. Supported: average_hourly_earnings, average_hourly_earnings_mom, balance_on_goods, balance_on_services, bgcr, breakeven_inflation_rate, broad_money, building_approvals, building_permits, business_confidence, capital_account_balance, cb_assets, commodity_price_energy, commodity_price_ex_energy, commodity_price_index, commodity_prices, consumer_confidence, core_inflation, core_inflation_median, core_inflation_mom, core_inflation_trim, core_pce, core_pce_mom, credit_growth, crude_oil_inventories, current_account_balance, dairy_exports, deposit_rates, durable_goods_orders, effr, employment, exports, financial_account_balance, foreign_reserves, full_time_employment, fx_reserves, gdp, gdp_growth_q4_yoy, gold_reserves, gov_bond_10y, gov_bond_15y, gov_bond_1_5m, gov_bond_1m, gov_bond_1y, gov_bond_20y, gov_bond_25y, gov_bond_2m, gov_bond_2y, gov_bond_30y, gov_bond_3m, gov_bond_3y, gov_bond_40y, gov_bond_4m, gov_bond_4y, gov_bond_5y, gov_bond_6m, gov_bond_6y, gov_bond_7y, gov_bond_8y, gov_bond_9y, government_debt, house_price_index, house_prices, household_credit, household_spending, housing_starts, imports, inflation, inflation_linked_bond, inflation_mom, initial_jobless_claims, international_assets, international_liabilities, job_openings, m1, m2, m3, nairu, natural_gas_storage, net_foreign_asset_position, non_farm_payrolls, non_farm_payrolls_change, obfr, part_time_employment, participation_rate, pce, pce_mom, policy_rate, policy_rate_midpoint, policy_rate_mlf, policy_rate_mro, policy_rate_target_lower, ppi, primary_income_balance, real_yield_20y, real_yield_30y, real_yield_5y, real_yield_7y, retail_sales, retail_sales_control_group, retail_sales_ex_autos, retail_sales_ex_autos_and_gas, risk_free_rate, secondary_income_balance, sight_deposits, snb_balance_sheet, sofr_average_180d, sofr_average_30d, sofr_average_90d, sofr_index, terms_of_trade, tgcr, trade_balance, trade_weighted_index, trimmed_mean_inflation, unemployment, wage_price_index, wages.",
+          "examples": [
+            "policy_rate",
+            "inflation",
+            "unemployment",
+            "gdp"
+          ],
+          "type": "string"
+        },
+        "base": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional FX base currency for pair context.",
+          "examples": [
+            "eur",
+            "usd"
+          ]
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional FX quote currency for pair context.",
+          "examples": [
+            "usd",
+            "jpy"
+          ]
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "required": [
+        "currency",
+        "indicator"
+      ],
+      "title": "macro_research_pack_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "market_sessions",
+    "description": "Tell the user which FX trading sessions are currently open (Sydney, Tokyo, London, New York) and when the next session opens/closes. Use this when the user asks 'is the market open?', 'when does London open?', or 'which sessions overlap right now?'. Pass an ISO-8601 UTC timestamp via `at` to get the snapshot for a specific moment instead of now. Accounts for weekends and major banking holidays.",
+    "inputSchema": {
+      "properties": {
+        "at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional ISO-8601 UTC timestamp; defaults to now. Use to snapshot session state at a specific moment.",
+          "examples": [
+            "2025-06-15T13:30:00Z",
+            "2025-12-25T00:00:00Z"
+          ]
+        }
+      },
+      "title": "market_sessionsArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "cot_data",
+    "description": "Get weekly CFTC Commitment of Traders (COT) positioning data for a currency's FX futures contract on the CME. Use this when the user asks about speculator positioning, non-commercial longs vs shorts, hedge-fund FX positioning, or wants to gauge sentiment extremes. Returns weekly snapshots with long/short open interest by trader category. Updated every Friday at 15:30 ET reflecting the Tuesday cutoff. Requires an API key. Supported currencies: AUD, CAD, CHF, EUR, GBP, JPY, MXN, NZD, USD, XAU. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "description": "3-letter ISO currency code for the FX futures contract (case-insensitive). Supported: AUD, CAD, CHF, EUR, GBP, JPY, MXN, NZD, USD, XAU.",
+          "examples": [
+            "eur",
+            "jpy",
+            "gbp",
+            "aud"
+          ],
+          "type": "string"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "cot_dataArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "commodities",
+    "description": "Get historical price series for supported commodity indicators using the exact slugs advertised by this schema. Requires an API key. Supported indicators: crude_oil_inventories, gold, natural_gas, natural_gas_storage, oil_brent, oil_wti, platinum, silver. Access: requires an FXMacroData API key; an anonymous call returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "indicator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Commodity indicator slug. Supported: crude_oil_inventories, gold, natural_gas, natural_gas_storage, oil_brent, oil_wti, platinum, silver.",
+          "examples": [
+            "crude_oil_inventories",
+            "gold",
+            "natural_gas",
+            "natural_gas_storage",
+            "oil_brent",
+            "oil_wti"
+          ]
+        },
+        "symbol": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Backward-compatible alias for `indicator`. Prefer `indicator` in new calls.",
+          "examples": [
+            "crude_oil_inventories",
+            "gold",
+            "natural_gas",
+            "natural_gas_storage",
+            "oil_brent",
+            "oil_wti"
+          ]
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive lower bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive upper bound, YYYY-MM-DD.",
+          "examples": [
+            "2020-01-01",
+            "2024-06-30"
+          ]
+        }
+      },
+      "title": "commoditiesArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "financial_prices",
+    "description": "Read persisted official financial price observations: government yield curves, individual securities, overnight benchmarks and reference prices. Preserves issuer, instrument, maturity, curve type and source precision. Requires an API key; an empty result means no stored observations for the selection. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "currency": {
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "measure": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "instrument_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "issuer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "limit": {
+          "default": 100,
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "currency"
+      ],
+      "title": "financial_pricesArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "official_dataset_family",
+    "description": "Get metadata-first official dataset payloads grouped by API endpoint type. Use endpoint_type to pick the API taxonomy group and dataset to choose the specific series family. Supported endpoint types: monetary_policy, fiscal_policy, international_trade, statistics_releases. Supported datasets: auction_metrics, bop, capital_flows, cb_liquidity, credit_conditions, external_debt, fx_intervention, iip, services_trade, treasury_cash, wage_settlements. Access: USD is available without an API key; every other currency returns subscription_required with a subscribe link.",
+    "inputSchema": {
+      "properties": {
+        "endpoint_type": {
+          "description": "Endpoint taxonomy group from the API structure. Supported: monetary_policy, fiscal_policy, international_trade, statistics_releases.",
+          "examples": [
+            "monetary_policy",
+            "fiscal_policy",
+            "international_trade",
+            "statistics_releases"
+          ],
+          "type": "string"
+        },
+        "dataset": {
+          "description": "Dataset slug within the selected endpoint_type. Supported: auction_metrics, bop, capital_flows, cb_liquidity, credit_conditions, external_debt, fx_intervention, iip, services_trade, treasury_cash, wage_settlements.",
+          "examples": [
+            "cb_liquidity",
+            "treasury_cash",
+            "bop",
+            "credit_conditions"
+          ],
+          "type": "string"
+        },
+        "currency": {
+          "description": "3-letter ISO currency code (case-insensitive).",
+          "examples": [
+            "usd",
+            "eur",
+            "gbp",
+            "jpy"
+          ],
+          "type": "string"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required only when dataset='bop'. Supported bop components: goods_balance, services_balance, primary_income, secondary_income, current_account, capital_account, financial_account.",
+          "examples": [
+            "current_account",
+            "services_balance",
+            "financial_account"
+          ]
+        }
+      },
+      "required": [
+        "endpoint_type",
+        "dataset",
+        "currency"
+      ],
+      "title": "official_dataset_familyArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  }
+]

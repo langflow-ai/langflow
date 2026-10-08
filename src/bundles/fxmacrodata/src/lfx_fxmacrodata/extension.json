@@ -1,0 +1,9 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-fxmacrodata",
+  "version": "0.1.0",
+  "name": "FXMacroData",
+  "description": "Macroeconomic, release-calendar and market research data for Langflow tables and agents.",
+  "lfx": {"compat": ["1"]},
+  "bundles": [{"name": "fxmacrodata", "path": "components/fxmacrodata"}]
+}

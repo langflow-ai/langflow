@@ -1,0 +1,40 @@
+---
+title: FXMacroData
+slug: /bundles-fxmacrodata
+---
+
+[FXMacroData](https://fxmacrodata.com/?utm_source=langflow&utm_medium=integration&utm_campaign=open_source_integrations&utm_content=app) provides macroeconomic observations, official release calendars and sourced market research. Its public USD catalogue, recent macro history and release calendar need no API key.
+
+## Installation
+
+The bundle is included in `langflow[bundles]`. To install it from a Langflow source checkout:
+
+```bash
+uv pip install ./src/bundles/fxmacrodata
+```
+
+Restart Langflow after installation. The extension loader discovers the **FXMacroData** bundle automatically.
+
+## FXMacroData Table
+
+Choose an operation and supply its parameters. For recent USD inflation history, select `indicator_history` and use:
+
+```json
+{"currency": "USD", "indicator": "inflation"}
+```
+
+Connect **DataFrame** to data-processing components. **Original response** retains every response field, while **Parameter schema** exposes the selected operation's documented inputs. The **FXMacroData** output provides a clickable provider link.
+
+Use `data_catalogue` with `{"currency":"USD"}` to discover indicator slugs, or `release_calendar` with the same parameter to retrieve the official release schedule. Public history access covers a recent window; broader history and protected datasets follow the documented access limits.
+
+## FXMacroData Tools
+
+Connect **Tools** to an Agent tool input. The component supplies 72 separately named tools covering the documented REST operations and hosted MCP tools, including macro history, calendars, FX, positioning, commodities, news and analytical tasks. Each tool retains its complete input schema. The [capability inventory](https://github.com/fxmacrodata/langflow-fxmacrodata/blob/main/CAPABILITIES.md) lists every operation.
+
+Results preserve the original response, a record view and source links. Keep units, timestamp flags and provenance when using the data. FXMacroData-generated predictions are distinct from market consensus. Empty records remain empty; failed requests produce an explicit error. Hosted visual resources remain in the response, but these components do not render an MCP Apps iframe.
+
+## Credentials
+
+For optional protected access, select your own Langflow global secret in the **FXMacroData API Key** field. Credentials are excluded from model-visible tool arguments. Exported component nodes leave this field empty so recipients select their own secret after import; exporting preserves the running component's private credential.
+
+See the [FXMacroData API reference](https://fxmacrodata.com/documentation/reference?utm_source=github&utm_medium=referral&utm_campaign=open_source_integrations&utm_content=langflow_docs) for public data and parameter definitions.
