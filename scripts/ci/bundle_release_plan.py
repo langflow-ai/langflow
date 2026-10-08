@@ -231,21 +231,26 @@ def _lfx_specifiers(requirements: Iterable[str]) -> tuple[str, ...]:
     return tuple(specifiers)
 
 
-def _admits_lfx_series(specifier: str, lfx_version: str) -> bool:
-    """Whether ``specifier`` admits any lfx in ``lfx_version``'s minor series.
+def _lfx_series_admission(specifier: str, lfx_version: str) -> bool | None:
+    """Whether ``specifier`` admits any lfx in ``lfx_version``'s minor series, or ``None`` if it cannot tell.
 
-    Clauses without a comparable bound (``==``, ``~=``, ``!=``) count as admitting so the caller fails closed.
+    ``False`` means a comparable bound excludes the series. ``None`` means some clause has no comparable
+    bound (``==``, ``~=``, ``!=``, an unparsable version) or the requirement is a bare ``lfx``.
     """
     major, minor, _, _, _ = parse_version(lfx_version)
     series_start = parse_version(f"{major}.{minor}.0.dev0")
     series_end = parse_version(f"{major}.{minor + 1}.0.dev0")
-    for clause in filter(None, specifier.split(",")):
+    clauses = [clause for clause in specifier.split(",") if clause]
+    known = bool(clauses)
+    for clause in clauses:
         match = re.fullmatch(r"(?P<op>>=|<=|>|<)(?P<bound>.+)", clause)
         if match is None:
+            known = False
             continue
         try:
             bound = _version_key(match["bound"])
         except PlanError:
+            known = False
             continue
         op = match["op"]
         if (
@@ -254,7 +259,15 @@ def _admits_lfx_series(specifier: str, lfx_version: str) -> bool:
             or (op == "<=" and bound < series_start)
         ):
             return False
-    return True
+    return True if known else None
+
+
+def _admits_lfx_series(specifier: str, lfx_version: str) -> bool:
+    """Whether ``specifier`` may admit lfx in ``lfx_version``'s minor series.
+
+    A range this check cannot evaluate counts as admitting, so a guard that blocks on admission fails closed.
+    """
+    return _lfx_series_admission(specifier, lfx_version) is not False
 
 
 def _newer_public_versions(package: str, version: str, latest: str, client: IndexClient) -> list[str]:
@@ -297,15 +310,18 @@ def _ensure_reusable_for_lfx_line(package: str, version: str, release: dict[str,
     """Reject reusing a public release that another lfx line published under the same version.
 
     Each lfx minor line owns its own bundle minor. A version the other line already published carries
-    that line's lfx floor, so reusing it would pin this release to a bundle it cannot install. An
-    unknown lfx range blocks the build so the check fails closed.
+    that line's lfx floor, so reusing it would pin this release to a bundle it cannot install. Reuse
+    needs every lfx requirement to provably admit this build's series; anything this check cannot
+    evaluate blocks the build so it fails closed.
     """
     specifiers = _lfx_specifiers((release.get("info") or {}).get("requires_dist") or ())
-    if specifiers and all(_admits_lfx_series(specifier, lfx_version) for specifier in specifiers):
+    admissions = [_lfx_series_admission(specifier, lfx_version) for specifier in specifiers]
+    if admissions and all(admission is True for admission in admissions):
         return
     observed = ", ".join(f"lfx{specifier}" for specifier in specifiers) or "lfx range unknown"
+    verdict = "which excludes" if False in admissions else "which this check cannot confirm admits"
     raise PlanError(
-        f"{package} {version}: already published for {observed}, which excludes lfx {lfx_version}; bump "
+        f"{package} {version}: already published for {observed}, {verdict} lfx {lfx_version}; bump "
         f"{package} to an unpublished version in this lfx line's bundle minor before building"
     )
 
