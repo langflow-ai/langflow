@@ -338,7 +338,7 @@ def test_prerelease_versions_share_the_requested_restamp() -> None:
 def test_prerelease_restamp_reuses_stable_and_changes_only_unpublished_bundle(tmp_path: Path) -> None:
     repo = _create_repository(tmp_path, {"alpha": "0.1.1", "beta": "0.2.0"})
     index = FakeIndex()
-    index.queue("lfx-alpha", "0.1.1", {"urls": [{"packagetype": "bdist_wheel"}]})
+    index.queue("lfx-alpha", "0.1.1", _release_requiring("lfx<2.0.0,>=1.11.0.dev0"))
     index.queue("lfx-beta", "0.2.0", None)
 
     plan = restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
@@ -384,7 +384,7 @@ def test_prerelease_restamp_ignores_newer_release_for_another_lfx_line(tmp_path:
     index.versions["lfx-alpha"] = ("0.1.0", "0.1.1", "0.2.0rc1", "0.2.0")
     index.queue("lfx-alpha", "0.2.0", _release_requiring("lfx<2.0.0,>=1.12.0.dev0"))
     index.queue("lfx-alpha", "0.2.0rc1", _release_requiring("lfx (<2.0.0,>=1.12.0rc1)"))
-    index.queue("lfx-alpha", "0.1.1", {"urls": [{"packagetype": "bdist_wheel"}]})
+    index.queue("lfx-alpha", "0.1.1", _release_requiring("lfx (<2.0.0,>=1.11.0.dev0)"))
 
     plan = restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
 
@@ -405,6 +405,33 @@ def test_prerelease_restamp_rejects_newer_release_for_the_same_lfx_line(tmp_path
         PlanError,
         match=r"lfx-alpha 0\.1\.1: source version trails public version 0\.1\.2 \(lfx<2\.0\.0,>=1\.11\.0\.dev0\)",
     ):
+        restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+
+def test_prerelease_restamp_rejects_reusing_a_release_published_for_another_lfx_line(tmp_path: Path) -> None:
+    # The lfx 1.12 line already published 0.1.8, so the lfx 1.11 line cannot reuse that number.
+    repo = _create_repository(tmp_path, {"alpha": "0.2.0", "beta": "0.1.8"})
+    index = FakeIndex()
+    index.queue("lfx-alpha", "0.2.0", None)
+    index.latest_versions["lfx-beta"] = "0.1.8"
+    index.queue("lfx-beta", "0.1.8", _release_requiring("lfx (<2.0.0,>=1.12.0.dev0)"))
+
+    with pytest.raises(
+        PlanError,
+        match=r"lfx-beta 0\.1\.8: already published for lfx<2\.0\.0,>=1\.12\.0\.dev0, which excludes lfx 1\.11\.0rc3",
+    ):
+        restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+    # alpha was restamped before beta failed; the whole plan rolls back.
+    assert 'version = "0.2.0"' in (repo / "src" / "bundles" / "alpha" / "pyproject.toml").read_text()
+
+
+def test_prerelease_restamp_rejects_reusing_a_release_with_unknown_lfx_range(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1"})
+    index = FakeIndex()
+    index.queue("lfx-alpha", "0.1.1", {"urls": [{"packagetype": "bdist_wheel"}]})
+
+    with pytest.raises(PlanError, match=r"lfx-alpha 0\.1\.1: already published for lfx range unknown"):
         restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
 
 
