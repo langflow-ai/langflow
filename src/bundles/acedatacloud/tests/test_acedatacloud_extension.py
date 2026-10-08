@@ -6,6 +6,10 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
+from lfx.custom.utils import create_component_template
+from lfx.extension.loader import load_extension
+from lfx.extension.manifest import load_manifest
+from lfx.schema.data import Data
 from lfx_acedatacloud.client import AceAPIError, normalize, post_json, scrub
 from lfx_acedatacloud.components.acedatacloud.fish_audio_task import (
     FishAudioRetrieveTaskComponent,
@@ -27,11 +31,6 @@ from lfx_acedatacloud.provider import (
     load_catalog,
 )
 from lfx_acedatacloud.specs import SERVICES
-
-from lfx.custom.utils import create_component_template
-from lfx.extension.loader import load_extension
-from lfx.extension.manifest import load_manifest
-from lfx.schema.data import Data
 
 ROOT = Path(__file__).resolve().parents[1] / "src" / "lfx_acedatacloud"
 
