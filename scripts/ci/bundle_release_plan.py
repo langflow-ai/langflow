@@ -293,6 +293,23 @@ def _ensure_not_behind_public_latest(package: str, version: str, lfx_version: st
         )
 
 
+def _ensure_reusable_for_lfx_line(package: str, version: str, release: dict[str, Any], lfx_version: str) -> None:
+    """Reject reusing a public release that another lfx line published under the same version.
+
+    Each lfx minor line owns its own bundle minor. A version the other line already published carries
+    that line's lfx floor, so reusing it would pin this release to a bundle it cannot install. An
+    unknown lfx range blocks the build so the check fails closed.
+    """
+    specifiers = _lfx_specifiers((release.get("info") or {}).get("requires_dist") or ())
+    if specifiers and all(_admits_lfx_series(specifier, lfx_version) for specifier in specifiers):
+        return
+    observed = ", ".join(f"lfx{specifier}" for specifier in specifiers) or "lfx range unknown"
+    raise PlanError(
+        f"{package} {version}: already published for {observed}, which excludes lfx {lfx_version}; bump "
+        f"{package} to an unpublished version in this lfx line's bundle minor before building"
+    )
+
+
 def bump_version(version: str, bump: str = "patch", prerelease: str | None = None) -> str:
     """Increment a stable release component and optionally append a prerelease label."""
     major, minor, patch, _, _ = parse_version(version)
@@ -798,7 +815,9 @@ def restamp_unpublished_bundles(
     try:
         for bundle in bundles.values():
             _ensure_not_behind_public_latest(bundle.name, bundle.version, lfx_version, client)
-            if client.get_release(bundle.name, bundle.version) is not None:
+            release = client.get_release(bundle.name, bundle.version)
+            if release is not None:
+                _ensure_reusable_for_lfx_line(bundle.name, bundle.version, release, lfx_version)
                 targets.append(
                     VersionTarget(
                         package=bundle.name,
