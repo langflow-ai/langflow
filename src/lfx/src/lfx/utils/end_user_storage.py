@@ -1,11 +1,10 @@
 """Which end users own a SaveToFile folder under ``config_dir``.
 
-SaveToFile names an identified end user's folder after their sanitized id, so the folder name alone
-cannot prove ownership: the sanitizing is lossy (``a@b`` and ``a_b`` share ``a_b``) and an unrelated
-folder may carry the same name. The writer records every raw id it saves for here, and erasure deletes a
-folder only when this record names exactly the person being erased.
+SaveToFile encodes the complete raw id into a filesystem-safe folder name. Legacy folders used a
+lossy sanitizer, and unrelated folders may already occupy a name, so the writer records ownership
+and erasure deletes a folder only when this record names exactly the person being erased.
 
-The registry lives in a dot-folder, which a sanitized id can never be named (leading dots are stripped).
+The registry lives in a dot-folder, which neither the encoded nor legacy folder names can address.
 """
 
 from __future__ import annotations
@@ -13,11 +12,28 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from base64 import b32encode
 from pathlib import Path
 
 from filelock import FileLock
 
 REGISTRY_DIR_NAME = ".save_file_end_users"
+# 145 bytes encode to 232 characters. The prefix and registry temporary-file suffix
+# then fit within the common 255-byte filesystem name limit without truncation.
+_MAX_END_USER_ID_BYTES = 145
+
+
+def end_user_folder_segment(end_user_id: str) -> str:
+    """Encode the full UTF-8 identity, preserving distinctions even on case-insensitive filesystems.
+
+    Raises:
+        ValueError: If the identity is empty or too long for the folder and registry filenames.
+    """
+    raw = end_user_id.encode("utf-8")
+    if not raw or len(raw) > _MAX_END_USER_ID_BYTES:
+        msg = f"End-user file storage requires an identity of 1 to {_MAX_END_USER_ID_BYTES} UTF-8 bytes."
+        raise ValueError(msg)
+    return "end_user-" + b32encode(raw).decode("ascii").rstrip("=").lower()
 
 
 def _entry(config_dir: Path, segment: str) -> Path:
@@ -47,15 +63,21 @@ def end_user_folder_owners(config_dir: Path, segment: str) -> frozenset[str] | N
     return frozenset(str(owner) for owner in owners)
 
 
-def record_end_user_folder(config_dir: Path, segment: str, end_user_id: str) -> None:
-    """Record an owner without claiming a pre-existing folder whose contents cannot be attributed."""
+def record_end_user_folder(config_dir: Path, segment: str, end_user_id: str, *, exclusive: bool = False) -> None:
+    """Record ownership, rejecting unowned or shared existing folders when an exclusive save is required."""
     with end_user_folder_lock(config_dir, segment):
         owners = end_user_folder_owners(config_dir, segment)
+        if exclusive and owners is not None and owners != frozenset({end_user_id}):
+            msg = "Cannot save to an end-user folder owned by another identity."
+            raise ValueError(msg)
         folder = Path(config_dir) / segment
         if owners is None:
             try:
                 folder.mkdir()
             except FileExistsError:
+                if exclusive:
+                    msg = "Cannot save to an end-user folder without verified ownership."
+                    raise ValueError(msg) from None
                 return
         owners = owners or frozenset()
         if end_user_id in owners:

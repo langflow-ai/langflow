@@ -7,6 +7,7 @@ some paths), and each item is removed from it only after its bytes are gone, so 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import re
 import shutil
@@ -17,7 +18,12 @@ from uuid import UUID
 from lfx.components.files_and_knowledge._filesystem_isolation import load_isolation_config
 from lfx.components.files_and_knowledge._filesystem_namespace import compute_user_namespace
 from lfx.log.logger import logger
-from lfx.utils.end_user_storage import end_user_folder_lock, end_user_folder_owners, forget_end_user_folder
+from lfx.utils.end_user_storage import (
+    end_user_folder_lock,
+    end_user_folder_owners,
+    end_user_folder_segment,
+    forget_end_user_folder,
+)
 from sqlmodel import select
 
 from langflow.services.data_subjects.memory_base_storage import KIND_MEMORY_BASE, drop_memory_base
@@ -57,7 +63,7 @@ def _is_uuid(value: str) -> bool:
 
 
 def _save_file_segment(raw_id: str) -> str | None:
-    """The folder name SaveToFile gives this end user, unless it is a name other storage uses.
+    """The legacy sanitized folder name, unless it is a name other storage uses.
 
     Ownership is checked against the SaveToFile registry when the item runs.
     """
@@ -89,6 +95,10 @@ def end_user_storage_plan(ctx: EraseContext) -> list[dict[str, str]]:
     if ctx.scope_flow_ids:
         return [_item(KIND_SKIPPED, SKIPPED_SHARED_ACROSS_FLOWS)]
     plan = [_item(KIND_FS_SANDBOX, ctx.end_user.raw_id)]
+    # Older identities can exceed the new encoding limit and still own a legacy folder.
+    with contextlib.suppress(ValueError):
+        encoded = end_user_folder_segment(ctx.end_user.raw_id)
+        plan.append(_item(KIND_SAVE_FILE_DIR, encoded, end_user_id=ctx.end_user.raw_id))
     segment = _save_file_segment(ctx.end_user.raw_id)
     if segment:
         plan.append(_item(KIND_SAVE_FILE_DIR, segment, end_user_id=ctx.end_user.raw_id))
