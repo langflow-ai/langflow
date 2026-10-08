@@ -271,8 +271,24 @@ class TestEnvDetection:
 
     def test_not_configured_when_env_absent(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+        monkeypatch.delenv("OPENSEARCH_URL", raising=False)
         assert postgres_env_configured() is False
         assert read_connection_string_from_env() is None
+        assert resolve_default_kb_backend() == BackendType.SQLITE.value
+
+    def test_opensearch_env_alone_defaults_to_opensearch(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+        monkeypatch.setenv("OPENSEARCH_URL", "https://opensearch.internal:9200")
+        assert resolve_default_kb_backend() == BackendType.OPENSEARCH.value
+
+    @pytest.mark.usefixtures("pgvector_env")
+    def test_pgvector_wins_over_opensearch_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("OPENSEARCH_URL", "https://opensearch.internal:9200")
+        assert resolve_default_kb_backend() == BackendType.POSTGRES.value
+
+    def test_blank_opensearch_env_is_absent(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+        monkeypatch.setenv("OPENSEARCH_URL", "  ")
         assert resolve_default_kb_backend() == BackendType.SQLITE.value
 
     def test_empty_env_is_treated_as_absent(self, monkeypatch: pytest.MonkeyPatch) -> None:
