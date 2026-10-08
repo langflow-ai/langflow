@@ -4,6 +4,7 @@ import base64
 import hashlib
 import random
 from typing import TYPE_CHECKING, Annotated, Final
+from uuid import UUID
 
 from cryptography.fernet import Fernet, MultiFernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
@@ -11,7 +12,7 @@ from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, session_scope
-from lfx.services.settings.constants import MINIMUM_SECRET_KEY_LENGTH
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, MINIMUM_SECRET_KEY_LENGTH
 
 from langflow.services.auth.exceptions import (
     AuthBackendUnavailableError,
@@ -21,7 +22,7 @@ from langflow.services.auth.exceptions import (
     MissingCredentialsError,
 )
 from langflow.services.auth.external import extract_external_token
-from langflow.services.deps import get_auth_service, get_settings_service
+from langflow.services.deps import get_auth_service, get_settings_service, get_telemetry_service
 from langflow.services.telemetry.context import clear_current_telemetry_user, set_current_telemetry_user
 
 if TYPE_CHECKING:
@@ -35,8 +36,16 @@ if TYPE_CHECKING:
 
 
 def set_authenticated_telemetry_user(user: User | UserRead) -> None:
-    """Attribute subsequent telemetry to a user resolved by authentication."""
-    set_current_telemetry_user(getattr(user, "username", None))
+    """Attribute telemetry to an installation-scoped UUID, never a username."""
+    if not getattr(user, "username", None) or user.username == DEFAULT_SUPERUSER:
+        clear_current_telemetry_user()
+        return
+    try:
+        user_id = UUID(str(user.id))
+    except (AttributeError, ValueError):
+        clear_current_telemetry_user()
+        return
+    set_current_telemetry_user(user_id, get_telemetry_service().anonymous_id)
 
 
 class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):

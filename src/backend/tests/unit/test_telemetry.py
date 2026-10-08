@@ -3,6 +3,7 @@ import subprocess
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from uuid import UUID
 
 import pytest
 from langflow.services.telemetry.context import reset_current_telemetry_user, set_current_telemetry_user
@@ -13,7 +14,7 @@ from langflow.services.telemetry.opentelemetry import (
 )
 from langflow.services.telemetry.schema import DeploymentPayload, IntegrationActionPayload, RunPayload, ShutdownPayload
 from langflow.services.telemetry.service import TelemetryService
-from lfx.services.telemetry.identity import get_hashed_user_id
+from lfx.services.telemetry.identity import get_installation_user_id
 
 
 @pytest.fixture
@@ -80,14 +81,14 @@ async def test_queue_captures_request_user_id(telemetry_service):
         deployment_seconds=1.0,
         deployment_success=True,
     )
-    token = set_current_telemetry_user("alice")
+    token = set_current_telemetry_user(UUID(int=1), telemetry_service.anonymous_id)
     try:
         await telemetry_service.log_package_deployment(payload)
     finally:
         reset_current_telemetry_user(token)
 
     _func, _queued_payload, _path, user_id = telemetry_service.telemetry_queue.get_nowait()
-    assert user_id == get_hashed_user_id("alice")
+    assert user_id == get_installation_user_id(UUID(int=1), telemetry_service.anonymous_id)
 
 
 @pytest.mark.asyncio
