@@ -618,6 +618,32 @@ async def test_while_a_copy_runs_a_second_one_is_refused(
     assert command[1:] == ["-m", "langflow", "convert-sqlite-to-postgres", "--json"]
 
 
+async def test_a_running_copy_can_still_be_followed_and_stopped_when_a_step_before_it_opens_again(
+    client, logged_in_headers_super_user, config_dir, monkeypatch, unanswering
+):
+    headers = logged_in_headers_super_user
+    _ready_to_copy(config_dir)
+    _send_to(monkeypatch, unanswering)
+    run_id = await _start(client, headers)
+
+    resumed = await client.delete(PAUSE, headers=headers)
+
+    assert resumed.status_code == 200, resumed.text
+    steps = await _steps(client, headers)
+    assert steps["pause"] == ("current", None)
+    # Its command still writes to the destination, so the page still draws the copy, with its stop.
+    assert steps["copy_database"] == ("current", None)
+    refused = await client.post(RUNS.format("copy_database"), json={}, headers=headers)
+    assert refused.status_code == 409
+    assert refused.json()["detail"] == {"code": "locked", "reason": "earlier_step"}
+
+    stopped = await client.delete(f"{RUNS.format('copy_database')}/{run_id}", headers=headers)
+
+    assert stopped.status_code == 202
+    await asyncio.wait_for(_to_its_end(run_id), _TIMEOUT)
+    assert (await _steps(client, headers))["copy_database"] == ("locked", "earlier_step")
+
+
 async def test_a_page_that_goes_away_leaves_the_copy_running_until_it_is_stopped(
     client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch, unanswering, server_log
 ):

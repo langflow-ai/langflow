@@ -936,9 +936,11 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
     frontier_open = first["state"] == "done"
     for step in _LATER_STEPS:
         state, reason = own.get(step, ("current", None))
+        # A copy whose command still runs has started too, so a page can still follow it and stop it.
+        running = step in COPY_COMMANDS and (record["steps"].get(step) or {}).get("status") == "running"
         if skipped.get(step):
             state, reason = "skipped", skipped[step]
-        elif state == "current" and not frontier_open:
+        elif state == "current" and not frontier_open and not running:
             state, reason = "locked", "earlier_step"
         elif step not in own:
             # Nothing can be done here yet, and nothing after it waits for it.
