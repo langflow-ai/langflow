@@ -60,7 +60,8 @@ def test_workspace_security_constraints_enforce_patched_versions() -> None:
 
     _assert_floor(_requirement(constraints, "fsspec"), "2026.6.0")
     _assert_floor(_requirement(constraints, "multidict"), "6.9.1")
-    _assert_floor(_requirement(constraints, "langgraph-sdk"), "0.4.4")
+    _assert_floor(_requirement(constraints, "langgraph"), "1.2.14")
+    _assert_floor(_requirement(constraints, "langgraph-sdk"), "0.4.6")
 
     # An override replaces every requirement on the package, dropping caps such as
     # aiohttp's multidict<7.0 and langgraph's langgraph-sdk<0.5.0. Keep these floors
