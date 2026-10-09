@@ -37,13 +37,14 @@ def copy_command(step_id: str, destinations: dict[str, Any], *, dry_run: bool = 
     destinations is what the record says of where the data goes, which holds no secret.
     """
     argv = [sys.executable, "-m", "langflow", *COPY_COMMANDS[step_id]]
-    if step_id == "copy_knowledge_bases" and "database" in destinations:
+    if step_id == "copy_knowledge_bases":
         # A copy from SQLite is given the destination as its pgvector store (see copy_environment), and the
         # database copy brought each knowledge base's row as it is. A row that already says pgvector then
         # names the destination, whichever store holds its chunks, so the command counts it there before it
         # skips it. On PostgreSQL the copy reads the server's own store, where the check step has counted
-        # every such row.
-        argv.append("--verify-skipped")
+        # every such row, so there it is told not to. The option is given either way: the command's own
+        # default is for a person who runs it by hand.
+        argv.append("--verify-skipped" if "database" in destinations else "--no-verify-skipped")
     if step_id == "copy_files":
         argv += ["--bucket", destinations["files"]["bucket"], "--prefix", destinations["files"]["prefix"]]
     return [*argv, "--dry-run"] if dry_run else argv

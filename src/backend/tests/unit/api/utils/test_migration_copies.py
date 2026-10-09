@@ -56,7 +56,14 @@ def _refused(*codes: str) -> dict:
 
 def test_each_copy_runs_its_own_command_and_names_no_address_or_key_on_it():
     assert copy_command("copy_database", {}) == [*LANGFLOW, "convert-sqlite-to-postgres", "--json"]
-    assert copy_command("copy_knowledge_bases", {}) == [*LANGFLOW, "relocate-kb", "--to", "postgres", "--json"]
+    assert copy_command("copy_knowledge_bases", {}) == [
+        *LANGFLOW,
+        "relocate-kb",
+        "--to",
+        "postgres",
+        "--json",
+        "--no-verify-skipped",
+    ]
     files = [*LANGFLOW, "relocate-files", "--json", "--bucket", "acme", "--prefix", "moved/files"]
     assert copy_command("copy_files", BUCKET) == files
     # A test run is the same command, told to write nothing.
@@ -154,8 +161,8 @@ def test_a_copy_from_sqlite_has_the_command_count_a_knowledge_base_before_it_ski
     assert copy_command("copy_knowledge_bases", moved) == command
     assert copy_command("copy_knowledge_bases", moved, dry_run=True) == [*command, "--dry-run"]
     # An instance on PostgreSQL names no database to move to. Its copy reads the server's own store, where such
-    # a row is, so the command is asked for nothing more there.
-    assert "--verify-skipped" not in copy_command("copy_knowledge_bases", {"vectors": {"kind": "pgvector"}})
+    # a row is, so the command is told not to count there. It counts unless it is told not to.
+    assert copy_command("copy_knowledge_bases", {"vectors": {"kind": "pgvector"}})[-1] == "--no-verify-skipped"
 
 
 @pytest.mark.parametrize(
