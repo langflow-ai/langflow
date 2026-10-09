@@ -270,7 +270,13 @@ class FlowRegistry:
     # Mutations (add / remove) invalidate the cache immediately.
     _STORE_IDS_TTL: float = 1.0
 
-    def __init__(self, *, no_env_fallback: bool = False, store: FlowStore | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        no_env_fallback: bool = False,
+        store: FlowStore | None = None,
+        project_dir: Path | None = None,
+    ) -> None:
         from lfx.cli.flow_store import NullFlowStore
 
         # Key invariant: a flow may be stored under TWO keys simultaneously —
@@ -280,6 +286,9 @@ class FlowRegistry:
         # (list_metas, __len__, remove) uses meta.id as the canonical identity.
         self._flows: dict[str, tuple[Graph, FlowMeta]] = {}
         self._no_env_fallback = no_env_fallback
+        # The folder these flows were loaded from, when they came from one. Recorded on
+        # every graph so a flow can resolve its siblings without a database.
+        self._project_dir = project_dir
         self._store = store if store is not None else NullFlowStore()
         # Maps meta.id → store key when they differ (pre-placed files with human-readable names).
         self._store_keys: dict[str, str] = {}
@@ -294,13 +303,15 @@ class FlowRegistry:
         self._store_ids_cache_ts: float = 0.0
 
     def stamp(self, graph: Graph) -> None:
-        """Apply the registry's env-fallback policy to ``graph.context``.
+        """Apply the registry's env-fallback policy and source folder to ``graph.context``.
 
         Called again after ``deepcopy`` in the run/stream endpoints, since
         ``Graph.__deepcopy__`` does not carry ``context`` over.
         """
         if self._no_env_fallback:
             graph.context["no_env_fallback"] = True
+        if self._project_dir is not None:
+            graph.context["project_dir"] = str(self._project_dir)
 
     def _get_cached_store_ids(self) -> list[str]:
         """Return store.list_ids(), refreshing at most once per _STORE_IDS_TTL seconds."""

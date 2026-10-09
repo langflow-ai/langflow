@@ -894,7 +894,7 @@ async def build_registry_from_directory(
         msg = f"No .json files found in directory: {dir_path}"
         raise ValueError(msg)
 
-    registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore())
+    registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore(), project_dir=dir_path)
     await _populate_registry(json_files, dir_path, registry, verbose_print, check_variables=check_variables)
     return registry
 

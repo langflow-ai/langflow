@@ -106,7 +106,7 @@ def nested_env(monkeypatch):
     )
     monkeypatch.setattr(
         run_flow_module,
-        "scoped_model_provider_policy_for_target_flow",
+        "_model_provider_policy",
         _authorized_target_scope,
     )
     monkeypatch.setattr(run_flow_module, "get_user_is_superuser", env.get_user_is_superuser)
