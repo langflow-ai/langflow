@@ -10,6 +10,9 @@ the wrong way round, an external server gets handed a key for our serving plane.
 
 from __future__ import annotations
 
+import io
+import json
+import zipfile
 from uuid import uuid4
 
 import pytest
@@ -90,6 +93,40 @@ def test_a_sibling_project_url_is_reported_with_the_name_the_flow_calls_it_by():
     requirements = _collect_mcp_requirements(flow)
     assert requirements.projects == (ProjectArtifactRequiredMcpProject(server_name="billing", project_id=SIBLING),)
     assert requirements.variables == ()
+
+
+def test_a_sibling_project_does_not_ask_for_the_credential_beside_it():
+    """The real shape, which an earlier version of this test missed by omitting headers.
+
+    Saving a flow scrubs the author's key out of the config into a generated
+    ``MCP_*`` variable name, so a sibling-project server reaches the builder with
+    both a project URL *and* a credential reference. Declaring that reference
+    refuses the deploy over a variable the serving plane must never hold -- it is
+    the authoring plane's key, and the rebuilt connection discards it for one
+    minted on the target. Every internal connection was undeployable until this
+    was pinned.
+    """
+    flow = _flow(
+        _server(
+            "billing",
+            {
+                "url": f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/streamable",
+                "headers": {"x-api-key": variable_name_for("billing", "x-api-key")},
+            },
+        )
+    )
+    requirements = _collect_mcp_requirements(flow)
+
+    assert requirements.variables == ()
+    assert requirements.projects == (ProjectArtifactRequiredMcpProject(server_name="billing", project_id=SIBLING),)
+
+
+def test_an_external_server_still_asks_for_its_credential():
+    """The other side of the rule above, so the skip cannot widen to every server."""
+    name = variable_name_for("stripe", "Authorization")
+    flow = _flow(_server("stripe", {"url": "https://api.stripe.com/mcp", "headers": {"Authorization": name}}))
+
+    assert _collect_mcp_requirements(flow).variables == (name,)
 
 
 def test_a_server_with_no_name_declares_no_project():
@@ -260,3 +297,86 @@ def test_a_project_with_no_mcp_servers_packages_exactly_as_before():
     assert "required_mcp_variables" not in manifest
     assert "required_mcp_projects" not in manifest
     assert all("required_mcp_variables" not in flow for flow in manifest["flows"])
+
+
+# --- what the artifact carries beside the bytes ---------------------------------
+#
+# The packaged graph keeps only a server's name, so the configuration a deployed
+# flow resolves through has to reach the target some other way. It rides on the
+# returned object and never enters the archive, which stays a file safe to store.
+
+
+def _external(*servers: dict) -> tuple:
+    snapshot = _FlowSnapshot(flow_id=uuid4(), name="support", payload={"data": _flow(*servers)})
+    return _archive(snapshot).external_mcp_servers
+
+
+def test_an_external_server_is_carried_with_the_config_the_author_left():
+    carried = _external(
+        _server("stripe", {"url": "https://api.stripe.com/mcp", "headers": {"Authorization": "{{MCP_STRIPE}}"}})
+    )
+
+    assert [server.server_name for server in carried] == ["stripe"]
+    assert carried[0].config["headers"] == {"Authorization": "{{MCP_STRIPE}}"}
+
+
+def test_a_sibling_project_is_not_carried():
+    """It is rebuilt against the target with a key minted there, so its config is moot."""
+    carried = _external(_server("billing", {"url": f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/streamable"}))
+
+    assert carried == ()
+
+
+def test_a_url_in_a_variable_is_carried_unresolved():
+    """So one deployed project can point at a sandbox here and the real endpoint there."""
+    carried = _external(_server("mystery", {"url": "{{MCP_SERVER_URL}}", "headers": {"A": "{{MCP_TOKEN}}"}}))
+
+    assert [server.config["url"] for server in carried] == ["{{MCP_SERVER_URL}}"]
+
+
+def test_a_config_still_holding_a_literal_credential_is_not_carried():
+    """The one thing this must never do is hand a secret to another plane."""
+    carried = _external(
+        _server("leaky", {"url": "https://x.example/mcp", "headers": {"Authorization": "Bearer sk_live_1"}})
+    )
+
+    assert carried == ()
+
+
+def test_a_non_secret_header_does_not_disqualify_a_config():
+    carried = _external(_server("plain", {"url": "https://x.example/mcp", "headers": {"Accept": "application/json"}}))
+
+    assert [server.server_name for server in carried] == ["plain"]
+
+
+def test_the_carried_config_is_a_copy_the_caller_cannot_write_back_through():
+    config = {"url": "https://x.example/mcp", "headers": {"Authorization": "{{MCP_A}}"}}
+    carried = _external(_server("stripe", config))
+
+    carried[0].config["headers"]["Authorization"] = "Bearer leaked"
+
+    assert config["headers"]["Authorization"] == "{{MCP_A}}"
+
+
+def test_the_archive_itself_carries_no_mcp_config():
+    """The export invariant, restated from this side.
+
+    `test_build_project_artifact_reduces_mcp_config_to_name_only` pins the packaged
+    graph. This pins that carrying the config out of band did not quietly put it back.
+    """
+    snapshot = _mcp_snapshot()
+    artifact = _archive(snapshot)
+
+    assert artifact.external_mcp_servers  # something was carried
+
+    # The variable *name* belongs in the archive: naming it is what the manifest's
+    # declaration is for. What must not be there is the connection detail beside it.
+    bytes_as_text = artifact.content.decode("utf-8", "ignore")
+    assert "MCP_STRIPE" in bytes_as_text
+    assert "api.stripe.com" not in bytes_as_text
+    with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
+        graph = json.loads(archive.read(next(n for n in archive.namelist() if n.startswith("flows/"))))
+    for node in graph["data"]["nodes"]:
+        for field in node["data"]["node"]["template"].values():
+            if isinstance(field, dict) and field.get("type") == "mcp":
+                assert "config" not in field["value"]

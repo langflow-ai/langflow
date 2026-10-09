@@ -171,6 +171,25 @@ class ProjectArtifactRequiredModel:
 
 
 @dataclass(frozen=True, slots=True)
+class ProjectArtifactExternalMcpServer:
+    """One external MCP server a packaged flow calls, and the config it reaches it by.
+
+    Returned beside the archive and deliberately *not* written into it. The manifest
+    and the packaged graphs reduce every MCP field to a name, because an lfpkg is a
+    file people store and move; the configuration still has to reach a deploy target,
+    so it rides on this object to whoever is deploying and no further.
+
+    Only a config whose every credential is already a variable reference appears here.
+    Saving a flow rewrites a literal into a generated ``MCP_*`` name, so for a saved
+    flow that is every external server, and one that still holds a literal is left out
+    rather than handed on.
+    """
+
+    server_name: str
+    config: dict[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
 class ProjectArtifact:
     """Immutable package bytes and non-secret response metadata."""
 
@@ -184,6 +203,8 @@ class ProjectArtifact:
     # Empty when no flow references a Memory Base or Knowledge Base.
     dependencies: dict[str, Any] = field(default_factory=dict)
     project_description: str | None = None
+    # Beside the bytes, never inside them. See ProjectArtifactExternalMcpServer.
+    external_mcp_servers: tuple[ProjectArtifactExternalMcpServer, ...] = ()
 
     @property
     def flow_count(self) -> int:
@@ -632,11 +653,25 @@ def _mcp_config_requirements(
     by: the component looks its server up by name and prefers the stored row over
     the config embedded here, so a deploy that rebuilds the connection under any
     other name writes a row the flow never finds.
+
+    One of our own projects reports *only* the project, never the credential beside
+    it. The deploy replaces that whole configuration with the target's own address
+    and a key minted there, so the author's credential is discarded rather than
+    carried -- and it is the authoring plane's key, which the target must never be
+    asked to hold. Declaring it refuses every internal connection for a variable
+    nobody should set.
     """
     variables: set[str] = set()
     projects: set[ProjectArtifactRequiredMcpProject] = set()
     if not isinstance(config, dict) or not isinstance(server_name, str) or not server_name:
         return variables, projects
+    if url_variable := variable_reference_name(config.get("url")):
+        # A URL behind a variable names no project until it resolves, so it is
+        # reported as a variable and treated as external. Being wrong this way
+        # asks for something harmless; the other way mints a key for a stranger.
+        variables.add(url_variable)
+    elif project_id := project_id_from_mcp_url(config.get("url")):
+        return variables, {ProjectArtifactRequiredMcpProject(server_name=server_name, project_id=project_id)}
     for key in MCP_SECRET_CONFIG_MAPS:
         entries = config.get(key)
         if not isinstance(entries, dict):
@@ -646,35 +681,22 @@ def _mcp_config_requirements(
                 continue
             if name := variable_reference_name(entry_value):
                 variables.add(name)
-    if name := variable_reference_name(config.get("url")):
-        # A URL behind a variable names no project until it resolves, so it is
-        # reported as a variable and treated as external. Being wrong this way
-        # asks for something harmless; the other way mints a key for a stranger.
-        variables.add(name)
-    elif project_id := project_id_from_mcp_url(config.get("url")):
-        projects.add(ProjectArtifactRequiredMcpProject(server_name=server_name, project_id=project_id))
     return variables, projects
 
 
-def _collect_mcp_requirements(flow_data: object) -> _McpRequirements:
-    """Collect what a flow's MCP servers need from regular and grouped nodes.
+def _mcp_field_values(flow_data: object) -> Iterator[dict[str, Any]]:
+    """Every MCP field value in a flow, from regular and grouped nodes alike.
 
-    Walked without recursion, like the connection refs. A flow reaches an MCP
-    server through one field type, so unlike the model fields there is only one
-    shape to read.
-
-    The project ids collected here name a project but do not prove one is ours:
-    any host can serve that path shape. Confirming the origin belongs to the
-    deploy target is the caller's job, and skipping it would mint a key for this
-    plane and write it into a config pointing somewhere else.
+    Walked without recursion, like the connection refs. Shared by the two readers of
+    these fields so a server reachable by one is reachable by the other: a config the
+    requirements see but the carried list does not would declare a credential nothing
+    then resolves.
     """
     if not isinstance(flow_data, dict):
-        return _McpRequirements()
+        return
     nodes = flow_data.get("nodes")
     if not isinstance(nodes, list):
-        return _McpRequirements()
-    variables: set[str] = set()
-    projects: set[ProjectArtifactRequiredMcpProject] = set()
+        return
     node_frames = [iter(nodes)]
     while node_frames:
         try:
@@ -693,17 +715,69 @@ def _collect_mcp_requirements(flow_data: object) -> _McpRequirements:
                 if not isinstance(field_value, dict) or field_value.get("type") != "mcp":
                     continue
                 value = field_value.get("value")
-                if not isinstance(value, dict):
-                    continue
-                field_variables, field_projects = _mcp_config_requirements(value.get("name"), value.get("config"))
-                variables.update(field_variables)
-                projects.update(field_projects)
+                if isinstance(value, dict):
+                    yield value
         nested_flow = node_inner.get("flow")
         if isinstance(nested_flow, dict):
             nested_data = nested_flow.get("data")
             nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
             if isinstance(nested_nodes, list):
                 node_frames.append(iter(nested_nodes))
+
+
+def _config_is_only_references(config: dict[str, Any]) -> bool:
+    """Whether every credential-bearing value in this config is a variable name.
+
+    The same question ``_mcp_config_is_clean`` asks of a whole config, narrowed to the
+    two maps that hold credentials, because that is the only part being handed on.
+    """
+    for key in MCP_SECRET_CONFIG_MAPS:
+        entries = config.get(key)
+        if not isinstance(entries, dict):
+            continue
+        for entry_key, entry_value in entries.items():
+            if key == "headers" and str(entry_key).lower() in NON_SECRET_HEADERS:
+                continue
+            if entry_value in (None, "") or variable_reference_name(entry_value) is not None:
+                continue
+            return False
+    return True
+
+
+def _collect_external_mcp_servers(flow_data: object) -> tuple[ProjectArtifactExternalMcpServer, ...]:
+    """The external MCP servers a flow calls, read from its unscrubbed data.
+
+    Walks the same fields as ``_collect_mcp_requirements`` and splits the two kinds the
+    same way: a URL naming one of our projects is a sibling, which a deploy rebuilds
+    against its target, and anything else is external, which a deploy can only carry.
+    """
+    servers: dict[str, ProjectArtifactExternalMcpServer] = {}
+    for value in _mcp_field_values(flow_data):
+        name, config = value.get("name"), value.get("config")
+        if not isinstance(name, str) or not name or not isinstance(config, dict):
+            continue
+        if project_id_from_mcp_url(config.get("url")) is not None:
+            continue
+        if name in servers or not _config_is_only_references(config):
+            continue
+        servers[name] = ProjectArtifactExternalMcpServer(server_name=name, config=deepcopy(config))
+    return tuple(servers.values())
+
+
+def _collect_mcp_requirements(flow_data: object) -> _McpRequirements:
+    """Collect what a flow's MCP servers need, from regular and grouped nodes.
+
+    The project ids collected here name a project but do not prove one is ours:
+    any host can serve that path shape. Confirming the origin belongs to the
+    deploy target is the caller's job, and skipping it would mint a key for this
+    plane and write it into a config pointing somewhere else.
+    """
+    variables: set[str] = set()
+    projects: set[ProjectArtifactRequiredMcpProject] = set()
+    for value in _mcp_field_values(flow_data):
+        field_variables, field_projects = _mcp_config_requirements(value.get("name"), value.get("config"))
+        variables.update(field_variables)
+        projects.update(field_projects)
     return _McpRequirements(variables=tuple(sorted(variables)), projects=tuple(sorted(projects)))
 
 
@@ -1027,8 +1101,14 @@ def _build_archive(
     for snapshot in snapshots:
         _json_string_size(snapshot.name)
 
+    external_mcp: dict[str, ProjectArtifactExternalMcpServer] = {}
     for snapshot in snapshots:
         path = f"flows/{snapshot.flow_id}.json"
+        # Read from the payload as saved, before scrubbing: the packaged graph below
+        # keeps only the server's name, so this is the one place the configuration is
+        # still here to be handed on.
+        for server in _collect_external_mcp_servers(snapshot.payload.get("data")):
+            external_mcp.setdefault(server.server_name, server)
         (
             content,
             required_variables,
@@ -1198,6 +1278,7 @@ def _build_archive(
         flows=tuple(flow_entries),
         dependencies=dependencies or {},
         project_description=project_description,
+        external_mcp_servers=tuple(external_mcp.values()),
     )
 
 
