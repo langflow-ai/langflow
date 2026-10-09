@@ -48,6 +48,8 @@ def test_scan_reports_sidecars_and_unreadable_entries_and_skips_internal_folders
     # A user named "sqlite" keeps its legacy bases, beside the SQLite stores of every account.
     (tmp_path / "sqlite" / str(uuid4()) / str(uuid4())).mkdir(parents=True)
     (tmp_path / "sqlite" / "knowledge").mkdir()
+    # macOS and Windows match folder names regardless of case, so the stores may sit under another spelling.
+    (tmp_path / "SQLite" / str(uuid4())).mkdir(parents=True)
     (tmp_path / "linked").symlink_to(tmp_path / "bob", target_is_directory=True)
 
     directories, unreadable = scan_legacy_sources(tmp_path)

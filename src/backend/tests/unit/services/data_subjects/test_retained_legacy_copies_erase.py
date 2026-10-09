@@ -26,6 +26,8 @@ from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 from langflow.services.knowledge_base_storage import coordinator
+from langflow.services.knowledge_base_storage.legacy_directories import is_legacy_directory
+from langflow.services.knowledge_base_storage.retained import MIGRATION_DIRECTORY
 from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError, backend_for_record
 from sqlmodel import delete
 
@@ -44,6 +46,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 RENAMED = "renamed-owner"
+# A username may start with a dot, as the internal `.migration` folder does.
+HIDDEN = ".hidden"
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -331,11 +335,12 @@ async def test_should_leave_a_renamed_builders_upgrade_evidence_when_erasing_who
         assert await session.get(KnowledgeBaseStorageMigration, record.active_migration_id) is not None
 
 
-async def test_should_keep_a_renamed_builders_directory_when_erasing_whoever_took_the_name(storage_root):
-    record, _ = await _upgraded_memory_base(storage_root)
-    original, _ = _copies(storage_root, record)
+@pytest.mark.parametrize("username", [OWNER, HIDDEN])
+async def test_should_keep_a_renamed_builders_directory_when_erasing_whoever_took_the_name(storage_root, username):
+    record, _ = await _upgraded_memory_base(storage_root, username)
+    original, _ = _copies(storage_root, record, username)
     await _rename(record.user_id, RENAMED)
-    newcomer = await create_user(OWNER)
+    newcomer = await create_user(username)
     # The binding retires the old source, so the newcomer may create a base of the same name.
     await knowledge_base_service.create_record(
         user_id=newcomer, name=KB_NAME, model_selection={"provider": "OpenAI", "name": "text-embedding-3-small"}
@@ -345,7 +350,7 @@ async def test_should_keep_a_renamed_builders_directory_when_erasing_whoever_too
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
     assert (original / "chroma.sqlite3").is_file()
-    assert _binding(storage_root).is_file()
+    assert _binding(storage_root, username).is_file()
 
 
 @pytest.mark.parametrize("state", ["migrating", "needs_attention"])
@@ -412,9 +417,10 @@ async def test_should_keep_a_former_holders_only_copy_that_whoever_took_the_name
     assert (original / "chroma.sqlite3").is_file()
 
 
-async def test_should_follow_the_recorded_id_of_a_directory_kept_under_a_former_name(storage_root):
-    record_id, owner = await _legacy_knowledge_base(storage_root, OWNER)
-    original = storage_root / OWNER / KB_NAME
+@pytest.mark.parametrize("username", [OWNER, HIDDEN])
+async def test_should_follow_the_recorded_id_of_a_directory_kept_under_a_former_name(storage_root, username):
+    record_id, owner = await _legacy_knowledge_base(storage_root, username)
+    original = storage_root / username / KB_NAME
     # Versions 1.8 to 1.11 recorded the base's id next to its Chroma files.
     (original / "embedding_metadata.json").write_text(json.dumps({"id": str(record_id)}))
     await _rename(owner, RENAMED)
@@ -423,7 +429,7 @@ async def test_should_follow_the_recorded_id_of_a_directory_kept_under_a_former_
     # The upgrade reads the directory that the recorded id names, under the former name.
     record = await knowledge_base_service.get_by_id(record_id)
     assert (record.backend_type, record.storage_state) == ("sqlite", "ready")
-    newcomer = await create_user(OWNER)
+    newcomer = await create_user(username)
     # Even if the newcomer owns a base of that name, the recorded id ties the directory to the renamed builder.
     async with session_scope() as session:
         session.add(KnowledgeBaseRecord(name=KB_NAME, user_id=newcomer, backend_type="chroma", model_selection={}))
@@ -436,7 +442,7 @@ async def test_should_follow_the_recorded_id_of_a_directory_kept_under_a_former_
     status, request = await erase_builder(owner)
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
-    assert not (storage_root / OWNER).exists()
+    assert not (storage_root / username).exists()
 
 
 async def test_should_remove_the_builders_only_copy_of_a_base_the_upgrade_never_read(storage_root, monkeypatch):
@@ -504,6 +510,88 @@ async def test_should_keep_other_accounts_storage_under_a_folder_named_like_the_
     assert (bindings / "colleague.json").is_file()
 
 
+@pytest.mark.parametrize("username", [HIDDEN, f"{MIGRATION_DIRECTORY}s"])
+async def test_should_remove_the_upgraded_directory_of_a_builder_whose_name_starts_with_a_dot(storage_root, username):
+    record, _ = await _upgraded_memory_base(storage_root, username)
+    original, snapshot = _copies(storage_root, record, username)
+    colleague, _ = await _upgraded_memory_base(storage_root, "colleague")
+    colleague_original, colleague_snapshot = _copies(storage_root, colleague, "colleague")
+    assert original.is_dir()
+
+    status, request = await erase_builder(record.user_id)
+
+    assert status == DataSubjectRequestStatus.DONE.value, request.error
+    assert not (storage_root / username).exists()
+    assert not snapshot.exists()
+    assert not _binding(storage_root, username).exists()
+    assert colleague_original.is_dir()
+    assert colleague_snapshot.is_dir()
+    assert _binding(storage_root, "colleague").is_file()
+
+
+async def test_should_keep_the_upgrades_own_folder_when_erasing_a_builder_named_after_it(storage_root):
+    colleague, _ = await _upgraded_memory_base(storage_root, "colleague")
+    colleague_snapshot = _copies(storage_root, colleague, "colleague")[1]
+    builder = await create_user(MIGRATION_DIRECTORY)
+    record = await knowledge_base_service.create_record(user_id=builder, name=KB_NAME)
+    # A builder of this name wrote their bases there before the upgrade took the folder over. Nothing in it is
+    # an owner's directory now, even a store whose sidecar records the builder's base, or a deletion's leftovers.
+    install_legacy_store(storage_root, MIGRATION_DIRECTORY)
+    recorded = storage_root / MIGRATION_DIRECTORY / KB_NAME
+    (recorded / "embedding_metadata.json").write_text(json.dumps({"id": str(record.id)}))
+    leftover = storage_root / MIGRATION_DIRECTORY / "deleted-notes"
+    leftover.mkdir()
+    (leftover / "chroma.sqlite3").write_bytes(b"deleted chunks")
+    (leftover / ".kb_deleted").touch()
+
+    status, request = await erase_builder(builder)
+
+    assert status == DataSubjectRequestStatus.DONE.value, request.error
+    assert (recorded / "chroma.sqlite3").is_file()
+    assert (leftover / "chroma.sqlite3").is_file()
+    assert colleague_snapshot.is_dir()
+    assert _binding(storage_root, "colleague").is_file()
+
+
+async def test_should_keep_every_accounts_sqlite_stores_when_erasing_a_builder_named_sqlite(storage_root):
+    colleague = await create_user("colleague")
+    await knowledge_base_service.create_record(user_id=colleague, name="kept")
+    colleague_store = storage_root / "sqlite" / str(colleague)
+    record, _ = await _upgraded_memory_base(storage_root, "sqlite")
+    original, _ = _copies(storage_root, record, "sqlite")
+    # A folder named after an account's id in `sqlite` is that account's store, even if it held what looks like
+    # the files a deletion left in the builder's folder.
+    (colleague_store / ".kb_deleted").touch()
+    kept = sorted(colleague_store.rglob("*"))
+
+    status, request = await erase_builder(record.user_id)
+
+    assert status == DataSubjectRequestStatus.DONE.value, request.error
+    assert not original.exists()
+    assert sorted(colleague_store.rglob("*")) == kept
+
+
+async def test_should_keep_the_sqlite_stores_in_a_folder_that_a_builder_named_sqlite_in_another_case_wrote_first(
+    storage_root,
+):
+    builder = await create_user("SQLite")
+    colleague = await create_user("colleague")
+    install_legacy_store(storage_root, "SQLite")
+    leftover = storage_root / "SQLite" / KB_NAME
+    (leftover / ".kb_deleted").touch()
+    # macOS and Windows match folder names regardless of case, so once the builder's folder exists the SQLite
+    # stores are written into it, under the builder's spelling.
+    colleague_store = storage_root / "SQLite" / str(colleague)
+    colleague_store.mkdir()
+    (colleague_store / ".kb_deleted").touch()
+
+    status, request = await erase_builder(builder)
+
+    assert status == DataSubjectRequestStatus.DONE.value, request.error
+    assert not leftover.exists()
+    assert (colleague_store / ".kb_deleted").is_file()
+
+
 async def test_should_leave_a_former_holders_deleted_base_when_erasing_whoever_took_the_name(storage_root):
     record, _ = await _upgraded_memory_base(storage_root)
     original, snapshot = _copies(storage_root, record)
@@ -527,14 +615,15 @@ async def test_should_leave_a_former_holders_deleted_base_when_erasing_whoever_t
 
 @pytest.mark.skipif(sys.platform == "win32" or os.geteuid() == 0, reason="needs POSIX permissions")
 @pytest.mark.parametrize("unreadable", ["sidecar", "folder"])
-async def test_should_keep_directories_whose_ownership_cannot_be_read(storage_root, unreadable):
-    install_legacy_store(storage_root, OWNER)
-    original = storage_root / OWNER / KB_NAME
-    newcomer = await create_user(OWNER)
+@pytest.mark.parametrize("username", [OWNER, HIDDEN])
+async def test_should_keep_directories_whose_ownership_cannot_be_read(storage_root, unreadable, username):
+    install_legacy_store(storage_root, username)
+    original = storage_root / username / KB_NAME
+    newcomer = await create_user(username)
     async with session_scope() as session:
         session.add(KnowledgeBaseRecord(name=KB_NAME, user_id=newcomer, backend_type="sqlite", model_selection={}))
     # Whoever wrote the directory, nothing readable says so, and it may be another account's.
-    locked = storage_root / OWNER
+    locked = storage_root / username
     if unreadable == "sidecar":
         (original / "embedding_metadata.json").write_text("{")
     else:
@@ -548,23 +637,44 @@ async def test_should_keep_directories_whose_ownership_cannot_be_read(storage_ro
     assert (original / "chroma.sqlite3").is_file()
 
 
-async def test_should_remove_the_builders_empty_knowledge_base_folder(storage_root):
-    builder = await create_user(OWNER)
-    (storage_root / OWNER).mkdir(parents=True)
+@pytest.mark.parametrize("username", [OWNER, HIDDEN])
+async def test_should_remove_the_builders_empty_knowledge_base_folder(storage_root, username):
+    builder = await create_user(username)
+    (storage_root / username).mkdir(parents=True)
 
     status, request = await erase_builder(builder)
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
-    assert not (storage_root / OWNER).exists()
+    assert not (storage_root / username).exists()
 
 
-async def test_should_remove_what_a_deletion_left_in_the_builders_folder(storage_root):
-    builder = await create_user(OWNER)
-    install_legacy_store(storage_root, OWNER)
+@pytest.mark.parametrize("username", [OWNER, HIDDEN])
+async def test_should_remove_what_a_deletion_left_in_the_builders_folder(storage_root, username):
+    builder = await create_user(username)
+    install_legacy_store(storage_root, username)
     # The base's row is gone, but its files could not be removed.
-    (storage_root / OWNER / KB_NAME / ".kb_deleted").touch()
+    (storage_root / username / KB_NAME / ".kb_deleted").touch()
 
     status, request = await erase_builder(builder)
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
-    assert not (storage_root / OWNER).exists()
+    assert not (storage_root / username).exists()
+
+
+@pytest.mark.parametrize(
+    ("source_identity", "expected"),
+    [
+        (f"{HIDDEN}/{KB_NAME}", True),
+        (f"{MIGRATION_DIRECTORY}s/{KB_NAME}", True),
+        (f"sqlite/{KB_NAME}", True),
+        (f"{MIGRATION_DIRECTORY}/bindings", False),
+        # Usernames are unique regardless of case, and macOS and Windows match folder names that way too.
+        (".Migration/bindings", False),
+        (f"sqlite/{UUID(int=1)}", False),
+        (f"SQLite/{UUID(int=1)}", False),
+        ("team/", False),
+        ("team/ops/kb", False),
+    ],
+)
+def test_should_tell_an_owners_legacy_directory_from_internal_storage(source_identity, expected):
+    assert is_legacy_directory(source_identity) is expected

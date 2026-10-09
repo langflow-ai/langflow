@@ -14,8 +14,7 @@ from langflow.services.database.models.knowledge_base.model import KnowledgeBase
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_job_service
-from langflow.services.knowledge_base_storage.legacy_directories import LegacyDirectories, is_owner_folder
-from langflow.services.knowledge_base_storage.retained import is_source_identity
+from langflow.services.knowledge_base_storage.legacy_directories import LegacyDirectories, is_legacy_directory
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -87,15 +86,13 @@ async def builder_directories(
     ``named`` holds the directories that the builder's ledger rows and rows name, and ``kb_ids`` the
     builder's bases. The files a deletion left in the builder's folder are a deleted base's, so they are
     the builder's too. A directory is the builder's when one of these ties it to the builder and none ties
-    it to another account. A path that is not one `<owner>/<name>` directory as written, one under an internal
-    folder such as `.migration`, or a directory that could not be read is left alone, since it may be
-    another account's.
+    it to another account. A path that is not one `<owner>/<name>` directory as written, one in the internal
+    `.migration` folder or the SQLite stores, or a directory that could not be read is left alone, since it
+    may be another account's. A username may start with a dot, so its folder may too.
     """
-    candidates = {
-        source for source in named if is_source_identity(source) and is_owner_folder(source.partition("/")[0])
-    }
-    candidates |= {source for source, kb_id in found.recorded.items() if kb_id in kb_ids}
-    candidates |= {source for source in found.tombstones if source.startswith(f"{username}/")}
+    tied = {source for source, kb_id in found.recorded.items() if kb_id in kb_ids}
+    tied |= {source for source in found.tombstones if source.startswith(f"{username}/")}
+    candidates = {source for source in named | tied if is_legacy_directory(source)}
     readable = {source for source in candidates if found.readable(source)}
     if dropped := len(named - candidates) + len(candidates - readable):
         await logger.awarning(
