@@ -2,6 +2,7 @@
 import { renderHook } from "@testing-library/react";
 import useFlowHistoryRepairStore from "@/stores/flowHistoryRepairStore";
 import useFlowSaveCauseStore from "@/stores/flowSaveCauseStore";
+import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import useSaveFlow from "../use-save-flow";
 
 const mockSetFlows = jest.fn();
@@ -623,6 +624,34 @@ describe("useSaveFlow", () => {
     await expect(result.current()).resolves.toBeUndefined();
 
     expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
+  });
+
+  describe("while history is open", () => {
+    afterEach(() => useVersionPreviewStore.getState().clearPreview());
+
+    // The canvas then shows a point in the flow's past. A save that carried it
+    // wrote that point back over the flow.
+    it("sends no graph and no precondition, only settings", async () => {
+      useVersionPreviewStore
+        .getState()
+        .setPreview([], [], "Oct 9, 10:41 AM", "revision:2");
+      const { result } = renderHook(() => useSaveFlow());
+
+      await result.current();
+
+      const sent = mockMutate.mock.calls[0][0];
+      expect("data" in sent).toBe(false);
+      expect(sent.versionToken).toBeNull();
+      expect(sent.name).toBe("Saved Flow");
+    });
+
+    it("sends the graph again once history is closed", async () => {
+      const { result } = renderHook(() => useSaveFlow());
+
+      await result.current();
+
+      expect("data" in mockMutate.mock.calls[0][0]).toBe(true);
+    });
   });
 
   describe("history refusals the server can repair", () => {
