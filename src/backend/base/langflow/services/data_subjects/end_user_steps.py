@@ -8,6 +8,7 @@ from sqlalchemy import true
 from sqlmodel import and_, col, select
 
 from langflow.services.data_subjects.batching import delete_batch, delete_job_batch, delete_trace_batch
+from langflow.services.data_subjects.end_user_legacy_copies import erase_retained_memory_copies
 from langflow.services.data_subjects.end_user_memory import erase_memory_base_vectors
 from langflow.services.data_subjects.transactions import end_user_transactions
 from langflow.services.database.models.jobs.model import Job
@@ -119,5 +120,6 @@ END_USER_STEPS: tuple[tuple[str, Step], ...] = (
     ("memory_workflow_runs", _memory_rows(MemoryBaseWorkflowRun)),
     ("memory_sessions", _memory_rows(MemoryBaseSession)),
     ("memory_vectors", erase_memory_base_vectors),
+    ("memory_legacy_copies", erase_retained_memory_copies),
     ("jobs", erase_jobs),
 )

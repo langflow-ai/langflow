@@ -256,6 +256,15 @@ def _is_retired_source(relative: str, *, root: Path | None = None) -> bool:
     return True
 
 
+def forget_source_binding(relative: str) -> None:
+    """Drop the binding of an erased owner's source. Call only after that source directory is gone."""
+    path = _binding_path(relative)
+    if path.is_symlink():
+        msg = "Invalid source migration binding"
+        raise MaintenanceRequiredError(msg)
+    path.unlink(missing_ok=True)
+
+
 async def retire_legacy_source(record: KnowledgeBaseRecord) -> None:
     """Bind retained local sources and preserve their ledger before detachment/deletion.
 

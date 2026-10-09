@@ -93,6 +93,15 @@ Deleting a session also purges its Memory data when its message rows were alread
 Successful SQLite deletion wipes text from live pages, reclaims the database, truncates its WAL, and keeps a small generation tombstone to fence stale workers.
 This does not remove retained pre-upgrade backups or promise erasure of filesystem snapshots.
 
+A data-subject erase does reach the retained Chroma copies.
+Erasing an end user removes the retained source directory and `.migration/<base-id>/<run-id>/source/` snapshot of each Memory base that may hold that person's chunks.
+It also removes a failed run's `export.jsonl` that holds them.
+This applies once the base's SQLite store is ready, or after the base is deleted. The copy is removed whole, because Chroma files cannot be edited safely.
+A copy that is still the only data of a base that has not finished upgrading, or of a base whose deletion has not finished, is kept, and the erase waits for that base.
+An erase limited to some flows cannot attribute the copies of a deleted base to a flow, so only an unlimited erase removes them.
+Erasing a builder also removes their `.migration/<base-id>/` snapshots, routing backups and source bindings.
+Neither erase changes the shared `.migration/application-backups/` database backup.
+
 ## Concurrency and platform support
 
 PostgreSQL application databases use a separate storage-coordination pool.

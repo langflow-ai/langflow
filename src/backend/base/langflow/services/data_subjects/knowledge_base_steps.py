@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from lfx.utils.util_strings import escape_like_pattern
-from sqlmodel import col, select
+from sqlmodel import and_, col, or_, select
 
 from langflow.services.data_subjects.batching import delete_batch
 from langflow.services.data_subjects.export import LIKE_ESCAPE
@@ -15,6 +15,9 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_job_service
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlalchemy.sql.elements import ColumnElement
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.data_subjects.context import EraseContext
@@ -40,14 +43,26 @@ async def erase_knowledge_bases(session: AsyncSession, ctx: EraseContext) -> int
     return 1
 
 
+def builder_upgrade_runs(subject_user_id: UUID, username: str) -> ColumnElement[bool]:
+    """Ledger rows of the builder's bases. They outlive the base and name its `<username>/<name>` directory.
+
+    The name is the owner's at upgrade time, so a row is also matched by a base the builder owns, and a
+    row under this name whose base someone else owns now, after a rename, is not the builder's.
+    """
+    prefix = f"{escape_like_pattern(username)}/%"
+    run_kb_id = col(KnowledgeBaseStorageMigration.kb_id)
+    owned = select(KnowledgeBaseRecord.id).where(KnowledgeBaseRecord.user_id == subject_user_id)
+    others = select(KnowledgeBaseRecord.id).where(KnowledgeBaseRecord.user_id != subject_user_id)
+    by_name = and_(
+        col(KnowledgeBaseStorageMigration.source_identity).like(prefix, escape=LIKE_ESCAPE), run_kb_id.not_in(others)
+    )
+    return or_(by_name, run_kb_id.in_(owned))
+
+
 async def erase_knowledge_base_upgrades(session: AsyncSession, ctx: EraseContext) -> int:
-    # Ledger rows outlive their knowledge base and name it by its `<username>/<name>` directory.
     owner = await session.get(User, ctx.subject_user_id)
     if owner is None:
         return 0
-    prefix = f"{escape_like_pattern(owner.username)}/%"
     return await delete_batch(
-        session,
-        KnowledgeBaseStorageMigration,
-        col(KnowledgeBaseStorageMigration.source_identity).like(prefix, escape=LIKE_ESCAPE),
+        session, KnowledgeBaseStorageMigration, builder_upgrade_runs(ctx.subject_user_id, owner.username)
     )
