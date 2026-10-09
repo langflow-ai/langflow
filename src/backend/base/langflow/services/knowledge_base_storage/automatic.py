@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import shutil
@@ -14,6 +13,7 @@ from uuid import uuid4
 
 import psutil
 
+from langflow.services.knowledge_base_storage.application_backup import backup_path
 from langflow.services.knowledge_base_storage.maintenance import (
     MaintenanceRequiredError,
     _fsync_directory,
@@ -106,8 +106,7 @@ def preserve_routing(directory: Path, row, database: Path | None, *, backup_dire
         msg = "Invalid routing backup path"
         raise MaintenanceRequiredError(msg)
     if database is not None:
-        identity = hashlib.sha256(str(database).encode()).hexdigest()
-        backup = backup_directory / f"application-before-upgrade-{identity}.sqlite3"
+        backup = backup_path(backup_directory, database)
         if not backup.exists():
             # Back up the app database once for the whole upgrade. Each KB still
             # keeps its own source snapshot and pre-upgrade routing record.

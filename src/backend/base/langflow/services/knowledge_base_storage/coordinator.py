@@ -25,7 +25,7 @@ from langflow.services.database.models.knowledge_base_storage_migration import K
 from langflow.services.database.models.user.model import User
 from langflow.services.database.service import get_sqlite_database_file_path
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
-from langflow.services.knowledge_base_storage import helper
+from langflow.services.knowledge_base_storage import application_backup, helper
 from langflow.services.knowledge_base_storage.automatic import (
     AutomaticUpgradeUnavailableError,
     check_local_upgrade,
@@ -363,7 +363,7 @@ async def migrate_one(kb_id: UUID) -> None:
                     directory,
                     row,
                     database,
-                    backup_directory=private_directory(storage_root() / ".migration" / "application-backups"),
+                    backup_directory=private_directory(application_backup.backup_directory(storage_root())),
                 )
             snapshot = directory / "source"
             await _phase(
@@ -720,6 +720,18 @@ async def published_inventory_status() -> dict:
 
 
 async def run_pending() -> None:
+    """Reconcile legacy inventory, resume eligible storage migrations, then drop a finished upgrade's backup."""
+    async with application_backup.upgrade_pass():
+        await _resume_pending()
+        try:
+            await application_backup.discard_if_finished(inventory_complete=_inventory_complete)
+        except Exception as exc:  # noqa: BLE001 -- the next pass or erase retries; migrated data is unaffected
+            await logger.awarning(
+                "The application backup of a finished storage upgrade was not checked: %s", type(exc).__name__
+            )
+
+
+async def _resume_pending() -> None:
     """Reconcile legacy inventory and resume eligible storage migrations."""
     global _inventory_scanned, _inventory_issue_count  # noqa: PLW0603 -- process-local discovery status
     try:
@@ -829,14 +841,5 @@ async def readiness(*, require_storage_ready: bool = True) -> bool:
     if not _inventory_complete:
         return False
     async with session_scope() as session:
-        row = (
-            await session.exec(
-                select(KnowledgeBaseRecord.id)
-                .where(
-                    ((KnowledgeBaseRecord.backend_type == "chroma") & (KnowledgeBaseRecord.storage_state != "detached"))
-                    | col(KnowledgeBaseRecord.storage_state).in_(("migrating", "needs_attention"))
-                )
-                .limit(1)
-            )
-        ).first()
+        row = (await session.exec(application_backup.first_unfinished_base())).first()
     return row is None

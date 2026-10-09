@@ -3,86 +3,45 @@
 from __future__ import annotations
 
 import hashlib
-import sqlite3
-import tarfile
-from contextlib import closing
-from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest
 from langflow.api.utils import knowledge_base_service
 from langflow.services.data_subjects.context import EraseContext
 from langflow.services.data_subjects.end_user_legacy_copies import erase_retained_memory_copies
-from langflow.services.data_subjects.engine import run_request
 from langflow.services.data_subjects.identity import end_user_keys
-from langflow.services.data_subjects.requests import approve, create_builder_request, create_end_user_request
-from langflow.services.database.models.data_subject_request import (
-    DataSubjectRequest,
-    DataSubjectRequestSource,
-    DataSubjectRequestStatus,
-)
+from langflow.services.database.models.data_subject_request import DataSubjectRequestStatus
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.deps import session_scope
 from langflow.services.knowledge_base_storage import coordinator
 from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError, backend_for_record
 from sqlmodel import delete
 
+from tests.unit.services.data_subjects._legacy_store import (
+    ALICE,
+    BOB,
+    KB_NAME,
+    OWNER,
+    erase_builder,
+    erase_end_user,
+    install_legacy_store,
+)
 from tests.unit.services.data_subjects._seed import create_user
 
-FIXTURE = Path(__file__).resolve().parents[5] / "lfx/tests/unit/base/knowledge_bases/fixtures/chroma-1.5.9-local.tar.gz"
-# The base is named after the fixture's collection, as 1.12.x named a Memory Base's collection after its KB.
-KB_NAME = "fixture-l2"
-OWNER = "memory-owner"
-ALICE = "eu-alice-7f3"
-BOB = "eu-bob-2c9"
-TAGGED_CHUNKS = {"doc-1": ALICE, "doc-2": ALICE, "doc-3": BOB}
+if TYPE_CHECKING:
+    from pathlib import Path
 
 pytestmark = pytest.mark.no_blockbuster
 
 
-@pytest.fixture
-def storage_root(client, monkeypatch, tmp_path):  # noqa: ARG001 - initialize the app first
-    root = tmp_path / "knowledge"
-    monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(root))
-    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
-    # The single-host preflight inspects this machine's processes and mounts; a test is one host.
-    monkeypatch.setattr(coordinator, "check_local_upgrade", lambda *_args: None)
-    return root
-
-
-def _install_legacy_store(root: Path, username: str) -> None:
-    """A 1.12.x Memory Base: the real Chroma 1.5.9 fixture, with chunks stamped by end user."""
-    source = root / username / KB_NAME
-    with tarfile.open(FIXTURE) as archive:
-        for member in archive:
-            if not (member.isfile() and member.name.startswith("source/")):
-                continue
-            destination = source / Path(member.name).relative_to("source")
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            with archive.extractfile(member) as stream:
-                destination.write_bytes(stream.read())
-    with closing(sqlite3.connect(source / "chroma.sqlite3")) as connection:
-        for embedding_id, end_user in TAGGED_CHUNKS.items():
-            (row_id,) = connection.execute(
-                "SELECT e.id FROM embeddings e JOIN segments s ON e.segment_id = s.id "
-                "JOIN collections c ON s.collection = c.id "
-                "WHERE c.name = ? AND s.scope = 'METADATA' AND e.embedding_id = ?",
-                (KB_NAME, embedding_id),
-            ).fetchone()
-            connection.execute(
-                "INSERT INTO embedding_metadata (id, key, string_value) VALUES (?, 'end_user_id', ?)",
-                (row_id, end_user),
-            )
-        connection.commit()
-
-
 async def _legacy_memory_base(root: Path, username: str) -> tuple[UUID, UUID]:
     owner = await create_user(username)
-    _install_legacy_store(root, username)
+    install_legacy_store(root, username)
     async with session_scope() as session:
         flow = Flow(name="support", user_id=owner)
         session.add(flow)
@@ -128,39 +87,6 @@ async def _live_end_users(record: KnowledgeBaseRecord) -> list[str]:
         await backend.teardown()
 
 
-async def _run(request_id: UUID) -> tuple[str | None, DataSubjectRequest]:
-    status = await run_request(request_id)
-    async with session_scope() as session:
-        return status, await session.get(DataSubjectRequest, request_id)
-
-
-async def _erase_end_user(end_user: str, scope_flow_ids: list[UUID] | None = None):
-    admin = await create_user(f"admin-{uuid4().hex[:8]}", superuser=True)
-    async with session_scope() as session:
-        request, _ = await create_end_user_request(
-            session,
-            end_user_id=end_user,
-            scope_flow_ids=scope_flow_ids,
-            requested_by=admin,
-            source=DataSubjectRequestSource.API,
-        )
-        await approve(session, request, admin)
-        request_id = request.id
-    return await _run(request_id)
-
-
-async def _erase_builder(user_id: UUID):
-    admin = await create_user(f"admin-{uuid4().hex[:8]}", superuser=True)
-    async with session_scope() as session:
-        user = await session.get(User, user_id)
-        request, _ = await create_builder_request(
-            session, subject=user, requested_by=admin, source=DataSubjectRequestSource.ADMIN
-        )
-        await approve(session, request, admin)
-        request_id = request.id
-    return await _run(request_id)
-
-
 async def _set_state(record_id: UUID, state: str) -> None:
     async with session_scope() as session:
         row = await session.get(KnowledgeBaseRecord, record_id)
@@ -198,7 +124,7 @@ async def test_should_remove_the_retained_copies_that_hold_the_end_users_chunks(
     assert original.is_dir()
     assert snapshot.is_dir()
 
-    status, request = await _erase_end_user(ALICE)
+    status, request = await erase_end_user(ALICE)
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
     assert await _live_end_users(record) == [BOB]
@@ -214,7 +140,7 @@ async def test_should_keep_the_retained_copies_when_the_end_user_has_no_chunks_t
     record, _ = await _upgraded_memory_base(storage_root)
     original, snapshot = _copies(storage_root, record)
 
-    status, request = await _erase_end_user("eu-carol-55d")
+    status, request = await erase_end_user("eu-carol-55d")
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
     assert original.is_dir()
@@ -230,7 +156,7 @@ async def test_should_remove_the_copies_a_deleted_memory_base_left_behind(storag
     assert original.is_dir()
     assert snapshot.is_dir()
 
-    status, request = await _erase_end_user(ALICE)
+    status, request = await erase_end_user(ALICE)
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
     assert not original.exists()
@@ -246,13 +172,13 @@ async def test_should_only_remove_the_copies_of_memory_bases_in_a_flow_scoped_er
         await session.flush()
         other_flow_id = other_flow.id
 
-    status, request = await _erase_end_user(ALICE, scope_flow_ids=[other_flow_id])
+    status, request = await erase_end_user(ALICE, scope_flow_ids=[other_flow_id])
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
     assert original.is_dir()
     assert snapshot.is_dir()
 
-    status, request = await _erase_end_user(ALICE, scope_flow_ids=[flow_id])
+    status, request = await erase_end_user(ALICE, scope_flow_ids=[flow_id])
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
     assert not original.exists()
@@ -285,7 +211,7 @@ async def test_should_remove_the_upgrade_evidence_when_erasing_the_builder(stora
     colleague, _ = await _upgraded_memory_base(storage_root, "colleague")
     colleague_original, colleague_snapshot = _copies(storage_root, colleague, "colleague")
 
-    status, request = await _erase_builder(record.user_id)
+    status, request = await erase_builder(record.user_id)
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
     assert not (storage_root / OWNER).exists()
@@ -336,7 +262,7 @@ async def test_should_remove_the_export_a_failed_upgrade_left_with_the_end_users
     await _drop_memory_base_row()
     await knowledge_base_service.delete_record(record.id)
 
-    status, request = await _erase_end_user(ALICE)
+    status, request = await erase_end_user(ALICE)
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
     assert not export.exists()
@@ -349,7 +275,7 @@ async def test_should_erase_the_upgrade_evidence_kept_under_a_builders_former_na
     original, _ = _copies(storage_root, record)
     await _rename(record.user_id, "renamed-owner")
 
-    status, request = await _erase_builder(record.user_id)
+    status, request = await erase_builder(record.user_id)
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
     assert not original.exists()
@@ -362,7 +288,7 @@ async def test_should_leave_a_renamed_builders_upgrade_evidence_when_erasing_who
     await _rename(record.user_id, "renamed-owner")
     newcomer = await create_user(OWNER)
 
-    status, request = await _erase_builder(newcomer)
+    status, request = await erase_builder(newcomer)
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
     assert (storage_root / ".migration" / str(record.id)).is_dir()
