@@ -26,9 +26,14 @@ from lfx.utils.end_user_storage import (
 )
 from sqlmodel import select
 
+from langflow.services.data_subjects.knowledge_base_steps import builder_upgrade_runs
 from langflow.services.data_subjects.memory_base_storage import KIND_MEMORY_BASE, drop_memory_base
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
+from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.knowledge_base_storage.retained import remove_copy, remove_upgrade_evidence, retained_source
+from langflow.services.knowledge_base_storage.runtime import storage_root
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -37,6 +42,9 @@ if TYPE_CHECKING:
 
 KIND_NAMESPACE = "namespace"
 KIND_KB_USER_DIR = "kb_user_dir"
+KIND_KB_UPGRADE_EVIDENCE = "kb_upgrade_evidence"
+KIND_KB_RETAINED_SOURCE = "kb_retained_source"
+KIND_KB_SOURCE_BINDING = "kb_source_binding"
 KIND_FLOWS_DIR = "flows_dir"
 KIND_FS_SANDBOX = "fs_sandbox"
 KIND_SAVE_FILE_DIR = "save_file_dir"
@@ -81,7 +89,43 @@ async def builder_storage_plan(session: AsyncSession, ctx: EraseContext) -> list
     plan.append(_item(KIND_FS_SANDBOX, str(ctx.subject_user_id)))
     if ctx.username:
         plan.append(_item(KIND_KB_USER_DIR, ctx.username))
+        plan.extend(await _upgrade_evidence_plan(session, ctx))
     return plan
+
+
+async def _upgrade_evidence_plan(session: AsyncSession, ctx: EraseContext) -> list[dict[str, str]]:
+    """What the automatic storage upgrade kept of the builder's bases besides their directories.
+
+    The snapshots and routing backups hold every chunk, and the bindings name the builder. Sources
+    kept under a former username and then the bindings run last, after the directories they guard,
+    since the plan runs in order and stops at a failure.
+    """
+    username = str(ctx.username)
+    owned = dict(
+        (
+            await session.exec(
+                select(KnowledgeBaseRecord.id, KnowledgeBaseRecord.name).where(
+                    KnowledgeBaseRecord.user_id == ctx.subject_user_id
+                )
+            )
+        ).all()
+    )
+    runs = (
+        await session.exec(
+            select(KnowledgeBaseStorageMigration.kb_id, KnowledgeBaseStorageMigration.source_identity).where(
+                builder_upgrade_runs(ctx.subject_user_id, username)
+            )
+        )
+    ).all()
+    kb_ids = {kb_id for kb_id, _ in runs} | set(owned)
+    identities = {identity for _, identity in runs if identity} | {f"{username}/{name}" for name in owned.values()}
+    # KIND_KB_USER_DIR already removes the sources under the builder's current name.
+    elsewhere = {identity for identity in identities if not identity.startswith(f"{username}/")}
+    return [
+        *(_item(KIND_KB_UPGRADE_EVIDENCE, str(kb_id)) for kb_id in sorted(kb_ids, key=str)),
+        *(_item(KIND_KB_RETAINED_SOURCE, identity) for identity in sorted(elsewhere)),
+        *(_item(KIND_KB_SOURCE_BINDING, identity) for identity in sorted(identities)),
+    ]
 
 
 def end_user_storage_plan(ctx: EraseContext) -> list[dict[str, str]]:
@@ -150,6 +194,29 @@ def _remove_kb_user_dir(username: str) -> None:
     _remove_dir(root / username, root)
 
 
+def _local_storage_configured() -> bool:
+    return bool(get_settings_service().settings.knowledge_bases_dir)
+
+
+def _remove_upgrade_evidence(kb_id: str) -> None:
+    if _local_storage_configured():
+        remove_upgrade_evidence(storage_root(), UUID(kb_id))
+
+
+def _remove_retained_source(source_identity: str) -> None:
+    if _local_storage_configured():
+        root = storage_root()
+        remove_copy(retained_source(root, source_identity), root)
+
+
+def _forget_source_binding(source_identity: str) -> None:
+    # The coordinator pulls in the whole upgrade machinery, so load it only when a binding is due.
+    from langflow.services.knowledge_base_storage.coordinator import forget_source_binding
+
+    if _local_storage_configured():
+        forget_source_binding(source_identity)
+
+
 async def run_storage_item(item: dict[str, Any]) -> None:
     kind, value = item["kind"], str(item["value"])
     if kind == KIND_NAMESPACE:
@@ -165,3 +232,9 @@ async def run_storage_item(item: dict[str, Any]) -> None:
         await asyncio.to_thread(_remove_save_file_dir, value, str(item.get("end_user_id", "")))
     elif kind == KIND_MEMORY_BASE:
         await drop_memory_base(item)
+    elif kind == KIND_KB_UPGRADE_EVIDENCE:
+        await asyncio.to_thread(_remove_upgrade_evidence, value)
+    elif kind == KIND_KB_RETAINED_SOURCE:
+        await asyncio.to_thread(_remove_retained_source, value)
+    elif kind == KIND_KB_SOURCE_BINDING:
+        await asyncio.to_thread(_forget_source_binding, value)
