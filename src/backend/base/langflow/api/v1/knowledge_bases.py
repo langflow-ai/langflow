@@ -1104,6 +1104,8 @@ async def ingest_files_to_knowledge_base(
             asset_id=asset_id,
             asset_type="knowledge_base",
             user_id=current_user.id,
+            # Live from insert, so no sweep can catch it before the run heartbeats.
+            heartbeat=True,
         )
 
         # Always use async path: fire and forget the ingestion logic wrapped in status updates
@@ -1259,6 +1261,7 @@ async def ingest_folder_to_knowledge_base(
             asset_id=asset_id,
             asset_type="knowledge_base",
             user_id=current_user.id,
+            heartbeat=True,
         )
 
         task_service = get_task_service()
@@ -1786,6 +1789,7 @@ async def ingest_via_connector(
                 asset_id=asset_id,
                 asset_type="knowledge_base",
                 user_id=current_user.id,
+                heartbeat=True,
                 dedupe_key=dedupe_key,
             )
         except DuplicateJobError as exc:

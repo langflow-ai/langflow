@@ -1483,6 +1483,8 @@ class KnowledgeComponent(Component):
                 source_config=source.describe().get("config") or {},
                 user_metadata=user_metadata,
             )
+            # Inserted running and already heartbeated, so an orphan sweep in
+            # another worker never sees this live run without a heartbeat.
             await job_service.create_job(
                 job_id=job_id,
                 flow_id=flow_id_uuid,
@@ -1490,8 +1492,9 @@ class KnowledgeComponent(Component):
                 asset_id=kb_record_id,
                 asset_type="knowledge_base",
                 user_id=user_uuid,
+                status=JobStatus.IN_PROGRESS,
+                heartbeat=True,
             )
-            await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
 
             run_id = await ingestion_run_service.create_run(
                 kb_name=self.knowledge_base,
@@ -1506,6 +1509,8 @@ class KnowledgeComponent(Component):
             await ingestion_run_service.mark_running(run_id)
 
             self.log(f"Started ingestion run job_id={job_id} kb_name={self.knowledge_base} kb_id={kb_record_id}")
+            # Keeps the job heartbeated until _finalize_ingestion_run stops it.
+            await job_service.start_keep_alive(job_id)
         except asyncio.CancelledError:
             # The caller has not received the run ID yet, so it cannot finalize
             # a cancellation that arrives while tracking is being initialized.
@@ -1545,6 +1550,9 @@ class KnowledgeComponent(Component):
             return
 
         try:
+            if job_id is not None:
+                # The heartbeat also rewrites job_metadata, so it stops first.
+                await get_job_service().stop_keep_alive(job_id)
             await ingestion_run_service.finalize_run(
                 run_id,
                 summary=summary,

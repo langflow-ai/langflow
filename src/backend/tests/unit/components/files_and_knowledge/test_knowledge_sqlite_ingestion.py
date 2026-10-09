@@ -395,3 +395,62 @@ async def test_cancelled_upload_keeps_the_kb_status(client, logged_in_headers, a
     listed = next(kb for kb in response.json() if kb["dir_name"] == name)
     assert listed["status"] == "ready"
     assert listed["last_job_id"] == str(job_id)
+
+
+async def test_live_flow_ingestion_is_not_swept_as_orphaned(
+    client, logged_in_headers, active_user, monkeypatch, tmp_path
+):
+    """Another worker's orphan sweep must leave a running flow ingestion alone."""
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "knowledge_bases_dir", str(tmp_path))
+    monkeypatch.setattr(settings, "background_heartbeat_interval_s", 0.1)
+    # A run whose worker died: the same sweep must still fail it.
+    dead_job_id = uuid4()
+    await get_job_service().create_job(job_id=dead_job_id, flow_id=dead_job_id, status=JobStatus.IN_PROGRESS)
+    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+    embeddings = LocalEmbeddings()
+    monkeypatch.setattr("lfx.components.files_and_knowledge.knowledge.get_embeddings", lambda **_kwargs: embeddings)
+    name = "live_flow_ingestion"
+    endpoint = f"/api/v1/knowledge_bases/{name}"
+    response = await client.post(
+        "/api/v1/knowledge_bases",
+        json={"name": name, "embedding_provider": "OpenAI", "embedding_model": "text-embedding-3-small"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 201, response.text
+    component = KnowledgeComponent(
+        knowledge_base=name,
+        input_df=DataFrame({"text": ["slow document"]}),
+        _user_id=active_user.id,
+    )
+    embedding_started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def slow_embeddings(texts):
+        embedding_started.set()
+        await release.wait()
+        return embeddings.embed_documents(texts)
+
+    monkeypatch.setattr(embeddings, "aembed_documents", slow_embeddings)
+
+    task = asyncio.create_task(component.build_kb_info())
+    try:
+        await asyncio.wait_for(embedding_started.wait(), timeout=10)
+        # Outlive the lease and the insert-time heartbeat, so only the run's
+        # own keep-alive keeps its job fresh.
+        await asyncio.sleep(1.5)
+        swept = await get_job_service().sweep_orphans(lease_ttl_s=1.0)
+        response = await client.get(f"{endpoint}/runs", headers=logged_in_headers)
+        mid_run = response.json()["runs"][0]
+    finally:
+        release.set()
+        await asyncio.wait_for(task, timeout=10)
+
+    assert swept == [dead_job_id]
+    assert mid_run["status"] == "running"
+    response = await client.get(f"{endpoint}/runs", headers=logged_in_headers)
+    run = response.json()["runs"][0]
+    assert run["status"] == "succeeded"
+    job = await get_job_service().get_job_by_job_id(UUID(run["job_id"]))
+    assert job.status == JobStatus.COMPLETED
+    assert job.error is None
