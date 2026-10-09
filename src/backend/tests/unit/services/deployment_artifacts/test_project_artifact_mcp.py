@@ -20,6 +20,7 @@ from langflow.services.deployment_artifacts.builder import (
     ProjectArtifactLimits,
     ProjectArtifactRequiredMcpProject,
     _build_deployment_snapshot_flows,
+    _collect_external_mcp_servers,
     _collect_mcp_requirements,
     _FlowSnapshot,
     _McpRequirements,
@@ -334,13 +335,34 @@ def test_a_url_in_a_variable_is_carried_unresolved():
     assert [server.config["url"] for server in carried] == ["{{MCP_SERVER_URL}}"]
 
 
-def test_a_config_still_holding_a_literal_credential_is_not_carried():
-    """The one thing this must never do is hand a secret to another plane."""
-    carried = _external(
-        _server("leaky", {"url": "https://x.example/mcp", "headers": {"Authorization": "Bearer sk_live_1"}})
-    )
+def test_a_literal_credential_is_replaced_by_a_name_rather_than_carried():
+    """The secret stays here; the name it resolves by is what travels.
 
-    assert carried == ()
+    Dropping the whole config instead would be safe but useless -- the target would
+    then have no way to reach the server at all. Rewriting keeps the connection and
+    leaves the operator one variable to set, which the requirements declare.
+    """
+    config = {"url": "https://x.example/mcp", "headers": {"Authorization": "Bearer sk_live_1"}}
+    carried = _external(_server("leaky", config))
+
+    assert len(carried) == 1
+    assert "sk_live_1" not in json.dumps(carried[0].config)
+    assert carried[0].config["headers"]["Authorization"] == variable_name_for("leaky", "Authorization")
+
+
+def test_the_name_a_literal_is_replaced_by_is_the_one_declared():
+    """Carry and declaration have to name the same variable.
+
+    A config carried with a reference the requirements never mention leaves the target
+    holding a configuration nothing resolves, and a readiness check that never asked.
+    """
+    config = {"url": "https://x.example/mcp", "headers": {"Authorization": "Bearer sk_live_1"}}
+    flow = _flow(_server("leaky", config))
+
+    declared = _collect_mcp_requirements(flow).variables
+    carried = _collect_external_mcp_servers(flow)[0].config["headers"]["Authorization"]
+
+    assert carried in declared
 
 
 def test_a_non_secret_header_does_not_disqualify_a_config():
@@ -380,3 +402,107 @@ def test_the_archive_itself_carries_no_mcp_config():
         for field in node["data"]["node"]["template"].values():
             if isinstance(field, dict) and field.get("type") == "mcp":
                 assert "config" not in field["value"]
+
+
+# --- a server referenced by name alone -------------------------------------------
+#
+# The shape that actually occurs. Selecting a registered server stores only its
+# name; the url and credentials live in the owner's `mcp_server` row, and
+# `resolve_mcp_config` prefers that row at run time. Reading only what is inline
+# meant such a flow declared nothing and provisioned nothing, silently.
+
+
+def _named_only(server_name: str) -> dict:
+    return _flow({"name": server_name})
+
+
+def test_a_sibling_referenced_by_name_alone_is_found_through_the_address_book():
+    book = {"billing": {"url": f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/streamable"}}
+
+    requirements = _collect_mcp_requirements(_named_only("billing"), book)
+
+    assert requirements.projects == (ProjectArtifactRequiredMcpProject(server_name="billing", project_id=SIBLING),)
+
+
+def test_an_external_referenced_by_name_alone_is_carried_from_the_address_book():
+    book = {"stripe": {"url": "https://api.stripe.com/mcp", "headers": {"Authorization": "{{MCP_STRIPE}}"}}}
+
+    carried = _collect_external_mcp_servers(_named_only("stripe"), book)
+
+    assert [server.server_name for server in carried] == ["stripe"]
+    assert carried[0].config["url"] == "https://api.stripe.com/mcp"
+
+
+def test_the_address_book_wins_over_a_stale_inline_config():
+    """The precedence `resolve_mcp_config` applies at run time, applied here too.
+
+    Reading them the other way round lets a deploy provision the project the flow
+    used to call while the flow calls the one the row names.
+    """
+    stale = _server(
+        "billing",
+        {"url": "http://localhost:7860/api/v1/mcp/project/" + "0" * 8 + "-0000-0000-0000-000000000000/streamable"},
+    )
+    book = {"billing": {"url": f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/streamable"}}
+
+    requirements = _collect_mcp_requirements(_flow(stale), book)
+
+    assert [project.project_id for project in requirements.projects] == [SIBLING]
+
+
+def test_a_sibling_configured_as_stdio_is_still_recognised():
+    """Langflow seeds its own projects in the mcp-proxy shape, url buried in `args`.
+
+    Reading `config["url"]` alone saw nothing there, so such a server was classified
+    external and the deploy tried to carry a subprocess command to the target.
+    """
+    book = {
+        "lf-billing": {
+            "command": "uvx",
+            "args": [
+                "--with",
+                "mcp~=1.28",
+                "mcp-proxy",
+                "--transport",
+                "streamablehttp",
+                f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/streamable",
+            ],
+        }
+    }
+
+    requirements = _collect_mcp_requirements(_named_only("lf-billing"), book)
+
+    assert requirements.projects == (ProjectArtifactRequiredMcpProject(server_name="lf-billing", project_id=SIBLING),)
+
+
+def test_a_credential_hidden_in_stdio_args_is_never_carried():
+    """`--headers NAME VALUE` puts a secret in a positional list.
+
+    The reference rewrite only understands the `env` and `headers` maps, so a config
+    shaped like this is left behind rather than carried with the value in it.
+    """
+    book = {
+        "lf-thing": {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--headers", "x-api-key", "sk_live_secret", "https://x.example/mcp"],
+        }
+    }
+
+    assert _collect_external_mcp_servers(_named_only("lf-thing"), book) == ()
+
+
+def test_a_server_with_no_address_anywhere_is_not_carried():
+    """An empty row is what produced an empty config on the target.
+
+    The component prefers the stored row, so writing one with no url left the flow
+    resolving through something it could never connect to.
+    """
+    assert _collect_external_mcp_servers(_named_only("billing"), {"billing": {}}) == ()
+    assert _collect_external_mcp_servers(_named_only("billing"), {}) == ()
+
+
+def test_a_name_that_is_in_no_address_book_falls_back_to_what_is_inline():
+    """An ad-hoc config pasted into the field, naming no registered server."""
+    flow = _flow(_server("ad-hoc", {"url": "https://x.example/mcp", "headers": {"Auth": "{{MCP_X}}"}}))
+
+    assert [s.server_name for s in _collect_external_mcp_servers(flow, {"other": {}})] == ["ad-hoc"]
