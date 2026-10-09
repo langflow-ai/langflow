@@ -471,6 +471,39 @@ describe("FlowVersionSidebarContent store behavior", () => {
     ).toBeTruthy();
   });
 
+  it("puts back the flow's own graph a store update copied the preview into", () => {
+    entryQueryData = {
+      id: "entry-1",
+      version_tag: "v1",
+      data: { nodes: [{ id: "version-node" }], edges: [] },
+    };
+
+    const { unmount } = render(<FlowVersionSidebarContent flowId="flow-1" />);
+    const entryRow = screen
+      .getByText("v1")
+      .closest<HTMLElement>("[class*=cursor-pointer]");
+    if (entryRow) {
+      act(() => {
+        entryRow.click();
+      });
+    }
+    // Any node update during the preview (a field the editor corrects as the
+    // node renders) copies the canvas, which is the preview, into currentFlow.
+    storeState.currentFlow = {
+      ...mockCurrentFlow,
+      data: { nodes: [{ id: "version-node" }], edges: [] },
+    };
+
+    setStateMock.mockClear();
+    unmount();
+
+    expect(setStateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        currentFlow: expect.objectContaining({ data: mockCurrentFlow.data }),
+      }),
+    );
+  });
+
   it("restores original draft when Current is clicked after previewing a version", () => {
     entryQueryData = {
       id: "entry-1",
