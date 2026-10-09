@@ -252,4 +252,96 @@ describe("the steps after the check", () => {
     ).toBeInTheDocument();
     expect(row("secret_key").queryByRole("button")).not.toBeInTheDocument();
   });
+
+  it("shows the pause from the record, whatever the pause step still waits for", () => {
+    open(
+      state(
+        {
+          check_source: ["blocked", "blocking_findings"],
+          connect_target: ["done"],
+          secret_key: ["done"],
+          pause: ["blocked", "recheck_failed"],
+          backup: ["locked", "earlier_step"],
+        },
+        { pause: { frozen_at: "2026-10-06T12:00:00Z", frozen_by: "alice" } },
+      ),
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Changes are paused on this instance.",
+    );
+    expect(row("pause").getByRole("alert")).toHaveTextContent(
+      "Something changed before the pause.",
+    );
+    expect(
+      row("backup").queryByRole("button", { hidden: true }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the pause as working while the check runs again", () => {
+    const check = (status: "running" | "cancelled") => ({
+      steps: {
+        check_source: {
+          status,
+          started_by: "alice",
+          started_at: "2026-10-06T12:01:00Z",
+          target_version: "1.13.0",
+          exit_code: null,
+          report: null,
+          error: null,
+        },
+      },
+      pause: { frozen_at: "2026-10-06T12:00:00Z", frozen_by: "alice" },
+    });
+    const steps: Parameters<typeof state>[0] = {
+      check_source: ["current"],
+      connect_target: ["done"],
+      secret_key: ["done"],
+      pause: ["blocked", "recheck_pending"],
+    };
+    const marker = () =>
+      row("pause").getByRole("heading").parentElement?.previousElementSibling;
+
+    const { unmount } = open(state(steps, check("running")));
+    expect(marker()).not.toHaveClass("border-destructive");
+    unmount();
+
+    // The run stopped, so the pause waits on the admin again.
+    open(state(steps, check("cancelled")));
+    expect(marker()).toHaveClass("border-destructive");
+  });
+
+  it("sums up the pause once it is done, and leaves nothing to press in its row", () => {
+    open(
+      state(
+        {
+          check_source: ["done"],
+          connect_target: ["done"],
+          secret_key: ["done"],
+          pause: ["done"],
+          backup: ["current", "not_available"],
+        },
+        { pause: { frozen_at: "2026-10-06T12:00:00Z", frozen_by: "alice" } },
+      ),
+    );
+
+    expect(
+      row("pause").getByText(/^Paused .* by alice\.$/),
+    ).toBeInTheDocument();
+    // Turning changes back on belongs to the banner and to the way back.
+    expect(row("pause").queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("offers the way back only when this server can pause", () => {
+    const { unmount } = open(
+      state({ check_source: ["done"], pause: ["current", "not_available"] }),
+    );
+    expect(
+      screen.queryByText("If something goes wrong"),
+    ).not.toBeInTheDocument();
+    unmount();
+
+    open(state({ check_source: ["done"], pause: ["locked", "earlier_step"] }));
+    expect(screen.getByText("If something goes wrong")).toBeInTheDocument();
+  });
 });

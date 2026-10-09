@@ -43,3 +43,36 @@ export const fingerprint = (keyFile: string) =>
     .update(fs.readFileSync(keyFile))
     .digest("hex")
     .slice(0, 12);
+
+/** Does the steps before the pause through the API, with the answers the first walk gives on the page. */
+export async function prepare(
+  page: Page,
+  instance: Awaited<ReturnType<typeof startOver>>,
+) {
+  // The check answers as a stream, and reading it to the end waits for the last result.
+  const check = await page.request.post("/api/v1/migration/checks", {
+    data: { target_version: instance.version },
+    timeout: 120000,
+  });
+  await check.body();
+  await page.request.put("/api/v1/migration/destinations", {
+    data: {
+      ...(instance.database.type === "sqlite" && {
+        database_url: DESTINATION.databaseUrl,
+      }),
+      ...(instance.knowledge_bases.local && { vectors: { kind: "pgvector" } }),
+      ...(instance.files.local && {
+        files: {
+          bucket: DESTINATION.bucket,
+          prefix: "files",
+          access_key_id: DESTINATION.accessKeyId,
+          secret_access_key: DESTINATION.secretAccessKey, // pragma: allowlist secret
+          endpoint_url: DESTINATION.endpointUrl || undefined,
+        },
+      }),
+    },
+  });
+  await page.request.post("/api/v1/migration/secret-key/verify", {
+    data: { fingerprint: fingerprint(instance.secret_key.path) },
+  });
+}

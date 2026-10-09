@@ -21,6 +21,7 @@ import { cn } from "@/utils/utils";
 import { CheckStep } from "./CheckStep";
 import { formatTime, PARTS } from "./catalog";
 import { DestinationsStep } from "./DestinationsStep";
+import { PausedBanner, PauseStep, Recovery } from "./PauseStep";
 import { SecretKeyStep } from "./SecretKeyStep";
 
 const MARKER_ICONS: Partial<Record<MigrationStepState["state"], string>> = {
@@ -161,6 +162,7 @@ function Migration({ migration }: { migration: MigrationState }) {
   let number = 0;
   return (
     <>
+      <PausedBanner migration={migration} />
       <section className="overflow-hidden rounded-lg border">
         <div className="flex flex-col gap-3 p-4">
           <h3 className="text-sm font-medium">
@@ -263,6 +265,11 @@ function Migration({ migration }: { migration: MigrationState }) {
                     ),
                     user: record.secret_key?.verified_by,
                   });
+                } else if (step.id === "pause" && state.state === "done") {
+                  summary = t("settings.migration.pause.done", {
+                    time: formatTime(record.pause?.frozen_at, i18n.language),
+                    user: record.pause?.frozen_by,
+                  });
                 }
                 // A step the admin has reached, and that this server can do.
                 const live =
@@ -279,6 +286,8 @@ function Migration({ migration }: { migration: MigrationState }) {
                   );
                 } else if (unfinished && step.id === "secret_key") {
                   body = <SecretKeyStep migration={migration} state={state} />;
+                } else if (unfinished && step.id === "pause") {
+                  body = <PauseStep migration={migration} state={state} />;
                 }
                 return (
                   <StepItem
@@ -287,7 +296,11 @@ function Migration({ migration }: { migration: MigrationState }) {
                     title={t(`settings.migration.step.${step.slug}.title`)}
                     summary={summary}
                     state={state}
-                    running={isCheck && run?.status === "running"}
+                    // The pause waits on the same run while it is checked again.
+                    running={
+                      run?.status === "running" &&
+                      (isCheck || state.reason === "recheck_pending")
+                    }
                     expandable={Boolean(body) && state.state === "done"}
                   >
                     {body}
@@ -299,6 +312,9 @@ function Migration({ migration }: { migration: MigrationState }) {
         </Fragment>
       ))}
 
+      {stateOf("pause").reason !== "not_available" && (
+        <Recovery migration={migration} />
+      )}
       <Button
         variant="link"
         className="h-auto w-fit whitespace-normal px-0 text-left"
@@ -434,7 +450,9 @@ function Marker({
         state === "current" && !running
           ? "bg-primary text-primary-foreground"
           : "border text-muted-foreground",
-        state === "blocked" && "border-destructive text-destructive",
+        state === "blocked" &&
+          !running &&
+          "border-destructive text-destructive",
         state === "done" && "text-accent-emerald-foreground",
       )}
     >

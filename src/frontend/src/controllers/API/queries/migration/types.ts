@@ -72,6 +72,13 @@ export interface MigrationState {
     };
     /** Set once the fingerprint the admin pasted was this instance's. */
     secret_key?: { verified_by?: string; verified_at?: string };
+    /** Set while changes to this instance are paused. */
+    pause?: { frozen_at: string; frozen_by: string };
+    /**
+     * Set while a request for a pause still waits for changes to end. Changes are refused already.
+     * It stays when the server stopped during that wait.
+     */
+    pausing?: { frozen_at: string; frozen_by: string };
   };
   steps: MigrationStepState[];
   blocking_findings: string[];
@@ -108,11 +115,28 @@ export interface DestinationsSaved extends MigrationState {
   results: ProbeResults;
 }
 
+/** Something still writing to this instance, which the pause waits for. */
+export interface MigrationJob {
+  id: string;
+  flow_name: string | null;
+  knowledge_base?: string | null;
+  owner: string | null;
+  /** `queued`, `in_progress`, `suspended`, or `ingesting` for a knowledge base. */
+  state: string;
+  started_at: string;
+  /** The request that cancels the job through its own route, when the admin may send it. */
+  cancel: { method: string; url: string; body: unknown } | null;
+}
+
 /** The `detail` of a request the server refused. */
 export interface MigrationError {
   code: string;
   source_version?: string;
   path?: string;
+  /** With `jobs_active`: what the pause waits for. */
+  jobs?: MigrationJob[];
+  /** With `jobs_active`: each trigger listener process that is still running. */
+  listeners?: { holder: string }[];
 }
 
 /** One line of the `POST /api/v1/migration/checks` stream. */
