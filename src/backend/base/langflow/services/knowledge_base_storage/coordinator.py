@@ -31,6 +31,7 @@ from langflow.services.knowledge_base_storage.automatic import (
     check_local_upgrade,
     preserve_routing,
 )
+from langflow.services.knowledge_base_storage.legacy_directories import MAX_SIDECAR_BYTES
 from langflow.services.knowledge_base_storage.maintenance import (
     MaintenanceRequiredError,
     _fsync_directory,
@@ -607,7 +608,7 @@ async def reconcile_legacy_inventory() -> None:
             if await _worker(tree_fingerprint, source) != receipt["sources"][relative]:
                 raise ValueError
             path = source / "embedding_metadata.json"
-            if path.is_symlink() or path.stat().st_size > 2 * 1024 * 1024:
+            if path.is_symlink() or path.stat().st_size > MAX_SIDECAR_BYTES:
                 raise ValueError
             metadata = json.loads(await _worker(path.read_bytes))
             if not isinstance(metadata, dict) or metadata.get("backend_type", "chroma") != "chroma":

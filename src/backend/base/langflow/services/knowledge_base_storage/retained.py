@@ -13,13 +13,13 @@ import json
 import shutil
 import sqlite3
 from contextlib import closing, suppress
-from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from langflow.services.knowledge_base_storage.maintenance import MaintenanceRequiredError
 
 if TYPE_CHECKING:
+    from pathlib import Path
     from uuid import UUID
 
 MIGRATION_DIRECTORY = ".migration"
@@ -29,16 +29,25 @@ END_USER_KEY = "end_user_id"
 _ERASED_DIRECTORY = "erased"
 _DATABASE_FILES = ("chroma.sqlite3", "chroma.sqlite3-wal", "chroma.sqlite3-journal")
 _READ_CHUNK = 1024 * 1024
-_SOURCE_PATH_PARTS = 2  # <owner>/<name>
+
+
+def is_path_segment(value: str) -> bool:
+    """Whether a value is one plain folder name, as an owner or a base name must be on disk."""
+    return value not in ("", ".", "..") and "/" not in value and "\\" not in value
+
+
+def is_source_identity(source_identity: str) -> bool:
+    """Whether a value names one ``<owner>/<name>`` directory exactly as written, without ``//`` or ``.``."""
+    owner, separator, name = source_identity.partition("/")
+    return bool(separator) and is_path_segment(owner) and is_path_segment(name)
 
 
 def retained_source(root: Path, source_identity: str) -> Path:
     """The original ``<owner>/<name>`` directory an upgrade run read and kept."""
-    parts = PurePosixPath(source_identity).parts
-    if len(parts) != _SOURCE_PATH_PARTS or any(part in ("", ".", "..") or "\\" in part for part in parts):
+    if not is_source_identity(source_identity):
         msg = "Invalid retained source identity"
         raise MaintenanceRequiredError(msg)
-    return root.joinpath(*parts)
+    return root.joinpath(*source_identity.split("/"))
 
 
 def retained_copies(root: Path, *, kb_id: UUID, run_id: UUID, source_identity: str) -> tuple[Path, Path]:

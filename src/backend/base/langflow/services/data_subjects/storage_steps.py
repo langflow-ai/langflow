@@ -26,12 +26,17 @@ from lfx.utils.end_user_storage import (
 )
 from sqlmodel import select
 
-from langflow.services.data_subjects.knowledge_base_steps import builder_upgrade_runs
+from langflow.services.data_subjects.knowledge_base_steps import builder_directories, builder_upgrade_runs
 from langflow.services.data_subjects.memory_base_storage import KIND_MEMORY_BASE, drop_memory_base
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.knowledge_base_storage.legacy_directories import (
+    LegacyDirectories,
+    is_owner_folder,
+    scan_legacy_directories,
+)
 from langflow.services.knowledge_base_storage.retained import remove_copy, remove_upgrade_evidence, retained_source
 from langflow.services.knowledge_base_storage.runtime import storage_root
 
@@ -88,28 +93,27 @@ async def builder_storage_plan(session: AsyncSession, ctx: EraseContext) -> list
     plan.append(_item(KIND_FLOWS_DIR, str(ctx.subject_user_id)))
     plan.append(_item(KIND_FS_SANDBOX, str(ctx.subject_user_id)))
     if ctx.username:
-        plan.append(_item(KIND_KB_USER_DIR, ctx.username))
-        plan.extend(await _upgrade_evidence_plan(session, ctx))
+        plan.extend(await _knowledge_base_plan(session, ctx))
     return plan
 
 
-async def _upgrade_evidence_plan(session: AsyncSession, ctx: EraseContext) -> list[dict[str, str]]:
-    """What the automatic storage upgrade kept of the builder's bases besides their directories.
+async def _knowledge_base_plan(session: AsyncSession, ctx: EraseContext) -> list[dict[str, str]]:
+    """The builder's legacy directories and what the automatic storage upgrade kept of their bases.
 
-    The snapshots and routing backups hold every chunk, and the bindings name the builder. Sources
-    kept under a former username and then the bindings run last, after the directories they guard,
-    since the plan runs in order and stops at a failure.
+    Each `<owner>/<name>` directory that belongs to the builder is removed whole, as a retained source is,
+    and then the folder named after the builder once nothing else is in it, since a rename can leave
+    another account's directories there. The snapshots and routing backups hold every chunk, and the
+    bindings name the builder. The bindings run last, after the directories they guard, since the plan
+    runs in order and stops at a failure.
     """
     username = str(ctx.username)
-    owned = dict(
-        (
-            await session.exec(
-                select(KnowledgeBaseRecord.id, KnowledgeBaseRecord.name).where(
-                    KnowledgeBaseRecord.user_id == ctx.subject_user_id
-                )
+    owned = (
+        await session.exec(
+            select(KnowledgeBaseRecord.id, KnowledgeBaseRecord.name, KnowledgeBaseRecord.backend_type).where(
+                KnowledgeBaseRecord.user_id == ctx.subject_user_id
             )
-        ).all()
-    )
+        )
+    ).all()
     runs = (
         await session.exec(
             select(KnowledgeBaseStorageMigration.kb_id, KnowledgeBaseStorageMigration.source_identity).where(
@@ -117,15 +121,36 @@ async def _upgrade_evidence_plan(session: AsyncSession, ctx: EraseContext) -> li
             )
         )
     ).all()
-    kb_ids = {kb_id for kb_id, _ in runs} | set(owned)
-    identities = {identity for _, identity in runs if identity} | {f"{username}/{name}" for name in owned.values()}
-    # KIND_KB_USER_DIR already removes the sources under the builder's current name.
-    elsewhere = {identity for identity in identities if not identity.startswith(f"{username}/")}
+    kb_ids = {kb_id for kb_id, _ in runs} | {kb_id for kb_id, _, _ in owned}
+    # Only a Chroma base still reads `<username>/<name>`. An upgraded base's directory is its ledger row's.
+    named = {identity for _, identity in runs if identity}
+    named |= {f"{username}/{name}" for _, name, backend in owned if backend == "chroma"}
+    found = await _scan_legacy_directories()
+    sources = await builder_directories(session, ctx.subject_user_id, username, named=named, kb_ids=kb_ids, found=found)
+    removed = sources & found.stores
+    folder = [_item(KIND_KB_USER_DIR, username)] if is_owner_folder(username) else []
+    if folder and (kept := {source for source in found.stores if source.startswith(f"{username}/")} - removed):
+        await logger.awarning(
+            "op=data_subject_erase kept %d directories in the builder's knowledge base folder that are not theirs",
+            len(kept),
+        )
     return [
+        *(_item(KIND_KB_RETAINED_SOURCE, source) for source in sorted(removed)),
+        *folder,
         *(_item(KIND_KB_UPGRADE_EVIDENCE, str(kb_id)) for kb_id in sorted(kb_ids, key=str)),
-        *(_item(KIND_KB_RETAINED_SOURCE, identity) for identity in sorted(elsewhere)),
-        *(_item(KIND_KB_SOURCE_BINDING, identity) for identity in sorted(identities)),
+        *(_item(KIND_KB_SOURCE_BINDING, source) for source in sorted(sources)),
     ]
+
+
+async def _scan_legacy_directories() -> LegacyDirectories:
+    if not _local_storage_configured():
+        return LegacyDirectories()
+    try:
+        return await asyncio.to_thread(scan_legacy_directories, storage_root())
+    except OSError:
+        # Nothing is removed then, and a binding waits until its directory is known to be gone.
+        await logger.awarning("op=data_subject_erase could not list the knowledge base storage root")
+        return LegacyDirectories()
 
 
 def end_user_storage_plan(ctx: EraseContext) -> list[dict[str, str]]:
@@ -187,15 +212,26 @@ def _remove_save_file_dir(segment: str, end_user_id: str) -> None:
         forget_end_user_folder(root, segment)
 
 
-def _remove_kb_user_dir(username: str) -> None:
-    from langflow.api.utils.kb_helpers import KBStorageHelper
-
-    root = KBStorageHelper.get_root_path()
-    _remove_dir(root / username, root)
-
-
 def _local_storage_configured() -> bool:
     return bool(get_settings_service().settings.knowledge_bases_dir)
+
+
+def _remove_kb_user_dir(username: str) -> None:
+    """Delete the folder named after the builder once nothing is left in it."""
+    if _local_storage_configured() and is_owner_folder(username):
+        with contextlib.suppress(OSError):
+            (storage_root() / username).rmdir()
+
+
+def _remove_retained_source(source_identity: str) -> None:
+    """Delete one `<owner>/<name>` directory, then its owner's folder once nothing else is in it."""
+    if not _local_storage_configured():
+        return
+    root = storage_root()
+    directory = retained_source(root, source_identity)
+    remove_copy(directory, root)
+    with contextlib.suppress(OSError):
+        directory.parent.rmdir()
 
 
 def _remove_upgrade_evidence(kb_id: str) -> None:
@@ -203,17 +239,20 @@ def _remove_upgrade_evidence(kb_id: str) -> None:
         remove_upgrade_evidence(storage_root(), UUID(kb_id))
 
 
-def _remove_retained_source(source_identity: str) -> None:
-    if _local_storage_configured():
-        root = storage_root()
-        remove_copy(retained_source(root, source_identity), root)
+def _present(path: Path) -> bool:
+    try:
+        path.lstat()
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    return True
 
 
 def _forget_source_binding(source_identity: str) -> None:
     # The coordinator pulls in the whole upgrade machinery, so load it only when a binding is due.
     from langflow.services.knowledge_base_storage.coordinator import forget_source_binding
 
-    if _local_storage_configured():
+    # A binding keeps its directory from being adopted again, so it stays as long as the directory does.
+    if _local_storage_configured() and not _present(retained_source(storage_root(), source_identity)):
         forget_source_binding(source_identity)
 
 
