@@ -15,6 +15,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from lfx.base.knowledge_bases.backends import is_local_backend
+from lfx.base.mcp.constants import GLOBAL_VARIABLE_PLACEHOLDER_PATTERN
 from lfx.base.models.provider_registry import model_component_provider_id, resolve_provider_id
 from lfx.helpers.base_model import coalesce_bool
 from lfx.integrations.models import ConnectionRef
@@ -42,6 +43,7 @@ from langflow.utils.mcp_config_secrets import (
     MCP_SECRET_CONFIG_MAPS,
     NON_SECRET_HEADERS,
     project_id_from_mcp_url,
+    strip_config_secrets,
     variable_name_for,
     variable_reference_name,
 )
@@ -82,6 +84,10 @@ class ProjectArtifactError(ValueError):
 
 class EmptyProjectArtifactError(ProjectArtifactError):
     """Raised when a project has no flows to package."""
+
+
+class ProjectArtifactMcpError(ProjectArtifactError):
+    """Raised when an MCP connection cannot safely be provisioned at deploy."""
 
 
 class ProjectArtifactNotFoundError(ProjectArtifactError):
@@ -182,10 +188,8 @@ class ProjectArtifactExternalMcpServer:
     file people store and move; the configuration still has to reach a deploy target,
     so it rides on this object to whoever is deploying and no further.
 
-    Only a config whose every credential is already a variable reference appears here.
-    Saving a flow rewrites a literal into a generated ``MCP_*`` name, so for a saved
-    flow that is every external server, and one that still holds a literal is left out
-    rather than handed on.
+    Every credential is rewritten to its serving-plane variable reference. Configs
+    that cannot be carried safely refuse packaging instead of losing a connection.
     """
 
     server_name: str
@@ -705,11 +709,14 @@ def _mcp_config_requirements(
     if not isinstance(config, dict) or not isinstance(server_name, str) or not server_name:
         return variables, projects
     url = _mcp_config_url(config)
+    url_variables = set(GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.findall(url)) if isinstance(url, str) else set()
     if url_variable := variable_reference_name(url):
+        url_variables.add(url_variable)
+    if url_variables:
         # A URL behind a variable names no project until it resolves, so it is
         # reported as a variable and treated as external. Being wrong this way
         # asks for something harmless; the other way mints a key for a stranger.
-        variables.add(url_variable)
+        variables.update(url_variables)
     elif project_id := project_id_from_mcp_url(url):
         return variables, {ProjectArtifactRequiredMcpProject(server_name=server_name, project_id=project_id)}
     for key in MCP_SECRET_CONFIG_MAPS:
@@ -730,7 +737,7 @@ def _mcp_config_requirements(
     return variables, projects
 
 
-def _mcp_field_values(flow_data: object) -> Iterator[dict[str, Any]]:
+def iter_mcp_field_values(flow_data: object) -> Iterator[dict[str, Any]]:
     """Every MCP field value in a flow, from regular and grouped nodes alike.
 
     Walked without recursion, like the connection refs. Shared by the two readers of
@@ -783,23 +790,13 @@ def _referenced_mcp_config(server_name: str, config: dict[str, Any]) -> dict[str
 
     Returns ``None`` for a config this cannot be done to safely. A credential inside
     ``args`` is the case that matters: the stdio shape hides one after ``--headers``,
-    and rewriting positional arguments is guesswork, so such a config is left behind
-    rather than risk carrying the value itself.
+    and rewriting positional arguments is guesswork, so the caller refuses packaging
+    rather than carrying the value itself.
     """
-    carried = deepcopy(config)
-    args = carried.get("args")
+    args = config.get("args")
     if isinstance(args, list) and any(isinstance(a, str) and a == "--headers" for a in args):
         return None
-    for key in MCP_SECRET_CONFIG_MAPS:
-        entries = carried.get(key)
-        if not isinstance(entries, dict):
-            continue
-        for entry_key, entry_value in list(entries.items()):
-            if key == "headers" and str(entry_key).lower() in NON_SECRET_HEADERS:
-                continue
-            if entry_value in (None, "") or variable_reference_name(entry_value) is not None:
-                continue
-            entries[entry_key] = variable_name_for(server_name, str(entry_key))
+    carried, _, _ = strip_config_secrets(deepcopy(config), server_name)
     return carried
 
 
@@ -813,7 +810,7 @@ def _collect_external_mcp_servers(
     against its target, and anything else is external, which a deploy can only carry.
     """
     servers: dict[str, ProjectArtifactExternalMcpServer] = {}
-    for value in _mcp_field_values(flow_data):
+    for value in iter_mcp_field_values(flow_data):
         name = value.get("name")
         config = _effective_mcp_config(name, value.get("config"), registered)
         if not isinstance(name, str) or not name or not config:
@@ -821,16 +818,21 @@ def _collect_external_mcp_servers(
         url = _mcp_config_url(config)
         if project_id_from_mcp_url(url) is not None:
             continue
-        # No address, nothing to connect to. Carrying it would write a row on the
-        # target that the component then resolves through in preference to anything
-        # else, which is worse than carrying nothing at all.
-        if not url:
-            continue
+        if not url or "command" in config or config.get("mode") == "Stdio":
+            msg = (
+                f"MCP server {name!r} cannot be deployed. Configure an HTTP URL on this server "
+                "instead of a local command before deploying."
+            )
+            raise ProjectArtifactMcpError(msg)
         if name in servers:
             continue
         carried = _referenced_mcp_config(name, config)
         if carried is None:
-            continue
+            msg = (
+                f"MCP server {name!r} cannot be deployed with headers in command arguments. "
+                "Use the headers map with credential variable references instead."
+            )
+            raise ProjectArtifactMcpError(msg)
         servers[name] = ProjectArtifactExternalMcpServer(server_name=name, config=carried)
     return tuple(servers.values())
 
@@ -847,7 +849,7 @@ def _collect_mcp_requirements(
     """
     variables: set[str] = set()
     projects: set[ProjectArtifactRequiredMcpProject] = set()
-    for value in _mcp_field_values(flow_data):
+    for value in iter_mcp_field_values(flow_data):
         name = value.get("name")
         field_variables, field_projects = _mcp_config_requirements(
             name, _effective_mcp_config(name, value.get("config"), registered)

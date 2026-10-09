@@ -17,6 +17,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.deployment_artifacts.builder import (
+    ProjectArtifactError,
     ProjectArtifactLimits,
     ProjectArtifactRequiredMcpProject,
     _build_deployment_snapshot_flows,
@@ -488,7 +489,8 @@ def test_a_credential_hidden_in_stdio_args_is_never_carried():
         }
     }
 
-    assert _collect_external_mcp_servers(_named_only("lf-thing"), book) == ()
+    with pytest.raises(ProjectArtifactError, match="cannot be deployed"):
+        _collect_external_mcp_servers(_named_only("lf-thing"), book)
 
 
 def test_a_server_with_no_address_anywhere_is_not_carried():
@@ -506,3 +508,42 @@ def test_a_name_that_is_in_no_address_book_falls_back_to_what_is_inline():
     flow = _flow(_server("ad-hoc", {"url": "https://x.example/mcp", "headers": {"Auth": "{{MCP_X}}"}}))
 
     assert [s.server_name for s in _collect_external_mcp_servers(flow, {"other": {}})] == ["ad-hoc"]
+
+
+@pytest.mark.parametrize("field", ["api_key", "apiKey", "authorization", "Authorization"])
+def test_top_level_secret_fields_are_not_carried_from_registered_servers(field):
+    config = {"url": "https://external.example/mcp", field: "synthetic-review-credential"}
+    carried = _collect_external_mcp_servers(_named_only("external"), {"external": config})
+
+    assert len(carried) == 1
+    assert field not in carried[0].config
+    assert config[field] == "synthetic-review-credential"
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://{{MCP_HOST}}/mcp", ("MCP_HOST",)),
+        ("{{BASE_URL}}/mcp?tenant={{ TENANT_ID }}", ("BASE_URL", "TENANT_ID")),
+        ("https://{{HOST}}/mcp?copy={{HOST}}", ("HOST",)),
+    ],
+)
+def test_composed_url_variables_are_all_required(url, expected):
+    flow = _named_only("external")
+    book = {"external": {"url": url}}
+
+    assert _collect_mcp_requirements(flow, book).variables == expected
+    assert _collect_external_mcp_servers(flow, book)[0].config["url"] == url
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/data"]},
+        {"command": "uvx", "args": ["mcp-proxy", "https://external.example/mcp"]},
+        {"url": "https://external.example/mcp", "args": ["--headers", "x-api-key", "synthetic-review-credential"]},
+    ],
+)
+def test_unprovisionable_external_servers_refuse_packaging(config):
+    with pytest.raises(ProjectArtifactError, match=r"external.*cannot be deployed"):
+        _external(_server("external", config))

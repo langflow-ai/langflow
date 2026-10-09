@@ -9,6 +9,7 @@ from .builder import (
     ProjectArtifactFlow,
     ProjectArtifactLimitError,
     ProjectArtifactLimits,
+    ProjectArtifactMcpError,
     ProjectArtifactNotFoundError,
     ProjectArtifactRequiredConnection,
     ProjectArtifactRequiredModel,
@@ -16,6 +17,7 @@ from .builder import (
     ProjectDeploymentSnapshotFlow,
     build_project_artifact,
     build_project_deployment_snapshot,
+    iter_mcp_field_values,
 )
 
 __all__ = [
@@ -27,6 +29,7 @@ __all__ = [
     "ProjectArtifactFlow",
     "ProjectArtifactLimitError",
     "ProjectArtifactLimits",
+    "ProjectArtifactMcpError",
     "ProjectArtifactNotFoundError",
     "ProjectArtifactRequiredConnection",
     "ProjectArtifactRequiredModel",
@@ -34,4 +37,5 @@ __all__ = [
     "ProjectDeploymentSnapshotFlow",
     "build_project_artifact",
     "build_project_deployment_snapshot",
+    "iter_mcp_field_values",
 ]
