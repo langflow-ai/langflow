@@ -15,8 +15,9 @@ let mockFolders: Array<{
   flows: never[];
   components: never[];
   owner_username: string;
-  is_owner: boolean;
+  is_owner?: boolean;
 }> = [];
+let mockPermissionsResourceIds: string[] = [];
 
 jest.mock("@tanstack/react-query", () => ({
   ...jest.requireActual("@tanstack/react-query"),
@@ -75,9 +76,16 @@ jest.mock("@/components/ui/sidebar", () => {
 });
 
 jest.mock("@/contexts/permissionsContext", () => ({
-  PermissionsProvider: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
+  PermissionsProvider: ({
+    children,
+    resourceIds,
+  }: {
+    children: React.ReactNode;
+    resourceIds: string[];
+  }) => {
+    mockPermissionsResourceIds = resourceIds;
+    return <>{children}</>;
+  },
   usePermissions: () => ({ can: mockCan }),
 }));
 
@@ -206,11 +214,15 @@ jest.mock("../../sidebarFolderSkeleton", () => ({
   SidebarFolderSkeleton: () => null,
 }));
 
-// Project names are truncated with an ellipsis and the sidebar cannot be
-// widened. With one default project per user the list fills with same-prefixed
-// entries — "Starter Project — u_vie...", "Starter Project — u_edi..." — where
-// the truncated portion is the only part that distinguishes one row from
-// another. The full name has to stay reachable (LE-1905 finding 12).
+// The sidebar lists only the current user's own projects — everything else
+// (explicitly shared, or visible via a broad role/scope grant) has its own
+// home in "Shared with me" / "Visible via your role" instead. Previously a
+// non-owned row rendered here too, disambiguated only by a "<name> —
+// <owner>" suffix that became unreadable once truncated by the sidebar's
+// fixed width, with one default project per user filling the list with
+// same-prefixed entries (LE-1905 finding 12). Scoping the sidebar to owned
+// projects removes the suffix's reason to exist here at all, not just its
+// truncation problem.
 const OWN_FOLDER = {
   id: "own-id",
   name: "Starter Project",
@@ -222,14 +234,27 @@ const OWN_FOLDER = {
   is_owner: true,
 };
 
-// Someone else's project: the display name is the composed
-// "<name> — <owner>" form, which is exactly the shape that truncates.
-const SHARED_FOLDER = {
+// Someone else's project — reachable via a role grant or an explicit share,
+// neither of which makes it "mine". Must never render in the sidebar.
+const OTHER_FOLDER = {
   ...OWN_FOLDER,
-  id: "shared-id",
-  name: "Starter Project",
+  id: "other-id",
+  name: "Someone Else's Project",
   owner_username: "u_editor_with_a_long_name",
   is_owner: false,
+};
+
+// A caller that doesn't populate is_owner at all — the filter's `!== false`
+// check must treat this as owned (matching getProjectDisplayName's own
+// existing fallback), not silently drop it from the sidebar.
+const UNDEFINED_OWNER_FOLDER = {
+  id: "undefined-owner-id",
+  name: "Legacy Project",
+  description: "",
+  parent_id: "",
+  flows: [] as never[],
+  components: [] as never[],
+  owner_username: "current-user",
 };
 
 const nameCellFor = (folderId: string) =>
@@ -239,31 +264,56 @@ describe("project name tooltip", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCan.mockReturnValue(true);
-    mockFolders = [OWN_FOLDER, SHARED_FOLDER];
+    mockFolders = [OWN_FOLDER, OTHER_FOLDER];
   });
 
-  it("exposes the full display name as a title on every project row", () => {
+  it("renders only the caller's own projects, never a non-owned one", () => {
+    render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+
+    expect(
+      screen.getByTestId(`sidebar-nav-${OWN_FOLDER.id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`sidebar-nav-${OTHER_FOLDER.id}`),
+    ).not.toBeInTheDocument();
+  });
+
+  it("treats a folder with no is_owner field at all as owned", () => {
+    mockFolders = [UNDEFINED_OWNER_FOLDER, OTHER_FOLDER];
+
+    render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+
+    expect(
+      screen.getByTestId(`sidebar-nav-${UNDEFINED_OWNER_FOLDER.id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`sidebar-nav-${OTHER_FOLDER.id}`),
+    ).not.toBeInTheDocument();
+  });
+
+  it("only requests permissions for the projects it actually renders", () => {
+    render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+
+    expect(mockPermissionsResourceIds).toEqual([OWN_FOLDER.id]);
+    expect(mockPermissionsResourceIds).not.toContain(OTHER_FOLDER.id);
+  });
+
+  it("exposes the plain project name as a title, with no ownership suffix", () => {
     render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
 
     expect(nameCellFor(OWN_FOLDER.id)).toHaveAttribute(
       "title",
       "Starter Project",
     );
-    expect(nameCellFor(SHARED_FOLDER.id)).toHaveAttribute(
-      "title",
-      "Starter Project — u_editor_with_a_long_name",
-    );
   });
 
   it("keeps the title identical to the rendered name", () => {
     render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
 
-    for (const folder of [OWN_FOLDER, SHARED_FOLDER]) {
-      const cell = nameCellFor(folder.id);
-      // A title that drifts from the text is worse than none: the tooltip
-      // would claim a different project than the row it belongs to.
-      expect(cell).toHaveAttribute("title", cell?.textContent ?? "");
-    }
+    const cell = nameCellFor(OWN_FOLDER.id);
+    // A title that drifts from the text is worse than none: the tooltip
+    // would claim a different project than the row it belongs to.
+    expect(cell).toHaveAttribute("title", cell?.textContent ?? "");
   });
 
   it("does not render a title on the rename input that replaces the name", () => {
