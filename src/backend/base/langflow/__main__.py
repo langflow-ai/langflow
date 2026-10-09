@@ -1505,6 +1505,20 @@ def relocation_line(result) -> str:
     return f"{line}  chunks {counts}"
 
 
+def relocation_lines(result) -> list[str]:
+    """Everything the command prints for one knowledge base: its line, a hint, its warnings."""
+    lines = [relocation_line(result) + (f"  ({result.reason})" if result.reason else "")]
+    if result.code == "kb_target_short":
+        # Only in this output. The reason and the flag go to the migration page as well, and nobody there
+        # runs the command.
+        lines.append(
+            f"{'':15} hint: if this is the right store and its row records too many chunks, "
+            "re-run with --no-verify-skipped, which skips every knowledge base already on the target "
+            "without a count"
+        )
+    return [*lines, *(f"{'':15} warning: {warning}" for warning in result.warnings)]
+
+
 async def _schema_mismatch() -> str | None:
     """Say why the database is not at this Langflow's schema, or None when it is."""
     from alembic.config import Config
@@ -1568,9 +1582,8 @@ async def _relocate_kb(
         events.report(results, by_status, dry_run=dry_run)
         return failed
     for result in results:
-        typer.echo(relocation_line(result) + (f"  ({result.reason})" if result.reason else ""))
-        for warning in result.warnings:
-            typer.echo(f"{'':15} warning: {warning}")
+        for line in relocation_lines(result):
+            typer.echo(line)
     summary = ", ".join(f"{count} {status}" for status, count in sorted(by_status.items())) or "no knowledge bases"
     typer.echo(f"Knowledge base relocation {'dry run ' if dry_run else ''}complete: {summary}.")
     return failed

@@ -765,6 +765,36 @@ def test_relocation_line_shows_what_was_copied(status, copied, expected):
     assert relocation_line(result).endswith(expected)
 
 
+@pytest.mark.parametrize(
+    ("code", "hinted"), [("kb_target_short", True), ("kb_target_unreachable", False), (None, False)]
+)
+def test_a_short_count_says_how_to_get_past_it_when_the_store_is_the_right_one(code, hinted):
+    # The reason names one cause, chunks kept in another store. A row that records too many chunks over the
+    # right store fails the same way, and the way past it is an option only the command line has.
+    from langflow.__main__ import relocation_lines
+
+    result = KBRelocationResult(
+        kb_id=uuid.uuid4(),
+        kb_name="kb",
+        owner="alice",
+        source_backend="postgres",
+        target_backend="postgres",
+        status="failed",
+        source_count=5,
+        target_count=3,
+        code=code,
+        reason="why",
+        warnings=["a warning"],
+    )
+
+    lines = relocation_lines(result)
+
+    assert lines[0].endswith("(why)")
+    assert lines[-1].endswith("warning: a warning")
+    assert [line.split()[0] for line in lines[1:-1]] == (["hint:"] if hinted else [])
+    assert any("--no-verify-skipped" in line for line in lines) is hinted
+
+
 async def test_relocation_rejects_shared_target_collection():
     with pytest.raises(ValueError, match="index_name"):
         await relocate_knowledge_bases(target_backend_type="opensearch", target_backend_config={"index_name": "shared"})
@@ -985,7 +1015,8 @@ class TestRelocationToPostgresLive:
                 await target.delete_collection()
             await target.teardown()
 
-    async def test_kb_recorded_on_the_target_without_its_chunks_there_is_short_when_asked(self, active_user):
+    @pytest.mark.usefixtures("quiet_libraries")
+    async def test_kb_recorded_on_the_target_without_its_chunks_there_is_short_when_asked(self, active_user, capsys):
         # What a knowledge base kept in another pgvector store looks like from here: its row says postgres
         # and records 36 chunks, and the store this run reads has no table for it.
         record = await knowledge_base_service.create_record(
@@ -1003,6 +1034,20 @@ class TestRelocationToPostgresLive:
                 short = await run(verify_skipped=True, dry_run=dry_run)
                 assert (short.status, short.code, short.copied) == ("failed", "kb_target_short", 0)
                 assert "0 of its 36" in short.reason
+            # Typed by hand, the command says under the knowledge base how to get past it.
+            capsys.readouterr()
+            failed = await _relocate_kb(
+                target_backend_type="postgres",
+                target_backend_config={},
+                username=active_user.username,
+                dry_run=True,
+                batch_size=500,
+                verify_skipped=True,
+            )
+            printed = capsys.readouterr().out.splitlines()
+            at = next(index for index, line in enumerate(printed) if record.name in line)
+            assert failed == 1
+            assert printed[at + 1].split()[:1] == ["hint:"]
             # Once the store holds what the row records, the knowledge base is there.
             chunks = [IngestedDocument(id=f"c{i}", content="doc", embedding=[0.5] * DIM) for i in range(36)]
             await store.add_embedded_documents(chunks)
