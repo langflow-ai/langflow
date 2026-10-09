@@ -158,7 +158,7 @@ def test_message_session_list_index_roundtrip(db_url):  # noqa: F811
         with engine.connect() as connection:
             assert session_list_index(connection) == {_SESSION_LIST_INDEX: ["flow_id", "session_id", "timestamp"]}
 
-        command.downgrade(alembic_cfg, "-1")
+        command.downgrade(alembic_cfg, "d4f1a6c8e2b7")  # pragma: allowlist secret -- index revision parent
         with engine.connect() as connection:
             assert session_list_index(connection) == {}
             # Earlier read-path indexes belong to a previous revision and stay.

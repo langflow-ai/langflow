@@ -361,6 +361,55 @@ async def test_deleting_flow_cascades_to_versions(client: AsyncClient, logged_in
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
+async def _set_retained(version_id: str, *, retained: bool, reason: str | None = None) -> None:
+    from uuid import UUID
+
+    from langflow.services.database.models.flow_version.crud import set_flow_version_retained
+    from langflow.services.deps import session_scope
+
+    async with session_scope() as session:
+        await set_flow_version_retained(session, UUID(version_id), retained=retained, reason=reason)
+
+
+async def test_delete_retained_version_conflicts_until_cleared(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+    assert snap["retained"] is False
+    assert snap["retained_reason"] is None
+    url = f"api/v1/flows/{flow['id']}/versions/{snap['id']}"
+
+    await _set_retained(snap["id"], retained=True, reason="cp-deploy")
+    got = (await client.get(url, headers=logged_in_headers)).json()
+    assert got["retained"] is True
+    assert got["retained_reason"] == "cp-deploy"
+    listed = await _list_versions(client, logged_in_headers, flow["id"])
+    assert listed[0]["retained"] is True
+    resp = await client.delete(url, headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_409_CONFLICT
+    assert "cp-deploy" in resp.json()["detail"]
+
+    await _set_retained(snap["id"], retained=False)
+    resp = await client.delete(url, headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+
+async def test_deleting_flow_removes_retained_versions(client: AsyncClient, logged_in_headers):
+    from uuid import UUID
+
+    from langflow.services.database.models.flow_version.model import FlowVersion
+    from langflow.services.deps import session_scope
+    from sqlmodel import select
+
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+    await _set_retained(snap["id"], retained=True)
+
+    resp = await client.delete(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_200_OK
+    async with session_scope() as session:
+        assert (await session.exec(select(FlowVersion).where(FlowVersion.id == UUID(snap["id"])))).first() is None
+
+
 # ---------------------------------------------------------------------------
 # Error / edge cases
 # ---------------------------------------------------------------------------
