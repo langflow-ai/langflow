@@ -19,6 +19,8 @@
   "storageUpgrade.interrupted": "The upgrade was interrupted. Retry to resume safely.",
   "storageUpgrade.checkStorage": "Check storage access, free disk space and the upgrade logs, then retry. Your original data is preserved.",
   "storageUpgrade.readerLimit": "This store exceeds the automatic reader limits. Preserve the source and use the managed controller with a qualified signed helper, or export it from an isolated old-release environment.",
+  "storageUpgrade.sourceMissing": "No directory from the previous version could be tied to this base. If its owner was renamed, move its directory to <current username>/<base name> in the knowledge base directory, then retry.",
+  "storageUpgrade.sourceAmbiguous": "More than one directory from the previous version could hold this base. Leave only its own directory at <current username>/<base name>, move any other copy out of the knowledge base directory, then retry. Your original data is preserved.",
   "storageUpgrade.retry": "Retry upgrade",
   "storageUpgrade.retryFailed": "Could not schedule the upgrade. Refresh and try again.",
   "storageUpgrade.viewProgress": "View upgrade progress",

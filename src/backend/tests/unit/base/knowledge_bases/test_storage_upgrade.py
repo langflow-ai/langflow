@@ -9,6 +9,7 @@ import os
 import sqlite3
 import threading
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -78,6 +79,11 @@ async def database(tmp_path, monkeypatch):
         await session.commit()
     yield SimpleNamespace(root=root, path=path, sessions=sessions, user=user, settings=settings)
     await engine.dispose()
+
+
+def created_now() -> str:
+    """When a 1.11 sidecar records its base was created: after its owner's account, as the create endpoint did."""
+    return datetime.now(timezone.utc).isoformat()
 
 
 async def make_kb(database, *, backend="chroma", config=None):
@@ -293,7 +299,15 @@ async def test_automatic_adoption_requires_controller_inventory_and_known_owner(
     source, _ = frozen_source(database, monkeypatch)
     identity = uuid4()
     (source / "embedding_metadata.json").write_text(
-        json.dumps({"id": str(identity), "name": "knowledge", "embedding_provider": "test", "embedding_model": "fixed"})
+        json.dumps(
+            {
+                "id": str(identity),
+                "name": "knowledge",
+                "embedding_provider": "test",
+                "embedding_model": "fixed",
+                "created_at": created_now(),
+            }
+        )
     )
     fingerprint = maintenance.tree_fingerprint(source)
     monkeypatch.setattr(
@@ -365,7 +379,8 @@ async def test_missing_source_persists_fence_without_calling_helper(database, ex
     assert (current.backend_type, current.storage_state) == ("chroma", "needs_attention")
     async with database.sessions() as session:
         run = await session.get(KnowledgeBaseStorageMigration, current.active_migration_id)
-    assert run.error_code == "maintenance_required"
+    assert run.error_code == "legacy_source_missing"
+    assert run.source_identity is None
     assert not export_helper
     with pytest.raises(runtime.StorageUnavailableError):
         await runtime.backend_for_record(current)
@@ -732,7 +747,7 @@ async def test_automatic_upgrade_adopts_disk_only_base_with_original_identity(da
     source = native_source(database)
     identity = uuid4()
     (source / "embedding_metadata.json").write_text(
-        json.dumps({"id": str(identity), "name": "fixture-l2", **embedding_metadata})
+        json.dumps({"id": str(identity), "name": "fixture-l2", "created_at": created_now(), **embedding_metadata})
     )
     original = maintenance.tree_fingerprint(source)
     await coordinator.run_pending()
@@ -760,7 +775,15 @@ async def test_disk_only_cloud_base_preserves_remote_routing_and_original_source
     identity = uuid4()
     config = {"mode": "cloud", "collection": "remote-original", "url_variable": "CHROMA_URL"}
     (source / "embedding_metadata.json").write_text(
-        json.dumps({"id": str(identity), "name": "fixture-l2", "backend_type": "chroma", "backend_config": config})
+        json.dumps(
+            {
+                "id": str(identity),
+                "name": "fixture-l2",
+                "backend_type": "chroma",
+                "backend_config": config,
+                "created_at": created_now(),
+            }
+        )
     )
     original = maintenance.tree_fingerprint(source)
 

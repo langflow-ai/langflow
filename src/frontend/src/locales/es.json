@@ -19,6 +19,8 @@
   "storageUpgrade.interrupted": "La actualización se interrumpió. Vuelve a intentarlo para continuar de forma segura.",
   "storageUpgrade.checkStorage": "Revisa el acceso al almacenamiento, el espacio libre y los registros de actualización. Luego vuelve a intentarlo. Tus datos originales se conservan.",
   "storageUpgrade.readerLimit": "Este almacén supera los límites del lector automático. Conserva la fuente y usa el controlador administrado con un auxiliar firmado verificado, o exporta desde un entorno aislado de la versión anterior.",
+  "storageUpgrade.sourceMissing": "No se pudo vincular ningún directorio de la versión anterior a esta base. Si se cambió el nombre de su propietario, mueve su directorio a <nombre de usuario actual>/<nombre de la base> dentro del directorio de bases de conocimiento y vuelve a intentarlo.",
+  "storageUpgrade.sourceAmbiguous": "Más de un directorio de la versión anterior podría pertenecer a esta base. Deja solo su propio directorio en <nombre de usuario actual>/<nombre de la base>, saca cualquier otra copia del directorio de bases de conocimiento y vuelve a intentarlo. Tus datos originales se conservan.",
   "storageUpgrade.retry": "Reintentar actualización",
   "storageUpgrade.retryFailed": "No se pudo programar la actualización. Actualiza la página y vuelve a intentarlo.",
   "storageUpgrade.viewProgress": "Ver progreso de la actualización",

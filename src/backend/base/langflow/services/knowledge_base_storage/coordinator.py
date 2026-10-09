@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import socket
+from contextvars import ContextVar
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,7 +32,14 @@ from langflow.services.knowledge_base_storage.automatic import (
     check_local_upgrade,
     preserve_routing,
 )
-from langflow.services.knowledge_base_storage.legacy_directories import MAX_SIDECAR_BYTES
+from langflow.services.knowledge_base_storage.legacy_directories import SIDECAR, read_sidecar, recorded_id
+from langflow.services.knowledge_base_storage.legacy_sources import (
+    Attribution,
+    LegacySourceUnresolvedError,
+    attribute,
+    evidence_from,
+    scan_legacy_sources,
+)
 from langflow.services.knowledge_base_storage.maintenance import (
     MaintenanceRequiredError,
     _fsync_directory,
@@ -40,6 +48,7 @@ from langflow.services.knowledge_base_storage.maintenance import (
     tree_stat_fingerprint,
     validate_receipt,
 )
+from langflow.services.knowledge_base_storage.retained import retained_source
 from langflow.services.knowledge_base_storage.runtime import (
     StorageUnavailableError,
     operation,
@@ -55,6 +64,8 @@ _inventory_issue_count = 0
 _retry_requested = False
 _MAX_BINDING_BYTES = 4096
 _SOURCE_PATH_PARTS = 2
+# Set for the migrations of one upgrade pass, which share one attribution of the legacy directories.
+_pass_attribution: ContextVar[list[Attribution] | None] = ContextVar("_pass_attribution", default=None)
 
 
 async def _worker(function, *args, **kwargs):
@@ -257,6 +268,66 @@ def _is_retired_source(relative: str, *, root: Path | None = None) -> bool:
     return True
 
 
+async def _legacy_attribution() -> Attribution:
+    """Tie every legacy directory to the bases its ledger run, its sidecar or its folder name gives it to.
+
+    A rename leaves a base's directory under its owner's former username, and another account may take
+    that name, so the owner's current username alone never decides which directory a base reads.
+    """
+    async with session_scope() as session:
+        accounts = (await session.exec(select(User.id, User.username, User.create_at))).all()
+        bases = (
+            await session.exec(
+                select(
+                    KnowledgeBaseRecord.id,
+                    KnowledgeBaseRecord.user_id,
+                    KnowledgeBaseRecord.name,
+                    KnowledgeBaseRecord.active_migration_id,
+                    KnowledgeBaseRecord.backend_type,
+                    KnowledgeBaseRecord.backend_config,
+                    KnowledgeBaseRecord.storage_state,
+                    KnowledgeBaseRecord.chunks,
+                )
+            )
+        ).all()
+        runs = (
+            await session.exec(
+                select(
+                    KnowledgeBaseStorageMigration.id,
+                    KnowledgeBaseStorageMigration.kb_id,
+                    KnowledgeBaseStorageMigration.source_identity,
+                ).where(col(KnowledgeBaseStorageMigration.source_identity).is_not(None))
+            )
+        ).all()
+    directories, unreadable = await _worker(scan_legacy_sources, storage_root())
+    return attribute(directories, evidence_from(accounts, bases, runs), unreadable_folders=unreadable)
+
+
+async def _shared_attribution() -> Attribution:
+    """One attribution for a whole upgrade pass, since locating each base would otherwise rescan the root."""
+    shared = _pass_attribution.get()
+    if shared is None:
+        return await _legacy_attribution()
+    if not shared:
+        shared.append(await _legacy_attribution())
+    return shared[0]
+
+
+async def _locate_source(kb_id: UUID, migration_id: UUID) -> str:
+    """Record a base's legacy directory before anything can fail, so a later rename cannot move it."""
+    relative = (await _shared_attribution()).source_of(kb_id)
+    await _phase(migration_id, "discovered", source_identity=relative)
+    return relative
+
+
+def _present(relative: str) -> bool:
+    try:
+        retained_source(storage_root(), relative).lstat()
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    return True
+
+
 def forget_source_binding(relative: str) -> None:
     """Drop the binding of an erased owner's source. Call only after that source directory is gone."""
     path = _binding_path(relative)
@@ -271,22 +342,22 @@ async def retire_legacy_source(record: KnowledgeBaseRecord) -> None:
 
     No removed provider is instantiated. Cloud and remote sources remain with
     their provider. The caller holds the immutable KB's exclusive operation.
+    Only the directories that are this base's alone are bound, so a directory
+    that another account's base holds, under a username this owner took over,
+    stays visible to that base's upgrade.
     """
     async with session_scope() as session:
-        owner = await session.get(User, record.user_id)
         run = (
             await session.get(KnowledgeBaseStorageMigration, record.active_migration_id)
             if record.active_migration_id
             else None
         )
-    if owner is not None and get_settings_service().settings.knowledge_bases_dir:
-        relative = f"{owner.username}/{record.name}"
-        if len(Path(relative).parts) != _SOURCE_PATH_PARTS or "\\" in relative:
-            msg = "Invalid retained source identity"
-            raise MaintenanceRequiredError(msg)
-        source = storage_root() / relative
-        if source.is_dir() and (source / "chroma.sqlite3").exists():
-            await _worker(_write_source_binding, relative, None, record.id, retired=True)
+    if get_settings_service().settings.knowledge_bases_dir:
+        attribution = await _legacy_attribution()
+        for relative in sorted(attribution.sources_of(record.id)):
+            source = retained_source(storage_root(), relative)
+            if source.is_dir() and (source / "chroma.sqlite3").exists():
+                await _worker(_write_source_binding, relative, None, record.id, retired=True)
     if run is not None:
         await _phase(run.id, "detached", error_code=None)
 
@@ -318,6 +389,10 @@ async def migrate_one(kb_id: UUID) -> None:
             if row.backend_config.get("mode", "local") != "local":
                 await _attention(row.id, run.id, "remote_source_requires_migration")
                 return
+            relative = run.source_identity
+            # Before its snapshot, a recorded directory that was moved away is located again.
+            if not relative or (not run.source_fingerprint and not await _worker(_present, relative)):
+                relative = await _locate_source(row.id, run.id)
             database = get_sqlite_database_file_path(get_db_service().database_url)
             receipt_name = os.environ.get("LANGFLOW_KB_UPGRADE_RECEIPT")
             receipt = None
@@ -330,25 +405,12 @@ async def migrate_one(kb_id: UUID) -> None:
                 )
             else:
                 await _worker(check_local_upgrade, storage_root(), get_settings_service().settings)
-            async with session_scope() as session:
-                owner = await session.get(User, row.user_id)
-            if owner is None:
-                msg = "Legacy store owner is missing"
-                raise MaintenanceRequiredError(msg)
-            if any(
-                part in ("", ".", "..") or Path(part).name != part or "\\" in part
-                for part in (owner.username, row.name)
-            ):
-                msg = "Legacy storage identity is ambiguous"
-                raise MaintenanceRequiredError(msg)
-            source = storage_root() / owner.username / row.name
+            source = retained_source(storage_root(), relative)
             if source.parent.is_symlink() or (source / ".kb_deleted").exists():
                 msg = "Legacy source is a symlink or a deletion tombstone"
                 raise MaintenanceRequiredError(msg)
             fingerprint = (
-                receipt.get("sources", {}).get(source.relative_to(storage_root()).as_posix())
-                if receipt
-                else await _worker(tree_fingerprint, source)
+                receipt.get("sources", {}).get(relative) if receipt else await _worker(tree_fingerprint, source)
             )
             if not isinstance(fingerprint, str):
                 msg = "Source was not inventoried by the stopped-worker controller"
@@ -367,12 +429,7 @@ async def migrate_one(kb_id: UUID) -> None:
                     backup_directory=private_directory(application_backup.backup_directory(storage_root())),
                 )
             snapshot = directory / "source"
-            await _phase(
-                run.id,
-                "snapshotting",
-                source_fingerprint=fingerprint,
-                source_identity=source.relative_to(storage_root()).as_posix(),
-            )
+            await _phase(run.id, "snapshotting", source_fingerprint=fingerprint, source_identity=relative)
             await _worker(snapshot_source, source, snapshot, fingerprint)
             await _phase(run.id, "exporting")
             output = directory / "export.jsonl"
@@ -456,7 +513,7 @@ async def migrate_one(kb_id: UUID) -> None:
         except Exception as exc:  # noqa: BLE001 -- persist a safe failure, never expose a partial target
             code = (
                 exc.code
-                if isinstance(exc, AutomaticUpgradeUnavailableError)
+                if isinstance(exc, (AutomaticUpgradeUnavailableError, LegacySourceUnresolvedError))
                 else "automatic_reader_limit"
                 if isinstance(exc, AutomaticMigrationLimitError)
                 else "maintenance_required"
@@ -492,27 +549,40 @@ async def fence_legacy_records() -> None:
 
 
 async def ensure_legacy_name_available(user_id: UUID, name: str) -> None:
-    """Reserve an unadopted source name even while background discovery is running."""
+    """Reserve an unadopted source name even while background discovery is running.
+
+    The owner's former usernames count as well as the current one, as far as the ledger or a sidecar shows
+    them. A directory that one base already holds reserves nothing, since that base's own name guards it.
+    """
     if not get_settings_service().settings.knowledge_bases_dir:
         return
-    async with session_scope() as session:
-        owner = await session.get(User, user_id)
-    if owner is None:
-        return
 
-    def reserved():
-        """Check whether a live legacy directory reserves this owner and display name."""
+    def possible() -> bool:
+        """Whether any folder has a directory of this name, or cannot be read, so attribution is worth it."""
         root = storage_root()
-        owner_path = root / owner.username
-        source = owner_path / name
-        if owner_path.is_symlink() or source.is_symlink() or not source.resolve().is_relative_to(root):
+        return root.is_dir() and any(
+            folder.is_symlink() or not os.access(folder, os.R_OK | os.X_OK) or os.path.lexists(folder / name)
+            for folder in root.iterdir()
+            if folder.name != ".migration" and folder.is_dir()
+        )
+
+    def reserved(attribution: Attribution) -> bool:
+        """Check whether a live legacy directory that no single base holds reserves this name."""
+        if attribution.folder_unreadable(user_id):
             return True
-        if not (source / "chroma.sqlite3").exists() or (source / ".kb_deleted").exists():
-            return False
-        return not _is_retired_source(source.relative_to(root).as_posix())
+        root = storage_root()
+        for relative in attribution.unclaimed(user_id, name):
+            source = retained_source(root, relative)
+            if source.is_symlink() or not source.resolve().is_relative_to(root):
+                return True
+            if not (source / "chroma.sqlite3").exists() or (source / ".kb_deleted").exists():
+                continue
+            if not _is_retired_source(relative):
+                return True
+        return False
 
     try:
-        unavailable = await _worker(reserved)
+        unavailable = await _worker(possible) and await _worker(reserved, await _legacy_attribution())
     except (OSError, MaintenanceRequiredError, ValueError) as exc:
         msg = "This name is held by data from a previous version. Choose another name or contact your administrator."
         raise StorageUnavailableError(msg) from exc
@@ -524,11 +594,112 @@ async def ensure_legacy_name_available(user_id: UUID, name: str) -> None:
         raise StorageUnavailableError(msg)
 
 
+def _claimed_source_issue(
+    claims: frozenset[UUID],
+    relative: str,
+    fingerprint: str,
+    rows: dict[UUID, KnowledgeBaseRecord],
+    runs: dict[UUID, KnowledgeBaseStorageMigration],
+) -> dict | None:
+    """The inventory issue of a directory that the evidence ties to a base, if it has one."""
+    if len(claims) != 1:
+        return {"code": "ambiguous_source_identity"}
+    row = rows.get(next(iter(claims)))
+    if row is None:
+        # Only a ledger run names it, and its base is gone without retiring it, so no account holds it.
+        return {"code": "missing_source_owner"}
+    run = runs.get(row.active_migration_id) if row.active_migration_id else None
+    recovering_activation = bool(
+        row.backend_type == "sqlite"
+        and run
+        and run.source_backend == "chroma"
+        and run.source_identity == relative
+        and run.source_fingerprint == fingerprint
+        and run.target_generation == row.storage_generation
+        and row.storage_state in ("migrating", "needs_attention")
+    )
+    if row.backend_type == "chroma" or recovering_activation:
+        return None
+    return {"code": "ambiguous_source_identity", "owner_id": str(row.user_id)}
+
+
+async def _adopt(relative: str, fingerprint: str, owner_id: UUID, kb_id: UUID) -> dict | None:
+    """Register a directory the database never knew as a Chroma base, recording it in the base's ledger run."""
+    name = relative.partition("/")[2]
+    source = storage_root() / relative
+    try:
+        if await _worker(tree_fingerprint, source) != fingerprint:
+            raise ValueError
+        metadata = await _worker(read_sidecar, source / SIDECAR)
+        if recorded_id(metadata) != kb_id or metadata.get("backend_type", "chroma") != "chroma":
+            raise ValueError
+        if metadata.get("name", name) != name:
+            raise ValueError
+        selection = metadata.get("model_selection") or {}
+        if isinstance(selection, list):
+            selection = selection[0] if selection else {}
+        if not isinstance(selection, dict):
+            raise TypeError
+        if not selection:
+            model = str(metadata.get("embedding_model") or "")
+            provider = str(metadata.get("embedding_provider") or "Unknown")
+            if provider == "Unknown" and model:
+                # Match the legacy sidecar backfill so a migrated base can
+                # still construct its query embedder after the vector copy.
+                provider = await _worker(infer_embedding_provider, model)
+            selection = {"provider": provider, "name": model}
+        config = metadata.get("backend_config") or {}
+        if not isinstance(config, dict):
+            raise TypeError
+        row = KnowledgeBaseRecord(
+            id=kb_id,
+            user_id=owner_id,
+            name=name,
+            model_selection=selection,
+            chunk_size=int(metadata.get("chunk_size", 1000)),
+            chunk_overlap=int(metadata.get("chunk_overlap", 200)),
+            separator=metadata.get("separator"),
+            column_config=metadata.get("column_config", []),
+            backend_type="chroma",
+            backend_config=config,
+            storage_state="migrating",
+        )
+        # The ledger names the adopted directory, so a later rename of its owner cannot move it.
+        run = KnowledgeBaseStorageMigration(
+            kb_id=row.id,
+            source_generation=row.storage_generation,
+            target_generation=row.storage_generation + 1,
+            source_identity=relative,
+        )
+        row.active_migration_id = run.id
+        async with session_scope() as session:
+            session.add(row)
+            session.add(run)
+            await session.commit()
+    except Exception:  # noqa: BLE001 -- retain an explicit inventory blocker
+        # A different new worker may have adopted this same source first.
+        async with session_scope() as session:
+            found = (
+                await session.exec(
+                    select(KnowledgeBaseRecord).where(
+                        KnowledgeBaseRecord.user_id == owner_id, KnowledgeBaseRecord.name == name
+                    )
+                )
+            ).first()
+        if found is None or found.backend_type != "chroma":
+            return {"code": "unreadable_or_ambiguous_legacy_metadata", "owner_id": str(owner_id)}
+    return None
+
+
 async def reconcile_legacy_inventory() -> None:
     """Adopt unambiguous local sidecar identities from a bounded source inventory.
 
     Unknown owners or damaged metadata remain visible upgrade blockers. They
     cannot disappear just because there is no corresponding application row.
+    A directory that the ledger, its sidecar or a former username ties to a
+    base is that base's, whoever holds its folder's name now. One that only its
+    folder name ties to an account is adopted only with a recorded base id and
+    no sign that another account held that name.
     """
     global _inventory_complete, _inventory_issue_count  # noqa: PLW0603 -- process-local readiness during inventory
     _inventory_complete = False
@@ -570,95 +741,32 @@ async def reconcile_legacy_inventory() -> None:
             return {"sources": sources}
 
         receipt = await _worker(discover)
+    attribution = await _legacy_attribution()
     async with session_scope() as session:
-        owners = {user.username: user for user in (await session.exec(select(User))).all()}
-        rows = {(row.user_id, row.name): row for row in (await session.exec(select(KnowledgeBaseRecord))).all()}
+        rows = {row.id: row for row in (await session.exec(select(KnowledgeBaseRecord))).all()}
         runs = {run.id: run for run in (await session.exec(select(KnowledgeBaseStorageMigration))).all()}
     issues = []
-    for relative in receipt.get("sources", {}):
+    for relative, fingerprint in receipt.get("sources", {}).items():
         parts = Path(relative).parts
         if len(parts) != _SOURCE_PATH_PARTS or any(part in (".", "..") or "\\" in part for part in parts):
             issues.append({"code": "ambiguous_source_identity"})
             continue
         if await _worker(_is_retired_source, relative):
             continue
-        owner = owners.get(parts[0])
-        if owner is None:
-            issues.append({"code": "missing_source_owner"})
+        if (storage_root() / relative / ".kb_deleted").exists():
             continue
-        source = storage_root() / relative
-        if (source / ".kb_deleted").exists():
+        if relative in attribution.claims:
+            if issue := _claimed_source_issue(attribution.claims[relative], relative, fingerprint, rows, runs):
+                issues.append(issue)
             continue
-        if (owner.id, parts[1]) in rows:
-            row = rows[owner.id, parts[1]]
-            run = runs.get(row.active_migration_id)
-            recovering_activation = bool(
-                row.backend_type == "sqlite"
-                and run
-                and run.source_backend == "chroma"
-                and run.source_identity == relative
-                and run.source_fingerprint == receipt["sources"][relative]
-                and run.target_generation == row.storage_generation
-                and row.storage_state in ("migrating", "needs_attention")
-            )
-            if row.backend_type != "chroma" and not recovering_activation:
-                issues.append({"code": "ambiguous_source_identity", "owner_id": str(owner.id)})
+        # Nothing but its folder name ties the directory to an account.
+        owner_id = attribution.holder(parts[0])
+        adoption = attribution.adoption(relative, owner_id)
+        if isinstance(adoption, str):
+            issues.append({"code": adoption, **({"owner_id": str(owner_id)} if owner_id else {})})
             continue
-        try:
-            if await _worker(tree_fingerprint, source) != receipt["sources"][relative]:
-                raise ValueError
-            path = source / "embedding_metadata.json"
-            if path.is_symlink() or path.stat().st_size > MAX_SIDECAR_BYTES:
-                raise ValueError
-            metadata = json.loads(await _worker(path.read_bytes))
-            if not isinstance(metadata, dict) or metadata.get("backend_type", "chroma") != "chroma":
-                raise ValueError
-            if metadata.get("name", parts[1]) != parts[1]:
-                raise ValueError
-            selection = metadata.get("model_selection") or {}
-            if isinstance(selection, list):
-                selection = selection[0] if selection else {}
-            if not isinstance(selection, dict):
-                raise TypeError
-            if not selection:
-                model = str(metadata.get("embedding_model") or "")
-                provider = str(metadata.get("embedding_provider") or "Unknown")
-                if provider == "Unknown" and model:
-                    # Match the legacy sidecar backfill so a migrated base can
-                    # still construct its query embedder after the vector copy.
-                    provider = await _worker(infer_embedding_provider, model)
-                selection = {"provider": provider, "name": model}
-            config = metadata.get("backend_config") or {}
-            if not isinstance(config, dict):
-                raise TypeError
-            row = KnowledgeBaseRecord(
-                id=UUID(str(metadata["id"])) if metadata.get("id") else uuid4(),
-                user_id=owner.id,
-                name=parts[1],
-                model_selection=selection,
-                chunk_size=int(metadata.get("chunk_size", 1000)),
-                chunk_overlap=int(metadata.get("chunk_overlap", 200)),
-                separator=metadata.get("separator"),
-                column_config=metadata.get("column_config", []),
-                backend_type="chroma",
-                backend_config=config,
-                storage_state="migrating",
-            )
-            async with session_scope() as session:
-                session.add(row)
-                await session.commit()
-        except Exception:  # noqa: BLE001 -- retain an explicit inventory blocker
-            # A different new worker may have adopted this same source first.
-            async with session_scope() as session:
-                found = (
-                    await session.exec(
-                        select(KnowledgeBaseRecord).where(
-                            KnowledgeBaseRecord.user_id == owner.id, KnowledgeBaseRecord.name == parts[1]
-                        )
-                    )
-                ).first()
-            if found is None or found.backend_type != "chroma":
-                issues.append({"code": "unreadable_or_ambiguous_legacy_metadata", "owner_id": str(owner.id)})
+        if issue := await _adopt(relative, fingerprint, *adoption):
+            issues.append(issue)
     _inventory_issue_count = len(issues)
     directory = private_directory(storage_root() / ".migration")
     path = directory / "inventory.json"
@@ -760,6 +868,7 @@ async def _resume_pending() -> None:
         )
     if not rows:
         return
+    shared = _pass_attribution.set([])
     try:
         for row in rows:
             try:
@@ -773,6 +882,7 @@ async def _resume_pending() -> None:
                     if await session.get(KnowledgeBaseRecord, row.id) is not None:
                         raise
     finally:
+        _pass_attribution.reset(shared)
         # Image cleanup is separate from data success and must not revert an
         # activated generation. The helper protects images used by other runs.
         if os.environ.get("LANGFLOW_KB_MIGRATION_HELPER_IMAGE"):
