@@ -310,8 +310,8 @@ async def test_the_page_describes_this_instance_and_its_steps(client, logged_in_
         {"id": "copy_database", "state": "locked", "reason": "earlier_step"},
         {"id": "copy_knowledge_bases", "state": "skipped", "reason": "no_local_knowledge_bases"},
         {"id": "copy_files", "state": "skipped", "reason": "no_local_files"},
-        {"id": "start_target", "state": "locked", "reason": "earlier_step"},
         {"id": "check_target", "state": "locked", "reason": "earlier_step"},
+        {"id": "start_target", "state": "locked", "reason": "earlier_step"},
     ]
 
 
@@ -346,8 +346,8 @@ async def test_after_the_check_the_next_needed_step_is_current_and_the_rest_wait
         ("copy_database", "locked", "earlier_step"),
         ("copy_knowledge_bases", "skipped", "no_local_knowledge_bases"),
         ("copy_files", "skipped", "no_local_files"),
-        ("start_target", "locked", "earlier_step"),
         ("check_target", "locked", "earlier_step"),
+        ("start_target", "locked", "earlier_step"),
     ]
 
 
