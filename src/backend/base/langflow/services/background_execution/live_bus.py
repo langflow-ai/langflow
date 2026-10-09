@@ -172,18 +172,24 @@ class InMemoryLiveBus:
         async def _gen() -> AsyncIterator[LiveFrame]:
             highest = last_seq
 
-            async def drain_durable(after: int) -> tuple[int, list[LiveFrame]]:
-                fresh = [f for f in await read_durable(after) if f.seq > after]
+            async def drain_durable(after: int, through: int | None = None) -> tuple[int, list[LiveFrame]]:
+                fresh = [
+                    f for f in await read_durable(after) if f.seq > after and (through is None or f.seq <= through)
+                ]
                 return (fresh[-1].seq if fresh else after), fresh
 
             try:
                 for frame in await read_durable(last_seq):
                     highest = max(highest, frame.seq)
                     yield frame
-                # If the job closed before/while we replayed, drain nothing more.
-                if self._closed.get(job_id) and queue.empty():
-                    return
                 while True:
+                    # close() cannot enqueue its sentinel into a full queue.
+                    # Once that queue is consumed, finish from durable storage.
+                    if self._closed.get(job_id) and queue.empty():
+                        highest, fresh = await drain_durable(highest)
+                        for frame in fresh:
+                            yield frame
+                        return
                     if is_done is None:
                         item = await queue.get()
                     else:
@@ -200,7 +206,19 @@ class InMemoryLiveBus:
                                 return
                             continue
                     if item is _CLOSED:
+                        highest, fresh = await drain_durable(highest)
+                        for frame in fresh:
+                            yield frame
                         return
+                    # A slow subscriber can lose live frames to queue overflow.
+                    # Recover missing milestones before advancing Last-Event-ID,
+                    # even when the surviving frame is only an ephemeral token.
+                    # Stop at this frame's cursor to preserve live token order.
+                    missing_through = item.seq - 1 if item.durable else item.seq
+                    if missing_through > highest:
+                        highest, fresh = await drain_durable(highest, through=missing_through)
+                        for frame in fresh:
+                            yield frame
                     if item.durable:
                         if item.seq <= highest:
                             continue
