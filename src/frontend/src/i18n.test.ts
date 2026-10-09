@@ -56,6 +56,8 @@ describe("loadLanguage", () => {
     expect(i18n.hasResourceBundle("tr", "translation")).toBe(false);
     await loadLanguage("tr");
     expect(i18n.hasResourceBundle("tr", "translation")).toBe(true);
-    expect(i18n.getResource("tr", "translation", "chat.newChat")).toBe("Yeni sohbet");
+    expect(i18n.getResource("tr", "translation", "chat.newChat")).toBe(
+      "Yeni sohbet",
+    );
   });
 });
