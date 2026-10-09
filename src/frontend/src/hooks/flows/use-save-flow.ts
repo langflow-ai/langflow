@@ -14,6 +14,7 @@ import useFlowHistoryRepairStore, {
 import useFlowSaveCauseStore from "@/stores/flowSaveCauseStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
 import {
@@ -46,6 +47,15 @@ const keepBuiltOnGraph = (
     version_token: builtOn.version_token,
   };
 };
+
+/** The payload of a save that changes settings only, with no graph to guard. */
+const withoutGraph = ({
+  data: _data,
+  ...settings
+}: FlowUpdatePayload): FlowUpdatePayload => ({
+  ...settings,
+  versionToken: null,
+});
 
 // Opt-out for callers that recover from a save failure themselves.
 export type SaveFlowOptions = { suppressErrorToast?: boolean };
@@ -202,7 +212,7 @@ const useSaveFlow = () => {
           const { id } = flow;
           // The baseline is the last applied server response, never the canvas,
           // which can hold a token from a response this save has not adopted.
-          const payload = buildFlowUpdatePayload({
+          const built = buildFlowUpdatePayload({
             flow,
             persisted:
               currentSavedFlow?.id === id ? currentSavedFlow : undefined,
@@ -210,6 +220,13 @@ const useSaveFlow = () => {
             live: currentFlow?.id === id ? { nodes, edges } : undefined,
             userEdited: useFlowStore.getState().userEditedSinceLoad,
           });
+          // While history is open the canvas shows a point in the flow's past,
+          // not the flow, so no save may carry a graph; settings still save.
+          const payload =
+            useVersionPreviewStore.getState().previewLabel !== null &&
+            "data" in built
+              ? withoutGraph(built)
+              : built;
           // Set by a component update or code edit; the save that carries the
           // graph takes it, so a rename in between does not use it up.
           const cause =
