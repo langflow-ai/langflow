@@ -29,20 +29,25 @@ Ordinary `/healthz` checks remain available during discovery and copying.
 Langflow retains the original Chroma directory, takes a pristine source snapshot, and saves private routing metadata before copying.
 For a SQLite application database, it also takes one consistent database backup shared by the migration runs.
 This automatic `application-before-upgrade-*.sqlite3` backup is created **after** the application schema upgrade.
-It supports recovery within 1.13. It is not an old-version database backup and must not be used to downgrade to 1.12.
+It supports recovery while the upgrade runs. It is not an old-version database backup and must not be used to downgrade to 1.12.
 Each run records the backup's location, so multiple bases do not duplicate the full application database.
+Langflow deletes the backup when an upgrade pass, at startup or on retry, leaves the upgrade finished: discovery is complete, and no base is still on Chroma, migrating, or needs attention.
+This is the condition that `/healthz?require_storage_ready=true` checks.
+If the upgrade finishes because an administrator detaches or deletes the last base that needed attention, the next startup, retry, or data-subject erase deletes the backup.
+A retried base uses its own routing metadata and source snapshot, not the application backup.
+Each run's record of the backup's location remains after the backup is deleted.
 For a PostgreSQL application database, the local copy uses the same path and saves the base's routing metadata. Keep your usual PostgreSQL backups.
 The target remains unpublished until the complete export and import have passed validation.
 Exact SQLite search can order tied results differently from Chroma's approximate search.
 
 If Langflow restarts or an upgrade is interrupted, the next startup automatically resumes the durable migration.
 An incomplete target cannot be used as an empty replacement for the old base.
-Do not remove retained originals or backups until you have verified your data.
+Do not remove retained originals or source snapshots until you have verified your data.
 Allow free space for approximately four times each Chroma store's size plus 64 MiB while it is migrated.
 The application database backup also requires twice the combined database and WAL size plus 64 MiB of free space.
-Retained files include `.migration/<base-id>/<run-id>/source/`, `routing-before-upgrade.json`, and `.migration/application-backups/`.
+Retained files include `.migration/<base-id>/<run-id>/source/` and `routing-before-upgrade.json`. Until the upgrade finishes, they also include `.migration/application-backups/`.
 They can contain document text, user data and encrypted credentials. Protect them as you protect the application database.
-After verifying all migrated bases and making a fresh backup, an administrator can archive or remove the retained source snapshots and application backups.
+After verifying all migrated bases and making a fresh backup, an administrator can archive or remove the retained source snapshots.
 Keep `.migration/bindings/` and active migration targets. Bindings prevent an old source from being adopted again.
 Existing installations already upgraded to 1.13 resume through the same startup path. You do not need to downgrade first.
 
@@ -100,7 +105,16 @@ This applies once the base's SQLite store is ready, or after the base is deleted
 A copy that is still the only data of a base that has not finished upgrading, or of a base whose deletion has not finished, is kept, and the erase waits for that base.
 An erase limited to some flows cannot attribute the copies of a deleted base to a flow, so only an unlimited erase removes them.
 Erasing a builder also removes their `.migration/<base-id>/` snapshots, routing backups and source bindings.
-Neither erase changes the shared `.migration/application-backups/` database backup.
+
+Both erases also reach the shared application database backup in `.migration/application-backups/`, which holds every application row as it was when the upgrade copied its first base.
+If the upgrade has finished when the erase completes, the erase deletes the backup.
+While an upgrade pass is running, or while a base is still upgrading or needs attention, the backup is kept and the erase reports it.
+A backup that the erase cannot delete, for example on a read-only volume, is also reported, and the erase still completes.
+The request's `retained_backups` count and the `dsar:erase` audit event's `backups_not_reached` field give the number of backups that the erase did not reach.
+The count includes the backup of any other application database that uses the same knowledge-base directory. An erase deletes only its own database's backup.
+Langflow deletes the backup once the upgrade finishes, as described above.
+To remove it sooner, retry, detach or delete the bases that need attention. The next startup, retry, or erase then deletes it.
+A PostgreSQL application database has no local backup, so both values are `0`.
 
 ## Concurrency and platform support
 

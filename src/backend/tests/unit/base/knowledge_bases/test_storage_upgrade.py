@@ -22,7 +22,7 @@ from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.memory_base.model import MemoryBase, MemoryBaseSession
 from langflow.services.database.models.user.model import User
-from langflow.services.knowledge_base_storage import coordinator, maintenance, runtime
+from langflow.services.knowledge_base_storage import application_backup, coordinator, maintenance, runtime
 from lfx.base.knowledge_bases.backends.base import IngestedDocument
 from lfx.base.knowledge_bases.migration import ExportHeader, write_export
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -64,6 +64,9 @@ async def database(tmp_path, monkeypatch):
     monkeypatch.setattr(runtime, "get_db_service", lambda: service)
     monkeypatch.setattr(coordinator, "get_db_service", lambda: service)
     monkeypatch.setattr(coordinator, "get_settings_service", lambda: settings)
+    monkeypatch.setattr(application_backup, "session_scope", sessions)
+    monkeypatch.setattr(application_backup, "get_db_service", lambda: service)
+    monkeypatch.setattr(application_backup, "get_settings_service", lambda: settings)
     monkeypatch.setattr(coordinator, "check_local_upgrade", lambda *_args: None)
     monkeypatch.setattr(coordinator, "_inventory_complete", True)
     monkeypatch.setattr(coordinator, "_inventory_scanned", False)
@@ -639,8 +642,9 @@ async def test_first_start_native_migration_without_receipt_docker_or_embeddings
     backups = database.root / ".migration" / str(row.id) / str(current.active_migration_id)
     assert (backups / "routing-before-upgrade.json").is_file()
     reference = json.loads((backups / "application-backup.json").read_text())
-    with sqlite3.connect(database.root / ".migration" / reference["backup"]) as connection:
-        assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    # The pass that finished the upgrade no longer needs the application backup, so it deleted it.
+    assert reference["backup"].startswith("application-backups/application-before-upgrade-")
+    assert not (database.root / ".migration" / reference["backup"]).exists()
     await coordinator.run_pending()
     assert (await read_kb(database, row.id)).storage_generation == 2
     await backend.teardown()
