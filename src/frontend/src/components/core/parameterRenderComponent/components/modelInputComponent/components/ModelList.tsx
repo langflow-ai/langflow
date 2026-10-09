@@ -99,7 +99,7 @@ const ModelList = ({
                       size="tag"
                       data-testid={`${data.name}-deprecated-badge`}
                     >
-                      Deprecated
+                      {t("modelProvider.deprecated")}
                     </Badge>
                   ) : null}
                   <div className="pl-2 ml-auto">

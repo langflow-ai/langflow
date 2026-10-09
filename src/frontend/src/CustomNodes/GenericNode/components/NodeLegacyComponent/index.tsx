@@ -58,7 +58,7 @@ export default function NodeLegacyComponent({
           data-testid="dismiss-warning-bar"
           disabled={disabled}
         >
-          Dismiss
+          {t("node.dismiss")}
         </Button>
       </div>
       <div className="text-mmd text-muted-foreground w-full">

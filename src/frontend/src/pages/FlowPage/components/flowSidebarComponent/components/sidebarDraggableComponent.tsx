@@ -134,11 +134,12 @@ export const SidebarDraggableComponent = forwardRef(
     // the text the row shows, and the Beta / Legacy badge is part of that
     // visible text — so it goes into the name too ("Add Listen Beta to
     // canvas"), otherwise voice-control users saying "click Listen Beta"
-    // get no match. Keep these literals in sync with the badges below.
+    // get no match. Use the same keys as the badges below so both stay in the
+    // user's language.
     const visibleName = [
       paletteLabel ?? display_name,
-      beta && "Beta",
-      legacy && "Legacy",
+      beta && t("sidebar.betaLabel"),
+      legacy && t("sidebar.legacyLabel"),
     ]
       .filter(Boolean)
       .join(" ");
@@ -237,7 +238,7 @@ export const SidebarDraggableComponent = forwardRef(
                     size="xq"
                     className="ml-1.5 shrink-0"
                   >
-                    Beta
+                    {t("sidebar.betaLabel")}
                   </Badge>
                 )}
                 {legacy && (
@@ -246,7 +247,7 @@ export const SidebarDraggableComponent = forwardRef(
                     size="xq"
                     className="ml-1.5 shrink-0"
                   >
-                    Legacy
+                    {t("sidebar.legacyLabel")}
                   </Badge>
                 )}
               </div>
