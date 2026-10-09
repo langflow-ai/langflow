@@ -857,7 +857,9 @@ describe("Back up this instance", () => {
     );
     const location = screen.getByLabelText("Where is the backup?");
     expect(location).toBeRequired();
-    expect(location).toHaveAccessibleDescription(/^Keep it off this server\./);
+    expect(location).toHaveAccessibleDescription(
+      /^Required\. Say where you put the backup/,
+    );
     // Nothing is said of a copy until this pause has one.
     expect(screen.getByRole("status")).toBeEmptyDOMElement();
     // Only the folders this instance keeps data in.
@@ -865,6 +867,13 @@ describe("Back up this instance", () => {
       screen.getByText("Knowledge bases folder: /app/data/knowledge_bases"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/^Files folder/)).not.toBeInTheDocument();
+    // The download is the database alone, and the folders are copied by hand.
+    expect(
+      screen.getByText(/^This file is the database only\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/^The database copy doesn't hold these folders\./),
+    ).toBeInTheDocument();
     unmount();
 
     // A copy made before changes stopped misses what changed since.
@@ -966,6 +975,13 @@ describe("Back up this instance", () => {
       screen.queryByRole("button", { name: "Download the database" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText("Files folder: /app/data")).toBeInTheDocument();
+    // No download on this page, so the line under the folders speaks of the database copy.
+    expect(
+      screen.getByText(/^The database copy doesn't hold these folders\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/^This file is the database only\./),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "I've backed up everything" }),
     ).toBeEnabled();
@@ -991,7 +1007,7 @@ describe("Back up this instance", () => {
     );
     // Nothing on this server to copy by hand, so no advice about folders.
     expect(
-      screen.queryByText("Copy each folder somewhere off this server."),
+      screen.queryByText(/^The database copy doesn't hold these folders\./),
     ).not.toBeInTheDocument();
 
     await userEvent.click(
