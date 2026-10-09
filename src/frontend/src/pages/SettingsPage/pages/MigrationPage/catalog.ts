@@ -51,11 +51,8 @@ export const CHECKS: Record<
 > = {
   version: { slug: "version" },
   "source: schema": { slug: "schema" },
-  "default superuser": {
-    slug: "defaultSuperuser",
-    accept: true,
-    handledIn: "start_target",
-  },
+  // Its warning asks for a password while changes can still be made, so no later step is named for it.
+  "default superuser": { slug: "defaultSuperuser", accept: true },
   "embedding models": {
     slug: "embeddingModels",
     handledIn: "copy_knowledge_bases",

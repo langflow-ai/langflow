@@ -639,7 +639,7 @@
   "settings.migration.check.schema.title": "데이터베이스 버전",
   "settings.migration.check.schema.body": "점검에서 이 인스턴스의 데이터베이스를 읽지 못해 나머지 점검은 실행하지 않았습니다. 이유는 '자세히'에 있습니다. 다른 Langflow 버전이 데이터베이스를 마지막으로 업데이트했다면 이 인스턴스를 다시 시작한 뒤 점검을 다시 실행하세요.",
   "settings.migration.check.defaultSuperuser.title": "'langflow' 계정",
-  "settings.migration.check.defaultSuperuser.body": "이 계정은 작업물을 소유하고 있지만 로그인한 적이 없습니다. 새 인스턴스에서는 관리자 계정으로만 남으며, 관리자 계정은 '새 인스턴스 시작' 단계에서 설정합니다.",
+  "settings.migration.check.defaultSuperuser.body": "이 인스턴스는 사용자를 자동으로 로그인시키므로, 이 계정의 비밀번호는 아무도 모르는 것일 수 있습니다. 새 인스턴스는 그 비밀번호를 그대로 유지하며, 그 비밀번호를 요구할 수 있습니다. 변경을 일시 중지하기 전에, 알고 있는 비밀번호로 로그인되는지 확인하거나, 비밀번호를 설정하세요. 방법과, 처리한 뒤에도 이 항목이 계속 표시되는 이유는 '자세히'에 있습니다.",
   "settings.migration.check.defaultSuperuser.accept": "수락합니다. 새 인스턴스에서 관리자 계정으로 남습니다.",
   "settings.migration.check.embeddingModels.title": "Embedding Model",
   "settings.migration.check.embeddingModels.body": "일부 Knowledge Base에는 어떤 Model로 만들었는지 기록이 없습니다. 새 인스턴스에서는 검색에 다른 Model을 쓸 수 있습니다. 새 인스턴스에서 검색 결과가 이상하면 Knowledge Base를 다시 만드세요.",

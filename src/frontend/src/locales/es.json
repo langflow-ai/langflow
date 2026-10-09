@@ -2012,7 +2012,7 @@
   "settings.migration.check.schema.title": "Versión de la base de datos",
   "settings.migration.check.schema.body": "La comprobación no pudo leer la base de datos de esta instancia, así que las demás comprobaciones no se ejecutaron. El motivo está en Detalles. Si otra versión de Langflow fue la última en actualizar la base de datos, reinicia esta instancia y vuelve a ejecutar la comprobación.",
   "settings.migration.check.defaultSuperuser.title": "La cuenta 'langflow'",
-  "settings.migration.check.defaultSuperuser.body": "Tiene trabajo a su nombre, pero nunca ha iniciado sesión. La nueva instancia solo la conserva como su cuenta de administrador, que se configura en 'Iniciar la nueva instancia'.",
+  "settings.migration.check.defaultSuperuser.body": "Esta instancia inicia la sesión de los usuarios automáticamente, así que la contraseña de esta cuenta puede ser una que nadie conoce. La nueva instancia conserva esa contraseña y puede pedirla. Antes de pausar los cambios, comprueba que puedes iniciar sesión con una contraseña que conozcas, o establece una. En Detalles se explica cómo hacerlo y por qué este hallazgo sigue en la lista después.",
   "settings.migration.check.defaultSuperuser.accept": "Aceptar. La nueva instancia la conserva como su administrador.",
   "settings.migration.check.embeddingModels.title": "Modelos de incrustación",
   "settings.migration.check.embeddingModels.body": "Algunas bases de conocimientos no registran qué modelo las creó. La búsqueda en la nueva instancia puede usar un modelo distinto. Si allí los resultados no parecen correctos, reconstrúyelas.",

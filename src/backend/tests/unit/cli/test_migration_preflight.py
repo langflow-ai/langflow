@@ -24,10 +24,11 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
-from langflow.services.deps import get_settings_service, get_storage_service, session_scope
+from langflow.services.deps import get_auth_service, get_settings_service, get_storage_service, session_scope
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.utils.version import get_version_info
-from lfx.services.settings.constants import DEFAULT_SUPERUSER
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
+from pydantic import SecretStr
 from sqlmodel import select
 
 if TYPE_CHECKING:
@@ -296,6 +297,10 @@ class TestDefaultSuperuser:
         # On a target that deletes it, the workaround keeps it, and says what it leaves open.
         assert "last_login_at = now()" in deleted
         assert "API keys minted while AUTO_LOGIN was on keep working" in deleted
+        # The account is deactivated through the API. The editor has no page for it.
+        assert "PATCH /api/v1/users/" in deleted
+        assert "is_active false" in deleted
+        assert "Admin page" not in deleted
 
     @pytest.fixture
     async def owning_default_superuser(self, active_user, storage_dir, kb_root):  # noqa: ARG002
@@ -336,8 +341,92 @@ class TestDefaultSuperuser:
 
         assert check.status == "fail"
 
-    async def test_a_default_superuser_that_signed_in_passes(self, safe_superuser):  # noqa: ARG002
-        assert _check(await run_preflight(), "default superuser").status == "ok"
+    async def test_a_default_superuser_that_signed_in_passes(self, safe_superuser, monkeypatch):  # noqa: ARG002
+        # This instance asks for a password, so the check takes the account's password as known. It says what
+        # it read, because a run by hand without the server's variables can read AUTO_LOGIN as off.
+        monkeypatch.setattr(get_settings_service().auth_settings, "AUTO_LOGIN", False)
+
+        check = _check(await run_preflight(), "default superuser")
+
+        assert check.status == "ok"
+        assert "AUTO_LOGIN is off for this command" in check.summary
+
+    async def test_a_default_superuser_that_signed_in_under_auto_login_is_told_to_set_a_password(
+        self,
+        safe_superuser,  # noqa: ARG002
+        monkeypatch,
+    ):
+        # AUTO_LOGIN signs everyone in as this account, and its password can be one that Langflow made. The
+        # target keeps the account with the password it has.
+        monkeypatch.setattr(get_settings_service().auth_settings, "AUTO_LOGIN", True)
+        # No password is given to the command, so none is known.
+        monkeypatch.setattr(get_settings_service().auth_settings, "SUPERUSER_PASSWORD", SecretStr(""))
+
+        report = await run_preflight(target_revision=HEAD)
+        check = _check(report, "default superuser")
+
+        assert check.status == "warn"
+        assert "LANGFLOW_SUPERUSER_PASSWORD" in check.summary
+        # It says how to find out, and names the account's own address for the change.
+        assert "POST /api/v1/login" in check.problems[0]
+        async with session_scope() as session:
+            default = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).one()
+        assert f"PATCH /api/v1/users/{default.id} " in check.problems[0]
+        # It says what makes it pass, and that it stays until then.
+        assert "passes once the LANGFLOW_SUPERUSER_PASSWORD it sees signs in" in check.problems[-1]
+        assert "stays while AUTO_LOGIN is on" in check.problems[-1]
+        # It is advice, so it does not refuse the migration.
+        assert report.ok
+
+    @pytest.mark.parametrize(
+        ("stored", "given", "status"),
+        [
+            # The password the command is given signs in, so it is known and the target can be given it.
+            ("a password somebody set", "a password somebody set", "ok"),
+            ("a password somebody set", "another password", "warn"),
+            # The sign-in refuses the old default, so it is not a known password even where the hash matches.
+            (
+                LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value(),
+                LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value(),
+                "warn",
+            ),
+        ],
+    )
+    async def test_a_default_superuser_under_auto_login_passes_when_the_given_password_signs_in(
+        self,
+        safe_superuser,  # noqa: ARG002
+        monkeypatch,
+        stored,
+        given,
+        status,
+    ):
+        auth_settings = get_settings_service().auth_settings
+        monkeypatch.setattr(auth_settings, "AUTO_LOGIN", True)
+        monkeypatch.setattr(auth_settings, "SUPERUSER_PASSWORD", SecretStr(given))
+        async with session_scope() as session:
+            default = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).one()
+            default.password = get_auth_service().get_password_hash(stored)
+            session.add(default)
+            await session.commit()
+
+        check = _check(await run_preflight(target_revision=HEAD), "default superuser")
+
+        assert check.status == status
+        if status == "ok":
+            assert "LANGFLOW_SUPERUSER_PASSWORD this command sees signs in" in check.summary
+
+    async def test_a_default_superuser_that_never_signed_in_under_auto_login_keeps_its_own_answer(
+        self,
+        owning_default_superuser,  # noqa: ARG002
+        monkeypatch,
+    ):
+        # A target that claims this account sets the configured password on it, so there is none to set first.
+        monkeypatch.setattr(get_settings_service().auth_settings, "AUTO_LOGIN", True)
+
+        check = _check(await run_preflight(target_revision=HEAD), "default superuser")
+
+        assert check.status == "ok"
+        assert "the target keeps the account" in check.summary
 
 
 class TestTargetKey:

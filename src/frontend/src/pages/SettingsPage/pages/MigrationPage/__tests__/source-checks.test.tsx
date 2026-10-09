@@ -85,3 +85,50 @@ it("does not report a deliberate stop as a transport failure", async () => {
     }),
   ).resolves.toBeUndefined();
 });
+
+// On the page this check never fails. Its warning has to be dealt with before the pause, so the row names no
+// later step.
+it("says what to do about the 'langflow' account and names no later step", async () => {
+  const warned = {
+    ...migration,
+    record: {
+      ...migration.record,
+      steps: {
+        check_source: {
+          ...migration.record.steps.check_source,
+          report: {
+            ok: true,
+            checks: [
+              {
+                name: "default superuser",
+                status: "warn",
+                summary: "'langflow' has signed in and AUTO_LOGIN is on",
+                problems: [],
+              },
+              {
+                name: "role assignments",
+                status: "warn",
+                summary: "1 role assignment moves with the database",
+                problems: [],
+              },
+            ],
+          },
+        },
+      },
+    },
+  };
+  jest.spyOn(api, "get").mockResolvedValue({ data: warned });
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Subject />
+    </QueryClientProvider>,
+  );
+
+  const row = await screen.findByTestId("migration-check-default superuser");
+  expect(row).toHaveTextContent("Before you pause changes");
+  expect(row).not.toHaveTextContent("Handled in");
+  // A warning that a later step deals with still names it.
+  expect(
+    screen.getByTestId("migration-check-role assignments"),
+  ).toHaveTextContent("Handled in: Start the new instance");
+});
