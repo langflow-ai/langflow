@@ -45,7 +45,9 @@ _APPEND_EVENT_MAX_RETRIES = 50
 # session_scope() (pool checkout). Durable agent runs stream one event per step/token,
 # so a fresh checkout per event is the dominant source of connection churn for chatty
 # runs. The caller's contract is unchanged -- append_event still awaits and returns the
-# real, gap-free seq -- only the number of connection checkouts changes.
+# real, gap-free seq -- only the number of connection checkouts changes. Only paid when
+# another append is already queued when this one takes over as window owner -- a lone
+# append has nothing to batch with, so it flushes immediately instead of waiting it out.
 _APPEND_EVENT_BATCH_WINDOW_S = 0.01
 
 
@@ -481,7 +483,15 @@ class JobService(Service):
         try:
             async with lock:
                 if not future.done():
-                    await asyncio.sleep(_APPEND_EVENT_BATCH_WINDOW_S)
+                    # A bare sleep(0) doesn't wait in wall-clock time -- it only lets
+                    # whatever's already scheduled on this tick run before we resume, so
+                    # genuinely-simultaneous callers (e.g. a burst of concurrent requests)
+                    # get a free chance to join. Only pay the real window -- a wait with
+                    # nothing queued yet is a pure latency tax -- once that check finds
+                    # someone actually waiting on us.
+                    await asyncio.sleep(0)
+                    if len(self._append_queue) > 1:
+                        await asyncio.sleep(_APPEND_EVENT_BATCH_WINDOW_S)
                     batch, self._append_queue = self._append_queue, []
                     flush = asyncio.create_task(self._flush_append_batch(batch))
                     try:
