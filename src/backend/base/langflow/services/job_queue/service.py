@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import random
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -18,6 +19,11 @@ if TYPE_CHECKING:
 
 # Sentinel value written to Redis Streams to signal end-of-stream to consumers.
 _STREAM_SENTINEL_DATA = b"__sentinel__"
+# Base interval for the periodic in-memory queue cleanup sweep, and the +/-20%
+# jitter applied to it so replicas that start near-simultaneously (a rolling
+# deploy) desynchronize their sweeps instead of polling in lockstep forever.
+_CLEANUP_INTERVAL_S = 60
+_CLEANUP_JITTER_FRACTION = 0.2
 
 # Shared Redis key prefix for job event streams. Producer (RedisJobQueueService) and
 # consumer (RedisQueueWrapper) MUST agree on this — keep a single source of truth.
@@ -505,7 +511,10 @@ class JobQueueService(Service):
         """
         while not self._closed:
             try:
-                await asyncio.sleep(60)  # Sleep for 60 seconds before next cleanup attempt.
+                jittered = _CLEANUP_INTERVAL_S * random.uniform(  # noqa: S311 - jitter, not crypto
+                    1 - _CLEANUP_JITTER_FRACTION, 1 + _CLEANUP_JITTER_FRACTION
+                )
+                await asyncio.sleep(jittered)
                 await self._cleanup_old_queues()
             except asyncio.CancelledError:
                 await logger.adebug("Periodic cleanup task received cancellation signal.")
