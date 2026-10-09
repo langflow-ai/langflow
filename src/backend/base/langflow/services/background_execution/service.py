@@ -249,9 +249,9 @@ class BackgroundExecutionService(Service):
         belong to a live sibling. The default mode has no periodic sweep, so
         without this pass the run would stay IN_PROGRESS until the next restart.
 
-        Only heartbeated rows are considered. By now this process and its
-        siblings may be serving runs that never heartbeat, and the startup sweep
-        already failed any such row that was left over from before boot.
+        Only heartbeated rows are considered. A sibling still on an older version
+        may be serving runs that never heartbeat, and the startup sweep already
+        failed any such row that was left over from before boot.
         """
         if self._lease_expiry_task is not None:
             return
