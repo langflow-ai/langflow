@@ -173,3 +173,48 @@ class TestAutoDefaultNoLongerGuessesAProvider:
         )
 
         assert not result["model"]["value"]
+
+
+class TestApiKeyBindingSurvivesAnEmptyModel:
+    """Hiding the API key for a missing model must not erase what the user saved.
+
+    Opening a flow refreshes a model field that has no options yet. With no model
+    selected the response used to clear the key, so a key bound to a global
+    variable (``OPENAI_API_KEY``) came back as an empty literal, and the editor
+    saved that loss with the next edit.
+    """
+
+    @staticmethod
+    def _bound_key() -> dict:
+        return {"value": "OPENAI_API_KEY", "load_from_db": True, "show": True}
+
+    def test_empty_model_refresh_keeps_a_variable_bound_key(self):
+        build_config = {"model": {"value": "", "options": []}, "api_key": self._bound_key()}
+
+        result = handle_model_input_update(
+            component=_component(),
+            build_config=build_config,
+            field_value="",
+            field_name="model",
+            get_options_func=_get_options,
+        )
+
+        assert result["api_key"]["value"] == "OPENAI_API_KEY"
+        assert result["api_key"]["load_from_db"] is True
+
+    def test_provider_without_an_api_key_still_clears_it(self):
+        """The previous provider's credential must not leak into a provider that has no key."""
+        selection = [{"name": "llama3", "provider": "Ollama", "metadata": {}}]
+        build_config = {"model": {"value": selection, "options": []}, "api_key": self._bound_key()}
+
+        result = handle_model_input_update(
+            component=_component(),
+            build_config=build_config,
+            field_value=selection,
+            field_name="model",
+            get_options_func=lambda user_id=None: selection,  # noqa: ARG005
+        )
+
+        assert result["api_key"]["show"] is False
+        assert result["api_key"]["value"] == ""
+        assert result["api_key"]["load_from_db"] is False

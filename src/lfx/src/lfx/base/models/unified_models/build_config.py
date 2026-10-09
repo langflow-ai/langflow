@@ -647,8 +647,14 @@ def handle_model_input_update(
     # sets ``show=True`` for providers whose metadata maps a variable to the
     # ``api_key`` field; if it wasn't shown, the provider has no api_key
     # variable and the previous provider's credential must not leak across
-    # the switch.
-    if "api_key" in build_config and not build_config["api_key"].get("show", False):
+    # the switch. With no model selected there is no provider to leak into, so
+    # the saved key, or its global variable, stays as it is, only hidden.
+    selected_provider = (
+        current_model_value[0].get("provider", "")
+        if isinstance(current_model_value, list) and current_model_value and isinstance(current_model_value[0], dict)
+        else ""
+    )
+    if selected_provider and "api_key" in build_config and not build_config["api_key"].get("show", False):
         build_config["api_key"]["value"] = ""
         build_config["api_key"]["load_from_db"] = False
 
