@@ -163,6 +163,16 @@ function Migration({ migration }: { migration: MigrationState }) {
     },
   ];
 
+  // What has to be ready elsewhere, each thing only when this instance's move calls for it.
+  const needs = [
+    instance.database.type === "sqlite" && "database",
+    instance.knowledge_bases.local && "vectors",
+    instance.files.local && "bucket",
+    "access",
+    "backup",
+    "window",
+  ].filter(Boolean);
+
   let number = 0;
   return (
     <>
@@ -200,6 +210,24 @@ function Migration({ migration }: { migration: MigrationState }) {
           {t("settings.migration.oneWay")}
         </p>
       </section>
+
+      <details
+        // Read before the first step. Once the check is done it closes, and stays one click away.
+        open={stateOf("check_source").state !== "done"}
+        className="rounded-lg border p-4 text-sm"
+      >
+        <summary className="cursor-pointer font-medium">
+          {t("settings.migration.need.title")}
+        </summary>
+        <ul
+          className="mt-2 list-disc pl-5 text-muted-foreground"
+          data-testid="migration-needs"
+        >
+          {needs.map((need) => (
+            <li key={String(need)}>{t(`settings.migration.need.${need}`)}</li>
+          ))}
+        </ul>
+      </details>
 
       {PARTS.map((part, index) => (
         <Fragment key={part.slug}>
