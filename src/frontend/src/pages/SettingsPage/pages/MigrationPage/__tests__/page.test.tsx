@@ -697,6 +697,65 @@ describe("the steps after the check", () => {
   });
 });
 
+describe("what the admin needs before starting", () => {
+  const needs = () =>
+    within(screen.getByTestId("migration-needs"))
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+
+  it("lists what this instance's move needs, each thing once", () => {
+    const migration = state({ check_source: ["current"] });
+    migration.instance.knowledge_bases.local = true;
+    open(migration);
+
+    expect(screen.getByText("What you'll need")).toBeInTheDocument();
+    expect(needs()).toEqual([
+      "An empty PostgreSQL database for the new instance.",
+      "PostgreSQL with the pgvector extension, for knowledge bases.",
+      "An S3 bucket and its access keys, for files.",
+      "Access to where the new instance runs, or someone who has it.",
+      "A place off this server to keep the backup.",
+      "A time when people can pause their changes.",
+    ]);
+  });
+
+  it("leaves out what this instance doesn't move", () => {
+    const migration = state({ check_source: ["current"] });
+    migration.instance.database = {
+      type: "postgresql",
+      location: "db.internal:5432/langflow",
+    };
+    migration.instance.files = {
+      storage: "s3",
+      bucket: "acme",
+      prefix: "files",
+      local: false,
+    };
+    open(migration);
+
+    expect(needs()).toEqual([
+      "Access to where the new instance runs, or someone who has it.",
+      "A place off this server to keep the backup.",
+      "A time when people can pause their changes.",
+    ]);
+  });
+
+  it("stays open until the check is done, and can be opened again after", () => {
+    const { unmount } = open(state({ check_source: ["current"] }));
+    expect(
+      screen.getByTestId("migration-needs").closest("details"),
+    ).toHaveAttribute("open");
+    unmount();
+
+    open(state({ check_source: ["done"], connect_target: ["current"] }));
+    const list = screen.getByTestId("migration-needs").closest("details");
+    expect(list).not.toHaveAttribute("open");
+    expect(
+      within(list as HTMLElement).getByText("What you'll need"),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("what another admin does meanwhile", () => {
   const BANNER = "Changes are paused on this instance.";
   const pause = { frozen_at: "2026-10-06T12:00:00Z", frozen_by: "alice" };
