@@ -25,16 +25,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const DEFAULT_LOCALES = [
-  "de",
-  "es",
-  "fr",
-  "ja",
-  "ko",
-  "pt",
-  "tr",
-  "zh-Hans",
-];
+export const DEFAULT_LOCALES = ["de", "es", "fr", "ja", "ko", "pt", "zh-Hans"];
+export const PARTIAL_LOCALES = ["tr"];
 const PLURAL_SUFFIXES = ["_zero", "_one", "_two", "_few", "_many", "_other"];
 
 /** Walk a directory for .ts/.tsx files. */
@@ -74,6 +66,7 @@ const placeholders = (value) =>
  * @param {string} [options.srcRoot] Tree to scan (default `<frontendRoot>/src`).
  * @param {string} [options.localesDir] Bundle directory (default `<srcRoot>/locales`).
  * @param {string[]} [options.locales] Locales required to be in parity with en.
+ * @param {string[]} [options.partialLocales] Locales allowed to fall back to en.
  * @returns {{fileCount: number, staticCallCount: number, uniqueKeyCount: number,
  *   dynamicCount: number, missing: Array<{key: string, file: string, line: number}>,
  *   parityProblems: Array<{locale: string, key: string, reason: string}>, ok: boolean}}
@@ -83,6 +76,7 @@ export function analyzeI18n({
   srcRoot = path.join(frontendRoot, "src"),
   localesDir = path.join(srcRoot, "locales"),
   locales = DEFAULT_LOCALES,
+  partialLocales = [],
 } = {}) {
   const readJson = (file) =>
     JSON.parse(readFileSync(path.join(localesDir, file), "utf8"));
@@ -146,6 +140,19 @@ export function analyzeI18n({
     }
   }
 
+  // Partial locales may intentionally omit keys and use English fallback, but
+  // every shipped key must exist in en.json with matching placeholders.
+  for (const locale of partialLocales) {
+    const bundle = readJson(`${locale}.json`);
+    for (const key of Object.keys(bundle)) {
+      if (!enKeys.has(key)) {
+        parityProblems.push({ locale, key, reason: "unknown key" });
+      } else if (placeholders(en[key]) !== placeholders(bundle[key])) {
+        parityProblems.push({ locale, key, reason: "placeholder mismatch" });
+      }
+    }
+  }
+
   return {
     fileCount: sourceFiles.length,
     staticCallCount,
@@ -172,6 +179,7 @@ export function reportI18n(
     stdout: (text) => process.stdout.write(text),
     stderr: (text) => process.stderr.write(text),
   },
+  partialLocaleCount = 0,
 ) {
   out.stdout(`Scanned ${result.fileCount} source files.\n`);
   out.stdout(
@@ -199,7 +207,11 @@ export function reportI18n(
 
   if (result.ok) {
     out.stdout(
-      `✓ All used keys exist in en.json; all ${localeCount} locales are in parity (keys + placeholders).\n`,
+      `✓ All used keys exist in en.json; all ${localeCount} locales are in parity (keys + placeholders)` +
+        (partialLocaleCount > 0
+          ? `; ${partialLocaleCount} partial locale(s) checked.`
+          : ".") +
+        "\n",
     );
     return 0;
   }
@@ -214,6 +226,11 @@ if (isCli) {
     "..",
   );
   process.exit(
-    reportI18n(analyzeI18n({ frontendRoot }), DEFAULT_LOCALES.length),
+    reportI18n(
+      analyzeI18n({ frontendRoot, partialLocales: PARTIAL_LOCALES }),
+      DEFAULT_LOCALES.length,
+      undefined,
+      PARTIAL_LOCALES.length,
+    ),
   );
 }
