@@ -14,8 +14,10 @@ import logging
 import os
 import re
 import socket
+import sqlite3
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -219,7 +221,9 @@ async def _add(*rows) -> None:
         await session.commit()
 
 
-async def _run_and_hang_up(client, headers, on_first_event: Callable[[], Awaitable[None]] | None = None) -> None:
+async def _run_and_hang_up(
+    client, headers, on_first_event: Callable[[], Awaitable[None]] | None = None, path: str = "/api/v1/migration/checks"
+) -> None:
     """Drive the app as a raw ASGI client that hangs up after the first event.
 
     on_first_event runs while the stream waits to send that event, so the run is still live.
@@ -247,8 +251,8 @@ async def _run_and_hang_up(client, headers, on_first_event: Callable[[], Awaitab
         "http_version": "1.1",
         "method": "POST",
         "scheme": "http",
-        "path": "/api/v1/migration/checks",
-        "raw_path": b"/api/v1/migration/checks",
+        "path": path,
+        "raw_path": path.encode(),
         "query_string": b"",
         "root_path": "",
         "headers": raw_headers,
@@ -279,6 +283,8 @@ async def test_only_a_superuser_can_open_the_migration(client, logged_in_headers
         await client.delete(PAUSE, headers=logged_in_headers),
         await client.put("api/v1/migration/destinations", json={}, headers=logged_in_headers),
         await client.post("api/v1/migration/secret-key/verify", json={"fingerprint": "0"}, headers=logged_in_headers),
+        await client.post("api/v1/migration/backup/database", headers=logged_in_headers),
+        await client.post("api/v1/migration/steps/backup/confirm", json={"location": "x"}, headers=logged_in_headers),
     ]
 
     assert [response.status_code for response in refused] == [403] * len(refused)
@@ -1947,7 +1953,7 @@ async def test_a_check_that_passes_after_the_pause_completes_the_step(client, lo
 
     steps = await _steps(client, headers)
     assert steps["pause"] == ("done", None)
-    assert steps["backup"] == ("current", "not_available")
+    assert steps["backup"] == ("current", None)
 
 
 async def test_a_check_from_an_earlier_pause_does_not_count_for_the_next_one(
@@ -3005,3 +3011,161 @@ async def test_the_fingerprint_read_on_the_new_instance_confirms_the_secret_key(
     assert f"{admin} gave a secret key fingerprint that does not match" in server_log.getvalue()
     assert f"{admin} confirmed the secret key on the new instance" in server_log.getvalue()
     assert _fingerprint() not in server_log.getvalue()
+
+
+async def test_the_database_backup_needs_the_pause_and_a_sqlite_database(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers, download = logged_in_headers_super_user, "api/v1/migration/backup/database"
+
+    not_paused = await client.post(download, headers=headers)
+
+    assert not_paused.status_code == 409
+    assert not_paused.json()["detail"] == {"code": "not_paused"}
+
+    _checked(config_dir, [PASSING], **PREPARED, pause=PAUSED_AFTER_THE_CHECK)
+    monkeypatch.setattr(get_db_service(), "database_url", "postgresql://db.internal:5432/langflow")
+    not_sqlite = await client.post(download, headers=headers)
+
+    assert not_sqlite.status_code == 409
+    assert not_sqlite.json()["detail"] == {"code": "not_sqlite"}
+
+
+async def test_the_database_backup_is_a_whole_copy_and_leaves_nothing_on_the_server(
+    client, logged_in_headers_super_user, config_dir, tmp_path, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(scratch))
+    _checked(config_dir, [PASSING], **PREPARED, pause=PAUSED_AFTER_THE_CHECK)
+
+    response = await client.post("api/v1/migration/backup/database", headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.headers["content-disposition"].startswith('attachment; filename="langflow-backup-')
+    (tmp_path / "backup.db").write_bytes(response.content)
+    backup = sqlite3.connect(tmp_path / "backup.db")
+    try:
+        assert backup.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
+        assert ("activeuser",) in backup.execute('SELECT username FROM "user"').fetchall()
+    finally:
+        backup.close()
+    assert list(scratch.iterdir()) == []
+    downloaded_at = (await _migration(client, headers))["record"]["backup"]["database_downloaded_at"]
+    assert datetime.fromisoformat(downloaded_at) > datetime.fromisoformat(PAUSED_AFTER_THE_CHECK["frozen_at"])
+
+
+async def test_a_backup_download_that_is_cut_short_is_deleted_and_does_not_count(
+    client, logged_in_headers_super_user, config_dir, tmp_path, monkeypatch
+):
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(scratch))
+    # Small pieces, so that the client is gone before the last one.
+    monkeypatch.setattr(migration_module, "_CHUNK", 1024)
+    _checked(config_dir, [PASSING], **PREPARED, pause=PAUSED_AFTER_THE_CHECK)
+
+    await _run_and_hang_up(client, logged_in_headers_super_user, path="/api/v1/migration/backup/database")
+
+    assert list(scratch.iterdir()) == []
+    assert "backup" not in (await _migration(client, logged_in_headers_super_user))["record"]
+
+
+async def test_the_backup_is_confirmed_only_once_the_pause_is_checked(client, logged_in_headers_super_user, config_dir):
+    headers, confirm = logged_in_headers_super_user, "api/v1/migration/steps/backup/confirm"
+    _checked(config_dir, [PASSING], **PREPARED, pause=PAUSED_AFTER_THE_CHECK)
+
+    locked = await client.post(confirm, json={"location": "s3://backups/langflow"}, headers=headers)
+
+    assert locked.status_code == 409
+    assert locked.json()["detail"] == {"code": "locked", "reason": "earlier_step"}
+    assert (await client.post(confirm, json={"location": "  "}, headers=headers)).status_code == 422
+
+
+async def test_a_confirmed_backup_counts_only_for_the_pause_it_was_made_in(
+    client, logged_in_headers_super_user, config_dir
+):
+    headers, confirm = logged_in_headers_super_user, "api/v1/migration/steps/backup/confirm"
+    where = {"location": "s3://backups/langflow"}
+    _checked(config_dir, [PASSING], **PREPARED, pause=PAUSED_BEFORE_THE_CHECK)
+
+    # On SQLite the downloaded copy is the backup of the database. Without one there is nothing to confirm.
+    not_yet = await client.post(confirm, json=where, headers=headers)
+    assert not_yet.status_code == 409
+    assert not_yet.json()["detail"] == {"code": "database_not_downloaded"}
+
+    assert (await client.post("api/v1/migration/backup/database", headers=headers)).status_code == 200
+    confirmed = await client.post(confirm, json=where, headers=headers)
+
+    assert confirmed.status_code == 200, confirmed.text
+    backup = confirmed.json()["record"]["backup"]
+    assert (backup["location"], backup["confirmed_by"]) == ("s3://backups/langflow", "activeuser")
+    steps = {step["id"]: (step["state"], step["reason"]) for step in confirmed.json()["steps"]}
+    assert steps["backup"] == ("done", None)
+    assert steps["copy_database"] == ("current", "not_available")
+
+    # Whatever changes between the two pauses is in neither the copy nor the backup made during the first.
+    await client.delete(PAUSE, headers=headers)
+    await client.post(PAUSE, headers=headers)
+    await _run_checks(client, headers)
+
+    steps = await _steps(client, headers)
+    assert steps["pause"] == ("done", None)
+    assert steps["backup"] == ("current", None)
+    assert (await client.post(confirm, json=where, headers=headers)).json()["detail"] == {
+        "code": "database_not_downloaded"
+    }
+
+
+async def test_an_instance_on_postgresql_confirms_its_backup_without_a_download(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    # Its database is backed up with PostgreSQL's own tools, so this server has no copy to hand out.
+    monkeypatch.setattr(get_db_service(), "database_url", "postgresql://db.internal:5432/langflow")
+    _checked(config_dir, [PASSING], **PREPARED, pause=PAUSED_BEFORE_THE_CHECK)
+
+    confirmed = await client.post(
+        "api/v1/migration/steps/backup/confirm",
+        json={"location": "s3://backups/langflow"},
+        headers=logged_in_headers_super_user,
+    )
+
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["record"]["backup"]["confirmed_by"] == "activeuser"
+
+
+async def test_a_backup_finishing_in_a_new_pause_does_not_count(
+    client, logged_in_headers_super_user, active_super_user, config_dir, tmp_path
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED, pause=PAUSED_BEFORE_THE_CHECK)
+    response = await migration_module.download_database(active_super_user)
+    # Consume the route's source directly so middleware buffering cannot finish it before the new pause.
+    source = response.body_iterator
+    try:
+        copied = bytearray(await anext(source))
+        assert (await client.delete(PAUSE, headers=headers)).status_code == 200
+        created = await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)
+        assert created.status_code == 201, created.text
+        assert (await client.post(PAUSE, headers=headers)).status_code == 200
+        await _run_checks(client, headers)
+        async for chunk in source:
+            copied.extend(chunk)
+    finally:
+        await source.aclose()
+
+    backup_path = tmp_path / "old-pause-backup.db"
+    backup_path.write_bytes(copied)
+    old = sqlite3.connect(backup_path)
+    try:
+        assert old.execute("SELECT id FROM flow WHERE name = ?", (NEW_FLOW["name"],)).fetchall() == []
+    finally:
+        old.close()
+    state = await _migration(client, headers)
+    assert {step["id"]: step["state"] for step in state["steps"]}["pause"] == "done"
+    response = await client.post(
+        "api/v1/migration/steps/backup/confirm", json={"location": "old-pause-backup.db"}, headers=headers
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["detail"] == {"code": "database_not_downloaded"}
