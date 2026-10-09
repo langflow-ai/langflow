@@ -431,7 +431,7 @@ async def test_a_copy_the_destination_refuses_blocks_the_step_with_the_commands_
     assert datetime.fromisoformat(run["started_at"]) <= datetime.fromisoformat(run["finished_at"])
     steps = {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}
     assert steps["copy_database"] == ("blocked", "target_unreachable")
-    assert steps["start_target"] == ("locked", "earlier_step")
+    assert steps["check_target"] == ("locked", "earlier_step")
     started = f"Migration: user_id={active_super_user.id} started the copy of the database (run {run_id})"
     assert started in server_log.getvalue()
 
@@ -462,9 +462,10 @@ async def test_a_copy_completes_its_step_only_when_this_pause_let_it_in_and_it_r
     steps = await _steps(client, logged_in_headers_super_user)
 
     assert steps["copy_database"] == expected
-    # What comes after the copies is not built. It says so once nothing before it is left to do.
-    closed = ("locked", "not_available" if expected[0] == "done" else "earlier_step")
-    assert (steps["start_target"], steps["check_target"]) == (closed, closed)
+    # The copy can be checked once nothing before it is left to do, and the start waits for that check.
+    waiting = ("locked", "earlier_step")
+    assert steps["check_target"] == (("current", None) if expected[0] == "done" else waiting)
+    assert steps["start_target"] == waiting
 
 
 async def test_a_copy_from_before_the_pause_was_lifted_has_to_be_made_again(
@@ -936,10 +937,10 @@ async def test_the_database_is_copied_and_the_step_is_done(
     assert run["report"]["rows_copied"] == sum(table["target_rows"] for table in copied) > 0
     steps = {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}
     assert steps["copy_database"] == ("done", None)
-    # This instance keeps nothing else on its own disk, and what follows the copies is not built.
+    # This instance keeps nothing else on its own disk, so the copy can be checked.
     assert steps["copy_knowledge_bases"] == ("skipped", "no_local_knowledge_bases")
     assert steps["copy_files"] == ("skipped", "no_local_files")
-    assert steps["start_target"] == ("locked", "not_available")
+    assert steps["check_target"] == ("current", None)
 
 
 def _command_line(run_id: str) -> str:
@@ -1136,9 +1137,9 @@ async def test_each_copy_waits_for_the_one_before_it_and_a_test_run_completes_no
 
     async def copies() -> list[tuple[str, str | None]]:
         steps = await _steps(client, headers)
-        return [steps[step] for step in ("copy_database", "copy_knowledge_bases", "copy_files", "start_target")]
+        return [steps[step] for step in ("copy_database", "copy_knowledge_bases", "copy_files", "check_target")]
 
-    waiting, closed = ("locked", "earlier_step"), ("locked", "not_available")
+    waiting = ("locked", "earlier_step")
     assert await copies() == [("current", None), waiting, waiting, waiting]
     _ran(config_dir)
     assert await copies() == [("done", None), ("current", None), waiting, waiting]
@@ -1151,7 +1152,7 @@ async def test_each_copy_waits_for_the_one_before_it_and_a_test_run_completes_no
     _ran(config_dir, "copy_files", report={**UPLOADED, "ok": False, "counts": {"failed": 1}, "attention": [missing]})
     assert await copies() == [("done", None), ("done", None), ("blocked", "no_source_bytes"), waiting]
     _ran(config_dir, "copy_files", report=UPLOADED)
-    assert await copies() == [("done", None), ("done", None), ("done", None), closed]
+    assert await copies() == [("done", None), ("done", None), ("done", None), ("current", None)]
 
 
 async def test_the_copies_after_the_database_are_to_be_made_again_once_it_is_copied_again(
@@ -1305,7 +1306,7 @@ async def test_knowledge_bases_are_copied_into_the_destination_and_this_instance
     steps = {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}
     assert steps["copy_knowledge_bases"] == ("done", None)
     assert steps["copy_files"] == ("skipped", "no_local_files")
-    assert steps["start_target"] == ("locked", "not_available")
+    assert steps["check_target"] == ("current", None)
 
     # Copying the database again writes this instance's rows over the destination's, so the knowledge base
     # there is said to be on local disk once more. Its copy is to be made again, which puts that right.
@@ -1487,7 +1488,7 @@ async def test_files_are_copied_into_the_bucket_and_this_instance_keeps_its_own(
     assert (run["status"], run["dry_run"], run["report"]["counts"]) == ("done", False, {"copied": 2, "repointed": 1})
     steps = {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}
     assert steps["copy_files"] == ("done", None)
-    assert steps["start_target"] == ("locked", "not_available")
+    assert steps["check_target"] == ("current", None)
 
 
 @pytest.mark.api_key_required
