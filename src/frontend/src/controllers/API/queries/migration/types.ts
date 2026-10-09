@@ -53,6 +53,8 @@ export interface MigrationState {
     database: { type: "sqlite" | "postgresql"; location?: string };
     knowledge_bases: { local: boolean };
     files: { storage: "local" | "s3"; local: boolean };
+    /** Where this instance's secret key is. The key itself never leaves the server. */
+    secret_key?: { source: "file" | "env"; path?: string };
   };
   record: {
     target: { version?: string; set_by?: string; set_at?: string };
@@ -68,6 +70,8 @@ export interface MigrationState {
       saved_by: string;
       saved_at: string;
     };
+    /** Set once the fingerprint the admin pasted was this instance's. */
+    secret_key?: { verified_by?: string; verified_at?: string };
   };
   steps: MigrationStepState[];
   blocking_findings: string[];

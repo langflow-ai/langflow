@@ -9,12 +9,18 @@ import type {
   MigrationStepState,
 } from "@/controllers/API/queries/migration";
 import { DestinationsStep } from "../DestinationsStep";
+import { SecretKeyStep } from "../SecretKeyStep";
 
-// No request leaves these tests. A test that submits first makes the connection fail, as it does when the server is gone.
+// No request leaves these tests. A test that submits first makes the request fail: the connection, as it does when the
+// server is gone, or with the refusal the server would send, where the page decides from that answer alone.
 const show = (ui: ReactElement) =>
   render(
     <QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>,
   );
+const refused = (status: number, detail: object) =>
+  Object.assign(new AxiosError("Request failed"), {
+    response: { status, data: { detail } },
+  });
 const unreachable = () =>
   new AxiosError("Network Error", AxiosError.ERR_NETWORK);
 
@@ -302,5 +308,131 @@ describe("Where your data goes", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       /^Something went wrong\. Try again\.$/,
     );
+  });
+});
+
+describe("Hand over the secret key", () => {
+  it("says where this instance's key is, and gives the command that prints its fingerprint", () => {
+    const { unmount } = show(
+      <SecretKeyStep
+        migration={migration({
+          secret_key: { source: "file", path: "/app/data/secret_key" },
+        })}
+        state={step("secret_key", "current")}
+      />,
+    );
+
+    expect(
+      screen.getByText(/is in the file \/app\/data\/secret_key on this server/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `printf '%s' "$LANGFLOW_SECRET_KEY" | sha256sum | cut -c1-12`,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/shasum -a 256/)).toBeInTheDocument();
+    // Static advice, so it must not interrupt a screen reader as an alert would.
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "Do this before 'Start the new instance'.",
+    );
+    unmount();
+
+    show(
+      <SecretKeyStep
+        migration={migration({ secret_key: { source: "env" } })}
+        state={step("secret_key", "current")}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        /is set in its LANGFLOW_SECRET_KEY environment variable/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("has no room for a pasted key", async () => {
+    show(
+      <SecretKeyStep
+        migration={migration({ secret_key: { source: "env" } })}
+        state={step("secret_key", "current")}
+      />,
+    );
+    const field = screen.getByLabelText("What the command printed");
+    // Nothing to verify until something is pasted.
+    expect(field).toBeRequired();
+
+    await userEvent.click(field);
+    await userEvent.paste("k".repeat(44));
+
+    expect(field).toHaveValue("k".repeat(12));
+  });
+
+  it("marks the field when the fingerprint is not this instance's", () => {
+    show(
+      <SecretKeyStep
+        migration={migration({ secret_key: { source: "env" } })}
+        state={step("secret_key", "blocked", "fingerprint_mismatch")}
+      />,
+    );
+
+    const field = screen.getByLabelText("What the command printed");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription(
+      /^This doesn't match this instance's key\./,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This doesn't match this instance's key.",
+    );
+  });
+
+  it("sends what was pasted, and says so when the server answers that it does not match", async () => {
+    const post = jest
+      .spyOn(api, "post")
+      .mockRejectedValue(refused(400, { code: "fingerprint_mismatch" }));
+    show(
+      <SecretKeyStep
+        migration={migration({ secret_key: { source: "env" } })}
+        state={step("secret_key", "current")}
+      />,
+    );
+
+    await userEvent.type(
+      screen.getByLabelText("What the command printed"),
+      "000000000000",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Verify" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This doesn't match this instance's key.",
+    );
+    expect(post).toHaveBeenCalledWith(
+      expect.stringContaining("secret-key/verify"),
+      { fingerprint: "000000000000" },
+    );
+  });
+
+  it("shows a check that never reached the server as failed, and leaves out the last mismatch", async () => {
+    jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    show(
+      <SecretKeyStep
+        migration={migration({ secret_key: { source: "env" } })}
+        state={step("secret_key", "blocked", "fingerprint_mismatch")}
+      />,
+    );
+
+    await userEvent.type(
+      screen.getByLabelText("What the command printed"),
+      "0123456789ab",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Verify" }));
+
+    expect(
+      await screen.findByText("Something went wrong. Try again."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/doesn't match this instance's key/),
+    ).not.toBeInTheDocument();
   });
 });
