@@ -62,7 +62,7 @@ export function SecretKeyStep({
         <p className="text-sm">{t("settings.migration.key.verifyIntro")}</p>
         <pre
           lang="en"
-          className="select-all overflow-x-auto rounded-md bg-muted p-2 font-mono text-xs"
+          className="select-all whitespace-pre-wrap break-words rounded-md bg-muted p-2 font-mono text-xs"
         >
           {FINGERPRINT_COMMAND}
         </pre>
