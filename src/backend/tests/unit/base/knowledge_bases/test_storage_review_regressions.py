@@ -55,7 +55,14 @@ async def test_legacy_name_cannot_be_claimed_while_discovery_is_running(database
     source = storage_tests.native_source(database)
     identity = uuid4()
     (source / "embedding_metadata.json").write_text(
-        json.dumps({"id": str(identity), "name": "fixture-l2", "embedding_model": "text-embedding-3-small"})
+        json.dumps(
+            {
+                "id": str(identity),
+                "name": "fixture-l2",
+                "embedding_model": "text-embedding-3-small",
+                "created_at": storage_tests.created_now(),
+            }
+        )
     )
     original = maintenance.tree_fingerprint(source)
     started, release = threading.Event(), threading.Event()

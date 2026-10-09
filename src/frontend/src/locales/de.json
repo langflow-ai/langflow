@@ -19,6 +19,8 @@
   "storageUpgrade.interrupted": "Die Aktualisierung wurde unterbrochen. Versuchen Sie es erneut, um sicher fortzufahren.",
   "storageUpgrade.checkStorage": "Prüfen Sie den Speicherzugriff, den freien Speicherplatz und die Aktualisierungsprotokolle. Versuchen Sie es dann erneut. Ihre ursprünglichen Daten bleiben erhalten.",
   "storageUpgrade.readerLimit": "Dieser Speicher überschreitet die Grenzen des automatischen Lesers. Bewahren Sie die Quelle auf und verwenden Sie den verwalteten Controller mit einem qualifizierten signierten Hilfsprogramm, oder exportieren Sie die Daten in einer isolierten Umgebung der alten Version.",
+  "storageUpgrade.sourceMissing": "Kein Verzeichnis aus der vorherigen Version konnte dieser Basis zugeordnet werden. Wurde der Besitzer umbenannt, verschieben Sie das Verzeichnis im Wissensdatenbank-Verzeichnis nach <aktueller Benutzername>/<Name der Basis> und versuchen Sie es erneut.",
+  "storageUpgrade.sourceAmbiguous": "Mehr als ein Verzeichnis aus der vorherigen Version könnte zu dieser Basis gehören. Belassen Sie nur ihr eigenes Verzeichnis unter <aktueller Benutzername>/<Name der Basis>, verschieben Sie andere Kopien aus dem Wissensdatenbank-Verzeichnis und versuchen Sie es erneut. Ihre ursprünglichen Daten bleiben erhalten.",
   "storageUpgrade.retry": "Aktualisierung wiederholen",
   "storageUpgrade.retryFailed": "Die Aktualisierung konnte nicht geplant werden. Laden Sie die Seite neu und versuchen Sie es erneut.",
   "storageUpgrade.viewProgress": "Aktualisierungsfortschritt anzeigen",

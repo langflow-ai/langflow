@@ -135,6 +135,24 @@ it("lets an administrator retry the bound migration and reports scheduling failu
   );
 });
 
+it.each([
+  ["legacy_source_missing", /could be tied to this base/],
+  ["legacy_source_ambiguous", /More than one directory/],
+])(
+  "tells an administrator how to recover a base whose legacy directory is %s",
+  (code, guidance) => {
+    status.stores[0] = {
+      ...status.stores[0],
+      storage_state: "needs_attention",
+      phase: "needs_attention",
+      error_code: code,
+      can_retry: true,
+    };
+    render(<StorageUpgradePanel kbId="kb-id" />, { wrapper: wrapper() });
+    expect(screen.getByText(guidance)).toBeInTheDocument();
+  },
+);
+
 it("refreshes Knowledge and Memory even when a small upgrade completes between polls", () => {
   status.stores = [];
   status.running = false;

@@ -19,6 +19,8 @@
   "storageUpgrade.interrupted": "La mise à niveau a été interrompue. Réessayez pour reprendre en toute sécurité.",
   "storageUpgrade.checkStorage": "Vérifiez l’accès au stockage, l’espace libre et les journaux de mise à niveau, puis réessayez. Vos données originales sont conservées.",
   "storageUpgrade.readerLimit": "Ce stockage dépasse les limites du lecteur automatique. Conservez la source et utilisez le contrôleur géré avec un outil signé vérifié, ou exportez depuis un environnement isolé de l’ancienne version.",
+  "storageUpgrade.sourceMissing": "Aucun répertoire de la version précédente n’a pu être associé à cette base. Si son propriétaire a été renommé, déplacez son répertoire vers <nom d’utilisateur actuel>/<nom de la base> dans le répertoire des bases de connaissances, puis réessayez.",
+  "storageUpgrade.sourceAmbiguous": "Plusieurs répertoires de la version précédente pourraient appartenir à cette base. Ne laissez que son propre répertoire dans <nom d’utilisateur actuel>/<nom de la base>, sortez toute autre copie du répertoire des bases de connaissances, puis réessayez. Vos données originales sont conservées.",
   "storageUpgrade.retry": "Réessayer la mise à niveau",
   "storageUpgrade.retryFailed": "Impossible de planifier la mise à niveau. Actualisez la page et réessayez.",
   "storageUpgrade.viewProgress": "Voir la progression",

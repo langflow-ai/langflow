@@ -26,7 +26,6 @@ from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 from langflow.services.knowledge_base_storage import coordinator
-from langflow.services.knowledge_base_storage.maintenance import MaintenanceRequiredError
 from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError, backend_for_record
 from sqlmodel import delete
 
@@ -130,16 +129,13 @@ async def _run_step_alone(end_user: str = ALICE) -> None:
             pass
 
 
-async def _stalled_after_rename(root: Path, state: str, *, sidecar: bool = False) -> KnowledgeBaseRecord:
+async def _stalled_after_rename(root: Path, state: str) -> KnowledgeBaseRecord:
     """A legacy base whose owner was renamed before the upgrade, so its only copy stays under the old name.
 
-    The upgrade looks for the source under the owner's current name, finds nothing and stops. It is a
-    Knowledge Base, because a builder whose Memory Base awaits upgrade recovery cannot be erased yet.
+    Nothing ties the directory to the renamed owner, since 1.12 wrote no sidecar, so the upgrade stops. It
+    is a Knowledge Base, because a builder whose Memory Base awaits upgrade recovery cannot be erased yet.
     """
     record_id, _ = await _legacy_knowledge_base(root, OWNER)
-    if sidecar:
-        # Versions 1.8 to 1.11 recorded the base's id next to its Chroma files.
-        (root / OWNER / KB_NAME / "embedding_metadata.json").write_text(json.dumps({"id": str(record_id)}))
     record = await knowledge_base_service.get_by_id(record_id)
     await _rename(record.user_id, RENAMED)
     await coordinator.fence_legacy_records()
@@ -417,8 +413,16 @@ async def test_should_keep_a_former_holders_only_copy_that_whoever_took_the_name
 
 
 async def test_should_follow_the_recorded_id_of_a_directory_kept_under_a_former_name(storage_root):
-    record = await _stalled_after_rename(storage_root, "needs_attention", sidecar=True)
+    record_id, owner = await _legacy_knowledge_base(storage_root, OWNER)
     original = storage_root / OWNER / KB_NAME
+    # Versions 1.8 to 1.11 recorded the base's id next to its Chroma files.
+    (original / "embedding_metadata.json").write_text(json.dumps({"id": str(record_id)}))
+    await _rename(owner, RENAMED)
+    await coordinator.fence_legacy_records()
+    await coordinator.migrate_one(record_id)
+    # The upgrade reads the directory that the recorded id names, under the former name.
+    record = await knowledge_base_service.get_by_id(record_id)
+    assert (record.backend_type, record.storage_state) == ("sqlite", "ready")
     newcomer = await create_user(OWNER)
     # Even if the newcomer owns a base of that name, the recorded id ties the directory to the renamed builder.
     async with session_scope() as session:
@@ -429,7 +433,7 @@ async def test_should_follow_the_recorded_id_of_a_directory_kept_under_a_former_
     assert status == DataSubjectRequestStatus.DONE.value, request.error
     assert (original / "chroma.sqlite3").is_file()
 
-    status, request = await erase_builder(record.user_id)
+    status, request = await erase_builder(owner)
 
     assert status == DataSubjectRequestStatus.DONE.value, request.error
     assert not (storage_root / OWNER).exists()
@@ -437,15 +441,17 @@ async def test_should_follow_the_recorded_id_of_a_directory_kept_under_a_former_
 
 async def test_should_remove_the_builders_only_copy_of_a_base_the_upgrade_never_read(storage_root, monkeypatch):
     record_id, _ = await _legacy_knowledge_base(storage_root, OWNER)
+    scan = coordinator.scan_legacy_sources
 
-    def refused(*_args):
-        msg = "another worker holds the storage"
-        raise MaintenanceRequiredError(msg)
+    def unlistable(_root):
+        msg = "storage root could not be listed"
+        raise OSError(msg)
 
-    # The upgrade stops before its ledger names the source, and 1.12 wrote no sidecar.
-    monkeypatch.setattr(coordinator, "check_local_upgrade", refused)
+    # The upgrade stops before it locates the directory, so its ledger names none, and 1.12 wrote no sidecar.
+    monkeypatch.setattr(coordinator, "scan_legacy_sources", unlistable)
     await coordinator.fence_legacy_records()
     await coordinator.migrate_one(record_id)
+    monkeypatch.setattr(coordinator, "scan_legacy_sources", scan)
     record = await knowledge_base_service.get_by_id(record_id)
     assert record.storage_state == "needs_attention"
     async with session_scope() as session:

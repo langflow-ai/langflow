@@ -80,6 +80,23 @@ Users can open the upgrade notice and see progress for their own bases through `
 Administrators can retry a failed migration from that notice after resolving the reported cause.
 Active superusers can also inspect `/api/v1/knowledge-base-storage/migrations` and `/api/v1/knowledge-base-storage/inventory`.
 Inventory reports the latest completed scan shared across workers on the configured storage root.
+
+A local Chroma base lives in `<username>/<base-name>`, under the username its owner had when the directory was written. Renaming an account does not move it, and another account can take the old username.
+The upgrade therefore finds a base's directory by evidence, not by its owner's current username.
+In order, the evidence is the directory that the base's upgrade ledger recorded, the directory whose `embedding_metadata.json` sidecar records the base's ID, and the folder of the owner's username. That folder can be the current username, or a former username where another of the owner's bases is found through its ledger or sidecar.
+The upgrade records the directory in its ledger before it copies anything, so a later rename does not move it.
+A directory that only its folder name ties to a base is not used while another local Chroma base of that name holds data but has no directory, because that base may have written it under a username it held before.
+If no directory, or more than one, can be tied to a base, the base needs attention with the `legacy_source_missing` or `legacy_source_ambiguous` error, and its data is preserved.
+To recover, move the base's directory to `<owner's current username>/<base-name>`, move any other copy out of the knowledge-base directory, detach a base of the same name whose data is gone, and retry.
+A directory without an application record is adopted for the account that holds its folder's name only when all of these are true:
+
+- Its sidecar records a base ID, and a creation time no earlier than that account's. Versions 1.8 to 1.11 recorded both when they created a base.
+- Nothing shows that another account held that username.
+- No other local Chroma base of that name holds data but is still missing its directory.
+
+Otherwise the inventory reports `unattributed_legacy_source` and leaves the directory in place, so an account that takes over a username never receives a former holder's data.
+To keep such a directory's data, move it to the folder of the base it holds, or register it for the account that holds its folder's name with `langflow reconcile-kb-from-disk --username <username>`, and restart Langflow.
+Deleting or detaching a base retires only the directories that are its alone, so a directory under a username that another account took over stays with its own base.
 Use the returned KB UUID and storage generation for retry or detachment.
 Retries never change the readiness of unrelated flows.
 After an interrupted controller run, repeat its original command with the original state directory.

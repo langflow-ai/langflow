@@ -19,6 +19,8 @@
   "storageUpgrade.interrupted": "升级已中断。重试即可安全恢复。",
   "storageUpgrade.checkStorage": "请检查存储访问权限、可用磁盘空间和升级日志，然后重试。您的原始数据已保留。",
   "storageUpgrade.readerLimit": "此存储超出自动读取器的限制。请保留源数据，并使用经验证的签名辅助程序运行管理控制器，或从隔离的旧版本环境导出。",
+  "storageUpgrade.sourceMissing": "无法将上一版本的任何目录关联到此知识库。如果其所有者已改名，请在知识库目录中将该目录移动到 <当前用户名>/<知识库名称>，然后重试。",
+  "storageUpgrade.sourceAmbiguous": "上一版本中有多个目录可能属于此知识库。请只在 <当前用户名>/<知识库名称> 保留它自己的目录，将其他副本移出知识库目录，然后重试。您的原始数据已保留。",
   "storageUpgrade.retry": "重试升级",
   "storageUpgrade.retryFailed": "无法安排升级。请刷新页面后重试。",
   "storageUpgrade.viewProgress": "查看升级进度",

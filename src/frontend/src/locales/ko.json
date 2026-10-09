@@ -19,6 +19,8 @@
   "storageUpgrade.interrupted": "업그레이드가 중단되었습니다. 안전하게 이어서 진행하려면 다시 시도하세요.",
   "storageUpgrade.checkStorage": "저장소 접근 권한, 디스크 여유 공간, 업그레이드 로그를 확인한 뒤 다시 시도하세요. 원래 데이터는 보존됩니다.",
   "storageUpgrade.readerLimit": "이 저장소는 자동 읽기 제한을 초과합니다. 원본을 보존하고 검증된 서명 도우미로 관리 컨트롤러를 사용하거나 이전 버전의 격리 환경에서 내보내세요.",
+  "storageUpgrade.sourceMissing": "이전 버전의 디렉터리를 이 베이스에 연결할 수 없습니다. 소유자의 이름이 변경되었다면 지식 베이스 디렉터리에서 해당 디렉터리를 <현재 사용자 이름>/<베이스 이름>(으)로 옮긴 뒤 다시 시도하세요.",
+  "storageUpgrade.sourceAmbiguous": "이전 버전의 디렉터리 여러 개가 이 베이스에 해당할 수 있습니다. <현재 사용자 이름>/<베이스 이름>에 이 베이스의 디렉터리만 남기고 다른 사본은 지식 베이스 디렉터리 밖으로 옮긴 뒤 다시 시도하세요. 원래 데이터는 보존됩니다.",
   "storageUpgrade.retry": "업그레이드 다시 시도",
   "storageUpgrade.retryFailed": "업그레이드를 예약하지 못했습니다. 새로고침한 뒤 다시 시도하세요.",
   "storageUpgrade.viewProgress": "업그레이드 진행 상황 보기",

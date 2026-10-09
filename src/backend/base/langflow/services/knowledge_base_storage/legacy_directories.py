@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from langflow.services.knowledge_base_storage.retained import is_path_segment
@@ -102,7 +102,8 @@ def _survey(source: Path) -> tuple[set[str], UUID | None] | None:
     return names, _sidecar_id(source / SIDECAR) if SIDECAR in names else None
 
 
-def _sidecar_id(sidecar: Path) -> UUID | None:
+def read_sidecar(sidecar: Path) -> dict[str, Any]:
+    """The JSON object a legacy sidecar holds, read without following a symbolic link."""
     if sidecar.is_symlink() or sidecar.stat().st_size > MAX_SIDECAR_BYTES:
         msg = "Legacy sidecar is a symbolic link or too large"
         raise ValueError(msg)
@@ -110,4 +111,13 @@ def _sidecar_id(sidecar: Path) -> UUID | None:
     if not isinstance(metadata, dict):
         msg = "Legacy sidecar is not an object"
         raise TypeError(msg)
+    return metadata
+
+
+def recorded_id(metadata: dict[str, Any]) -> UUID | None:
+    """The base id a sidecar records, if any."""
     return UUID(str(metadata["id"])) if metadata.get("id") else None
+
+
+def _sidecar_id(sidecar: Path) -> UUID | None:
+    return recorded_id(read_sidecar(sidecar))
