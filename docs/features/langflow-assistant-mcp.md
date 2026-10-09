@@ -4,7 +4,7 @@
 > Status: Draft
 > Owner: Engineering Team
 > Related PRs: #12575 (MCP integration), `feat/assistant-mcp-integration-clean` branch
-> Companion documents: [`langflow-assistant.md`](./langflow-assistant.md) — read first for base Assistant concepts (session model, SSE pipeline, provider configuration, off-topic guardrails); [`../../src/backend/base/langflow/agentic/ARCHITECTURE.md`](../../src/backend/base/langflow/agentic/ARCHITECTURE.md) — end-to-end Mermaid diagrams of the single-agent loop, MCP toolkit, and continuation flow.
+> Companion documents: [`langflow-assistant.md`](./langflow-assistant.md) — read first for base Assistant concepts (session model, SSE pipeline, provider configuration, off-topic guardrails).
 >
 > **2026-05-12 revision** folds in: refining-plan UX (`Dismiss` → revisable state with `Reset`), the `/skip-all` power-user preference (persistent, header badge, gate bypass), per-request tool result caching, inline build-task checklist, per-session conversation history (server-side ring buffer), shell-style input command history, the **per-user user-components registry** that lets validated-generated Components round-trip into `build_flow` requests, and the **dual Add/Replace action on flow proposals** that lets the user choose between additive merge (default, non-destructive) and full canvas replacement (legacy semantic). Each is treated as a first-class capability in the sections below — not an addendum.
 >
