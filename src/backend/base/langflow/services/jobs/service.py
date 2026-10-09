@@ -577,7 +577,7 @@ class JobService(Service):
     def _heartbeat_stamp(self) -> dict[str, str]:
         return {"owner": self._owner, "heartbeat_at": datetime.now(timezone.utc).isoformat()}
 
-    async def start_keep_alive(self, job_id: UUID, *, interval_s: float | None = None) -> None:
+    async def start_keep_alive(self, job_id: UUID, *, interval_s: float | None = None, beat_now: bool = True) -> None:
         """Heartbeat ``job_id`` from this process for as long as it stays IN_PROGRESS.
 
         For runs that execute in this process outside the background runner, which
@@ -588,6 +588,10 @@ class JobService(Service):
 
         Each heartbeat rewrites ``job_metadata`` whole, so the caller must not write
         that column itself until ``stop_keep_alive`` returns.
+
+        ``beat_now=False`` waits one interval before the first heartbeat. Only for a
+        job inserted heartbeated (``create_job(heartbeat=True)``) moments ago: its
+        heartbeat is still fresh, and a run shorter than the interval writes none.
         """
         if job_id in self._keep_alives:
             return
@@ -596,7 +600,8 @@ class JobService(Service):
 
             interval_s = get_settings_service().settings.background_heartbeat_interval_s
         stop = asyncio.Event()
-        task = asyncio.create_task(self._keep_alive_loop(job_id, stop, max(interval_s, _MIN_HEARTBEAT_INTERVAL_S)))
+        loop = self._keep_alive_loop(job_id, stop, max(interval_s, _MIN_HEARTBEAT_INTERVAL_S), beat_now=beat_now)
+        task = asyncio.create_task(loop)
         self._keep_alives[job_id] = (task, stop)
         task.add_done_callback(lambda done: self._forget_keep_alive(job_id, done))
 
@@ -609,7 +614,10 @@ class JobService(Service):
         stop.set()
         await asyncio.wait({task})
 
-    async def _keep_alive_loop(self, job_id: UUID, stop: asyncio.Event, interval_s: float) -> None:
+    async def _keep_alive_loop(self, job_id: UUID, stop: asyncio.Event, interval_s: float, *, beat_now: bool) -> None:
+        if not beat_now:
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(stop.wait(), timeout=interval_s)
         while not stop.is_set() and await self._beat(job_id):
             with contextlib.suppress(asyncio.TimeoutError):
                 await asyncio.wait_for(stop.wait(), timeout=interval_s)
@@ -1047,9 +1055,10 @@ class JobService(Service):
         reattacher always sees a clean end. QUEUED jobs are intentionally
         untouched (at-least-once: they get re-picked by a fresh worker).
 
-        ``require_heartbeat`` skips rows that never recorded a heartbeat. Runs that
-        do not heartbeat at all (synchronous runs, playground builds) carry none,
-        so a sweep after startup must not read that as death.
+        ``require_heartbeat`` skips rows that never recorded a heartbeat. A live run
+        can carry none when a sibling replica still runs a version from before its
+        path heartbeated, during a rolling upgrade, so a sweep after startup must not
+        read that as death.
 
         Returns the ids of the jobs transitioned to FAILED.
         """
@@ -1203,7 +1212,15 @@ class JobService(Service):
             await session.flush()
             return [job.job_id for job in jobs]
 
-    async def execute_with_status(self, job_id: UUID, run_coro_func, *args, mark_in_progress: bool = True, **kwargs):
+    async def execute_with_status(
+        self,
+        job_id: UUID,
+        run_coro_func,
+        *args,
+        mark_in_progress: bool = True,
+        keep_alive: bool = False,
+        **kwargs,
+    ):
         """Wrapper that manages job status lifecycle around a coroutine.
 
         This function:
@@ -1219,6 +1236,12 @@ class JobService(Service):
             *args: Positional arguments to pass to run_coro_func
             mark_in_progress: Write IN_PROGRESS before running. Keyword-only, and not
                 passed on to run_coro_func.
+            keep_alive: Heartbeat the job while run_coro_func runs (``start_keep_alive``),
+                for a run outside the background runner, which heartbeats its own jobs.
+                Insert the row with ``create_job(heartbeat=True)``: the first heartbeat
+                waits one interval. The heartbeat stops before the terminal status write,
+                and on a pause, which leaves the row IN_PROGRESS. run_coro_func must not
+                write ``job_metadata``. Keyword-only, and not passed on to run_coro_func.
             **kwargs: Keyword arguments to pass to run_coro_func
 
         Returns:
@@ -1236,9 +1259,15 @@ class JobService(Service):
                 await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
                 await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
 
-            # Execute the wrapped function
-            await logger.ainfo(f"Executing job function for job_id={job_id}")
-            result = await run_coro_func(*args, **kwargs)
+            if keep_alive:
+                await self.start_keep_alive(job_id, beat_now=False)
+            try:
+                # Execute the wrapped function
+                await logger.ainfo(f"Executing job function for job_id={job_id}")
+                result = await run_coro_func(*args, **kwargs)
+            finally:
+                if keep_alive:
+                    await self.stop_keep_alive(job_id)
 
         except (PauseRequested, GraphPausedException):
             # A producer paused the run for human input. The runner suspends it

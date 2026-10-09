@@ -106,6 +106,9 @@ async def trigger_ingestion(
         asset_id=memory_base_id,
         asset_type="memory_base",
         dedupe_key=dedupe_key,
+        # Live from insert, then kept alive by execute_with_status, so an orphan sweep
+        # cannot fail it mid-run. Ingestion writes no job_metadata of its own.
+        heartbeat=True,
     )
 
     task_service = get_task_service()
@@ -113,6 +116,7 @@ async def trigger_ingestion(
         job_service.execute_with_status,
         job_id=job_id,
         run_coro_func=ingest_memory_task,
+        keep_alive=True,
         request=IngestionRequest(
             memory_base_id=memory_base_id,
             session_id=session_id,
@@ -228,6 +232,7 @@ async def _maybe_trigger(
             asset_id=mb.id,
             asset_type="memory_base",
             dedupe_key=dedupe_key,
+            heartbeat=True,
         )
     except DuplicateJobError:
         await logger.adebug("Auto-capture: duplicate job for dedupe_key=%s - skipping.", dedupe_key)
@@ -238,6 +243,7 @@ async def _maybe_trigger(
         job_service.execute_with_status,
         job_id=job_id,
         run_coro_func=ingest_memory_task,
+        keep_alive=True,
         request=IngestionRequest(
             memory_base_id=mb.id,
             session_id=session_id,

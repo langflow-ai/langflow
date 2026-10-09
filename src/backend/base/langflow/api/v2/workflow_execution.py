@@ -914,6 +914,9 @@ async def execute_sync_workflow(
         # Keep the notice available to GET status even when sync result caching is off.
         initial_metadata={"component_substitution_warning": warning} if warning else None,
         status=JobStatus.IN_PROGRESS,
+        # Live from insert, then kept alive by execute_with_status, so an orphan sweep
+        # cannot fail it mid-run. Its own job_metadata write comes after the run ends.
+        heartbeat=True,
     )
     _sync_run_paused = False
     _sync_run_success = False
@@ -932,6 +935,7 @@ async def execute_sync_workflow(
                 job_id=job_id,
                 run_coro_func=run_graph_internal,
                 mark_in_progress=False,
+                keep_alive=True,
                 graph=graph,
                 flow_id=flow_id_str,
                 session_id=session_id,

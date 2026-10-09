@@ -586,6 +586,9 @@ async def simple_run_flow(
                 # getattr: the warm-run path may hand back a lightweight graph stand-in without
                 # this attribute, matching every other end_user_id read in the codebase.
                 end_user_id=getattr(graph, "end_user_id", None),
+                # Live from insert, then kept alive by execute_with_status, so an orphan
+                # sweep cannot fail it mid-run. The run writes no job_metadata of its own.
+                heartbeat=True,
             )
             # The funnel default. Binding is outermost-wins, so a caller that already named its
             # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands
@@ -594,6 +597,7 @@ async def simple_run_flow(
                 task_result, session_id = await _job_svc.execute_with_status(
                     run_id_uuid,
                     run_graph_internal,
+                    keep_alive=True,
                     graph=graph,
                     flow_id=flow_id_str,
                     session_id=effective_session_id,
