@@ -19,6 +19,8 @@ def convert_to_message(v) -> Message:
     Returns:
         Message: Converted Message object
     """
+    if isinstance(v, dict):
+        return Data(data=v).to_message()
     return v if isinstance(v, Message) else v.to_message()
 
 

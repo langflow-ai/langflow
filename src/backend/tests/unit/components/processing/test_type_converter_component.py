@@ -60,6 +60,26 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
         assert payload == expected
         assert component.status == result
 
+    @pytest.mark.parametrize(
+        ("payload", "expected_text"),
+        [
+            ({"text": "Hello", "items": [1]}, "Hello"),
+            ({"name": "Ada"}, str({"name": "Ada"})),
+            ({"data": {"id": 42}, "text_key": "source"}, str({"data": {"id": 42}, "text_key": "source"})),
+            ({}, "{}"),
+        ],
+    )
+    def test_dict_to_message(self, component_class, payload, expected_text):
+        """Dictionary input converts to Message the same way a JSON input with that payload does."""
+        expected_payload = json.loads(json.dumps(payload))
+        component = component_class(input_data=payload, output_type="Message")
+        result = component.convert_to_message()
+        assert isinstance(result, Message)
+        assert result.text == expected_text
+        assert result.text == Data(data=payload).to_message().text
+        assert payload == expected_payload
+        assert component.status == result
+
     # Data to other types
     def test_data_to_message(self, component_class):
         """Test converting Data to Message."""
