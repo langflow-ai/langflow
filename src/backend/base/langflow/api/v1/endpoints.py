@@ -65,6 +65,7 @@ from langflow.api.utils.execution_principal import (
     execution_principal_for,
     stamp_execution_principal,
 )
+from langflow.api.utils.migration_pause import writing_on
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
     enforce_catalog_policy_for_component_type,
@@ -1522,6 +1523,9 @@ async def webhook_run_flow(
         )
         # Fire-and-forget: log exceptions but don't block
         background_task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
+        # The run goes on after this request has answered, so it holds a place of its own among the
+        # changes a migration pause waits for.
+        writing_on(background_task, name="webhook_run")
     except Exception as exc:
         error_msg = str(exc)
         raise HTTPException(status_code=500, detail=error_msg) from exc

@@ -8,23 +8,29 @@ background service and the second worker process are real.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from langflow.api.utils import migration_pause
+from langflow.api.utils.migration_jobs import live_listeners
 from langflow.api.utils.migration_pause import MigrationPauseMiddleware, is_paused
+from langflow.initial_setup import setup as flow_sync
 from langflow.initial_setup.setup import sync_flows_from_fs
 from langflow.main import create_app
 from langflow.services.background_execution.executor import InProcessExecutor
 from langflow.services.data_subjects.requests import create_end_user_request
 from langflow.services.data_subjects.worker import LEASE_NAME, DataSubjectEraseWorker, data_subject_erase_worker
 from langflow.services.database.models.auth import AuthzAuditLog
+from langflow.services.database.models.connection import ConnectionSecret
+from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.data_subject_request import (
     DataSubjectRequest,
     DataSubjectRequestSource,
@@ -39,6 +45,7 @@ from langflow.services.database.models.trigger.schemas import TriggerEventState,
 from langflow.services.deps import (
     get_background_execution_service,
     get_job_service,
+    get_queue_service,
     get_settings_service,
     session_scope,
 )
@@ -46,13 +53,15 @@ from langflow.services.task.audit_cleanup import AuditLogCleanupWorker
 from langflow.services.telemetry_writer.service import TelemetryWriterService
 from langflow.services.triggers.constants import DISPATCHER_LEASE_NAME, SCHEDULER_LEASE_NAME
 from langflow.services.triggers.dispatcher import TriggerDispatcher
+from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlmodel import select
+
+from tests.unit.api.v1 import test_connection_oauth as oauth
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
     from pathlib import Path
-    from uuid import UUID
 
 RECORD = {"target": {}, "steps": {}, "accepted_findings": []}
 PAUSED = {**RECORD, "pause": {"frozen_at": "2026-10-05T12:00:00+00:00", "frozen_by": "admin"}}
@@ -119,6 +128,31 @@ async def _acts_only_after_the_pause(config_dir: Path, acted: Callable[[], Await
     _write_record(config_dir, RECORD)
 
     assert await _eventually(acted)
+
+
+def _held_open(monkeypatch: pytest.MonkeyPatch, owner: object, its_pass: str) -> tuple[asyncio.Event, asyncio.Event]:
+    """Make a pass wait before it does anything, as one that was let in before a pause and has not written yet."""
+    began, go_on = asyncio.Event(), asyncio.Event()
+    real = getattr(owner, its_pass)
+
+    async def waits(*args, **kwargs):
+        began.set()
+        await go_on.wait()
+        return await real(*args, **kwargs)
+
+    monkeypatch.setattr(owner, its_pass, waits)
+    return began, go_on
+
+
+async def _the_pause_waits_for_it(config_dir: Path, began: asyncio.Event, go_on: asyncio.Event, named: str) -> None:
+    await began.wait()
+    _write_record(config_dir, PAUSED)
+    # The pass was let in before the pause, so the pause waits for it and does not count yet.
+    assert not await migration_pause.drained(0.2)
+    # A pause that gives up can say which loop it waited for.
+    assert ("loop", named) in [(change["kind"], change["name"]) for change in migration_pause.under_way()["changes"]]
+    go_on.set()
+    assert await migration_pause.drained(5)
 
 
 async def _job_status(job_id) -> JobStatus:
@@ -233,6 +267,278 @@ async def test_a_websocket_is_refused_while_paused(client, config_dir):
 
 
 @pytest.mark.usefixtures("background_service")
+async def test_a_change_is_refused_at_the_moment_a_pause_checks_that_none_is_going(
+    client, logged_in_headers, config_dir
+):
+    fcntl = pytest.importorskip("fcntl", reason="workers share the lock through flock")
+    _write_record(config_dir, RECORD)
+    lock = os.open(config_dir / "migrations" / "pause.lock", os.O_RDWR | os.O_CREAT)
+    try:
+        # What a pause holds for an instant, in whichever worker it runs, to learn that no change is going.
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        refused = await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)
+    finally:
+        os.close(lock)
+
+    assert refused.status_code == 503
+    assert refused.json() == REFUSAL
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
+
+
+async def test_a_change_takes_its_place_before_it_asks_about_the_pause(
+    client, logged_in_headers, config_dir, monkeypatch
+):
+    fcntl = pytest.importorskip("fcntl", reason="workers share the lock through flock")
+    _write_record(config_dir, RECORD)
+    place_held_when_asked = []
+    ask = migration_pause.is_paused
+
+    def ask_and_look() -> bool:
+        # What a pause would find at this very moment, from whichever worker it runs in.
+        lock = os.open(config_dir / "migrations" / "pause.lock", os.O_RDWR | os.O_CREAT)
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            place_held_when_asked.append(True)
+        else:
+            place_held_when_asked.append(False)
+        finally:
+            os.close(lock)
+        return ask()
+
+    monkeypatch.setattr(migration_pause, "is_paused", ask_and_look)
+
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
+    # Asked the other way round, a pause written between the two would count nothing and stop nothing.
+    assert place_held_when_asked == [True]
+
+
+@pytest.mark.no_blockbuster
+@pytest.mark.usefixtures("active_user")
+async def test_a_get_that_changes_the_instance_is_refused_while_paused(
+    client, logged_in_headers, config_dir, monkeypatch
+):
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "desktop")
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", json.dumps({"google-work": oauth.registration()}))
+    # Someone began to connect an account before the pause, and is still at the provider's consent screen.
+    row, query = await oauth.begin(client, logged_in_headers)
+    exchanged = oauth.provider_double(monkeypatch, query)
+    _write_record(config_dir, PAUSED)
+
+    # The provider sends the browser back with a GET, which the middleware takes for a read. This one
+    # stores the tokens of the connection.
+    refused = await oauth.callback(client, query)
+
+    assert refused.status_code == 503, refused.text
+    assert refused.json() == {"detail": "This instance is being migrated."}
+    assert exchanged == []
+    async with session_scope() as session:
+        assert await session.get(ConnectionSecret, UUID(row["id"])) is None
+
+    # Nothing of the consent was used up, so the same answer of the provider completes it after the pause.
+    _write_record(config_dir, RECORD)
+    assert (await oauth.callback(client, query)).status_code == 200
+    async with session_scope() as session:
+        assert await session.get(ConnectionSecret, UUID(row["id"])) is not None
+
+
+@pytest.mark.no_blockbuster
+@pytest.mark.usefixtures("active_user")
+async def test_the_desktop_browser_handoff_is_refused_while_paused(client, logged_in_headers, config_dir, monkeypatch):
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "desktop")
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", json.dumps({"google-work": oauth.registration()}))
+    # Desktop began to connect an account before the pause and opens the handoff in the system browser.
+    row, started = await oauth.begin(client, logged_in_headers, handoff=True)
+    handoff_url = started.json()["authorization_url"]
+
+    async def browser_digest() -> str | None:
+        async with session_scope() as session:
+            return (await session.get(ConnectionOAuth, UUID(row["id"]))).browser_digest
+
+    before = await browser_digest()
+    _write_record(config_dir, PAUSED)
+
+    # The handoff is a GET, which the middleware takes for a read. It binds the browser in the database.
+    refused = await client.get(handoff_url, follow_redirects=False)
+
+    assert refused.status_code == 503, refused.text
+    assert refused.json() == REFUSAL
+    assert "set-cookie" not in refused.headers
+    assert await browser_digest() == before
+
+    # The handoff was not used up, so the same URL binds the browser after the pause.
+    _write_record(config_dir, RECORD)
+    bound = await client.get(handoff_url, follow_redirects=False)
+    assert bound.status_code == 303, bound.text
+    assert "set-cookie" in bound.headers
+    assert await browser_digest() != before
+
+
+@pytest.mark.parametrize(
+    ("path", "answer_after", "rows_after"),
+    [
+        ("api/v1/data-subjects/end-users?search=ab", 200, 1),
+        ("api/v1/users/me/data-export", 200, 1),
+        (f"api/v1/data-subjects/requests/{UUID(int=0)}/export", 404, 0),
+    ],
+)
+async def test_a_data_subject_read_that_records_who_read_is_refused_while_paused(
+    client, logged_in_headers_super_user, config_dir, monkeypatch, path, answer_after, rows_after
+):
+    monkeypatch.setattr(FEATURE_FLAGS, "data_subject_requests", True)
+
+    async def recorded() -> int:
+        async with session_scope() as session:
+            rows = (await session.exec(select(AuthzAuditLog))).all()
+            return len([row for row in rows if row.action.startswith("dsar:")])
+
+    _write_record(config_dir, PAUSED)
+
+    # Each of these answers a GET, which the middleware takes for a read, and adds a row to the audit log.
+    refused = await client.get(path, headers=logged_in_headers_super_user)
+
+    assert refused.status_code == 503
+    assert refused.json() == REFUSAL
+    assert await recorded() == 0
+
+    _write_record(config_dir, RECORD)
+    assert (await client.get(path, headers=logged_in_headers_super_user)).status_code == answer_after
+    assert await recorded() == rows_after
+
+
+async def test_a_lock_that_cannot_be_taken_stops_no_change(client, logged_in_headers, config_dir):
+    pytest.importorskip("fcntl", reason="workers share the lock through flock")
+    # A CONFIG_DIR this process cannot use for the lock, here because a folder sits where the lock goes.
+    (config_dir / "migrations" / "pause.lock").mkdir(parents=True)
+
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
+
+    _write_record(config_dir, PAUSED)
+
+    # The pause itself still holds: it is read from the record.
+    assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 503
+
+
+async def test_a_listener_that_starts_during_a_pause_claims_nothing_until_it_ends(client, config_dir):  # noqa: ARG001
+    async def announced() -> list[str]:
+        async with session_scope() as session:
+            return [listener["holder"] for listener in await live_listeners(session)]
+
+    _write_record(config_dir, PAUSED)
+    listener = ListenerSupervisor()
+    try:
+        await listener.reconcile()
+
+        assert await announced() == []
+
+        _write_record(config_dir, RECORD)
+        await listener.reconcile()
+
+        assert await announced() == [listener.holder]
+    finally:
+        await listener.stop()
+
+
+async def test_a_listener_that_is_running_renews_its_lease_while_a_pause_is_tried(client, config_dir):  # noqa: ARG001
+    async def lease_runs_out() -> datetime:
+        async with session_scope() as session:
+            lease = (await session.exec(select(TriggerLease).where(TriggerLease.owner == listener.holder))).one()
+            return lease.expires_at
+
+    listener = ListenerSupervisor()
+    try:
+        await listener.reconcile()
+        before = await lease_runs_out()
+
+        # A pause that is refused over a change still under way stays written while it waits, and an admin
+        # tries it again. The listener holds its connections all the while, and a pause finds it by this lease.
+        _write_record(config_dir, PAUSED)
+        await listener.reconcile()
+
+        assert await lease_runs_out() > before
+    finally:
+        await listener.stop()
+
+
+async def test_a_pause_waits_for_a_listener_pass_that_began_before_it(client, config_dir, monkeypatch):  # noqa: ARG001
+    listener = ListenerSupervisor()
+    began, go_on = _held_open(monkeypatch, listener, "_reconcile")
+    passing = asyncio.create_task(listener.reconcile())
+    try:
+        await _the_pause_waits_for_it(config_dir, began, go_on, "trigger_listener")
+        await passing
+    finally:
+        go_on.set()
+        await asyncio.gather(passing, return_exceptions=True)
+        await listener.stop()
+
+
+@pytest.mark.parametrize("ending", ["returns", "raises", "is cancelled"])
+async def test_work_left_running_holds_a_place_until_it_ends_however_it_ends(client, config_dir, ending):  # noqa: ARG001
+    going, finish = asyncio.Event(), asyncio.Event()
+
+    async def work() -> None:
+        going.set()
+        await finish.wait()
+        if ending == "raises":
+            msg = "the work failed"
+            raise RuntimeError(msg)
+
+    def tasks_under_way() -> list[str | None]:
+        return [change["name"] for change in migration_pause.under_way()["changes"] if change["kind"] == "task"]
+
+    task = asyncio.create_task(work())
+    # Taken before the task has run at all, as a request does while it still holds its own place.
+    migration_pause.writing_on(task, name="webhook_run")
+    assert tasks_under_way() == ["webhook_run"]
+    await going.wait()
+    assert not await migration_pause.drained(0.2)
+
+    if ending == "is cancelled":
+        task.cancel()
+    else:
+        finish.set()
+    await asyncio.gather(task, return_exceptions=True)
+
+    assert await migration_pause.drained(5)
+    assert tasks_under_way() == []
+
+
+async def test_a_live_connection_is_named_by_the_path_it_was_routed_to(client, config_dir):  # noqa: ARG001
+    opened, closing = asyncio.Event(), asyncio.Event()
+
+    async def a_session_that_stays_open(scope, receive, send):  # noqa: ARG001
+        opened.set()
+        await closing.wait()
+
+    scope = {
+        "type": "websocket",
+        "path": "/langflow/api/v1/voice/ws/flow_tts/handbook",
+        "root_path": "/langflow",
+        # Left out of what is told: a query can carry a key.
+        "query_string": b"api_key=sk-not-for-the-admin",
+    }
+    session = asyncio.create_task(MigrationPauseMiddleware(a_session_that_stays_open)(scope, None, None))
+    await opened.wait()
+    try:
+        under_way = migration_pause.under_way()
+        [connection] = [change for change in under_way["changes"] if change["kind"] == "websocket"]
+        assert datetime.fromisoformat(connection.pop("since")) <= datetime.now(timezone.utc)
+        assert connection == {
+            "kind": "websocket",
+            "method": None,
+            "path": "/api/v1/voice/ws/flow_tts/handbook",
+            "name": None,
+        }
+        assert "sk-not-for-the-admin" not in json.dumps(under_way)
+        # This worker names what it holds itself, so it does not point at another worker.
+        assert under_way["elsewhere"] is False
+    finally:
+        closing.set()
+        await session
+    assert [change for change in migration_pause.under_way()["changes"] if change["kind"] == "websocket"] == []
+
+
 async def test_a_schedule_that_comes_due_during_the_pause_fires_after_it_ends(active_user, config_dir):
     async with session_scope() as session:
         flow = Flow(name="scheduled", user_id=active_user.id, data={"nodes": [], "edges": []})
@@ -355,6 +661,24 @@ async def test_a_record_that_says_paused_changes_nothing_while_the_feature_is_of
     assert not is_paused()
     assert MigrationPauseMiddleware not in [middleware.cls for middleware in create_app().user_middleware]
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
+    listener = ListenerSupervisor()
+    sync = asyncio.create_task(sync_flows_from_fs())
+    queue, job_id = get_queue_service(), str(uuid4())
+    queue.create_queue(job_id)
+    try:
+        await listener.reconcile()
+        queue.start_job(job_id, asyncio.sleep(0))
+        # Long enough for the flow sync to begin a pass.
+        await asyncio.sleep(0)
+    finally:
+        await listener.stop()
+        sync.cancel()
+        await asyncio.gather(sync, return_exceptions=True)
+        await queue.cleanup_job(job_id)
+    # Neither a change, a listener, the flow sync nor work the job queue starts takes the lock a pause
+    # waits on: this instance pays nothing.
+    assert not (config_dir / "migrations" / "pause.lock").exists()
+    assert migration_pause.under_way() == {"changes": [], "elsewhere": False}
 
 
 async def test_the_flow_sync_from_disk_waits_out_the_pause(active_user, config_dir, monkeypatch):
@@ -366,6 +690,10 @@ async def test_the_flow_sync_from_disk_waits_out_the_pause(active_user, config_d
     await asyncio.gather(*theirs, return_exceptions=True)
     flow_file = config_dir / "flow.json"
     flow_file.write_text(json.dumps({"name": "renamed on disk"}))
+    # Paused the way the route does it: the pause is written, then the passes that began before it end.
+    # The app under test runs this loop too, and one of its passes may be going.
+    _write_record(config_dir, PAUSED)
+    assert await migration_pause.drained(5)
     async with session_scope() as session:
         flow = Flow(name="named in the database", user_id=active_user.id, data={}, fs_path=str(flow_file))
         session.add(flow)
@@ -377,13 +705,128 @@ async def test_the_flow_sync_from_disk_waits_out_the_pause(active_user, config_d
             return (await session.get(Flow, flow_id)).name == "renamed on disk"
 
     monkeypatch.setattr(get_settings_service().settings, "fs_flows_polling_interval", 50)
-    _write_record(config_dir, PAUSED)
     sync = asyncio.create_task(sync_flows_from_fs())
     try:
+        # The loop has found the instance paused and waits. It holds no place meanwhile, or no pause
+        # could ever count.
+        await asyncio.sleep(0)
+        assert await migration_pause.drained(0.2)
         await _acts_only_after_the_pause(config_dir, synced)
     finally:
         sync.cancel()
         await asyncio.gather(sync, return_exceptions=True)
+
+
+async def test_a_pause_waits_for_a_flow_sync_pass_that_began_before_it(active_user, config_dir, monkeypatch):
+    flow_file = config_dir / "flow.json"
+    flow_file.write_text(json.dumps({"name": "renamed on disk"}))
+    async with session_scope() as session:
+        flow = Flow(name="named in the database", user_id=active_user.id, data={}, fs_path=str(flow_file))
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+    reading, go_on = asyncio.Event(), asyncio.Event()
+
+    @contextlib.asynccontextmanager
+    async def a_session_that_waits():
+        # A pass has asked about the pause, was let in, and is about to read the flows.
+        reading.set()
+        await go_on.wait()
+        async with session_scope() as session:
+            yield session
+
+    monkeypatch.setattr(flow_sync, "session_scope", a_session_that_waits)
+    monkeypatch.setattr(get_settings_service().settings, "fs_flows_polling_interval", 50)
+    sync = asyncio.create_task(sync_flows_from_fs())
+    try:
+        await reading.wait()
+        _write_record(config_dir, PAUSED)
+
+        # The pass was let in before the pause, so the pause waits for it and does not count yet.
+        assert not await migration_pause.drained(0.2)
+        under_way = migration_pause.under_way()["changes"]
+        assert ("loop", "flow_sync") in [(change["kind"], change["name"]) for change in under_way]
+
+        go_on.set()
+
+        assert await migration_pause.drained(5)
+        async with session_scope() as session:
+            # What it wrote, it wrote before the pause counted.
+            assert (await session.get(Flow, flow_id)).name == "renamed on disk"
+    finally:
+        go_on.set()
+        sync.cancel()
+        await asyncio.gather(sync, return_exceptions=True)
+
+
+@pytest.mark.parametrize(
+    ("loop", "its_pass", "named"),
+    [("_loop", "tick", "trigger_dispatcher"), ("_source_loop", "source_tick", "trigger_sources")],
+)
+async def test_a_pause_waits_for_a_trigger_dispatcher_pass_that_began_before_it(
+    config_dir, monkeypatch, loop, its_pass, named
+):
+    dispatcher = TriggerDispatcher(owner="pause-test")
+    began, go_on = _held_open(monkeypatch, dispatcher, its_pass)
+    running = asyncio.create_task(getattr(dispatcher, loop)())
+    try:
+        await _the_pause_waits_for_it(config_dir, began, go_on, named)
+    finally:
+        go_on.set()
+        running.cancel()
+        await asyncio.gather(running, return_exceptions=True)
+
+
+async def test_a_pause_waits_for_an_audit_log_cleanup_that_began_before_it(config_dir, monkeypatch):
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_AUDIT_ENABLED", True)
+    worker = AuditLogCleanupWorker(interval=0.05)
+    began, go_on = _held_open(monkeypatch, worker, "_run_once")
+    await worker.start()
+    try:
+        await _the_pause_waits_for_it(config_dir, began, go_on, "audit_cleanup")
+    finally:
+        go_on.set()
+        await worker.stop()
+
+
+@pytest.mark.parametrize(
+    ("its_pass", "named"), [("_flush", "telemetry_flush"), ("_run_retention_pass", "telemetry_retention")]
+)
+async def test_a_pause_waits_for_a_telemetry_write_that_began_before_it(
+    active_user, config_dir, monkeypatch, its_pass, named
+):
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "telemetry_writer_enabled", True)
+    monkeypatch.setattr(settings, "telemetry_writer_outbox_dir", str(config_dir / "outbox"))
+    monkeypatch.setattr(settings, "telemetry_writer_flush_interval_s", 0.05)
+    monkeypatch.setattr(settings, "telemetry_writer_cleanup_interval_s", 1)
+    async with session_scope() as session:
+        flow = Flow(name="traced", user_id=active_user.id, data={})
+        session.add(flow)
+        await session.flush()
+        row = TransactionTable(vertex_id="first", inputs={}, outputs={}, status="success", flow_id=flow.id)
+    writer = TelemetryWriterService(get_settings_service())
+    began, go_on = _held_open(monkeypatch, writer, its_pass)
+    await writer.start()
+    try:
+        # Something for the writer to flush. The sweep runs whether or not anything was written.
+        assert writer.enqueue_transaction(row.model_dump(mode="python"))
+        await _the_pause_waits_for_it(config_dir, began, go_on, named)
+    finally:
+        go_on.set()
+        await writer.teardown()
+
+
+async def test_a_pause_waits_for_an_erase_pass_that_began_before_it(config_dir, monkeypatch):
+    await data_subject_erase_worker.stop()
+    worker = DataSubjectEraseWorker(interval=0.05)
+    began, go_on = _held_open(monkeypatch, worker, "run_once")
+    await worker.start()
+    try:
+        await _the_pause_waits_for_it(config_dir, began, go_on, "data_subject_eraser")
+    finally:
+        go_on.set()
+        await worker.stop()
 
 
 async def test_the_audit_log_cleanup_waits_out_the_pause(config_dir, monkeypatch):

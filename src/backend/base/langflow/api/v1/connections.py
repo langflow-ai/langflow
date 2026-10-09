@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
+from langflow.api.utils.migration_pause import changes_the_instance
 from langflow.api.v1.model_provider_policy_scope import ProviderPolicyAttributesDependency
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
 from langflow.services.authorization.guards import audit_guard_in_transaction
@@ -508,7 +509,8 @@ async def start_connection_oauth(
     return OAuthStartResponse(authorization_url=url)
 
 
-@router.get("/oauth/{provider}/browser", response_model=None)
+# The two routes a browser is sent to during an authorization answer a GET and write what it brought.
+@router.get("/oauth/{provider}/browser", response_model=None, dependencies=[Depends(changes_the_instance)])
 async def bind_connection_oauth_browser(provider: str, request: Request, service: ConnectionService) -> Response:
     """Set the Desktop binding in the browser which will receive the callback."""
     _ = service
@@ -613,7 +615,7 @@ async def list_oauth_registrations(
     )
 
 
-@router.get("/oauth/{provider}/callback", response_class=HTMLResponse)
+@router.get("/oauth/{provider}/callback", response_class=HTMLResponse, dependencies=[Depends(changes_the_instance)])
 async def complete_connection_oauth(provider: str, request: Request, service: ConnectionService) -> HTMLResponse:
     """Terminate provider callbacks here; state and browser binding replace login."""
     _ = service  # Respect host-managed connection services at the callback too.

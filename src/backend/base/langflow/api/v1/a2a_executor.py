@@ -3,7 +3,8 @@
 Deliberately free of langflow imports (only the a2a SDK, ``lfx.schema.workflow``,
 and stdlib) so it can move to lfx when the A2A protocol layer is extracted. The
 langflow-bound seam (flow lookup, v2 execution, gating) lives in ``a2a.py`` and
-is injected as the ``run_flow`` callable.
+is injected as the ``run_flow`` callable. The one exception is the place a run
+holds while an instance migration waits for changes to end (``migration_pause``).
 
 The a2a-sdk 1.x server stack is protobuf-based (``a2a.types.a2a_pb2``); the
 spec-name methods ``message/send`` / ``tasks/get`` reach it through the v0.3
@@ -17,6 +18,7 @@ import contextlib
 import json
 import logging
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from uuid import UUID
 
 from a2a.helpers.proto_helpers import get_data_parts, new_data_part, new_text_part
@@ -25,6 +27,8 @@ from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types import a2a_pb2 as pb
 from lfx.schema.workflow import JobStatus, OutputReason, WorkflowExecutionResponse
+
+from langflow.api.utils.migration_pause import writing_until_told
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +89,64 @@ def _answer_parts(response: WorkflowExecutionResponse) -> list[pb.Part]:
     return parts
 
 
+# How long a run that has returned keeps its place while the SDK saves nothing of its task.
+_SAVE_GRACE = 60.0
+
+
+@dataclass
+class _Place:
+    """A run's place among the changes a migration pause waits for."""
+
+    let_go: Callable[[], None]
+    # The state the task was in when the run began. An answer to a task that waits for a person is saved
+    # first in that same state, with the answer in it, and that save ends nothing.
+    began_in: str | None = None
+    # A save of the task in a state that ends no run has come since the run began.
+    moved: bool = False
+    returned: bool = False
+    saved: bool = False
+    # Set once the run has returned: gives the place up when no save of the task has come for _SAVE_GRACE.
+    giving_up: asyncio.TimerHandle | None = None
+
+
+# The place of each run that holds one, by task id.
+_places: dict[str, _Place] = {}
+
+
+def task_saved(task_id: str, state: str | None, *, run_over: bool) -> None:
+    """The task store has written this task in this state. run_over says that the state ends a run."""
+    place = _places.get(task_id)
+    if place is None:
+        return
+    if not run_over:
+        place.moved = True
+    elif place.moved or state != place.began_in:
+        # The run brought the task here. The place does not ask the store what the row held before: an
+        # older version stored a public task under another owner, and another worker can save in between.
+        place.saved = True
+    if not _settle(task_id, place) and place.giving_up:
+        # The SDK is still saving what the run did, so the wait for the last save starts again.
+        _give_up_later(task_id, place)
+
+
+def _settle(task_id: str, place: _Place, *, given_up: bool = False) -> bool:
+    """Let a place go once its run has returned and what it ended with is saved, or the wait for that is given up."""
+    if not (given_up or (place.returned and place.saved)):
+        return False
+    if place.giving_up:
+        place.giving_up.cancel()
+    if _places.get(task_id) is place:
+        del _places[task_id]
+    place.let_go()
+    return True
+
+
+def _give_up_later(task_id: str, place: _Place) -> None:
+    if place.giving_up:
+        place.giving_up.cancel()
+    place.giving_up = asyncio.get_running_loop().call_later(_SAVE_GRACE, lambda: _settle(task_id, place, given_up=True))
+
+
 class FlowAgentExecutor(AgentExecutor):
     """Runs a Langflow flow for one A2A ``message/send`` and reports a terminal Task."""
 
@@ -93,6 +155,33 @@ class FlowAgentExecutor(AgentExecutor):
         self._resume_flow = resume_flow
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
+        # The SDK goes on with a run after the request that sent its message has answered, and it saves
+        # the state the run ended with only after this method has returned. So the run holds a place of
+        # its own among the changes a migration pause waits for, until the task store has saved that state.
+        let_go = writing_until_told("a2a_run")
+        if let_go is None:
+            await self._execute(context, event_queue)
+            return
+        existing = context.current_task
+        place = _Place(let_go, began_in=pb.TaskState.Name(existing.status.state) if existing is not None else None)
+        if earlier := _places.pop(context.task_id, None):
+            # A follow-up message on the same task: this run takes the place over.
+            _settle(context.task_id, earlier, given_up=True)
+        _places[context.task_id] = place
+        try:
+            await self._execute(context, event_queue)
+        finally:
+            place.returned = True
+            if not _settle(context.task_id, place):
+                # ponytail: a save that never comes, because the SDK's reader died, would hold every pause off.
+                # The place is given up once no save of the task has come for _SAVE_GRACE. Have the store take
+                # a place of its own if one save is ever slower than that. An answer that lost the claim to
+                # another worker saves nothing that ends a run, so its place waits that long as well. A run
+                # that is cancelled is saved as cancelled once more after its place is gone: the row's
+                # time changes and nothing else.
+                _give_up_later(context.task_id, place)
+
+    async def _execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         flow_id = context.call_context.state["flow_id"]
 
         # A follow-up message on an input-required task resumes the paused run with the

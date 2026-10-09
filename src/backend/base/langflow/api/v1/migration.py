@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 import psutil
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from lfx.base.knowledge_bases.backends import is_local_backend
 from lfx.log.logger import logger
@@ -30,6 +30,8 @@ from pydantic import BaseModel
 from sqlalchemy.engine import make_url
 from sqlmodel import select
 
+from langflow.api.utils.migration_jobs import active_jobs, live_listeners
+from langflow.api.utils.migration_pause import drained, under_way
 from langflow.cli.migration_preflight import check_target_version
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.file.model import File
@@ -54,7 +56,9 @@ ACCEPTABLE_FINDINGS = frozenset(
 _KEY_CHECK = "target key"
 # How much of a failed command's stderr the record keeps.
 _STDERR_LINES = 40
-# The steps after the check, in page order. None of them ships yet.
+# Seconds a pause waits for the changes that were let in before it. Past that it is refused.
+_DRAIN_SECONDS = 5
+# The steps after the check, in page order.
 _LATER_STEPS = (
     "connect_target",
     "secret_key",
@@ -156,6 +160,77 @@ async def withdraw_finding(name: str, admin: Superuser) -> dict[str, Any]:
     record["accepted_findings"] = [finding for finding in record["accepted_findings"] if finding["name"] != name]
     _write_record(record)
     await logger.ainfo(f"Migration: user_id={admin.id} withdrew the acceptance of '{name}'")
+    return await _state(record)
+
+
+@router.post("/pause")
+async def pause_changes(request: Request, admin: Superuser) -> dict[str, Any]:
+    """Stop changes to this instance, so that what is copied next is all of it.
+
+    Nothing is cancelled here. The admin ends what is still writing, then asks again.
+    """
+    record = _read_record()
+    state = await _state(record)
+    if record.get("pause"):
+        # The moment the re-check and the copies are measured against stays the first one.
+        return state
+    if not record.get("pausing"):
+        _require_unlocked(state, "pause")
+        # Written first, so that no worker lets a new change in. Read again, with nothing awaited
+        # before the write, so that what another request saved meanwhile is kept.
+        record = _read_record()
+        if record.get("pause"):
+            return await _state(record)
+        if not record.get("pausing"):
+            # It is "pausing" until every change let in before it has ended. It refuses new changes
+            # from now on and is a pause for nothing else, so no check or copy is measured against it.
+            record["pausing"] = {"frozen_at": _now(), "frozen_by": admin.username}
+            _write_record(record)
+    # One that another request still waits on, or that a stopped worker left behind, is waited on here as well.
+    pausing = record["pausing"]
+    # A server keeps a request going after its caller hangs up, so the wait listens for that itself.
+    leaving = asyncio.create_task(_hung_up(request))
+    try:
+        refusal = await _still_writing(admin)
+    except BaseException:
+        # A request that is cut off while it waits must not leave a pause that nobody checked.
+        _lift(pausing)
+        raise
+    finally:
+        left = leaving.done()
+        await _end(leaving)
+    if refusal:
+        _lift(pausing)
+        raise HTTPException(status_code=409, detail=refusal)
+    if left:
+        # Nobody is there to read that changes are paused, so nobody would know to turn them back on.
+        # ponytail: the pause that waited is lifted when the wait ends, so it refuses changes for at most
+        # _DRAIN_SECONDS after the caller left. Race the wait against the listener to lift it at once.
+        _lift(pausing)
+    record = _read_record()
+    # Another request may have resumed, or finished this pause, while this one waited. Its word stands.
+    if record.get("pausing") == pausing:
+        # The instance is still from this moment. The re-check and the copies are measured against it.
+        del record["pausing"]
+        record["pause"] = {"frozen_at": _now(), "frozen_by": admin.username}
+        _write_record(record)
+        await logger.ainfo(f"Migration: user_id={admin.id} paused changes to this instance")
+    if not record.get("pause"):
+        # It was ended while this request waited: changes were turned back on, or another request for
+        # the same pause was refused or cut off. Nothing is paused, and the answer must not read as if it were.
+        raise HTTPException(status_code=409, detail={"code": "pause_ended"})
+    return await _state(record)
+
+
+@router.delete("/pause")
+async def resume_changes(admin: Superuser) -> dict[str, Any]:
+    """End the pause. What was checked or copied during it no longer counts, because later changes are in none of it."""
+    record = _read_record()
+    # A pause that still waited refuses changes as well, so it ends here too.
+    paused, pausing = record.pop("pause", None), record.pop("pausing", None)
+    if paused or pausing:
+        _write_record(record)
+        await logger.ainfo(f"Migration: user_id={admin.id} resumed changes to this instance")
     return await _state(record)
 
 
@@ -342,18 +417,105 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
         "copy_knowledge_bases": None if local_kbs else "no_local_knowledge_bases",
         "copy_files": "files_in_s3" if files["storage"] == "s3" else None if files["local"] else "no_local_files",
     }
+    # What each later step says for itself. A step with no entry is not built yet.
+    own = {
+        # Connecting and the key get their routes next. Until then only the record can say they are done.
+        "connect_target": ("done", None) if record.get("destinations") else ("current", "not_available"),
+        "secret_key": ("done", None) if record.get("secret_key") else ("current", "not_available"),
+        "pause": _pause_step(record, blocking),
+    }
     steps = [first]
-    # The first step neither done nor skipped is the one to do now, and every later one waits for it.
+    # The first step neither done nor skipped is the one to do now. A later step that has not started
+    # waits for it, and one that has started keeps saying where it stands.
     frontier_open = first["state"] == "done"
     for step in _LATER_STEPS:
+        state, reason = own.get(step, ("current", "not_available"))
         if skipped.get(step):
-            steps.append({"id": step, "state": "skipped", "reason": skipped[step]})
-        elif frontier_open:
-            steps.append({"id": step, "state": "current", "reason": "not_available"})
-            frontier_open = False
-        else:
-            steps.append({"id": step, "state": "locked", "reason": "earlier_step"})
+            state, reason = "skipped", skipped[step]
+        elif state == "current" and not frontier_open:
+            state, reason = "locked", "earlier_step"
+        steps.append({"id": step, "state": state, "reason": reason})
+        frontier_open = frontier_open and state in {"done", "skipped"}
     return steps
+
+
+async def _still_writing(admin: User) -> dict[str, Any] | None:
+    """What still writes now that no new change is let in: the refusal to answer with, or None.
+
+    A refusal says what the admin can act on. Jobs and listeners are read from the database, which
+    every worker shares. Changes are what this worker let in before the pause, and so can name.
+    """
+    # The changes that were let in before the pause end first. Only then is it known what writes
+    # without a request: a job that one of those changes queued is in the table by now, and the job
+    # of a run that ended with its request is no longer live. Looking at the table first would refuse
+    # every pause that comes while a request runs a flow, which on a busy instance is every pause.
+    waited_for = None if await drained(_DRAIN_SECONDS) else under_way()
+    if refusal := await _jobs_and_listeners(admin):
+        # A change that outlasted the wait is a long one, such as an upload, and is told with them.
+        # The task a job runs in is left out: the job says what it is, and who can cancel it.
+        still = waited_for["changes"] if waited_for else []
+        return {**refusal, "changes": [change for change in still if change["kind"] != "task"]}
+    if waited_for:
+        return {"code": "requests_active", "jobs": [], "listeners": [], **waited_for}
+    return None
+
+
+async def _jobs_and_listeners(admin: User) -> dict[str, Any] | None:
+    """The refusal for what writes without a request and is known to every worker, or None."""
+    async with session_scope() as session:
+        jobs, listeners = await active_jobs(session, admin.id), await live_listeners(session)
+    return {"code": "jobs_active", "jobs": jobs, "listeners": listeners} if jobs or listeners else None
+
+
+async def _hung_up(request: Request) -> None:
+    """Return once the caller of this request is gone.
+
+    request.is_disconnected() is not used: on a real server it still answered False here after the caller had gone.
+    """
+    while (await request.receive())["type"] != "http.disconnect":
+        pass
+
+
+async def _end(listener: asyncio.Task) -> None:
+    """End the task that listens for the caller, so that it does not outlive the request.
+
+    It is asked until it ends: under the app's middleware a task group can take one cancel() for its own.
+    """
+    while not listener.done():
+        listener.cancel()
+        await asyncio.sleep(0)
+
+
+def _lift(pausing: dict[str, Any]) -> None:
+    """Take out a pause that still waited, unless another request has since finished it or taken it out."""
+    record = _read_record()
+    if record.get("pausing") == pausing:
+        del record["pausing"]
+        _write_record(record)
+
+
+def _pause_step(record: dict[str, Any], blocking: list[str]) -> tuple[str, str | None]:
+    """Where the pause stands. It is done once a check that started during it has passed."""
+    if not record.get("pause"):
+        return "current", None
+    check = record["steps"].get("check_source") or {}
+    # The page starts that check. One from before the pause says nothing about what the instance held when it stopped.
+    if check.get("status") != "done" or not _during_pause(record, check["started_at"]):
+        return "blocked", "recheck_pending"
+    return ("blocked", "recheck_failed") if blocking else ("done", None)
+
+
+def _during_pause(record: dict[str, Any], moment: str | None) -> bool:
+    """Whether this moment falls in the pause that is on now. What an earlier pause saw no longer counts."""
+    pause = record.get("pause")
+    return bool(pause and moment) and datetime.fromisoformat(moment) > datetime.fromisoformat(pause["frozen_at"])
+
+
+def _require_unlocked(state: dict[str, Any], step_id: str) -> None:
+    """Refuse to act on a step that still waits for an earlier one."""
+    step = next(step for step in state["steps"] if step["id"] == step_id)
+    if step["state"] == "locked":
+        raise HTTPException(status_code=409, detail={"code": "locked", "reason": step["reason"]})
 
 
 def _failing_checks(record: dict[str, Any]) -> dict[str, dict[str, Any]]:

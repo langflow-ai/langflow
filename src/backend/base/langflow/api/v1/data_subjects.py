@@ -10,6 +10,7 @@ from sqlalchemy import func
 from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils.migration_pause import changes_the_instance
 from langflow.api.v1.data_subjects_common import (
     request_read,
     require_data_subject_feature,
@@ -225,7 +226,8 @@ async def retry_request(request_id: UUID, current_user: CurrentActiveUser, sessi
     return request_read(request)
 
 
-@router.get("/requests/{request_id}/export")
+# An export and a search answer a GET and add a row to the audit log, so a paused instance refuses them.
+@router.get("/requests/{request_id}/export", dependencies=[Depends(changes_the_instance)])
 async def export_request(request_id: UUID, current_user: CurrentActiveUser, session: DbSession):
     """Download what Langflow holds about the subject, while the request is still open."""
     await _require_admin(current_user)
@@ -249,7 +251,7 @@ async def export_request(request_id: UUID, current_user: CurrentActiveUser, sess
     return zip_response(archive, f"data-subject-{request.id}.zip")
 
 
-@router.get("/end-users", response_model=list[EndUserMatch])
+@router.get("/end-users", response_model=list[EndUserMatch], dependencies=[Depends(changes_the_instance)])
 async def find_end_users(
     current_user: CurrentActiveUser,
     session: DbSession,
