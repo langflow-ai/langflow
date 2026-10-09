@@ -13,7 +13,7 @@ import i18n, { loadLanguage } from "./i18n";
 describe("loadLanguage", () => {
   beforeEach(() => {
     // Clear cached non-English bundles between tests
-    ["fr", "ja", "ko", "es", "de", "pt", "zh-Hans"].forEach((lang) => {
+    ["fr", "ja", "ko", "es", "de", "pt", "zh-Hans", "tr"].forEach((lang) => {
       if (i18n.hasResourceBundle(lang, "translation")) {
         i18n.removeResourceBundle(lang, "translation");
       }
@@ -50,5 +50,12 @@ describe("loadLanguage", () => {
     await loadLanguage("ja");
     expect(i18n.hasResourceBundle("fr", "translation")).toBe(true);
     expect(i18n.hasResourceBundle("ja", "translation")).toBe(true);
+  });
+
+  it("loads the Turkish bundle", async () => {
+    expect(i18n.hasResourceBundle("tr", "translation")).toBe(false);
+    await loadLanguage("tr");
+    expect(i18n.hasResourceBundle("tr", "translation")).toBe(true);
+    expect(i18n.getResource("tr", "translation", "chat.newChat")).toBe("Yeni sohbet");
   });
 });
