@@ -9,7 +9,9 @@ from __future__ import annotations
 import asyncio
 import io
 import json
+import logging
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -20,12 +22,14 @@ from uuid import uuid4
 
 import langflow.api.router as api_router_module
 import pytest
+import sqlalchemy as sa
 import structlog
 import uvicorn
 from anyio import Path as AsyncPath
 from fastapi import APIRouter, FastAPI, Request
 from httpx import ASGITransport, AsyncClient
 from langflow.api.utils import migration_pause
+from langflow.api.utils.migration_probes import database_identity, location
 from langflow.api.v1 import migration as migration_module
 from langflow.api.v1.migration import _source_env
 from langflow.services.database.models.file.model import File
@@ -33,6 +37,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.user.model import User
+from langflow.services.database.sqlite_to_postgres import upgrade_to_head
 from langflow.services.deps import (
     get_background_execution_service,
     get_db_service,
@@ -70,6 +75,12 @@ PAUSED_BEFORE_THE_CHECK = {"frozen_at": "2026-09-29T00:00:00+00:00", "frozen_by"
 PAUSED_AFTER_THE_CHECK = {"frozen_at": "2026-10-01T00:00:00+00:00", "frozen_by": "alice"}
 PAUSE = "api/v1/migration/pause"
 NEW_FLOW = {"name": "saved around a pause", "data": {}}
+# Nothing listens on port 1, so a connection there is refused at once.
+NOWHERE = "127.0.0.1:1"
+DB_PASSWORD = "db-password-9f3a61c2"  # noqa: S105  # pragma: allowlist secret
+S3_SECRET = "s3-secret-key-7be04d15"  # noqa: S105  # pragma: allowlist secret
+# The files part of a destination that no test reaches, for the routes that never get as far as a bucket.
+FILES = {"bucket": "acme", "prefix": "files", "access_key_id": "AKIAEXAMPLE", "secret_access_key": S3_SECRET}
 
 
 @pytest.fixture(autouse=True)
@@ -90,7 +101,45 @@ def config_dir(migration_enabled, client, tmp_path: Path, monkeypatch: pytest.Mo
     The feature is turned on first: the app registers the pause middleware when it is built.
     """
     monkeypatch.setattr(get_settings_service().settings, "config_dir", str(tmp_path))
+    # Destination passwords and keys are kept in the worker's memory, which outlives a test.
+    monkeypatch.setattr(migration_module, "_secrets", {"for": {}})
+    # A profile named in the developer's shell would decide how every S3 client here is built.
+    monkeypatch.delenv("AWS_PROFILE", raising=False)
     return tmp_path
+
+
+@pytest.fixture
+def scratch_database():
+    """An empty PostgreSQL database of this test's own, removed afterwards."""
+    pytest.importorskip("psycopg", reason="needs the postgresql extra")
+    base_url = os.getenv("LANGFLOW_TEST_DATABASE_URI")
+    if not base_url:
+        pytest.skip("LANGFLOW_TEST_DATABASE_URI not set")
+    admin_url = sa.make_url(base_url).set(drivername="postgresql+psycopg")
+    name = f"lf_destination_{uuid4().hex[:10]}"
+    _sql(admin_url, f'CREATE DATABASE "{name}"')
+    try:
+        yield admin_url.set(database=name)
+    finally:
+        _sql(admin_url, f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+@pytest.fixture
+async def bucket() -> str:
+    """A bucket of this test's own, emptied and removed afterwards."""
+    if not (os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY")):
+        pytest.skip("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY not set")
+    from aiobotocore.session import get_session
+
+    name = f"lf-destination-{uuid4().hex[:10]}"
+    async with get_session().create_client("s3") as s3:
+        await s3.create_bucket(Bucket=name)
+        try:
+            yield name
+        finally:
+            for stored in (await s3.list_objects_v2(Bucket=name)).get("Contents", []):
+                await s3.delete_object(Bucket=name, Key=stored["Key"])
+            await s3.delete_bucket(Bucket=name)
 
 
 @pytest.fixture
@@ -126,6 +175,36 @@ async def _steps(client, headers) -> dict[str, tuple[str, str | None]]:
 def _write_record(config_dir: Path, record: dict) -> None:
     (config_dir / "migrations").mkdir(exist_ok=True)
     (config_dir / "migrations" / "migration.json").write_text(json.dumps(record))
+
+
+def _sql(database: sa.URL, *statements: str) -> None:
+    engine = sa.create_engine(database, isolation_level="AUTOCOMMIT")
+    with engine.connect() as connection:
+        for statement in statements:
+            connection.execute(sa.text(statement))
+    engine.dispose()
+
+
+def _add_user(database: sa.URL, user_id) -> None:
+    _sql(database, f"INSERT INTO \"user\" VALUES ('{user_id}')")  # noqa: S608
+
+
+async def _connect(client, headers, **parts) -> dict:
+    response = await client.put("api/v1/migration/destinations", json=parts, headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def _files(bucket: str, **changes) -> dict:
+    """The files part of a destination, with the keys and the endpoint this test run was given."""
+    return {
+        "bucket": bucket,
+        "prefix": "files",
+        "access_key_id": os.environ["AWS_ACCESS_KEY_ID"],
+        "secret_access_key": os.environ["AWS_SECRET_ACCESS_KEY"],
+        "endpoint_url": os.getenv("AWS_ENDPOINT_URL"),
+        **changes,
+    }
 
 
 async def _add(*rows) -> None:
@@ -192,6 +271,7 @@ async def test_only_a_superuser_can_open_the_migration(client, logged_in_headers
         await client.delete("api/v1/migration/accepted-findings", params=finding, headers=logged_in_headers),
         await client.post(PAUSE, headers=logged_in_headers),
         await client.delete(PAUSE, headers=logged_in_headers),
+        await client.put("api/v1/migration/destinations", json={}, headers=logged_in_headers),
     ]
 
     assert [response.status_code for response in refused] == [403] * len(refused)
@@ -244,7 +324,7 @@ async def test_after_the_check_the_next_needed_step_is_current_and_the_rest_wait
 
     assert [(step["id"], step["state"], step["reason"]) for step in steps] == [
         ("check_source", "done", None),
-        ("connect_target", "current", "not_available"),
+        ("connect_target", "current", None),
         ("secret_key", "locked", "earlier_step"),
         ("pause", "locked", "earlier_step"),
         ("backup", "locked", "earlier_step"),
@@ -2074,3 +2154,808 @@ async def test_the_pause_is_refused_while_a_trigger_listener_is_alive(client, lo
         await replicas.withdraw(session, holder="listener:222:cafef00d")
 
     assert (await client.post(PAUSE, headers=headers)).status_code == 200
+
+
+async def test_a_destination_this_instance_does_not_need_is_refused(client, logged_in_headers_super_user):
+    # Nothing but the database is kept on this instance's own disk.
+    body = {"vectors": {"kind": "pgvector"}, "files": FILES}
+
+    refused = await client.put("api/v1/migration/destinations", json=body, headers=logged_in_headers_super_user)
+
+    assert refused.status_code == 422
+    assert refused.json()["detail"] == {"code": "not_needed", "parts": ["files", "vectors"]}
+    assert "destinations" not in (await _migration(client, logged_in_headers_super_user))["record"]
+
+
+async def test_a_database_that_cannot_be_reached_blocks_the_step(client, logged_in_headers_super_user, config_dir):
+    _checked(config_dir, [PASSING])
+    url = f"postgresql://migrator:{DB_PASSWORD}@{NOWHERE}/langflow"
+
+    saved = await _connect(client, logged_in_headers_super_user, database_url=url)
+
+    assert saved["results"]["database"]["ok"] is False
+    assert saved["results"]["database"]["code"] == "db_unreachable"
+    destinations = saved["record"]["destinations"]
+    # Where it is, for the page, and a digest of everything that decides where a copy would land.
+    assert destinations["database"] == {"location": f"{NOWHERE}/langflow", "identity": database_identity(url)}
+    # How the test ended is kept. The driver's own words are shown once and not saved.
+    assert destinations["results"] == {"database": {"ok": False, "code": "db_unreachable"}}
+    assert destinations["saved_by"] == "activeuser"
+    steps = {step["id"]: (step["state"], step["reason"]) for step in saved["steps"]}
+    assert steps["connect_target"] == ("blocked", "db_unreachable")
+    assert steps["secret_key"] == ("locked", "earlier_step")
+    assert migration_module._secrets == {"for": {}}
+
+
+@pytest.mark.parametrize("address", ["sqlite:///created-by-mistake.db", "not an address"])
+async def test_an_address_that_is_not_postgresql_is_not_opened(
+    client, logged_in_headers_super_user, address, tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    saved = await _connect(client, logged_in_headers_super_user, database_url=address)
+
+    assert saved["results"]["database"]["code"] == "db_unreachable"
+    assert not (tmp_path / "created-by-mistake.db").exists()
+
+
+@pytest.mark.parametrize("hostname", ["a..b", "a" * 64 + ".com"])
+async def test_an_invalid_database_hostname_is_reported_without_exposing_credentials(
+    client, logged_in_headers_super_user, config_dir, server_log, caplog, capfd, hostname
+):
+    pytest.importorskip("psycopg", reason="needs the postgresql extra")
+    caplog.set_level(logging.DEBUG)
+    address = f"postgresql://migrator:{DB_PASSWORD}@{hostname}/langflow"
+
+    response = await client.put(
+        "api/v1/migration/destinations", json={"database_url": address}, headers=logged_in_headers_super_user
+    )
+
+    assert response.status_code == 200
+    assert response.json()["results"]["database"]["code"] == "db_unreachable"
+    assert "database_url" not in migration_module._secrets
+    _nowhere((DB_PASSWORD,), [response], config_dir, server_log, caplog, capfd)
+
+
+async def test_a_server_with_no_postgresql_driver_says_what_to_install(
+    client, logged_in_headers_super_user, monkeypatch
+):
+    monkeypatch.setitem(sys.modules, "psycopg", None)
+
+    saved = await _connect(client, logged_in_headers_super_user, database_url=f"postgresql://{NOWHERE}/langflow")
+
+    assert saved["results"]["database"]["code"] == "db_unreachable"
+    assert "langflow[postgresql]" in saved["results"]["database"]["reason"]
+
+
+async def test_an_empty_database_passes_and_its_address_stays_in_memory(
+    client, logged_in_headers_super_user, config_dir, scratch_database
+):
+    _checked(config_dir, [PASSING])
+    url = scratch_database.set(password=scratch_database.password or DB_PASSWORD)
+    address = url.render_as_string(hide_password=False)
+
+    saved = await _connect(client, logged_in_headers_super_user, database_url=address)
+
+    assert saved["results"] == {"database": {"ok": True}}
+    database = {"location": f"{url.host}:{url.port}/{url.database}", "identity": database_identity(address)}
+    assert saved["record"]["destinations"]["database"] == database
+    assert {step["id"]: step["state"] for step in saved["steps"]}["connect_target"] == "done"
+    # The copy needs the whole address, password included. It is kept where no file and no response holds it,
+    # together with the saved part it belongs to.
+    assert migration_module._secrets == {"database_url": address, "for": {"database": database}}
+    record = (config_dir / "migrations" / "migration.json").read_text()
+    assert url.password not in record
+    assert url.username not in record
+
+    # The copy builds Langflow's tables there with its own migrations. A database that holds them still passes.
+    await asyncio.to_thread(upgrade_to_head, address)
+    assert (await _connect(client, logged_in_headers_super_user, database_url=address))["results"] == {
+        "database": {"ok": True}
+    }
+
+    # A destination that stops passing is no longer one the copy may use.
+    await _connect(client, logged_in_headers_super_user, database_url=f"postgresql://{NOWHERE}/langflow")
+    assert migration_module._secrets == {"for": {}}
+
+
+async def test_only_an_empty_database_or_one_an_earlier_copy_filled_passes(
+    client, logged_in_headers_super_user, active_super_user, scratch_database
+):
+    headers, address = logged_in_headers_super_user, scratch_database.render_as_string(hide_password=False)
+    # What an earlier copy leaves: Langflow's tables, this instance's users, and a table for each knowledge base.
+    _sql(
+        scratch_database,
+        "CREATE TABLE alembic_version (version_num text)",
+        "CREATE TABLE lf_0123456789abcdef01234567 (id text)",
+        'CREATE TABLE "user" (id uuid)',
+    )
+    _add_user(scratch_database, active_super_user.id)
+    assert (await _connect(client, headers, database_url=address))["results"]["database"] == {"ok": True}
+
+    # A user this instance does not have: the database belongs to another instance.
+    _add_user(scratch_database, uuid4())
+    assert (await _connect(client, headers, database_url=address))["results"]["database"]["code"] == "db_not_empty"
+
+    _sql(scratch_database, 'TRUNCATE "user"', "CREATE TABLE invoices (id int)")
+    not_empty = (await _connect(client, headers, database_url=address))["results"]["database"]
+    assert not_empty["code"] == "db_not_empty"
+    assert "invoices" in not_empty["reason"]
+
+
+async def test_a_database_user_that_cannot_create_tables_is_reported(
+    client, logged_in_headers_super_user, scratch_database
+):
+    role = f"lf_reader_{uuid4().hex[:10]}"
+    _sql(
+        scratch_database,
+        f"CREATE ROLE {role} LOGIN PASSWORD '{DB_PASSWORD}'",
+        "REVOKE CREATE ON SCHEMA public FROM PUBLIC",
+    )
+    try:
+        address = scratch_database.set(username=role, password=DB_PASSWORD).render_as_string(hide_password=False)
+
+        saved = await _connect(client, logged_in_headers_super_user, database_url=address)
+    finally:
+        _sql(scratch_database, f"DROP ROLE {role}")
+
+    assert saved["results"]["database"]["code"] == "no_create"
+
+
+async def test_knowledge_bases_need_the_vector_extension_turned_on(
+    client, logged_in_headers_super_user, active_super_user, config_dir, scratch_database
+):
+    pytest.importorskip("pgvector", reason="needs the pgvector extra")
+    headers, address = logged_in_headers_super_user, scratch_database.render_as_string(hide_password=False)
+    engine = sa.create_engine(scratch_database)
+    with engine.connect() as connection:
+        available = connection.scalar(sa.text("SELECT 1 FROM pg_available_extensions WHERE name = 'vector'"))
+    engine.dispose()
+    if not available:
+        pytest.skip("this PostgreSQL server has no pgvector to turn on")
+    _checked(config_dir, [PASSING])
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+
+    saved = await _connect(client, headers, database_url=address, vectors={"kind": "pgvector"})
+
+    assert saved["results"]["database"] == {"ok": True}
+    assert saved["results"]["vectors"]["code"] == "pgvector_missing"
+    # The copy never turns the extension on, so the reason says who does and how.
+    assert "CREATE EXTENSION vector" in saved["results"]["vectors"]["reason"]
+    assert {step["id"]: (step["state"], step["reason"]) for step in saved["steps"]}["connect_target"] == (
+        "blocked",
+        "pgvector_missing",
+    )
+
+    _sql(scratch_database, "CREATE EXTENSION vector")
+    # Sent alone, it is tested against the database address this worker still holds.
+    saved = await _connect(client, headers, vectors={"kind": "pgvector"})
+
+    assert saved["results"] == {"vectors": {"ok": True}}
+    assert saved["record"]["destinations"]["vectors"] == {"kind": "pgvector"}
+    assert {step["id"]: step["state"] for step in saved["steps"]}["connect_target"] == "done"
+
+
+async def test_an_instance_on_postgresql_keeps_its_knowledge_bases_where_its_own_variable_points(
+    client,
+    logged_in_headers_super_user,
+    active_super_user,
+    config_dir,
+    scratch_database,
+    monkeypatch,
+    server_log,
+    caplog,
+    capfd,
+):
+    pytest.importorskip("pgvector", reason="needs the pgvector extra")
+    headers = logged_in_headers_super_user
+    caplog.set_level(logging.DEBUG)
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    # The instance runs on one database, and its server reads knowledge bases through another.
+    monkeypatch.setattr(get_db_service(), "database_url", f"postgresql://{NOWHERE}/own")
+    its_own = scratch_database.set(password=DB_PASSWORD).render_as_string(hide_password=False)
+    monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", its_own)
+
+    tested = await client.put("api/v1/migration/destinations", json={"vectors": {"kind": "pgvector"}}, headers=headers)
+
+    # Tested where the variable points. That database is new, so nobody turned the extension on in it.
+    saved = tested.json()
+    assert saved["results"]["vectors"]["code"] == "pgvector_missing"
+    assert saved["record"]["destinations"]["vectors"] == {"kind": "pgvector"}
+    # The variable's value holds a password. It went to the test and nowhere else.
+    _nowhere((DB_PASSWORD,), [tested], config_dir, server_log, caplog, capfd)
+    assert migration_module._secrets == {"for": {}}
+    refused = await client.put(
+        "api/v1/migration/destinations", json={"database_url": f"postgresql://{NOWHERE}/other"}, headers=headers
+    )
+    assert refused.json()["detail"] == {"code": "not_needed", "parts": ["database"]}
+
+
+async def test_an_instance_on_postgresql_cannot_keep_knowledge_bases_without_its_own_variable(
+    client, logged_in_headers_super_user, active_super_user, monkeypatch
+):
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    monkeypatch.setattr(get_db_service(), "database_url", f"postgresql://{NOWHERE}/own")
+    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+
+    saved = await _connect(client, logged_in_headers_super_user, vectors={"kind": "pgvector"})
+
+    # After the copy the server reads them through that variable, so the admin learns it here, before the pause.
+    assert saved["results"]["vectors"]["code"] == "pgvector_env_missing"
+    assert "PGVECTOR_CONNECTION_STRING" in saved["results"]["vectors"]["reason"]
+    assert "restart Langflow" in saved["results"]["vectors"]["reason"]
+    assert {step["id"]: (step["state"], step["reason"]) for step in saved["steps"]}["connect_target"] == (
+        "blocked",
+        "pgvector_env_missing",
+    )
+
+
+async def test_knowledge_bases_cannot_be_tested_without_the_database_address(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+
+    # After a restart the record still names the database, and its password is gone with the old process.
+    restarted = await _connect(client, logged_in_headers_super_user, vectors={"kind": "pgvector"})
+
+    assert restarted["results"]["vectors"]["code"] == "secrets_missing"
+
+    # Without the package the copy cannot write to pgvector, wherever it is.
+    monkeypatch.setitem(sys.modules, "pgvector", None)
+    # A database that passed its test: named in the record, and held in this worker.
+    address = f"postgresql://{NOWHERE}/langflow"
+    part = {"location": location(address), "identity": database_identity(address)}
+    _checked(config_dir, [PASSING], destinations={"database": part, "results": {"database": {"ok": True}}})
+    monkeypatch.setitem(migration_module._secrets, "database_url", address)
+    unable = await _connect(client, logged_in_headers_super_user, vectors={"kind": "pgvector"})
+
+    # Its own code: this server's package is for whoever runs Langflow, the extension for the database's admin.
+    assert unable["results"]["vectors"]["code"] == "pgvector_package_missing"
+    assert "langflow[pgvector]" in unable["results"]["vectors"]["reason"]
+
+
+@pytest.mark.api_key_required
+async def test_a_bucket_the_keys_can_write_to_passes_and_nothing_is_left_in_it(
+    client, logged_in_headers_super_user, active_super_user, bucket, monkeypatch
+):
+    from aiobotocore.session import get_session
+
+    await _add_file_without_bytes(active_super_user.id)
+    files = _files(bucket, ca_bundle="")
+    # The server's own AWS settings name a profile that is not there, which fails any client built from them.
+    monkeypatch.setenv("AWS_PROFILE", "a-profile-that-is-not-there")
+
+    saved = await _connect(client, logged_in_headers_super_user, files=files)
+
+    assert saved["results"] == {"files": {"ok": True}}
+    assert saved["record"]["destinations"]["files"] == {
+        "bucket": bucket,
+        "prefix": "files",
+        "endpoint_url": files["endpoint_url"],
+    }
+    kept = ("access_key_id", "secret_access_key", "endpoint_url", "ca_bundle")
+    assert migration_module._secrets == {
+        "files": {key: files[key] or None for key in kept},
+        "for": {"files": saved["record"]["destinations"]["files"]},
+    }
+    monkeypatch.delenv("AWS_PROFILE")
+    async with get_session().create_client("s3") as s3:
+        assert "Contents" not in await s3.list_objects_v2(Bucket=bucket)
+
+    missing = await _connect(client, logged_in_headers_super_user, files=_files(f"lf-no-such-{uuid4().hex[:10]}"))
+
+    assert missing["results"]["files"]["code"] == "bucket_missing"
+    assert migration_module._secrets == {"for": {}}
+
+
+@pytest.mark.api_key_required
+async def test_keys_the_bucket_refuses_are_reported_as_denied(
+    client, logged_in_headers_super_user, active_super_user, bucket
+):
+    await _add_file_without_bytes(active_super_user.id)
+    strangers = _files(bucket, access_key_id=f"AKIA{uuid4().hex[:16].upper()}", secret_access_key=S3_SECRET)
+
+    saved = await _connect(client, logged_in_headers_super_user, files=strangers)
+
+    if saved["results"]["files"]["ok"]:
+        pytest.skip("this S3 server accepts any keys, so it cannot refuse these")
+    assert saved["results"]["files"]["code"] == "bucket_denied"
+
+
+async def test_a_bucket_is_tested_with_what_the_admin_gave_and_nothing_of_the_servers(
+    client, logged_in_headers_super_user, active_super_user, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    await _add_file_without_bytes(active_super_user.id)
+    monkeypatch.setenv("AWS_PROFILE", "a-profile-that-is-not-there")
+    monkeypatch.setenv("AWS_ENDPOINT_URL", "http://127.0.0.1:2")
+
+    unreachable = await _connect(client, headers, files={**FILES, "endpoint_url": f"http://{NOWHERE}"})
+
+    # It got as far as the endpoint it was given, which does not answer. That is not a bucket that is missing.
+    assert unreachable["results"]["files"]["code"] == "bucket_unreachable"
+    assert NOWHERE in unreachable["results"]["files"]["reason"]
+
+    unusable = await _connect(client, headers, files={**FILES, "endpoint_url": "http://-"})
+
+    # It has the shape of an endpoint, and the client refuses it before it asks anyone. That comes back the
+    # same way.
+    assert unusable["results"]["files"]["code"] == "bucket_unreachable"
+    assert "Invalid endpoint" in unusable["results"]["files"]["reason"]
+
+
+async def test_a_slow_test_of_a_destination_keeps_what_was_saved_meanwhile(
+    client, logged_in_headers_super_user, active_super_user
+):
+    headers = logged_in_headers_super_user
+    await _add_file_without_bytes(active_super_user.id)
+    arrived, answer = asyncio.Event(), asyncio.Event()
+
+    async def keep_waiting(_reader, writer) -> None:
+        arrived.set()
+        await answer.wait()
+        writer.close()
+
+    # A server that takes the connection and says nothing, as a destination far away does for a while.
+    server = await asyncio.start_server(keep_waiting, "127.0.0.1", 0)
+    endpoint = f"http://127.0.0.1:{server.sockets[0].getsockname()[1]}"
+    saving = asyncio.create_task(
+        client.put(
+            "api/v1/migration/destinations", json={"files": {**FILES, "endpoint_url": endpoint}}, headers=headers
+        )
+    )
+    await asyncio.wait_for(arrived.wait(), timeout=10)
+
+    # While the bucket is being tested, another request saves the database.
+    await _connect(client, headers, database_url=f"postgresql://{NOWHERE}/langflow")
+    answer.set()
+    saved = (await saving).json()
+    server.close()
+
+    assert saved["results"]["files"]["ok"] is False
+    assert saved["record"]["destinations"]["database"]["location"] == f"{NOWHERE}/langflow"
+
+
+async def _bucket_that_keeps_waiting() -> tuple[str, asyncio.Event, asyncio.Event, asyncio.AbstractServer]:
+    """An S3 endpoint that takes a connection and says nothing, as a destination far away does for a while.
+
+    Returns its address, an event set when a bucket test connects (the tests before it in that save
+    are over by then), the event that lets the connection go, and the server for the caller to close.
+    """
+    arrived, answer = asyncio.Event(), asyncio.Event()
+
+    async def keep_waiting(_reader, writer) -> None:
+        arrived.set()
+        await answer.wait()
+        writer.close()
+
+    server = await asyncio.start_server(keep_waiting, "127.0.0.1", 0)
+    return f"http://127.0.0.1:{server.sockets[0].getsockname()[1]}", arrived, answer, server
+
+
+async def test_what_this_worker_holds_changes_only_when_the_destination_is_saved(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    await _add_file_without_bytes(active_super_user.id)
+    # What an earlier save left: a database that passed, named in the record and held in this worker.
+    earlier = f"postgresql://migrator:{DB_PASSWORD}@db-a.internal/langflow"
+    part = {"location": "db-a.internal/langflow", "identity": "of the database saved earlier"}
+    _checked(config_dir, [PASSING], destinations={"database": part, "results": {"database": {"ok": True}}})
+    monkeypatch.setitem(migration_module._secrets, "database_url", earlier)
+    monkeypatch.setitem(migration_module._secrets, "for", {"database": part})
+    endpoint, arrived, answer, server = await _bucket_that_keeps_waiting()
+    body = {"database_url": f"postgresql://{NOWHERE}/langflow", "files": {**FILES, "endpoint_url": endpoint}}
+    saving = asyncio.create_task(client.put("api/v1/migration/destinations", json=body, headers=headers))
+    await asyncio.wait_for(arrived.wait(), timeout=10)
+
+    # The database test of this save is over, and it failed. The save now waits on its bucket and has
+    # written nothing, so the record and this worker still name the earlier database.
+    assert (await _migration(client, headers))["record"]["destinations"]["database"] == part
+    assert migration_module._secrets.get("database_url") == earlier
+
+    answer.set()
+    saved = (await saving).json()
+    server.close()
+
+    # Saved and forgotten in one step.
+    assert saved["record"]["destinations"]["database"]["location"] == f"{NOWHERE}/langflow"
+    assert migration_module._secrets == {"for": {}}
+
+
+async def test_two_saves_that_overlap_leave_the_record_and_this_worker_naming_one_database(
+    client, logged_in_headers_super_user, active_super_user, scratch_database
+):
+    headers = logged_in_headers_super_user
+    await _add_file_without_bytes(active_super_user.id)
+    first = scratch_database
+    second = first.set(database=f"{first.database}_b")
+    _sql(first, f'CREATE DATABASE "{second.database}"')
+    endpoint, arrived, answer, server = await _bucket_that_keeps_waiting()
+    try:
+        # The first save passes its database test, then waits on its bucket.
+        body = {
+            "database_url": first.render_as_string(hide_password=False),
+            "files": {**FILES, "endpoint_url": endpoint},
+        }
+        slow = asyncio.create_task(client.put("api/v1/migration/destinations", json=body, headers=headers))
+        await asyncio.wait_for(arrived.wait(), timeout=10)
+        # It has saved nothing yet, so this worker holds nothing yet.
+        assert "database_url" not in migration_module._secrets
+        # Meanwhile a second save names another database, and ends.
+        await _connect(client, headers, database_url=second.render_as_string(hide_password=False))
+        answer.set()
+        await slow
+    finally:
+        server.close()
+        _sql(first, f'DROP DATABASE IF EXISTS "{second.database}" WITH (FORCE)')
+
+    saved = (await _migration(client, headers))["record"]["destinations"]["database"]
+    # Whichever save ended last, the address a copy would use is the one the record names.
+    assert location(migration_module._secrets["database_url"]) == saved["location"]
+    assert migration_module._secrets["for"]["database"] == saved
+
+
+async def test_a_new_database_does_not_keep_what_knowledge_bases_found_in_the_old_one(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers = logged_in_headers_super_user
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    # What an earlier save left: a database, and knowledge bases that passed their test in it.
+    tested = {
+        "database": {"location": "db-a.internal/langflow", "identity": "of the database saved earlier"},
+        "vectors": {"kind": "pgvector"},
+        "results": {"database": {"ok": True}, "vectors": {"ok": True}},
+    }
+    _checked(config_dir, [PASSING], destinations=tested)
+
+    # Another database is saved alone. Nobody looked for the vector extension in it.
+    saved = await _connect(client, headers, database_url=f"postgresql://{NOWHERE}/langflow")
+
+    assert "vectors" not in saved["record"]["destinations"]
+    assert "vectors" not in saved["record"]["destinations"]["results"]
+    # The database that was just saved failed its test. The step says so, and does not wait as if nothing had.
+    steps = {step["id"]: (step["state"], step["reason"]) for step in saved["steps"]}
+    assert steps["connect_target"] == ("blocked", "db_unreachable")
+
+
+async def test_knowledge_bases_tested_in_a_database_that_is_replaced_meanwhile_keep_no_result(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    await _add_file_without_bytes(active_super_user.id)
+    # What an earlier save left: a database that passed, named in the record and held in this worker.
+    earlier = f"postgresql://migrator:{DB_PASSWORD}@{NOWHERE}/earlier"
+    part = {"location": f"{NOWHERE}/earlier", "identity": database_identity(earlier)}
+    _checked(config_dir, [PASSING], destinations={"database": part, "results": {"database": {"ok": True}}})
+    monkeypatch.setitem(migration_module._secrets, "database_url", earlier)
+    monkeypatch.setitem(migration_module._secrets, "for", {"database": part})
+    endpoint, arrived, answer, server = await _bucket_that_keeps_waiting()
+    # Sent with no database, the knowledge bases are tested in the one this worker holds. Then the bucket
+    # keeps the save waiting.
+    body = {"vectors": {"kind": "pgvector"}, "files": {**FILES, "endpoint_url": endpoint}}
+    saving = asyncio.create_task(client.put("api/v1/migration/destinations", json=body, headers=headers))
+    await asyncio.wait_for(arrived.wait(), timeout=10)
+
+    # Meanwhile another save names another database.
+    await _connect(client, headers, database_url=f"postgresql://{NOWHERE}/another")
+    answer.set()
+    saved = (await saving).json()
+    server.close()
+
+    # What they found, they found in a database that is no longer the saved one. It is not kept.
+    destinations = saved["record"]["destinations"]
+    assert destinations["database"]["location"] == f"{NOWHERE}/another"
+    assert "vectors" not in destinations
+    assert "vectors" not in destinations["results"]
+    assert "vectors" not in saved["results"]
+
+
+async def test_the_same_database_saved_again_keeps_what_knowledge_bases_found_in_it(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers = logged_in_headers_super_user
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    address = f"postgresql://migrator:{DB_PASSWORD}@{NOWHERE}/langflow"
+    tested = {
+        "database": {"location": f"{NOWHERE}/langflow", "identity": database_identity(address)},
+        "vectors": {"kind": "pgvector"},
+        "results": {"database": {"ok": True}, "vectors": {"ok": True}},
+    }
+    _checked(config_dir, [PASSING], destinations=tested)
+
+    # As after a restart, when the address has to be entered again. Its driver and password may differ.
+    again = f"postgresql+psycopg://migrator:another-password@{NOWHERE}/langflow"  # pragma: allowlist secret
+    saved = await _connect(client, headers, database_url=again)
+
+    assert saved["record"]["destinations"]["vectors"] == {"kind": "pgvector"}
+    assert saved["record"]["destinations"]["results"]["vectors"] == {"ok": True}
+
+
+@pytest.mark.parametrize(
+    ("one", "other", "same"),
+    [
+        # The driver and the password are no part of where an address leads.
+        (
+            "postgresql://migrator:one@db.internal:5432/app",  # pragma: allowlist secret
+            "postgresql+psycopg://migrator:two@db.internal:5432/app",  # pragma: allowlist secret
+            True,
+        ),
+        (
+            "postgresql://db.internal/app?sslmode=require&application_name=copy",
+            "postgresql+asyncpg://db.internal/app?application_name=copy&sslmode=require&sslpassword=three",
+            True,
+        ),
+        # Each of these pairs has one location on the page, and leads to two databases.
+        ("postgresql://ignored/app?host=one", "postgresql://ignored/app?host=two", False),
+        (
+            "postgresql://db.internal/app?options=-csearch_path%3Dalpha",
+            "postgresql://db.internal/app?options=-csearch_path%3Dbeta",
+            False,
+        ),
+        ("postgresql://migrator@db.internal/app", "postgresql://reader@db.internal/app", False),
+    ],
+)
+def test_the_identity_of_a_database_is_where_its_address_leads(one: str, other: str, same: bool):  # noqa: FBT001
+    assert location(one) == location(other)
+    assert (database_identity(one) == database_identity(other)) is same
+    # A digest, short enough for the record, with nothing of the address left to read in it.
+    assert len(database_identity(one)) == 16
+    assert int(database_identity(one), 16) >= 0
+
+
+@pytest.mark.parametrize(
+    ("one", "other", "same"),
+    [
+        # One host, written three ways.
+        ("postgresql://[2001:db8::1]:5432/app", "postgresql+psycopg://[2001:DB8::1]:5432/app", True),
+        ("postgresql://[2001:db8::1]:5432/app", "postgresql://[2001:0db8:0:0:0:0:0:1]:5432/app", True),
+        # Another host, and the same host on another port.
+        ("postgresql://[2001:db8::1]:5432/app", "postgresql://[2001:db8::2]:5432/app", False),
+        ("postgresql://[::1]:5432/app", "postgresql://[::1]:5433/app", False),
+    ],
+)
+def test_the_identity_of_a_database_on_an_ipv6_host_is_the_same_however_the_host_is_written(
+    one: str,
+    other: str,
+    same: bool,  # noqa: FBT001
+):
+    assert (database_identity(one) == database_identity(other)) is same
+
+
+async def test_a_new_database_is_not_done_on_what_knowledge_bases_found_in_the_old_one(
+    client, logged_in_headers_super_user, active_super_user, config_dir, scratch_database
+):
+    pytest.importorskip("pgvector", reason="needs the pgvector extra")
+    headers = logged_in_headers_super_user
+    engine = sa.create_engine(scratch_database)
+    with engine.connect() as connection:
+        available = connection.scalar(sa.text("SELECT 1 FROM pg_available_extensions WHERE name = 'vector'"))
+    engine.dispose()
+    if not available:
+        pytest.skip("this PostgreSQL server has no pgvector to turn on")
+    _checked(config_dir, [PASSING])
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    first = scratch_database
+    second = first.set(database=f"{first.database}_b")
+    _sql(first, "CREATE EXTENSION vector", f'CREATE DATABASE "{second.database}"')
+    try:
+        both = await _connect(
+            client, headers, database_url=first.render_as_string(hide_password=False), vectors={"kind": "pgvector"}
+        )
+        assert {step["id"]: step["state"] for step in both["steps"]}["connect_target"] == "done"
+
+        # The second database is empty, so it passes. It has no vector extension, and nobody asked.
+        alone = await _connect(client, headers, database_url=second.render_as_string(hide_password=False))
+    finally:
+        _sql(first, f'DROP DATABASE IF EXISTS "{second.database}" WITH (FORCE)')
+
+    assert alone["results"] == {"database": {"ok": True}}
+    assert "vectors" not in alone["record"]["destinations"]
+    assert {step["id"]: (step["state"], step["reason"]) for step in alone["steps"]}["connect_target"] == (
+        "current",
+        None,
+    )
+
+
+def _nowhere(secrets: tuple[str, ...], responses: list, config_dir: Path, server_log, caplog, capfd) -> None:
+    """Assert that no secret is in a response, a file under CONFIG_DIR, or anything the server logged or printed."""
+    printed = capfd.readouterr()
+    held = {
+        **{f"response {number}": response.text for number, response in enumerate(responses)},
+        **{str(path): path.read_text() for path in config_dir.rglob("*") if path.is_file()},
+        "the migration log": server_log.getvalue(),
+        "the other logs": caplog.text,
+        "stdout": printed.out,
+        "stderr": printed.err,
+    }
+    assert [(where, secret) for where, text in held.items() for secret in secrets if secret in text] == []
+
+
+async def test_a_destination_that_fails_gives_no_password_or_key_away(
+    client, logged_in_headers_super_user, active_super_user, config_dir, server_log, caplog, capfd
+):
+    headers = logged_in_headers_super_user
+    caplog.set_level(logging.DEBUG)
+    await _add_file_without_bytes(active_super_user.id)
+    await _add(KnowledgeBaseRecord(user_id=active_super_user.id, name="handbook", backend_type="sqlite"))
+    body = {
+        "database_url": f"postgresql://migrator:{DB_PASSWORD}@{NOWHERE}/langflow",
+        "vectors": {"kind": "pgvector"},
+        "files": {**FILES, "endpoint_url": f"http://{NOWHERE}"},
+    }
+    no_bucket = {key: value for key, value in FILES.items() if key != "bucket"}
+
+    responses = [
+        await client.put("api/v1/migration/destinations", json=body, headers=headers),
+        # A body with a field missing, and one that is not JSON, come back naming what failed. What was sent
+        # is neither repeated nor logged.
+        await client.put("api/v1/migration/destinations", json={**body, "files": no_bucket}, headers=headers),
+        await client.put("api/v1/migration/destinations", content=f'{{"database_url": "{DB_PASSWORD}', headers=headers),
+        await client.get("api/v1/migration", headers=headers),
+    ]
+
+    assert [response.status_code for response in responses] == [200, 422, 422, 200]
+    assert [error["loc"] for error in responses[1].json()["detail"]] == [["body", "files", "bucket"]]
+    results = responses[0].json()["results"]
+    assert {part: result["code"] for part, result in results.items()} == {
+        "database": "db_unreachable",
+        "vectors": "secrets_missing",
+        "files": "bucket_unreachable",
+    }
+    assert "tested the destination" in server_log.getvalue()
+    _nowhere((DB_PASSWORD, S3_SECRET), responses, config_dir, server_log, caplog, capfd)
+    record = (config_dir / "migrations" / "migration.json").read_text()
+    assert "migrator" not in record
+    assert "AKIAEXAMPLE" not in record
+
+
+@pytest.mark.parametrize(
+    "password",
+    ["Zq7Summer@Xk2Tail", "Zq7Summer@Xk2Tail/Wd5Wind", "Zq7Summer@Xk2Tail?Wd5Wind"],  # pragma: allowlist secret
+    ids=["into the host", "into the database", "into an option"],
+)
+async def test_a_password_with_an_at_sign_in_it_gives_no_part_of_itself_away(
+    client, logged_in_headers_super_user, config_dir, server_log, caplog, capfd, password
+):
+    headers = logged_in_headers_super_user
+    caplog.set_level(logging.DEBUG)
+    # Typed as it is and not as %40, the "@" ends the password where the address is read. The rest of the
+    # password is taken for the host, and for the database or an option when it also holds a "/" or a "?".
+    url = f"postgresql://migrator:{password}@{NOWHERE}/langflow"
+
+    responses = [
+        await client.put("api/v1/migration/destinations", json={"database_url": url}, headers=headers),
+        await client.get("api/v1/migration", headers=headers),
+    ]
+
+    assert [response.status_code for response in responses] == [200, 200]
+    database = responses[0].json()["results"]["database"]
+    assert database["code"] == "db_unreachable"
+    # The admin is told what to change. No driver is asked, since it would name the host it was given.
+    assert "%40" in database["reason"]
+    # Nothing tells the rest of the password from a real host, so no location is kept for the address.
+    assert responses[1].json()["record"]["destinations"]["database"] == {"location": None, "identity": ""}
+    _nowhere(tuple(re.split("[@/?]", password)), responses, config_dir, server_log, caplog, capfd)
+
+
+# Each of these holds a made-up user, password or token in a place where an endpoint has none.
+ENDPOINTS_WITH_MORE_IN_THEM = {
+    "a user and a password": (
+        "http://proxyuser:Pq4Harbor-Xk2Tail@HOST",  # pragma: allowlist secret
+        ("proxyuser", "Pq4Harbor-Xk2Tail"),
+    ),
+    "a password that ends the host early": (
+        "http://proxyuser:Pq4Harbor/Xk2Tail@HOST",
+        ("proxyuser", "Pq4Harbor", "Xk2Tail"),
+    ),
+    "a user alone": ("http://proxyuser@HOST", ("proxyuser",)),
+    "a full-width at sign": (
+        "http://proxyuser:Pq4Harbor-Xk2Tail\uff20HOST",
+        ("proxyuser", "Pq4Harbor-Xk2Tail"),
+    ),
+    "an at sign written as %40": (
+        "http://proxyuser:Pq4Harbor-Xk2Tail%40HOST",
+        ("proxyuser", "Pq4Harbor-Xk2Tail"),
+    ),
+    "a user and a password written into the path": (
+        "http://HOST/proxyuser%3APq4Harbor-Xk2Tail%40x",
+        ("proxyuser", "Pq4Harbor-Xk2Tail"),
+    ),
+    "a question mark written as %3F": (
+        "http://HOST/%3Fapi_key%3DPq4Harbor-Xk2Tail",
+        ("Pq4Harbor-Xk2Tail",),
+    ),
+    "a token after a question mark": (
+        "http://HOST/?api_key=Pq4Harbor-Xk2Tail",
+        ("Pq4Harbor-Xk2Tail",),
+    ),
+    "a token after a hash": ("http://HOST/#Pq4Harbor-Xk2Tail", ("Pq4Harbor-Xk2Tail",)),
+    "no scheme": ("proxyuser:Pq4Harbor-Xk2Tail", ("proxyuser", "Pq4Harbor-Xk2Tail")),
+}
+
+
+@pytest.mark.parametrize("shape", list(ENDPOINTS_WITH_MORE_IN_THEM))
+async def test_a_bucket_endpoint_with_more_than_an_address_in_it_is_neither_tested_nor_kept(
+    client, logged_in_headers_super_user, active_super_user, config_dir, server_log, caplog, capfd, shape
+):
+    headers = logged_in_headers_super_user
+    caplog.set_level(logging.DEBUG)
+    await _add_file_without_bytes(active_super_user.id)
+    endpoint, secrets = ENDPOINTS_WITH_MORE_IN_THEM[shape]
+
+    responses = [
+        await client.put(
+            "api/v1/migration/destinations",
+            json={"files": {**FILES, "endpoint_url": endpoint.replace("HOST", NOWHERE)}},
+            headers=headers,
+        ),
+        await client.get("api/v1/migration", headers=headers),
+    ]
+
+    assert [response.status_code for response in responses] == [200, 200]
+    files = responses[0].json()["results"]["files"]
+    assert files["code"] == "bucket_unreachable"
+    # The admin is told how to enter it. The bucket's client is not asked, since it repeats what it is given.
+    assert "http(s)://host:port" in files["reason"]
+    assert responses[1].json()["record"]["destinations"]["files"] == {
+        "bucket": "acme",
+        "prefix": "files",
+        "endpoint_url": None,
+    }
+    _nowhere(secrets, responses, config_dir, server_log, caplog, capfd)
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "https://s3.eu-west-1.amazonaws.com",
+        "http://minio:9000",
+        "HTTP://127.0.0.1:9000/",
+        "https://[2001:db8::1]:9000",
+        "https://gateway.example/s3/",
+    ],
+)
+def test_an_endpoint_that_is_only_an_address_is_plain(endpoint):
+    assert migration_module._PLAIN_ENDPOINT.fullmatch(endpoint)
+
+
+def test_a_user_name_with_an_at_sign_in_it_is_still_read():
+    # Some servers name their users user@server. Only an "@" after the password is in doubt.
+    address = "postgresql://migrator@pool:db-password@db.internal:5432/langflow"  # pragma: allowlist secret
+
+    assert location(address) == "db.internal:5432/langflow"
+    assert database_identity(address)
+
+
+@pytest.mark.api_key_required
+async def test_a_destination_that_passes_gives_no_password_or_key_away(
+    client,
+    logged_in_headers_super_user,
+    active_super_user,
+    config_dir,
+    server_log,
+    caplog,
+    capfd,
+    scratch_database,
+    bucket,
+):
+    headers = logged_in_headers_super_user
+    caplog.set_level(logging.DEBUG)
+    await _add_file_without_bytes(active_super_user.id)
+    url = scratch_database.set(password=scratch_database.password or DB_PASSWORD)
+    files = _files(bucket)
+
+    responses = [
+        await client.put(
+            "api/v1/migration/destinations",
+            json={"database_url": url.render_as_string(hide_password=False), "files": files},
+            headers=headers,
+        ),
+        await client.get("api/v1/migration", headers=headers),
+    ]
+
+    assert responses[0].json()["results"] == {"database": {"ok": True}, "files": {"ok": True}}
+    assert url.password in migration_module._secrets["database_url"]
+    _nowhere((url.password, files["secret_access_key"]), responses, config_dir, server_log, caplog, capfd)
