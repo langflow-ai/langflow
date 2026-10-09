@@ -1,5 +1,5 @@
 import type { AxiosError } from "axios";
-import { Fragment, type ReactNode, useEffect, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -20,6 +20,7 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { CheckStep } from "./CheckStep";
 import { formatTime, PARTS } from "./catalog";
+import { DestinationsStep } from "./DestinationsStep";
 
 const MARKER_ICONS: Partial<Record<MigrationStepState["state"], string>> = {
   locked: "Lock",
@@ -122,7 +123,8 @@ function Migration({ migration }: { migration: MigrationState }) {
   const { instance } = migration;
   const stateOf = (id: MigrationStepState["id"]) =>
     migration.steps?.find((step) => step.id === id) ?? { id, ...NOT_LISTED };
-  const run = migration.record.steps.check_source;
+  const { record } = migration;
+  const run = record.steps.check_source;
 
   const facts = [
     {
@@ -233,6 +235,37 @@ function Migration({ migration }: { migration: MigrationState }) {
                   summary = t("settings.migration.check.doneSummary", {
                     time: formatTime(run?.finished_at, i18n.language),
                   });
+                } else if (
+                  step.id === "connect_target" &&
+                  state.state === "done"
+                ) {
+                  const saved = record.destinations;
+                  summary = [
+                    saved?.database &&
+                      t("settings.migration.dest.done.db", {
+                        location: saved.database.location,
+                      }),
+                    saved?.vectors?.kind === "pgvector" &&
+                      t("settings.migration.dest.done.kb.pgvector"),
+                    saved?.files &&
+                      t("settings.migration.dest.done.files", {
+                        bucket: saved.files.bucket,
+                      }),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ");
+                }
+                // A step the admin has reached, and that this server can do.
+                const live =
+                  state.reason !== "not_available" &&
+                  ["current", "blocked", "done"].includes(state.state);
+                let body: ReactNode = null;
+                if (isCheck) {
+                  body = <CheckStep migration={migration} />;
+                } else if (live && step.id === "connect_target") {
+                  body = (
+                    <DestinationsStep migration={migration} state={state} />
+                  );
                 }
                 return (
                   <StepItem
@@ -242,9 +275,9 @@ function Migration({ migration }: { migration: MigrationState }) {
                     summary={summary}
                     state={state}
                     running={isCheck && run?.status === "running"}
-                    expandable={isCheck && state.state === "done"}
+                    expandable={Boolean(body) && state.state === "done"}
                   >
-                    {isCheck && <CheckStep migration={migration} />}
+                    {body}
                   </StepItem>
                 );
               })}
@@ -294,6 +327,13 @@ function StepItem({
   const bodyId = `migration-step-${state.id}-body`;
   // The admin has reached this step, and either the server or this page can't do it yet.
   const comingSoon = frontier && !children;
+  // When the step before this one finishes, keyboard and screen reader users land on what to do next.
+  const heading = useRef<HTMLHeadingElement>(null);
+  const wasLocked = useRef(locked);
+  useEffect(() => {
+    if (wasLocked.current && frontier && !comingSoon) heading.current?.focus();
+    wasLocked.current = locked;
+  }, [locked, frontier, comingSoon]);
   return (
     <li
       aria-current={frontier ? "step" : undefined}
@@ -304,6 +344,8 @@ function StepItem({
         <Marker number={number} state={state.state} running={running} />
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h4
+            ref={heading}
+            tabIndex={-1}
             className={cn(
               "text-sm font-medium",
               locked && "text-muted-foreground",
@@ -328,7 +370,8 @@ function StepItem({
               title
             )}
           </h4>
-          <span className="flex items-center gap-2 text-sm text-muted-foreground">
+          {/* A summary can hold an address with nowhere to break, which has to fit a phone. */}
+          <span className="flex items-center gap-2 text-sm text-muted-foreground [overflow-wrap:anywhere]">
             {summary}
             {locked && (
               <span className="sr-only">
