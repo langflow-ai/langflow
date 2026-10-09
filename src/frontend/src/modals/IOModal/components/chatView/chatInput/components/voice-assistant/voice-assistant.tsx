@@ -22,7 +22,7 @@ import IconComponent from "../../../../../../../components/common/genericIconCom
 import SettingsVoiceModal from "./components/audio-settings/audio-settings-dialog";
 import { checkProvider } from "./helpers/check-provider";
 import { formatTime } from "./helpers/format-time";
-import { workletCode } from "./helpers/streamProcessor";
+import { workletUrl } from "./helpers/streamProcessor";
 import { useBarControls } from "./hooks/use-bar-controls";
 import { useHandleWebsocketMessage } from "./hooks/use-handle-websocket-message";
 import { useInitializeAudio } from "./hooks/use-initialize-audio";
@@ -149,7 +149,7 @@ export function VoiceAssistant({
       playNextAudioChunk,
       isPlayingRef,
       audioQueueRef,
-      workletCode,
+      workletUrl,
       processorRef,
       setStatus,
     );
