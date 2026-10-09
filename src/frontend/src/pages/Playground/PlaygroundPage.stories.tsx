@@ -88,9 +88,14 @@ const withQueryClient = (
         { data: { messages: [] } },
       );
       queryClient.setQueryData(
-        ["useGetSessionsFromFlowQuery", { id: flowId }],
+        [
+          "useGetSessionsFromFlowQuery",
+          { id: computedFlowId, playground: true, shared: false },
+          "pages",
+        ],
         {
-          data: { sessions: [computedFlowId] },
+          pages: [{ sessions: [computedFlowId] }],
+          pageParams: [0],
         },
       );
     }, [flowId, queryClient]);

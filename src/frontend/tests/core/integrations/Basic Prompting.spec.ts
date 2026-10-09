@@ -26,7 +26,11 @@ withEventDeliveryModes(
 
     //create a new session - default session can not be deleted
     await page.getByTestId("new-chat").click();
-    await expect(page.getByTitle("New Session 0")).toBeVisible();
+    await expect(
+      page.getByTitle(
+        /^New Session [0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      ),
+    ).toBeVisible();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });

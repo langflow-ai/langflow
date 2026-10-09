@@ -89,6 +89,10 @@ def _validate_message_attachment_scopes(files: list[str] | None, scope_ids: tupl
 _MESSAGES_DEFAULT_LIMIT = 100
 _MESSAGES_MAX_LIMIT = 200
 
+# Session lists grow independently of message history and must also be bounded.
+_SESSIONS_DEFAULT_LIMIT = 100
+_SESSIONS_MAX_LIMIT = 200
+
 
 def _sorted_for_display(messages: list[MessageTable], *, order_by: str | None, descending: bool) -> list[MessageTable]:
     """Re-order an already-bounded window into the caller's requested display order."""
@@ -248,15 +252,18 @@ async def get_message_sessions(
     current_user: Annotated[User, Depends(get_current_active_user)],
     flow_id: Annotated[UUID | None, Query()] = None,
     limit: Annotated[int | None, Query(ge=0)] = None,
+    offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[str]:
+    """List sessions by most recent activity, defaulting to 100 and capped at 200.
+
+    A zero limit uses the default. Offset counts distinct sessions, not messages.
+    """
     try:
+        stmt = select(MessageTable.session_id)
         # When a flow_id is provided, gate on flow READ permission so a viewer
         # without flow access cannot enumerate sessions. The bulk path
         # (flow_id is None) keeps the user-scoped JOIN — share-aware listing
         # across all visible flows is an plugin optimisation.
-        # Bound the list to the most recent sessions (default 100, max 200).
-        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
-        stmt = select(MessageTable.session_id, func.max(MessageTable.timestamp))
         if flow_id is not None:
             flow = await _ensure_flow_action_or_404(session, flow_id=flow_id, user=current_user, action=FlowAction.READ)
             if flow is None:
@@ -268,10 +275,12 @@ async def get_message_sessions(
         stmt = stmt.where(col(MessageTable.session_id).isnot(None))
         stmt = stmt.where(~col(MessageTable.session_id).startswith("agentic_"))
         stmt = stmt.group_by(MessageTable.session_id)
-        stmt = stmt.order_by(func.max(MessageTable.timestamp).desc(), col(MessageTable.session_id).desc())
-        stmt = stmt.limit(effective_limit)
-        rows = await session.exec(stmt)
-        return [row[0] for row in rows]
+        stmt = stmt.order_by(func.max(MessageTable.timestamp).desc(), col(MessageTable.session_id).asc())
+        effective_limit = _SESSIONS_DEFAULT_LIMIT if not limit else min(limit, _SESSIONS_MAX_LIMIT)
+        stmt = stmt.offset(offset or 0).limit(effective_limit)
+
+        session_ids = await session.exec(stmt)
+        return list(session_ids)
     except HTTPException:
         raise
     except Exception as e:
@@ -640,25 +649,27 @@ async def get_shared_message_sessions(
     current_user: Annotated[User, Depends(get_current_active_user)],
     source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
     limit: Annotated[int | None, Query(ge=0)] = None,
+    offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[str]:
     """Get session IDs for a shared/public flow, scoped to the authenticated user.
 
     Uses a deterministic virtual flow_id derived from the user's ID and the
     original flow ID. Only messages stored under this virtual flow_id are returned.
-    Bounded to the most recent sessions (default 100, hard max 200).
+    Sessions are ordered by most recent activity. The default (also used for zero)
+    limit is 100, capped at 200; offset counts distinct sessions, not messages.
     """
     try:
         virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
-        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
-        stmt = select(MessageTable.session_id, func.max(MessageTable.timestamp))
+        stmt = select(MessageTable.session_id)
         stmt = stmt.where(MessageTable.flow_id == virtual_flow_id)
         stmt = stmt.where(col(MessageTable.session_id).isnot(None))
         stmt = stmt.group_by(MessageTable.session_id)
-        stmt = stmt.order_by(func.max(MessageTable.timestamp).desc(), col(MessageTable.session_id).desc())
-        stmt = stmt.limit(effective_limit)
+        stmt = stmt.order_by(func.max(MessageTable.timestamp).desc(), col(MessageTable.session_id).asc())
+        effective_limit = _SESSIONS_DEFAULT_LIMIT if not limit else min(limit, _SESSIONS_MAX_LIMIT)
+        stmt = stmt.offset(offset or 0).limit(effective_limit)
 
-        rows = await session.exec(stmt)
-        return [row[0] for row in rows]
+        session_ids = await session.exec(stmt)
+        return list(session_ids)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

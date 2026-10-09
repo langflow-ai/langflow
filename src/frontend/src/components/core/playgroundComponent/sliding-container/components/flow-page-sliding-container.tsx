@@ -54,6 +54,9 @@ export function FlowPageSlidingContainerContent({
     renameSession,
     selectSession,
     clearDefaultSession,
+    hasMoreSessions,
+    isLoadingSessions,
+    loadMoreSessions,
   } = useSessionManager({ flowId: currentFlowId });
 
   const [openLogsModal, setOpenLogsModal] = useState(false);
@@ -183,6 +186,9 @@ export function FlowPageSlidingContainerContent({
           <div className="h-full overflow-y-auto border-r border-border w-218 bg-primary-foreground">
             <div className="p-4">
               <ChatSidebar
+                hasMoreSessions={hasMoreSessions}
+                isLoadingSessions={isLoadingSessions}
+                onLoadMoreSessions={loadMoreSessions}
                 sessions={sessions}
                 onNewChat={createSession}
                 onSessionSelect={selectSession}
@@ -197,6 +203,9 @@ export function FlowPageSlidingContainerContent({
         </AnimatedConditional>
         <div className="flex-1 flex flex-col overflow-hidden pt-2">
           <ChatHeader
+            hasMoreSessions={hasMoreSessions}
+            isLoadingSessions={isLoadingSessions}
+            onLoadMoreSessions={loadMoreSessions}
             sessions={sessions}
             onNewChat={createSession}
             onSessionSelect={selectSession}

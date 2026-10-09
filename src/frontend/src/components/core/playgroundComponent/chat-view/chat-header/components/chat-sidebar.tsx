@@ -7,9 +7,13 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
+import {
+  SessionLoadMore,
+  type SessionPaginationProps,
+} from "./session-load-more";
 import { SessionSelector } from "./session-selector";
 
-interface ChatSidebarProps {
+interface ChatSidebarProps extends SessionPaginationProps {
   sessions: string[];
   onNewChat?: () => void;
   onSessionSelect?: (sessionId: string) => void;
@@ -29,6 +33,7 @@ export function ChatSidebar({
   onOpenLogs,
   onRenameSession,
   onBulkDeleteSessions,
+  ...pagination
 }: ChatSidebarProps) {
   const { t } = useTranslation();
   const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
@@ -228,6 +233,7 @@ export function ChatSidebar({
           })}
         </div>
       )}
+      <SessionLoadMore {...pagination} />
     </div>
   );
 }

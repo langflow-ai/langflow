@@ -94,18 +94,12 @@ export const useSessionManagerStore = create<SessionManagerStoreType>(
       const merged: SessionInfo[] = [];
       const seen = new Set<string>();
 
-      // Keep existing sessions in their current order, promoting local→server
+      // Keep unsaved sessions; loaded server pages supply the recency order.
       for (const s of sessions) {
-        if (seen.has(s.id)) continue;
-        seen.add(s.id);
-        if (serverSet.has(s.id)) {
-          // Promote: was local, now on server
-          merged.push({ id: s.id, isLocal: false });
-        } else if (s.isLocal) {
-          // Still local-only, keep
+        if (s.isLocal && !serverSet.has(s.id) && !seen.has(s.id)) {
+          seen.add(s.id);
           merged.push(s);
         }
-        // If not on server and not local, it was removed server-side — drop it
       }
 
       // Add new server sessions not already tracked

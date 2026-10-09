@@ -92,6 +92,10 @@ export default function IOModal({
     data: sessionsFromDb,
     isLoading: sessionsLoading,
     refetch: refetchSessions,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetching: sessionsFetching,
+    fetchNextPage,
   } = useGetSessionsFromFlowQuery(
     {
       id: currentFlowId,
@@ -100,14 +104,7 @@ export default function IOModal({
   );
 
   useEffect(() => {
-    if (sessionsFromDb && !sessionsLoading) {
-      const sessions = [...sessionsFromDb.sessions];
-      // Always include the currentFlowId as the default session if it's not already present
-      if (!sessions.includes(currentFlowId)) {
-        sessions.unshift(currentFlowId);
-      }
-      setSessions(sessions);
-    }
+    setSessions(sessionsFromDb?.sessions ?? [currentFlowId]);
   }, [sessionsFromDb, sessionsLoading, currentFlowId]);
 
   useEffect(() => {
@@ -238,7 +235,9 @@ export default function IOModal({
       const handleRefetchAndSetSession = async () => {
         try {
           await refetchSessions();
-          setvisibleSession(newSessionId);
+          // The new session's ID is known locally. The newest page can also
+          // contain concurrent conversations, and its last row is the oldest.
+          setvisibleSession(sessionId);
         } catch (error) {
           console.error("Error refetching sessions:", error);
         }
@@ -417,6 +416,12 @@ export default function IOModal({
                 </div>
                 {sidebarOpen && !sessionsLoading && (
                   <SidebarOpenView
+                    hasMoreSessions={hasNextPage}
+                    isLoadingSessions={isFetchingNextPage}
+                    onLoadMoreSessions={() => {
+                      if (hasNextPage && !sessionsFetching)
+                        void fetchNextPage();
+                    }}
                     sessions={sessions}
                     setSelectedViewField={setSelectedViewField}
                     setvisibleSession={setvisibleSession}
