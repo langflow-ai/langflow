@@ -100,6 +100,7 @@ from langflow.services.auth.utils import (
     api_key_security,
     get_current_user_for_sse,
     get_optional_user,
+    get_webhook_user,
 )
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.access_ceiling import (
@@ -112,7 +113,6 @@ from langflow.services.database.models.flow.utils import get_all_webhook_compone
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
-    get_auth_service,
     get_catalog_policy_service,
     get_job_service,
     get_memory_base_service,
@@ -586,6 +586,9 @@ async def simple_run_flow(
                 # getattr: the warm-run path may hand back a lightweight graph stand-in without
                 # this attribute, matching every other end_user_id read in the codebase.
                 end_user_id=getattr(graph, "end_user_id", None),
+                # Live from insert, then kept alive by execute_with_status, so an orphan
+                # sweep cannot fail it mid-run. The run writes no job_metadata of its own.
+                heartbeat=True,
             )
             # The funnel default. Binding is outermost-wins, so a caller that already named its
             # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands
@@ -594,6 +597,7 @@ async def simple_run_flow(
                 task_result, session_id = await _job_svc.execute_with_status(
                     run_id_uuid,
                     run_graph_internal,
+                    keep_alive=True,
                     graph=graph,
                     flow_id=flow_id_str,
                     session_id=effective_session_id,
@@ -961,7 +965,7 @@ async def get_webhook_auth(
 
     Centralizes the security logic for webhook run endpoints.
     """
-    webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
+    webhook_user = await get_webhook_user(flow_id_or_name, request)
     # Webhook route also calls ``ensure_flow_permission`` after, so widening
     # for shared resources is acceptable here.
     flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id, widen_for_shares=True)

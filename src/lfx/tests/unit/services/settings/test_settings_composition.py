@@ -25,6 +25,7 @@ from lfx.services.settings.base import (
 )
 from lfx.services.settings.constants import AGENTIC_VARIABLES
 from lfx.services.settings.groups.runtime import RuntimeSettings
+from lfx.services.telemetry.constants import DEFAULT_SEGMENT_WRITE_KEY
 from pydantic import ValidationError
 
 
@@ -44,6 +45,11 @@ def test_voice_mode_requires_openai_sdk(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setattr(builtins, "__import__", import_without_openai)
 
     assert Settings().voice_mode_available is False
+
+
+def test_segment_has_no_write_key_in_source_checkout() -> None:
+    assert DEFAULT_SEGMENT_WRITE_KEY == ""
+    assert Settings().segment_write_key == DEFAULT_SEGMENT_WRITE_KEY
 
 
 # Every field the composed Settings must expose: the original monolith fields
@@ -121,7 +127,8 @@ EXPECTED_FIELDS = {
     "sentry_traces_sample_rate",
     "sentry_profiles_sample_rate",
     "do_not_track",
-    "telemetry_base_url",
+    "segment_write_key",
+    "segment_api_url",
     "transactions_storage_enabled",
     "vertex_builds_storage_enabled",
     "sync_result_storage_enabled",
@@ -562,6 +569,7 @@ def test_yaml_round_trip():
         ("LANGFLOW_MCP_SDK_CONSTRAINT", "mcp~=1.30", "mcp_sdk_constraint", "mcp~=1.30"),
         ("LANGFLOW_SKIP_MCP_AUTO_INIT", "true", "skip_mcp_auto_init", True),
         ("LANGFLOW_DO_NOT_TRACK", "true", "do_not_track", True),
+        ("LANGFLOW_SEGMENT_WRITE_KEY", "segment-test-key", "segment_write_key", "segment-test-key"),
         ("LANGFLOW_DEV", "true", "dev", True),
         (
             "LANGFLOW_MODEL_PROVIDER_POLICY_REFRESH_INTERVAL_S",

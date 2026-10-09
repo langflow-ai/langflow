@@ -1613,6 +1613,11 @@ def migration_preflight(
     target_revision: str = typer.Option(
         "", help="Alembic revision the target image runs. Refuses a target older than this database."
     ),
+    target_version: str = typer.Option(
+        "",
+        help="Langflow version the target image runs, such as 1.13.0. Refuses a target older than this Langflow. "
+        "--target-revision is exact and wins when both are given.",
+    ),
     target_secret_key_file: Path | None = typer.Option(
         None,
         help="File holding the LANGFLOW_SECRET_KEY the target will run with.",
@@ -1630,16 +1635,25 @@ def migration_preflight(
     their vectors need. Then runs check-integrity against this instance.
 
     Read-only. Exits non-zero if any check fails.
+
+    Run it with the environment the server runs with: the database, the secret
+    key and AUTO_LOGIN are read from it.
     """
     configure(log_level=log_level, output_file=sys.stderr if as_json else None)
     # Not stripped: a Secret made from this file with --from-file carries its whitespace, so the key is tested with it.
     key = target_secret_key_file.read_text() if target_secret_key_file else None
-    if not asyncio.run(_migration_preflight(target_revision or None, key, as_json=as_json)):
+    if not asyncio.run(
+        _migration_preflight(target_revision or None, key, target_version=target_version or None, as_json=as_json)
+    ):
         raise typer.Exit(1)
 
 
 async def _migration_preflight(
-    target_revision: str | None, target_secret_key: str | None, *, as_json: bool = False
+    target_revision: str | None,
+    target_secret_key: str | None,
+    *,
+    target_version: str | None = None,
+    as_json: bool = False,
 ) -> bool:
     from langflow.cli.integrity import open_instance
     from langflow.cli.migration_preflight import run_preflight
@@ -1647,6 +1661,7 @@ async def _migration_preflight(
     open_instance()
     report = await run_preflight(
         target_revision=target_revision,
+        target_version=target_version,
         target_secret_key=target_secret_key,
         on_check=partial(_echo_check, width=24, as_json=as_json),
     )

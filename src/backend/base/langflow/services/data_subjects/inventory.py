@@ -17,6 +17,7 @@ TABLE_POLICY: dict[str, str] = {
     "a2a_tasks": ERASED_WITH_FLOW,
     "apikey": BUILDER_ROWS,
     "audit_events": "kept as evidence; account and credential UUIDs plus event-time resource names, no contact details",
+    "authz_access_exception": BUILDER_ROWS,
     "authz_audit_log": "kept as evidence; identifying details redacted, subject reference cleared",
     "authz_edit_lock": BUILDER_ROWS,
     "authz_role": REFERENCE_CLEARED,

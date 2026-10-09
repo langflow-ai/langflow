@@ -6,7 +6,7 @@ from langflow.services.data_subjects.errors import InvalidTransitionError, LastA
 from langflow.services.data_subjects.requests import approve, create_builder_request, refuse, withdraw
 from langflow.services.database.models.a2a.model import A2ATask
 from langflow.services.database.models.api_key.model import ApiKey
-from langflow.services.database.models.auth.authz import AuthzAuditLog, AuthzShare
+from langflow.services.database.models.auth.authz import AuthzAccessException, AuthzAuditLog, AuthzShare
 from langflow.services.database.models.data_subject_request import (
     DataSubjectRequest,
     DataSubjectRequestSource,
@@ -79,6 +79,39 @@ async def test_should_leave_no_rows_or_files_when_builder_erase_completes():
         assert await _count(session, Flow, Flow.id == seeded.colleague_flow_id) == 1
         assert await _count(session, MessageTable, MessageTable.user_id == seeded.colleague_id) == 1
     assert not seeded.file_path.exists()
+
+
+@pytest.mark.usefixtures("client")
+async def test_should_delete_access_exceptions_naming_the_builder_and_keep_ones_they_created():
+    seeded = await seed_builder()
+    admin_id = await create_user("dsr-admin", superuser=True)
+    async with session_scope() as session:
+        naming_builder = AuthzAccessException(
+            user_id=seeded.user_id,
+            resource_type="flow",
+            resource_id=seeded.colleague_flow_id,
+            created_by=seeded.colleague_id,
+        )
+        created_by_builder = AuthzAccessException(
+            user_id=seeded.colleague_id,
+            resource_type="flow",
+            resource_id=seeded.colleague_flow_id,
+            created_by=seeded.user_id,
+        )
+        session.add_all([naming_builder, created_by_builder])
+        await session.commit()
+        naming_id, created_id = naming_builder.id, created_by_builder.id
+
+    status = await run_request(await _request_and_approve(seeded.user_id, admin_id))
+
+    assert status == DataSubjectRequestStatus.DONE.value
+    async with session_scope() as session:
+        assert await session.get(AuthzAccessException, naming_id) is None
+        kept = await session.get(AuthzAccessException, created_id)
+        assert kept is not None
+        assert kept.user_id == seeded.colleague_id
+        assert kept.created_by is None
+        assert await _count(session, AuthzAccessException, AuthzAccessException.user_id == seeded.user_id) == 0
 
 
 @pytest.mark.usefixtures("client")
