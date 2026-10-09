@@ -149,6 +149,8 @@ export default defineConfig({
         // Serve the A2A discovery + JSON-RPC endpoints so the Agent tab tests
         // can publish and exercise a live agent.
         LANGFLOW_A2A_ENABLED: "true",
+        // Shows Settings > Migration, which is off by default.
+        LANGFLOW_FEATURE_INSTANCE_MIGRATION: "true",
       },
       stdout:
         process.env.CI && process.platform === "win32" ? "pipe" : "ignore",

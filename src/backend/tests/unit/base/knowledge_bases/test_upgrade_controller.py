@@ -18,11 +18,14 @@ from langflow.services.knowledge_base_storage import controller, maintenance
 
 pytestmark = [pytest.mark.no_blockbuster, pytest.mark.skipif(os.name != "posix", reason="POSIX controller")]
 
+# File existence signals readiness, so subprocesses must publish complete JSON atomically.
 _SERVER = """
 import http.server, json, os, pathlib, sys
 port, ready, environment = int(sys.argv[1]), pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3])
 names = ('LANGFLOW_DATABASE_URL', 'LANGFLOW_KNOWLEDGE_BASES_DIR')
-environment.write_text(json.dumps({k: v for k, v in os.environ.items() if k.startswith('LANGFLOW_KB_') or k in names}))
+pending = environment.with_suffix('.tmp')
+pending.write_text(json.dumps({k: v for k, v in os.environ.items() if k.startswith('LANGFLOW_KB_') or k in names}))
+pending.replace(environment)
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200 if ready.exists() else 503)
@@ -35,7 +38,10 @@ _SUPERVISOR = """
 import json, pathlib, subprocess, sys, time
 import psutil
 child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(300)'])
-pathlib.Path(sys.argv[1]).write_text(json.dumps({'pid': child.pid, 'created': psutil.Process(child.pid).create_time()}))
+identity = pathlib.Path(sys.argv[1])
+pending = identity.with_suffix('.tmp')
+pending.write_text(json.dumps({'pid': child.pid, 'created': psutil.Process(child.pid).create_time()}))
+pending.replace(identity)
 time.sleep(300)
 """
 

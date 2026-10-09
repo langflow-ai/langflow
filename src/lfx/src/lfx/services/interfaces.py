@@ -234,6 +234,9 @@ class TransactionServiceProtocol(Protocol):
         status: str,
         target_id: str | None = None,
         error: str | None = None,
+        *,
+        user_id: UUID | None = None,
+        session_id: str | None = None,
     ) -> None:
         """Log a transaction record for a vertex execution.
 
@@ -245,6 +248,8 @@ class TransactionServiceProtocol(Protocol):
             status: Execution status (success/error)
             target_id: Optional target vertex ID
             error: Optional error message
+            user_id: Message owner of the run (the end user when one is known)
+            session_id: Session of the run
         """
         ...
 

@@ -208,7 +208,7 @@ def test_malformed_preflight_never_echoes_field_value() -> None:
 async def test_integration_action_does_not_wait_for_telemetry_transport(monkeypatch: pytest.MonkeyPatch) -> None:
     from lfx.services.telemetry.service import TelemetryService
 
-    service = TelemetryService(do_not_track=False)
+    service = TelemetryService(write_key="test-key", do_not_track=False)
     entered = asyncio.Event()
     release = asyncio.Event()
     sent = []
