@@ -104,6 +104,14 @@ It also removes a failed run's `export.jsonl` that holds them.
 This applies once the base's SQLite store is ready, or after the base is deleted. The copy is removed whole, because Chroma files cannot be edited safely.
 A copy that is still the only data of a base that has not finished upgrading, or of a base whose deletion has not finished, is kept, and the erase waits for that base.
 An erase limited to some flows cannot attribute the copies of a deleted base to a flow, so only an unlimited erase removes them.
+Erasing a builder removes the legacy `<username>/<base-name>` directories of their bases, one directory at a time.
+A directory is the builder's when their upgrade ledger names it, when it has the builder's current username and the name of one of their bases that still uses Chroma, or when its `embedding_metadata.json` sidecar records the id of one of their bases.
+Files that a base deletion could not remove from the builder's own folder are also removed.
+A directory that the ledger or the sidecar ties to another account's base is kept, so a folder that still carries a username another account held before a rename keeps that account's data.
+A ledger row recorded before the builder's account existed belongs to a former holder of the username.
+A directory whose folder or sidecar cannot be read is kept, and the erase logs how many directories it kept.
+The folder named after the builder is removed once nothing else is in it.
+A directory kept under the builder's own former username is found only through the ledger or the sidecar, and an erase leaves one that neither names.
 Erasing a builder also removes their `.migration/<base-id>/` snapshots, routing backups and source bindings.
 
 Both erases also reach the shared application database backup in `.migration/application-backups/`, which holds every application row as it was when the upgrade copied its first base.
