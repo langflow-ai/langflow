@@ -66,30 +66,30 @@ describe("locale bundles", () => {
       expect(mismatched).toEqual([]);
     },
   );
-  });
+});
 
-  it.each(Object.keys(partialLocales))(
-    "%s only uses keys English ships",
-    (locale) => {
-      const unknown = Object.keys(partialLocales[locale]).filter(
-        (key) => !(key in en),
+it.each(Object.keys(partialLocales))(
+  "%s only uses keys English ships",
+  (locale) => {
+    const unknown = Object.keys(partialLocales[locale]).filter(
+      (key) => !(key in en),
+    );
+
+    expect(unknown).toEqual([]);
+  },
+);
+
+it.each(Object.keys(partialLocales))(
+  "%s keeps placeholders for translated keys",
+  (locale) => {
+    const mismatched = Object.keys(partialLocales[locale])
+      .filter((key) => key in en)
+      .filter(
+        (key) =>
+          placeholders((en as Record<string, string>)[key]).join("|") !==
+          placeholders(partialLocales[locale][key]).join("|"),
       );
 
-      expect(unknown).toEqual([]);
-    },
-  );
-
-  it.each(Object.keys(partialLocales))(
-    "%s keeps placeholders for translated keys",
-    (locale) => {
-      const mismatched = Object.keys(partialLocales[locale])
-        .filter((key) => key in en)
-        .filter(
-          (key) =>
-            placeholders((en as Record<string, string>)[key]).join("|") !==
-            placeholders(partialLocales[locale][key]).join("|"),
-        );
-
-      expect(mismatched).toEqual([]);
-    },
-  );
+    expect(mismatched).toEqual([]);
+  },
+);
