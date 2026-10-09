@@ -56,8 +56,12 @@ def is_owner_folder(value: str) -> bool:
 
 
 def is_sqlite_store(folder: str, name: str) -> bool:
-    """Whether ``<folder>/<name>`` is where an account's SQLite stores live, rather than a legacy directory."""
-    return folder == SQLITE_DIRECTORY and _is_uuid(name)
+    """Whether ``<folder>/<name>`` is where an account's SQLite stores live, rather than a legacy directory.
+
+    The folder is matched regardless of case, as for ``.migration``: on macOS and Windows the stores go into
+    a folder such as ``SQLite`` when a user of that name wrote it first.
+    """
+    return folder.casefold() == SQLITE_DIRECTORY and _is_uuid(name)
 
 
 def is_legacy_directory(source_identity: str) -> bool:

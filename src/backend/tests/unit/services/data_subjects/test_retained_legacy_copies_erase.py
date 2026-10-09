@@ -571,6 +571,27 @@ async def test_should_keep_every_accounts_sqlite_stores_when_erasing_a_builder_n
     assert sorted(colleague_store.rglob("*")) == kept
 
 
+async def test_should_keep_the_sqlite_stores_in_a_folder_that_a_builder_named_sqlite_in_another_case_wrote_first(
+    storage_root,
+):
+    builder = await create_user("SQLite")
+    colleague = await create_user("colleague")
+    install_legacy_store(storage_root, "SQLite")
+    leftover = storage_root / "SQLite" / KB_NAME
+    (leftover / ".kb_deleted").touch()
+    # macOS and Windows match folder names regardless of case, so once the builder's folder exists the SQLite
+    # stores are written into it, under the builder's spelling.
+    colleague_store = storage_root / "SQLite" / str(colleague)
+    colleague_store.mkdir()
+    (colleague_store / ".kb_deleted").touch()
+
+    status, request = await erase_builder(builder)
+
+    assert status == DataSubjectRequestStatus.DONE.value, request.error
+    assert not leftover.exists()
+    assert (colleague_store / ".kb_deleted").is_file()
+
+
 async def test_should_leave_a_former_holders_deleted_base_when_erasing_whoever_took_the_name(storage_root):
     record, _ = await _upgraded_memory_base(storage_root)
     original, snapshot = _copies(storage_root, record)
@@ -650,6 +671,7 @@ async def test_should_remove_what_a_deletion_left_in_the_builders_folder(storage
         # Usernames are unique regardless of case, and macOS and Windows match folder names that way too.
         (".Migration/bindings", False),
         (f"sqlite/{UUID(int=1)}", False),
+        (f"SQLite/{UUID(int=1)}", False),
         ("team/", False),
         ("team/ops/kb", False),
     ],
