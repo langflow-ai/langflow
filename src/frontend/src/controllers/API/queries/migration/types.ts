@@ -122,8 +122,8 @@ export type MigrationStepId =
   | "copy_database"
   | "copy_knowledge_bases"
   | "copy_files"
-  | "start_target"
-  | "check_target";
+  | "check_target"
+  | "start_target";
 
 /** Where the server says a step stands. The page renders it as given. */
 export interface MigrationStepState {
@@ -145,9 +145,12 @@ export interface MigrationState {
   };
   record: {
     target: { version?: string; set_by?: string; set_at?: string };
-    steps: { check_source?: MigrationStep } & Partial<
-      Record<CopyStepId, MigrationCopyRun>
-    >;
+    steps: {
+      check_source?: MigrationStep;
+      /** Set once the admin said that the new instance runs on the copied data, which ends the move. */
+      start_target?: { confirmed_by?: string; confirmed_at?: string };
+      check_target?: MigrationTargetCheck;
+    } & Partial<Record<CopyStepId, MigrationCopyRun>>;
     accepted_findings: AcceptedFinding[];
     /** Where the new instance keeps its data. Each part is there only when this instance needs it, and none holds a secret. */
     destinations?: {
@@ -178,6 +181,56 @@ export interface MigrationState {
   steps: MigrationStepState[];
   blocking_findings: string[];
   acceptable_checks: string[];
+  /** What "Start the new instance" shows once the admin has reached it. */
+  start?: { settings: MigrationSetting[] };
+}
+
+/** One check as it came out on the copied data, beside this instance's last result for the same check. */
+export interface MigrationComparedCheck {
+  /** The check's name for the copy, which is this instance's without "source: ". */
+  name: string;
+  /** `problems` are the examples the check printed, often none. */
+  there: { status: string; summary: string; problems?: string[] };
+  here: { status: string; summary: string } | null;
+  same: boolean;
+  /** The admin accepted this check's finding on this instance in the first step. */
+  accepted: boolean;
+}
+
+/**
+ * What the admin says before changes go back on once the new instance has started: that it is stopped, and,
+ * where it shared this instance's database, that the database is restored from the backup.
+ */
+export interface MigrationWayBack {
+  target_stopped: boolean;
+  database_restored?: boolean;
+}
+
+/** The run that checks the copy, and the admin's word about what it found different. */
+export interface MigrationTargetCheck {
+  run_id?: string;
+  status?: MigrationCopyRun["status"];
+  started_by?: string;
+  started_at?: string;
+  finished_at?: string | null;
+  /** Set when the run did not end done, as for a copy. */
+  error?: { code: string; message?: string } | null;
+  /** `ok` when every check came out the same on both sides. */
+  report?: { ok: boolean; checks: MigrationComparedCheck[] } | null;
+  confirmed_by?: string;
+  confirmed_at?: string;
+  /** The checks that differed when the admin said that each difference was expected, and went on. */
+  accepted_differences?: string[];
+}
+
+/**
+ * One setting the new instance has to start with, in the order to show it.
+ * `fill` marks a value the server never sends, a password or a key: `value` then holds a placeholder for the admin to replace.
+ */
+export interface MigrationSetting {
+  name: string;
+  value: string;
+  fill: boolean;
 }
 
 /** `PUT /api/v1/migration/destinations`: only the parts this instance needs. */

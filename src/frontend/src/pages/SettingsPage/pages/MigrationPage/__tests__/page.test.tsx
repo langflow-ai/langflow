@@ -111,24 +111,6 @@ describe("the steps after the check", () => {
     ).toBeInTheDocument();
   });
 
-  it("says the same of a step this page has no form for yet, whatever the server can do", () => {
-    open(
-      state({
-        check_source: ["done"],
-        connect_target: ["done"],
-        secret_key: ["done"],
-        pause: ["done"],
-        backup: ["done"],
-        copy_database: ["skipped"],
-        copy_knowledge_bases: ["skipped"],
-        copy_files: ["skipped"],
-        start_target: ["current"],
-      }),
-    );
-
-    expect(row("start_target").getByText("Coming soon")).toBeInTheDocument();
-  });
-
   it("opens the step the admin is on, and holds no form for one they haven't reached", () => {
     const { unmount } = open(
       state({ check_source: ["done"], connect_target: ["current"] }),
@@ -417,6 +399,209 @@ describe("the steps after the check", () => {
       ),
     ).toBeInTheDocument();
     expect(row("backup").queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  // Every copy is done or not needed, in the order the server sends the steps.
+  const copies = {
+    ...copied,
+    copy_database: ["skipped", "already_postgresql"],
+    copy_knowledge_bases: ["skipped", "no_local_knowledge_bases"],
+    copy_files: ["skipped", "files_in_s3"],
+  } as Parameters<typeof state>[0];
+  // A check of the copy that found nothing different.
+  const matched = {
+    run_id: "run-9",
+    status: "done" as const,
+    started_at: "2026-10-06T13:10:00Z",
+    finished_at: "2026-10-06T13:11:00Z",
+    report: { ok: true, checks: [] },
+  };
+
+  it("checks the copy before the one-way line, and sums the check up once it matches", () => {
+    const { unmount } = open(
+      state({
+        ...copies,
+        check_target: ["current"],
+        start_target: ["locked", "earlier_step"],
+      }),
+    );
+    expect(
+      row("check_target").getByRole("button", { name: "Check the copy" }),
+    ).toBeInTheDocument();
+    // The check comes while the copy can still be made again, so it sits above the line after which the move
+    // is one-way, and the start is alone below it.
+    const steps = screen
+      .getAllByTestId(/^migration-step-/)
+      .map((item) => item.getAttribute("data-testid"));
+    expect(steps.slice(-2)).toEqual([
+      "migration-step-check_target",
+      "migration-step-start_target",
+    ]);
+    const line = screen.getByText("One-way from here");
+    expect(
+      screen
+        .getByTestId("migration-step-check_target")
+        .compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByTestId("migration-step-start_target")
+        .compareDocumentPosition(line) & Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
+    // The start is not reached, so it has nothing to press.
+    expect(row("start_target").queryByRole("button")).not.toBeInTheDocument();
+    unmount();
+
+    open(
+      state(
+        { ...copies, check_target: ["done"], start_target: ["current"] },
+        { steps: { check_target: matched } },
+      ),
+    );
+    // A copy that matches needs no word from the admin: the step is done by itself.
+    expect(
+      row("check_target").getByText(/^Checked .*\. Everything matches\.$/),
+    ).toBeInTheDocument();
+    expect(row("check_target").queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("names what differed when the admin went on with differences", () => {
+    open(
+      state(
+        { ...copies, check_target: ["done"], start_target: ["current"] },
+        {
+          steps: {
+            check_target: {
+              status: "done",
+              finished_at: "2026-10-06T13:11:00Z",
+              confirmed_by: "alice",
+              confirmed_at: "2026-10-06T13:20:00Z",
+              // The second name is one this page has no title for.
+              accepted_differences: ["files", "something new"],
+            },
+          },
+        },
+      ),
+    );
+    expect(
+      row("check_target").getByText(
+        /^Checked .*\. alice accepted what differs: Files, something new\.$/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("opens the start once the copy is checked, and says the move is complete once the admin confirmed it", () => {
+    const { unmount } = open(
+      state(
+        { ...copies, check_target: ["done"], start_target: ["current"] },
+        { steps: { check_target: matched } },
+      ),
+    );
+    expect(
+      row("start_target").getByRole("button", { name: "Show the settings" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("migration-complete")).not.toBeInTheDocument();
+    unmount();
+
+    open(
+      state(
+        { ...copies, check_target: ["done"], start_target: ["done"] },
+        {
+          steps: {
+            check_target: matched,
+            start_target: {
+              confirmed_by: "alice",
+              confirmed_at: "2026-10-06T13:20:00Z",
+            },
+          },
+        },
+      ),
+    );
+    expect(
+      row("start_target").getByText(/^Started .*, confirmed by alice\.$/),
+    ).toBeInTheDocument();
+    expect(row("start_target").queryByRole("button")).not.toBeInTheDocument();
+    // The admin's word that the new instance runs is the end of the move.
+    expect(screen.getByTestId("migration-complete")).toHaveTextContent(
+      /^Move complete\./,
+    );
+  });
+
+  it("offers nothing in the check of the copy while a step above is open again", () => {
+    open(
+      state(
+        {
+          ...copied,
+          copy_database: ["current"],
+          copy_knowledge_bases: ["skipped", "no_local_knowledge_bases"],
+          copy_files: ["skipped", "files_in_s3"],
+          check_target: ["blocked", "differences"],
+          start_target: ["locked", "earlier_step"],
+        } as Parameters<typeof state>[0],
+        {
+          steps: {
+            copy_database: run("done"),
+            check_target: {
+              run_id: "run-9",
+              status: "done",
+              started_at: "2026-10-06T13:10:00Z",
+              finished_at: "2026-10-06T13:11:00Z",
+              report: {
+                ok: false,
+                checks: [
+                  {
+                    name: "files",
+                    there: { status: "fail", summary: "1 of 2", problems: [] },
+                    here: { status: "ok", summary: "2 of 2" },
+                    same: false,
+                    accepted: false,
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ),
+    );
+
+    expect(
+      row("check_target").getByText("Finish the steps above first."),
+    ).toBeInTheDocument();
+    expect(row("check_target").queryByRole("button")).not.toBeInTheDocument();
+    expect(row("check_target").queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("still follows a check of the copy that runs while a step above is open again", () => {
+    open(
+      state(
+        {
+          ...copied,
+          copy_database: ["current"],
+          copy_knowledge_bases: ["skipped", "no_local_knowledge_bases"],
+          copy_files: ["skipped", "files_in_s3"],
+          check_target: ["current"],
+          start_target: ["locked", "earlier_step"],
+        } as Parameters<typeof state>[0],
+        {
+          steps: {
+            copy_database: run("done"),
+            check_target: {
+              run_id: "run-9",
+              status: "running",
+              started_at: "2026-10-06T13:10:00Z",
+            },
+          },
+        },
+      ),
+    );
+
+    // The run goes on whatever opened above it, so the admin can still see it and stop it.
+    expect(
+      row("check_target").getByText("Checking the copy…"),
+    ).toBeInTheDocument();
+    expect(
+      row("check_target").getByRole("button", { name: "Stop" }),
+    ).toBeInTheDocument();
   });
 
   it("sums up the database copy once it is done, and keeps it one click away", async () => {
@@ -725,12 +910,7 @@ describe("what the admin needs before starting", () => {
       type: "postgresql",
       location: "db.internal:5432/langflow",
     };
-    migration.instance.files = {
-      storage: "s3",
-      bucket: "acme",
-      prefix: "files",
-      local: false,
-    };
+    migration.instance.files = { storage: "s3", local: false };
     open(migration);
 
     expect(needs()).toEqual([
@@ -801,6 +981,57 @@ describe("what another admin does meanwhile", () => {
     expect(screen.queryByText(BANNER)).not.toBeInTheDocument();
     expect(
       row("pause").getByRole("button", { name: "Pause changes" }),
+    ).toBeInTheDocument();
+  });
+
+  it("reads the result of the check of the copy when it ends, with no pause to follow", async () => {
+    jest.useFakeTimers();
+    const steps = (check: string, start: [string, string?]) =>
+      ({
+        ...copied,
+        copy_database: ["skipped", "already_postgresql"],
+        copy_knowledge_bases: ["skipped", "no_local_knowledge_bases"],
+        copy_files: ["skipped", "files_in_s3"],
+        check_target: [check],
+        start_target: start,
+      }) as Parameters<typeof state>[0];
+    const check = { run_id: "run-9", started_at: "2026-10-06T13:10:00Z" };
+    const get = jest.spyOn(api, "get").mockResolvedValue({
+      data: state(steps("current", ["locked", "earlier_step"]), {
+        steps: { check_target: { ...check, status: "running" } },
+      }),
+    });
+    openLive();
+    await act(() => jest.advanceTimersByTimeAsync(0));
+    expect(
+      row("check_target").getByText("Checking the copy…"),
+    ).toBeInTheDocument();
+    // The step is the current one, and its marker shows work under way in place of its number.
+    const marker = () =>
+      screen.getByTestId("migration-step-check_target").querySelector("span");
+    // A current step that waits for the admin has a filled marker. One that is working has not.
+    expect(marker()).not.toHaveClass("bg-primary");
+
+    get.mockResolvedValue({
+      data: state(steps("done", ["current"]), {
+        steps: {
+          check_target: {
+            ...check,
+            status: "done",
+            finished_at: "2026-10-06T13:11:00Z",
+            report: { ok: true, checks: [] },
+          },
+        },
+      }),
+    });
+    // Only the running check makes the page ask again.
+    await act(() => jest.advanceTimersByTimeAsync(6000));
+
+    expect(
+      row("check_target").getByText(/^Checked .*\. Everything matches\.$/),
+    ).toBeInTheDocument();
+    expect(
+      row("start_target").getByRole("button", { name: "Show the settings" }),
     ).toBeInTheDocument();
   });
 

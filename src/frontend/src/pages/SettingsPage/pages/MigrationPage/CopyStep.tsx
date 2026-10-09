@@ -29,6 +29,7 @@ import {
   copyProgress,
   DECISIONS,
   formatTime,
+  hasStarted,
   ITEM_CODES,
   STEP_SLUGS,
 } from "./catalog";
@@ -70,16 +71,19 @@ export function CopyStep({
   const reached = migration.steps
     .slice(0, place)
     .every((earlier) => ["done", "skipped"].includes(earlier.state));
+  // Once the new instance runs on this data, a copy would write over what it has written since.
+  const started = hasStarted(migration);
+  const offered = reached && !started;
   // The state can close the gate under a focused start button: a refused start reads it again, and so does the
   // poll. The button is then gone and the browser drops focus on <body>, so focus goes to the line in its place.
   const gate = useRef<HTMLParagraphElement>(null);
   const focused = useRef(false);
   useEffect(() => {
-    if (reached || !focused.current) return;
+    if (offered || !focused.current) return;
     focused.current = false;
     if (!document.activeElement || document.activeElement === document.body)
       gate.current?.focus();
-  }, [reached]);
+  }, [offered]);
   const running = run?.status === "running";
   const [key, counts] = progress
     ? copyProgress(step, progress, i18n.language)
@@ -250,6 +254,7 @@ export function CopyStep({
                   step={step}
                   decision={asked.decision}
                   decide={decide}
+                  frozen={started}
                 />
               )}
             </div>
@@ -300,6 +305,7 @@ export function CopyStep({
                         decision={accept}
                         name={name}
                         decide={decide}
+                        frozen={started}
                       />
                     )}
                   </li>
@@ -313,6 +319,7 @@ export function CopyStep({
               step={step}
               decision={decision}
               decide={decide}
+              frozen={started}
             />
           ))}
           {cut && (
@@ -326,7 +333,7 @@ export function CopyStep({
               <p>{t("settings.migration.copy.tooManyToAccept")}</p>
             </div>
           )}
-          {reached ? (
+          {offered ? (
             <>
               {start.isError && (
                 <p role="alert" className="text-sm text-destructive">
@@ -391,7 +398,11 @@ export function CopyStep({
               tabIndex={-1}
               className="text-sm outline-none"
             >
-              {t("settings.migration.notStarted")}
+              {t(
+                started
+                  ? "settings.migration.copy.afterStart"
+                  : "settings.migration.notStarted",
+              )}
             </p>
           )}
         </>
@@ -409,12 +420,15 @@ function Decision({
   decision: { kind, subject, run_id, made },
   name,
   decide,
+  frozen,
 }: {
   step: CopyStepId;
   decision: CopyDecision;
   /** Names the item for a screen reader, since every row has the same label. */
   name?: string;
   decide: ReturnType<typeof useDecideMutation>;
+  /** The new instance runs on what this copy left, so the decision stays as it was made. */
+  frozen: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const id = useId();
@@ -434,11 +448,11 @@ function Decision({
         <Checkbox
           id={id}
           checked={Boolean(made)}
-          aria-disabled={decide.isPending}
+          aria-disabled={decide.isPending || frozen}
           aria-label={name && `${label}, ${name}`}
           className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
           onCheckedChange={(value) => {
-            if (!decide.isPending)
+            if (!decide.isPending && !frozen)
               decide.mutate({
                 step,
                 kind,
