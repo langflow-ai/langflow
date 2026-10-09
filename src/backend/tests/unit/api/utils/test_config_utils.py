@@ -10,6 +10,7 @@ from langflow.api.utils.mcp.config_utils import (
     project_mcp_server_name_candidates,
     validate_mcp_server_for_project,
 )
+from langflow.api.v2.mcp import get_server
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
@@ -657,7 +658,9 @@ class TestMCPPatchServerConfig:
     """Test PATCH semantics for MCP server configs."""
 
     @pytest.mark.asyncio
-    async def test_patch_preserves_existing_headers_when_omitted(self, client: AsyncClient, created_api_key):
+    async def test_patch_preserves_existing_headers_when_omitted(
+        self, client: AsyncClient, created_api_key, active_user
+    ):
         """PATCH should keep existing headers when request body omits them."""
         server_name = f"preserve-headers-{uuid4()}"
         auth_headers = {"x-api-key": created_api_key.api_key}
@@ -667,24 +670,29 @@ class TestMCPPatchServerConfig:
         }
         patch_config = {"url": f"http://new-host-{uuid4()}/sse"}
         expected_config = {**initial_config, **patch_config}
+        initial_response = {**initial_config, "headers": {"X-My-Header": "********"}}
+        expected_response = {**expected_config, "headers": {"X-My-Header": "********"}}
 
         response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=initial_config, headers=auth_headers)
         assert response.status_code == 200
-        assert response.json() == initial_config
+        assert response.json() == initial_response
 
         try:
             response = await client.patch(f"/api/v2/mcp/servers/{server_name}", json=patch_config, headers=auth_headers)
             assert response.status_code == 200
-            assert response.json() == expected_config
+            assert response.json() == expected_response
 
             response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
             assert response.status_code == 200
-            assert response.json() == expected_config
+            assert response.json() == expected_response
+
+            async with session_scope() as session:
+                assert await get_server(server_name, active_user, session, None, None) == expected_config
         finally:
             await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
 
     @pytest.mark.asyncio
-    async def test_patch_allows_explicit_header_clear(self, client: AsyncClient, created_api_key):
+    async def test_patch_allows_explicit_header_clear(self, client: AsyncClient, created_api_key, active_user):
         """PATCH with headers=null should clear stored headers explicitly."""
         server_name = f"clear-headers-{uuid4()}"
         auth_headers = {"x-api-key": created_api_key.api_key}
@@ -694,10 +702,11 @@ class TestMCPPatchServerConfig:
         }
         patch_config = {"headers": None}
         expected_config = {"url": initial_config["url"], "headers": None}
+        initial_response = {**initial_config, "headers": {"X-My-Header": "********"}}
 
         response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=initial_config, headers=auth_headers)
         assert response.status_code == 200
-        assert response.json() == initial_config
+        assert response.json() == initial_response
 
         try:
             response = await client.patch(f"/api/v2/mcp/servers/{server_name}", json=patch_config, headers=auth_headers)
@@ -707,11 +716,16 @@ class TestMCPPatchServerConfig:
             response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
             assert response.status_code == 200
             assert response.json() == expected_config
+
+            async with session_scope() as session:
+                assert await get_server(server_name, active_user, session, None, None) == expected_config
         finally:
             await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
 
     @pytest.mark.asyncio
-    async def test_patch_replaces_headers_instead_of_deep_merging(self, client: AsyncClient, created_api_key):
+    async def test_patch_replaces_headers_instead_of_deep_merging(
+        self, client: AsyncClient, created_api_key, active_user
+    ):
         """PATCH should replace the headers dict with the exact value provided."""
         server_name = f"replace-headers-{uuid4()}"
         auth_headers = {"x-api-key": created_api_key.api_key}
@@ -721,19 +735,24 @@ class TestMCPPatchServerConfig:
         }
         patch_config = {"headers": {"A": "9"}}
         expected_config = {"url": initial_config["url"], "headers": {"A": "9"}}
+        initial_response = {**initial_config, "headers": {"A": "********", "B": "********"}}
+        expected_response = {**expected_config, "headers": {"A": "********"}}
 
         response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=initial_config, headers=auth_headers)
         assert response.status_code == 200
-        assert response.json() == initial_config
+        assert response.json() == initial_response
 
         try:
             response = await client.patch(f"/api/v2/mcp/servers/{server_name}", json=patch_config, headers=auth_headers)
             assert response.status_code == 200
-            assert response.json() == expected_config
+            assert response.json() == expected_response
 
             response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
             assert response.status_code == 200
-            assert response.json() == expected_config
+            assert response.json() == expected_response
+
+            async with session_scope() as session:
+                assert await get_server(server_name, active_user, session, None, None) == expected_config
         finally:
             await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
 
