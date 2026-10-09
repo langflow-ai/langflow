@@ -25,6 +25,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useRevisionPlaybackStore from "@/stores/revisionPlaybackStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
+import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
 import {
   type DescribeOptions,
@@ -95,12 +96,32 @@ export function useFlowVersionSidebar(
   const originalDraftNodesRef = useRef<any[] | null>(null);
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   const originalDraftEdgesRef = useRef<any[] | null>(null);
+  // The flow's own copy of its graph, which store updates during a preview
+  // overwrite with the previewed graph: anything that saves the current flow
+  // later (the API dialog when the toolbar returns) would save that instead.
+  const originalDraftDataRef = useRef<FlowType["data"] | null>(null);
   if (originalDraftNodesRef.current === null) {
     originalDraftNodesRef.current =
       cloneDeep(useFlowStore.getState().nodes) ?? [];
     originalDraftEdgesRef.current =
       cloneDeep(useFlowStore.getState().edges) ?? [];
+    originalDraftDataRef.current =
+      cloneDeep(useFlowStore.getState().currentFlow?.data) ?? null;
   }
+  const restoreDraft = useCallback(() => {
+    const currentFlow = useFlowStore.getState().currentFlow;
+    useFlowStore.setState({
+      nodes: cloneDeep(originalDraftNodesRef.current),
+      edges: cloneDeep(originalDraftEdgesRef.current),
+      ...(currentFlow &&
+        originalDraftDataRef.current && {
+          currentFlow: {
+            ...currentFlow,
+            data: cloneDeep(originalDraftDataRef.current),
+          },
+        }),
+    });
+  }, []);
 
   const {
     data: versionResponse,
@@ -295,14 +316,11 @@ export function useFlowVersionSidebar(
       previewedSomething.current &&
       (selectedId === CURRENT_DRAFT_ID || processedPreview?.error)
     ) {
-      useFlowStore.setState({
-        nodes: cloneDeep(originalDraftNodesRef.current),
-        edges: cloneDeep(originalDraftEdgesRef.current),
-      });
+      restoreDraft();
     }
     // The viewport is left alone: moving through history keeps the same part
     // of the canvas in view, so changes can be compared in place.
-  }, [processedPreview, selectedId]);
+  }, [processedPreview, selectedId, restoreDraft]);
 
   useEffect(() => {
     if (processedPreview?.error) {
@@ -380,10 +398,7 @@ export function useFlowVersionSidebar(
           previewedSomething.current &&
           useFlowStore.getState().currentFlow?.id === flowId
         ) {
-          useFlowStore.setState({
-            nodes: cloneDeep(originalDraftNodesRef.current),
-            edges: cloneDeep(originalDraftEdgesRef.current),
-          });
+          restoreDraft();
         }
       } catch (err) {
         console.error("Version sidebar cleanup: failed to restore draft", err);
@@ -433,7 +448,7 @@ export function useFlowVersionSidebar(
         );
       }
     };
-  }, [clearPreview, flowId]);
+  }, [clearPreview, flowId, restoreDraft]);
 
   useLayoutEffect(() => {
     // The canvas can register its autosave after the sidebar's first layout.
