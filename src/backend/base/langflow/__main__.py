@@ -1320,9 +1320,10 @@ def relocate_kb(
         help="Move knowledge bases whose search rankings would change because the target ranks by another metric.",
     ),
     verify_skipped: bool = typer.Option(  # noqa: FBT001
-        default=False,
+        default=True,
         help="Before skipping a knowledge base whose row already names the target, count its chunks there, and "
-        "fail it when the store cannot be read or holds fewer than the row records.",
+        "fail it when the store cannot be read or holds fewer than the row records. With --no-verify-skipped it "
+        "is skipped without a look at the store.",
     ),
     as_json: bool = typer.Option(  # noqa: FBT001
         False,  # noqa: FBT003
@@ -1346,13 +1347,15 @@ def relocate_kb(
 
     Safe to re-run: chunks keep their ids, so a second run upserts, and knowledge
     bases already on the target are skipped. Nothing is deleted from the source.
-    Exits non-zero if any knowledge base could not be moved.
+    Exits non-zero if any knowledge base failed.
 
-    A knowledge base whose row already names the target is skipped without a look
-    at the store. With --verify-skipped its chunks are counted there first, if
-    the row records any, and it fails when the store cannot be read or holds
-    fewer chunks than the row records, as it does when PGVECTOR_CONNECTION_STRING
-    names another database than the one the chunks were written to.
+    A knowledge base whose row already names the target is not moved. Its chunks
+    are counted there first, if the row records any and its storage is ready,
+    and it fails when the store cannot be read or holds fewer chunks than the
+    row records, as it does when PGVECTOR_CONNECTION_STRING names another
+    database than the one the chunks were written to. Pass --no-verify-skipped
+    to skip it without a look at the store, for a knowledge base that is in
+    place and whose row records too many chunks.
 
     With --json, stdout carries one JSON object per line and logs go to stderr:
     "progress" as a knowledge base's chunks are copied, an "item" as each one

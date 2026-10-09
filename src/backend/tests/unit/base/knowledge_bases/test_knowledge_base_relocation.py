@@ -190,7 +190,7 @@ class TestRelocationWithoutATarget:
             by_id = {result.kb_id: (result.status, result.code) for result in results}
             return [by_id[recorded.id], by_id[empty.id]]
 
-        # Unless asked, the command looks at neither.
+        # Unless asked, relocate_knowledge_bases looks at neither.
         assert await outcome() == [("skipped", None), ("skipped", None)]
         # Asked to, it counts the one that records chunks. One that records none has nothing to miss.
         assert await outcome(verify_skipped=True) == [("failed", "kb_target_unreachable"), ("skipped", None)]
@@ -618,8 +618,8 @@ class TestRelocateKbCommand:
 
     @pytest.mark.usefixtures("quiet_libraries")
     async def test_json_stream_reports_a_kb_whose_store_cannot_be_counted(self, active_user, capsys, monkeypatch):
-        # With no PGVECTOR_CONNECTION_STRING there is no store to count, and the command says so when it is asked
-        # to count. Unless asked, it skips the knowledge base as it did.
+        # With no PGVECTOR_CONNECTION_STRING there is no store to count, and the helper says so when it is asked
+        # to count. Unless asked, it skips the knowledge base. The command asks unless it is told not to.
         monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
         there = await knowledge_base_service.create_record(
             user_id=active_user.id, name="kb_json_recorded", backend_type="postgres", chunks=3
@@ -659,6 +659,18 @@ class TestRelocateKbCommand:
 
         asked = (context.params["verify_skipped"], context.params["dry_run"], context.params["as_json"])
         assert asked == (True, True, True)
+
+    @pytest.mark.parametrize(
+        ("options", "counted"), [([], True), (["--verify-skipped"], True), (["--no-verify-skipped"], False)]
+    )
+    def test_the_command_counts_before_it_skips_unless_it_is_told_not_to(self, options, counted):
+        # Run by hand the command counts, so a knowledge base kept in another store is not passed over in
+        # silence. The migration page gives the option either way.
+        command = typer.main.get_command(app).commands["relocate-kb"]
+
+        context = command.make_context("relocate-kb", ["--to", "postgres", *options])
+
+        assert context.params["verify_skipped"] is counted
 
     @pytest.mark.usefixtures("quiet_libraries")
     async def test_text_output_is_the_same_without_json(self, active_user, kb_root, capsys, monkeypatch):  # noqa: ARG002

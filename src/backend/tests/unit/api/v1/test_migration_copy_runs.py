@@ -959,8 +959,8 @@ async def test_on_postgresql_the_knowledge_bases_are_copied_only_when_this_serve
         # The copy writes where this server reads: it is given the server's own store, and the database to work on.
         given = psutil.Process(migration_runs.read_run(started.json()["run_id"])["child"]["pid"]).environ()
         assert (given["LANGFLOW_DATABASE_URL"], given["PGVECTOR_CONNECTION_STRING"]) == (own, store)
-        # It reads that store as the server does, so it is not asked to count what it skips.
-        assert "--verify-skipped" not in _command_line(started.json()["run_id"])
+        # It reads that store as the server does, so it is told not to count what it skips.
+        assert "--no-verify-skipped" in _command_line(started.json()["run_id"])
 
     assert (steps["copy_database"], steps["copy_knowledge_bases"]) == (("skipped", "already_postgresql"), step)
     status, refusal = answer
