@@ -595,21 +595,28 @@ async def test_a_run_is_not_interrupted_while_its_worker_still_reads_it(gate: Pa
     assert migration_runs.read_run(run_id)["status"] == "done"
 
 
-async def test_a_run_stays_live_for_the_worker_reading_it_when_the_system_no_longer_matches_what_was_recorded(
-    gate: Path, config_dir: Path
-):
-    run_id = await _start('wait_for_gate()\nemit(event="report", ok=True)', gate)
-    # A process is told apart by when it started. On macOS that time moves when the system clock is set:
-    # psutil shifts it once the boot time differs by a second or more from the one it read at import. What
-    # the status recorded before then matches neither the worker nor the child, although both are alive.
+def _unmatch(config_dir: Path, run_id: str) -> None:
+    """Leave a run's status as a clock update leaves it: what it recorded matches neither the worker nor the child.
+
+    A process is told apart by when it started. On macOS that time moves when the system clock is set:
+    psutil shifts it once the boot time differs by a second or more from the one it read at import.
+    Linux goes by the start ticks, which no clock moves. They are moved as well, so every system is
+    asked the same.
+    """
     status = config_dir / "migrations" / "runs" / f"{run_id}.json"
     recorded = json.loads(status.read_text())
     for process in (recorded["worker"], recorded["child"]):
         process["created"] += 2
-        # Linux goes by the start ticks, which no clock moves. Moved as well, so every system is asked the same.
         if "start_ticks" in process:
             process["start_ticks"] += 200
     status.write_text(json.dumps(recorded))
+
+
+async def test_a_run_stays_live_for_the_worker_reading_it_when_the_system_no_longer_matches_what_was_recorded(
+    gate: Path, config_dir: Path
+):
+    run_id = await _start('wait_for_gate()\nemit(event="report", ok=True)', gate)
+    _unmatch(config_dir, run_id)
 
     assert migration_runs.read_run(run_id)["status"] == "running"
     # Nor can a second run be started on top of it.
@@ -618,6 +625,30 @@ async def test_a_run_stays_live_for_the_worker_reading_it_when_the_system_no_lon
     gate.touch()
     assert [event["event"] for event in await _follow(run_id)] == ["report", "end"]
     assert migration_runs.read_run(run_id)["status"] == "done"
+
+
+async def test_the_worker_reading_a_run_can_still_stop_it_when_the_system_no_longer_matches_what_was_recorded(
+    gate: Path, config_dir: Path
+):
+    run_id = await _start(
+        """
+        emit(event="progress", done=1)
+        wait_for_gate()
+        """,
+        gate,
+    )
+    seen, follower = _follow_in_background(run_id)
+    await _until(lambda: seen)
+    child = psutil.Process(migration_runs.read_run(run_id)["child"]["pid"])
+    _unmatch(config_dir, run_id)
+
+    await migration_runs.cancel_run(run_id)
+
+    # The worker holds the child it started, so it needs no match to end it.
+    assert not child.is_running() or child.status() == psutil.STATUS_ZOMBIE
+    await asyncio.wait_for(follower, _TIMEOUT)
+    assert seen[-1] == {"event": "end", "status": "cancelled", "exit_code": -signal.SIGTERM, "seq": 2}
+    assert migration_runs.read_run(run_id)["status"] == "cancelled"
 
 
 async def test_a_cancel_that_arrives_after_the_child_exited_changes_nothing(gate: Path):
