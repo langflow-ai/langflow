@@ -136,6 +136,8 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
         "mp",
         "concurrent.futures.process.mp is forbidden — multiprocessing exposes unsafe pickle deserialization",
     ),
+    # ctypeslib exposes ctypes even when the component only imports numpy.
+    ("numpy", "ctypeslib", "numpy.ctypeslib is forbidden — native library loading"),
     # NumPy's array modules re-export the stdlib pickle module while also
     # exposing safe readers. Deny the re-export without blocking those readers.
     ("numpy.lib.format", "pickle", "numpy.lib.format.pickle is forbidden — unsafe pickle deserialization"),
@@ -289,6 +291,8 @@ DANGEROUS_IMPORTS: set[str] = {
     "bdb",
     "pdb",
     "doctest",
+    # Documentation helpers execute imported source files and shell pagers.
+    "pydoc",
     # Direct process-spawning modules. ``asyncio`` itself remains allowed, but
     # its subprocess entry points are blocked in DANGEROUS_ATTR_CALLS above.
     "multiprocessing",
@@ -327,6 +331,8 @@ DANGEROUS_SUBMODULES: tuple[str, ...] = (
     "urllib.error",
     "http.client",
     "http.server",
+    # NumPy's native-library helpers expose the otherwise blocked ctypes module.
+    "numpy.ctypeslib",
     # All useful members of this module are pickle entry points or re-exports
     # of pickle / pandas.compat.pickle_compat, not just read_pickle().
     "pandas.io.pickle",

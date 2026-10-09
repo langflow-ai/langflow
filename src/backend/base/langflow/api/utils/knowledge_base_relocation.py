@@ -20,11 +20,14 @@ from __future__ import annotations
 
 import asyncio
 import math
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
-from lfx.base.knowledge_bases.backends import BackendType, create_backend
+from lfx.base.knowledge_bases.backends import BackendType, create_backend, get_backend_class
+from lfx.base.knowledge_bases.backends.base import BackendConfigurationError
 from lfx.log.logger import logger
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlmodel import select, update
 
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
@@ -33,6 +36,7 @@ from langflow.services.deps import session_scope
 from langflow.services.knowledge_base_storage.runtime import operation, unfenced_backend
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
     from uuid import UUID
 
     from lfx.base.knowledge_bases.backends import BaseVectorStoreBackend
@@ -44,6 +48,14 @@ _METRIC_BATCH_SIZE = 100
 _UNIT_NORM_TOLERANCE = 1e-3
 _UNIT_EQUIVALENT_METRICS = {"cosine", "l2", "inner_product"}
 _OPENSEARCH_SPACE_TYPES = {"cosine": "cosinesimil", "l2": "l2", "inner_product": "innerproduct"}
+
+# What a write or a count raises when the target cannot be reached, by the type
+# each driver has for it.
+_UNREACHABLE: tuple[type[Exception], ...] = (OperationalError,)
+with suppress(ImportError):
+    from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
+
+    _UNREACHABLE = (*_UNREACHABLE, OpenSearchConnectionError)
 
 # Some stores (OpenSearch) count newly written chunks only after a refresh, so
 # the post-copy count is polled briefly before a shortfall is treated as real.
@@ -64,6 +76,12 @@ class KBRelocationResult:
     target_count: int = 0
     reason: str | None = None
     warnings: list[str] = field(default_factory=list)
+    # A stable name for why it failed, for callers that cannot match on ``reason``.
+    code: str | None = None
+    # How to get past a metric refusal: the flag that accepts the change and, for a
+    # target whose new index can take the source's metric, the config that avoids it.
+    flag: str | None = None
+    target_config: dict[str, Any] | None = None
 
 
 def validate_relocation_target_config(target_backend_type: str, target_backend_config: dict[str, Any]) -> None:
@@ -90,11 +108,16 @@ async def relocate_knowledge_bases(
     dry_run: bool = False,
     batch_size: int = 500,
     allow_metric_change: bool = False,
+    on_result: Callable[[KBRelocationResult], None] | None = None,
+    on_progress: Callable[[KBRelocationResult], None] | None = None,
 ) -> list[KBRelocationResult]:
     """Relocate every knowledge base, or one user's, to the target backend.
 
     Returns one result per knowledge base and never raises for a single
     knowledge base's failure, so one bad store does not stop the rest.
+
+    ``on_result`` is called with each result as its knowledge base finishes, and
+    ``on_progress`` with the result so far after each batch of chunks is copied.
     """
     validate_relocation_target_config(target_backend_type, target_backend_config)
     async with session_scope() as session:
@@ -113,8 +136,11 @@ async def relocate_knowledge_bases(
             dry_run=dry_run,
             batch_size=batch_size,
             allow_metric_change=allow_metric_change,
+            on_progress=on_progress,
         )
         results.append(result)
+        if on_result:
+            on_result(result)
     return results
 
 
@@ -127,6 +153,7 @@ async def _relocate_one(
     dry_run: bool,
     batch_size: int,
     allow_metric_change: bool,
+    on_progress: Callable[[KBRelocationResult], None] | None = None,
 ) -> KBRelocationResult:
     source_config = record.backend_config or {}
     result = KBRelocationResult(
@@ -143,23 +170,30 @@ async def _relocate_one(
         result.reason = "already on the target backend"
         return result
     if not_ready := _storage_not_ready(record):
+        result.code = "kb_upgrade_pending"
         result.reason = not_ready
         return result
     if record.status == KnowledgeBaseStatus.INGESTING.value:
+        result.code = "kb_ingesting"
         result.reason = "knowledge base is ingesting; wait for it to finish, then re-run"
         return result
 
     source: BaseVectorStoreBackend | None = None
     target: BaseVectorStoreBackend | None = None
     try:
+        with _failing_as(result, "kb_backend_missing"):
+            get_backend_class(record.backend_type)
+            get_backend_class(target_backend_type)
         source = unfenced_backend(record)
-        target = _build_backend(target_backend_type, target_backend_config, record)
+        with _failing_as(result, "kb_target_unreachable"):
+            target = _build_backend(target_backend_type, target_backend_config, record)
         await source.ensure_ready()
         if type(source) is type(target):
             # A stored config usually carries keys the target config leaves out (field
             # names, TLS flags) while naming the same store, so compare where the two
             # resolve to. Copying a knowledge base onto itself rewrites it in place.
-            await target.ensure_ready()
+            with _failing_as(result, "kb_target_unreachable"):
+                await target.ensure_ready()
             if source.store_location is not None and source.store_location == target.store_location:
                 result.status = "skipped"
                 result.reason = "already on the target backend"
@@ -176,6 +210,7 @@ async def _relocate_one(
             # Fewer chunks than recorded is what a truncated or half-lost store
             # looks like. Copying what is left and repointing would make the loss
             # permanent, so this needs a person to look first.
+            result.code = "kb_short"
             result.reason = f"source holds {result.source_count} of {record.chunks} recorded chunks; not relocating"
             return result
         if result.source_count > record.chunks:
@@ -187,30 +222,43 @@ async def _relocate_one(
             result.reason = metric_problem
             return result
         if dry_run:
-            connection = await target.test_connection()
+            with _failing_as(result, "kb_target_unreachable"):
+                connection = await target.test_connection()
             if not connection.ok:
+                result.code = "kb_target_unreachable"
                 result.reason = f"target is not reachable: {connection.message}"
                 return result
             result.status = "would_relocate"
             return result
 
+        # The first write would resolve the target's connection settings. Doing it
+        # here tells a target that is not set up apart from a write that failed.
+        with _failing_as(result, "kb_target_unreachable"):
+            await target.ensure_ready()
         async for batch in source.iter_documents(batch_size=batch_size, include_embeddings=True):
             if any(doc.embedding is None for doc in batch):
+                result.code = "kb_no_vectors"
                 result.reason = "source returned chunks without vectors, so they can only be re-ingested"
                 return result
-            await target.add_embedded_documents(batch)
+            with _failing_as(result, "kb_target_unreachable", _UNREACHABLE):
+                await target.add_embedded_documents(batch)
             result.copied += len(batch)
+            if on_progress:
+                on_progress(result)
 
         # A read that stops early returns a short list without raising on some
         # backends, so the copy is checked against the source's own count.
         if result.copied != result.source_count:
+            result.code = "kb_read_short"
             result.reason = f"read {result.copied} of {result.source_count} chunks from the source; not repointing"
             return result
 
-        result.target_count = await _settled_count(target, result.source_count)
+        with _failing_as(result, "kb_target_unreachable", _UNREACHABLE):
+            result.target_count = await _settled_count(target, result.source_count)
         if result.target_count != result.source_count:
             # More than the source means the target already held other chunks
             # (a store left from an earlier move, say), which would join this KB.
+            result.code = "kb_target_more"
             result.reason = (
                 f"target holds {result.target_count} chunks, the source {result.source_count}; not repointing"
             )
@@ -224,6 +272,7 @@ async def _relocate_one(
             # the target can agree while the source has moved on.
             source_now = await source.count()
             if source_now != result.source_count:
+                result.code = "kb_changed"
                 result.reason = (
                     f"source changed during the copy ({result.source_count} -> {source_now} chunks); "
                     "stop ingestion and memory capture, then re-run"
@@ -232,9 +281,11 @@ async def _relocate_one(
 
             repoint = await _repoint(record, target_backend_type, target_backend_config, result.source_count)
         if repoint == "deleted":
+            result.code = "kb_deleted"
             result.reason = "knowledge base was deleted during the move"
             return result
         if repoint == "changed":
+            result.code = "kb_routing_changed"
             result.reason = (
                 "knowledge base's storage changed during the move (its backend, configuration, storage generation "
                 "or storage state is no longer what was copied). Its current routing was preserved. Re-run."
@@ -242,8 +293,18 @@ async def _relocate_one(
             return result
         result.status = "relocated"
     except Exception as exc:  # noqa: BLE001 - reported per knowledge base
-        result.reason = f"{type(exc).__name__}: {exc}"
-        await logger.awarning("Relocating knowledge base %s for %s failed: %s", record.name, owner, exc)
+        became = None if result.code else await _row_since_read(record)
+        if became == "deleted":
+            # Deleting a knowledge base retires its store before its row, so a copy
+            # still reading it fails before the repoint could find the row gone.
+            result.code = "kb_deleted"
+            result.reason = "knowledge base was deleted during the move"
+        else:
+            # The storage lock refuses a row that was rerouted, with the error it has
+            # for any row it cannot use, before the repoint could find it changed.
+            result.code = result.code or ("kb_routing_changed" if became == "changed" else "kb_failed")
+            result.reason = _describe(exc)
+            await logger.awarning("Relocating knowledge base %s for %s failed: %s", record.name, owner, result.reason)
     finally:
         for backend in (source, target):
             if backend is not None:
@@ -291,6 +352,30 @@ def _build_backend(
     )
 
 
+def _describe(exc: Exception) -> str:
+    """Name a failure without the chunks it was handling.
+
+    SQLAlchemy includes the statement and its parameters, and even the driver's
+    first line can quote a stored value. Keep only the driver's exception type.
+    """
+    if not isinstance(exc, SQLAlchemyError):
+        return f"{type(exc).__name__}: {exc}"
+    cause = getattr(exc, "orig", None) or exc
+    return f"{type(cause).__name__}: database operation failed"
+
+
+@contextmanager
+def _failing_as(
+    result: KBRelocationResult, code: str, errors: type[Exception] | tuple[type[Exception], ...] = Exception
+) -> Iterator[None]:
+    """Give a failure raised inside the block ``code``, unless a narrower block already named it."""
+    try:
+        yield
+    except errors:
+        result.code = result.code or code
+        raise
+
+
 async def _metric_change(
     source: BaseVectorStoreBackend, target: BaseVectorStoreBackend, result: KBRelocationResult, *, allow: bool
 ) -> str | None:
@@ -301,8 +386,21 @@ async def _metric_change(
     so only the scores change scale, which is a warning. For any other vectors the
     ranking may change, and nothing else about the copy would show it, so it is refused
     unless ``allow`` accepts it, which leaves a warning instead.
+
+    Checking reads every source vector, so it can also find what the copy would: a
+    chunk without a vector, or a read that stops short. Each reason sets its own code.
     """
-    before, after = await source.get_distance_metric(), await target.get_distance_metric()
+    # OpenSearch reads its metric from the index's mapping, and a mapping that does
+    # not give one is what it reports as a configuration error.
+    with _failing_as(result, "kb_metric_unknown", BackendConfigurationError):
+        before = await source.get_distance_metric()
+    # An OpenSearch target reads its metric from its cluster, which is the first
+    # time a relocation needs the target's settings and a connection to it.
+    with (
+        _failing_as(result, "kb_target_unreachable"),
+        _failing_as(result, "kb_metric_unknown", BackendConfigurationError),
+    ):
+        after = await target.get_distance_metric()
     if before is None or after is None or before == after:
         return None
     checked = 0
@@ -312,6 +410,7 @@ async def _metric_change(
         async for batch in documents:
             for doc in batch:
                 if doc.embedding is None:
+                    result.code = "kb_no_vectors"
                     return "source returned chunks without vectors, so they can only be re-ingested"
                 checked += 1
                 unit_length = unit_length and abs(math.hypot(*doc.embedding) - 1) <= _UNIT_NORM_TOLERANCE
@@ -319,6 +418,7 @@ async def _metric_change(
         if close := getattr(documents, "aclose", None):
             await close()
     if checked != result.source_count:
+        result.code = "kb_read_short"
         return f"read {checked} of {result.source_count} chunks while checking metrics; not relocating"
     if not checked:
         return None
@@ -336,6 +436,7 @@ async def _metric_change(
         return None
     if target.backend_type == BackendType.OPENSEARCH:
         space_type = _OPENSEARCH_SPACE_TYPES.get(before, before)
+        result.target_config = {"space_type": space_type}
         how = (
             f'For a new target index, set the source\'s metric (--target-config \'{{"space_type": "{space_type}"}}\'). '
             "An existing index's metric cannot be changed by configuration; re-run with --allow-metric-change "
@@ -343,6 +444,8 @@ async def _metric_change(
         )
     else:
         how = "The target's metric is fixed; re-run with --allow-metric-change to accept the change"
+    result.flag = "--allow-metric-change"
+    result.code = "kb_metric_change"
     return f"{change}, and {uncertainty}, so nearest-neighbour results may change. {how}"
 
 
@@ -354,6 +457,20 @@ async def _settled_count(backend: BaseVectorStoreBackend, expected: int) -> int:
         await asyncio.sleep(_COUNT_SETTLE_SECONDS)
         count = await backend.count()
     return count
+
+
+async def _row_since_read(record: KnowledgeBaseRecord) -> Literal["deleted", "changed"] | None:
+    """What became of the row since ``record`` was read, and None when nothing did or the database cannot say."""
+    try:
+        async with session_scope() as session:
+            row = await session.get(KnowledgeBaseRecord, record.id)
+    except SQLAlchemyError:
+        return None
+    if row is None or row.storage_state in ("deleting", "deleted"):
+        return "deleted"
+    # The columns the repoint needs unchanged.
+    routing = ("user_id", "name", "backend_type", "backend_config", "storage_generation", "storage_state")
+    return "changed" if any(getattr(row, column) != getattr(record, column) for column in routing) else None
 
 
 async def _repoint(

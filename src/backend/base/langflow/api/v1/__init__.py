@@ -1,5 +1,6 @@
 from langflow.api.v1.a2a import router as a2a_router
 from langflow.api.v1.api_key import router as api_key_router
+from langflow.api.v1.audits import router as audits_router
 from langflow.api.v1.authz_audit import router as authz_audit_router
 from langflow.api.v1.authz_capabilities import router as authz_capabilities_router
 from langflow.api.v1.authz_me import router as authz_me_router
@@ -17,6 +18,7 @@ from langflow.api.v1.flow_conflict_routes import router as flow_conflict_router
 from langflow.api.v1.flow_events import router as flow_events_router
 from langflow.api.v1.flow_version import router as flow_version_router
 from langflow.api.v1.flows import router as flows_router
+from langflow.api.v1.flows_audits import router as flows_audits_router
 from langflow.api.v1.folders import router as folders_router
 from langflow.api.v1.integrations import router as integrations_router
 from langflow.api.v1.knowledge_bases import router as knowledge_bases_router
@@ -24,6 +26,7 @@ from langflow.api.v1.login import router as login_router
 from langflow.api.v1.mcp import router as mcp_router
 from langflow.api.v1.mcp_projects import router as mcp_projects_router
 from langflow.api.v1.memories import router as memories_router
+from langflow.api.v1.migration import router as migration_router
 from langflow.api.v1.model_options import router as model_options_router
 from langflow.api.v1.model_provider_policy import router as model_provider_policy_router
 from langflow.api.v1.models import router as models_router
@@ -31,6 +34,7 @@ from langflow.api.v1.monitor import router as monitor_router
 from langflow.api.v1.openai_responses import router as openai_responses_router
 from langflow.api.v1.policy_bundle import router as policy_bundle_router
 from langflow.api.v1.projects import router as projects_router
+from langflow.api.v1.projects_audits import router as projects_audits_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
 from langflow.api.v1.store import router as store_router
 from langflow.api.v1.traces import router as traces_router
@@ -44,6 +48,7 @@ from langflow.api.v1.voice_mode import router as voice_mode_router
 __all__ = [
     "a2a_router",
     "api_key_router",
+    "audits_router",
     "authz_audit_router",
     "authz_capabilities_router",
     "authz_me_router",
@@ -60,6 +65,7 @@ __all__ = [
     "flow_conflict_router",
     "flow_events_router",
     "flow_version_router",
+    "flows_audits_router",
     "flows_router",
     "folders_router",
     "integrations_router",
@@ -68,12 +74,14 @@ __all__ = [
     "mcp_projects_router",
     "mcp_router",
     "memories_router",
+    "migration_router",
     "model_options_router",
     "model_provider_policy_router",
     "models_router",
     "monitor_router",
     "openai_responses_router",
     "policy_bundle_router",
+    "projects_audits_router",
     "projects_router",
     "starter_projects_router",
     "store_router",

@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import copy
+import os
 import re
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
@@ -69,6 +70,7 @@ from lfx.mcp.registry import (
     load_registry,
     search_registry,
 )
+from lfx.services.deps import get_settings_service
 from lfx.services.telemetry import MCPToolPayload, TelemetryService
 
 # Session state. Module-level singletons for stdio (single agent), with
@@ -84,7 +86,12 @@ _telemetry: TelemetryService | None = None
 async def _telemetry_lifespan(_server: FastMCP) -> AsyncIterator[dict]:
     """Start/stop the telemetry service with the MCP server lifecycle."""
     global _telemetry  # noqa: PLW0603
-    svc = TelemetryService()
+    settings = get_settings_service().settings
+    svc = TelemetryService(
+        base_url=os.environ.get("LANGFLOW_SEGMENT_API_URL") or settings.segment_api_url,
+        write_key=os.environ.get("LANGFLOW_SEGMENT_WRITE_KEY") or settings.segment_write_key,
+        do_not_track=settings.do_not_track or os.environ.get("DO_NOT_TRACK", "false").lower() in {"1", "true"},
+    )
     svc.start()
     _telemetry = svc
     try:

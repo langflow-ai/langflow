@@ -9,6 +9,7 @@ and other form fields, routing conversations into the default session
 from __future__ import annotations
 
 import io
+import logging
 
 import orjson
 import pytest
@@ -16,6 +17,10 @@ from fastapi import FastAPI, Request
 from httpx import ASGITransport, AsyncClient
 from langflow.api.v1.endpoints import parse_input_request_from_body
 from langflow.api.v1.schemas import SimplifiedAPIRequest
+from structlog import PrintLogger, make_filtering_bound_logger, wrap_logger
+from structlog.dev import ConsoleRenderer
+
+CANARY = "lf-canary-9d1f4e7a2c8b"  # pragma: allowlist secret
 
 
 def _build_app() -> FastAPI:
@@ -209,3 +214,29 @@ async def test_malformed_json_returns_default(parser_client: AsyncClient):
 
     assert response.status_code == 200
     assert response.json() == SimplifiedAPIRequest().model_dump()
+
+
+@pytest.mark.asyncio
+async def test_invalid_field_is_logged_without_the_submitted_value(parser_client: AsyncClient, monkeypatch):
+    """Pydantic's error text quotes the input, so the warning names the field and the reason only."""
+    # A real logger with its own sink: the module's logger is a lazy structlog proxy
+    # that freezes its level on first use, and a test process leaves it above WARNING.
+    sink = io.StringIO()
+    warning_logger = wrap_logger(
+        PrintLogger(file=sink),
+        processors=[ConsoleRenderer(colors=False)],
+        wrapper_class=make_filtering_bound_logger(logging.WARNING),
+    )
+    monkeypatch.setattr("langflow.api.v1.endpoints.logger", warning_logger)
+
+    async with parser_client as client:
+        response = await client.post("/parse", json={"input_value": {"secret": CANARY}, "session_id": "s1"})
+
+    assert response.status_code == 200
+    assert response.json() == SimplifiedAPIRequest().model_dump()
+    logged = sink.getvalue()
+    # The warning was captured and still says what failed and where.
+    assert "Failed to parse request body" in logged
+    assert "input_value" in logged
+    assert "string_type" in logged
+    assert CANARY not in logged

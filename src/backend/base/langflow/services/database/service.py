@@ -433,6 +433,9 @@ class DatabaseService(Service):
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
         if isinstance(dbapi_connection, sqlite3.Connection | dialect_sqlite.aiosqlite.AsyncAdapt_aiosqlite_connection):
+            from langflow.services.audit.search_sql import register_sqlite_search_functions
+
+            register_sqlite_search_functions(dbapi_connection)
             pragmas: dict = self.settings_service.settings.sqlite_pragmas or {}
             pragmas_list = []
             for key, val in pragmas.items():

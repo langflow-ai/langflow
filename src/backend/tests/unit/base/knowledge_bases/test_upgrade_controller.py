@@ -7,6 +7,7 @@ import json
 import os
 import socket
 import sqlite3
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -18,11 +19,14 @@ from langflow.services.knowledge_base_storage import controller, maintenance
 
 pytestmark = [pytest.mark.no_blockbuster, pytest.mark.skipif(os.name != "posix", reason="POSIX controller")]
 
+# File existence signals readiness, so subprocesses must publish complete JSON atomically.
 _SERVER = """
 import http.server, json, os, pathlib, sys
 port, ready, environment = int(sys.argv[1]), pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3])
 names = ('LANGFLOW_DATABASE_URL', 'LANGFLOW_KNOWLEDGE_BASES_DIR')
-environment.write_text(json.dumps({k: v for k, v in os.environ.items() if k.startswith('LANGFLOW_KB_') or k in names}))
+pending = environment.with_suffix('.tmp')
+pending.write_text(json.dumps({k: v for k, v in os.environ.items() if k.startswith('LANGFLOW_KB_') or k in names}))
+pending.replace(environment)
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200 if ready.exists() else 503)
@@ -35,7 +39,10 @@ _SUPERVISOR = """
 import json, pathlib, subprocess, sys, time
 import psutil
 child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(300)'])
-pathlib.Path(sys.argv[1]).write_text(json.dumps({'pid': child.pid, 'created': psutil.Process(child.pid).create_time()}))
+identity = pathlib.Path(sys.argv[1])
+pending = identity.with_suffix('.tmp')
+pending.write_text(json.dumps({'pid': child.pid, 'created': psutil.Process(child.pid).create_time()}))
+pending.replace(identity)
 time.sleep(300)
 """
 
@@ -358,6 +365,31 @@ def test_receipt_worker_barrier_accepts_exited_unreaped_workers(monkeypatch, sta
     process = SimpleNamespace(status=lambda: status, create_time=lambda: 1234)
     monkeypatch.setattr(maintenance.psutil, "Process", lambda _pid: process)
     assert maintenance._process_matches({"pid": 123, "created": 1234}) is expected
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux /proc identity")
+def test_process_reaped_during_identity_read_is_reported_gone(monkeypatch):
+    """Report a process as gone when it is reaped between opening and reading its /proc entry."""
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])  # noqa: S603
+    opened = maintenance.Path.open
+
+    def reap_after_open(path, *args, **kwargs):
+        """Open for real, then end the child so the kernel itself fails the read."""
+        stream = opened(path, *args, **kwargs)
+        if str(path) == f"/proc/{child.pid}/stat":
+            child.kill()
+            child.wait()
+        return stream
+
+    try:
+        process = psutil.Process(child.pid)
+        monkeypatch.setattr(maintenance.Path, "open", reap_after_open)
+        with pytest.raises(psutil.NoSuchProcess) as raised:
+            maintenance.process_identity(process)
+        assert isinstance(raised.value.__cause__, ProcessLookupError)
+    finally:
+        child.kill()
+        child.wait()
 
 
 async def test_forward_restart_rejects_surviving_new_workers(installation):

@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from langflow.logging.logger import logger
 
-from .service import StorageReadiness, StorageService
+from .service import StorageReadiness, StorageService, validate_namespace
 
 # S3 parts are 5 MiB at least, except the last one.
 STREAM_PART_SIZE = 8 * 1024 * 1024
@@ -472,6 +472,30 @@ class S3StorageService(StorageService):
             raise
         else:
             return files
+
+    async def delete_namespace(self, namespace: str) -> int:
+        """Delete every key under ``<prefix><namespace>/``, nested keys included."""
+        validated = validate_namespace(namespace)
+        prefix = f"{self.prefix}{validated}/"
+        removed = 0
+        try:
+            async with self._get_client() as s3_client:
+                paginator = s3_client.get_paginator("list_objects_v2")
+                async for page in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix):
+                    keys = [{"Key": obj["Key"]} for obj in page.get("Contents", [])]
+                    if not keys:
+                        continue
+                    response = await s3_client.delete_objects(
+                        Bucket=self.bucket_name, Delete={"Objects": keys, "Quiet": True}
+                    )
+                    if response.get("Errors"):
+                        msg = f"S3 refused to delete {len(response['Errors'])} object(s) in a namespace"
+                        raise RuntimeError(msg)
+                    removed += len(keys)
+        except Exception:
+            logger.exception("Error deleting an S3 namespace")
+            raise
+        return removed
 
     async def delete_file(self, flow_id: str, file_name: str) -> None:
         """Delete a file from S3.
