@@ -30,14 +30,13 @@ export const PARTS: {
       { id: "copy_database", slug: "copyDatabase" },
       { id: "copy_knowledge_bases", slug: "copyKnowledgeBases" },
       { id: "copy_files", slug: "copyFiles" },
+      // The copy is checked while it can still be made again, before the new instance starts on it.
+      { id: "check_target", slug: "checkTarget" },
     ],
   },
   {
     slug: "switch",
-    steps: [
-      { id: "start_target", slug: "start" },
-      { id: "check_target", slug: "checkTarget" },
-    ],
+    steps: [{ id: "start_target", slug: "start" }],
   },
 ];
 
@@ -199,6 +198,22 @@ export const COPIES: Record<
 export const isCopy = (id: MigrationStepId): id is CopyStepId => id in COPIES;
 
 /**
+ * Whether the new instance was started on the copied data in the pause that is on. From then on nothing is
+ * copied or checked, the destination can't be saved again, and turning changes back on is a way back that
+ * loses what the new instance wrote.
+ */
+export const hasStarted = (migration: MigrationState) =>
+  migration.steps.some(
+    ({ id, state }) => id === "start_target" && state === "done",
+  );
+
+/**
+ * The page's entry for a check that ran on the new instance's data. The check of the copy names each one
+ * as the command prints it, without the "source: " the first step's names carry.
+ */
+export const targetCheck = (name: string) => CHECKS[`source: ${name}`];
+
+/**
  * The page's line, under `settings.migration.*`, for each reason a copy does not start or does not count.
  * Any other code reads as a failure, with the command's own words under it.
  */
@@ -211,6 +226,8 @@ export const COPY_CODES: Record<string, string> = {
   interrupted: "error.interrupted",
   crashed: "error.crashed",
   destination_changed: "error.destinationChanged",
+  // The start was confirmed, perhaps in another tab. A copy would write over what the new instance wrote since.
+  new_instance_started: "copy.afterStart",
   // The knowledge bases test of "Where your data goes" refuses for the same reason. Its line follows a note
   // that names the store, so it asks only for the variable. The note above this one, kb.postgresNote, says the
   // store changes but not which one, so this line names it before "that database" can refer to it.

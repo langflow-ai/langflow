@@ -12,6 +12,7 @@ import type {
   MigrationError,
   MigrationJob,
   MigrationState,
+  MigrationWayBack,
 } from "./types";
 
 export const migrationKeys = {
@@ -30,7 +31,8 @@ export const useMigrationQuery = (enabled = true) =>
     refetchInterval: (query) => {
       const record = query.state.data?.record;
       const running = Object.values(record?.steps ?? {}).some(
-        (step) => step?.status === "running",
+        // A step that only records the admin's word has no run.
+        (step) => step && "status" in step && step.status === "running",
       );
       // A pause that still waits refuses changes as well, and another admin's request can end it either way.
       return (record?.pause ?? record?.pausing) || running ? 5000 : false;
@@ -137,8 +139,12 @@ export const usePauseMutation = () =>
 
 /** Lets changes through again. What was backed up or copied during the pause no longer counts. */
 export const useResumeMutation = () =>
-  useStepMutation<void>(() =>
-    api.delete(getURL("MIGRATION", { path: "pause" })),
+  // Once the new instance has started, turning changes back on is a way back. The admin's word that it is
+  // stopped, and that the database is restored where it was shared, goes with the request.
+  useStepMutation((back: MigrationWayBack | void) =>
+    back
+      ? api.delete(getURL("MIGRATION", { path: "pause" }), { data: back })
+      : api.delete(getURL("MIGRATION", { path: "pause" })),
   );
 
 /** Sends the request the server gave for cancelling a job. Only the job's own route knows who may. */
@@ -176,18 +182,40 @@ export const useConfirmBackupMutation = () =>
     }),
   );
 
+/** Records the admin's word that the new instance runs on the copied data, which ends the move. */
+export const useConfirmStartMutation = () =>
+  useStepMutation<void>(() =>
+    api.post(getURL("MIGRATION", { path: "steps/start_target/confirm" })),
+  );
+
 /**
- * Starts a copy, or a test run of one, which copies nothing.
+ * Records the admin's word that what the check of the copy found different is expected, so the move can go on.
+ * That word is about the check the admin read, so `run` names it: the server refuses it for another check,
+ * which someone else may have run since.
+ */
+export const useAcceptDifferencesMutation = () =>
+  useStepMutation((run: string) =>
+    api.post(getURL("MIGRATION", { path: "steps/check_target/confirm" }), {
+      accept_differences: true,
+      run_id: run,
+    }),
+  );
+
+/**
+ * Starts a copy, or a test run of one, which copies nothing. The check of the copy is started the same way.
  * It is a process of its own on the server, so it keeps going when the page is gone.
  */
-export const useStartCopyMutation = (step: CopyStepId) => {
+export const useStartCopyMutation = (step: CopyStepId | "check_target") => {
   const client = useQueryClient();
   return useMutation<unknown, AxiosError<{ detail?: MigrationError }>, boolean>(
     {
       mutationFn: (dryRun) =>
-        api.post(getURL("MIGRATION", { path: `steps/${step}/runs` }), {
-          dry_run: dryRun,
-        }),
+        // The check of the copy has no test run, and its request has no body.
+        step === "check_target"
+          ? api.post(getURL("MIGRATION", { path: `steps/${step}/runs` }))
+          : api.post(getURL("MIGRATION", { path: `steps/${step}/runs` }), {
+              dry_run: dryRun,
+            }),
       // The record now says the run is on, or what changed for the server to refuse it.
       onSettled: () =>
         client.invalidateQueries({ queryKey: migrationKeys.all }),
@@ -196,7 +224,7 @@ export const useStartCopyMutation = (step: CopyStepId) => {
 };
 
 /** Stops a run. The page learns that it ended from the run's own events. */
-export const useStopCopyMutation = (step: CopyStepId) =>
+export const useStopCopyMutation = (step: CopyStepId | "check_target") =>
   useMutation<unknown, AxiosError, string>({
     mutationFn: (runId) =>
       api.delete(getURL("MIGRATION", { path: `steps/${step}/runs/${runId}` })),

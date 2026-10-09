@@ -10,10 +10,12 @@ import type {
   MigrationStepState,
 } from "@/controllers/API/queries/migration";
 import { BackupStep } from "../BackupStep";
+import { CheckTargetStep } from "../CheckTargetStep";
 import { CopyStep } from "../CopyStep";
 import { DestinationsStep } from "../DestinationsStep";
 import { PausedBanner, PauseStep, Recovery, Waiting } from "../PauseStep";
 import { SecretKeyStep } from "../SecretKeyStep";
+import { MoveComplete, StartStep } from "../StartStep";
 
 // No request leaves these tests. A test that submits first makes the request fail: the connection, as it does when the
 // server is gone, or with the refusal the server would send, where the page decides from that answer alone.
@@ -126,6 +128,67 @@ describe("Where your data goes", () => {
       "type",
       "password",
     );
+  });
+
+  it("closes a form that was open when the new instance started", async () => {
+    const saved = migration(
+      { files: { storage: "local", local: true } },
+      {
+        destinations: {
+          database: { location: "db.internal:5432/target" },
+          files: { bucket: "acme", prefix: "moved" },
+          results: { database: { ok: true }, files: { ok: true } },
+          saved_by: "alice",
+          saved_at: "2026-10-06T12:00:00Z",
+        },
+      },
+    );
+    const client = new QueryClient();
+    const shown = (state: MigrationState) => (
+      <QueryClientProvider client={client}>
+        <DestinationsStep
+          migration={state}
+          state={step("connect_target", "done")}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(shown(saved));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Change or enter again" }),
+    );
+    expect(screen.getByLabelText("Bucket")).toBeInTheDocument();
+
+    // The start is confirmed, here or in another tab. The server now saves no other destination.
+    rerender(shown({ ...saved, steps: [step("start_target", "done")] }));
+    expect(screen.queryByLabelText("Bucket")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("offers no change once the new instance has started", () => {
+    show(
+      <DestinationsStep
+        migration={{
+          ...migration(
+            { files: { storage: "local", local: true } },
+            {
+              destinations: {
+                database: { location: "db.internal:5432/target" },
+                files: { bucket: "acme", prefix: "moved" },
+                results: { database: { ok: true }, files: { ok: true } },
+                saved_by: "alice",
+                saved_at: "2026-10-06T12:00:00Z",
+              },
+            },
+          ),
+          steps: [step("start_target", "done")],
+        }}
+        state={step("connect_target", "done")}
+      />,
+    );
+
+    // The new instance runs on this destination, and the server saves no other one from here on.
+    expect(screen.getByText(/^Saved .* by alice\.$/)).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("shows a done step as facts, and asks again without the secrets it never got back", async () => {
@@ -1076,6 +1139,163 @@ describe("Pause changes", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("offers the way back in one place once the new instance has started", async () => {
+    const started = {
+      ...migration({}, { pause: paused }),
+      steps: [step("start_target", "done")],
+    };
+    const { unmount } = show(<PausedBanner migration={started} />);
+    // The banner stays, without the button: going back now takes more than a click.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Changes are paused on this instance\./,
+    );
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    unmount();
+
+    const remove = jest.spyOn(api, "delete").mockRejectedValue(unreachable());
+    show(<Recovery migration={started} />);
+    // It opens by itself, since this is now where the admin has to look.
+    expect(screen.getByRole("group")).toHaveAttribute("open");
+    expect(
+      screen.getByText(
+        "The new instance has started. Going back loses everything that changed on it since then.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Stop the new instance.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "This instance's database wasn't changed, so there is nothing to restore.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/^Turn changes back on\. Nothing is lost here\./),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("checkbox", { name: "The database is restored" }),
+    ).not.toBeInTheDocument();
+
+    const resume = screen.getByRole("button", {
+      name: "Turn changes back on",
+    });
+    expect(resume).toBeDisabled();
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "The new instance is stopped" }),
+    );
+    await userEvent.click(resume);
+    const asked = screen.getByRole("dialog", {
+      name: "Turn changes back on?",
+    });
+    expect(asked).toHaveTextContent(
+      // The destination keeps the copy, and a copy needs an empty database: better said before the pause is given up.
+      "People can work on this instance again, and everything that changed on the new instance since it started is lost. To move again, you'll start over from 'Pause changes'. The next move also needs a new, empty database for the new instance.",
+    );
+    await userEvent.click(
+      within(asked).getByRole("button", { name: "Resume" }),
+    );
+
+    // The admin's word goes with the request, which the server refuses without it.
+    expect(remove.mock.calls).toEqual([
+      [
+        expect.stringMatching(/\/migration\/pause$/),
+        { data: { target_stopped: true } },
+      ],
+    ]);
+  });
+
+  it("asks for the admin's word again after another start", async () => {
+    const started = (confirmed_at: string): MigrationState => ({
+      ...migration(
+        {},
+        {
+          pause: paused,
+          steps: { start_target: { confirmed_by: "alice", confirmed_at } },
+        },
+      ),
+      steps: [step("start_target", "done")],
+    });
+    const client = new QueryClient();
+    const shown = (state: MigrationState) => (
+      <QueryClientProvider client={client}>
+        <Recovery migration={state} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(shown(started("2026-10-06T13:00:00Z")));
+    const box = () =>
+      screen.getByRole("checkbox", { name: "The new instance is stopped" });
+    const resume = () =>
+      screen.getByRole("button", { name: "Turn changes back on" });
+    // What the button waits for is read out with it.
+    expect(resume()).toHaveAccessibleDescription(
+      "The new instance has started. Going back loses everything that changed on it since then.",
+    );
+    await userEvent.click(box());
+    expect(resume()).toBeEnabled();
+
+    // The admin went back, moved again and started the new instance again. The tick was about the first start.
+    rerender(shown(started("2026-10-06T15:00:00Z")));
+    expect(box()).not.toBeChecked();
+    expect(resume()).toBeDisabled();
+  });
+
+  it("asks an instance on PostgreSQL to restore its database before changes go back on", async () => {
+    const remove = jest.spyOn(api, "delete").mockRejectedValue(unreachable());
+    show(
+      <Recovery
+        migration={{
+          ...migration(
+            {
+              database: {
+                type: "postgresql",
+                location: "db.internal:5432/langflow",
+              },
+            },
+            {
+              pause: paused,
+              backup: {
+                location: "s3://backups/langflow",
+                confirmed_by: "alice",
+                confirmed_at: "2026-10-06T12:10:00Z",
+              },
+            },
+          ),
+          steps: [step("start_target", "done"), step("check_target", "done")],
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Restore this instance's database from your backup at s3://backups/langflow.",
+      ),
+    ).toBeInTheDocument();
+    const resume = screen.getByRole("button", { name: "Turn changes back on" });
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "The new instance is stopped" }),
+    );
+    // Stopped is not enough here: the new instance has updated the database this instance reads.
+    expect(resume).toBeDisabled();
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "The database is restored" }),
+    );
+    await userEvent.click(resume);
+    // The restore put the shared database back as it was, so the next move needs no other one.
+    expect(screen.getByRole("dialog")).not.toHaveTextContent(
+      "new, empty database",
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Resume",
+      }),
+    );
+
+    expect(remove.mock.calls).toEqual([
+      [
+        expect.stringMatching(/\/migration\/pause$/),
+        { data: { target_stopped: true, database_restored: true } },
+      ],
+    ]);
+  });
+
   it("keeps a banner up while paused, and confirms before turning changes back on", async () => {
     const { unmount } = show(<PausedBanner migration={migration()} />);
     // There before the pause, so a screen reader hears it start.
@@ -1105,7 +1325,10 @@ describe("Pause changes", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Something went wrong. Try again.",
     );
-    expect(resume).toHaveBeenCalledTimes(1);
+    // Before the new instance has started there is nothing to say about it, so the request has no body.
+    expect(resume.mock.calls).toEqual([
+      [expect.stringMatching(/\/migration\/pause$/)],
+    ]);
   });
 
   it("offers the way back from a pause that still waits, or that the server left behind", () => {
@@ -1469,6 +1692,11 @@ describe("Copy the database", () => {
     ["run_active", "Another step is running. Wait for it to finish."],
     // A step above opened again in another tab, and this page has not read that yet.
     ["locked", "Finish the steps above first."],
+    // The start was confirmed in another tab. A copy now would write over what the new instance wrote since.
+    [
+      "new_instance_started",
+      "The new instance already runs on this data, so nothing is copied again from here.",
+    ],
   ])("says why the server would not start it: %s", async (code, line) => {
     jest.spyOn(api, "post").mockRejectedValue(refused(409, { code }));
     show(panel(undefined, "current"));
@@ -1878,6 +2106,36 @@ describe("Copy knowledge bases and files", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(
       screen.getByText("Finish the steps above first."),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no copy once the new instance has started, and says why", () => {
+    show(
+      <CopyStep
+        migration={{
+          ...ended("copy_knowledge_bases", {
+            report: { ok: true, counts: { relocated: 3 }, attention: [] },
+          }),
+          steps: [
+            ...above(step("check_source", "done")),
+            step("copy_knowledge_bases", "done"),
+            step("copy_files", "done"),
+            step("start_target", "done"),
+          ],
+        }}
+        state={step("copy_knowledge_bases", "done")}
+        step="copy_knowledge_bases"
+      />,
+    );
+
+    expect(
+      screen.getByText("Copied: 3. Already copied: 0. Not copied: 0."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The new instance already runs on this data, so nothing is copied again from here.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -2574,6 +2832,51 @@ describe("What the admin decides about a copy", () => {
     );
   });
 
+  it("leaves a copy's decisions as they were made once the new instance has started", async () => {
+    const withdrawn = jest
+      .spyOn(api, "delete")
+      .mockRejectedValue(unreachable());
+    const post = jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    const before = panel(
+      "copy_knowledge_bases",
+      {
+        report: {
+          ok: false,
+          counts: { relocated: 1, failed: 2 },
+          attention: [
+            item("kb_backend_missing", "legacy", "leave_behind", {
+              made: true,
+            }),
+            item("kb_backend_missing", "lost", "leave_behind"),
+          ],
+        },
+      },
+      "done",
+    );
+    show(
+      <CopyStep
+        {...before.props}
+        migration={{
+          ...before.props.migration,
+          steps: [step("start_target", "done")],
+        }}
+      />,
+    );
+
+    const made = screen.getByRole("checkbox", {
+      name: "Leave it behind, legacy",
+    });
+    const open = screen.getByRole("checkbox", {
+      name: "Leave it behind, lost",
+    });
+    expect(made).toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(made);
+    await userEvent.click(open);
+    // Taking one back, or making another, would change what the move was finished on.
+    expect(withdrawn).not.toHaveBeenCalled();
+    expect(post).not.toHaveBeenCalled();
+  });
+
   it("asks once about an option several knowledge bases wait for, and offers each what the server offers it", async () => {
     const post = jest.spyOn(api, "post").mockRejectedValue(unreachable());
     const withdrawn = jest
@@ -2840,6 +3143,836 @@ describe("What the admin decides about a copy", () => {
       screen.getByText(
         "More were not copied than this list holds, so they can't be accepted one by one.",
       ),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("Start the new instance", () => {
+  // What the steps before this one left in the record, and the settings the server builds from it.
+  const ready = (instance: Partial<MigrationState["instance"]> = {}) => ({
+    ...migration(instance, {
+      pause: { frozen_at: "2026-10-06T12:00:00Z", frozen_by: "alice" },
+      backup: {
+        location: "s3://backups/langflow",
+        confirmed_by: "alice",
+        confirmed_at: "2026-10-06T12:10:00Z",
+      },
+      secret_key: { verified_by: "alice", verified_at: "2026-10-06T11:50:00Z" },
+    }),
+    start: {
+      settings: [
+        {
+          name: "LANGFLOW_DATABASE_URL",
+          value: "postgresql://<user>:<password>@db.internal:5432/langflow",
+          fill: true,
+        },
+        { name: "LANGFLOW_STORAGE_TYPE", value: "s3", fill: false },
+        {
+          name: "LANGFLOW_SECRET_KEY",
+          value: "<this instance's key>",
+          fill: true,
+        },
+      ],
+    },
+  });
+
+  it("holds the settings back until the admin agrees that the move is one-way", async () => {
+    show(<StartStep migration={ready()} />);
+
+    expect(
+      screen.getByText(
+        "You start the new instance yourself, with the settings this step shows. Once it runs on this data, going back means stopping it and losing what changed on it.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("migration-start-settings"),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Show the settings" }),
+    );
+    const gate = within(screen.getByRole("dialog"));
+    expect(gate.getByText("Start the new instance?")).toBeInTheDocument();
+    expect(
+      gate.getByText(
+        "The new instance takes over the copied data. This instance keeps its own database, but changes made on the new instance won't come back here.",
+      ),
+    ).toBeInTheDocument();
+    // What the steps before it left behind, so the admin sees what they stand on.
+    expect(
+      gate.getByText("Backup confirmed: s3://backups/langflow"),
+    ).toBeInTheDocument();
+    expect(gate.getByText(/^Changes paused since /)).toBeInTheDocument();
+    expect(
+      gate.getByText("Secret key verified on the new instance"),
+    ).toBeInTheDocument();
+    expect(
+      gate.getByText("Every copy is done or not needed"),
+    ).toBeInTheDocument();
+    expect(gate.getByText("The copy is checked")).toBeInTheDocument();
+
+    // Backing out shows nothing.
+    await userEvent.click(gate.getAllByRole("button", { name: "Cancel" })[0]);
+    expect(
+      screen.queryByTestId("migration-start-settings"),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Show the settings" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Continue",
+      }),
+    );
+    expect(
+      screen.getByText("Start the new instance with these settings:"),
+    ).toBeInTheDocument();
+    // One block the admin can select and copy, in the server's order, with a placeholder where a secret goes.
+    expect(screen.getByTestId("migration-start-settings")).toHaveTextContent(
+      "LANGFLOW_DATABASE_URL=postgresql://<user>:<password>@db.internal:5432/langflow LANGFLOW_STORAGE_TYPE=s3 LANGFLOW_SECRET_KEY=<this instance's key>",
+    );
+    expect(
+      screen.getByText(
+        "Replace each value in angle brackets with the real one. This page never shows a password or a key.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Give the new instance a new, empty config folder and knowledge bases folder. Neither is copied.",
+      ),
+    ).toBeInTheDocument();
+    // Nothing about roles when the check had nothing to say about them.
+    expect(screen.queryByText("Roles")).not.toBeInTheDocument();
+    // "Show the settings" is gone, so focus is on what took its place.
+    expect(
+      screen.getByText("Start the new instance with these settings:"),
+    ).toHaveFocus();
+  });
+
+  it("does not take the admin's word that the new instance runs when it has no settings to show", async () => {
+    show(<StartStep migration={{ ...ready(), start: { settings: [] } }} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Show the settings" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Continue",
+      }),
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Something went wrong. Try again.",
+    );
+    expect(
+      screen.queryByRole("button", { name: "The new instance is running" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("says nothing about roles when the first step passed them", async () => {
+    const passed = ready();
+    passed.record.steps.check_source = {
+      status: "done",
+      started_by: "alice",
+      started_at: "2026-10-06T11:00:00Z",
+      target_version: "1.13.0",
+      exit_code: 0,
+      error: null,
+      report: {
+        ok: true,
+        checks: [
+          {
+            name: "role assignments",
+            status: "ok",
+            summary: "no role assignments",
+            problems: [],
+          },
+        ],
+      },
+    };
+    show(<StartStep migration={passed} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Show the settings" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Continue",
+      }),
+    );
+
+    expect(screen.getByTestId("migration-start-settings")).toBeInTheDocument();
+    expect(screen.queryByText("Roles")).not.toBeInTheDocument();
+  });
+
+  it("repeats what the first step said about roles, since this is where it is dealt with", async () => {
+    const warned = ready();
+    warned.record.steps.check_source = {
+      status: "done",
+      started_by: "alice",
+      started_at: "2026-10-06T11:00:00Z",
+      target_version: "1.13.0",
+      exit_code: 0,
+      error: null,
+      report: {
+        ok: true,
+        checks: [
+          {
+            name: "role assignments",
+            status: "warn",
+            summary:
+              "2 role assignments move; sign in as a superuser and POST /api/v1/authz/policy/sync",
+            problems: [],
+          },
+        ],
+      },
+    };
+    show(<StartStep migration={warned} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Show the settings" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Continue",
+      }),
+    );
+
+    expect(screen.getByText("Roles")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Roles move with your data. The new instance ignores them until you turn them on after it starts.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "2 role assignments move; sign in as a superuser and POST /api/v1/authz/policy/sync",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says what the settings leave out, where it matters", async () => {
+    const agree = async () => {
+      await userEvent.click(
+        screen.getByRole("button", { name: "Show the settings" }),
+      );
+      await userEvent.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Continue",
+        }),
+      );
+    };
+    const options =
+      "An address above leaves out any options you entered after a '?', such as sslmode. Add them again.";
+    const bundle =
+      "If the bucket needs a CA certificate file, set AWS_CA_BUNDLE on the new instance too.";
+
+    // An address is printed, and no bucket keys.
+    const first = show(<StartStep migration={ready()} />);
+    await agree();
+    expect(screen.getByText(options)).toBeInTheDocument();
+    expect(screen.queryByText(bundle)).not.toBeInTheDocument();
+    first.unmount();
+
+    // A bucket and no address: an instance on PostgreSQL whose files move.
+    show(
+      <StartStep
+        migration={{
+          ...ready(),
+          start: {
+            settings: [
+              {
+                name: "LANGFLOW_SECRET_KEY",
+                value: "<secret key>",
+                fill: true,
+              },
+              {
+                name: "AWS_ACCESS_KEY_ID",
+                value: "<access key id>",
+                fill: true,
+              },
+            ],
+          },
+        }}
+      />,
+    );
+    await agree();
+    expect(screen.getByText(bundle)).toBeInTheDocument();
+    expect(screen.queryByText(options)).not.toBeInTheDocument();
+  });
+
+  it("tells an instance on PostgreSQL that the new instance takes its database", async () => {
+    show(
+      <StartStep
+        migration={ready({
+          database: {
+            type: "postgresql",
+            location: "db.internal:5432/langflow",
+          },
+        })}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Show the settings" }),
+    );
+    expect(
+      within(screen.getByRole("dialog")).getByText(
+        "The new instance updates this instance's database to its version. This instance may not open it afterwards. Your backup is the only way back.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("takes the admin's word that the new instance runs", async () => {
+    const post = jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    show(<StartStep migration={ready()} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Show the settings" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Continue",
+      }),
+    );
+
+    // The copy was checked from this server. Whether the new instance works on it is for the admin to see first.
+    expect(screen.getByText("Try it yourself")).toBeInTheDocument();
+    for (const line of [
+      "Sign in to the new instance.",
+      "Run a flow that uses a saved credential.",
+      "Run a flow that reads a file.",
+      "Search a knowledge base.",
+    ])
+      expect(screen.getByText(line)).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "The new instance is running" }),
+    );
+
+    expect(post).toHaveBeenCalledWith(
+      expect.stringMatching(/\/migration\/steps\/start_target\/confirm$/),
+    );
+    // The server did not answer, so the step says so and stays where it was.
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Something went wrong.",
+    );
+    expect(
+      screen.getByRole("button", { name: "The new instance is running" }),
+    ).toBeInTheDocument();
+  });
+
+  it("says that the move is complete once the new instance runs, and what to do with this instance", () => {
+    const finished = (
+      instance: Partial<MigrationState["instance"]> = {},
+    ): MigrationState => ({
+      ...migration(instance),
+      steps: [step("start_target", "done")],
+    });
+    const open = show(
+      <MoveComplete
+        migration={{
+          ...migration(),
+          steps: [step("start_target", "current")],
+        }}
+      />,
+    );
+    expect(screen.queryByTestId("migration-complete")).not.toBeInTheDocument();
+    // The button that ended the move is gone with it, so focus goes to what took its place.
+    open.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MoveComplete migration={finished()} />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByTestId("migration-complete")).toHaveFocus();
+    open.unmount();
+
+    // Another tab ended the move while the admin was typing here: the panel shows, and the caret stays.
+    const busy = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <input aria-label="elsewhere" />
+        <MoveComplete
+          migration={{
+            ...migration(),
+            steps: [step("start_target", "current")],
+          }}
+        />
+      </QueryClientProvider>,
+    );
+    screen.getByLabelText("elsewhere").focus();
+    busy.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <input aria-label="elsewhere" />
+        <MoveComplete migration={finished()} />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByTestId("migration-complete")).toBeInTheDocument();
+    expect(screen.getByLabelText("elsewhere")).toHaveFocus();
+    busy.unmount();
+
+    const { unmount } = show(<MoveComplete migration={finished()} />);
+    // A page opened on a finished move leaves focus where it is.
+    expect(screen.getByTestId("migration-complete")).not.toHaveFocus();
+    expect(
+      screen.getByText(
+        "Move complete. Keep your backup and keep this instance paused until people confirm their work is there, then shut it down.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Don't start this instance again/),
+    ).not.toBeInTheDocument();
+    unmount();
+
+    show(
+      <MoveComplete
+        migration={finished({
+          database: {
+            type: "postgresql",
+            location: "db.internal:5432/langflow",
+          },
+        })}
+      />,
+    );
+    expect(
+      screen.getByText(
+        "Don't start this instance again. It would write to the new instance's database.",
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("Check the copy", () => {
+  type Check = NonNullable<
+    NonNullable<MigrationState["record"]["steps"]["check_target"]>["report"]
+  >["checks"][number];
+  const same = (name: string, summary: string, accepted = false): Check => ({
+    name,
+    there: { status: accepted ? "fail" : "ok", summary, problems: [] },
+    here: { status: accepted ? "fail" : "ok", summary },
+    same: true,
+    accepted,
+  });
+  // A check whose result on the copied data is not this instance's.
+  const differs = (
+    name: string,
+    here: string,
+    there: string,
+    accepted = false,
+  ): Check => ({
+    name,
+    there: {
+      status: "fail",
+      summary: there,
+      problems: ["file 00000002-2222-4000-8000-000000000000"],
+    },
+    here: { status: "ok", summary: here },
+    same: false,
+    accepted,
+  });
+  const checked = (
+    checks: Check[],
+    more: Partial<
+      NonNullable<MigrationState["record"]["steps"]["check_target"]>
+    > = {},
+  ) =>
+    migration(
+      {},
+      {
+        steps: {
+          check_target: {
+            run_id: "run-9",
+            status: "done",
+            started_by: "alice",
+            started_at: "2026-10-06T13:10:00Z",
+            finished_at: "2026-10-06T13:11:00Z",
+            error: null,
+            report: { ok: checks.every((check) => check.same), checks },
+            ...more,
+          },
+        },
+      },
+    );
+
+  it("offers the check, and starts it", async () => {
+    const post = jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    show(<CheckTargetStep migration={migration()} />);
+
+    expect(
+      screen.getByText(
+        "Runs the checks of the first step on the copied data and compares each one with this instance. Nothing is changed.",
+      ),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Check the copy" }),
+    );
+
+    // The check has no test run, so the request has no body.
+    expect(post.mock.calls).toEqual([
+      [expect.stringMatching(/\/migration\/steps\/check_target\/runs$/)],
+    ]);
+  });
+
+  it("shows a check that is running, with a way to stop it", async () => {
+    const stopped = jest.spyOn(api, "delete").mockResolvedValue({ data: {} });
+    show(
+      <CheckTargetStep
+        migration={checked([], { status: "running", report: null })}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Checking the copy…");
+    expect(
+      screen.queryByRole("button", { name: "Check the copy" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Stop" }));
+
+    expect(stopped).toHaveBeenCalledWith(
+      expect.stringMatching(/\/migration\/steps\/check_target\/runs\/run-9$/),
+    );
+    // The record says that it stopped a moment later. Until then a second press sends nothing.
+    await userEvent.click(screen.getByRole("button", { name: "Stop" }));
+    expect(stopped).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("can stop a later check after an earlier one was stopped", async () => {
+    const stopped = jest.spyOn(api, "delete").mockResolvedValue({ data: {} });
+    const client = new QueryClient();
+    const running = (run_id: string) => (
+      <QueryClientProvider client={client}>
+        <CheckTargetStep
+          migration={checked([], { run_id, status: "running", report: null })}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(running("run-9"));
+    await userEvent.click(screen.getByRole("button", { name: "Stop" }));
+
+    rerender(running("run-10"));
+    await userEvent.click(screen.getByRole("button", { name: "Stop" }));
+
+    expect(stopped).toHaveBeenCalledTimes(2);
+    expect(stopped).toHaveBeenLastCalledWith(
+      expect.stringMatching(/\/migration\/steps\/check_target\/runs\/run-10$/),
+    );
+  });
+
+  it("shows only what differs, with what each side said, and how to put it right", () => {
+    show(
+      <CheckTargetStep
+        migration={checked([
+          same("schema", "at revision d4f1a6c8e2b7"),
+          differs(
+            "files",
+            "2 file rows, every one has its bytes",
+            "1 of 2 file rows point at bytes storage does not hold",
+          ),
+          // Accepted on this instance, and still not the same in the copy: that is a difference too.
+          differs(
+            "knowledge bases",
+            "1 of 4 knowledge bases have a backend that cannot be built",
+            "2 of 4 knowledge bases have a backend that cannot be built",
+            true,
+          ),
+        ])}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The copy differs from this instance: 2.",
+    );
+    expect(
+      within(
+        screen.getByTestId("migration-difference-knowledge bases"),
+      ).getByText("Knowledge bases"),
+    ).toBeInTheDocument();
+    const row = within(screen.getByTestId("migration-difference-files"));
+    expect(row.getByText("Files")).toBeInTheDocument();
+    expect(row.getByText("This instance")).toBeInTheDocument();
+    expect(
+      row.getByText("2 file rows, every one has its bytes"),
+    ).toHaveAttribute("lang", "en");
+    expect(row.getByText("The copy")).toBeInTheDocument();
+    expect(
+      row.getByText("1 of 2 file rows point at bytes storage does not hold"),
+    ).toBeInTheDocument();
+    // The examples the check printed for the copy, under Details.
+    expect(
+      row.getByText("file 00000002-2222-4000-8000-000000000000"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("migration-difference-schema"),
+    ).not.toBeInTheDocument();
+    // The new instance has not started, so what is missing can still be copied.
+    expect(
+      screen.getByText(
+        "Compare the two lines. If data is missing, copy again in the steps above, then check again.",
+      ),
+    ).toBeInTheDocument();
+    // What to try on the new instance belongs to the step that starts it.
+    expect(screen.queryByText("Try it yourself")).not.toBeInTheDocument();
+    // The move goes on with a difference only once the admin says that it is expected.
+    const go = screen.getByRole("button", { name: "Continue" });
+    expect(go).toBeDisabled();
+    expect(go).toHaveAccessibleDescription(
+      "I compared them, and what differs is expected.",
+    );
+    expect(
+      screen.getByRole("button", { name: "Check again" }),
+    ).toBeInTheDocument();
+  });
+
+  it("goes on with a difference once the admin says it is expected, and asks again after another check", async () => {
+    const post = jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    const found = [
+      differs("flows", "5 flows", "6 flows"),
+      same("schema", "at revision d4f1a6c8e2b7"),
+    ];
+    const client = new QueryClient();
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        <CheckTargetStep migration={checked(found)} />
+      </QueryClientProvider>,
+    );
+
+    await userEvent.click(
+      screen.getByRole("checkbox", {
+        name: "I compared them, and what differs is expected.",
+      }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    // The admin's word is about the check they read, so the request names it.
+    expect(post).toHaveBeenCalledWith(
+      expect.stringMatching(/\/migration\/steps\/check_target\/confirm$/),
+      { accept_differences: true, run_id: "run-9" },
+    );
+
+    // The admin's word was about that check. Another one found its own differences.
+    rerender(
+      <QueryClientProvider client={client}>
+        <CheckTargetStep migration={checked(found, { run_id: "run-10" })} />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+  });
+
+  it("says so when this instance has no result of its own for a check", () => {
+    show(
+      <CheckTargetStep
+        migration={checked([
+          {
+            name: "memory bases",
+            there: { status: "ok", summary: "0 memory bases", problems: [] },
+            here: null,
+            same: false,
+            accepted: false,
+          },
+        ])}
+      />,
+    );
+
+    const row = within(screen.getByTestId("migration-difference-memory bases"));
+    expect(row.getByText("Agent memory")).toBeInTheDocument();
+    expect(row.getByText("Not checked here.")).not.toHaveAttribute("lang");
+    expect(row.getByText("0 memory bases")).toBeInTheDocument();
+  });
+
+  it("says why a check did not run or did not end, in the page's words", async () => {
+    jest
+      .spyOn(api, "post")
+      .mockRejectedValue(refused(409, { code: "secrets_missing" })); // pragma: allowlist secret
+    const { unmount } = show(<CheckTargetStep migration={migration()} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Check the copy" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Langflow no longer holds the passwords and keys of the new instance. Enter them again in 'Where your data goes'.",
+    );
+    unmount();
+
+    const stopped = show(
+      <CheckTargetStep
+        migration={checked([], {
+          status: "interrupted",
+          report: null,
+          error: { code: "interrupted" },
+        })}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Stopped before it finished. Run it again.",
+    );
+    expect(
+      screen.getByRole("button", { name: "Check again" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Continue" }),
+    ).not.toBeInTheDocument();
+    stopped.unmount();
+
+    show(
+      <CheckTargetStep
+        migration={checked([], {
+          status: "failed",
+          report: null,
+          error: { code: "crashed", message: "connection refused" },
+        })}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The step stopped with an error. Run it again. If it happens again, download the migration record.",
+    );
+    expect(screen.getByText("connection refused")).toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      refused(409, { code: "run_active" }),
+      "Another step is running. Wait for it to finish.",
+    ],
+    [unreachable(), "Something went wrong. Try again."],
+  ])(
+    "keeps the result that stands when another check is refused or does not get through",
+    async (answer, words) => {
+      jest.spyOn(api, "post").mockRejectedValue(answer);
+      show(
+        <CheckTargetStep
+          migration={checked([differs("flows", "5 flows", "6 flows")])}
+        />,
+      );
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Check again" }),
+      );
+
+      expect(await screen.findByText(words)).toBeInTheDocument();
+      expect(
+        screen.getByTestId("migration-difference-flows"),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("checkbox")).toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    ["not_checked", "Check the copy again before you go on."],
+    [
+      "differences",
+      "The last check found differences. Read them before you go on.",
+    ],
+    // Someone ran the check again after this page read it.
+    [
+      "report_changed",
+      "The last check found differences. Read them before you go on.",
+    ],
+    ["locked", "Finish the steps above first."],
+  ])(
+    "says what to do when the server does not take the admin's word (%s)",
+    async (code, words) => {
+      jest.spyOn(api, "post").mockRejectedValue(refused(409, { code }));
+      show(
+        <CheckTargetStep
+          migration={checked([differs("flows", "5 flows", "6 flows")])}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("checkbox"));
+      await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+      expect(await screen.findByText(words)).toBeInTheDocument();
+    },
+  );
+
+  it("keeps the line of a refused acceptance when the record changed with it, until the admin acts on it", async () => {
+    // Someone ran the check again after this page read it, so the server did not take the admin's word.
+    jest
+      .spyOn(api, "post")
+      .mockRejectedValue(refused(409, { code: "report_changed" }));
+    const client = new QueryClient();
+    const shown = (run_id: string) => (
+      <QueryClientProvider client={client}>
+        <CheckTargetStep
+          migration={checked([differs("flows", "5 flows", "6 flows")], {
+            run_id,
+          })}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(shown("run-9"));
+    await userEvent.click(screen.getByRole("checkbox"));
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    const words =
+      "The last check found differences. Read them before you go on.";
+    expect(await screen.findByText(words)).toBeInTheDocument();
+
+    // The page then reads the newer check. The line is what says why the list changed and the tick is gone.
+    rerender(shown("run-10"));
+    // Whatever the record's change set off has run by now.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    expect(screen.getByText(words)).toBeInTheDocument();
+
+    // Once the admin has read it and says so, the line has done its work.
+    await userEvent.click(screen.getByRole("checkbox"));
+    expect(screen.queryByText(words)).not.toBeInTheDocument();
+  });
+
+  it("does not show a stop that failed beside the next check", async () => {
+    jest.spyOn(api, "delete").mockRejectedValue(unreachable());
+    const client = new QueryClient();
+    const running = (run_id: string) => (
+      <QueryClientProvider client={client}>
+        <CheckTargetStep
+          migration={checked([], { run_id, status: "running", report: null })}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(running("run-9"));
+    await userEvent.click(screen.getByRole("button", { name: "Stop" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Something went wrong. Try again.",
+    );
+
+    // That check ended by itself, and the admin started another. Nobody asked this one to stop.
+    rerender(running("run-10"));
+    await waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("offers nothing to accept when the copied database could not be read", () => {
+    show(
+      <CheckTargetStep
+        migration={checked([
+          {
+            name: "schema",
+            there: {
+              status: "fail",
+              summary:
+                "the database could not be reached: connection refused. Check LANGFLOW_DATABASE_URL",
+              problems: [],
+            },
+            here: { status: "ok", summary: "at revision d4f1a6c8e2b7" },
+            same: false,
+            accepted: false,
+          },
+        ])}
+      />,
+    );
+
+    // The command's own advice names a setting of this instance. The address of the copy is in step 2.
+    expect(
+      screen.getByText(
+        "This instance could not read the copied database, so nothing else was compared. Check the address in 'Where your data goes', then check again.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/^Compare the two lines/),
+    ).not.toBeInTheDocument();
+    // Nothing was compared, so there is nothing the admin could call expected.
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Continue" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Check again" }),
     ).toBeInTheDocument();
   });
 });

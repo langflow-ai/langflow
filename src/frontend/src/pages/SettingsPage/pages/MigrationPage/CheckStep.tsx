@@ -25,6 +25,7 @@ import {
   CHECKS,
   formatTime,
   groupChecks,
+  hasStarted,
   STEP_SLUGS,
 } from "./catalog";
 
@@ -98,91 +99,96 @@ export function CheckStep({ migration }: { migration: MigrationState }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!running && !busy) start();
-        }}
-      >
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={VERSION_FIELD}>
-            {t("settings.migration.check.version.label")}
-          </Label>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-            <div className="flex-1">
-              <Input
-                ref={input}
-                id={VERSION_FIELD}
-                className="aria-[invalid=true]:border-destructive"
-                value={version}
-                placeholder={migration.instance.version}
-                readOnly={running || busy}
-                onChange={(event) => {
-                  setVersion(event.target.value);
-                  setVersionError(undefined);
-                }}
-                aria-invalid={Boolean(versionError)}
-                aria-describedby={
-                  versionError
-                    ? `${VERSION_FIELD}-error ${VERSION_FIELD}-help`
-                    : `${VERSION_FIELD}-help`
-                }
-                data-testid={VERSION_FIELD}
-              />
+      {/* Once the new instance runs, the server takes no other check and no other word about one. What the
+          last check found stays to read. */}
+      {!hasStarted(migration) && (
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!running && !busy) start();
+          }}
+        >
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={VERSION_FIELD}>
+              {t("settings.migration.check.version.label")}
+            </Label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+              <div className="flex-1">
+                <Input
+                  ref={input}
+                  id={VERSION_FIELD}
+                  className="aria-[invalid=true]:border-destructive"
+                  value={version}
+                  placeholder={migration.instance.version}
+                  readOnly={running || busy}
+                  onChange={(event) => {
+                    setVersion(event.target.value);
+                    setVersionError(undefined);
+                  }}
+                  aria-invalid={Boolean(versionError)}
+                  aria-describedby={
+                    versionError
+                      ? `${VERSION_FIELD}-error ${VERSION_FIELD}-help`
+                      : `${VERSION_FIELD}-help`
+                  }
+                  data-testid={VERSION_FIELD}
+                />
+              </div>
+              {running ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full shrink-0 sm:w-fit"
+                  onClick={() => controller.current?.abort()}
+                  ignoreTitleCase
+                >
+                  {t("settings.migration.check.stop")}
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  className="w-full shrink-0 sm:w-fit"
+                  disabled={busy}
+                  ignoreTitleCase
+                  data-testid="migration-run-checks"
+                >
+                  {run
+                    ? t("settings.migration.check.runAgain")
+                    : t("settings.migration.check.run")}
+                </Button>
+              )}
             </div>
-            {running ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full shrink-0 sm:w-fit"
-                onClick={() => controller.current?.abort()}
-                ignoreTitleCase
+            {versionError && (
+              <p
+                id={`${VERSION_FIELD}-error`}
+                className="text-sm text-destructive"
               >
-                {t("settings.migration.check.stop")}
-              </Button>
-            ) : (
-              <Button
-                type="submit"
-                className="w-full shrink-0 sm:w-fit"
-                disabled={busy}
-                ignoreTitleCase
-                data-testid="migration-run-checks"
-              >
-                {run
-                  ? t("settings.migration.check.runAgain")
-                  : t("settings.migration.check.run")}
-              </Button>
+                {versionError.code === "version_older"
+                  ? t("settings.migration.check.version.older", {
+                      version:
+                        versionError.source_version ??
+                        migration.instance.version,
+                    })
+                  : t("settings.migration.check.version.invalid", {
+                      version: migration.instance.version,
+                    })}
+              </p>
             )}
-          </div>
-          {versionError && (
             <p
-              id={`${VERSION_FIELD}-error`}
-              className="text-sm text-destructive"
+              id={`${VERSION_FIELD}-help`}
+              className="text-xs text-muted-foreground"
             >
-              {versionError.code === "version_older"
-                ? t("settings.migration.check.version.older", {
-                    version:
-                      versionError.source_version ?? migration.instance.version,
-                  })
-                : t("settings.migration.check.version.invalid", {
-                    version: migration.instance.version,
-                  })}
+              {t("settings.migration.check.version.help")}
+            </p>
+          </div>
+          {(running || !run) && (
+            <p className="text-sm text-muted-foreground">
+              {t("settings.migration.check.note")}
             </p>
           )}
-          <p
-            id={`${VERSION_FIELD}-help`}
-            className="text-xs text-muted-foreground"
-          >
-            {t("settings.migration.check.version.help")}
-          </p>
-        </div>
-        {(running || !run) && (
-          <p className="text-sm text-muted-foreground">
-            {t("settings.migration.check.note")}
-          </p>
-        )}
-      </form>
+        </form>
+      )}
 
       {/* Stays in the accessibility tree while empty, so the first progress line and the outcome are read. */}
       <div aria-live="polite" className="flex flex-col gap-4 empty:-mt-4">
@@ -329,6 +335,8 @@ function CheckRow({
   const accepted = Boolean(acceptance && !acceptance.lapsed);
   const acceptId = `migration-accept-${check.name}`;
   const pending = acceptFinding.isPending || withdrawFinding.isPending;
+  // The new instance runs on what was accepted, so each acceptance stays as it was given.
+  const frozen = hasStarted(migration);
 
   const decide = (accept: boolean) => {
     setProblem(undefined);
@@ -384,10 +392,10 @@ function CheckRow({
           <Checkbox
             id={acceptId}
             checked={accepted}
-            aria-disabled={pending}
+            aria-disabled={pending || frozen}
             className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
             onCheckedChange={(value) => {
-              if (!pending) decide(value === true);
+              if (!pending && !frozen) decide(value === true);
             }}
           />
           <Label htmlFor={acceptId} className="text-sm font-normal">
