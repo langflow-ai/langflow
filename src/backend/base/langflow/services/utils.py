@@ -439,7 +439,7 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
       would otherwise bring it back usable by anyone who knows the default.
 
     A retired account is left alone on later restarts, so an admin who reactivates it or sets
-    its password from the Admin page is not undone. An account that has signed in
+    its password with ``PATCH /api/v1/users/<id>`` is not undone. An account that has signed in
     (``last_login_at`` set) is left alone.
     """
     if settings_service.auth_settings.AUTO_LOGIN:
@@ -486,8 +486,8 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
         await logger.awarning(
             f"AUTO_LOGIN is off, so the default superuser '{DEFAULT_SUPERUSER}' was deactivated: its "
             f"password, API keys and tokens no longer work. It owns rows in '{owned}', so it was kept "
-            "rather than deleted. Another superuser can reactivate it and set a password from the Admin "
-            f"page or PATCH /api/v1/users/{user.id}."
+            "rather than deleted. Another superuser can reactivate it and set a password with "
+            f"PATCH /api/v1/users/{user.id}."
         )
     except Exception as exc:
         await logger.aexception("Could not retire default superuser.")

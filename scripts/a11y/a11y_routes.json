@@ -154,6 +154,11 @@
       "path": "/login/admin",
       "surface": "Admin login page",
       "currentBehavior": "Redirects to /flows while authenticated. Scan in logged-out/no-auto-login mode."
+    },
+    {
+      "path": "/settings/migration",
+      "surface": "Migration settings page",
+      "currentBehavior": "Redirects to /settings unless the backend runs with LANGFLOW_FEATURE_INSTANCE_MIGRATION=true. Scan as a superuser with that flag on."
     }
   ],
   "excluded": [

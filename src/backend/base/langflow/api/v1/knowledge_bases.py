@@ -1351,11 +1351,12 @@ async def list_knowledge_bases(
 
             # Map job statuses back to knowledge bases
             # Normalize to frontend-expected values: ready, ingesting, failed, empty
+            # A cancelled job is absent: cancelling rolls the KB back, so the
+            # row's own status (ready / empty / an earlier failure) still holds.
             job_status_map = {
                 "queued": "ingesting",
                 "in_progress": "ingesting",
                 "failed": "failed",
-                "cancelled": "failed",
                 "timed_out": "failed",
             }
             for kb_info in knowledge_bases:
