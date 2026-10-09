@@ -11,6 +11,7 @@ from sqlmodel import col, select
 
 from langflow.api.utils.kb_helpers import _coerce_backend_config_value, resolve_local_store_path
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
+from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.knowledge_base_storage.runtime import backend_for_record
@@ -45,6 +46,8 @@ async def _local_store_missing(
     backend_config = _coerce_backend_config_value(record.backend_config) if record else {}
     if not is_local_chroma(backend_type, backend_config):
         return False
+    if record is not None and await _upgrade_captured_source(session, record):
+        return False
     owner = await session.get(User, memory_base.user_id)
     if owner is None:
         return False
@@ -52,6 +55,16 @@ async def _local_store_missing(
         memory_base.kb_name, owner.username, backend_type=backend_type, backend_config=backend_config
     )
     return kb_path is not None and not kb_path.exists()
+
+
+async def _upgrade_captured_source(session: AsyncSession, record: KnowledgeBaseRecord) -> bool:
+    # The SQLite upgrade fingerprints the source just before it snapshots and imports it into an
+    # unpublished generation, so once it has, a missing directory no longer means the chunks are gone.
+    # A directory that was never written fails before that point and leaves the fingerprint unset.
+    if record.active_migration_id is None:
+        return False
+    run = await session.get(KnowledgeBaseStorageMigration, record.active_migration_id)
+    return run is not None and run.source_fingerprint is not None
 
 
 async def _erase_from_store(record: KnowledgeBaseRecord | None, end_user_id: str) -> None:

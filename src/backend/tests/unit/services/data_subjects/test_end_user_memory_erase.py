@@ -16,8 +16,10 @@ from langflow.services.database.models.data_subject_request import (
 )
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
+from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.knowledge_base_storage.coordinator import fence_legacy_records, migrate_one
 from langflow.services.knowledge_base_storage.runtime import backend_for_record, unfenced_backend
 from langflow.services.memory_base.document_builders import sync_kb_stats_to_record
 
@@ -66,6 +68,26 @@ async def _seed_memory_base(username: str):
     finally:
         await backend.teardown()
     return owner, record
+
+
+async def _upgrade_never_written_legacy_memory_base(username: str):
+    """Run the real SQLite upgrade over a legacy local-Chroma Memory Base whose directory never existed."""
+    Path(get_settings_service().settings.knowledge_bases_dir).mkdir(parents=True, exist_ok=True)
+    owner = await create_user(username)
+    async with session_scope() as session:
+        record = KnowledgeBaseRecord(name="legacy_memory", user_id=owner, backend_type="chroma", backend_config={})
+        session.add(record)
+        await session.flush()
+        kb_id = record.id
+    await _seed_memory_base_row(owner, "legacy_memory")
+    await fence_legacy_records()
+    await migrate_one(kb_id)
+    async with session_scope() as session:
+        record = await session.get(KnowledgeBaseRecord, kb_id)
+        run = await session.get(KnowledgeBaseStorageMigration, record.active_migration_id)
+    # The upgrade cannot fingerprint a missing directory, so it stops before copying anything.
+    assert (record.backend_type, record.storage_state, run.source_fingerprint) == ("chroma", "needs_attention", None)
+    return record, run
 
 
 async def _erase(end_user: str) -> tuple[str | None, DataSubjectRequest]:
@@ -198,3 +220,28 @@ async def test_should_keep_the_request_open_while_a_legacy_store_awaits_its_upgr
 
     assert status == DataSubjectRequestStatus.ERASING.value
     assert request.error["code"] == "ChromaMigrationRequiredError"
+
+
+@pytest.mark.usefixtures("local_storage")
+async def test_should_skip_a_legacy_store_the_upgrade_found_never_written():
+    await _upgrade_never_written_legacy_memory_base("memory-owner-legacy-unwritten")
+
+    status, request = await _erase("alice")
+
+    assert status == DataSubjectRequestStatus.DONE.value, request.error
+
+
+@pytest.mark.usefixtures("local_storage")
+async def test_should_keep_the_request_open_when_the_upgrade_copied_a_source_that_is_now_missing():
+    _, run = await _upgrade_never_written_legacy_memory_base("memory-owner-legacy-copied")
+    # Emulate a run that snapshotted and imported the source into its unpublished SQLite
+    # generation before the source directory disappeared.
+    async with session_scope() as session:
+        captured = await session.get(KnowledgeBaseStorageMigration, run.id)
+        captured.source_fingerprint = "captured-before-the-source-disappeared"
+        session.add(captured)
+
+    status, request = await _erase("alice")
+
+    assert status == DataSubjectRequestStatus.ERASING.value
+    assert request.error["code"] == "StorageUnavailableError"
