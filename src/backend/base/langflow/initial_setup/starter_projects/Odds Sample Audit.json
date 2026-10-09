@@ -1,0 +1,1456 @@
+{
+  "id": "b4d95386-7c85-5601-8e02-ecefee6c756e",
+  "name": "Odds Sample Audit",
+  "description": "Audit market completeness and source timestamp presence in a fictional odds fixture. No keys or LLM required.",
+  "is_component": false,
+  "locked": false,
+  "endpoint_name": null,
+  "tags": [
+    "Coding"
+  ],
+  "data": {
+    "nodes": [
+      {
+        "id": "APIRequest-fixture",
+        "type": "genericNode",
+        "position": {
+          "x": 0,
+          "y": 680
+        },
+        "data": {
+          "id": "APIRequest-fixture",
+          "node": {
+            "base_classes": [
+              "JSON"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Make HTTP requests using URL or cURL commands.",
+            "display_name": "API Request",
+            "documentation": "https://docs.langflow.org/api-request",
+            "edited": false,
+            "field_order": [
+              "url_input",
+              "curl_input",
+              "method",
+              "mode",
+              "query_params",
+              "body",
+              "headers",
+              "timeout",
+              "follow_redirects",
+              "save_to_file",
+              "include_httpx_metadata"
+            ],
+            "frozen": false,
+            "icon": "Globe",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "941f801d5a8c",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "aiofiles",
+                    "version": "24.1.0"
+                  },
+                  {
+                    "name": "httpx",
+                    "version": "0.28.1"
+                  },
+                  {
+                    "name": "validators",
+                    "version": "0.35.0"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 4
+              },
+              "module": "lfx.components.data_source.api_request.APIRequestComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "API Response",
+                "group_outputs": false,
+                "method": "make_api_request",
+                "name": "data",
+                "selected": "JSON",
+                "tool_mode": true,
+                "types": [
+                  "JSON"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "body": {
+                "_input_type": "TableInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Body",
+                "dynamic": false,
+                "info": "The body to send with the request as a dictionary (for POST, PATCH, PUT).",
+                "input_types": [
+                  "Data",
+                  "JSON"
+                ],
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "body",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "table_icon": "Table",
+                "table_schema": [
+                  {
+                    "description": "Parameter name",
+                    "display_name": "Key",
+                    "name": "key",
+                    "type": "str"
+                  },
+                  {
+                    "description": "Parameter value",
+                    "display_name": "Value",
+                    "name": "value"
+                  }
+                ],
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "trigger_icon": "Table",
+                "trigger_text": "Open table",
+                "type": "table",
+                "value": []
+              },
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import json\nimport re\nimport tempfile\nfrom datetime import datetime, timezone\nfrom pathlib import Path\nfrom typing import Any\nfrom urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse\n\nimport aiofiles\nimport aiofiles.os as aiofiles_os\nimport httpx\nimport validators\n\nfrom lfx.base.curl.parse import parse_context\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import TabInput\nfrom lfx.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    IntInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    TableInput,\n)\nfrom lfx.schema.data import Data\nfrom lfx.schema.dotdict import dotdict\nfrom lfx.utils.component_utils import set_current_fields, set_field_advanced, set_field_display\n\n# SSRF Protection imports - for preventing Server-Side Request Forgery attacks\nfrom lfx.utils.ssrf_protection import (\n    SSRFProtectionError,\n    is_ssrf_protection_enabled,\n    validate_and_resolve_url,\n)\nfrom lfx.utils.ssrf_transport import create_ssrf_protected_client\n\n# Define fields for each mode\nMODE_FIELDS = {\n    \"URL\": [\n        \"url_input\",\n        \"method\",\n    ],\n    \"cURL\": [\"curl_input\"],\n}\n\n# Fields that should always be visible\nDEFAULT_FIELDS = [\"mode\"]\n\n# HTTP redirect status codes (RFC 9110).\nHTTP_MOVED_PERMANENTLY = 301\nHTTP_FOUND = 302\nHTTP_SEE_OTHER = 303\nHTTP_TEMPORARY_REDIRECT = 307\nHTTP_PERMANENT_REDIRECT = 308\n\n# Maximum number of redirects to follow when re-validating each hop (matches httpx's default).\nMAX_REDIRECTS = 20\n\n# HTTP status codes that represent a redirect carrying a Location header.\nREDIRECT_STATUS_CODES = frozenset(\n    {\n        HTTP_MOVED_PERMANENTLY,\n        HTTP_FOUND,\n        HTTP_SEE_OTHER,\n        HTTP_TEMPORARY_REDIRECT,\n        HTTP_PERMANENT_REDIRECT,\n    }\n)\n\n# Default ports per scheme, used to compare redirect origins.\nDEFAULT_SCHEME_PORTS = {\"http\": 80, \"https\": 443}\n\n\nclass APIRequestComponent(Component):\n    display_name = \"API Request\"\n    description = \"Make HTTP requests using URL or cURL commands.\"\n    documentation: str = \"https://docs.langflow.org/api-request\"\n    icon = \"Globe\"\n    name = \"APIRequest\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"url_input\",\n            display_name=\"URL\",\n            info=\"Enter the URL for the request.\",\n            advanced=False,\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"curl_input\",\n            display_name=\"cURL\",\n            info=(\n                \"Paste a curl command to populate the fields. \"\n                \"This will fill in the dictionary fields for headers and body.\"\n            ),\n            real_time_refresh=True,\n            tool_mode=True,\n            advanced=True,\n            show=False,\n        ),\n        DropdownInput(\n            name=\"method\",\n            display_name=\"Method\",\n            options=[\"GET\", \"POST\", \"PATCH\", \"PUT\", \"DELETE\"],\n            value=\"GET\",\n            info=\"The HTTP method to use.\",\n            real_time_refresh=True,\n        ),\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"URL\", \"cURL\"],\n            value=\"URL\",\n            info=\"Enable cURL mode to populate fields from a cURL command.\",\n            real_time_refresh=True,\n        ),\n        DataInput(\n            name=\"query_params\",\n            display_name=\"Query Parameters\",\n            info=\"The query parameters to append to the URL.\",\n            advanced=True,\n        ),\n        TableInput(\n            name=\"body\",\n            display_name=\"Body\",\n            info=\"The body to send with the request as a dictionary (for POST, PATCH, PUT).\",\n            table_schema=[\n                {\n                    \"name\": \"key\",\n                    \"display_name\": \"Key\",\n                    \"type\": \"str\",\n                    \"description\": \"Parameter name\",\n                },\n                {\n                    \"name\": \"value\",\n                    \"display_name\": \"Value\",\n                    \"description\": \"Parameter value\",\n                },\n            ],\n            value=[],\n            input_types=[\"Data\", \"JSON\"],\n            advanced=True,\n            real_time_refresh=True,\n        ),\n        TableInput(\n            name=\"headers\",\n            display_name=\"Headers\",\n            info=\"The headers to send with the request\",\n            table_schema=[\n                {\n                    \"name\": \"key\",\n                    \"display_name\": \"Header\",\n                    \"type\": \"str\",\n                    \"description\": \"Header name\",\n                },\n                {\n                    \"name\": \"value\",\n                    \"display_name\": \"Value\",\n                    \"type\": \"str\",\n                    \"description\": \"Header value\",\n                },\n            ],\n            value=[{\"key\": \"User-Agent\", \"value\": \"Langflow/1.0\"}],\n            advanced=True,\n            input_types=[\"Data\", \"JSON\"],\n            real_time_refresh=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            value=30,\n            info=\"The timeout to use for the request.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"follow_redirects\",\n            display_name=\"Follow Redirects\",\n            value=False,\n            info=(\n                \"Whether to follow HTTP redirects. \"\n                \"WARNING: Enabling redirects may allow SSRF bypass attacks where a public URL \"\n                \"redirects to internal resources. Only enable if you trust the target server. \"\n                \"See OWASP SSRF Prevention Cheat Sheet for details.\"\n            ),\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"save_to_file\",\n            display_name=\"Save to File\",\n            value=False,\n            info=\"Save the API response to a temporary file\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_httpx_metadata\",\n            display_name=\"Include HTTPx Metadata\",\n            value=False,\n            info=(\n                \"Include properties such as headers, status_code, response_headers, \"\n                \"and redirection_history in the output.\"\n            ),\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"API Response\", name=\"data\", method=\"make_api_request\"),\n    ]\n\n    def _parse_json_value(self, value: Any) -> Any:\n        \"\"\"Parse a value that might be a JSON string.\"\"\"\n        if not isinstance(value, str):\n            return value\n\n        try:\n            parsed = json.loads(value)\n        except json.JSONDecodeError:\n            return value\n        else:\n            return parsed\n\n    def _process_body(self, body: Any) -> dict:\n        \"\"\"Process the body input into a valid dictionary.\"\"\"\n        if body is None:\n            return {}\n        if hasattr(body, \"data\"):\n            body = body.data\n        if isinstance(body, dict):\n            return self._process_dict_body(body)\n        if isinstance(body, str):\n            return self._process_string_body(body)\n        if isinstance(body, list):\n            return self._process_list_body(body)\n        return {}\n\n    def _process_dict_body(self, body: dict) -> dict:\n        \"\"\"Process dictionary body by parsing JSON values.\"\"\"\n        return {k: self._parse_json_value(v) for k, v in body.items()}\n\n    def _process_string_body(self, body: str) -> dict:\n        \"\"\"Process string body by attempting JSON parse.\"\"\"\n        try:\n            return self._process_body(json.loads(body))\n        except json.JSONDecodeError:\n            return {\"data\": body}\n\n    def _process_list_body(self, body: list) -> dict:\n        \"\"\"Process list body by converting to key-value dictionary.\"\"\"\n        processed_dict = {}\n        try:\n            for item in body:\n                # Unwrap Data objects\n                current_item = item\n                if hasattr(item, \"data\"):\n                    unwrapped_data = item.data\n                    # If the unwrapped data is a dict but not key-value format, use it directly\n                    if isinstance(unwrapped_data, dict) and not self._is_valid_key_value_item(unwrapped_data):\n                        return unwrapped_data\n                    current_item = unwrapped_data\n                if not self._is_valid_key_value_item(current_item):\n                    continue\n                key = current_item[\"key\"]\n                value = self._parse_json_value(current_item[\"value\"])\n                processed_dict[key] = value\n        except (KeyError, TypeError, ValueError) as e:\n            self.log(f\"Failed to process body list: {e}\")\n            return {}\n        return processed_dict\n\n    def _is_valid_key_value_item(self, item: Any) -> bool:\n        \"\"\"Check if an item is a valid key-value dictionary.\"\"\"\n        return isinstance(item, dict) and \"key\" in item and \"value\" in item\n\n    def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:\n        \"\"\"Parse a cURL command and update build configuration.\"\"\"\n        try:\n            parsed = parse_context(curl)\n\n            # Update basic configuration\n            url = parsed.url\n            # Normalize URL before setting it\n            url = self._normalize_url(url)\n\n            build_config[\"url_input\"][\"value\"] = url\n            build_config[\"method\"][\"value\"] = parsed.method.upper()\n\n            # Process headers\n            headers_list = [{\"key\": k, \"value\": v} for k, v in parsed.headers.items()]\n            build_config[\"headers\"][\"value\"] = headers_list\n\n            # Process body data\n            if not parsed.data:\n                build_config[\"body\"][\"value\"] = []\n            elif parsed.data:\n                try:\n                    json_data = json.loads(parsed.data)\n                    if isinstance(json_data, dict):\n                        body_list = [\n                            {\"key\": k, \"value\": json.dumps(v) if isinstance(v, dict | list) else str(v)}\n                            for k, v in json_data.items()\n                        ]\n                        build_config[\"body\"][\"value\"] = body_list\n                    else:\n                        build_config[\"body\"][\"value\"] = [{\"key\": \"data\", \"value\": json.dumps(json_data)}]\n                except json.JSONDecodeError:\n                    build_config[\"body\"][\"value\"] = [{\"key\": \"data\", \"value\": parsed.data}]\n\n        except Exception as exc:\n            msg = f\"Error parsing curl: {exc}\"\n            self.log(msg)\n            raise ValueError(msg) from exc\n\n        return build_config\n\n    def _normalize_url(self, url: str) -> str:\n        \"\"\"Normalize URL by adding https:// if no protocol is specified.\"\"\"\n        if not url or not isinstance(url, str):\n            msg = \"URL cannot be empty\"\n            raise ValueError(msg)\n\n        url = url.strip()\n        if url.startswith((\"http://\", \"https://\")):\n            return url\n        return f\"https://{url}\"\n\n    async def make_request(\n        self,\n        client: httpx.AsyncClient,\n        method: str,\n        url: str,\n        headers: dict | None = None,\n        body: Any = None,\n        timeout: int = 5,\n        *,\n        follow_redirects: bool = False,\n        save_to_file: bool = False,\n        include_httpx_metadata: bool = False,\n    ) -> Data:\n        method = method.upper()\n        if method not in {\"GET\", \"POST\", \"PATCH\", \"PUT\", \"DELETE\"}:\n            msg = f\"Unsupported method: {method}\"\n            raise ValueError(msg)\n\n        processed_body = self._process_body(body)\n        redirection_history = []\n\n        try:\n            # Prepare request parameters\n            request_params = {\n                \"method\": method,\n                \"url\": url,\n                \"headers\": headers,\n                \"timeout\": timeout,\n                \"follow_redirects\": follow_redirects,\n            }\n            # Only include body for methods that support it (GET must not have a body per HTTP spec)\n            if method in {\"POST\", \"PATCH\", \"PUT\", \"DELETE\"} and processed_body is not None:\n                request_params[\"json\"] = processed_body\n            response = await client.request(**request_params)\n\n            redirection_history = [\n                {\n                    \"url\": redirect.headers.get(\"Location\", str(redirect.url)),\n                    \"status_code\": redirect.status_code,\n                }\n                for redirect in response.history\n            ]\n\n            return await self._build_response_data(\n                response,\n                url,\n                headers,\n                redirection_history,\n                save_to_file=save_to_file,\n                include_httpx_metadata=include_httpx_metadata,\n            )\n        except (httpx.HTTPError, httpx.RequestError, httpx.TimeoutException) as exc:\n            self.log(f\"Error making request to {url}\")\n            return Data(\n                data={\n                    \"source\": url,\n                    \"headers\": headers,\n                    \"status_code\": 500,\n                    \"error\": str(exc),\n                    **({\"redirection_history\": redirection_history} if redirection_history else {}),\n                },\n            )\n\n    async def _build_response_data(\n        self,\n        response: httpx.Response,\n        source_url: str,\n        headers: dict | None,\n        redirection_history: list,\n        *,\n        save_to_file: bool = False,\n        include_httpx_metadata: bool = False,\n    ) -> Data:\n        \"\"\"Turn an httpx response into the component's ``Data`` output.\n\n        Shared by the standard request path (``make_request``) and the redirect\n        re-validation path (``_follow_redirects_with_validation``) so both produce\n        identical metadata, optional file saving, and body decoding.\n        \"\"\"\n        is_binary, file_path = await self._response_info(response, with_file_path=save_to_file)\n        response_headers = self._headers_to_dict(response.headers)\n\n        # Base metadata\n        metadata = {\n            \"source\": source_url,\n            \"status_code\": response.status_code,\n            \"response_headers\": response_headers,\n        }\n\n        if redirection_history:\n            metadata[\"redirection_history\"] = redirection_history\n\n        if save_to_file:\n            mode = \"wb\" if is_binary else \"w\"\n            encoding = response.encoding if mode == \"w\" else None\n            if file_path:\n                await aiofiles_os.makedirs(file_path.parent, exist_ok=True)\n                if is_binary:\n                    async with aiofiles.open(file_path, \"wb\") as f:\n                        await f.write(response.content)\n                        await f.flush()\n                else:\n                    async with aiofiles.open(file_path, \"w\", encoding=encoding) as f:\n                        await f.write(response.text)\n                        await f.flush()\n                metadata[\"file_path\"] = str(file_path)\n\n            if include_httpx_metadata:\n                metadata.update({\"headers\": headers})\n            return Data(data=metadata)\n\n        # Handle response content\n        if is_binary:\n            result = response.content\n        else:\n            try:\n                result = response.json()\n            except (json.JSONDecodeError, UnicodeDecodeError):\n                self.log(\"Failed to decode JSON response\")\n                result = response.text.encode(\"utf-8\")\n\n        metadata[\"result\"] = result\n\n        if include_httpx_metadata:\n            metadata.update({\"headers\": headers})\n\n        return Data(data=metadata)\n\n    def add_query_params(self, url: str, params: dict) -> str:\n        \"\"\"Add query parameters to URL efficiently.\"\"\"\n        if not params:\n            return url\n        url_parts = list(urlparse(url))\n        query = dict(parse_qsl(url_parts[4]))\n        query.update(params)\n        url_parts[4] = urlencode(query)\n        return urlunparse(url_parts)\n\n    def _headers_to_dict(self, headers: httpx.Headers) -> dict[str, str]:\n        \"\"\"Convert HTTP headers to a dictionary with lowercased keys.\"\"\"\n        return {k.lower(): v for k, v in headers.items()}\n\n    def _process_headers(self, headers: Any) -> dict:\n        \"\"\"Process the headers input into a valid dictionary.\"\"\"\n        if headers is None:\n            return {}\n        if isinstance(headers, dict):\n            return headers\n        if isinstance(headers, list):\n            return {item[\"key\"]: item[\"value\"] for item in headers if self._is_valid_key_value_item(item)}\n        return {}\n\n    async def make_api_request(self) -> Data:\n        \"\"\"Make HTTP request with SSRF protection and DNS pinning.\n\n        This method implements comprehensive SSRF (Server-Side Request Forgery) protection\n        using DNS pinning to prevent DNS rebinding attacks. The protection works by:\n        1. Validating the URL and resolving DNS during security check\n        2. Pinning the validated IP address\n        3. Forcing the HTTP client to use the pinned IP for the actual request\n        4. Ignoring any subsequent DNS changes (prevents rebinding attacks)\n\n        Returns:\n            Data: Response data from the HTTP request\n\n        Raises:\n            ValueError: If URL is invalid or blocked by SSRF protection\n        \"\"\"\n        # Extract request parameters\n        method = self.method\n        url = self.url_input.strip() if isinstance(self.url_input, str) else \"\"\n        headers = self.headers or {}\n        body = self.body or {}\n        timeout = self.timeout\n        follow_redirects = self.follow_redirects\n        save_to_file = self.save_to_file\n        include_httpx_metadata = self.include_httpx_metadata\n\n        # Security warning: HTTP redirects can bypass SSRF protection\n        # A public URL could redirect to an internal resource\n        if follow_redirects:\n            self.log(\n                \"Security Warning: HTTP redirects are enabled. This may allow SSRF bypass attacks \"\n                \"where a public URL redirects to internal resources (e.g., cloud metadata endpoints). \"\n                \"Only enable this if you trust the target server.\"\n            )\n\n        # Normalize URL (add https:// if no protocol specified)\n        url = self._normalize_url(url)\n\n        # Basic URL format validation\n        if not validators.url(url):\n            msg = f\"Invalid URL provided: {url}\"\n            raise ValueError(msg)\n\n        # ============================================================================\n        # SSRF Protection with DNS Pinning\n        # ============================================================================\n        # This prevents DNS rebinding attacks by:\n        # 1. Resolving DNS and validating IPs during security check\n        # 2. Pinning the validated IP address\n        # 3. Using a custom HTTP transport that forces use of the pinned IP\n        # 4. Ignoring any new DNS resolutions (prevents rebinding)\n        #\n        # Without DNS pinning, an attacker could:\n        # - First DNS lookup: returns public IP (passes validation)\n        # - Second DNS lookup: returns internal IP (bypasses protection)\n        # - Attack succeeds: accesses internal services\n        #\n        # With DNS pinning:\n        # - First DNS lookup: returns public IP (passes validation)\n        # - IP is pinned: \"example.com = 93.184.216.34\"\n        # - HTTP request: uses pinned IP directly (no new DNS lookup)\n        # - Attack fails: even if DNS changes, we use the validated IP\n        # ============================================================================\n\n        try:\n            # Validate URL and get validated IPs for DNS pinning\n            _validated_url, validated_ips = validate_and_resolve_url(url)\n\n            # Log DNS pinning information for security auditing\n            if validated_ips:\n                self.log(f\"SSRF Protection: Using DNS pinning with {len(validated_ips)} validated IP(s)\")\n\n        except SSRFProtectionError as e:\n            # SSRF protection blocked the request (private IP, internal network, etc.)\n            msg = f\"SSRF Protection: {e}\"\n            raise ValueError(msg) from e\n\n        # Process query parameters (from string or Data object)\n        if isinstance(self.query_params, str):\n            query_params = dict(parse_qsl(self.query_params))\n        else:\n            query_params = self.query_params.data if self.query_params else {}\n\n        # Process headers and body into proper format\n        headers = self._process_headers(headers)\n        body = self._process_body(body)\n        url = self.add_query_params(url, query_params)\n\n        # ============================================================================\n        # Execute the request (re-validating any redirects when SSRF protection is on)\n        # ============================================================================\n        # When SSRF protection is enabled we must NOT let httpx auto-follow redirects:\n        # a validated public URL can redirect to an internal address (loopback, RFC1918,\n        # link-local / cloud metadata) that was never checked, bypassing both the initial\n        # validation and DNS pinning. Instead we follow redirects manually so every hop\n        # is re-validated with the same denylist + DNS pinning. When protection is\n        # disabled, we preserve the previous behavior and let httpx handle redirects.\n        if is_ssrf_protection_enabled() and follow_redirects:\n            result = await self._follow_redirects_with_validation(\n                method,\n                url,\n                headers,\n                body,\n                timeout,\n                validated_ips,\n                save_to_file=save_to_file,\n                include_httpx_metadata=include_httpx_metadata,\n            )\n        else:\n            # No redirect re-validation needed:\n            # - SSRF protection is disabled (user opted out), or\n            # - redirects are disabled, so httpx makes a single request.\n            # DNS pinning still applies to the single request when protection is enabled\n            # and the host resolved to validated IPs.\n            async with self._build_http_client(url, validated_ips) as client:\n                result = await self.make_request(\n                    client,\n                    method,\n                    url,\n                    headers,\n                    body,\n                    timeout,\n                    follow_redirects=follow_redirects,\n                    save_to_file=save_to_file,\n                    include_httpx_metadata=include_httpx_metadata,\n                )\n\n        self.status = result\n        return result\n\n    def _build_http_client(self, url: str, validated_ips: list[str]) -> httpx.AsyncClient:\n        \"\"\"Create an HTTP client, pinning DNS to validated IPs when SSRF protection applies.\n\n        Args:\n            url: The request URL whose hostname will be pinned.\n            validated_ips: IPs validated by ``validate_and_resolve_url`` for this hop.\n\n        Returns:\n            httpx.AsyncClient: A client that pins DNS to ``validated_ips`` (preventing\n            rebinding) when SSRF protection is enabled and the hop has validated IPs;\n            otherwise a standard client (protection disabled, allowlisted host, or\n            hostname extraction failure).\n        \"\"\"\n        if is_ssrf_protection_enabled() and validated_ips:\n            # Extract hostname from the URL so the custom transport can pin it while\n            # preserving the Host header for virtual hosting / TLS SNI.\n            hostname = urlparse(url).hostname\n            if hostname:\n                # The custom transport tries validated IPs in order (dual-stack / LB).\n                return create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips)\n        return httpx.AsyncClient()\n\n    @staticmethod\n    def _method_for_redirect(method: str, status_code: int) -> str:\n        \"\"\"Return the HTTP method to use after a redirect, mirroring httpx semantics.\n\n        A 303 (See Other) always becomes GET; 301/302 downgrade POST to GET for\n        browser compatibility; 307/308 preserve the original method (and body).\n        \"\"\"\n        method = method.upper()\n        if status_code == HTTP_SEE_OTHER and method != \"HEAD\":\n            return \"GET\"\n        if status_code in (HTTP_MOVED_PERMANENTLY, HTTP_FOUND) and method == \"POST\":\n            return \"GET\"\n        return method\n\n    @staticmethod\n    def _headers_for_redirect(headers: dict | None, current_url: str, next_url: str) -> dict | None:\n        \"\"\"Drop sensitive headers when a redirect crosses to a different origin.\n\n        Mirrors httpx's auto-follow behavior so manually following redirects does not\n        leak credentials (Authorization / Cookie) to an origin other than the one the\n        caller intended them for. Headers are kept only when the redirect stays on the\n        same origin (scheme, host, port) or is a direct https upgrade of the same host\n        on default ports - the exact cases where httpx keeps the Authorization header.\n        \"\"\"\n        if not headers:\n            return headers\n        current, nxt = urlparse(current_url), urlparse(next_url)\n        current_port = current.port or DEFAULT_SCHEME_PORTS.get(current.scheme)\n        next_port = nxt.port or DEFAULT_SCHEME_PORTS.get(nxt.scheme)\n        same_origin = (current.scheme, current.hostname, current_port) == (nxt.scheme, nxt.hostname, next_port)\n        https_upgrade = (\n            current.hostname == nxt.hostname\n            and current.scheme == \"http\"\n            and nxt.scheme == \"https\"\n            and current_port == DEFAULT_SCHEME_PORTS[\"http\"]\n            and next_port == DEFAULT_SCHEME_PORTS[\"https\"]\n        )\n        if same_origin or https_upgrade:\n            return headers\n        sensitive = {\"authorization\", \"proxy-authorization\", \"cookie\"}\n        return {k: v for k, v in headers.items() if k.lower() not in sensitive}\n\n    async def _follow_redirects_with_validation(\n        self,\n        method: str,\n        url: str,\n        headers: dict | None,\n        body: Any,\n        timeout: int,\n        validated_ips: list[str],\n        *,\n        save_to_file: bool = False,\n        include_httpx_metadata: bool = False,\n    ) -> Data:\n        \"\"\"Make the request and follow redirects manually, re-validating every hop.\n\n        This closes an SSRF bypass: with ``follow_redirects`` enabled, httpx would\n        otherwise auto-follow a redirect from a validated public URL to an internal\n        address that was never checked. Here each redirect ``Location`` is resolved\n        (relative locations included) and re-validated with ``validate_and_resolve_url``\n        — the same private/loopback/link-local denylist and DNS pinning applied to the\n        initial request — before any connection to it is made. A blocked hop raises\n        ``ValueError``; the number of redirects is capped at ``MAX_REDIRECTS``.\n        \"\"\"\n        method = method.upper()\n        if method not in {\"GET\", \"POST\", \"PATCH\", \"PUT\", \"DELETE\"}:\n            msg = f\"Unsupported method: {method}\"\n            raise ValueError(msg)\n\n        processed_body = self._process_body(body)\n        current_url = url\n        current_ips = validated_ips\n        redirection_history: list[dict] = []\n\n        for _ in range(MAX_REDIRECTS + 1):\n            request_params: dict[str, Any] = {\n                \"method\": method,\n                \"url\": current_url,\n                \"headers\": headers,\n                \"timeout\": timeout,\n                # Never let httpx follow redirects itself; each hop is validated below.\n                \"follow_redirects\": False,\n            }\n            # Only include body for methods that support it (GET must not have a body).\n            if method in {\"POST\", \"PATCH\", \"PUT\", \"DELETE\"} and processed_body is not None:\n                request_params[\"json\"] = processed_body\n\n            try:\n                async with self._build_http_client(current_url, current_ips) as client:\n                    response = await client.request(**request_params)\n            except (httpx.HTTPError, httpx.RequestError, httpx.TimeoutException) as exc:\n                self.log(f\"Error making request to {current_url}\")\n                return Data(\n                    data={\n                        \"source\": url,\n                        \"headers\": headers,\n                        \"status_code\": 500,\n                        \"error\": str(exc),\n                        **({\"redirection_history\": redirection_history} if redirection_history else {}),\n                    },\n                )\n\n            location = response.headers.get(\"Location\")\n            if response.status_code in REDIRECT_STATUS_CODES and location:\n                # Resolve relative redirects against the current URL.\n                next_url = urljoin(current_url, location)\n                redirection_history.append({\"url\": location, \"status_code\": response.status_code})\n\n                # Re-validate the redirect target with the same SSRF denylist + DNS pinning.\n                # Non-http(s) schemes, private/loopback/link-local hosts, and hostnames that\n                # resolve to blocked IPs all raise SSRFProtectionError here.\n                try:\n                    _validated_url, current_ips = validate_and_resolve_url(next_url)\n                except SSRFProtectionError as e:\n                    msg = f\"SSRF Protection: blocked redirect to {next_url}: {e}\"\n                    raise ValueError(msg) from e\n\n                method = self._method_for_redirect(method, response.status_code)\n                headers = self._headers_for_redirect(headers, current_url, next_url)\n                current_url = next_url\n                continue\n\n            # Not a redirect (or no Location header) - this is the final response.\n            return await self._build_response_data(\n                response,\n                url,\n                headers,\n                redirection_history,\n                save_to_file=save_to_file,\n                include_httpx_metadata=include_httpx_metadata,\n            )\n\n        msg = f\"SSRF Protection: exceeded the maximum of {MAX_REDIRECTS} redirects while requesting {url}\"\n        raise ValueError(msg)\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        \"\"\"Update the build config based on the selected mode.\"\"\"\n        if field_name != \"mode\":\n            if field_name == \"curl_input\" and self.mode == \"cURL\" and self.curl_input:\n                return self.parse_curl(self.curl_input, build_config)\n            return build_config\n\n        if field_value == \"cURL\":\n            set_field_display(build_config, \"curl_input\", value=True)\n            if build_config[\"curl_input\"][\"value\"]:\n                try:\n                    build_config = self.parse_curl(build_config[\"curl_input\"][\"value\"], build_config)\n                except ValueError as e:\n                    self.log(f\"Failed to parse cURL input: {e}\")\n        else:\n            set_field_display(build_config, \"curl_input\", value=False)\n\n        return set_current_fields(\n            build_config=build_config,\n            action_fields=MODE_FIELDS,\n            selected_action=field_value,\n            default_fields=DEFAULT_FIELDS,\n            func=set_field_advanced,\n            default_value=True,\n        )\n\n    async def _response_info(\n        self, response: httpx.Response, *, with_file_path: bool = False\n    ) -> tuple[bool, Path | None]:\n        \"\"\"Determine the file path and whether the response content is binary.\n\n        Args:\n            response (Response): The HTTP response object.\n            with_file_path (bool): Whether to save the response content to a file.\n\n        Returns:\n            Tuple[bool, Path | None]:\n                A tuple containing a boolean indicating if the content is binary and the full file path (if applicable).\n        \"\"\"\n        content_type = response.headers.get(\"Content-Type\", \"\")\n        is_binary = \"application/octet-stream\" in content_type or \"application/binary\" in content_type\n\n        if not with_file_path:\n            return is_binary, None\n\n        component_temp_dir = Path(tempfile.gettempdir()) / self.__class__.__name__\n\n        # Create directory asynchronously\n        await aiofiles_os.makedirs(component_temp_dir, exist_ok=True)\n\n        filename = None\n        if \"Content-Disposition\" in response.headers:\n            content_disposition = response.headers[\"Content-Disposition\"]\n            filename_match = re.search(r'filename=\"(.+?)\"', content_disposition)\n            if filename_match:\n                # Reduce to the basename to prevent path traversal: the response\n                # (and therefore this header) is fully attacker-influenced, so a\n                # value like filename=\"../../../../tmp/evil.sh\" must not escape\n                # component_temp_dir. Path(...).name strips any directory parts.\n                # Normalize backslashes to forward slashes first so Windows-style\n                # separators (e.g. filename=\"..\\..\\tmp\\evil.sh\") are also stripped\n                # on POSIX, where \"\\\\\" is a valid filename character that\n                # Path(...).name would otherwise leave intact. NUL bytes are\n                # stripped too: they survive Path(...).name and would otherwise\n                # make the later .resolve() raise a cryptic \"embedded null\n                # character\" ValueError instead of failing cleanly here.\n                normalized_filename = filename_match.group(1).replace(\"\\\\\", \"/\").replace(\"\\x00\", \"\")\n                extracted_filename = Path(normalized_filename).name\n                if extracted_filename and extracted_filename not in (\".\", \"..\"):\n                    filename = extracted_filename\n\n        # Step 3: Infer file extension or use part of the request URL if no filename\n        if not filename:\n            # Extract the last segment of the URL path\n            url_path = urlparse(str(response.request.url) if response.request else \"\").path\n            base_name = Path(url_path).name  # Get the last segment of the path\n            if not base_name:  # If the path ends with a slash or is empty\n                base_name = \"response\"\n\n            # Infer file extension\n            content_type_to_extension = {\n                \"text/plain\": \".txt\",\n                \"application/json\": \".json\",\n                \"image/jpeg\": \".jpg\",\n                \"image/png\": \".png\",\n                \"application/octet-stream\": \".bin\",\n            }\n            extension = content_type_to_extension.get(content_type, \".bin\" if is_binary else \".txt\")\n            filename = f\"{base_name}{extension}\"\n\n        # Step 4: Define the full file path\n        file_path = component_temp_dir / filename\n\n        # Defense-in-depth: ensure the resolved path stays within the component\n        # temp dir even if filename derivation above is ever changed.\n        if not file_path.resolve().is_relative_to(component_temp_dir.resolve()):\n            msg = \"Resolved output path escapes the component temporary directory\"\n            raise ValueError(msg)\n\n        # Step 5: Check if file exists asynchronously and handle accordingly\n        try:\n            # Try to create the file exclusively (x mode) to check existence\n            async with aiofiles.open(file_path, \"x\") as _:\n                pass  # File created successfully, we can use this path\n        except FileExistsError:\n            # If file exists, append a timestamp to the filename\n            timestamp = datetime.now(timezone.utc).strftime(\"%Y%m%d%H%M%S%f\")\n            file_path = component_temp_dir / f\"{timestamp}-{filename}\"\n\n        return is_binary, file_path\n"
+              },
+              "curl_input": {
+                "_input_type": "MultilineInput",
+                "advanced": true,
+                "ai_enabled": false,
+                "api_editable": false,
+                "copy_field": false,
+                "display_name": "cURL",
+                "dynamic": false,
+                "info": "Paste a curl command to populate the fields. This will fill in the dictionary fields for headers and body.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "curl_input",
+                "override_skip": false,
+                "password": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "follow_redirects": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Follow Redirects",
+                "dynamic": false,
+                "info": "Whether to follow HTTP redirects. WARNING: Enabling redirects may allow SSRF bypass attacks where a public URL redirects to internal resources. Only enable if you trust the target server. See OWASP SSRF Prevention Cheat Sheet for details.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "follow_redirects",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
+              "headers": {
+                "_input_type": "TableInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Headers",
+                "dynamic": false,
+                "info": "The headers to send with the request",
+                "input_types": [
+                  "Data",
+                  "JSON"
+                ],
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "headers",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "table_icon": "Table",
+                "table_schema": [
+                  {
+                    "description": "Header name",
+                    "display_name": "Header",
+                    "name": "key",
+                    "type": "str"
+                  },
+                  {
+                    "description": "Header value",
+                    "display_name": "Value",
+                    "name": "value",
+                    "type": "str"
+                  }
+                ],
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "trigger_icon": "Table",
+                "trigger_text": "Open table",
+                "type": "table",
+                "value": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ]
+              },
+              "include_httpx_metadata": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Include HTTPx Metadata",
+                "dynamic": false,
+                "info": "Include properties such as headers, status_code, response_headers, and redirection_history in the output.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "include_httpx_metadata",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
+              "method": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "api_editable": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Method",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The HTTP method to use.",
+                "name": "method",
+                "options": [
+                  "GET",
+                  "POST",
+                  "PATCH",
+                  "PUT",
+                  "DELETE"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "GET"
+              },
+              "mode": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Mode",
+                "dynamic": false,
+                "info": "Enable cURL mode to populate fields from a cURL command.",
+                "name": "mode",
+                "options": [
+                  "URL",
+                  "cURL"
+                ],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "tab",
+                "value": "URL"
+              },
+              "query_params": {
+                "_input_type": "JSONInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Query Parameters",
+                "dynamic": false,
+                "info": "The query parameters to append to the URL.",
+                "input_types": [
+                  "Data",
+                  "JSON"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "query_params",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "save_to_file": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Save to File",
+                "dynamic": false,
+                "info": "Save the API response to a temporary file",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "save_to_file",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
+              "timeout": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Timeout",
+                "dynamic": false,
+                "info": "The timeout to use for the request.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 30
+              },
+              "url_input": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "URL",
+                "dynamic": false,
+                "info": "Enter the URL for the request.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "url_input",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "https://raw.githubusercontent.com/JacobiusMakes/parlay-api-python/a9db94c1f976656f217ef81f59da66b155e9549d/examples/langflow/synthetic-odds.json"
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "APIRequest",
+          "showNode": true
+        },
+        "selected": false
+      },
+      {
+        "id": "DataOperations-audit",
+        "type": "genericNode",
+        "position": {
+          "x": 380,
+          "y": 680
+        },
+        "data": {
+          "id": "DataOperations-audit",
+          "node": {
+            "base_classes": [
+              "JSON"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Perform various operations on a JSON object.",
+            "display_name": "JSON Operations",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "data",
+              "operations",
+              "select_keys_input",
+              "append_update_data",
+              "remove_keys_input",
+              "rename_keys_input",
+              "mapped_json_display",
+              "selected_key",
+              "query"
+            ],
+            "frozen": false,
+            "icon": "file-json",
+            "legacy": true,
+            "metadata": {
+              "code_hash": "4ad7dbc5a8b8",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "json_repair",
+                    "version": "0.61.7"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  },
+                  {
+                    "name": "jq",
+                    "version": "1.12.0"
+                  }
+                ],
+                "total_dependencies": 3
+              },
+              "keywords": [
+                "data",
+                "json",
+                "operations",
+                "Append or Update",
+                "remove keys",
+                "rename keys",
+                "select keys",
+                "literal eval",
+                "combine",
+                "append",
+                "update",
+                "remove",
+                "rename",
+                "data operations",
+                "json operations",
+                "data manipulation",
+                "data transformation",
+                "data filtering",
+                "data selection",
+                "data combination",
+                "Parse JSON",
+                "JSON Query",
+                "JQ Query"
+              ],
+              "module": "lfx.components.processing.data_operations.DataOperationsComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "JSON",
+                "group_outputs": false,
+                "method": "as_data",
+                "name": "data_output",
+                "selected": "JSON",
+                "tool_mode": true,
+                "types": [
+                  "JSON"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "replacement": [
+              "processing.Operations"
+            ],
+            "template": {
+              "_type": "Component",
+              "append_update_data": {
+                "_input_type": "DictInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Append or Update",
+                "dynamic": false,
+                "info": "Data to append or update the existing data with. Only top-level keys are checked.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "append_update_data",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "dict",
+                "value": {
+                  "key": "value"
+                }
+              },
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import ast\nimport json\nfrom typing import TYPE_CHECKING, Any\n\nfrom json_repair import repair_json\n\nfrom lfx.custom import Component\nfrom lfx.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput\nfrom lfx.io import DataInput, MultilineInput, Output\nfrom lfx.log.logger import logger\nfrom lfx.schema import Data\nfrom lfx.schema.dotdict import dotdict\nfrom lfx.utils.component_utils import set_current_fields, set_field_display\n\nif TYPE_CHECKING:\n    from collections.abc import Callable\n\nACTION_CONFIG = {\n    \"Select Keys\": {\"is_list\": False, \"log_msg\": \"setting filter fields\"},\n    \"Literal Eval\": {\"is_list\": False, \"log_msg\": \"setting evaluate fields\"},\n    \"Combine\": {\"is_list\": True, \"log_msg\": \"setting combine fields\"},\n    \"Append or Update\": {\"is_list\": False, \"log_msg\": \"setting Append or Update fields\"},\n    \"Remove Keys\": {\"is_list\": False, \"log_msg\": \"setting remove keys fields\"},\n    \"Rename Keys\": {\"is_list\": False, \"log_msg\": \"setting rename keys fields\"},\n    \"Path Selection\": {\"is_list\": False, \"log_msg\": \"setting mapped key extractor fields\"},\n    \"JQ Expression\": {\"is_list\": False, \"log_msg\": \"setting parse json fields\"},\n}\n\n\nclass DataOperationsComponent(Component):\n    display_name = \"JSON Operations\"\n    description = \"Perform various operations on a JSON object.\"\n    icon = \"file-json\"\n    name = \"DataOperations\"\n    legacy = True\n    replacement = [\"processing.Operations\"]\n    default_keys = [\"operations\", \"data\"]\n    metadata = {\n        \"keywords\": [\n            \"data\",\n            \"json\",\n            \"operations\",\n            \"Append or Update\",\n            \"remove keys\",\n            \"rename keys\",\n            \"select keys\",\n            \"literal eval\",\n            \"combine\",\n            \"append\",\n            \"update\",\n            \"remove\",\n            \"rename\",\n            \"data operations\",\n            \"json operations\",\n            \"data manipulation\",\n            \"data transformation\",\n            \"data filtering\",\n            \"data selection\",\n            \"data combination\",\n            \"Parse JSON\",\n            \"JSON Query\",\n            \"JQ Query\",\n        ],\n    }\n    actions_data = {\n        \"Select Keys\": [\"select_keys_input\", \"operations\"],\n        \"Literal Eval\": [],\n        \"Combine\": [],\n        \"Append or Update\": [\"append_update_data\", \"operations\"],\n        \"Remove Keys\": [\"remove_keys_input\", \"operations\"],\n        \"Rename Keys\": [\"rename_keys_input\", \"operations\"],\n        \"Path Selection\": [\"mapped_json_display\", \"selected_key\", \"operations\"],\n        \"JQ Expression\": [\"query\", \"operations\"],\n    }\n\n    # All operation-specific input fields (used to hide and reset when no operation selected).\n    ALL_OPERATION_FIELDS = [\n        \"select_keys_input\",\n        \"append_update_data\",\n        \"remove_keys_input\",\n        \"rename_keys_input\",\n        \"mapped_json_display\",\n        \"selected_key\",\n        \"query\",\n    ]\n\n    @staticmethod\n    def extract_all_paths(obj, path=\"\"):\n        paths = []\n        if isinstance(obj, dict):\n            for k, v in obj.items():\n                new_path = f\"{path}.{k}\" if path else f\".{k}\"\n                paths.append(new_path)\n                paths.extend(DataOperationsComponent.extract_all_paths(v, new_path))\n        elif isinstance(obj, list) and obj:\n            new_path = f\"{path}[0]\"\n            paths.append(new_path)\n            paths.extend(DataOperationsComponent.extract_all_paths(obj[0], new_path))\n        return paths\n\n    @staticmethod\n    def remove_keys_recursive(obj, keys_to_remove):\n        if isinstance(obj, dict):\n            return {\n                k: DataOperationsComponent.remove_keys_recursive(v, keys_to_remove)\n                for k, v in obj.items()\n                if k not in keys_to_remove\n            }\n        if isinstance(obj, list):\n            return [DataOperationsComponent.remove_keys_recursive(item, keys_to_remove) for item in obj]\n        return obj\n\n    @staticmethod\n    def rename_keys_recursive(obj, rename_map):\n        if isinstance(obj, dict):\n            return {\n                rename_map.get(k, k): DataOperationsComponent.rename_keys_recursive(v, rename_map)\n                for k, v in obj.items()\n            }\n        if isinstance(obj, list):\n            return [DataOperationsComponent.rename_keys_recursive(item, rename_map) for item in obj]\n        return obj\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"JSON\", info=\"Data object to filter.\", required=True, is_list=True),\n        SortableListInput(\n            name=\"operations\",\n            display_name=\"Operations\",\n            placeholder=\"Select Operation\",\n            info=\"List of operations to perform on the data.\",\n            options=[\n                {\"name\": \"Select Keys\", \"icon\": \"lasso-select\"},\n                {\"name\": \"Literal Eval\", \"icon\": \"braces\"},\n                {\"name\": \"Combine\", \"icon\": \"merge\"},\n                {\"name\": \"Append or Update\", \"icon\": \"circle-plus\"},\n                {\"name\": \"Remove Keys\", \"icon\": \"eraser\"},\n                {\"name\": \"Rename Keys\", \"icon\": \"pencil-line\"},\n                {\"name\": \"Path Selection\", \"icon\": \"mouse-pointer\"},\n                {\"name\": \"JQ Expression\", \"icon\": \"terminal\"},\n            ],\n            real_time_refresh=True,\n            limit=1,\n        ),\n        # select keys inputs\n        MessageTextInput(\n            name=\"select_keys_input\",\n            display_name=\"Select Keys\",\n            info=\"List of keys to select from the data. Only top-level keys can be selected.\",\n            show=False,\n            is_list=True,\n            value=[],\n        ),\n        # update/ Append data inputs\n        DictInput(\n            name=\"append_update_data\",\n            display_name=\"Append or Update\",\n            info=\"Data to append or update the existing data with. Only top-level keys are checked.\",\n            show=False,\n            value={\"key\": \"value\"},\n            is_list=True,\n        ),\n        # remove keys inputs\n        MessageTextInput(\n            name=\"remove_keys_input\",\n            display_name=\"Remove Keys\",\n            info=\"List of keys to remove from the data.\",\n            show=False,\n            is_list=True,\n            value=[],\n        ),\n        # rename keys inputs\n        DictInput(\n            name=\"rename_keys_input\",\n            display_name=\"Rename Keys\",\n            info=\"List of keys to rename in the data.\",\n            show=False,\n            is_list=True,\n            value={\"old_key\": \"new_key\"},\n        ),\n        MultilineInput(\n            name=\"mapped_json_display\",\n            display_name=\"JSON to Map\",\n            info=\"Paste or preview your JSON here to explore its structure and select a path for extraction.\",\n            required=False,\n            refresh_button=True,\n            real_time_refresh=True,\n            placeholder=\"Add a JSON example.\",\n            show=False,\n        ),\n        DropdownInput(\n            name=\"selected_key\",\n            display_name=\"Select Path\",\n            options=[],\n            required=False,\n            dynamic=True,\n            show=False,\n            value=None,\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"JQ Expression\",\n            info=\"JSON Query to filter the data. Used by Parse JSON operation.\",\n            placeholder=\"e.g., .properties.id\",\n            show=False,\n        ),\n    ]\n\n    # Default values for operation fields when clearing (match input definitions)\n    OPERATION_FIELD_DEFAULTS: dict[str, Any] = {\n        \"select_keys_input\": [],\n        \"append_update_data\": {\"key\": \"value\"},\n        \"remove_keys_input\": [],\n        \"rename_keys_input\": {\"old_key\": \"new_key\"},\n        \"mapped_json_display\": \"\",\n        \"selected_key\": None,\n        \"query\": \"\",\n    }\n\n    outputs = [\n        Output(display_name=\"JSON\", name=\"data_output\", method=\"as_data\"),\n    ]\n\n    # Helper methods for data operations\n    def get_data_dict(self) -> dict:\n        \"\"\"Extract data dictionary from Data object.\"\"\"\n        data = self.data[0] if isinstance(self.data, list) and len(self.data) == 1 else self.data\n        return data.model_dump()\n\n    def json_query(self) -> Data:\n        import json\n\n        try:\n            import jq\n        except ImportError:\n            msg = \"jq is required for JQ Expression. Install with: pip install jq\"\n            raise ImportError(msg) from None\n\n        if not self.query or not self.query.strip():\n            msg = \"JSON Query is required and cannot be blank.\"\n            raise ValueError(msg)\n        raw_data = self.get_data_dict()\n        try:\n            input_str = json.dumps(raw_data)\n            repaired = repair_json(input_str)\n            data_json = json.loads(repaired)\n            jq_input = data_json[\"data\"] if isinstance(data_json, dict) and \"data\" in data_json else data_json\n            results = jq.compile(self.query).input(jq_input).all()\n            if not results:\n                msg = \"No result from JSON query.\"\n                raise ValueError(msg)\n            result = results[0] if len(results) == 1 else results\n            if result is None or result == \"None\":\n                msg = \"JSON query returned null/None. Check if the path exists in your data.\"\n                raise ValueError(msg)\n            if isinstance(result, dict):\n                return Data(data=result)\n            return Data(data={\"result\": result})\n        except (ValueError, TypeError, KeyError, json.JSONDecodeError) as e:\n            logger.error(f\"JSON Query failed: {e}\")\n            msg = f\"JSON Query error: {e}\"\n            raise ValueError(msg) from e\n\n    def get_normalized_data(self) -> dict:\n        \"\"\"Get normalized data dictionary, handling the 'data' key if present.\"\"\"\n        data_dict = self.get_data_dict()\n        return data_dict.get(\"data\", data_dict)\n\n    def data_is_list(self) -> bool:\n        \"\"\"Check if data contains multiple items.\"\"\"\n        return isinstance(self.data, list) and len(self.data) > 1\n\n    def validate_single_data(self, operation: str) -> None:\n        \"\"\"Validate that the operation is being performed on a single data object.\"\"\"\n        if self.data_is_list():\n            msg = f\"{operation} operation is not supported for multiple data objects.\"\n            raise ValueError(msg)\n\n    def operation_exception(self, operations: list[str]) -> None:\n        \"\"\"Raise exception for incompatible operations.\"\"\"\n        msg = f\"{operations} operations are not supported in combination with each other.\"\n        raise ValueError(msg)\n\n    # Data transformation operations\n    def select_keys(self, *, evaluate: bool | None = None) -> Data:\n        \"\"\"Select specific keys from the data dictionary.\"\"\"\n        self.validate_single_data(\"Select Keys\")\n        data_dict = self.get_normalized_data()\n        filter_criteria: list[str] = self.select_keys_input\n\n        # Filter the data\n        if len(filter_criteria) == 1 and filter_criteria[0] == \"data\":\n            filtered = data_dict[\"data\"]\n        else:\n            if not all(key in data_dict for key in filter_criteria):\n                msg = f\"Select key not found in data. Available keys: {list(data_dict.keys())}\"\n                raise ValueError(msg)\n            filtered = {key: value for key, value in data_dict.items() if key in filter_criteria}\n\n        # Create a new Data object with the filtered data\n        if evaluate:\n            filtered = self.recursive_eval(filtered)\n\n        # Return a new Data object with the filtered data directly in the data attribute\n        return Data(data=filtered)\n\n    def remove_keys(self) -> Data:\n        \"\"\"Remove specified keys from the data dictionary, recursively.\"\"\"\n        self.validate_single_data(\"Remove Keys\")\n        data_dict = self.get_normalized_data()\n        remove_keys_input: list[str] = self.remove_keys_input\n\n        filtered = DataOperationsComponent.remove_keys_recursive(data_dict, set(remove_keys_input))\n        return Data(data=filtered)\n\n    def rename_keys(self) -> Data:\n        \"\"\"Rename keys in the data dictionary, recursively.\"\"\"\n        self.validate_single_data(\"Rename Keys\")\n        data_dict = self.get_normalized_data()\n        rename_keys_input: dict[str, str] = self.rename_keys_input\n\n        renamed = DataOperationsComponent.rename_keys_recursive(data_dict, rename_keys_input)\n        return Data(data=renamed)\n\n    def recursive_eval(self, data: Any) -> Any:\n        \"\"\"Recursively evaluate string values in a dictionary or list.\n\n        If the value is a string that can be evaluated, it will be evaluated.\n        Otherwise, the original value is returned.\n        \"\"\"\n        if isinstance(data, dict):\n            return {k: self.recursive_eval(v) for k, v in data.items()}\n        if isinstance(data, list):\n            return [self.recursive_eval(item) for item in data]\n        if isinstance(data, str):\n            try:\n                # Only attempt to evaluate strings that look like Python literals\n                if (\n                    data.strip().startswith((\"{\", \"[\", \"(\", \"'\", '\"'))\n                    or data.strip().lower() in (\"true\", \"false\", \"none\")\n                    or data.strip().replace(\".\", \"\").isdigit()\n                ):\n                    return ast.literal_eval(data)\n                # return data\n            except (ValueError, SyntaxError, TypeError, MemoryError):\n                # If evaluation fails for any reason, return the original string\n                return data\n            else:\n                return data\n        return data\n\n    def evaluate_data(self) -> Data:\n        \"\"\"Evaluate string values in the data dictionary.\"\"\"\n        self.validate_single_data(\"Literal Eval\")\n        logger.info(\"evaluating data\")\n        return Data(**self.recursive_eval(self.get_data_dict()))\n\n    def combine_data(self, *, evaluate: bool | None = None) -> Data:\n        \"\"\"Combine multiple data objects into one.\"\"\"\n        logger.info(\"combining data\")\n        if not self.data_is_list():\n            return self.data[0] if self.data else Data(data={})\n\n        if len(self.data) == 1:\n            msg = \"Combine operation requires multiple data inputs.\"\n            raise ValueError(msg)\n\n        data_dicts = [data.model_dump().get(\"data\", data.model_dump()) for data in self.data]\n        combined_data = {}\n\n        for data_dict in data_dicts:\n            for key, value in data_dict.items():\n                if key not in combined_data:\n                    combined_data[key] = value\n                elif isinstance(combined_data[key], list):\n                    if isinstance(value, list):\n                        combined_data[key].extend(value)\n                    else:\n                        combined_data[key].append(value)\n                else:\n                    # If current value is not a list, convert it to list and add new value\n                    combined_data[key] = (\n                        [combined_data[key], value] if not isinstance(value, list) else [combined_data[key], *value]\n                    )\n\n        if evaluate:\n            combined_data = self.recursive_eval(combined_data)\n\n        return Data(**combined_data)\n\n    def append_update(self) -> Data:\n        \"\"\"Append or Update with new key-value pairs.\"\"\"\n        self.validate_single_data(\"Append or Update\")\n        data_filtered = self.get_normalized_data()\n\n        for key, value in self.append_update_data.items():\n            data_filtered[key] = value\n\n        return Data(**data_filtered)\n\n    # Configuration and execution methods\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        if field_name == \"operations\":\n            build_config[\"operations\"][\"value\"] = field_value\n            # Mirror Text Operations: first hide all operation-specific fields and clear their values\n            for field in self.ALL_OPERATION_FIELDS:\n                if field in build_config:\n                    build_config[field][\"show\"] = False\n                    if field in self.OPERATION_FIELD_DEFAULTS:\n                        build_config[field][\"value\"] = self.OPERATION_FIELD_DEFAULTS[field]\n\n            selected_actions = [\n                action[\"name\"] for action in (field_value or []) if isinstance(action, dict) and \"name\" in action\n            ]\n            if len(selected_actions) == 1 and selected_actions[0] in ACTION_CONFIG:\n                action = selected_actions[0]\n                config = ACTION_CONFIG[action]\n                build_config[\"data\"][\"is_list\"] = config[\"is_list\"]\n                logger.info(config[\"log_msg\"])\n                return set_current_fields(\n                    build_config=build_config,\n                    action_fields=self.actions_data,\n                    selected_action=action,\n                    default_fields=[\"operations\", \"data\"],\n                    func=set_field_display,\n                )\n            return build_config\n\n        if field_name == \"mapped_json_display\":\n            try:\n                parsed_json = json.loads(field_value)\n                keys = DataOperationsComponent.extract_all_paths(parsed_json)\n                build_config[\"selected_key\"][\"options\"] = keys\n                build_config[\"selected_key\"][\"show\"] = True\n            except (json.JSONDecodeError, TypeError, ValueError) as e:\n                logger.error(f\"Error parsing mapped JSON: {e}\")\n                build_config[\"selected_key\"][\"show\"] = False\n\n        return build_config\n\n    def json_path(self) -> Data:\n        try:\n            import jq\n        except ImportError:\n            msg = \"jq is required for Path Selection. Install with: pip install jq\"\n            raise ImportError(msg) from None\n\n        try:\n            if not self.data or not self.selected_key:\n                msg = \"Missing input data or selected key.\"\n                raise ValueError(msg)\n            input_payload = self.data[0].data if isinstance(self.data, list) else self.data.data\n            compiled = jq.compile(self.selected_key)\n            result = compiled.input(input_payload).first()\n            if isinstance(result, dict):\n                return Data(data=result)\n            return Data(data={\"result\": result})\n        except (ValueError, TypeError, KeyError) as e:\n            self.status = f\"Error: {e!s}\"\n            self.log(self.status)\n            return Data(data={\"error\": str(e)})\n\n    def as_data(self) -> Data:\n        if not hasattr(self, \"operations\") or not self.operations:\n            return Data(data={})\n\n        selected_actions = [action[\"name\"] for action in self.operations]\n        logger.info(f\"selected_actions: {selected_actions}\")\n        if len(selected_actions) != 1:\n            return Data(data={})\n\n        action_map: dict[str, Callable[[], Data]] = {\n            \"Select Keys\": self.select_keys,\n            \"Literal Eval\": self.evaluate_data,\n            \"Combine\": self.combine_data,\n            \"Append or Update\": self.append_update,\n            \"Remove Keys\": self.remove_keys,\n            \"Rename Keys\": self.rename_keys,\n            \"Path Selection\": self.json_path,\n            \"JQ Expression\": self.json_query,\n        }\n        action_name = selected_actions[0]\n        handler: Callable[[], Data] | None = action_map.get(action_name)\n        if handler is None:\n            # Fail fast instead of silently returning empty data. Persisted flows\n            # may still reference a removed operation (e.g. \"Filter Values\").\n            msg = (\n                f\"The '{action_name}' operation is no longer supported by the JSON Operations component. \"\n                \"Update this flow to use the Operations component.\"\n            )\n            raise ValueError(msg)\n        try:\n            return handler()\n        except Exception as e:\n            logger.error(f\"Error executing {action_name}: {e!s}\")\n            raise\n"
+              },
+              "data": {
+                "_input_type": "JSONInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "JSON",
+                "dynamic": false,
+                "info": "Data object to filter.",
+                "input_types": [
+                  "Data",
+                  "JSON"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "data",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "mapped_json_display": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "api_editable": false,
+                "copy_field": false,
+                "display_name": "JSON to Map",
+                "dynamic": false,
+                "info": "Paste or preview your JSON here to explore its structure and select a path for extraction.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "mapped_json_display",
+                "override_skip": false,
+                "password": false,
+                "placeholder": "Add a JSON example.",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "operations": {
+                "_input_type": "SortableListInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Operations",
+                "dynamic": false,
+                "info": "List of operations to perform on the data.",
+                "limit": 1,
+                "name": "operations",
+                "options": [
+                  {
+                    "icon": "lasso-select",
+                    "name": "Select Keys"
+                  },
+                  {
+                    "icon": "braces",
+                    "name": "Literal Eval"
+                  },
+                  {
+                    "icon": "merge",
+                    "name": "Combine"
+                  },
+                  {
+                    "icon": "circle-plus",
+                    "name": "Append or Update"
+                  },
+                  {
+                    "icon": "eraser",
+                    "name": "Remove Keys"
+                  },
+                  {
+                    "icon": "pencil-line",
+                    "name": "Rename Keys"
+                  },
+                  {
+                    "icon": "mouse-pointer",
+                    "name": "Path Selection"
+                  },
+                  {
+                    "icon": "terminal",
+                    "name": "JQ Expression"
+                  }
+                ],
+                "override_skip": false,
+                "placeholder": "Select Operation",
+                "real_time_refresh": true,
+                "required": false,
+                "search_category": [],
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "sortableList",
+                "value": [
+                  {
+                    "name": "JQ Expression",
+                    "icon": "terminal"
+                  }
+                ]
+              },
+              "query": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "JQ Expression",
+                "dynamic": false,
+                "info": "JSON Query to filter the data. Used by Parse JSON operation.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "query",
+                "override_skip": false,
+                "placeholder": "e.g., .properties.id",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "def nonempty: type == \"string\" and length > 0;\ndef finite_number: type == \"number\" and (isnan | not) and (isinfinite | not);\nif .status_code != 200 then error(\"The fixture request did not return HTTP 200.\")\nelif (.result | type) != \"object\" or .result.synthetic != true then error(\"Expected the explicitly synthetic teaching fixture.\")\nelif (.result.events | type) != \"array\" then error(\"Expected an events array.\")\nelse\n  .result.events as $events |\n  [ $events[] as $event |\n    if ($event.id | nonempty) and ($event.home_team | nonempty) and ($event.away_team | nonempty)\n       and $event.home_team != $event.away_team and ($event.bookmakers | type) == \"array\"\n    then $event.bookmakers[] as $book |\n      (if ($book.markets | type) == \"array\" then [$book.markets[] | select(.key == \"h2h\")] else [] end) as $markets |\n      (if ($markets | length) == 1 and ($markets[0].outcomes | type) == \"array\" then $markets[0].outcomes else [] end) as $outcomes |\n      ([$outcomes[] | .name] | sort) as $names |\n      {\n        event_id: $event.id,\n        home_team: $event.home_team,\n        away_team: $event.away_team,\n        bookmaker: $book.title,\n        bookmaker_key: $book.key,\n        market: \"h2h\",\n        source_last_update: ($book.last_update // null),\n        timestamp_present: ($book.last_update | nonempty),\n        market_complete: (\n          ($book.key | nonempty) and\n          ([$event.bookmakers[] | select(.key == $book.key)] | length) == 1 and\n          ($markets | length) == 1 and\n          ($names == ([$event.home_team, $event.away_team] | sort) or\n           $names == ([$event.home_team, $event.away_team, \"Draw\"] | sort)) and\n          all($outcomes[]; .price | finite_number)\n        ),\n        h2h_group_count: ($markets | length),\n        outcomes: $outcomes\n      }\n    else error(\"An event is missing its identity, teams, or bookmaker list.\") end\n  ] as $checks |\n  {\n    scope: \"Synthetic fixture audit. No current odds or freshness claim.\",\n    event_count: ($events | length),\n    complete_markets: ([$checks[] | select(.market_complete)] | length),\n    incomplete_or_ambiguous_markets: ([$checks[] | select(.market_complete | not)] | length),\n    missing_source_timestamps: ([$checks[] | select(.timestamp_present | not)] | length),\n    timestamp_note: \"Timestamps are copied as supplied. Presence does not establish validity or freshness.\",\n    market_checks: $checks\n  }\nend\n"
+              },
+              "remove_keys_input": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Remove Keys",
+                "dynamic": false,
+                "info": "List of keys to remove from the data.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "remove_keys_input",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": []
+              },
+              "rename_keys_input": {
+                "_input_type": "DictInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Rename Keys",
+                "dynamic": false,
+                "info": "List of keys to rename in the data.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "rename_keys_input",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "dict",
+                "value": {
+                  "old_key": "new_key"
+                }
+              },
+              "select_keys_input": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Select Keys",
+                "dynamic": false,
+                "info": "List of keys to select from the data. Only top-level keys can be selected.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "select_keys_input",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": []
+              },
+              "selected_key": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "api_editable": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Select Path",
+                "dynamic": true,
+                "external_options": {},
+                "info": "",
+                "name": "selected_key",
+                "options": [],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str"
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "DataOperations",
+          "showNode": true
+        },
+        "selected": false
+      },
+      {
+        "id": "ParserComponent-report",
+        "type": "genericNode",
+        "position": {
+          "x": 760,
+          "y": 680
+        },
+        "data": {
+          "id": "ParserComponent-report",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Extracts text using a template.",
+            "display_name": "Parser",
+            "documentation": "https://docs.langflow.org/parser",
+            "edited": false,
+            "field_order": [
+              "input_data",
+              "mode",
+              "pattern",
+              "sep"
+            ],
+            "frozen": false,
+            "icon": "braces",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "7ab5fd0e0a10",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "lfx.components.processing.parser.ParserComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Parsed Text",
+                "group_outputs": false,
+                "method": "parse_combined_text",
+                "name": "parsed_text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.custom.custom_component.component import Component\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, HandleInput, MessageTextInput, MultilineInput, TabInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass _DefaultDict(dict):\n    def __init__(self, data_item: Data):\n        super().__init__(data_item.data)\n        self.default_value = data_item.default_value\n\n    def __missing__(self, key):\n        return self.default_value if self.default_value is not None else \"\"\n\n\nclass ParserComponent(Component):\n    display_name = \"Parser\"\n    description = \"Extracts text using a template.\"\n    documentation: str = \"https://docs.langflow.org/parser\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"JSON or Table\",\n            input_types=[\"DataFrame\", \"Table\", \"Data\", \"JSON\"],\n            info=\"Accepts a DataFrame, a Data object, or a list of Data objects.\",\n            required=True,\n        ),\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"Parser\", \"Stringify\"],\n            value=\"Parser\",\n            info=\"Convert into raw string instead of using a template.\",\n            real_time_refresh=True,\n        ),\n        MultilineInput(\n            name=\"pattern\",\n            display_name=\"Template\",\n            info=(\n                \"Use variables within curly brackets to extract column values for DataFrames \"\n                \"or key values for Data.\"\n                \"For example: `Name: {Name}, Age: {Age}, Country: {Country}`\"\n            ),\n            value=\"Text: {text}\",  # Example default\n            dynamic=True,\n            show=True,\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"sep\",\n            display_name=\"Separator\",\n            advanced=True,\n            value=\"\\n\",\n            info=\"String used to separate rows/items.\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Parsed Text\",\n            name=\"parsed_text\",\n            info=\"Formatted text output.\",\n            method=\"parse_combined_text\",\n        ),\n    ]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        \"\"\"Dynamically hide/show `template` and enforce requirement based on `stringify`.\"\"\"\n        if field_name == \"mode\":\n            build_config[\"pattern\"][\"show\"] = self.mode == \"Parser\"\n            build_config[\"pattern\"][\"required\"] = self.mode == \"Parser\"\n            if field_value:\n                clean_data = BoolInput(\n                    name=\"clean_data\",\n                    display_name=\"Clean Data\",\n                    info=(\n                        \"Enable to clean the data by removing empty rows and lines \"\n                        \"in each cell of the DataFrame/ Data object.\"\n                    ),\n                    value=True,\n                    advanced=True,\n                    required=False,\n                )\n                build_config[\"clean_data\"] = clean_data.to_dict()\n            else:\n                build_config.pop(\"clean_data\", None)\n\n        return build_config\n\n    def _clean_args(self) -> tuple[DataFrame | None, Data | list[Data] | None]:\n        \"\"\"Prepare arguments based on input type.\"\"\"\n        input_data = self.input_data\n\n        match input_data:\n            case list() if all(isinstance(item, Data) for item in input_data):\n                return None, input_data\n            case DataFrame():\n                return input_data, None\n            case Data():\n                return None, input_data\n            case dict() if \"data\" in input_data:\n                try:\n                    if \"columns\" in input_data:  # Likely a DataFrame\n                        return DataFrame.from_dict(input_data), None\n                    # Likely a Data object\n                    return None, Data(**input_data)\n                except (TypeError, ValueError, KeyError) as e:\n                    msg = f\"Invalid structured input provided: {e!s}\"\n                    raise ValueError(msg) from e\n            case _:\n                msg = f\"Unsupported input type: {type(input_data)}. Expected DataFrame, Data, or list[Data].\"\n                raise ValueError(msg)\n\n    def parse_combined_text(self) -> Message:\n        \"\"\"Parse all rows/items into a single text or convert input to string if `stringify` is enabled.\"\"\"\n        # Early return for stringify option\n        if self.mode == \"Stringify\":\n            return self.convert_to_string()\n\n        df, data = self._clean_args()\n\n        lines = []\n        if df is not None:\n            for _, row in df.iterrows():\n                formatted_text = self.pattern.format(**row.to_dict())\n                lines.append(formatted_text)\n        elif data is not None:\n            data_items = data if isinstance(data, list) else [data]\n            for data_item in data_items:\n                formatted_text = self.pattern.format_map(_DefaultDict(data_item))\n                lines.append(formatted_text)\n\n        combined_text = self.sep.join(lines)\n        self.status = combined_text\n        return Message(text=combined_text)\n\n    def convert_to_string(self) -> Message:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        clean_data = getattr(self, \"clean_data\", False)\n        if isinstance(self.input_data, list):\n            result = \"\\n\".join(safe_convert(item, clean_data=clean_data) for item in self.input_data)\n        else:\n            result = safe_convert(self.input_data, clean_data=clean_data)\n        self.log(f\"Converted to string with length: {len(result)}\")\n\n        message = Message(text=result)\n        self.status = message\n        return message\n"
+              },
+              "input_data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "JSON or Table",
+                "dynamic": false,
+                "info": "Accepts a DataFrame, a Data object, or a list of Data objects.",
+                "input_types": [
+                  "DataFrame",
+                  "Table",
+                  "Data",
+                  "JSON"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_data",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "mode": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Mode",
+                "dynamic": false,
+                "info": "Convert into raw string instead of using a template.",
+                "name": "mode",
+                "options": [
+                  "Parser",
+                  "Stringify"
+                ],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "tab",
+                "value": "Stringify"
+              },
+              "pattern": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "api_editable": false,
+                "copy_field": false,
+                "display_name": "Template",
+                "dynamic": true,
+                "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "pattern",
+                "override_skip": false,
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "Text: {text}"
+              },
+              "sep": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "String used to separate rows/items.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sep",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "\n"
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ParserComponent",
+          "showNode": true
+        },
+        "selected": false
+      },
+      {
+        "id": "ChatOutput-report",
+        "type": "genericNode",
+        "position": {
+          "x": 1140,
+          "y": 680
+        },
+        "data": {
+          "id": "ChatOutput-report",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "should_store_message",
+              "sender",
+              "sender_name",
+              "session_id",
+              "context_id",
+              "data_template",
+              "clean_data"
+            ],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "84009527d08c",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "orjson",
+                    "version": "3.11.9"
+                  },
+                  {
+                    "name": "fastapi",
+                    "version": "0.139.2"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 3
+              },
+              "module": "lfx.components.input_output.chat_output.ChatOutput"
+            },
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "clean_data": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Basic Clean Data",
+                "dynamic": false,
+                "info": "Whether to clean data before converting to string.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_data",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.schema.properties import Source\nfrom lfx.template.field.base import Output\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"JSON\", \"DataFrame\", \"Table\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            advanced=True,\n            info=\"Whether to clean data before converting to string.\",\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, _, display_name, source_id = self.get_properties_from_source_component()\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message) and not self.is_connected_to_chat_input():\n            message = self.input_value\n            # Update message properties\n            message.text = text\n            # Preserve existing session_id from the incoming message if it exists\n            existing_session_id = message.session_id\n        else:\n            message = Message(text=text)\n            existing_session_id = None\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        # Preserve session_id from incoming message, or use component/graph session_id\n        message.session_id = (\n            self.session_id or existing_session_id or (self.graph.session_id if hasattr(self, \"graph\") else None) or \"\"\n        )\n        message.context_id = self.context_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n\n        # Store message if needed\n        if message.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        # Set accumulated token usage from all upstream LLM vertices.\n        # This must happen AFTER send_message() because streaming captures\n        # usage from chunks and would overwrite accumulated totals.\n        if hasattr(self, \"_vertex\") and self._vertex is not None:\n            accumulated_usage = self._vertex._accumulate_upstream_token_usage()  # noqa: SLF001\n            if accumulated_usage:\n                message.properties.usage = accumulated_usage\n                if self.should_store_message and message.get_id():\n                    message = await self._update_stored_message(message)\n                    await self._send_message_event(message, id_=message.get_id())\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            clean_data: bool = getattr(self, \"clean_data\", False)\n            return \"\\n\".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value)\n"
+              },
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Context ID",
+                "dynamic": false,
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "data_template": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Data Template",
+                "dynamic": false,
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "data_template",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "{text}"
+              },
+              "input_value": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "Message to be passed as output.",
+                "input_types": [
+                  "Data",
+                  "JSON",
+                  "DataFrame",
+                  "Table",
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "api_editable": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "Machine"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "Fixture Audit"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ChatOutput",
+          "showNode": true
+        },
+        "selected": false
+      },
+      {
+        "id": "note-setup",
+        "type": "noteNode",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "width": 1460,
+        "height": 640,
+        "measured": {
+          "width": 1460,
+          "height": 640
+        },
+        "data": {
+          "id": "note-setup",
+          "type": "note",
+          "node": {
+            "display_name": "",
+            "description": "# Odds Sample Audit\n\nInspect a fictional sports-odds response with built-in components. No API key, LLM or credits are required.\n\n1. Import this flow into Langflow. Install the `jq` Python package in its environment for JQ Expression.\n2. Run the final Chat Output component. It makes one GET to the pinned GitHub fixture and prints a structured audit.\n3. Expect one complete market, two incomplete or ambiguous markets, and one missing source timestamp.\n\nThe audit checks team outcomes, duplicate groups, numeric prices and timestamp presence. It preserves source values; a present timestamp does not establish validity or freshness. Incomplete outcomes are diagnostic input, not usable quotes.\n\nNo current odds, recommendations or profit are calculated. Chat history and response file saving are off; your Langflow instance may retain execution logs. Keep real account data and logs private if adapting this flow.\n\nBy the ParlayAPI team with AI assistance. [Source and own-key SDK](https://github.com/JacobiusMakes/parlay-api-python). MIT-licensed software and fictional fixture; no API data redistribution rights are included.\n",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "blue"
+            }
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "APIRequest-fixture-DataOperations-audit",
+        "source": "APIRequest-fixture",
+        "target": "DataOperations-audit",
+        "sourceHandle": "{œdataTypeœ: œAPIRequestœ, œidœ: œAPIRequest-fixtureœ, œnameœ: œdataœ, œoutput_typesœ: [œJSONœ]}",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œDataOperations-auditœ, œinputTypesœ: [œDataœ, œJSONœ], œtypeœ: œotherœ}",
+        "data": {
+          "sourceHandle": {
+            "dataType": "APIRequest",
+            "id": "APIRequest-fixture",
+            "name": "data",
+            "output_types": [
+              "JSON"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "DataOperations-audit",
+            "inputTypes": [
+              "Data",
+              "JSON"
+            ],
+            "type": "other"
+          }
+        },
+        "animated": false,
+        "selected": false
+      },
+      {
+        "id": "DataOperations-audit-ParserComponent-report",
+        "source": "DataOperations-audit",
+        "target": "ParserComponent-report",
+        "sourceHandle": "{œdataTypeœ: œDataOperationsœ, œidœ: œDataOperations-auditœ, œnameœ: œdata_outputœ, œoutput_typesœ: [œJSONœ]}",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-reportœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}",
+        "data": {
+          "sourceHandle": {
+            "dataType": "DataOperations",
+            "id": "DataOperations-audit",
+            "name": "data_output",
+            "output_types": [
+              "JSON"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "ParserComponent-report",
+            "inputTypes": [
+              "DataFrame",
+              "Table",
+              "Data",
+              "JSON"
+            ],
+            "type": "other"
+          }
+        },
+        "animated": false,
+        "selected": false
+      },
+      {
+        "id": "ParserComponent-report-ChatOutput-report",
+        "source": "ParserComponent-report",
+        "target": "ChatOutput-report",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-reportœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-reportœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ParserComponent",
+            "id": "ParserComponent-report",
+            "name": "parsed_text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-report",
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "animated": false,
+        "selected": false
+      }
+    ],
+    "viewport": {
+      "x": 100,
+      "y": 200,
+      "zoom": 0.65
+    }
+  }
+}
