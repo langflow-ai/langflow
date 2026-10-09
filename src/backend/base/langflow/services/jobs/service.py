@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
+import os
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -13,6 +15,7 @@ from uuid import UUID, uuid4
 
 from lfx.graph.exceptions import GraphPausedException
 from lfx.observability import inject_trace_carrier
+from sqlalchemy import false, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlmodel import col, func, select
 
@@ -21,6 +24,7 @@ from langflow.services.database.models.jobs.crud import (
     get_latest_jobs_by_asset_ids,
     update_job_status,
 )
+from langflow.services.database.models.jobs.metrics import archive_retention_metrics, prepare_retention_metrics
 from langflow.services.database.models.jobs.model import (
     ExecutionSignal,
     Job,
@@ -42,6 +46,10 @@ _APPEND_EVENT_MAX_RETRIES = 50
 # is waiting on a human who may answer weeks later, so age never makes it
 # eligible.
 _RETAINABLE_STATUSES = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT)
+
+# Floor for a keep-alive's heartbeat interval, matching the background runner's,
+# so a tiny configured interval cannot turn heartbeats into a write loop.
+_MIN_HEARTBEAT_INTERVAL_S = 0.1
 
 
 def _unwrap_pause_payload(payload: dict | None) -> dict | None:
@@ -69,6 +77,9 @@ class JobService(Service):
 
     def __init__(self):
         """Initialize the job service."""
+        # Process-unique owner stamped on the heartbeat of jobs this process keeps alive.
+        self._owner = f"jobs:{os.getpid()}:{uuid4().hex[:8]}"
+        self._keep_alives: dict[UUID, tuple[asyncio.Task, asyncio.Event]] = {}
         self.set_ready()
 
     async def get_jobs_by_flow_id(
@@ -132,8 +143,11 @@ class JobService(Service):
         dedupe_key: str | None = None,
         end_user_id: str | None = None,
         initial_metadata: dict | None = None,
+        status: JobStatus = JobStatus.QUEUED,
+        *,
+        heartbeat: bool = False,
     ) -> Job:
-        """Create a new job record with QUEUED status.
+        """Create a new job record, QUEUED unless ``status`` says otherwise.
 
         Args:
             job_id: The job ID
@@ -153,6 +167,14 @@ class JobService(Service):
                 row. The background workflow facade uses this for its replay request and
                 encrypted override envelope so a worker can never claim a partially
                 initialized job.
+            status: Initial status. A caller that starts the run right away, in the same
+                request, passes IN_PROGRESS and calls ``execute_with_status`` with
+                ``mark_in_progress=False``, which saves the QUEUED -> IN_PROGRESS UPDATE.
+                Leave it QUEUED for anything a worker or the startup sweep may pick up:
+                the sweep re-enqueues QUEUED workflow rows.
+            heartbeat: Insert the row already heartbeated by this process, so it is live
+                before ``start_keep_alive`` takes over. For a run this process starts
+                right away and keeps alive itself.
 
         Returns:
             Created Job object
@@ -165,6 +187,24 @@ class JobService(Service):
 
         async with session_scope() as session:
             if dedupe_key is not None:
+                dialect = session.get_bind().dialect.name
+                if dialect == "postgresql":
+                    # A waiting creator must see the previous creator's commit, even when
+                    # the engine defaults to REPEATABLE READ. This fresh, owned transaction
+                    # alone uses READ COMMITTED; the pooled connection's default is restored.
+                    await session.connection(execution_options={"isolation_level": "READ COMMITTED"})
+                    lock_key = int.from_bytes(
+                        hashlib.sha256(f"langflow.job.dedupe:{user_id}:{dedupe_key}".encode()).digest()[:8],
+                        "big",
+                        signed=True,
+                    )
+                    await session.exec(select(func.pg_advisory_xact_lock(lock_key)))
+                elif dialect == "sqlite":
+                    # Reserve SQLite's writer before reading. No rows change, but the
+                    # reservation prevents another creator from passing the same check.
+                    # Unlike BEGIN IMMEDIATE, this also works with an explicit BEGIN.
+                    await session.exec(update(Job).where(false()).values(job_id=Job.job_id))
+
                 # Why: scope uniqueness to the owner — a client-controlled idempotency_key flows into
                 # dedupe_key, so a global count would let user A collide with / DoS user B's key (and leak
                 # its existence). Ownerless rows (single-tenant AUTO_LOGIN, user_id None) share one space.
@@ -193,10 +233,12 @@ class JobService(Service):
             metadata = dict(initial_metadata or {})
             if end_user_id:
                 metadata["end_user_id"] = end_user_id
+            if heartbeat:
+                metadata.update(self._heartbeat_stamp())
             job = Job(
                 job_id=job_id,
                 flow_id=flow_id,
-                status=JobStatus.QUEUED,
+                status=status,
                 type=job_type,
                 asset_id=asset_id,
                 asset_type=asset_type,
@@ -532,6 +574,68 @@ class JobService(Service):
         age = (datetime.now(timezone.utc) - hb).total_seconds()
         return age > lease_ttl_s
 
+    def _heartbeat_stamp(self) -> dict[str, str]:
+        return {"owner": self._owner, "heartbeat_at": datetime.now(timezone.utc).isoformat()}
+
+    async def start_keep_alive(self, job_id: UUID, *, interval_s: float | None = None) -> None:
+        """Heartbeat ``job_id`` from this process for as long as it stays IN_PROGRESS.
+
+        For runs that execute in this process outside the background runner, which
+        heartbeats its own jobs. A job with no heartbeat looks orphaned to the first
+        sweep that runs while it is in flight (a sibling worker's startup sweep, or
+        the Redis-fallback watchdog), which fails it as worker_lost. The heartbeat
+        ends at ``stop_keep_alive`` or once the job leaves IN_PROGRESS.
+
+        Each heartbeat rewrites ``job_metadata`` whole, so the caller must not write
+        that column itself until ``stop_keep_alive`` returns.
+        """
+        if job_id in self._keep_alives:
+            return
+        if interval_s is None:
+            from langflow.services.deps import get_settings_service
+
+            interval_s = get_settings_service().settings.background_heartbeat_interval_s
+        stop = asyncio.Event()
+        task = asyncio.create_task(self._keep_alive_loop(job_id, stop, max(interval_s, _MIN_HEARTBEAT_INTERVAL_S)))
+        self._keep_alives[job_id] = (task, stop)
+        task.add_done_callback(lambda done: self._forget_keep_alive(job_id, done))
+
+    async def stop_keep_alive(self, job_id: UUID) -> None:
+        """Stop ``job_id``'s heartbeat, returning only once no heartbeat write is in flight."""
+        entry = self._keep_alives.pop(job_id, None)
+        if entry is None:
+            return
+        task, stop = entry
+        stop.set()
+        await asyncio.wait({task})
+
+    async def _keep_alive_loop(self, job_id: UUID, stop: asyncio.Event, interval_s: float) -> None:
+        while not stop.is_set() and await self._beat(job_id):
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(stop.wait(), timeout=interval_s)
+
+    async def _beat(self, job_id: UUID) -> bool:
+        """Heartbeat ``job_id`` if it is still IN_PROGRESS. False once it is not."""
+        # session_scope logs a failed write; a transient DB error must not end the heartbeat.
+        with contextlib.suppress(Exception):
+            async with session_scope() as session:
+                # The row lock keeps a concurrent job_metadata write from being lost
+                # under this read-modify-write on Postgres. SQLite has no row locks.
+                job = await session.get(Job, job_id, with_for_update=True)
+                if job is None or job.status != JobStatus.IN_PROGRESS:
+                    return False
+                job.job_metadata = {**(job.job_metadata or {}), **self._heartbeat_stamp()}
+                session.add(job)
+                await session.flush()
+        return True
+
+    def _forget_keep_alive(self, job_id: UUID, task: asyncio.Task) -> None:
+        if not task.cancelled():
+            task.exception()  # Retrieve it, so a crashed loop is not reported as never retrieved.
+        entry = self._keep_alives.get(job_id)
+        if entry is not None and entry[0] is task:
+            del self._keep_alives[job_id]
+
     async def increment_attempt_if(self, job_id: UUID, *, expected: int, new: int) -> bool:
         """Atomically bump ``job_metadata.attempt`` from ``expected`` to ``new``.
 
@@ -780,7 +884,9 @@ class JobService(Service):
         sweep skips rows the first has locked and takes a disjoint batch instead
         of queueing behind it (or deadlocking on the child deletes), and a
         selected row cannot change status before it is deleted. SQLite renders
-        no lock clause and serializes writers on its own.
+        no lock clause, so a metrics-archive insert reserves its writer before
+        selecting the batch. Background outcome totals are archived in this
+        same transaction, independently of whether Prometheus is enabled.
 
         On SQLite, each DELETE uses at most 500 job IDs to stay below older
         builds' 999-variable limit; the selected batch remains one transaction.
@@ -822,6 +928,7 @@ class JobService(Service):
         )
         preserves_memory_state = exists().where(col(MemoryBaseWorkflowRun.ingestion_job_id) == col(Job.job_id))
         async with session_scope() as session:
+            await prepare_retention_metrics(session)
             result = await session.exec(
                 select(Job.job_id)
                 .where(
@@ -839,6 +946,7 @@ class JobService(Service):
             delete_batch_size = 500 if session.get_bind().dialect.name == "sqlite" else len(job_ids)
             for start in range(0, len(job_ids), delete_batch_size):
                 batch_ids = job_ids[start : start + delete_batch_size]
+                await archive_retention_metrics(session, batch_ids)
                 for child in (JobEvent, ExecutionSignal, JobCheckpoint):
                     await session.exec(delete(child).where(col(child.job_id).in_(batch_ids)))  # type: ignore[call-overload]
                 await session.exec(delete(Job).where(col(Job.job_id).in_(batch_ids)))  # type: ignore[call-overload]
@@ -925,7 +1033,7 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
-    async def sweep_orphans(self, *, lease_ttl_s: float = 30.0) -> list[UUID]:
+    async def sweep_orphans(self, *, lease_ttl_s: float = 30.0, require_heartbeat: bool = False) -> list[UUID]:
         """Reconcile GENUINELY orphaned IN_PROGRESS jobs (stale/absent heartbeat).
 
         Liveness-aware: only an IN_PROGRESS row whose heartbeat is older than
@@ -938,6 +1046,10 @@ class JobService(Service):
         finished_timestamp, and append a terminal ``run_failed`` event so a
         reattacher always sees a clean end. QUEUED jobs are intentionally
         untouched (at-least-once: they get re-picked by a fresh worker).
+
+        ``require_heartbeat`` skips rows that never recorded a heartbeat. Runs that
+        do not heartbeat at all (synchronous runs, playground builds) carry none,
+        so a sweep after startup must not read that as death.
 
         Returns the ids of the jobs transitioned to FAILED.
         """
@@ -956,6 +1068,8 @@ class JobService(Service):
                     # Live owner still heartbeating — leave the run alone.
                     continue
                 prior_heartbeat = (job.job_metadata or {}).get("heartbeat_at")
+                if require_heartbeat and prior_heartbeat is None:
+                    continue
                 heartbeat_unchanged = hb_expr.is_(None) if prior_heartbeat is None else hb_expr == prior_heartbeat
                 claim = (
                     update(Job)
@@ -1089,11 +1203,12 @@ class JobService(Service):
             await session.flush()
             return [job.job_id for job in jobs]
 
-    async def execute_with_status(self, job_id: UUID, run_coro_func, *args, **kwargs):
+    async def execute_with_status(self, job_id: UUID, run_coro_func, *args, mark_in_progress: bool = True, **kwargs):
         """Wrapper that manages job status lifecycle around a coroutine.
 
         This function:
-        1. Updates status to IN_PROGRESS before execution
+        1. Updates status to IN_PROGRESS before execution (unless ``mark_in_progress`` is
+           False: the caller created the row IN_PROGRESS already)
         2. Executes the wrapped function
         3. Updates status to COMPLETED on success or FAILED on error
         4. Sets finished_timestamp when done
@@ -1102,6 +1217,8 @@ class JobService(Service):
             job_id: The job ID
             run_coro_func: The coroutine function to wrap
             *args: Positional arguments to pass to run_coro_func
+            mark_in_progress: Write IN_PROGRESS before running. Keyword-only, and not
+                passed on to run_coro_func.
             **kwargs: Keyword arguments to pass to run_coro_func
 
         Returns:
@@ -1115,9 +1232,9 @@ class JobService(Service):
         await logger.ainfo(f"Starting job execution: job_id={job_id}")
 
         try:
-            # Update to IN_PROGRESS
-            await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
-            await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
+            if mark_in_progress:
+                await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
+                await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
 
             # Execute the wrapped function
             await logger.ainfo(f"Executing job function for job_id={job_id}")

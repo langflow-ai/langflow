@@ -1,9 +1,11 @@
+from pathlib import Path, PureWindowsPath
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access, enforce_storage_key_scope
 from sqlalchemy import func
 from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import col, delete, select
@@ -35,7 +37,9 @@ from langflow.services.database.models.vertex_builds.crud import (
     get_vertex_builds_by_flow_id,
 )
 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
-from langflow.services.deps import get_memory_base_service, get_tracing_service
+from langflow.services.deps import get_memory_base_service, get_settings_service, get_tracing_service
+from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
+from langflow.services.memory_base.ingestion import session_storage_operation
 from langflow.services.tracing.langfuse import (
     delete_feedback_score,
     langfuse_is_configured,
@@ -46,6 +50,36 @@ from langflow.services.tracing.langfuse import (
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 MESSAGE_UPDATE_FAILED = "Could not update the message."
+
+
+def _validate_message_attachment_scopes(files: list[str] | None, scope_ids: tuple[object, ...]) -> None:
+    """Keep edited attachments inside the authenticated user's message storage namespaces."""
+    scopes = tuple(scope for scope in scope_ids if scope is not None)
+    try:
+        for attachment in files or ():
+            file = attachment
+            path = Path(file)
+            if ".." in file.replace("\\", "/").split("/"):
+                msg = "Message attachments cannot contain parent traversal."
+                raise LocalFileAccessError(msg)
+            if path.is_absolute():
+                settings = get_settings_service().settings
+                if settings.storage_type == "s3":
+                    msg = "Object-storage attachments must use uploaded-file keys."
+                    raise LocalFileAccessError(msg)
+                # Normal component execution stores resolved local paths. Retain those
+                # references on edits, but authorize them against trusted route scopes.
+                resolved = enforce_local_file_access(path, scope_ids=scopes)
+                file = resolved.relative_to(Path(settings.config_dir).resolve()).as_posix()
+            elif PureWindowsPath(file).drive:
+                msg = "Message attachments must use uploaded-file keys."
+                raise LocalFileAccessError(msg)
+            enforce_storage_key_scope(file, scopes)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(
+            status_code=400, detail="Message attachment is outside the permitted storage scope."
+        ) from exc
+
 
 # Message-history reads must never return an entire table: the editor polls
 # this endpoint every few seconds, so an unbounded default serializes the full
@@ -167,28 +201,10 @@ async def _ensure_flow_action_or_404(
     return flow
 
 
-async def _purge_memory_base_session_data(user_id: UUID, session_ids: list[str]) -> None:
-    """Best-effort: drop ingested chunks for the deleted sessions from each MB.
-
-    Failures here are logged but never abort the message-delete response — the
-    user expects "delete this session" to succeed even if KB cleanup hits an
-    issue. The follow-up consequence (ghost chunks) is logged for ops to fix.
-    """
-    if not session_ids:
-        return
-    try:
-        await get_memory_base_service().purge_session_data(user_id=user_id, session_ids=session_ids)
-    except Exception:  # noqa: BLE001
-        # Lazy import to avoid pulling logger into the module-import path for
-        # an endpoint that doesn't need it on the happy path.
-        from lfx.log.logger import logger
-
-        await logger.aerror(
-            "Memory Base session purge failed for user=%s sessions=%d",
-            user_id,
-            len(session_ids),
-            exc_info=True,
-        )
+async def _purge_memory_base_session_data(user_id: UUID, session_ids: list[str], *, db=None) -> None:
+    """Purge vectors before committing message deletion, preserving retry on failure."""
+    if session_ids:
+        await get_memory_base_service().purge_session_data(user_id=user_id, session_ids=session_ids, db=db)
 
 
 @router.get("/builds", dependencies=[Depends(get_current_active_user)])
@@ -350,6 +366,7 @@ async def delete_messages(
     session: DbSession,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> None:
+    """Delete authorized messages after fencing associated Memory storage and tracking data."""
     try:
         # Ownership guard lives in the CRUD layer: only messages belonging to
         # current_user are selected and deleted; foreign IDs are ignored.
@@ -357,7 +374,22 @@ async def delete_messages(
         # Practical effect:
         # - Mixed lists (owned + foreign IDs) only delete owned rows.
         # - Pure foreign lists keep endpoint idempotent with 204 and no changes.
-        await delete_messages_for_user(session, current_user.id, message_ids)
+        owned_sessions = list(
+            await session.exec(
+                select(MessageTable.session_id)
+                .distinct()
+                .join(Flow, MessageTable.flow_id == Flow.id)
+                .where(Flow.user_id == current_user.id)
+                .where(col(MessageTable.id).in_(message_ids))
+                .where(col(MessageTable.session_id).isnot(None))
+            )
+        )
+        async with session_storage_operation(user_id=current_user.id, session_ids=owned_sessions):
+            await delete_messages_for_user(session, current_user.id, message_ids)
+            await session.commit()
+    except StorageUnavailableError as e:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -370,6 +402,7 @@ async def update_message(
     background_tasks: BackgroundTasks,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
+    """Update an owned message after authorizing its flow and attachment namespaces."""
     # Rollback expires ORM state, so keep the ownership key as a stable scalar
     # for the post-race lookup.
     current_user_id = current_user.id
@@ -394,6 +427,8 @@ async def update_message(
         )
         if db_flow is None:
             raise HTTPException(status_code=404, detail="Message not found")
+
+    _validate_message_attachment_scopes(message.files, (current_user.id, db_message.flow_id))
 
     try:
         previous_positive_feedback = _get_positive_feedback_value(db_message)
@@ -499,18 +534,19 @@ async def delete_messages_session(
     Only deletes messages from sessions belonging to flows owned by the current user.
     """
     try:
-        # Keep endpoint idempotent (204) while enforcing ownership in CRUD.
-        # If the session belongs to another user, this becomes a safe no-op.
-        # This preserves existing client behavior while blocking cross-user deletes.
-        await delete_messages_for_user_by_session(session, current_user.id, session_id)
-        await session.commit()
+        # Memory tracking is owner-scoped independently of message rows. It
+        # must still be purged when the last message was deleted earlier.
+        owned_sessions = [session_id]
+        async with session_storage_operation(user_id=current_user.id, session_ids=owned_sessions):
+            await _purge_memory_base_session_data(current_user.id, owned_sessions, db=session)
+            await delete_messages_for_user_by_session(session, current_user.id, session_id)
+            await session.commit()
+    except StorageUnavailableError as e:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:
         await session.rollback()
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-    # Purge ingested chunks AFTER the message rows are committed so a chunk-delete
-    # failure can never roll back the user-visible message delete.
-    await _purge_memory_base_session_data(current_user.id, [session_id])
 
     return {"message": "Messages deleted successfully"}
 
@@ -556,35 +592,45 @@ async def delete_messages_sessions(
         session_stmt = session_stmt.where(col(MessageTable.session_id).in_(session_ids))
 
         result = await session.exec(session_stmt)
-        affected_session_ids = list(result)
+        from langflow.services.database.models.memory_base.model import MemoryBase, MemoryBaseSession
+
+        tracked = await session.exec(
+            select(MemoryBaseSession.session_id)
+            .join(MemoryBase, MemoryBaseSession.memory_base_id == MemoryBase.id)
+            .where(MemoryBase.user_id == current_user.id)
+            .where(col(MemoryBaseSession.session_id).in_(session_ids))
+        )
+        affected_session_ids = sorted(set(result).union(tracked))
         affected_count = len(affected_session_ids)
 
         if not affected_session_ids:
             # No messages found for this user's flows with these session_ids
             return {"message": "No sessions to delete", "deleted_count": 0}
 
-        # Get message IDs to delete
-        msg_stmt = select(MessageTable.id)
-        msg_stmt = msg_stmt.join(Flow, MessageTable.flow_id == Flow.id)
-        msg_stmt = msg_stmt.where(Flow.user_id == current_user.id)
-        msg_stmt = msg_stmt.where(col(MessageTable.session_id).in_(affected_session_ids))
+        async with session_storage_operation(user_id=current_user.id, session_ids=affected_session_ids):
+            await _purge_memory_base_session_data(current_user.id, affected_session_ids, db=session)
+            # Get message IDs to delete
+            msg_stmt = select(MessageTable.id)
+            msg_stmt = msg_stmt.join(Flow, MessageTable.flow_id == Flow.id)
+            msg_stmt = msg_stmt.where(Flow.user_id == current_user.id)
+            msg_stmt = msg_stmt.where(col(MessageTable.session_id).in_(affected_session_ids))
 
-        msg_result = await session.exec(msg_stmt)
-        message_ids = list(msg_result)
+            msg_result = await session.exec(msg_stmt)
+            message_ids = list(msg_result)
 
-        # Delete only the messages that belong to the user
-        await session.exec(
-            delete(MessageTable)
-            .where(col(MessageTable.id).in_(message_ids))
-            .execution_options(synchronize_session="fetch")
-        )
-        await session.commit()
+            # Delete only the messages that belong to the user
+            await session.exec(
+                delete(MessageTable)
+                .where(col(MessageTable.id).in_(message_ids))
+                .execution_options(synchronize_session="fetch")
+            )
+            await session.commit()
+    except StorageUnavailableError as e:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:
         await session.rollback()
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-    # Purge ingested chunks AFTER the messages are committed; same reasoning as above.
-    await _purge_memory_base_session_data(current_user.id, list(affected_session_ids))
 
     return {
         "message": f"Messages deleted successfully for {affected_count} session{'s' if affected_count != 1 else ''}",
@@ -719,6 +765,8 @@ async def update_shared_message(
 
     if not db_message:
         raise HTTPException(status_code=404, detail="Message not found")
+
+    _validate_message_attachment_scopes(message.files, (current_user.id, virtual_flow_id, source_flow_id))
 
     try:
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)

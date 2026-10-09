@@ -229,6 +229,9 @@ export default function IOModal({
       window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
     }
     if (newChatOnPlayground && !sessionsLoading) {
+      // "New chat" sends under the generated `sessionId`. Select it by id: the
+      // refetched list is newest first and may not be complete.
+      const newSessionId = sessionId;
       const handleRefetchAndSetSession = async () => {
         try {
           await refetchSessions();

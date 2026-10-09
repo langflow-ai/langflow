@@ -206,6 +206,31 @@ class TestFilterOperations:
         assert len(result) == 2  # John(50k) and Alice(55k)
         assert all(salary < 60000 for salary in result["salary"])
 
+    def test_filter_equals_numeric_column(self, component, sample_dataframe):
+        """Test that a text Filter Value matches a numeric column."""
+        component.df = sample_dataframe
+        component.operation = [{"name": "Filter", "icon": "filter"}]
+        component.column_name = "age"
+        component.filter_operator = "equals"
+        component.filter_value = "30"
+
+        result = component.perform_operation()
+
+        assert result["name"].tolist() == ["Jane Smith"]
+
+    def test_filter_not_equals_numeric_column(self, component, sample_dataframe):
+        """Test that a text Filter Value excludes matching rows of a numeric column."""
+        component.df = sample_dataframe
+        component.operation = [{"name": "Filter", "icon": "filter"}]
+        component.column_name = "age"
+        component.filter_operator = "not equals"
+        component.filter_value = "30"
+
+        result = component.perform_operation()
+
+        assert len(result) == 4
+        assert 30 not in result["age"].tolist()
+
 
 class TestEdgeCases:
     """Test edge cases and error conditions."""

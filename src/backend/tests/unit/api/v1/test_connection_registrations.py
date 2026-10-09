@@ -122,6 +122,32 @@ async def test_never_returns_client_credentials(client: AsyncClient, logged_in_h
     assert "redirect_uri" not in body
 
 
+async def test_google_desktop_token_parameter_is_never_listed(client: AsyncClient, logged_in_headers, monkeypatch):
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "desktop")
+    monkeypatch.setenv(
+        "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS",
+        json.dumps(
+            {
+                "google-desktop": {
+                    "provider": "google",
+                    "client_id": "qa-desktop-id",
+                    "client_secret": "qa-desktop-parameter",  # pragma: allowlist secret - test fixture
+                    "client_type": "public",
+                    "context": "desktop",
+                    "redirect_uri": "http://localhost/api/v1/connections/oauth/google/callback",
+                    "scopes": _GOOGLE_SCOPES,
+                }
+            }
+        ),
+    )
+    response = await client.get("api/v1/connections/oauth/registrations", headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["registrations"][0]["client_type"] == "public"
+    assert "client_secret" not in response.text
+    assert "qa-desktop-parameter" not in response.text
+    assert "qa-desktop-id" not in response.text
+
+
 async def test_is_never_cached_by_a_shared_proxy(client: AsyncClient, logged_in_headers, registrations):
     _ = registrations
     response = await client.get("api/v1/connections/oauth/registrations", headers=logged_in_headers)

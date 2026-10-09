@@ -30,6 +30,8 @@ from langflow.api.v1.flows_helpers import _export_variable_names, _sanitize_flow
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
+from langflow.services.audit import vocabulary as audit_vocab
+from langflow.services.audit.operations import stage_project_succeeded
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import FlowAction, filter_visible_resources
 from langflow.services.authorization.utils import _resolve_authz_domain
@@ -245,4 +247,15 @@ async def upload_project_flows(
         flow.folder_id = new_project.id
         flow.workspace_id = new_project.workspace_id
 
-    return await create_flows(session=session, flow_list=flow_list, current_user=current_user)
+    created = await create_flows(session=session, flow_list=flow_list, current_user=current_user)
+    await stage_project_succeeded(
+        session,
+        action=audit_vocab.PROJECT_CREATE,
+        operation=audit_vocab.AuditOperation.CREATE,
+        project_id=new_project.id,
+        project_name=new_project.name,
+        description=new_project.description,
+        flows_before={},
+        flows_after={flow.id: flow.name for flow in created},
+    )
+    return created

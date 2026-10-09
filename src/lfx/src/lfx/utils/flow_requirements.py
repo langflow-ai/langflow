@@ -257,6 +257,16 @@ def _extract_imports(source: str) -> set[str]:
     that lazy imports inside ``build_model()`` etc. are captured.  Returns only
     the first segment of each dotted import (e.g. ``foo`` from ``import foo.bar``).
     """
+    # Saved built-in code can predate a retired provider. Match exactly the
+    # same shipped-source inventory used by evaluation so exported deployment
+    # requirements cannot reinstall an SDK the current implementation removed.
+    from lfx.custom.legacy_storage_compat import resolve_shipped_storage_component
+
+    replacement = resolve_shipped_storage_component(source)
+    if replacement is not None:
+        module = inspect.getmodule(replacement)
+        if module is not None:
+            source = inspect.getsource(module)
     try:
         tree = ast.parse(source)
     except SyntaxError as exc:

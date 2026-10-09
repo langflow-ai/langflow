@@ -12,7 +12,8 @@ import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-base
  * them via ``backend_config["mode"]``.
  */
 const BACKEND_LABELS: Record<string, string> = {
-  chroma: "Chroma Local",
+  sqlite: "SQLite Local",
+  chroma: "Chroma Local (migration required)",
   opensearch: "OpenSearch",
   postgres: "Postgres pgvector",
 };
@@ -22,16 +23,16 @@ export const getKnowledgeBaseBackendLabel = (
   backendConfig?: Record<string, unknown>,
 ): string => {
   if (backendType === "chroma" && backendConfig?.["mode"] === "cloud") {
-    return "Chroma Cloud";
+    return "Chroma Cloud (migration required)";
   }
-  const normalized = backendType || "chroma";
+  const normalized = backendType || "sqlite";
   return BACKEND_LABELS[normalized] || normalized;
 };
 
 export const getKnowledgeBaseBackendTarget = (
   knowledgeBase: Pick<KnowledgeBaseInfo, "backend_type" | "backend_config">,
 ): string | null => {
-  const backendType = knowledgeBase.backend_type || "chroma";
+  const backendType = knowledgeBase.backend_type || "sqlite";
   const backendConfig = knowledgeBase.backend_config || {};
 
   if (backendType === "chroma" && backendConfig["mode"] === "cloud") {
@@ -39,9 +40,8 @@ export const getKnowledgeBaseBackendTarget = (
     return typeof database === "string" && database ? database : "Chroma Cloud";
   }
 
-  if (backendType === "chroma") {
-    return "Stored locally in Langflow";
-  }
+  if (backendType === "chroma") return "Migration required";
+  if (backendType === "sqlite") return "Stored locally in Langflow";
 
   if (backendType === "opensearch") {
     const indexName = backendConfig.index_name;

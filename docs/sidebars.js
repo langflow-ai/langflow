@@ -130,6 +130,7 @@ module.exports = {
             "Develop/external-authentication",
             "Develop/authorization",
             "Develop/admin-api-cli",
+            "Develop/connections",
             "Develop/connection-oauth",
             "Develop/entra-app-registration",
           ],
@@ -168,6 +169,7 @@ module.exports = {
               label: "Database guide for enterprise administrators"
             },
             "Develop/knowledge",
+            "Develop/knowledge-storage-upgrade",
             "Develop/memory-bases",
           ],
         },

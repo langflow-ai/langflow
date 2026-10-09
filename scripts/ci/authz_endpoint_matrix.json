@@ -231,7 +231,10 @@
       "frontend": "project create, edit, export, import, and delete controls use effective project permissions",
       "personas": "canonical_v1",
       "test_references": [
-        "src/backend/tests/unit/api/v1/test_projects.py::test_shared_project_download_filters_flows_by_read_permission"
+        "src/backend/tests/unit/api/v1/test_projects.py::test_shared_project_download_filters_flows_by_read_permission",
+      "src/backend/tests/unit/api/v1/test_project_deployment_snapshot.py::test_deployment_snapshot_another_user_gets_404",
+      "src/backend/tests/unit/api/v1/test_project_replacement_operations.py::test_flow_level_authorization_denial_maps_to_404_and_leaves_content_unchanged",
+      "src/backend/tests/unit/api/v1/test_project_replacement_operations.py::test_replacement_receipts_are_owner_only_before_and_after_project_deletion"
       ],
       "routes": [
         "POST|/|create_project|create|authenticated",
@@ -241,6 +244,9 @@
         "PUT|/{project_id}|upsert_project|write|authenticated",
         "DELETE|/{project_id}|delete_project|delete|authenticated",
         "GET|/download/{project_id}|download_file|read|authenticated",
+    "GET|/{project_id}/deployment-snapshot|read_project_deployment_snapshot|read|authenticated",
+    "PUT|/{project_id}/replacement-operations/{operation_id}|replace_project_operation|write|authenticated",
+    "GET|/{project_id}/replacement-operations/{operation_id}|get_project_replacement_operation|read|authenticated",
         "POST|/upload/|upload_file|create|authenticated"
       ]
     },
@@ -453,6 +459,9 @@
         "src/backend/tests/unit/api/v1/test_connections.py::test_instance_connections_are_changed_only_by_superusers",
         "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_callback_pkce_storage_replay_and_revoke",
         "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_browser_binding_and_pending_callback_revocation",
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_desktop_handoff_binds_a_separate_browser",
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_desktop_handoff_is_single_use_before_callback",
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_desktop_handoff_rechecks_permission",
         "src/backend/tests/unit/api/v1/test_connection_registrations.py::test_requires_authentication",
         "src/backend/tests/unit/api/v1/test_connection_registrations.py::test_never_returns_client_credentials",
         "src/backend/tests/unit/api/v1/test_connection_registrations.py::test_omits_providers_outside_the_integration_policy"
@@ -467,6 +476,7 @@
         "DELETE|/{connection_id}|delete_connection|delete|authenticated",
         "POST|/{connection_id}/oauth/start|start_connection_oauth|write|authenticated",
         "GET|/oauth/registrations|list_oauth_registrations|read|authenticated",
+        "GET|/oauth/{provider}/browser|bind_connection_oauth_browser|write|conditional",
         "GET|/oauth/{provider}/callback|complete_connection_oauth|write|conditional"
       ]
     },
@@ -563,6 +573,54 @@
       "routes": [
         "POST|/{provider}/{public_id}|receive_provider_delivery|ingest|provider_signed",
         "POST|/slack/apps/{registration_id}|receive_slack_app_delivery|ingest|provider_signed"
+      ]
+    },
+    {
+      "family": "data_subject_requests",
+      "source": "api/v1/data_subjects.py",
+      "resource": "user",
+      "domain": "global: user administration (superuser or a plugin-delegated user:manage administrator)",
+      "privacy": "the whole router answers 404 while LANGFLOW_FEATURE_DATA_SUBJECT_REQUESTS is off; erasing a superuser requires a superuser",
+      "side_effects": "approve and erase deactivate the subject and cancel their runs synchronously, then a background worker deletes their data",
+      "frontend": "the Data requests admin surface is shown only to user administrators and only when the feature flag is on",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_data_subjects_api.py::test_should_forbid_the_queue_when_caller_is_not_an_administrator",
+        "src/backend/tests/unit/api/v1/test_data_subjects_api.py::test_should_export_and_erase_an_end_user_through_the_api",
+        "src/backend/tests/unit/api/v1/test_data_subjects_api.py::test_should_answer_404_on_every_route_when_the_flag_is_off"
+      ],
+      "routes": [
+        "POST|/requests|create_request|write|authenticated",
+        "GET|/requests|list_requests|read|authenticated",
+        "GET|/requests/{request_id}|get_request|read|authenticated",
+        "GET|/requests/{request_id}/dry-run|dry_run_request|read|authenticated",
+        "POST|/requests/{request_id}/approve|approve_request|write|authenticated",
+        "POST|/requests/{request_id}/refuse|refuse_request|write|authenticated",
+        "POST|/requests/{request_id}/retry|retry_request|write|authenticated",
+        "GET|/requests/{request_id}/export|export_request|read|authenticated",
+        "GET|/end-users|find_end_users|read|authenticated",
+        "POST|/find|find_subject|read|authenticated",
+        "POST|/erase|erase_subject|write|authenticated"
+      ]
+    },
+    {
+      "family": "data_subject_self_service",
+      "source": "api/v1/data_subjects_self.py",
+      "resource": "user",
+      "domain": "the signed-in user's own account only",
+      "privacy": "no route takes a user id; requests and withdrawals refuse API keys and AUTO_LOGIN sessions",
+      "side_effects": "records or withdraws a deletion request; nothing is deleted until an administrator approves",
+      "frontend": "Settings > Your data, shown only when the feature flag is on",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_data_subjects_api.py::test_should_let_a_builder_request_repeat_and_withdraw",
+        "src/backend/tests/unit/api/v1/test_data_subjects_api.py::test_should_refuse_a_deletion_request_made_with_an_api_key"
+      ],
+      "routes": [
+        "GET|/deletion-request|get_own_deletion_request|read|authenticated",
+        "POST|/deletion-request|request_own_deletion|write|authenticated",
+        "DELETE|/deletion-request|withdraw_own_deletion|write|authenticated",
+        "GET|/data-export|export_own_data|read|authenticated"
       ]
     }
   ]

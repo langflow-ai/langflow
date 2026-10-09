@@ -1,24 +1,18 @@
 import asyncio
-import contextlib
-import gc
 import json
 import shutil
 import time
 import uuid
+from contextlib import aclosing
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import chromadb
-import chromadb.errors
 import pandas as pd
-from chromadb.api.shared_system_client import SharedSystemClient
-from chromadb.config import Settings
-from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
-from lfx.base.knowledge_bases.backends import BackendType, create_backend, is_local_chroma
+from lfx.base.knowledge_bases.backends import BackendType, is_local_backend, is_local_chroma
 from lfx.base.knowledge_bases.backends.base import (
     METADATA_KEY_CHUNK_INDEX,
     METADATA_KEY_FILE_NAME,
@@ -38,7 +32,6 @@ from lfx.base.knowledge_bases.ingestion_sources import (
     KBIngestionSource,
 )
 from lfx.base.knowledge_bases.ingestion_sources.base import IngestionItemStatus, IngestionRunStatus
-from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
 from lfx.log import logger
 
@@ -47,6 +40,7 @@ from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseStatus
 from langflow.services.deps import get_settings_service
 from langflow.services.jobs.service import JobService
+from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
 from langflow.utils.kb_constants import (
     DELETE_BACKOFF_SECONDS,
     EXPONENTIAL_BACKOFF_MULTIPLIER,
@@ -107,6 +101,19 @@ def chunk_text_for_ingestion(
         splitter_kwargs["separators"] = [unescaped, *_FALLBACK_CHUNK_SEPARATORS]
     splitter = RecursiveCharacterTextSplitter(**splitter_kwargs)
     return splitter.split_text(text)
+
+
+def status_before_ingestion(kb_record) -> tuple[KnowledgeBaseStatus, str | None]:
+    """Return the status a cancelled ingestion restores on its KB row.
+
+    Cancelling rolls the run's chunks back, so the KB is again what it was
+    before the run started. Only an earlier failure is worth keeping; ready,
+    the in-flight states, and "empty" (a ready KB with no chunks) all restore
+    to READY.
+    """
+    if kb_record is not None and kb_record.status == KnowledgeBaseStatus.FAILED.value:
+        return KnowledgeBaseStatus.FAILED, kb_record.failure_reason
+    return KnowledgeBaseStatus.READY, None
 
 
 def _coerce_backend_config_value(value: Any) -> dict[str, Any]:
@@ -171,30 +178,32 @@ def local_chroma_rejection_reason(
     *,
     resource: str = "knowledge base",
 ) -> str | None:
-    """Explain why local Chroma is unavailable here, or ``None`` when it is fine.
+    """Explain why a host-local backend is unavailable in production.
 
-    Local Chroma writes vectors to the serving box's own filesystem: they do not
+    Local backends write vectors to the serving box's own filesystem: they do not
     survive a replica restart, cannot be shared between replicas, and scale with
     the machine rather than the cluster. The production profile therefore refuses
-    it and expects pgVector, OpenSearch, or Chroma Cloud instead.
+    them and expects a shared remote backend instead. The historical function
+    name remains for existing callers during the storage transition.
 
     This create-time check is the only enforcement needed. Prod boot already
-    requires a reachable pgVector (``preflight.probe_pgvector`` is a *required*
-    check that aborts startup), so ``resolve_default_kb_backend()`` never falls
-    back to Chroma there — local Chroma can only arrive as an explicit client
+    requires a reachable shared vector backend (``preflight.probe_vector_backend``
+    is a *required* check that aborts startup), so ``resolve_default_kb_backend()``
+    never falls back to a host-local store there — local Chroma can only arrive as an explicit client
     selection.
 
     Returns the message rather than raising so HTTP routes and service-layer
     callers can wrap it in their own error type without duplicating the rule.
     """
-    if not is_local_chroma(backend_type, backend_config):
+    if not is_local_backend(backend_type, backend_config):
         return None
     if get_settings_service().settings.deployment_profile != "prod":
         return None
+    label = "SQLite" if backend_type == BackendType.SQLITE else "Chroma"
     return (
-        f"Local Chroma is not available in the production deployment profile, so this {resource} "
-        "cannot be created with it. Choose a shared vector store (pgVector, OpenSearch, or Chroma "
-        "Cloud), or run with LANGFLOW_DEPLOYMENT_PROFILE=dev for local-only storage."
+        f"Local {label} is not available in the production deployment profile, so this {resource} "
+        "cannot be created with it. Choose a shared vector store (pgVector or OpenSearch), "
+        "or run with LANGFLOW_DEPLOYMENT_PROFILE=dev for local-only storage."
     )
 
 
@@ -278,6 +287,27 @@ async def resolve_backend_selection(
     raise ValueError(msg)
 
 
+async def backend_for_name(
+    user_id: uuid.UUID, kb_name: str, *, expected_record=None, **kwargs
+) -> BaseVectorStoreBackend:
+    """Open an existing KB through its authoritative, guarded storage record."""
+    from langflow.api.utils import knowledge_base_service
+    from langflow.services.knowledge_base_storage.runtime import backend_for_record
+
+    record = (
+        expected_record
+        if expected_record is not None
+        else await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+    )
+    if record is None:
+        msg = f"Knowledge base '{kb_name}' has no storage record."
+        raise ValueError(msg)
+    if record.user_id != user_id or record.name != kb_name:
+        msg = "Knowledge base storage identity does not match the ingestion snapshot."
+        raise StorageUnavailableError(msg)
+    return await backend_for_record(record, **kwargs)
+
+
 # Last-resort embedding when the row records none. Matches the historical
 # fallback in ``resolve_embedding`` so behavior is unchanged for callers that
 # relied on it.
@@ -347,84 +377,23 @@ class KBStorageHelper:
         return total_size
 
     @staticmethod
-    def get_fresh_chroma_client(kb_path: Path) -> chromadb.PersistentClient:
-        """Get a fresh Chroma client with a unique session ID to avoid 'readonly' errors."""
-        path_key = str(kb_path)
-        try:
-            if path_key in SharedSystemClient._identifier_to_system:  # noqa: SLF001
-                del SharedSystemClient._identifier_to_system[path_key]  # noqa: SLF001
-        except KeyError as e:
-            logger.debug(f"Failed to clear existing Chroma registry entry for {path_key}: {e}")
-
-        return chromadb.PersistentClient(
-            path=path_key,
-            settings=Settings(
-                is_persistent=True,
-                persist_directory=path_key,
-                chroma_otel_service_name=str(uuid.uuid4()),
-            ),
-        )
-
-    @staticmethod
-    def release_chroma_resources(kb_path: Path) -> None:
-        """Release ChromaDB resources by clearing the registry entry and forcing GC."""
-        path_key = str(kb_path)
-        try:
-            if path_key in SharedSystemClient._identifier_to_system:  # noqa: SLF001
-                del SharedSystemClient._identifier_to_system[path_key]  # noqa: SLF001
-        except KeyError:
-            pass
-        gc.collect()
-
-    @staticmethod
     def delete_storage(kb_path: Path, kb_name: str) -> bool:
-        """Teardown ChromaDB connections and delete KB directory with retry logic.
+        """Remove a retired name-addressed directory after writers have drained.
 
-        Handles ChromaDB SQLite file locks that can prevent deletion, particularly
-        on Windows where mandatory file locks block deletion of open files.
-        Uses retry with exponential backoff and a sentinel-file fallback when
-        physical removal is impossible.
+        This helper is only for legacy cleanup. Live SQLite generations use the
+        storage runtime's fenced tombstone protocol. Never truncate a database
+        or remove WAL/SHM files to force deletion of a locked store.
 
-        The sentinel-file fallback (``.kb_deleted``) is preferred over the
-        previous rename-based fallback because Windows can refuse to rename a
-        directory whose contents are still locked open, in which case the
-        directory remained at its original name and the disk-scan listing
-        path re-discovered it as a valid KB.  Writing a marker file inside
-        the dir works in cases where rename does not, and the listing layer
-        treats it identically to a missing dir.
-
-        Returns:
-            True if the KB is no longer visible to listing code (either
-            because the dir was removed, or because a sentinel was written
-            after a failed rmtree).  False only when both physical removal
-            and the sentinel write fail.
+        A failed directory removal writes a legacy deletion sentinel so disk
+        reconciliation cannot resurrect it. False means both actions failed.
         """
         if not kb_path.exists():
             return True
-
-        # Teardown ChromaDB collection to release handles
-        try:
-            has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
-            if has_data:
-                client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-                chroma = Chroma(client=client, collection_name=kb_name, **chroma_langchain_collection_kwargs())
-                with contextlib.suppress(Exception):
-                    chroma.delete_collection()
-                chroma = None
-                client = None
-        except (OSError, ValueError, TypeError, chromadb.errors.ChromaError) as e:
-            logger.debug("Collection teardown failed for %s: %s", kb_path.name, e)
-
-        gc.collect()
 
         for attempt in range(MAX_DELETE_RETRIES):
             try:
                 if attempt > 0:
                     time.sleep(DELETE_BACKOFF_SECONDS * (2**attempt))
-
-                _remove_sqlite_lock_files(kb_path)
-                _truncate_sqlite_files(kb_path)
-                gc.collect()
 
                 shutil.rmtree(kb_path, ignore_errors=False)
 
@@ -489,116 +458,34 @@ class KBStorageHelper:
             logger.debug("Could not clear %s sentinel under %s: %s", KB_DELETED_SENTINEL, kb_path, e)
 
 
-def _remove_sqlite_lock_files(kb_path: Path) -> None:
-    """Remove SQLite auxiliary files (WAL, SHM, journal) that hold locks."""
-    for pattern in ["*.sqlite3-wal", "*.sqlite3-shm", "*.sqlite3-journal"]:
-        for lock_file in kb_path.glob(pattern):
-            try:
-                lock_file.unlink()
-            except OSError as e:
-                logger.debug("Could not remove lock file %s: %s", lock_file.name, e)
-
-
-def _truncate_sqlite_files(kb_path: Path) -> None:
-    """Truncate SQLite database files to release locks."""
-    for sqlite_file in kb_path.glob("*.sqlite3"):
-        try:
-            with sqlite_file.open("r+b") as f:
-                f.truncate(0)
-        except OSError as e:
-            logger.debug("Could not truncate %s: %s", sqlite_file.name, e)
-
-
 class KBAnalysisHelper:
     """Helper class for Knowledge Base metadata, metrics, and configuration detection."""
 
     @staticmethod
     async def update_text_metrics_via_backend(metadata: dict, backend) -> None:
-        """Backend-agnostic metrics refresh.
+        """Refresh metrics from one complete guarded iteration.
 
-        Drives ``chunks`` / ``words`` / ``characters`` / ``avg_chunk_size``
-        from the backend's ``count`` + ``iter_documents`` abstraction so
-        every vector-store target (Chroma / Mongo / Astra / Postgres) is
-        covered. Silently tolerates iterator failures — metrics are
-        cosmetic, and raising here would wrongly fail an ingestion whose
-        writes already succeeded.
+        Failures propagate before changing the caller's cached metadata so a
+        partial read never reports a healthy empty or truncated knowledge base.
         """
-        try:
-            total_chunks = await backend.count()
-        except Exception as exc:  # noqa: BLE001 — backend-level issues are best-effort
-            logger.debug(f"Backend count() failed during metrics refresh: {exc}")
-            total_chunks = 0
-        metadata["chunks"] = total_chunks
-
-        if total_chunks <= 0:
-            return
-
+        total_chunks = 0
         total_words = 0
         total_characters = 0
-        try:
-            async for batch in backend.iter_documents(batch_size=5000):
+        async with aclosing(backend.iter_documents(batch_size=5000)) as batches:
+            async for batch in batches:
                 if not batch:
                     continue
+                total_chunks += len(batch)
                 source_chunks = pd.DataFrame({"document": [doc.content for doc in batch]})
                 words, characters = KBAnalysisHelper._calculate_text_metrics(source_chunks, ["document"])
                 total_words += words
                 total_characters += characters
-        except Exception as exc:  # noqa: BLE001 — see note above
-            logger.debug(f"Backend iter_documents failed during metrics refresh: {exc}")
-            return
-
-        metadata["words"] = total_words
-        metadata["characters"] = total_characters
-        metadata["avg_chunk_size"] = round(total_characters / total_chunks, 1) if total_chunks > 0 else 0.0
-
-    @staticmethod
-    def update_text_metrics(kb_path: Path, metadata: dict, chroma: Chroma | None = None) -> None:
-        """Update text metrics (chunks, words, characters) for a knowledge base."""
-        created_locally = chroma is None
-        client = None
-        try:
-            if created_locally:
-                client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-                chroma = Chroma(client=client, collection_name=kb_path.name, **chroma_langchain_collection_kwargs())
-
-            if chroma is None:
-                return
-            collection = chroma._collection  # noqa: SLF001
-            metadata["chunks"] = collection.count()
-
-            if metadata["chunks"] > 0:
-                total_words = 0
-                total_characters = 0
-                # Use a robust batch size to avoid SQLite limits and memory pressure
-                batch_size = 5000
-
-                for offset in range(0, metadata["chunks"], batch_size):
-                    results = collection.get(
-                        include=["documents"],
-                        limit=batch_size,
-                        offset=offset,
-                    )
-                    if not results["documents"]:
-                        break
-
-                    # Chroma collections always return the text content within the 'documents' field
-                    source_chunks = pd.DataFrame({"document": results["documents"]})
-                    words, characters = KBAnalysisHelper._calculate_text_metrics(source_chunks, ["document"])
-                    total_words += words
-                    total_characters += characters
-
-                metadata["words"] = total_words
-                metadata["characters"] = total_characters
-                metadata["avg_chunk_size"] = (
-                    round(total_characters / metadata["chunks"], 1) if metadata["chunks"] > 0 else 0.0
-                )
-        except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
-            logger.debug(f"Metrics update failed for {kb_path.name}: {e}")
-        finally:
-            if created_locally:
-                client = None
-                chroma = None
-                KBStorageHelper.release_chroma_resources(kb_path)
+        metadata.update(
+            chunks=total_chunks,
+            words=total_words,
+            characters=total_characters,
+            avg_chunk_size=round(total_characters / total_chunks, 1) if total_chunks else 0.0,
+        )
 
     @staticmethod
     def _calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[int, int]:
@@ -716,6 +603,7 @@ class KBIngestionHelper:
         # row keeps pointing at ``kb_name`` for N-1 compatibility.
         kb_record = await knowledge_base_service.get_by_user_and_name(owner.id, kb_name)
         kb_record_id = kb_record.id if kb_record is not None else None
+        restored_status, restored_failure_reason = status_before_ingestion(kb_record)
         run_id = await ingestion_run_service.create_run(
             kb_name=kb_name,
             user_metadata=dict(source_metadata or {}),
@@ -748,20 +636,13 @@ class KBIngestionHelper:
         encoded_metadata_tag = json.dumps(source_metadata) if source_metadata else ""
         source_extension_tags: set[str] = set()
         try:
+            # Heartbeat until finalize_run, so another worker's orphan sweep
+            # cannot fail this live run. It stops first, since both rewrite
+            # job_metadata.
+            await job_service.start_keep_alive(task_job_id)
             embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, current_user)
-            backend_type_value = (
-                kb_record.backend_type if kb_record and kb_record.backend_type else BackendType.CHROMA.value
-            )
-            backend_config = (kb_record.backend_config or {}) if kb_record is not None else {}
-            backend = create_backend(
-                backend_type_value,
-                kb_name=kb_name,
-                kb_path=kb_path,
-                backend_config=backend_config,
-                embedding_function=embeddings,
-                # The owner's id names owner-scoped storage and resolves the
-                # owner's connection variables through ``variable_service``.
-                user_id=getattr(owner, "id", None),
+            backend = await backend_for_name(
+                owner.id, kb_name, embedding_function=embeddings, expected_record=kb_record
             )
 
             job_id_str = str(task_job_id)
@@ -884,13 +765,21 @@ class KBIngestionHelper:
             # Mongo/Astra/Postgres with AttributeError, which then falsely marked
             # the run failed and rolled back chunks we had already written.
             metrics: dict[str, Any] = {}
-            await KBAnalysisHelper.update_text_metrics_via_backend(metrics, backend)
+            try:
+                await KBAnalysisHelper.update_text_metrics_via_backend(metrics, backend)
+            except Exception as exc:  # noqa: BLE001 -- cached metrics must not roll back a successful write
+                metrics = {}
+                await logger.awarning("KB metrics refresh lagged for %s: %s", kb_name, type(exc).__name__)
 
-            # ``size`` is a local-Chroma concept: it measures the persistence
-            # directory. Remote stores keep nothing on this box, so reporting a
-            # directory walk there would be meaningless (and would need a path we
-            # deliberately no longer resolve).
-            size_bytes = KBStorageHelper.get_directory_size(kb_path) if kb_path is not None else 0
+            size_bytes = None
+            try:
+                size_bytes = (
+                    KBStorageHelper.get_directory_size(kb_path)
+                    if kb_path is not None
+                    else await backend.storage_size_bytes()
+                )
+            except Exception as exc:  # noqa: BLE001 -- size refresh must not discard successful metrics
+                await logger.awarning("KB size refresh lagged for %s: %s", kb_name, type(exc).__name__)
 
             existing_source_types = list(kb_record.source_types or []) if kb_record is not None else []
             merged_source_types = sorted(set(existing_source_types) | source_extension_tags)
@@ -899,9 +788,9 @@ class KBIngestionHelper:
                 try:
                     await knowledge_base_service.update_stats(
                         kb_record_id,
-                        chunks=metrics.get("chunks", 0),
-                        words=metrics.get("words", 0),
-                        characters=metrics.get("characters", 0),
+                        chunks=metrics.get("chunks"),
+                        words=metrics.get("words"),
+                        characters=metrics.get("characters"),
                         size_bytes=size_bytes,
                         source_types=merged_source_types,
                         chunk_size=chunk_size,
@@ -909,7 +798,7 @@ class KBIngestionHelper:
                         separator=separator or None,
                     )
                 except Exception as exc:  # noqa: BLE001
-                    await logger.awarning("KB DB stat update lagged for %s: %s", kb_name, exc)
+                    await logger.awarning("KB DB stat update lagged for %s: %s", kb_name, type(exc).__name__)
                 # Clear any previous failure marker once the run finishes
                 # writing chunks; ``final_status`` (PARTIAL/SUCCEEDED) is
                 # not "failed", so the KB row should reflect READY.
@@ -955,11 +844,11 @@ class KBIngestionHelper:
                 try:
                     await knowledge_base_service.update_status(
                         kb_record_id,
-                        status=KnowledgeBaseStatus.FAILED,
-                        failure_reason=final_error,
+                        status=restored_status,
+                        failure_reason=restored_failure_reason,
                     )
                 except Exception as status_exc:  # noqa: BLE001
-                    await logger.awarning("KB status update to FAILED (cancel) lagged for %s: %s", kb_name, status_exc)
+                    await logger.awarning("KB status restore after cancel lagged for %s: %s", kb_name, status_exc)
             return {"message": "Job cancelled", "ingestion_run_id": str(run_id)}
         except Exception as exc:
             final_status = IngestionRunStatus.FAILED
@@ -987,9 +876,16 @@ class KBIngestionHelper:
                 except Exception as status_exc:  # noqa: BLE001
                     await logger.awarning("KB status update to FAILED lagged for %s: %s", kb_name, status_exc)
             raise
+        except asyncio.CancelledError:
+            # A shutdown or a system cancel interrupted the run. Without this the
+            # finally would record it as the SUCCEEDED it was initialized to.
+            final_status = IngestionRunStatus.FAILED
+            final_error = "Ingestion was interrupted before it finished."
+            raise
         finally:
             if backend is not None:
                 await backend.teardown()
+            await job_service.stop_keep_alive(task_job_id)
             await ingestion_run_service.finalize_run(
                 run_id,
                 summary=summary,
@@ -1000,10 +896,10 @@ class KBIngestionHelper:
     @staticmethod
     async def cleanup_chroma_chunks_by_job(
         job_id: uuid.UUID,
-        kb_path: Path | None,
+        kb_path: Path | None,  # noqa: ARG004 - compatibility signature
         kb_name: str,
-        backend_type: str | None = None,
-        backend_config: dict | None = None,
+        backend_type: str | None = None,  # noqa: ARG004 - routing comes from the row
+        backend_config: dict | None = None,  # noqa: ARG004 - routing comes from the row
         user_id=None,
     ) -> None:
         """Delete every chunk written by ``job_id`` from this KB.
@@ -1013,25 +909,23 @@ class KBIngestionHelper:
         rollbacks safe even when multiple concurrent jobs write to the same
         collection.
 
-        Name kept for backward compatibility — the cleanup now runs through
-        whichever backend the KB is configured with, not just Chroma.
-        Defaults to Chroma so existing callers still work.
+        The historical name and arguments remain for saved callers. Routing
+        always comes from the owner's current row and crosses the same lifecycle
+        fence as ingestion, so cleanup cannot write into a retired generation.
         """
-        effective_type = backend_type or BackendType.CHROMA.value
-        backend = create_backend(
-            effective_type,
-            kb_name=kb_name,
-            kb_path=kb_path,
-            backend_config=backend_config or {},
-            user_id=user_id,
-        )
+        backend = None
         try:
+            backend = await backend_for_name(user_id, kb_name)
             await backend.delete_by({METADATA_KEY_JOB_ID: str(job_id)})
             await logger.ainfo(f"Cleaned up chunks for job {job_id} in knowledge base '{kb_name}'")
-        except (OSError, ValueError, TypeError, chromadb.errors.ChromaError) as cleanup_error:
+        except Exception as cleanup_error:  # noqa: BLE001 - rollback must preserve the ingestion failure
             await logger.aerror(f"Failed to clean up chunks for job {job_id}: {cleanup_error}")
         finally:
-            await backend.teardown()
+            if backend is not None:
+                try:
+                    await backend.teardown()
+                except Exception as cleanup_error:  # noqa: BLE001 - closing cleanup must preserve the ingestion failure
+                    await logger.aerror("Failed to close ingestion cleanup backend: %s", cleanup_error)
 
     @staticmethod
     async def write_documents_to_backend(
@@ -1072,9 +966,10 @@ class KBIngestionHelper:
                 try:
                     await backend.add_documents(batch)
                     break
-                except BackendConfigurationError:
-                    # Permanent, operator-actionable misconfiguration (missing
-                    # extension, embedding-dimension mismatch, …). Retrying only
+                except (BackendConfigurationError, StorageUnavailableError):
+                    # A stale source/routing fence requires a new job snapshot.
+                    # Permanent backend configuration also cannot improve here.
+                    # Retrying either within this batch only
                     # burns the backoff budget (~20s) on a call that cannot
                     # succeed, so surface it immediately.
                     raise

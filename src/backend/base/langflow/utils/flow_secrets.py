@@ -15,6 +15,8 @@ from copy import deepcopy
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qsl, urlsplit
 
+from langflow.utils import mcp_config_secrets as _mcp_config_secrets
+
 if TYPE_CHECKING:
     from collections.abc import Collection
 
@@ -454,9 +456,20 @@ def _is_preserved_reference(value: object, known_variable_names: Collection[str]
 
 
 def _contains_url_credentials(value: str) -> bool:
-    """Return whether a URL contains userinfo or secret-named parameters."""
+    """Return whether a URL contains userinfo or secret-named parameters.
+
+    ``urlsplit`` parses any string, not just URLs: component ``code``, a
+    Markdown template, or a regex ``pattern`` all parse without error, and
+    text after a bare ``#`` is read as the fragment. A comment merely
+    mentioning "password" was therefore misread as a credential-bearing query
+    parameter. A URL has no inner whitespace, while code and prose do, so only
+    whitespace-free text (after trimming its ends) is treated as a URL.
+    """
+    candidate = value.strip()
+    if not candidate or any(character.isspace() for character in candidate):
+        return False
     try:
-        parsed = urlsplit(value)
+        parsed = urlsplit(candidate)
     except ValueError:
         return False
     if parsed.username is not None or parsed.password is not None:
@@ -579,10 +592,109 @@ def _strip_table_rows_in_place(
             row[_TABLE_LOAD_FROM_DB_FIELDS] = row_metadata
 
 
+# A flag argument whose name itself names a credential kind - ``--token x`` or
+# ``--api-key=x`` - carries the secret positionally, where ``strip_config_secrets``
+# cannot see it (it only rewrites the ``env``/``headers`` maps and drops ``--headers``
+# triples). Case-insensitive because CLIs are not consistent about casing.
+_MCP_SECRET_FLAG_PATTERN = re.compile(
+    r"^--?[A-Za-z0-9_-]*(key|token|secret|password|passwd|auth|credential)[A-Za-z0-9_-]*(=.*)?$",
+    re.IGNORECASE,
+)
+
+
+def _mcp_reference_names_known_variable(value: str, known_variable_names: Collection[str]) -> bool:
+    """Return whether an ``env``/``headers`` reference names one of the owner's variables.
+
+    Only called once ``_mcp_config_secrets._is_variable_reference`` has confirmed
+    ``value`` is a bare ``MCP_*`` reference or a ``{{NAME}}`` placeholder - the two
+    shapes the deploy target can resolve. A bare reference names itself; a
+    placeholder names its inner ``NAME``.
+    """
+    placeholder_match = _mcp_config_secrets.PLACEHOLDER_PATTERN.match(value)
+    name = value[2:-2].strip() if placeholder_match else value
+    return name in known_variable_names
+
+
+def _mcp_config_is_clean(config: dict, name: str, known_variable_names: Collection[str] | None = None) -> bool:
+    """Return whether an MCP ``config`` is provably free of secrets, verbatim.
+
+    Deliberately conservative: this only ever widens what gets kept behind an
+    explicit opt-in (see ``keep_mcp_config`` on ``_strip_template_field_value``),
+    so any shape it cannot positively clear the config on is treated as unclean.
+    The caller then nulls the config rather than keep something unverified.
+
+    ``known_variable_names``, when given, additionally requires every ``env``/
+    ``headers`` reference to name one of the caller's real global variables
+    (see ``_mcp_reference_names_known_variable``), so a literal secret shaped
+    like an ``MCP_*`` name or a ``{{NAME}}`` placeholder cannot escape a strict
+    snapshot just because it is shaped like a reference. ``None`` keeps the
+    shape-only check, matching ``_is_preserved_reference``'s default for other
+    secret fields.
+    """
+    # strip_config_secrets rewrites env/headers entries and drops secret-bearing
+    # args and top-level fields; "found" means it had to change something.
+    _, _, found = _mcp_config_secrets.strip_config_secrets(config, name)
+    if found:
+        return False
+
+    # Anything the general structured scrubber (secret-named keys, nested or
+    # top-level) would null - e.g. a top-level "token" or a nested
+    # "auth.client_secret" - means the config is not provably clean. env/headers
+    # are checked separately below because a reference value there is expected
+    # and must not be nulled by the generic key-name heuristic.
+    sanitized = {key: value for key, value in config.items() if key not in ("env", "headers")}
+    before = deepcopy(sanitized)
+    _strip_structured_secret_values_in_place(sanitized)
+    if sanitized != before:
+        return False
+
+    for map_name in ("env", "headers"):
+        values = config.get(map_name)
+        if values is None:
+            continue
+        if not isinstance(values, dict):
+            return False
+        for header_key, value in values.items():
+            is_non_secret_header = (
+                map_name == "headers"
+                and isinstance(header_key, str)
+                and header_key.lower() in _mcp_config_secrets.NON_SECRET_HEADERS
+            )
+            if is_non_secret_header or not value:
+                continue
+            if not isinstance(value, str) or not _mcp_config_secrets._is_variable_reference(value):  # noqa: SLF001
+                return False
+            if known_variable_names is not None and not _mcp_reference_names_known_variable(
+                value, known_variable_names
+            ):
+                return False
+
+    args = config.get("args")
+    if args is not None:
+        if not isinstance(args, list):
+            return False
+        for item in args:
+            if not isinstance(item, str):
+                continue
+            stripped_item = item.strip()
+            if _contains_url_credentials(item) or _MCP_SECRET_FLAG_PATTERN.match(stripped_item):
+                return False
+
+    for key, value in config.items():
+        if key in ("env", "headers"):
+            continue
+        if isinstance(value, str) and _contains_url_credentials(value):
+            return False
+
+    return True
+
+
 def _strip_template_field_value(
     field: dict,
     variable_references: set[str] | None = None,
     known_variable_names: Collection[str] | None = None,
+    *,
+    keep_mcp_config: bool = False,
 ) -> None:
     """Strip a template field according to metadata and value shape."""
     field_type = str(field.get("type") or "").lower()
@@ -618,14 +730,35 @@ def _strip_template_field_value(
         return
 
     if field.get("password") or _is_secret_name(field.get("name")):
-        field["value"] = None
+        # An already-empty or absent value carries no secret. Nulling it
+        # anyway would turn a missing ``value`` key into an explicit ``None``
+        # one, or ``""`` into ``None`` - a shape change a strict snapshot
+        # reads as scrubbing having removed something and refuses to capture.
+        if field.get("value") not in (None, ""):
+            field["value"] = None
         return
 
     input_type = str(field.get("_input_type") or "").lower()
     if field_type == "mcp" or input_type == "mcpinput":
         value = field.get("value")
-        name = value.get("name") if isinstance(value, dict) else None
-        field["value"] = {"name": name} if name else None
+        if not isinstance(value, dict):
+            field["value"] = None
+            return
+        name = value.get("name")
+        preserved: dict[str, object] = {}
+        if name:
+            preserved["name"] = name
+        # Every caller gets name-only by default, matching every other secret
+        # field: the config is kept only for the one caller that opts in and
+        # only when it is provably clean, never re-stripped and handed back.
+        # An unclean config is nulled explicitly (not omitted) so a strict
+        # snapshot sees the change against the original and refuses to capture.
+        config = value.get("config")
+        if keep_mcp_config and isinstance(config, dict):
+            preserved["config"] = (
+                config if _mcp_config_is_clean(config, str(name or ""), known_variable_names) else None
+            )
+        field["value"] = preserved or None
         return
 
     reference_columns = _table_reference_columns(field)
@@ -648,6 +781,8 @@ def _strip_secrets_from_nodes(
     nodes: list,
     variable_references: set[str] | None = None,
     known_variable_names: Collection[str] | None = None,
+    *,
+    keep_mcp_config: bool = False,
 ) -> None:
     """Iteratively strip secret values from regular and grouped flow nodes."""
     node_frames = [iter(nodes)]
@@ -669,7 +804,9 @@ def _strip_secrets_from_nodes(
         if isinstance(template, dict):
             for value in template.values():
                 if isinstance(value, dict):
-                    _strip_template_field_value(value, variable_references, known_variable_names)
+                    _strip_template_field_value(
+                        value, variable_references, known_variable_names, keep_mcp_config=keep_mcp_config
+                    )
 
         flow = node_inner.get("flow")
         if isinstance(flow, dict):
@@ -685,6 +822,7 @@ def strip_secret_field_values_in_place(
     *,
     variable_references: set[str] | None = None,
     known_variable_names: Collection[str] | None = None,
+    keep_mcp_config: bool = False,
 ) -> dict | None:
     """Scrub a detached flow-data mapping in place with bounded traversal memory.
 
@@ -704,12 +842,21 @@ def strip_secret_field_values_in_place(
     an ordinary name. Callers that can list the owner's global variables pass
     ``known_variable_names`` to close it: only values naming one of those
     variables are then preserved.
+
+    An MCP server field is always reduced to its ``name`` (or nulled if it has
+    none) regardless of ``variable_references`` - a deploy target does not need
+    the config to reference the server by name, and handing it out by default
+    would leak whatever a flow saved before save-time MCP stripping still
+    embeds. ``keep_mcp_config=True`` is the single, explicit opt-in for a
+    caller that both needs the config and can fail closed on it: the config
+    is kept only when it is provably free of secrets, and nulled outright
+    otherwise so a strict snapshot sees the change and refuses to capture it.
     """
     if not flow_data:
         return flow_data
     nodes = flow_data.get("nodes")
     if isinstance(nodes, list):
-        _strip_secrets_from_nodes(nodes, variable_references, known_variable_names)
+        _strip_secrets_from_nodes(nodes, variable_references, known_variable_names, keep_mcp_config=keep_mcp_config)
     return flow_data
 
 

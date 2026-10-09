@@ -4,6 +4,7 @@ slug: /deployment-docker
 ---
 
 import PartialPodmanAlt from '@site/docs/_partial-podman-alt.mdx';
+import PartialAutoLoginDefaults from '@site/docs/_partial-auto-login-defaults.mdx';
 
 <PartialPodmanAlt />
 
@@ -34,11 +35,9 @@ With Docker installed and running on your system, run the following command:
       langflowai/langflow:latest
     ```
 
-    By default, the official Docker images set `LANGFLOW_AUTO_LOGIN=false` by default.
-
     Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
 
-    For more information, see [Docker image defaults](#docker-image-security-defaults).
+    <PartialAutoLoginDefaults />
 
 Then, access Langflow at `http://localhost:7860/`.
 
@@ -63,13 +62,23 @@ The Langflow repo includes a ready-to-use Compose file at `docker_example/docker
    cd langflow/docker_example
    ```
 
-3. Run the Docker Compose file:
+3. Set `LANGFLOW_SUPERUSER_PASSWORD` in a `.env` file in the `docker_example` directory. The Compose file requires this value because official images disable automatic login.
+
+   ```shell
+   echo 'LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD' > .env
+   ```
+
+   Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
+
+   <PartialAutoLoginDefaults />
+
+4. Run the Docker Compose file:
 
    ```shell
    docker compose up
    ```
 
-4. Access Langflow at `http://localhost:7860/`.
+5. Access Langflow at `http://localhost:7860/`.
 
 ## Customize the Docker Compose file {#customize}
 
@@ -397,10 +406,12 @@ For a minimal Dockerfile that adds `uv` to the 1.8.0 image, see the [release not
 
 ## Docker image defaults {#docker-image-security-defaults}
 
-As of Langflow 1.11.x, official Langflow Docker images set `LANGFLOW_AUTO_LOGIN=false` at image build time.
-Official Python release packages and tagged source archives also default to `false`. Development branches and local builds from those branches default to `true`; Docker images, including DEV/CDK, explicitly default to `false`.
+<PartialAutoLoginDefaults />
 
-Because auto-login is disabled, you must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally `LANGFLOW_SUPERUSER`) unless you explicitly set `LANGFLOW_AUTO_LOGIN=true`.
+As of Langflow 1.11.x, official Langflow Docker images set `LANGFLOW_AUTO_LOGIN=false` at image build time.
+DEV and CDK images set `LANGFLOW_AUTO_LOGIN=false` starting in Langflow 1.13.
+
+To enable automatic login in a container, set `LANGFLOW_AUTO_LOGIN=true`:
 
 ```bash
 docker run -p 7860:7860 \

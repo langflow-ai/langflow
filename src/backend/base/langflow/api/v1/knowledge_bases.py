@@ -1,18 +1,16 @@
 import asyncio
-import hashlib
 import json
 import tempfile
 import uuid
-from contextlib import suppress
+from contextlib import aclosing, suppress
 from dataclasses import dataclass
 from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated, Any
 
-import chromadb.errors
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from lfx.base.data.utils import extract_text_from_bytes
-from lfx.base.knowledge_bases.backends import BackendType, create_backend, is_local_chroma
+from lfx.base.knowledge_bases.backends import BackendType, create_backend, is_local_backend, is_local_chroma
 from lfx.base.knowledge_bases.backends.naming import StorageRoutingNotAllowedError, ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 from lfx.base.knowledge_bases.ingestion_sources import (
@@ -24,7 +22,6 @@ from lfx.base.knowledge_bases.ingestion_sources import (
 )
 from lfx.base.knowledge_bases.validation import validate_collection_name
 from lfx.base.models.provider_registry import provider_id_for
-from lfx.base.vectorstores.chroma_security import chroma_client_create_collection_kwargs
 from lfx.integrations.errors import IntegrationError
 from lfx.log import logger
 from lfx.services.model_provider_policy import (
@@ -73,7 +70,13 @@ from langflow.services.database.models.knowledge_base.model import KnowledgeBase
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.jobs.service import JobService
+from langflow.services.knowledge_base_storage.runtime import (
+    StorageUnavailableError,
+    backend_for_record,
+    storage_unavailable_message,
+)
 from langflow.services.task.service import TaskService
+from langflow.utils.canonical_json import canonical_json_digest
 from langflow.utils.kb_constants import (
     CHUNK_PREVIEW_MULTIPLIER,
     KB_METADATA_RESERVED_KEYS,
@@ -215,6 +218,15 @@ async def _guard_kb_action(
         kb_user_id=kb_user_id,
         kb_name=kb_name,
     )
+    if (
+        action == KnowledgeBaseAction.INGEST
+        and resolved_record is not None
+        and (resolved_record.storage_state != "ready" or resolved_record.backend_type == "chroma")
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=storage_unavailable_message(resolved_record.storage_state),
+        )
     # Resolve the owner User so routes can compute disk paths against the
     # right username. For the common owner-only case the actor is the owner
     # and we skip the DB roundtrip.
@@ -340,17 +352,17 @@ def _build_connector_ingest_dedupe_key(
     of JSON key ordering. Only the hash (not the config) goes on the
     ``job`` row, so no credentials leak through ``dedupe_key``.
     """
-    canonical = json.dumps(
+    digest = canonical_json_digest(
         {
             "user_id": str(user_id),
             "kb_name": kb_name,
             "source_type": source_type,
             "source_config": source_config,
         },
-        sort_keys=True,
+        ensure_ascii=True,
+        separators=None,
         default=str,
     )
-    digest = hashlib.sha256(canonical.encode()).hexdigest()
     return f"kb_connector_ingest:{digest}"
 
 
@@ -466,6 +478,7 @@ def _build_kb_info(
     metadata: dict[str, Any],
     size: int | None = None,
 ) -> KnowledgeBaseInfo:
+    """Format persisted KB metadata and its storage availability for the API."""
     chunks_count = metadata.get("chunks") or 0
     # Trust a persisted "failed" status (set by ``perform_ingestion``)
     # so the UI can surface ``failure_reason`` after a backend error.
@@ -479,6 +492,9 @@ def _build_kb_info(
     else:
         status = "ready" if chunks_count > 0 else "empty"
         failure_reason = None
+    storage_state = metadata.get("storage_state", "ready")
+    if storage_state != "ready":
+        status = {"migrating": "upgrading", "needs_attention": "needs_migration"}.get(storage_state, "unavailable")
     return KnowledgeBaseInfo(
         id=str(metadata.get("id") or dir_name),
         dir_name=dir_name,
@@ -500,6 +516,9 @@ def _build_kb_info(
         column_config=metadata.get("column_config"),
         backend_type=str(metadata.get("backend_type") or BackendType.CHROMA.value),
         backend_config=_coerce_backend_config(metadata.get("backend_config")),
+        storage_state=metadata.get("storage_state", "ready"),
+        storage_generation=metadata.get("storage_generation", 1),
+        active_migration_id=metadata.get("active_migration_id"),
     )
 
 
@@ -553,13 +572,12 @@ async def _cancel_inflight_ingestion_for_kb(
     Transitions every job with ``asset_type='knowledge_base'`` and
     ``status in (QUEUED, IN_PROGRESS)`` to ``CANCELLED``. The ingestion polls
     :func:`KBIngestionHelper.is_job_cancelled` between batches and bails out via
-    :class:`IngestionCancelledError`, which stops a local-Chroma writer from
-    auto-recreating the KB directory we are about to delete.
+    :class:`IngestionCancelledError` to stop unnecessary work promptly.
 
-    Best-effort: surfacing a cancellation failure here would mask the
-    user's actual delete intent. Failures are logged and the delete
-    proceeds — the worst case is the same as before this helper
-    existed.
+    Cancellation is best-effort. The deletion path independently fences the KB,
+    drains guarded storage operations, and persists a SQLite tombstone or drops
+    the remote collection before removing routing. Cancellation failure cannot
+    allow an old writer to recreate deleted SQLite storage.
 
     Not filtered by user: ``asset_id`` is the KB row the caller is already
     authorized to delete, and a collaborator's run on a shared KB must stop
@@ -582,62 +600,6 @@ async def _cancel_inflight_ingestion_for_kb(
         )
 
 
-async def _delete_remote_backend_collection(
-    *,
-    kb_name: str,
-    kb_path: Path | None,
-    backend_type_value: str,
-    backend_config: dict[str, Any],
-    current_user: CurrentActiveUser,
-) -> str | None:
-    """Delete the remote vector-store collection on a best-effort basis.
-
-    Returns a human-readable warning string when the remote cleanup
-    failed so the caller can surface it alongside the (successful)
-    local-storage + DB-row deletions; returns ``None`` on success or
-    when the backend is local-only Chroma (whose vectors live in the
-    directory ``delete_storage`` removes).
-
-    Rationale for best-effort: a stale Astra token / missing MongoDB
-    credential / network blip should not leave the user unable to
-    delete the KB from Langflow's UI at all. Before this, the backend
-    ``ensure_ready()`` failure would abort the whole delete flow and
-    the row would stay indefinitely. Remote resources that linger are
-    surfaced to the user through the response warning and a
-    high-severity log line so they can be cleaned up out-of-band.
-    """
-    if is_local_chroma(backend_type_value, backend_config):
-        return None
-
-    backend = create_backend(
-        backend_type_value,
-        kb_name=kb_name,
-        kb_path=kb_path,
-        backend_config=backend_config,
-        user_id=current_user.id,
-    )
-    try:
-        await backend.ensure_ready()
-        await backend.delete_collection()
-    except Exception as exc:  # noqa: BLE001
-        await logger.aerror(
-            "Failed to delete remote backend resources for %s (%s): %s — "
-            "proceeding with local cleanup; the remote collection may need "
-            "manual cleanup.",
-            kb_name,
-            backend_type_value,
-            exc,
-        )
-        return (
-            f"Remote {backend_type_value} resources for knowledge base "
-            f"'{kb_name}' could not be deleted ({exc}). The local record "
-            "has been removed; please clean up the remote collection manually."
-        )
-    finally:
-        await backend.teardown()
-    return None
-
-
 @router.post("/test-connection", status_code=HTTPStatus.OK)
 async def test_backend_connection(
     request: TestBackendConnectionRequest,
@@ -648,7 +610,7 @@ async def test_backend_connection(
     Builds a transient backend instance against the supplied
     ``backend_type`` / ``backend_config`` and runs ``backend.test_connection()``,
     which each backend implements with a native reachability check
-    (e.g. OpenSearch ``cluster.info``, Chroma ``heartbeat``). Both
+    (e.g. OpenSearch ``cluster.info`` or SQLite integrity validation). Both
     success and connectivity / credential failures return HTTP 200 — the
     ``ok`` field on the response indicates outcome. Malformed requests
     (unknown backend, missing required field) are rejected by the
@@ -660,18 +622,27 @@ async def test_backend_connection(
     # backend reachability they could not act on.
     await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.CREATE, kb_name=None)
     # Use a private temp directory for the transient backend so a
-    # local-storage backend (Chroma) doesn't leak files into the user's
+    # SQLite connection check does not leave files in the user's
     # KB root, and so concurrent test-connection calls don't collide.
     with tempfile.TemporaryDirectory(prefix="kb-test-connection-") as tmp_dir:
         kb_path = Path(tmp_dir)
         try:
+            from lfx.base.knowledge_bases.backends.sqlite import SQLiteStorageContext
+
+            local_options: dict[str, Any] = {}
+            if request.backend_type == BackendType.SQLITE.value:
+                local_options = {
+                    "storage_context": SQLiteStorageContext(kb_path, current_user.id, uuid.uuid4()),
+                    "create": True,
+                }
             backend = create_backend(
                 request.backend_type,
                 kb_name="__test_connection__",
-                kb_path=kb_path,
+                kb_path=None if request.backend_type == BackendType.SQLITE.value else kb_path,
                 backend_config=dict(request.backend_config),
                 embedding_function=None,
                 user_id=current_user.id,
+                **local_options,
             )
         except ValueError as exc:
             # Registry rejection (unregistered backend, etc.) — surface
@@ -701,19 +672,19 @@ async def _validate_create_backend(
     backend_type: str,
     backend_config: dict[str, Any],
     kb_name: str,
-    kb_path: Path,
+    kb_path: Path | None,
     user_id: uuid.UUID,
 ) -> None:
     """Reject an unreachable remote backend before persisting a KB.
 
-    Local Chroma creates its store lazily on first write, so there is nothing to
-    probe. Every remote backend (Postgres / OpenSearch / Chroma Cloud / Mongo /
-    Astra) is connectivity-checked up front, mirroring the Memory Base path in
+    SQLite initialization occurs after allocating the persistent KB identity.
+    Remote backends (Postgres / OpenSearch) are connectivity-checked up front,
+    mirroring the Memory Base path in
     ``kb_path_helpers.provision_memory_base_collection`` so a KB and an MB
     pointed at the same dead backend both fail the create with 422 instead of
     persisting a resource that only errors on first use.
     """
-    if is_local_chroma(backend_type, backend_config):
+    if is_local_backend(backend_type, backend_config):
         return
 
     backend = create_backend(
@@ -820,35 +791,13 @@ async def create_knowledge_base(
 
         kb_id = uuid.uuid4()
 
-        # Initialize only local Chroma immediately — it is the one backend with a
-        # directory to create. Remote providers create their per-KB collection
-        # lazily on first write.
-        if kb_path is not None:
-            # Clear any leftover sentinel in case mkdir raced a sentinel write
-            # from a concurrent delete; ``clear_deletion_sentinel`` no-ops when
-            # the marker is absent.
-            kb_path.mkdir(parents=True, exist_ok=True)
-            KBStorageHelper.clear_deletion_sentinel(kb_path)
-            try:
-                client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-                client.create_collection(name=kb_name, **chroma_client_create_collection_kwargs())
-            except chromadb.errors.InvalidArgumentError as e:
-                KBStorageHelper.delete_storage(kb_path, kb_name)
-                raise HTTPException(status_code=400, detail=f"Invalid knowledge base name: {e}") from e
-            except (OSError, ValueError, chromadb.errors.ChromaError) as e:
-                logger.warning("Initial Chroma setup for %s failed: %s", kb_name, e)
-            finally:
-                client = None
-                KBStorageHelper.release_chroma_resources(kb_path)
-
         # Serialize column_config for persistence
         column_config_dicts = None
         if request.column_config:
             column_config_dicts = [item.model_dump() for item in request.column_config]
 
-        # The row is the only record of this KB's identity and config — no
-        # on-disk sidecar is written, so a create that fails here leaves nothing
-        # but (possibly) an empty Chroma directory, which the rollback removes.
+        # The row owns KB identity and configuration. SQLite initialization uses
+        # its immutable UUID; initialization failure rolls the new record back.
         try:
             # ``model_selection`` is the canonical source of truth for
             # embedding config; the request still carries
@@ -877,6 +826,8 @@ async def create_knowledge_base(
             if kb_path is not None:
                 KBStorageHelper.delete_storage(kb_path, kb_name)
             raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists") from exc
+        except StorageUnavailableError:
+            raise
         except Exception as exc:
             await logger.aerror(
                 "KB DB persist failed for backend %s (kb=%s): %s — rolling back",
@@ -910,6 +861,8 @@ async def create_knowledge_base(
             backend_config=backend_config_value,
         )
 
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as e:
@@ -1037,6 +990,8 @@ async def preview_chunks(
                     }
                 )
 
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as e:
@@ -1149,6 +1104,8 @@ async def ingest_files_to_knowledge_base(
             asset_id=asset_id,
             asset_type="knowledge_base",
             user_id=current_user.id,
+            # Live from insert, so no sweep can catch it before the run heartbeats.
+            heartbeat=True,
         )
 
         # Always use async path: fire and forget the ingestion logic wrapped in status updates
@@ -1174,6 +1131,8 @@ async def ingest_files_to_knowledge_base(
         )
         return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
 
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as e:
@@ -1302,6 +1261,7 @@ async def ingest_folder_to_knowledge_base(
             asset_id=asset_id,
             asset_type="knowledge_base",
             user_id=current_user.id,
+            heartbeat=True,
         )
 
         task_service = get_task_service()
@@ -1326,6 +1286,8 @@ async def ingest_folder_to_knowledge_base(
         )
         return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
 
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as e:
@@ -1389,17 +1351,18 @@ async def list_knowledge_bases(
 
             # Map job statuses back to knowledge bases
             # Normalize to frontend-expected values: ready, ingesting, failed, empty
+            # A cancelled job is absent: cancelling rolls the KB back, so the
+            # row's own status (ready / empty / an earlier failure) still holds.
             job_status_map = {
                 "queued": "ingesting",
                 "in_progress": "ingesting",
                 "failed": "failed",
-                "cancelled": "failed",
                 "timed_out": "failed",
             }
             for kb_info in knowledge_bases:
                 try:
                     kb_uuid = uuid.UUID(kb_info.id)
-                    if kb_uuid in latest_jobs:
+                    if kb_uuid in latest_jobs and kb_info.storage_state == "ready":
                         job = latest_jobs[kb_uuid]
                         raw_status = job.status.value if hasattr(job.status, "value") else str(job.status)
                         mapped = job_status_map.get(raw_status)
@@ -1465,6 +1428,8 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
             size=record.size_bytes,
         )
 
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as e:
@@ -1520,42 +1485,14 @@ async def get_knowledge_base_chunks(
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
     await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
-    kb_path: Path | None = None
     backend = None
-    backend_type_value: str = BackendType.CHROMA.value
     try:
         # Backend selection + construction must resolve against the KB owner
         # so remote-backed shared KBs read the owner's credential variables,
         # not the actor's (the actor often has none of the right vars).
         record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
-        backend_type_value, backend_config = _backend_from_record(record)
-        kb_path = _resolve_kb_store_path(
-            kb_name,
-            _kb_guard.owner_user,
-            backend_type=backend_type_value,
-            backend_config=backend_config,
-        )
 
-        # Local-Chroma short-circuit: a KB whose directory has no Chroma files
-        # yet is empty, and booting a client against it would hit 'readonly
-        # database'. ``kb_path`` is None for every other backend, so this cannot
-        # misfire on a Chroma Cloud KB that legitimately stores nothing locally.
-        if kb_path is not None and not _local_chroma_has_data(kb_path):
-            return PaginatedChunkResponse(
-                chunks=[],
-                total=0,
-                page=page,
-                limit=limit,
-                total_pages=0,
-            )
-
-        backend = create_backend(
-            backend_type_value,
-            kb_name=kb_name,
-            kb_path=kb_path,
-            backend_config=backend_config,
-            user_id=_kb_guard.owner_user.id,
-        )
+        backend = await backend_for_record(record)
 
         search_term = search.strip().lower()
 
@@ -1622,18 +1559,25 @@ async def get_knowledge_base_chunks(
         matched: list[tuple[str, str, dict[str, Any]]] = []
         matched_count = 0
         try:
-            async for batch in backend.iter_documents():
-                for entry in batch:
-                    if not matches_filters(entry.metadata, entry.content):
-                        continue
-                    entry_id = (
-                        entry.metadata.get("_id") or entry.metadata.get("id") or entry.metadata.get("chunk_id") or ""
-                    )
-                    # Only materialize entries inside the requested page; we
-                    # still have to count past them for ``total_pages``.
-                    if offset <= matched_count < offset + limit:
-                        matched.append((entry_id, entry.content, dict(entry.metadata)))
-                    matched_count += 1
+            async with aclosing(backend.iter_documents()) as batches:
+                async for batch in batches:
+                    for entry in batch:
+                        if not matches_filters(entry.metadata, entry.content):
+                            continue
+                        entry_id = (
+                            entry.id
+                            or entry.metadata.get("_id")
+                            or entry.metadata.get("id")
+                            or entry.metadata.get("chunk_id")
+                            or ""
+                        )
+                        # Only materialize entries inside the requested page; we
+                        # still have to count past them for ``total_pages``.
+                        if offset <= matched_count < offset + limit:
+                            matched.append((entry_id, entry.content, dict(entry.metadata)))
+                        matched_count += 1
+        except StorageUnavailableError:
+            raise
         except Exception as iter_error:
             await logger.aerror("iter_documents failed for '%s': %s", kb_name, iter_error)
             raise HTTPException(status_code=500, detail="Error getting chunks.") from iter_error
@@ -1650,6 +1594,8 @@ async def get_knowledge_base_chunks(
             total_pages=(matched_count + limit - 1) // limit if matched_count > 0 else 0,
         )
 
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as e:
@@ -1663,12 +1609,6 @@ async def get_knowledge_base_chunks(
                 # Surface at debug level so teardown failures stay
                 # visible without masking the original error path.
                 await logger.adebug("Backend teardown failed: %s", teardown_exc)
-        # ``release_chroma_resources`` clears Chroma's shared
-        # ``SharedSystemClient`` registry entry. Calling it for a
-        # MongoDB/Astra/Postgres-backed KB would mutate that registry
-        # for unrelated Chroma KBs served from the same path.
-        if kb_path is not None and backend_type_value == BackendType.CHROMA.value:
-            KBStorageHelper.release_chroma_resources(kb_path)
 
 
 @router.get(
@@ -1698,36 +1638,13 @@ async def get_knowledge_base_metadata_keys(
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
     await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
-    kb_path: Path | None = None
     backend = None
-    backend_type_value: str = BackendType.CHROMA.value
     try:
         # Backend selection + construction must use the KB owner so
         # remote-backed shared KBs read the owner's credential variables.
         record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
-        backend_type_value, backend_config = _backend_from_record(record)
-        kb_path = _resolve_kb_store_path(
-            kb_name,
-            _kb_guard.owner_user,
-            backend_type=backend_type_value,
-            backend_config=backend_config,
-        )
 
-        # Local-Chroma short-circuit: an empty KB directory would otherwise hit
-        # 'readonly database'. Gated on ``kb_path`` rather than on
-        # ``backend_type == CHROMA``, which used to match Chroma *Cloud* too and
-        # returned an empty key set for a perfectly healthy cloud collection
-        # whenever this box had no local directory for it.
-        if kb_path is not None and not _local_chroma_has_data(kb_path):
-            return KbMetadataKeysResponse(keys={}, truncated=False)
-
-        backend = create_backend(
-            backend_type_value,
-            kb_name=kb_name,
-            kb_path=kb_path,
-            backend_config=backend_config,
-            user_id=_kb_guard.owner_user.id,
-        )
+        backend = await backend_for_record(record)
 
         # Per-key ordered set of stringified distinct values. Insertion
         # order is preserved so the UI dropdown shows values in the order
@@ -1735,35 +1652,38 @@ async def get_knowledge_base_metadata_keys(
         distinct: dict[str, dict[str, None]] = {}
         truncated = False
         try:
-            async for batch in backend.iter_documents(batch_size=1000):
-                for entry in batch:
-                    raw = (entry.metadata or {}).get("source_metadata")
-                    if not raw:
-                        continue
-                    try:
-                        stored = json.loads(raw) if isinstance(raw, str) else raw
-                    except json.JSONDecodeError:
-                        continue
-                    if not isinstance(stored, dict):
-                        continue
-                    for key, value in stored.items():
-                        if key in KB_METADATA_RESERVED_KEYS:
+            async with aclosing(backend.iter_documents(batch_size=1000)) as batches:
+                async for batch in batches:
+                    for entry in batch:
+                        raw = (entry.metadata or {}).get("source_metadata")
+                        if not raw:
                             continue
-                        bucket = distinct.setdefault(key, {})
-                        # Array-valued metadata expands into one distinct value
-                        # per array entry so the popover dropdown shows every
-                        # tag that could be filtered on.
-                        candidates = value if isinstance(value, list) else [value]
-                        for candidate in candidates:
-                            if candidate is None:
+                        try:
+                            stored = json.loads(raw) if isinstance(raw, str) else raw
+                        except json.JSONDecodeError:
+                            continue
+                        if not isinstance(stored, dict):
+                            continue
+                        for key, value in stored.items():
+                            if key in KB_METADATA_RESERVED_KEYS:
                                 continue
-                            stringified = str(candidate)
-                            if stringified in bucket:
-                                continue
-                            if len(bucket) >= KB_METADATA_KEYS_VALUES_CAP:
-                                truncated = True
-                                break
-                            bucket[stringified] = None
+                            bucket = distinct.setdefault(key, {})
+                            # Array-valued metadata expands into one distinct value
+                            # per array entry so the popover dropdown shows every
+                            # tag that could be filtered on.
+                            candidates = value if isinstance(value, list) else [value]
+                            for candidate in candidates:
+                                if candidate is None:
+                                    continue
+                                stringified = str(candidate)
+                                if stringified in bucket:
+                                    continue
+                                if len(bucket) >= KB_METADATA_KEYS_VALUES_CAP:
+                                    truncated = True
+                                    break
+                                bucket[stringified] = None
+        except StorageUnavailableError:
+            raise
         except Exception as iter_error:
             await logger.aerror("iter_documents failed while listing metadata keys for '%s': %s", kb_name, iter_error)
             raise HTTPException(status_code=500, detail="Error listing metadata keys.") from iter_error
@@ -1773,6 +1693,8 @@ async def get_knowledge_base_metadata_keys(
             truncated=truncated,
         )
 
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as e:
@@ -1784,8 +1706,6 @@ async def get_knowledge_base_metadata_keys(
                 await backend.teardown()
             except Exception as teardown_exc:  # noqa: BLE001
                 await logger.adebug("Backend teardown failed: %s", teardown_exc)
-        if kb_path is not None and backend_type_value == BackendType.CHROMA.value:
-            KBStorageHelper.release_chroma_resources(kb_path)
 
 
 @router.post(
@@ -1869,6 +1789,7 @@ async def ingest_via_connector(
                 asset_id=asset_id,
                 asset_type="knowledge_base",
                 user_id=current_user.id,
+                heartbeat=True,
                 dedupe_key=dedupe_key,
             )
         except DuplicateJobError as exc:
@@ -1902,6 +1823,8 @@ async def ingest_via_connector(
         )
         return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
 
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as e:
@@ -2034,73 +1957,26 @@ async def delete_knowledge_base(
         # not it ever had a local directory. That is what makes a remote-backed
         # KB removable from any replica.
         record = await _require_kb_record(kb_name, kb_owner, _kb_guard)
-        backend_type_value, backend_config = _backend_from_record(record)
-        kb_path = _resolve_kb_store_path(
-            kb_name,
-            kb_owner,
-            backend_type=backend_type_value,
-            backend_config=backend_config,
-        )
 
-        # Cancel any in-flight ingestion before tearing down the KB. Without
-        # this, a local-Chroma writer keeps going through its persistent client
-        # and recreates the directory right after rmtree.
+        # Request cancellation promptly, then let the storage deletion fence
+        # drain existing writers before deleting their collection.
         await _cancel_inflight_ingestion_for_kb(
             kb_name=kb_name,
             asset_id=record.id,
             job_service=job_service,
         )
 
-        remote_warning = await _delete_remote_backend_collection(
-            kb_name=kb_name,
-            kb_path=kb_path,
-            backend_type_value=backend_type_value,
-            backend_config=backend_config,
-            current_user=kb_owner,
-        )
+        await knowledge_base_service.delete_record(record.id)
 
-        # Delete the DB row first, then attempt to clear the on-disk dir.
-        # Rationale: when Chroma still holds a SQLite lock (most common on
-        # Windows) physical removal can fail, but the user's intent was to
-        # remove the KB.  By dropping the DB row first the row never lingers
-        # past a partial cleanup, and KBStorageHelper.delete_storage() drops
-        # a sentinel inside any dir it could not remove so a recreate under the
-        # same name refuses rather than adopting the stale collection.
-        try:
-            await knowledge_base_service.delete_by_user_and_name(kb_owner.id, kb_name)
-        except Exception as exc:
-            await logger.aerror("KB DB delete failed for %s: %s", kb_name, exc)
-            raise HTTPException(status_code=500, detail="Error deleting knowledge base.") from exc
-
-        storage_warning: str | None = None
-        if kb_path is not None and not KBStorageHelper.delete_storage(kb_path, kb_name):
-            # Both physical removal AND the sentinel write failed.  This is
-            # rare (would require the dir itself being unwritable) but we
-            # still return 200 because the DB row is gone -- the user no
-            # longer sees the KB.  A warning surfaces so operators know the
-            # bytes are still on disk and want a follow-up cleanup.
-            storage_warning = (
-                f"Knowledge base '{kb_name}' was removed from the database but its on-disk "
-                "files could not be cleaned up. The KB will not reappear in the UI; the bytes "
-                "will be removed on the next server restart."
-            )
-            await logger.awarning(storage_warning)
-
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as e:
         await logger.aerror("Error deleting knowledge base '%s': %s", kb_name, e)
         raise HTTPException(status_code=500, detail="Error deleting knowledge base.") from e
     else:
-        response: dict[str, str] = {"message": f"Knowledge base '{kb_name}' deleted successfully"}
-        # Storage-cleanup failure first so it is the most visible to the
-        # operator (it has actionable filesystem implications).  Remote-
-        # backend warnings stack onto the same response field separated by
-        # a sentinel so a future client can split them.
-        warnings = [w for w in (storage_warning, remote_warning) if w]
-        if warnings:
-            response["warning"] = " | ".join(warnings)
-        return response
+        return {"message": f"Knowledge base '{kb_name}' deleted successfully"}
 
 
 @router.delete("", status_code=HTTPStatus.OK)
@@ -2147,16 +2023,11 @@ async def delete_knowledge_bases_bulk(
                 not_found_kbs.append(kb_name)
                 continue
 
-            backend_type_value, backend_config = _backend_from_record(record)
+            _validate_kb_name_or_403(kb_name, kb_guard.owner_user)
+
             # Resolved OUTSIDE the per-KB try below: a containment failure is a
             # 403 that must abort the whole request, not be downgraded to a
             # per-item "failed" entry in a 200 response.
-            kb_path = _resolve_kb_store_path(
-                kb_name,
-                kb_guard.owner_user,
-                backend_type=backend_type_value,
-                backend_config=backend_config,
-            )
 
             try:
                 # Cancel any in-flight ingestion before tearing down
@@ -2168,39 +2039,9 @@ async def delete_knowledge_bases_bulk(
                     asset_id=record.id,
                     job_service=job_service,
                 )
-                remote_warning = await _delete_remote_backend_collection(
-                    kb_name=kb_name,
-                    kb_path=kb_path,
-                    backend_type_value=backend_type_value,
-                    backend_config=backend_config,
-                    current_user=kb_guard.owner_user,
-                )
-                if remote_warning:
-                    remote_warnings.append(remote_warning)
-
-                # DB-first ordering, mirroring the single-delete endpoint:
-                # row goes first so a locked-storage cleanup leaves no
-                # stale row behind.  delete_storage() drops a sentinel
-                # inside any dir it could not remove so a same-name recreate
-                # refuses rather than adopting the stale collection.
-                try:
-                    await knowledge_base_service.delete_by_user_and_name(kb_guard.owner_user.id, kb_name)
-                except Exception as exc:  # noqa: BLE001 - DB delete failures shouldn't block remaining KBs in the bulk op
-                    await logger.aexception("KB DB delete failed for %s: %s", kb_name, exc)
-                    failed_kbs.append(kb_name)
-                    continue
-
-                if kb_path is not None and not KBStorageHelper.delete_storage(kb_path, kb_name):
-                    # Both rmtree and the sentinel write failed -- count
-                    # this as deleted (the row is gone, the listing UI
-                    # will not show the KB) but warn so the operator can
-                    # follow up on the orphaned bytes.
-                    remote_warnings.append(
-                        f"Knowledge base '{kb_name}' was removed from the database but its on-disk "
-                        "files could not be cleaned up; bytes will be reaped on next server restart."
-                    )
+                await knowledge_base_service.delete_record(record.id)
                 deleted_count += 1
-            except (HTTPException, OSError, PermissionError) as e:
+            except (HTTPException, OSError, ValueError) as e:
                 await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
                 # Continue with other deletions even if one fails
                 failed_kbs.append(kb_name)
@@ -2224,6 +2065,8 @@ async def delete_knowledge_bases_bulk(
         if remote_warnings:
             result["warnings"] = remote_warnings
 
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as e:
@@ -2292,6 +2135,8 @@ async def cancel_ingestion(
             message = f"Job {job.job_id} is already cancelled."
     except asyncio.CancelledError:
         raise
+    except StorageUnavailableError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as e:

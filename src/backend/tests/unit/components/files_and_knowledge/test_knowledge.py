@@ -31,6 +31,8 @@ from lfx.components.files_and_knowledge.knowledge import (
     _is_retrieve_mode,
 )
 from lfx.components.files_and_knowledge.retrieval import KnowledgeBaseComponent
+from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame
 
 
 # ---------------------------------------------------------------------------
@@ -275,6 +277,27 @@ class TestOutputMethodModeDispatch:
 
         assert result is sentinel
         component.build_kb_info.assert_awaited_once()
+
+    @pytest.mark.parametrize("mode", [MODE_INGEST, MODE_RETRIEVE])
+    @pytest.mark.parametrize("reverse_outputs", [False, True])
+    async def test_each_build_evaluates_selected_mode_once(self, mode, reverse_outputs) -> None:
+        component = KnowledgeComponent(mode=mode)
+        if reverse_outputs:
+            component.outputs = list(reversed(component.outputs))
+        value = Data(text="ingested") if mode == MODE_INGEST else DataFrame({"text": ["retrieved"]})
+        operation = AsyncMock(return_value=value)
+        setattr(component, "build_kb_info" if mode == MODE_INGEST else "retrieve_data", operation)
+
+        for expected_calls in (1, 2):
+            component.reset_all_output_values()
+            results, _artifacts = await component._build_results()
+            assert {"dataframe_output", "retrieve_data"} <= results.keys()
+            if mode == MODE_INGEST:
+                assert results["dataframe_output"].text == results["retrieve_data"].text == "ingested"
+            else:
+                assert results["dataframe_output"]["text"].tolist() == ["retrieved"]
+                assert results["retrieve_data"]["text"].tolist() == ["retrieved"]
+            assert operation.await_count == expected_calls
 
 
 # ---------------------------------------------------------------------------
@@ -833,7 +856,7 @@ class TestKbPathsBackwardCompatibleSymbols:
         from lfx.components.files_and_knowledge._kb_paths import load_kb_metadata
 
         (tmp_path / "embedding_metadata.json").write_text(
-            json.dumps({"model": "text-embedding-3-small", "api_key": "encrypted"}),
+            json.dumps({"model": "text-embedding-3-small", "api_key": "encrypted"}),  # pragma: allowlist secret
             encoding="utf-8",
         )
 

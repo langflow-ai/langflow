@@ -3,21 +3,17 @@
 Design principles enforced here:
 - Cursor atomicity: cursor_id is NEVER updated before ingestion confirms success.
 - Retry safety: If a job fails, cursor_id remains at the last known good position.
-- Serialization: A per-(memory_base_id, session_id) distributed lock prevents concurrent
-  jobs from racing to write the same messages into the vector store. Uses PostgreSQL
-  advisory locks for cross-worker safety, with an in-process asyncio.Lock fallback for
-  SQLite (dev/test). The lock is acquired before any DB or vector-store access and
-  released in a finally block.
+- Serialization: The KB storage fence spans validated message reads, vector writes,
+  and tracking commits. Preprocessing runs outside it and revalidates its snapshot.
+  A per-session ingestion lock also coordinates duplicate ingestion jobs.
 - Live cursor: After acquiring the lock, the current cursor_id is re-read from the DB
   (not the dispatch-time snapshot) so the pending message fetch always starts from the
   true latest position, even if a prior job advanced the cursor while this job waited.
-- Path safety: a local path is resolved only for local Chroma, and is containment-checked
-  against the KB root before any filesystem operation. Remote-backed Memory Bases resolve
-  no path at all.
+- Path safety: SQLite storage uses the authoritative owner UUID, KB UUID, and generation.
+  Remote stores require no local vector directory.
 
 The write goes through whichever backend the KB is configured with, resolved from the
-``knowledge_base`` row — so a Memory Base on OpenSearch or Chroma Cloud ingests to that
-store rather than to a local directory on whichever replica happened to run the job. The
+``knowledge_base`` row. SQLite, OpenSearch, and pgVector use the same guarded interface. The
 batching/retry logic is shared with KB file ingestion via
 ``KBIngestionHelper.write_documents_to_backend`` — no duplicate code here.
 
@@ -29,11 +25,11 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import weakref
+from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from lfx.base.knowledge_bases.backends import create_backend
 from lfx.log.logger import logger
 from lfx.workflow.end_user_identity import end_user_id_from_scoped_session
 from sqlalchemy import text
@@ -41,6 +37,7 @@ from sqlmodel import Session, col, select
 
 from langflow.api.utils.kb_helpers import (
     KBIngestionHelper,
+    backend_for_name,
     resolve_backend_selection,
     resolve_local_store_path,
 )
@@ -51,6 +48,7 @@ from langflow.services.database.models.memory_base.model import (
 )
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError, operation, resolve_record
 from langflow.services.memory_base.document_builders import (
     build_documents_from_messages,
     build_preprocessed_document,
@@ -201,6 +199,16 @@ async def _read_live_cursor(db: Session, memory_base_id: uuid.UUID, session_id: 
     return result.first()
 
 
+async def _read_live_session_id(db: Session, memory_base_id: uuid.UUID, session_id: str) -> uuid.UUID | None:
+    """Read the tracking identity to detect a session purged and recreated during preprocessing."""
+    result = await db.exec(
+        select(MemoryBaseSession.id)
+        .where(MemoryBaseSession.memory_base_id == memory_base_id)
+        .where(MemoryBaseSession.session_id == session_id)
+    )
+    return result.first()
+
+
 async def ingest_memory_task(*, request: IngestionRequest) -> dict:
     """Re-resolve and bind trusted provider scope before distributed ingestion."""
     async with session_scope() as db:
@@ -222,9 +230,11 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
         user_id=request.actor_user_id,
         is_superuser=provider_scope.is_superuser,
     ):
+        record = await resolve_record(request.owner_user_id, provider_scope.memory_base.kb_name)
+        async with operation(record, shared=True):
+            pass
         return await _ingest_memory_task_in_scope(
-            request=request,
-            provider_policies=provider_policies,
+            request=request, provider_policies=provider_policies, storage_record=record
         )
 
 
@@ -274,13 +284,14 @@ async def _ingest_memory_task_in_scope(
     *,
     request: IngestionRequest,
     provider_policies: MemoryProviderPolicies,
+    storage_record=None,
 ) -> dict:
     """Ingest pending output messages from a session into the target Knowledge Base.
 
     Accepts a single ``IngestionRequest`` dataclass that bundles all required parameters.
 
     Serialization: acquires a per-(memory_base_id, session_id) distributed lock before
-    any DB or Chroma access.  Uses PostgreSQL advisory locks for cross-worker
+    any message or vector-store access.  Uses PostgreSQL advisory locks for cross-worker
     serialization (multi-worker safe) with an in-process asyncio.Lock fallback for
     SQLite.  Concurrent jobs for the same session wait up to max_ingestion_timeout_secs;
     if the lock cannot be acquired in time, asyncio.TimeoutError is re-raised so
@@ -326,6 +337,7 @@ async def _ingest_memory_task_in_scope(
 
     # ---- 0. Acquire per-session serialization lock ----
     async with session_scope() as db:
+        storage_stack = AsyncExitStack()
         try:
             lock_handle = await _acquire_session_lock(db, memory_base_id, session_id)
         except asyncio.TimeoutError:
@@ -338,8 +350,13 @@ async def _ingest_memory_task_in_scope(
             raise
 
         try:
+            if storage_record is None:
+                storage_record = await resolve_record(owner_user_id, kb_name)
+            async with operation(storage_record, shared=True):
+                pass
             # ---- 0b. Re-read live cursor inside the lock ----
             live_cursor_id = await _read_live_cursor(db, memory_base_id, session_id)
+            live_session_id = await _read_live_session_id(db, memory_base_id, session_id)
             await logger.adebug(
                 "Ingestion lock acquired | memory_base=%s session=%s live_cursor=%s job=%s",
                 memory_base_id,
@@ -361,6 +378,25 @@ async def _ingest_memory_task_in_scope(
                 )
                 return {"message": "No pending messages", "ingested": 0}
 
+            async def validate_source_snapshot() -> None:
+                """Refuse writes derived from messages purged or changed during a provider call."""
+                async with operation(storage_record), session_scope() as fresh:
+                    current_session_id = await _read_live_session_id(fresh, memory_base_id, session_id)
+                    current_cursor = await _read_live_cursor(fresh, memory_base_id, session_id)
+                    current_messages = await _fetch_pending_messages(
+                        fresh, flow_id=flow_id, session_id=session_id, cursor_id=current_cursor
+                    )
+                originals = {message.id: message.model_dump() for message in messages}
+                current = {message.id: message.model_dump() for message in current_messages if message.id in originals}
+                if current_session_id != live_session_id or current_cursor != live_cursor_id or current != originals:
+                    msg = "Memory source messages changed during preprocessing. Retry ingestion."
+                    raise StorageUnavailableError(msg)
+
+            async def fence_preprocessing_snapshot() -> None:
+                """Keep preprocessing history commits serialized with session purges."""
+                await storage_stack.enter_async_context(operation(storage_record))
+                await validate_source_snapshot()
+
             # ---- 2. Build documents (preprocessing → Phase A; raw → direct) ----
             # ``preproc_row`` is non-None only on the preprocessing path; in Phase B
             # we flip its status from "processed" to "ingested" inside the same
@@ -373,6 +409,7 @@ async def _ingest_memory_task_in_scope(
                 preproc_row = await _get_pending_preproc_row(db, memory_base_id, session_id)
 
                 if preproc_row is not None:
+                    await fence_preprocessing_snapshot()
                     # Resume: restrict the working batch to the messages this row
                     # was built from.  Do NOT call the LLM again — the prior
                     # judgment (and cost) is preserved across crashes.
@@ -408,9 +445,10 @@ async def _ingest_memory_task_in_scope(
                         actor_user_id=actor_user_id,
                         provider_policy=provider_policies.preprocessing,
                     )
+                    await fence_preprocessing_snapshot()
                     if result.status == "skipped":
                         # Kill phrase — record the skip, advance the cursor, but
-                        # never write to Chroma. _mark_messages_ingested still
+                        # never write vectors. _mark_messages_ingested still
                         # runs so the same batch is not re-evaluated next job.
                         await _insert_preproc_row(
                             db,
@@ -471,7 +509,10 @@ async def _ingest_memory_task_in_scope(
 
             # ---- 3. Check cancellation before touching the vector store ----
             if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
-                return {"message": "Job cancelled before ingestion", "ingested": 0}
+                # A normal return makes execute_with_status record COMPLETED.
+                # Preserve cooperative cancellation through the job wrapper.
+                msg = "LANGFLOW_USER_CANCELLED"
+                raise asyncio.CancelledError(msg)
 
             # ---- 4. Open the KB's vector-store backend, write, then sync metadata ----
             embeddings = await _build_embeddings_for_owner(
@@ -481,25 +522,29 @@ async def _ingest_memory_task_in_scope(
                 actor_user_id=actor_user_id,
                 provider_policy=provider_policies.embedding,
             )
+            # Provider calls and retry back-off never retain an exclusive KB
+            # lease. Every batch validates the live source under its write
+            # lease, and the final tracking commit validates once more.
+            await storage_stack.aclose()
 
             # Resolved from the knowledge_base row, so an ingestion running on a
             # replica that has never touched this KB's directory still writes to
             # the configured store instead of silently creating a local one.
             backend_type, backend_config = await resolve_backend_selection(user_id=owner_user_id, kb_name=kb_name)
-            # ``None`` for every remote backend; only local Chroma gets a directory.
+            # Compatibility path for legacy cleanup only. Active SQLite routing
+            # is resolved by the guarded backend from immutable record identity.
             kb_path = resolve_local_store_path(
                 kb_name,
                 kb_username,
                 backend_type=backend_type,
                 backend_config=backend_config,
             )
-            backend = create_backend(
-                backend_type,
-                kb_name=kb_name,
-                kb_path=kb_path,
-                backend_config=backend_config,
+            backend = await backend_for_name(
+                owner_user_id,
+                kb_name,
                 embedding_function=embeddings,
-                user_id=owner_user_id,
+                before_write=validate_source_snapshot,
+                expected_record=storage_record,
             )
             written = 0
             try:
@@ -513,7 +558,11 @@ async def _ingest_memory_task_in_scope(
                 )
 
                 if written == len(documents):
-                    await sync_kb_stats_to_record(user_id=owner_user_id, kb_name=kb_name, backend=backend)
+                    try:
+                        await sync_kb_stats_to_record(user_id=owner_user_id, kb_name=kb_name, backend=backend)
+                    except Exception as exc:  # noqa: BLE001 -- cached counters cannot undo a confirmed write
+                        await logger.awarning("Memory metrics refresh lagged: %s", exc)
+                await fence_preprocessing_snapshot()
             except Exception:
                 await logger.aerror(
                     "Ingestion write failed | memory_base=%s session=%s job=%s. Rolling back partial writes...",
@@ -543,7 +592,8 @@ async def _ingest_memory_task_in_scope(
                     backend_config=backend_config,
                     user_id=owner_user_id,
                 )
-                return {"message": "Job cancelled during ingestion", "ingested": 0}
+                msg = "LANGFLOW_USER_CANCELLED"
+                raise asyncio.CancelledError(msg)
 
             # ---- 5. Phase B (preprocessing only) — flip preproc row to ingested ----
             # Staged in the same DB session as the ingestion-record writes and cursor
@@ -578,7 +628,10 @@ async def _ingest_memory_task_in_scope(
             return {"message": "Success", "ingested": ingested_count}
 
         finally:
-            await _release_session_lock(db, lock_handle)
+            try:
+                await storage_stack.aclose()
+            finally:
+                await _release_session_lock(db, lock_handle)
 
 
 async def _fetch_pending_messages(
@@ -673,7 +726,7 @@ async def _get_pending_preproc_row(
     """Return the oldest ``processed`` preproc row for this session, if any.
 
     A non-None return means a previous job's LLM output has not yet been
-    written to Chroma. Phase A reuses it instead of re-invoking the LLM.
+    written to vector storage. Phase A reuses it instead of re-invoking the LLM.
     """
     stmt = (
         select(MemoryBasePreprocessingOutput)
@@ -698,7 +751,7 @@ async def _insert_preproc_row(
     source_message_ids: list[str],
     model_used: str,
 ) -> MemoryBasePreprocessingOutput:
-    """Insert a fresh preproc-output row and commit so it survives a Chroma crash.
+    """Insert a fresh preproc-output row and commit so it survives a vector-store failure.
 
     For ``status='processed'`` this is the durable artifact that lets the next
     job retry only the KB write. For ``status='skipped'`` it's the audit record
@@ -740,7 +793,7 @@ async def _update_preproc_row_status(
         immediately because there is no follow-up batch.
 
     ``job_id`` is updated to ``task_job_id`` so ``cleanup_chroma_chunks_by_job``
-    keys remain consistent on retry — after a failed-then-cleaned Chroma write
+    keys remain consistent on retry — after a failed-then-cleaned vector write
     the original job_id no longer matches any docs.
     """
     row.status = status

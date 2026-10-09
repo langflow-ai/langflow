@@ -1,0 +1,332 @@
+{
+  "nodes": [
+    {
+      "id": "OpenDsStarAgent-CYVYX",
+      "data": {
+        "id": "OpenDsStarAgent-CYVYX",
+        "type": "OpenDsStarAgent",
+        "node": {
+          "display_name": "OpenDsStar Agent",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "FileDescriptionGeneratorComponent-oTrJn",
+      "data": {
+        "id": "FileDescriptionGeneratorComponent-oTrJn",
+        "type": "FileDescriptionGeneratorComponent",
+        "node": {
+          "display_name": "File Description Generator",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "File-jKAIS",
+      "data": {
+        "id": "File-jKAIS",
+        "type": "File",
+        "node": {
+          "display_name": "Read File",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "ChatInput-zSTGd",
+      "data": {
+        "id": "ChatInput-zSTGd",
+        "type": "ChatInput",
+        "node": {
+          "display_name": "Chat Input",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "ChatOutput-JmTk1",
+      "data": {
+        "id": "ChatOutput-JmTk1",
+        "type": "ChatOutput",
+        "node": {
+          "display_name": "Chat Output",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "note-qnCin",
+      "data": {
+        "id": "note-qnCin",
+        "type": "note",
+        "node": {
+          "display_name": "",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "note-9ftWr",
+      "data": {
+        "id": "note-9ftWr",
+        "type": "note",
+        "node": {
+          "display_name": "",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "note-FkADH",
+      "data": {
+        "id": "note-FkADH",
+        "type": "note",
+        "node": {
+          "display_name": "",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "note-c9x8h",
+      "data": {
+        "id": "note-c9x8h",
+        "type": "note",
+        "node": {
+          "display_name": "",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "note-t6CBQ",
+      "data": {
+        "id": "note-t6CBQ",
+        "type": "note",
+        "node": {
+          "display_name": "",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "Chroma-eMTbF",
+      "data": {
+        "id": "Chroma-eMTbF",
+        "type": "Chroma",
+        "node": {
+          "display_name": "Chroma DB",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "Chroma-IkIQx",
+      "data": {
+        "id": "Chroma-IkIQx",
+        "type": "Chroma",
+        "node": {
+          "display_name": "Chroma DB",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "FileContentRetriever-353E9",
+      "data": {
+        "id": "FileContentRetriever-353E9",
+        "type": "FileContentRetriever",
+        "node": {
+          "display_name": "File Content Retriever",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "FileContentRetriever-Yhfgz",
+      "data": {
+        "id": "FileContentRetriever-Yhfgz",
+        "type": "FileContentRetriever",
+        "node": {
+          "display_name": "File Content Retriever",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "MergeFlows-TfkV5",
+      "data": {
+        "id": "MergeFlows-TfkV5",
+        "type": "MergeFlows",
+        "node": {
+          "display_name": "Merge Flows",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "OllamaModel-7LbmX",
+      "data": {
+        "id": "OllamaModel-7LbmX",
+        "type": "OllamaModel",
+        "node": {
+          "display_name": "Ollama",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "OllamaEmbeddings-zAbkk",
+      "data": {
+        "id": "OllamaEmbeddings-zAbkk",
+        "type": "OllamaEmbeddings",
+        "node": {
+          "display_name": "Ollama Embeddings",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "note-xPy9b",
+      "data": {
+        "id": "note-xPy9b",
+        "type": "note",
+        "node": {
+          "display_name": "",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "note-v8fAB",
+      "data": {
+        "id": "note-v8fAB",
+        "type": "note",
+        "node": {
+          "display_name": "",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "note-JgV9B",
+      "data": {
+        "id": "note-JgV9B",
+        "type": "note",
+        "node": {
+          "display_name": "",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "note-QqpFM",
+      "data": {
+        "id": "note-QqpFM",
+        "type": "note",
+        "node": {
+          "display_name": "",
+          "template": {}
+        }
+      }
+    },
+    {
+      "id": "SaveToFile-9FQfI",
+      "data": {
+        "id": "SaveToFile-9FQfI",
+        "type": "SaveToFile",
+        "node": {
+          "display_name": "Write File",
+          "template": {}
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "FileDescriptionGeneratorComponent-oTrJn",
+      "target": "Chroma-eMTbF",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153FileDescriptionGeneratorComponent\u0153, \u0153id\u0153: \u0153FileDescriptionGeneratorComponent-oTrJn\u0153, \u0153name\u0153: \u0153descriptions\u0153, \u0153output_types\u0153: [\u0153JSON\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153ingest_data\u0153, \u0153id\u0153: \u0153Chroma-eMTbF\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Table\u0153], \u0153type\u0153: \u0153other\u0153}"
+    },
+    {
+      "source": "Chroma-IkIQx",
+      "target": "OpenDsStarAgent-CYVYX",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153Chroma\u0153, \u0153id\u0153: \u0153Chroma-IkIQx\u0153, \u0153name\u0153: \u0153component_as_tool\u0153, \u0153output_types\u0153: [\u0153Tool\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153tools\u0153, \u0153id\u0153: \u0153OpenDsStarAgent-CYVYX\u0153, \u0153inputTypes\u0153: [\u0153Tool\u0153], \u0153type\u0153: \u0153other\u0153}"
+    },
+    {
+      "source": "ChatInput-zSTGd",
+      "target": "OpenDsStarAgent-CYVYX",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153ChatInput\u0153, \u0153id\u0153: \u0153ChatInput-zSTGd\u0153, \u0153name\u0153: \u0153message\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153OpenDsStarAgent-CYVYX\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
+    },
+    {
+      "source": "OpenDsStarAgent-CYVYX",
+      "target": "ChatOutput-JmTk1",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153OpenDsStarAgent\u0153, \u0153id\u0153: \u0153OpenDsStarAgent-CYVYX\u0153, \u0153name\u0153: \u0153response\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153ChatOutput-JmTk1\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153JSON\u0153, \u0153DataFrame\u0153, \u0153Table\u0153, \u0153Message\u0153], \u0153type\u0153: \u0153other\u0153}"
+    },
+    {
+      "source": "FileContentRetriever-Yhfgz",
+      "target": "OpenDsStarAgent-CYVYX",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153FileContentRetriever\u0153, \u0153id\u0153: \u0153FileContentRetriever-Yhfgz\u0153, \u0153name\u0153: \u0153component_as_tool\u0153, \u0153output_types\u0153: [\u0153Tool\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153tools\u0153, \u0153id\u0153: \u0153OpenDsStarAgent-CYVYX\u0153, \u0153inputTypes\u0153: [\u0153Tool\u0153], \u0153type\u0153: \u0153other\u0153}"
+    },
+    {
+      "source": "Chroma-eMTbF",
+      "target": "MergeFlows-TfkV5",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153Chroma\u0153, \u0153id\u0153: \u0153Chroma-eMTbF\u0153, \u0153name\u0153: \u0153search_results\u0153, \u0153output_types\u0153: [\u0153JSON\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153inputs\u0153, \u0153id\u0153: \u0153MergeFlows-TfkV5\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Message\u0153, \u0153Tool\u0153, \u0153JSON\u0153, \u0153Table\u0153], \u0153type\u0153: \u0153other\u0153}"
+    },
+    {
+      "source": "FileContentRetriever-353E9",
+      "target": "MergeFlows-TfkV5",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153FileContentRetriever\u0153, \u0153id\u0153: \u0153FileContentRetriever-353E9\u0153, \u0153name\u0153: \u0153content\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153inputs\u0153, \u0153id\u0153: \u0153MergeFlows-TfkV5\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Message\u0153, \u0153Tool\u0153, \u0153JSON\u0153, \u0153Table\u0153], \u0153type\u0153: \u0153other\u0153}"
+    },
+    {
+      "source": "OllamaModel-7LbmX",
+      "target": "FileDescriptionGeneratorComponent-oTrJn",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153OllamaModel\u0153, \u0153id\u0153: \u0153OllamaModel-7LbmX\u0153, \u0153name\u0153: \u0153model_output\u0153, \u0153output_types\u0153: [\u0153LanguageModel\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153llm\u0153, \u0153id\u0153: \u0153FileDescriptionGeneratorComponent-oTrJn\u0153, \u0153inputTypes\u0153: [\u0153LanguageModel\u0153], \u0153type\u0153: \u0153other\u0153}"
+    },
+    {
+      "source": "OllamaModel-7LbmX",
+      "target": "OpenDsStarAgent-CYVYX",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153OllamaModel\u0153, \u0153id\u0153: \u0153OllamaModel-7LbmX\u0153, \u0153name\u0153: \u0153model_output\u0153, \u0153output_types\u0153: [\u0153LanguageModel\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153llm\u0153, \u0153id\u0153: \u0153OpenDsStarAgent-CYVYX\u0153, \u0153inputTypes\u0153: [\u0153LanguageModel\u0153], \u0153type\u0153: \u0153other\u0153}"
+    },
+    {
+      "source": "OllamaEmbeddings-zAbkk",
+      "target": "Chroma-eMTbF",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153OllamaEmbeddings\u0153, \u0153id\u0153: \u0153OllamaEmbeddings-zAbkk\u0153, \u0153name\u0153: \u0153embeddings\u0153, \u0153output_types\u0153: [\u0153Embeddings\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153embedding\u0153, \u0153id\u0153: \u0153Chroma-eMTbF\u0153, \u0153inputTypes\u0153: [\u0153Embeddings\u0153], \u0153type\u0153: \u0153other\u0153}"
+    },
+    {
+      "source": "OllamaEmbeddings-zAbkk",
+      "target": "Chroma-IkIQx",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153OllamaEmbeddings\u0153, \u0153id\u0153: \u0153OllamaEmbeddings-zAbkk\u0153, \u0153name\u0153: \u0153embeddings\u0153, \u0153output_types\u0153: [\u0153Embeddings\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153embedding\u0153, \u0153id\u0153: \u0153Chroma-IkIQx\u0153, \u0153inputTypes\u0153: [\u0153Embeddings\u0153], \u0153type\u0153: \u0153other\u0153}"
+    },
+    {
+      "source": "File-jKAIS",
+      "target": "FileDescriptionGeneratorComponent-oTrJn",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153File\u0153, \u0153id\u0153: \u0153File-jKAIS\u0153, \u0153name\u0153: \u0153message\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153file_data\u0153, \u0153id\u0153: \u0153FileDescriptionGeneratorComponent-oTrJn\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Message\u0153], \u0153type\u0153: \u0153other\u0153}"
+    },
+    {
+      "source": "File-jKAIS",
+      "target": "FileContentRetriever-353E9",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153File\u0153, \u0153id\u0153: \u0153File-jKAIS\u0153, \u0153name\u0153: \u0153message\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153file_data\u0153, \u0153id\u0153: \u0153FileContentRetriever-353E9\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Message\u0153], \u0153type\u0153: \u0153other\u0153}"
+    },
+    {
+      "source": "SaveToFile-9FQfI",
+      "target": "OpenDsStarAgent-CYVYX",
+      "sourceHandle": "{\u0153dataType\u0153: \u0153SaveToFile\u0153, \u0153id\u0153: \u0153SaveToFile-9FQfI\u0153, \u0153name\u0153: \u0153component_as_tool\u0153, \u0153output_types\u0153: [\u0153Tool\u0153]}",
+      "targetHandle": "{\u0153fieldName\u0153: \u0153tools\u0153, \u0153id\u0153: \u0153OpenDsStarAgent-CYVYX\u0153, \u0153inputTypes\u0153: [\u0153Tool\u0153], \u0153type\u0153: \u0153other\u0153}"
+    }
+  ]
+}

@@ -180,6 +180,53 @@ This example policy allows basic CRUD operations on S3 objects.
 }
 ```
 
+### Copy existing files to S3
+
+Changing `LANGFLOW_STORAGE_TYPE` to `s3` doesn't bring the files you already have.
+Langflow reads and writes new files in the bucket, the previously uploaded bytes stay on local disk, and nothing reports an error until someone opens a flow that reads one.
+
+To copy them, stop Langflow and run the following command.
+Set `LANGFLOW_STORAGE_TYPE=local` for this command, the value the instance had before the switch, so that it reads the files on local disk.
+The command needs the same AWS credentials Langflow uses.
+Before it copies anything, it checks that the bucket exists and that the credentials can reach it. If they can't, it stops there, including with `--dry-run`.
+
+```bash
+LANGFLOW_STORAGE_TYPE=local langflow relocate-files --bucket S3_BUCKET_NAME --prefix S3_BUCKET_DIRECTORY
+```
+
+Each file keeps its key.
+Chat history records each attachment by its absolute path on local disk, which the S3 backend can't read, so the command rewrites those paths to the `<id>/<file name>` form both backends read. A path it can't match to a stored file is reported and left as it was.
+Nothing is deleted from local disk, files already in the bucket are skipped, and a file counts as copied only when the bucket reports an object of the same size, so you can run the command again after an interrupted run.
+A file already in the bucket with the same size but different content, such as a file edited between runs, is reported rather than skipped. The content comparison uses the object's MD5, which S3 provides for files uploaded in one part without SSE-KMS or customer-provided keys. For other objects, including files larger than 8 MiB, which the command uploads in parts, it compares size only and says so.
+Files stream from disk to the bucket, so a large file isn't loaded into memory. The command copies 4 files at a time. Set `--concurrency` to change that; each file in flight holds at most 8 MiB.
+Add `--dry-run` to see what it would copy, and `--username` to limit it to one user's files.
+
+Add `--json` to run the command from another program. Standard output then carries one JSON object per line, and logs go to standard error:
+
+* `progress`: the files `done`, the `total`, and the `bytes` copied so far. The first one is sent at the start with `"phase": "checking"` and a `total` of `null`, because the files aren't counted yet. The next ones have `"phase": "copying"` and the real `total`: one as soon as the files are counted, then one as each file finishes.
+* `item`: one result, sent as each file finishes. Chat history rewrites and uploaded files with no bytes on local disk follow the copies.
+* `error`: the command refused to start. The `code` is `schema_mismatch`, `source_not_local`, `no_such_user`, or `bucket_error`.
+* `report`: the last line of a run that reached its end, with the `counts` for each status, the `bytes` copied, and the failed items under `attention`.
+
+Each failed item has a `code` next to its `reason`:
+
+| Code | Meaning |
+|------|---------|
+| `file_conflict` | The bucket already holds a different object under the file's key. |
+| `bad_name` | The file or its folder has a name that object storage rejects, such as one containing `..`. |
+| `no_source_bytes` | The file has no bytes on local disk. |
+| `attachment_unmatched` | A chat attachment path matches no stored file. |
+| `bucket_error` | S3 refused or couldn't be reached, for example because of credentials, permissions, or the network. |
+| `verify_failed` | After the copy, the bucket didn't report an object of the same size. |
+| `copy_failed` | Any other failure. |
+
+The command rewrites chat history paths in the database that `LANGFLOW_DATABASE_URL` points to, so set it to the database the S3-backed deployment uses. If you converted a SQLite database for that deployment, that's the converted database.
+Without `LANGFLOW_DATABASE_URL`, the command rewrites the default SQLite database instead, and the deployment's database keeps the absolute paths.
+Set `LANGFLOW_CONFIG_DIR` to the source instance's configuration directory, because local storage reads the files from there.
+
+The command copies uploads, chat attachments and files attached to flows.
+Profile pictures and knowledge bases are stored outside the file storage backend, so they stay on local disk.
+
 Replace the following placeholders with the actual values for your IAM policy and S3 instance:
 
 * `S3_BUCKET_NAME`: The name of your S3 bucket.

@@ -8,7 +8,7 @@ import sys
 # we need to import tmpdir
 import tempfile
 from collections.abc import AsyncGenerator
-from contextlib import suppress
+from contextlib import AsyncExitStack, suppress
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -19,6 +19,7 @@ from asgi_lifespan import LifespanManager
 from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
+from filelock import FileLock
 from httpx import ASGITransport, AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
@@ -46,6 +47,7 @@ from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
 from tests.api_keys import get_openai_api_key
+from tests.database_template import DatabaseTemplate
 
 load_dotenv()
 
@@ -284,6 +286,8 @@ def pytest_collection_modifyitems(config, items):  # noqa: ARG001
             item.add_marker(pytest.mark.integration)
         elif "tests/slow/" in str(item.fspath):
             item.add_marker(pytest.mark.slow)
+        if {"alembic", "initial_setup"} & set(item.path.parts):
+            item.add_marker(pytest.mark.full_database_init)
 
 
 async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):
@@ -546,21 +550,37 @@ def use_noop_session(monkeypatch):
 
 @pytest.fixture(name="client")
 async def client_fixture(
-    session: Session,  # noqa: ARG001
     monkeypatch,
     request,
     load_flows_dir,
+    database_templates,
 ):
     # Set the database url to a test database
     if "noclient" in request.keywords:
         yield
     else:
+        # Only cache the ordinary API fixture's schema. Startup and migration
+        # tests can request full_database_init or construct their own app.
+        from langflow.services import utils as service_utils
+        from langflow.services.database.utils import initialize_database
+
+        use_template = (
+            "full_database_init" not in request.keywords
+            and os.getenv("LANGFLOW_TEST_DATABASE_TEMPLATE", "1") != "0"
+            and service_utils.initialize_database is initialize_database
+        )
+        # Tests sometimes register additional SQLModel tables dynamically.
+        # Never reuse a template made before their metadata was registered.
+        schema_key = tuple((name, id(table)) for name, table in sorted(SQLModel.metadata.tables.items()))
+        template = database_templates(schema_key) if use_template else None
 
         def init_app():
             db_dir = tempfile.mkdtemp()
             db_path = Path(db_dir) / "test.db"
+            restored = template.restore(db_path) if template else False
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("LANGFLOW_KNOWLEDGE_BASES_DIR", str(db_path.parent / "knowledge"))
             monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
             monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
             monkeypatch.setenv("DO_NOT_TRACK", "true")
@@ -585,20 +605,60 @@ async def client_fixture(
             db_service = get_db_service()
             db_service.database_url = f"sqlite:///{db_path}"
             db_service.reload_engine()
-            return app, db_path
+            return app, db_path, restored
 
-        app, db_path = await asyncio.to_thread(init_app)
-        # app.dependency_overrides[get_session] = get_session_override
-        async with (
-            LifespanManager(app, startup_timeout=None, shutdown_timeout=60) as manager,
-            AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True) as client,
-        ):
+        app, db_path, restored = await asyncio.to_thread(init_app)
+
+        async def initialize_test_database(*, fix_migration=False):
+            if not restored:
+                await initialize_database(fix_migration=fix_migration)
+                if template:
+                    await asyncio.to_thread(template.capture, db_path)
+
+        async with AsyncExitStack() as stack:
+            with monkeypatch.context() as startup_patch:
+                # Each fixture has its own database, so another worker's
+                # starter-project lock must not make this app skip its seeds.
+                # Keep real locking, scoped to this database's directory.
+                main_module = sys.modules["langflow.main"]
+                if main_module.FileLock is FileLock:
+                    startup_patch.setattr(
+                        main_module,
+                        "FileLock",
+                        lambda path, **kwargs: FileLock(db_path.parent / Path(path).name, **kwargs),
+                    )
+                if template:
+                    startup_patch.setattr(service_utils, "initialize_database", initialize_test_database)
+                manager = await stack.enter_async_context(LifespanManager(app, startup_timeout=60, shutdown_timeout=60))
+                # Startup schedules storage discovery. Settle it before tests
+                # insert fenced records that the background migration could alter.
+                from langflow.services.knowledge_base_storage import coordinator
+
+                await coordinator.wait_for_upgrade(timeout=30)
+            # Restore the real initializer before test code runs. Tests of
+            # database initialization must still exercise production behavior.
+            client = await stack.enter_async_context(
+                AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True)
+            )
             yield client
         # app.dependency_overrides.clear()
         monkeypatch.undo()
         # clear the temp db
         with suppress(FileNotFoundError):
             await anyio.Path(db_path).unlink()
+
+
+@pytest.fixture(scope="session")
+def database_templates(tmp_path_factory):
+    directory = tmp_path_factory.mktemp("database-templates")
+    templates = {}
+
+    def get_template(schema_key):
+        if schema_key not in templates:
+            templates[schema_key] = DatabaseTemplate(directory / f"schema-{len(templates)}.db")
+        return templates[schema_key]
+
+    return get_template
 
 
 @pytest.fixture
