@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StickToBottom, useStickToBottom } from "use-stick-to-bottom";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
@@ -48,6 +48,7 @@ export function FlowPageSlidingContainerContent({
   const {
     activeSessionId,
     sessions,
+    sessionsPagination,
     createSession,
     deleteSession,
     bulkDeleteSessions,
@@ -58,6 +59,10 @@ export function FlowPageSlidingContainerContent({
 
   const [openLogsModal, setOpenLogsModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // True from the moment the sessions sidebar opens until its close animation
+  // ends, so the list does not vanish while the column is still collapsing.
+  const [sessionListShown, setSessionListShown] = useState(false);
+  if (sidebarOpen && !sessionListShown) setSessionListShown(true);
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -157,14 +162,15 @@ export function FlowPageSlidingContainerContent({
     setIsFullscreen(true);
   };
 
-  const handleOpenLogs = (
-    sessionId: string,
-    triggerElement: HTMLElement | null,
-  ) => {
-    selectSession(sessionId);
-    logsModalTriggerRef.current = triggerElement;
-    setOpenLogsModal(true);
-  };
+  // Stable so the memoized session rows it is passed to can skip re-renders.
+  const handleOpenLogs = useCallback(
+    (sessionId: string, triggerElement: HTMLElement | null) => {
+      selectSession(sessionId);
+      logsModalTriggerRef.current = triggerElement;
+      setOpenLogsModal(true);
+    },
+    [selectSession],
+  );
 
   return (
     <div
@@ -179,25 +185,35 @@ export function FlowPageSlidingContainerContent({
       onDrop={onDrop}
     >
       <div className="flex-1 flex overflow-hidden">
-        <AnimatedConditional isOpen={sidebarOpen} width="236px">
+        <AnimatedConditional
+          isOpen={sidebarOpen}
+          width="236px"
+          onAnimationComplete={() => setSessionListShown(sidebarOpen)}
+        >
           <div className="h-full overflow-y-auto border-r border-border w-218 bg-primary-foreground">
             <div className="p-4">
-              <ChatSidebar
-                sessions={sessions}
-                onNewChat={createSession}
-                onSessionSelect={selectSession}
-                currentSessionId={activeSessionId}
-                onDeleteSession={deleteSession}
-                onOpenLogs={handleOpenLogs}
-                onRenameSession={renameSession}
-                onBulkDeleteSessions={bulkDeleteSessions}
-              />
+              {/* This panel stays mounted while hidden; mounting one row per
+                  session there is what froze the editor on large flows. */}
+              {open && sessionListShown && (
+                <ChatSidebar
+                  sessions={sessions}
+                  sessionsPagination={sessionsPagination}
+                  onNewChat={createSession}
+                  onSessionSelect={selectSession}
+                  currentSessionId={activeSessionId}
+                  onDeleteSession={deleteSession}
+                  onOpenLogs={handleOpenLogs}
+                  onRenameSession={renameSession}
+                  onBulkDeleteSessions={bulkDeleteSessions}
+                />
+              )}
             </div>
           </div>
         </AnimatedConditional>
         <div className="flex-1 flex flex-col overflow-hidden pt-2">
           <ChatHeader
             sessions={sessions}
+            sessionsPagination={sessionsPagination}
             onNewChat={createSession}
             onSessionSelect={selectSession}
             currentSessionId={activeSessionId}

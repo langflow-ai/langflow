@@ -193,7 +193,7 @@ def process_identity(process: psutil.Process) -> dict:
             identity.update(
                 start_ticks=int(fields[19]), boot_id=Path("/proc/sys/kernel/random/boot_id").read_text().strip()
             )
-        except FileNotFoundError as exc:
+        except (FileNotFoundError, ProcessLookupError) as exc:
             raise psutil.NoSuchProcess(process.pid) from exc
     return identity
 

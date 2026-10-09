@@ -30,7 +30,7 @@ from uuid import NAMESPACE_URL, uuid5
 from lfx.log.logger import logger
 from sqlmodel import col, func, select, update
 
-from langflow.api.utils.migration_pause import is_paused
+from langflow.api.utils.migration_pause import is_paused, writing
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import (
     IN_FLIGHT_EVENT_STATES,
@@ -752,7 +752,9 @@ class TriggerDispatcher:
         settings = get_settings_service().settings
         while not self._stopping.is_set():
             try:
-                dispatched = await self.tick()
+                # A pass holds a place, so a pause waits for one that is under way.
+                with writing(name="trigger_dispatcher") as let_in:
+                    dispatched = await self.tick() if let_in else 0
                 if dispatched >= settings.trigger_max_events_per_poll:
                     # Continue draining full batches without adding a fixed
                     # sleep to every batch in a burst. Yield to other tasks.
@@ -849,7 +851,9 @@ class TriggerDispatcher:
     async def _source_loop(self) -> None:
         while not self._stopping.is_set():
             try:
-                await self.source_tick()
+                with writing(name="trigger_sources") as let_in:
+                    if let_in:
+                        await self.source_tick()
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 - retry independently of dispatch

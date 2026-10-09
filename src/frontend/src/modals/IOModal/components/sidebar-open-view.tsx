@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { ShowMoreSessions } from "@/components/core/playgroundComponent/chat-view/chat-header/components/show-more-sessions";
 import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
 import { useVoiceStore } from "@/stores/voiceStore";
@@ -10,6 +11,7 @@ import SessionSelector from "./IOFieldView/components/session-selector";
 
 export const SidebarOpenView = ({
   sessions,
+  sessionsPagination,
   setSelectedViewField,
   setvisibleSession,
   handleDeleteSession,
@@ -100,6 +102,7 @@ export const SidebarOpenView = ({
               }}
             />
           ))}
+          <ShowMoreSessions pagination={sessionsPagination} />
         </div>
       </div>
     </>

@@ -7,6 +7,7 @@ import json
 import os
 import socket
 import sqlite3
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -364,6 +365,31 @@ def test_receipt_worker_barrier_accepts_exited_unreaped_workers(monkeypatch, sta
     process = SimpleNamespace(status=lambda: status, create_time=lambda: 1234)
     monkeypatch.setattr(maintenance.psutil, "Process", lambda _pid: process)
     assert maintenance._process_matches({"pid": 123, "created": 1234}) is expected
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux /proc identity")
+def test_process_reaped_during_identity_read_is_reported_gone(monkeypatch):
+    """Report a process as gone when it is reaped between opening and reading its /proc entry."""
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])  # noqa: S603
+    opened = maintenance.Path.open
+
+    def reap_after_open(path, *args, **kwargs):
+        """Open for real, then end the child so the kernel itself fails the read."""
+        stream = opened(path, *args, **kwargs)
+        if str(path) == f"/proc/{child.pid}/stat":
+            child.kill()
+            child.wait()
+        return stream
+
+    try:
+        process = psutil.Process(child.pid)
+        monkeypatch.setattr(maintenance.Path, "open", reap_after_open)
+        with pytest.raises(psutil.NoSuchProcess) as raised:
+            maintenance.process_identity(process)
+        assert isinstance(raised.value.__cause__, ProcessLookupError)
+    finally:
+        child.kill()
+        child.wait()
 
 
 async def test_forward_restart_rejects_surviving_new_workers(installation):

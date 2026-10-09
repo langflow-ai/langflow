@@ -363,7 +363,7 @@ The following endpoints are most often used when contributing to the Langflow co
 * [Monitor endpoints](/api-monitor):
   * GET `/v1/monitor/builds`: Get vertex builds for a flow.
   * DELETE `/v1/monitor/builds`: Delete vertex builds for a flow.
-  * GET `/v1/monitor/messages/sessions`: List message session IDs (auth required).
+  * GET `/v1/monitor/messages/sessions`: List message session IDs, most recently active first (auth required). Returns 100 IDs by default; use `limit` (maximum 200) and `offset` to page through older sessions.
   * GET `/v1/monitor/messages`: List messages with optional filters.
   * DELETE `/v1/monitor/messages`: Delete messages by IDs (auth required).
   * PUT `/v1/monitor/messages/{message_id}`: Update a message.

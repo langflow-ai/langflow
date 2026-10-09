@@ -88,20 +88,19 @@ export default function IOModal({
   );
   const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
 
+  const sessionsQuery = useGetSessionsFromFlowQuery({
+    id: currentFlowId,
+    enabled: open,
+  });
   const {
     data: sessionsFromDb,
     isLoading: sessionsLoading,
     refetch: refetchSessions,
-  } = useGetSessionsFromFlowQuery(
-    {
-      id: currentFlowId,
-    },
-    { enabled: open },
-  );
+  } = sessionsQuery;
 
   useEffect(() => {
     if (sessionsFromDb && !sessionsLoading) {
-      const sessions = [...sessionsFromDb.sessions];
+      const sessions = [...sessionsFromDb];
       // Always include the currentFlowId as the default session if it's not already present
       if (!sessions.includes(currentFlowId)) {
         sessions.unshift(currentFlowId);
@@ -418,6 +417,7 @@ export default function IOModal({
                 {sidebarOpen && !sessionsLoading && (
                   <SidebarOpenView
                     sessions={sessions}
+                    sessionsPagination={sessionsQuery}
                     setSelectedViewField={setSelectedViewField}
                     setvisibleSession={setvisibleSession}
                     handleDeleteSession={handleDeleteSession}
