@@ -2,7 +2,8 @@
 
 A directory keeps the username its owner had when it was written, so the folder name alone does not say
 whose it is. What a directory holds, and the base id its sidecar records, are the evidence an erase reads.
-Internal folders such as ``.migration`` start with a dot and are never one owner's.
+The internal ``.migration`` folder and the SQLite stores in ``sqlite/<owner id>`` are never one owner's,
+though a username may start with a dot or be ``sqlite``.
 """
 
 from __future__ import annotations
@@ -12,11 +13,13 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from langflow.services.knowledge_base_storage.retained import is_path_segment
+from langflow.services.knowledge_base_storage.retained import MIGRATION_DIRECTORY, is_path_segment, is_source_identity
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+# The SQLite stores of 1.13 live in ``sqlite/<owner id>/``, beside the legacy folders.
+SQLITE_DIRECTORY = "sqlite"
 SIDECAR = "embedding_metadata.json"
 MAX_SIDECAR_BYTES = 2 * 1024 * 1024
 # Left by a deletion that removed the base's row but could not remove its files.
@@ -44,8 +47,23 @@ class LegacyDirectories:
 
 
 def is_owner_folder(value: str) -> bool:
-    """Whether a value can name one owner's folder, rather than an internal one or a path."""
-    return is_path_segment(value) and not value.startswith(".")
+    """Whether a value can name one owner's folder, rather than the internal ``.migration`` one or a path.
+
+    Usernames are unique regardless of case, and macOS and Windows match folder names that way too, so a
+    name such as ``.Migration`` is not an owner's folder either.
+    """
+    return is_path_segment(value) and value.casefold() != MIGRATION_DIRECTORY
+
+
+def is_sqlite_store(folder: str, name: str) -> bool:
+    """Whether ``<folder>/<name>`` is where an account's SQLite stores live, rather than a legacy directory."""
+    return folder == SQLITE_DIRECTORY and _is_uuid(name)
+
+
+def is_legacy_directory(source_identity: str) -> bool:
+    """Whether a value names one ``<owner>/<name>`` directory as written, outside the internal storage."""
+    owner, _, name = source_identity.partition("/")
+    return is_source_identity(source_identity) and is_owner_folder(owner) and not is_sqlite_store(owner, name)
 
 
 def scan_legacy_directories(root: Path) -> LegacyDirectories:
@@ -73,6 +91,8 @@ def scan_legacy_directories(root: Path) -> LegacyDirectories:
             unreadable.add(owner.name)
             continue
         for source in sources:
+            if is_sqlite_store(owner.name, source.name):
+                continue
             identity = f"{owner.name}/{source.name}"
             try:
                 survey = _survey(source)
@@ -121,3 +141,11 @@ def recorded_id(metadata: dict[str, Any]) -> UUID | None:
 
 def _sidecar_id(sidecar: Path) -> UUID | None:
     return recorded_id(read_sidecar(sidecar))
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        UUID(value)
+    except ValueError:
+        return False
+    return True

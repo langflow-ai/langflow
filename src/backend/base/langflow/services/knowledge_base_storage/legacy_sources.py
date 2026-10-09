@@ -18,21 +18,25 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
 
-from langflow.services.knowledge_base_storage.legacy_directories import SIDECAR, TOMBSTONE, read_sidecar, recorded_id
+from langflow.services.knowledge_base_storage.legacy_directories import (
+    SIDECAR,
+    TOMBSTONE,
+    is_sqlite_store,
+    read_sidecar,
+    recorded_id,
+)
 from langflow.services.knowledge_base_storage.maintenance import MaintenanceRequiredError
 from langflow.services.knowledge_base_storage.retained import MIGRATION_DIRECTORY
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Mapping
     from pathlib import Path
+    from uuid import UUID
 
 STORE = "chroma.sqlite3"
 MISSING = "legacy_source_missing"
 AMBIGUOUS = "legacy_source_ambiguous"
-# The SQLite stores of 1.13 live in ``sqlite/<owner id>/``, beside the legacy folders.
-_SQLITE_DIRECTORY = "sqlite"
 _AWAITING_STATES = frozenset({"ready", "migrating", "needs_attention"})
 _UNREADABLE = (OSError, RecursionError, TypeError, ValueError)
 
@@ -311,7 +315,7 @@ def scan_legacy_sources(root: Path) -> tuple[tuple[LegacyDirectory, ...], frozen
             unreadable.add(folder.name)
             continue
         for child in children:
-            if folder.name == _SQLITE_DIRECTORY and _is_uuid(child.name):
+            if is_sqlite_store(folder.name, child.name):
                 continue
             identity = f"{folder.name}/{child.name}"
             try:
@@ -337,14 +341,6 @@ def _survey(identity: str, path: Path) -> LegacyDirectory | None:
         recorded_id=recorded_id(metadata),
         created_at=_timestamp(metadata.get("created_at")),
     )
-
-
-def _is_uuid(value: str) -> bool:
-    try:
-        UUID(value)
-    except ValueError:
-        return False
-    return True
 
 
 def _timestamp(value: object) -> datetime | None:

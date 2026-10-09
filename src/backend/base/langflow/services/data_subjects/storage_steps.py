@@ -34,6 +34,7 @@ from langflow.services.database.models.knowledge_base_storage_migration import K
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.knowledge_base_storage.legacy_directories import (
     LegacyDirectories,
+    is_legacy_directory,
     is_owner_folder,
     scan_legacy_directories,
 )
@@ -226,6 +227,10 @@ def _remove_kb_user_dir(username: str) -> None:
 def _remove_retained_source(source_identity: str) -> None:
     """Delete one `<owner>/<name>` directory, then its owner's folder once nothing else is in it."""
     if not _local_storage_configured():
+        return
+    if not is_legacy_directory(source_identity):
+        # A plan never names internal storage, so a stored item that does is kept rather than trusted.
+        logger.warning("op=data_subject_erase kept a planned directory that is internal knowledge base storage")
         return
     root = storage_root()
     directory = retained_source(root, source_identity)
