@@ -89,6 +89,12 @@ async def upload_file(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
+    """Upload a file to a flow's storage.
+
+    Requires WRITE on the flow and rejects files larger than the configured
+    ``max_file_size_upload`` limit (HTTP 413). The stored name is prefixed with a
+    UTC timestamp so repeated uploads of the same filename do not collide.
+    """
     # Writing a file to a flow's storage is a flow mutation: enforce WRITE so
     # the external access ceiling (e.g. a "viewer") cannot upload via this route.
     await ensure_flow_permission(
@@ -128,6 +134,7 @@ async def download_file(
     flow: Annotated[Flow, Depends(get_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
+    """Download a stored file as an attachment."""
     # Authorization handled by get_flow dependency
     flow_id_str = str(flow.id)
     extension = file_name.split(".")[-1]
@@ -298,6 +305,7 @@ async def list_files(
     flow: Annotated[Flow, Depends(get_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
+    """List the files stored for a flow."""
     try:
         files = await storage_service.list_files(flow_id=str(flow.id))
     except Exception as e:
@@ -313,6 +321,10 @@ async def delete_file(
     current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
+    """Delete a file from a flow's storage.
+
+    Requires WRITE on the flow, mirroring the upload route.
+    """
     # Deleting a file from a flow's storage mutates the flow's attachments;
     # enforce WRITE so the external access ceiling (e.g. a "viewer") is honored.
     await ensure_flow_permission(
