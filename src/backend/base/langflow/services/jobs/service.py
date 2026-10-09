@@ -95,7 +95,26 @@ class JobService(Service):
         """Initialize the job service."""
         self.set_ready()
         self._append_queue: list[_PendingAppend] = []
-        self._append_lock = asyncio.Lock()
+        self._append_lock: asyncio.Lock | None = None
+        self._append_lock_loop: asyncio.AbstractEventLoop | None = None
+
+    def _bind_append_lock(self) -> asyncio.Lock:
+        """Return the append lock, rebinding it to the currently running loop if needed.
+
+        This service is a service-manager singleton and can outlive the event loop it
+        was first used on (e.g. a new loop per test in the real-service suite; in
+        production there is only ever one loop for the process's life, so this binds
+        once and never again). asyncio.Lock caches the loop it first acquired on and
+        raises "bound to a different event loop" if reused from another one, so a stale
+        lock must be replaced rather than reused. Anything still in the queue was queued
+        against a loop that's gone and can never be flushed, so it's dropped with it.
+        """
+        loop = asyncio.get_running_loop()
+        if self._append_lock is None or self._append_lock_loop is not loop:
+            self._append_queue = []
+            self._append_lock = asyncio.Lock()
+            self._append_lock_loop = loop
+        return self._append_lock
 
     async def get_jobs_by_flow_id(
         self, flow_id: UUID | str, user_id: UUID, page: int = 1, page_size: int = 10
@@ -455,11 +474,12 @@ class JobService(Service):
         flush even on cancellation: another job's append must not be cancelled with
         it, and database work must never outlive all its callers.
         """
+        lock = self._bind_append_lock()
         future: asyncio.Future[int] = asyncio.get_running_loop().create_future()
         item = _PendingAppend(job_id, event_type, payload, future)
         self._append_queue.append(item)
         try:
-            async with self._append_lock:
+            async with lock:
                 if not future.done():
                     await asyncio.sleep(_APPEND_EVENT_BATCH_WINDOW_S)
                     batch, self._append_queue = self._append_queue, []

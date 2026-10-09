@@ -326,6 +326,38 @@ async def test_invalid_event_does_not_fail_another_job(event_store):
     assert events[0].payload == {"value": "persisted"}
 
 
+def test_append_lock_rebinds_across_event_loops():
+    """A singleton JobService can outlive the event loop it was first used on.
+
+    Regression test: the service-manager JobService instance persists across the
+    real-service test suite, each test getting its own event loop. asyncio.Lock only
+    binds to a loop on its *contended* path (creating a waiter future) -- the fast,
+    uncontended acquire never touches the loop at all -- so each run below fires two
+    concurrent appends to force real contention. Without rebinding, the second run's
+    contended waiter hits the lock's loop cached from the first run and raises "bound
+    to a different event loop". fake_flush bypasses the DB; only lock/loop lifecycle
+    is under test here.
+    """
+    service = JobService()
+
+    async def fake_flush(items):
+        for i, item in enumerate(items, start=1):
+            if not item.future.done():
+                item.future.set_result(i)
+
+    service._flush_append_batch = fake_flush
+
+    async def run_contended_pair():
+        return await asyncio.gather(
+            service.append_event(uuid4(), "event", {}),
+            service.append_event(uuid4(), "event", {}),
+        )
+
+    assert sorted(asyncio.run(run_contended_pair())) == [1, 2]
+    # A fresh event loop reusing the same service instance -- must not raise.
+    assert sorted(asyncio.run(run_contended_pair())) == [1, 2]
+
+
 async def test_data_error_does_not_fail_another_job(event_store):
     """A DataError (e.g. Postgres rejecting a NUL byte) must isolate like a StatementError.
 
