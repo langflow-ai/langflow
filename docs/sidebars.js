@@ -33,6 +33,7 @@ module.exports = {
             "Tutorials/chat-with-files",
             "Tutorials/agent",
             "Tutorials/mcp-tutorial",
+            "Tutorials/x402-pay-per-call",
           ],
         },
       ],
