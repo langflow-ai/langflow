@@ -2186,6 +2186,7 @@ class TestIngestMemoryTask:
             sync_called = True
 
         with (
+            pytest.raises(asyncio.CancelledError, match="LANGFLOW_USER_CANCELLED"),
             patch(
                 "langflow.services.memory_base.task._acquire_session_lock",
                 AsyncMock(return_value=asyncio.Lock()),
@@ -2228,7 +2229,7 @@ class TestIngestMemoryTask:
                 return_value=tmp_path / "kb",
             ),
         ):
-            result = await ingest_memory_task(
+            await ingest_memory_task(
                 request=IngestionRequest(
                     memory_base_id=uuid.uuid4(),
                     session_id="s1",
@@ -2245,7 +2246,6 @@ class TestIngestMemoryTask:
             )
 
         assert not sync_called, "KB stats must not be synced when ingestion is cancelled"
-        assert "cancelled" in result["message"].lower()
 
     @pytest.mark.asyncio
     async def test_cursor_advanced_on_success(self, tmp_path):

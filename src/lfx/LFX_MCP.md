@@ -24,6 +24,7 @@ Set the command to `lfx-mcp` (or `uvx --from lfx lfx-mcp`) and pass the followin
 |----------|-------------|---------|
 | `LANGFLOW_SERVER_URL` | URL of your Langflow instance | `http://localhost:7860` |
 | `LANGFLOW_API_KEY` | API key for authentication | — |
+| `X-LANGFLOW-GLOBAL-VAR-<NAME>` | Optional global variable override forwarded as an HTTP header | — |
 
 For example, to connect to Claude Desktop, add the following to the Claude Desktop configuration file at `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
@@ -57,6 +58,40 @@ If `lfx` is not installed globally, use it through `uvx` instead.
   }
 }
 ```
+
+### Global variable overrides
+
+To override a stored global variable when running flows, add an environment entry
+named `X-LANGFLOW-GLOBAL-VAR-<NAME>` to your MCP client configuration. For example:
+
+```json
+{
+  "env": {
+    "LANGFLOW_SERVER_URL": "http://localhost:7860",
+    "LANGFLOW_API_KEY": "<your-api-key>",
+    "X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT": "staging"
+  }
+}
+```
+
+`lfx-mcp` forwards the entry as a header on its Langflow API requests, including
+streaming flow runs. A flow referencing `ENVIRONMENT` receives `staging` instead
+of its stored value. Prefix matching is case-insensitive, and empty values are
+ignored. Other environment entries are not forwarded as headers.
+
+Names must include a variable name and use valid HTTP header characters. Values
+must be ASCII, contain no control characters except internal tabs, and have no
+leading or trailing whitespace. Invalid entries are rejected without including
+their values in the error message.
+
+When overrides are configured, redirects must stay on the same scheme, host, and
+port as `LANGFLOW_SERVER_URL`. Configure the final server URL if a proxy redirects
+to another origin, including an HTTP-to-HTTPS redirect, to keep override values
+from being forwarded to a different server.
+
+These overrides are captured when the HTTP client is created and apply to all
+requests from that client. Restart the MCP server after changing its environment
+configuration. They do not modify the stored global variables.
 
 ## Server tools
 
