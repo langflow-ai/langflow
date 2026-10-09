@@ -131,6 +131,12 @@ async def list_flow_versions(
         Query(description=("Optional provider account ID for provider account-scoped deployment status.")),
     ] = None,
 ) -> FlowVersionListResponse:
+    """Return a page of version entries for a flow owned by the caller.
+
+    When ``deployment_provider_id`` is given, deployment status is resolved for
+    that provider account (after a best-effort provider-scoped sync); otherwise
+    the versions are returned without deployment status.
+    """
     await _get_user_flow(session, flow_id, current_user.id)
     _ensure_deployments_enabled_for_provider_id(deployment_provider_id)
 
@@ -194,6 +200,7 @@ async def get_single_flow_version(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> FlowVersionReadWithData:
+    """Return one version entry, with secret field values stripped from its data."""
     await _get_user_flow(session, flow_id, current_user.id)
 
     try:
@@ -213,6 +220,11 @@ async def create_snapshot(
     session: DbSession,
     body: FlowVersionCreate | None = None,
 ) -> FlowVersionRead:
+    """Archive a new version entry for a flow the caller may write.
+
+    The archived data is either the caller-supplied ``body.data`` or a deep copy
+    of the flow's current data.
+    """
     flow = await _get_user_flow(session, flow_id, current_user.id)
     await ensure_flow_permission(
         current_user,
@@ -268,6 +280,12 @@ async def activate_version(
     save_draft: Annotated[bool, Query()] = True,
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> FlowRead:
+    """Restore a flow's data from a stored version.
+
+    Optionally archives the current draft as a new version first
+    (``save_draft``), rotates the flow's version token, and honors the
+    ``If-Match`` precondition when one is supplied.
+    """
     flow = await _get_user_flow(session, flow_id, current_user.id)
     await ensure_version_precondition(session, flow, parse_if_match(if_match))
     # The write below shares this transaction; a decision the audit writer commits
@@ -378,6 +396,7 @@ async def delete_version_entry(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> None:
+    """Delete a stored version entry, after confirming the caller may delete the flow."""
     flow = await _get_user_flow(session, flow_id, current_user.id)
     await ensure_flow_permission(
         current_user,
