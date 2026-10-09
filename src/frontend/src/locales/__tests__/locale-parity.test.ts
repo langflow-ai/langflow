@@ -22,7 +22,6 @@ const LOCALES: Record<string, Record<string, string>> = {
   ja,
   ko,
   pt,
-  tr,
   "zh-Hans": zhHans,
 };
 
