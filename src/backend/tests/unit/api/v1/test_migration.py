@@ -7,6 +7,7 @@ against the test database, as the endpoint does in production.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import io
 import json
 import logging
@@ -16,6 +17,7 @@ import socket
 import subprocess
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -53,7 +55,6 @@ from lfx.log.logger import configure
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
-    from pathlib import Path
 
 VERSION = get_version_info()["version"]
 PASSING = {"name": "version", "status": "ok", "summary": "same version"}
@@ -207,6 +208,11 @@ def _files(bucket: str, **changes) -> dict:
     }
 
 
+def _fingerprint() -> str:
+    key = get_settings_service().auth_settings.SECRET_KEY.get_secret_value()
+    return hashlib.sha256(key.encode()).hexdigest()[:12]
+
+
 async def _add(*rows) -> None:
     async with session_scope() as session:
         session.add_all(rows)
@@ -272,6 +278,7 @@ async def test_only_a_superuser_can_open_the_migration(client, logged_in_headers
         await client.post(PAUSE, headers=logged_in_headers),
         await client.delete(PAUSE, headers=logged_in_headers),
         await client.put("api/v1/migration/destinations", json={}, headers=logged_in_headers),
+        await client.post("api/v1/migration/secret-key/verify", json={"fingerprint": "0"}, headers=logged_in_headers),
     ]
 
     assert [response.status_code for response in refused] == [403] * len(refused)
@@ -285,7 +292,8 @@ async def test_the_page_describes_this_instance_and_its_steps(client, logged_in_
     assert instance["database"] == {"type": "sqlite", "path": str(get_db_service().database_url).split("///")[1]}
     assert instance["knowledge_bases"]["local"] is False
     assert instance["files"] == {"storage": "local", "folder": str(config_dir), "local": False}
-    assert "secret_key" not in instance
+    key_file = Path(get_settings_service().auth_settings.CONFIG_DIR) / "secret_key"
+    assert instance["secret_key"] == {"source": "file", "path": str(key_file)}
     assert migration["steps"] == [
         {"id": "check_source", "state": "current", "reason": None},
         {"id": "connect_target", "state": "locked", "reason": "earlier_step"},
@@ -349,7 +357,7 @@ async def test_a_skipped_step_is_passed_over_for_the_current_one(
     }
 
     assert steps["connect_target"] == ("skipped", "nothing_to_connect")
-    assert steps["secret_key"] == ("current", "not_available")
+    assert steps["secret_key"] == ("current", None)
     assert steps["pause"] == ("locked", "earlier_step")
 
 
@@ -2959,3 +2967,41 @@ async def test_a_destination_that_passes_gives_no_password_or_key_away(
     assert responses[0].json()["results"] == {"database": {"ok": True}, "files": {"ok": True}}
     assert url.password in migration_module._secrets["database_url"]
     _nowhere((url.password, files["secret_access_key"]), responses, config_dir, server_log, caplog, capfd)
+
+
+async def test_the_page_learns_where_the_secret_key_lives_and_never_the_key(
+    client, logged_in_headers_super_user, monkeypatch
+):
+    monkeypatch.setenv("LANGFLOW_SECRET_KEY", "set in the environment")  # pragma: allowlist secret
+
+    response = await client.get("api/v1/migration", headers=logged_in_headers_super_user)
+
+    assert response.json()["instance"]["secret_key"] == {"source": "env"}
+    # A fingerprint that is handed out would pass the check without anyone reading the new instance.
+    assert _fingerprint() not in response.text
+    assert get_settings_service().auth_settings.SECRET_KEY.get_secret_value() not in response.text
+
+
+async def test_the_fingerprint_read_on_the_new_instance_confirms_the_secret_key(
+    client, logged_in_headers_super_user, active_super_user, server_log
+):
+    headers, verify = logged_in_headers_super_user, "api/v1/migration/secret-key/verify"
+    admin = f"Migration: user_id={active_super_user.id}"
+
+    refused = await client.post(verify, json={"fingerprint": "0" * 12}, headers=headers)
+
+    assert refused.status_code == 400
+    assert refused.json()["detail"] == {"code": "fingerprint_mismatch"}
+    assert (await _steps(client, headers))["secret_key"] == ("blocked", "fingerprint_mismatch")
+
+    # Pasted from a terminal, so the case and the line ending are not the admin's to get right.
+    confirmed = await client.post(verify, json={"fingerprint": f" {_fingerprint().upper()}\n"}, headers=headers)
+
+    assert confirmed.status_code == 200, confirmed.text
+    assert set(confirmed.json()["record"]["secret_key"]) == {"verified_by", "verified_at"}
+    assert confirmed.json()["record"]["secret_key"]["verified_by"] == "activeuser"
+    assert (await _steps(client, headers))["secret_key"] == ("done", None)
+    assert _fingerprint() not in confirmed.text
+    assert f"{admin} gave a secret key fingerprint that does not match" in server_log.getvalue()
+    assert f"{admin} confirmed the secret key on the new instance" in server_log.getvalue()
+    assert _fingerprint() not in server_log.getvalue()
