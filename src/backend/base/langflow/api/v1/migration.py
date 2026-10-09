@@ -341,7 +341,10 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
         results["vectors"] = results.get("vectors") or (
             await asyncio.to_thread(probe_vectors, address)
             if address
-            else {"ok": False, "code": "secrets_missing", "reason": "Enter the database address again."}
+            # No address is held. The one sent with them just failed its test, and they fail as it did.
+            # Or none was sent, and the one from before a restart is gone.
+            else results.get("database")
+            or {"ok": False, "code": "secrets_missing", "reason": "Enter the database address again."}
         )
         parts["vectors"] = {"kind": request.vectors.kind}
     if files := request.files:
