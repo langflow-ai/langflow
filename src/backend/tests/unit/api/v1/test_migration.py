@@ -372,7 +372,8 @@ async def test_folders_relocate_files_would_not_copy_do_not_keep_the_copy_step(
 async def test_an_instance_on_postgresql_and_s3_skips_what_it_does_not_need(
     client, logged_in_headers_super_user, monkeypatch
 ):
-    url = "postgresql://alice:hunter2@db.internal:5432/langflow"  # pragma: allowlist secret
+    # A user that no home folder is named after: the response also holds this machine's folders.
+    url = "postgresql://dbuser-7f3a:hunter2@db.internal:5432/langflow"  # pragma: allowlist secret
     monkeypatch.setattr(get_db_service(), "database_url", url)
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "storage_type", "s3")
@@ -382,7 +383,7 @@ async def test_an_instance_on_postgresql_and_s3_skips_what_it_does_not_need(
     response = await client.get("api/v1/migration", headers=logged_in_headers_super_user)
 
     assert "hunter2" not in response.text
-    assert "alice" not in response.text
+    assert "dbuser-7f3a" not in response.text
     instance = response.json()["instance"]
     assert instance["database"] == {"type": "postgresql", "location": "db.internal:5432/langflow"}
     assert instance["files"] == {"storage": "s3", "bucket": "acme", "prefix": "files", "local": False}
