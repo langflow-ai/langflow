@@ -119,7 +119,7 @@ async def start_run(step_id: str, argv: list[str], env: dict[str, str], *, start
     except Timeout:
         # Another worker is starting a run at this moment.
         raise RunActiveError from None
-    reader = asyncio.create_task(_read_child(status, process))
+    reader = asyncio.create_task(_read_child(status, process), name=status["run_id"])
     _readers.add(reader)
     reader.add_done_callback(_readers.discard)
     return status["run_id"]
@@ -132,7 +132,7 @@ def read_run(run_id: str) -> dict[str, Any]:
     except (FileNotFoundError, ValueError):
         # A status is replaced whole, so one that is not JSON is what a machine that lost power left.
         raise RunNotFoundError(run_id) from None
-    if run["status"] == "running" and not (_process(run["worker"]) or _process(run["child"])):
+    if run["status"] == "running" and not (_read_here(run_id) or _process(run["worker"]) or _process(run["child"])):
         # Nothing is left to write how it ended.
         run["status"] = "interrupted"
     return run
@@ -280,6 +280,16 @@ def _identity(pid: int) -> dict[str, Any] | None:
     except (psutil.NoSuchProcess, ProcessLookupError):
         # Linux answers with the second when the process is reaped while its entry in /proc is read.
         return None
+
+
+def _read_here(run_id: str) -> bool:
+    """Whether this worker is the one reading the run's child, which it knows without asking the system.
+
+    A process is told apart by when it started. On macOS that time moves when the system clock is set:
+    psutil shifts it once the boot time differs by a second or more from the one it read at import, and
+    a status written before then matches no process.
+    """
+    return any(reader.get_name() == run_id for reader in _readers)
 
 
 def _process(identity: dict[str, Any] | None) -> psutil.Process | None:
