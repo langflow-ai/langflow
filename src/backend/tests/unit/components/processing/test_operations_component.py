@@ -276,6 +276,24 @@ class TestTableOperations:
         result = component.as_dataframe()
         assert len(result) == 2
 
+    @pytest.mark.parametrize("operator", ["contains", "not contains"])
+    @pytest.mark.parametrize(("value", "matching"), [(".", [0]), ("report.pdf", [0]), ("[", [2])])
+    def test_filter_contains_literal_text(self, operator, value, matching):
+        """Contains filters treat punctuation as literal text, not regular expressions."""
+        values = ["report.pdf", "reportXpdf", "[citation]", "other"]
+        component = OperationsComponent(
+            df=DataFrame({"value": values}),
+            operation=[{"name": "Filter"}],
+            column_name="value",
+            filter_operator=operator,
+            filter_value=value,
+        )
+
+        result = component.as_dataframe()
+
+        expected = matching if operator == "contains" else [i for i in range(len(values)) if i not in matching]
+        assert result["value"].tolist() == [values[i] for i in expected]
+
     def test_drop_column(self, sample_dataframe):
         component = OperationsComponent(
             df=sample_dataframe,
