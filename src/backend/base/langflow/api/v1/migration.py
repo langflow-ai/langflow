@@ -40,11 +40,13 @@ from sqlmodel import select
 
 from langflow.api.utils.migration_copies import (
     COPY_COMMANDS,
+    DECISIONS,
     KEPT_EVENTS,
     blocking_code,
     copy_command,
     copy_environment,
     copy_outcome,
+    shown,
 )
 from langflow.api.utils.migration_jobs import active_jobs, live_listeners
 from langflow.api.utils.migration_pause import drained, under_way
@@ -170,6 +172,14 @@ class BackupRequest(BaseModel):
 
 class RunRequest(BaseModel):
     dry_run: bool = False
+
+
+class DecisionRequest(BaseModel):
+    step: str
+    kind: str
+    subject: str | None = None
+    # The run whose report an acceptance was read from. A page sends back what the item's decision said.
+    run_id: str | None = None
 
 
 @router.get("")
@@ -543,7 +553,7 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
         env = copy_environment(step_id, _source_env(), _secrets)
     except KeyError as exc:
         raise HTTPException(status_code=409, detail={"code": "secrets_missing"}) from exc
-    argv = copy_command(step_id, record.get("destinations", {}), dry_run=dry_run)
+    argv = copy_command(step_id, record.get("destinations", {}), record.get("decisions", []), dry_run=dry_run)
     try:
         run_id = await start_run(step_id, argv, env, started_by=admin.username)
     except RunActiveError as exc:
@@ -612,6 +622,69 @@ async def stop_copy(step_id: str, run_id: str, admin: Superuser) -> dict[str, st
     return {"run_id": run_id}
 
 
+@router.post("/decisions")
+async def decide(request: DecisionRequest, admin: Superuser) -> dict[str, Any]:
+    """Record what the admin decided about a copy: an option for its next run, or a failed item to accept as it is."""
+    decision = _decision(request)
+    record = _read_record()
+    latest = (record["steps"].get(request.step) or {}).get("run_id")
+    if decision["subject"] and (not request.run_id or request.run_id != latest):
+        # The copy was made again since the report this acceptance was read from, so it is consent to
+        # something the admin has not seen. The page reads the state again.
+        raise HTTPException(status_code=409, detail={"code": "report_changed"})
+    made = {**decision, "run_id": _reported_by(record, decision), "by": admin.username, "at": _now()}
+    record["decisions"] = [*_other_decisions(record, decision), made]
+    _write_record(record)
+    await logger.ainfo(f"Migration: user_id={admin.id} decided {_named(decision)}")
+    return await _state(record)
+
+
+@router.delete("/decisions")
+async def withdraw_decision(request: DecisionRequest, admin: Superuser) -> dict[str, Any]:
+    decision = _decision(request)
+    record = _read_record()
+    record["decisions"] = _other_decisions(record, decision)
+    _write_record(record)
+    await logger.ainfo(f"Migration: user_id={admin.id} withdrew the decision {_named(decision)}")
+    return await _state(record)
+
+
+def _decision(request: DecisionRequest) -> dict[str, Any]:
+    """What a request decides, or a refusal when its step has no such decision to make."""
+    kind = DECISIONS.get(request.kind)
+    if not kind or kind["step"] != request.step:
+        raise HTTPException(status_code=400, detail={"code": "unknown_decision"})
+    # An option holds for the whole step. An accepted item has to be named.
+    accepts_an_item = kind["option"] is None
+    if accepts_an_item and not request.subject:
+        raise HTTPException(status_code=400, detail={"code": "subject_missing"})
+    return {"step": request.step, "kind": request.kind, "subject": request.subject if accepts_an_item else None}
+
+
+def _reported_by(record: dict[str, Any], decision: dict[str, Any]) -> str | None:
+    """The run whose report an acceptance is consent to: the step's latest, when its report lists the item.
+
+    An option is for every run, so it names none. Nor does the acceptance of something the latest report
+    does not say, such as an item of a run that is still going: it is kept, and accepts nothing.
+    """
+    if not decision["subject"]:
+        return None
+    run = record["steps"].get(decision["step"]) or {}
+    listed = (run.get("report") or {}).get("attention") or []
+    answer = {"kind": decision["kind"], "subject": decision["subject"]}
+    return run["run_id"] if any(item["decision"] == answer for item in listed) else None
+
+
+def _other_decisions(record: dict[str, Any], decision: dict[str, Any]) -> list[dict[str, Any]]:
+    return [made for made in record.get("decisions", []) if any(made[key] != decision[key] for key in decision)]
+
+
+def _named(decision: dict[str, Any]) -> str:
+    """A decision as an audit line names it. A subject is quoted, so one with a line break in it stays on its line."""
+    about = f": {decision['subject']!r}" if decision["subject"] else ""
+    return f"'{decision['kind']}' for {_copy(decision['step'])}{about}"
+
+
 def _copy(step_id: str) -> str:
     """A copy step as an audit line names it, such as "the copy of the knowledge bases"."""
     return f"the copy of the {step_id.removeprefix('copy_').replace('_', ' ')}"
@@ -657,7 +730,7 @@ async def _settle_copies(record: dict[str, Any]) -> None:
         except RunNotFoundError:
             # Its files are gone, so all that can be said is that it did not finish.
             run, events = {"status": "interrupted", "finished_at": None}, {}
-        step.update(copy_outcome(run, events))
+        step.update(copy_outcome(step_id, run, events))
 
         def settle(saved: dict[str, Any], step_id: str = step_id, step: dict[str, Any] = step) -> bool:
             # Saved into the record as it is now: a request that read it earlier may have saved a change since.
@@ -825,9 +898,12 @@ async def _state(record: dict[str, Any]) -> dict[str, Any]:
     await _settle_copies(record)
     instance = await _instance()
     blocking = _blocking_findings(record)
+    # A page is given each copy with what it may decide about it and what was decided. The record is not changed.
+    decisions = record.get("decisions", [])
+    copies = {step: shown(step, record["steps"][step], decisions) for step in COPY_COMMANDS if step in record["steps"]}
     return {
         "instance": instance,
-        "record": record,
+        "record": {**record, "steps": {**record["steps"], **copies}},
         "steps": _steps(instance, record, blocking),
         "blocking_findings": blocking,
         "acceptable_checks": sorted(ACCEPTABLE_FINDINGS),
@@ -1068,7 +1144,7 @@ def _copy_step(record: dict[str, Any], step_id: str) -> tuple[str, str | None]:
     database = record["steps"].get("copy_database") or run
     if datetime.fromisoformat(database["started_at"]) > datetime.fromisoformat(run["started_at"]):
         return "current", None
-    code = blocking_code(run)
+    code = blocking_code(step_id, run, record.get("decisions", []))
     return ("blocked", code) if code else ("done", None)
 
 

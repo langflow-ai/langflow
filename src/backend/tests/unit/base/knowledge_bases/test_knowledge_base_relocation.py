@@ -652,7 +652,7 @@ class TestRelocateKbCommand:
     def test_the_command_takes_the_line_the_migration_page_gives_a_copy_from_sqlite(self):
         # The page starts the command as a child with this line. An option the command does not have would end
         # every such copy on a usage error, so the line is read here by the command's own parser.
-        argv = copy_command("copy_knowledge_bases", {"database": {}}, dry_run=True)
+        argv = copy_command("copy_knowledge_bases", {"database": {}}, [], dry_run=True)
         command = typer.main.get_command(app).commands["relocate-kb"]
 
         context = command.make_context("relocate-kb", argv[4:])
