@@ -53,7 +53,13 @@ def run_until_complete(coro):
         try:
             return new_loop.run_until_complete(coro)
         finally:
-            new_loop.close()
+            try:
+                # Like asyncio.run: close async generators on this loop so
+                # resources bound to it (such as a per-loop database engine)
+                # are released on the loop that owns them.
+                new_loop.run_until_complete(new_loop.shutdown_asyncgens())
+            finally:
+                new_loop.close()
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future = executor.submit(ctx.run, run_in_new_loop)
