@@ -226,7 +226,7 @@ async def run_checks(request: CheckRequest, admin: Superuser) -> StreamingRespon
     record["steps"]["check_source"] = step
     _write_record(record)
     await logger.ainfo(f"Migration: user_id={admin.id} started the source checks against Langflow {version}")
-    return StreamingResponse(_stream_checks(step), media_type="application/x-ndjson")
+    return _ClosingStream(_stream_checks(step), media_type="application/x-ndjson")
 
 
 @router.post("/accepted-findings")
@@ -497,7 +497,7 @@ async def download_database(admin: Superuser) -> StreamingResponse:
     if not record.get("pause"):
         raise HTTPException(status_code=409, detail={"code": "not_paused"})
     name = f"langflow-backup-{datetime.now(timezone.utc):%Y%m%d}.db"
-    return _Download(
+    return _ClosingStream(
         _database_copy(url.database, admin.id, record["pause"]["frozen_at"]),
         media_type="application/vnd.sqlite3",
         headers={"Content-Disposition": f'attachment; filename="{name}"'},
@@ -747,7 +747,7 @@ def _hold(name: str, secret: Any, result: dict[str, Any]) -> None:
         _secrets.pop(name, None)
 
 
-class _Download(StreamingResponse):
+class _ClosingStream(StreamingResponse):
     """A streamed response that closes its source when it ends, however it ends.
 
     A client that goes away leaves the source waiting to send, and what the source cleans
@@ -802,8 +802,12 @@ async def _stream_checks(step: dict[str, Any]) -> AsyncIterator[bytes]:
     stderr: deque[str] = deque(maxlen=_STDERR_LINES)
     process = drain = None
 
-    def keep(record: dict[str, Any]) -> None:
+    def keep(record: dict[str, Any]) -> bool:
+        # A run that ends after another run took the record leaves that run's step alone.
+        if (record["steps"].get("check_source") or {}).get("started_at") != step["started_at"]:
+            return False
         record["steps"]["check_source"] = step
+        return True
 
     try:
         process = await asyncio.create_subprocess_exec(
