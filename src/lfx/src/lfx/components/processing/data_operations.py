@@ -397,7 +397,7 @@ class DataOperationsComponent(Component):
         for key, value in self.append_update_data.items():
             data_filtered[key] = value
 
-        return Data(**data_filtered)
+        return Data(data=data_filtered)
 
     # Configuration and execution methods
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
