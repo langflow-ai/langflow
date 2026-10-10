@@ -640,6 +640,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
     def test_should_replace_current_date_and_model_name_when_both_placeholders_present(self, component_class):
         """Unit test: helper replaces both placeholders with concrete values."""
         import re
+
         component = component_class()
         component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
 
