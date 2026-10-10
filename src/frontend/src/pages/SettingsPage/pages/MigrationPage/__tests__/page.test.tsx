@@ -344,4 +344,34 @@ describe("the steps after the check", () => {
     open(state({ check_source: ["done"], pause: ["locked", "earlier_step"] }));
     expect(screen.getByText("If something goes wrong")).toBeInTheDocument();
   });
+
+  it("sums up the backup once it is confirmed, and leaves nothing to open", () => {
+    open(
+      state(
+        {
+          check_source: ["done"],
+          connect_target: ["done"],
+          secret_key: ["done"],
+          pause: ["done"],
+          backup: ["done"],
+          copy_database: ["current", "not_available"],
+        },
+        {
+          pause: { frozen_at: "2026-10-06T12:00:00Z", frozen_by: "alice" },
+          backup: {
+            location: "s3://acme-backups/langflow",
+            confirmed_by: "alice",
+            confirmed_at: "2026-10-06T12:30:00Z",
+          },
+        },
+      ),
+    );
+
+    expect(
+      row("backup").getByText(
+        /^Backed up .* to s3:\/\/acme-backups\/langflow\.$/,
+      ),
+    ).toBeInTheDocument();
+    expect(row("backup").queryByRole("button")).not.toBeInTheDocument();
+  });
 });

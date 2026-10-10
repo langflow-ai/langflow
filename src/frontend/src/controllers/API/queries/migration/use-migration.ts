@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
+import type { AxiosError, AxiosResponse } from "axios";
 import { api, performStreamingRequest } from "../../api";
 import { getURL } from "../../helpers/constants";
 import type {
@@ -139,3 +139,24 @@ export const useCancelJobMutation = () =>
     mutationFn: ({ method, url, body }) =>
       api.request({ method, url, data: body }),
   });
+
+/** Fetches a consistent copy of this instance's SQLite database. The server keeps no copy of its own. */
+export const useDownloadDatabaseMutation = () => {
+  const client = useQueryClient();
+  return useMutation<AxiosResponse<Blob>, AxiosError>({
+    mutationFn: () =>
+      api.post(getURL("MIGRATION", { path: "backup/database" }), undefined, {
+        responseType: "blob",
+      }),
+    // The record now says when the copy was made, or why there can't be one, such as a pause that ended.
+    onSettled: () => client.invalidateQueries({ queryKey: migrationKeys.all }),
+  });
+};
+
+/** Records where the admin keeps the backup, which finishes the step. */
+export const useConfirmBackupMutation = () =>
+  useStepMutation((location: string) =>
+    api.post(getURL("MIGRATION", { path: "steps/backup/confirm" }), {
+      location,
+    }),
+  );
