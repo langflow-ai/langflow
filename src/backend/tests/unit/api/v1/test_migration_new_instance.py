@@ -1241,10 +1241,14 @@ async def test_the_start_step_hands_out_the_settings_of_the_new_instance_and_no_
     assert not [secret for secret in (DB_PASSWORD, S3_SECRET) if secret in response.text]
 
 
+# A store of the server's own does not take the place of the one this move copied the knowledge bases into.
+@pytest.mark.parametrize("own_store", [None, f"postgresql+psycopg://vectors:{DB_PASSWORD}@pg.internal:5432/kb"])
 async def test_the_settings_name_where_the_knowledge_bases_and_the_files_went_and_stay_after_the_start(
-    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch, own_store
 ):
     monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+    if own_store:
+        monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", own_store)
     headers = logged_in_headers_super_user
     # An instance that keeps a knowledge base and a file on its own disk, with its three copies made and checked.
     path = await _three_copies_made(config_dir, active_super_user.id)
@@ -1317,6 +1321,58 @@ async def test_an_instance_on_postgresql_with_its_own_bucket_and_store_is_given_
         *signing_in,
     ]
     assert not [secret for secret in (DB_PASSWORD, S3_SECRET, "dbuser", "vectors:") if secret in response.text]
+
+
+async def test_the_bucket_this_instance_keeps_its_files_in_is_given_whatever_bucket_an_earlier_move_saved(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+    monkeypatch.delenv("AWS_ENDPOINT_URL", raising=False)
+    # The record still names the bucket of a move that was given up. Since then this instance keeps its files in
+    # a bucket of its own, so no copy moved them and the check of the copy read them there.
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "storage_type", "s3")
+    monkeypatch.setattr(settings, "object_storage_bucket_name", "own-bucket")
+    monkeypatch.setattr(settings, "object_storage_prefix", "own/files")
+    _copied(config_dir)
+    _checked_copy(config_dir, skipped={**TO_MOVE["skipped"], "copy_files": "files_in_s3"})
+
+    listed = (await _migration(client, logged_in_headers_super_user))["start"]["settings"]
+
+    given = {setting["name"]: setting["value"] for setting in listed}
+    assert given["LANGFLOW_OBJECT_STORAGE_BUCKET_NAME"] == "own-bucket"  # pragma: allowlist secret
+    assert given["LANGFLOW_OBJECT_STORAGE_PREFIX"] == "own/files"  # pragma: allowlist secret
+
+
+@pytest.mark.parametrize(
+    ("own_store", "read_in"),
+    [
+        (f"postgresql+psycopg://vectors:{DB_PASSWORD}@pg.internal:5432/kb", "pg.internal:5432/kb"),
+        # A server with no store of its own has none to read: the database the admin prepared for them is given.
+        (None, "db.internal:5432/langflow"),
+    ],
+    ids=["a store of its own", "no store of its own"],
+)
+async def test_knowledge_bases_that_no_copy_moved_are_read_in_the_store_this_server_reads_them_in(
+    client, logged_in_headers_super_user, config_dir, monkeypatch, own_store, read_in
+):
+    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+    if own_store:
+        monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", own_store)
+    _copied(config_dir)
+    # The record still sends knowledge bases into the destination database, from a move that was given up. This
+    # instance keeps none on its own disk any more, so no copy moved one and the check read the server's own store.
+    path = config_dir / "migrations" / "migration.json"
+    record = json.loads(path.read_text())
+    record["destinations"]["vectors"] = {"kind": "pgvector"}
+    path.write_text(json.dumps(record))
+    _checked_copy(config_dir)
+
+    response = await client.get("api/v1/migration", headers=logged_in_headers_super_user)
+
+    given = {setting["name"]: setting["value"] for setting in response.json()["start"]["settings"]}
+    assert given["PGVECTOR_CONNECTION_STRING"] == f"postgresql+psycopg://<user>:<password>@{read_in}"
+    assert DB_PASSWORD not in response.text
 
 
 # ---- with a real destination
