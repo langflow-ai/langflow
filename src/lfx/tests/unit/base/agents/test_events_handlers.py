@@ -359,3 +359,44 @@ async def test_tool_error_string_payload_passes_through():
     error_event = {"event": "on_tool_error", "name": "t", "run_id": "r1", "data": {"error": "tool failed"}}
     message, _ = await handle_on_tool_error(error_event, message, tool_blocks_map, _passthrough, perf_counter())
     assert message.content_blocks[-1].error == "tool failed"
+
+
+async def test_chain_stream_calls_the_token_callback_on_the_loop(monkeypatch):
+    """Each streamed token reaches the callback without a thread-pool hop.
+
+    The callback is EventManager.on_token, which only encodes the chunk and put_nowait()s it, so a
+    worker thread per token cost more than the call itself. Pins that the call stays on the loop's
+    thread and that the event lands on the queue before the handler returns.
+    """
+    import asyncio
+    import json
+    import threading
+
+    from langchain_core.messages import AIMessageChunk
+    from lfx.events.event_manager import create_default_event_manager
+
+    async def _no_thread_hop(*_args, **_kwargs):
+        msg = "token callback must not go through asyncio.to_thread"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(asyncio, "to_thread", _no_thread_hop)
+
+    queue: asyncio.Queue = asyncio.Queue()
+    manager = create_default_event_manager(queue)
+    callback_threads = []
+
+    def on_token(*, data):
+        callback_threads.append(threading.get_ident())
+        manager.on_token(data=data)
+
+    msg = Message(text="", sender="Machine", sender_name="AI")
+    for chunk in ("Hel", "lo"):
+        event = {"data": {"chunk": AIMessageChunk(content=chunk)}}
+        await handle_on_chain_stream(event, msg, _passthrough, on_token, perf_counter(), message_id="m-1")
+
+    assert callback_threads == [threading.get_ident()] * 2
+    frames = [json.loads(queue.get_nowait()[1]) for _ in range(queue.qsize())]
+    assert frames == [
+        {"event": "token", "data": {"chunk": "Hel", "id": "m-1"}},
+        {"event": "token", "data": {"chunk": "lo", "id": "m-1"}},
+    ]

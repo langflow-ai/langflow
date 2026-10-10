@@ -1,5 +1,4 @@
 # Add helper functions for each event type
-import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from time import perf_counter
 from typing import Any, Protocol
@@ -461,9 +460,11 @@ async def handle_on_chain_stream(
         # For streaming, send token event if callback is available
         # Note: we should expect the callback, but we keep it optional for backwards compatibility
         # as of v1.6.5
+        # Called on the loop, not through asyncio.to_thread: this runs once per streamed token, and
+        # the callback is EventManager.on_token, which encodes a two-field dict and put_nowait()s
+        # it (send_event is loop-aware). A callback passed here must not block.
         if output_text is not None and output_text != "" and send_token_callback and message_id:
-            await asyncio.to_thread(
-                send_token_callback,
+            send_token_callback(
                 data={
                     "chunk": output_text,
                     "id": str(message_id),
