@@ -10,7 +10,12 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { analyzeI18n, DEFAULT_LOCALES, reportI18n } from "./check-i18n.mjs";
+import {
+  analyzeI18n,
+  DEFAULT_LOCALES,
+  PARTIAL_LOCALES,
+  reportI18n,
+} from "./check-i18n.mjs";
 
 const LOCALES = ["de", "fr"];
 
@@ -24,7 +29,10 @@ test("validates every language enabled by the application", () => {
   const enabled = [...languages[1].matchAll(/"([^"]+)"/g)]
     .map((match) => match[1])
     .filter((locale) => locale !== "en");
-  assert.deepEqual([...DEFAULT_LOCALES].sort(), enabled.sort());
+  assert.deepEqual(
+    [...DEFAULT_LOCALES, ...PARTIAL_LOCALES].sort(),
+    enabled.sort(),
+  );
 });
 
 /**
@@ -148,6 +156,35 @@ test("reports a key present in en.json but missing from a locale", () => {
   assert.deepEqual(result.parityProblems, [
     { locale: "fr", key: "one", reason: "missing key" },
   ]);
+});
+
+test("allows partial locales to fall back to en.json", () => {
+  const result = analyze(
+    { "a.tsx": `t("one");\n` },
+    {
+      en: { one: "One", greet: "Hi {{name}}" },
+      de: { one: "Eins", greet: "Hallo {{name}}" },
+      fr: { one: "Un", greet: "Bonjour {{name}}" },
+      tr: { one: "Bir", greet: "Merhaba {{name}}" },
+    },
+  );
+
+  const partialResult = analyzeI18n({
+    frontendRoot: makeTree(
+      { "a.tsx": `t("one");\n` },
+      {
+        en: { one: "One", greet: "Hi {{name}}" },
+        de: { one: "Eins", greet: "Hallo {{name}}" },
+        fr: { one: "Un", greet: "Bonjour {{name}}" },
+        tr: { one: "Bir", greet: "Merhaba {{name}}" },
+      },
+    ),
+    locales: LOCALES,
+    partialLocales: ["tr"],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(partialResult.ok, true);
 });
 
 test("reports a locale whose interpolation placeholders differ from en", () => {

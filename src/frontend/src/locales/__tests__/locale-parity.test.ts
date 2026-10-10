@@ -12,6 +12,7 @@ import fr from "../fr.json";
 import ja from "../ja.json";
 import ko from "../ko.json";
 import pt from "../pt.json";
+import tr from "../tr.json";
 import zhHans from "../zh-Hans.json";
 
 const LOCALES: Record<string, Record<string, string>> = {
@@ -25,6 +26,7 @@ const LOCALES: Record<string, Record<string, string>> = {
 };
 
 const englishKeys = Object.keys(en as Record<string, string>);
+const partialLocales: Record<string, Record<string, string>> = { tr };
 
 /** `{{name}}` placeholders i18next substitutes at render time. */
 const placeholders = (value: string): string[] =>
@@ -64,3 +66,29 @@ describe("locale bundles", () => {
     },
   );
 });
+
+it.each(Object.keys(partialLocales))(
+  "%s only uses keys English ships",
+  (locale) => {
+    const unknown = Object.keys(partialLocales[locale]).filter(
+      (key) => !(key in en),
+    );
+
+    expect(unknown).toEqual([]);
+  },
+);
+
+it.each(Object.keys(partialLocales))(
+  "%s keeps placeholders for translated keys",
+  (locale) => {
+    const mismatched = Object.keys(partialLocales[locale])
+      .filter((key) => key in en)
+      .filter(
+        (key) =>
+          placeholders((en as Record<string, string>)[key]).join("|") !==
+          placeholders(partialLocales[locale][key]).join("|"),
+      );
+
+    expect(mismatched).toEqual([]);
+  },
+);
