@@ -1,0 +1,32 @@
+---
+title: SerpKite
+slug: /bundles-serpkite
+---
+
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="serpkite" />
+
+## SerpKite Search
+
+Search Google through [SerpKite](https://serpkite.com) and return organic results as a [Table](/data-types#table), with `title`, `link`, `snippet` and `position` columns. Each row's text is the snippet.
+
+Get an API key from [the SerpKite dashboard](https://app.serpkite.com/keys), then set **SerpKite Key**. The component sends the key in a Bearer authorization header and calls `POST /v1/search` asynchronously. It uses SerpKite's native parameters and response envelope.
+
+Enable [tool mode](/agents-tools) to expose `serpkite_search` to an [Agent](/agents). Only the query is model-controlled; localization, result depth and the API key are configured on the component.
+
+Failed requests produce a single error row; empty searches produce an empty table. See [SerpKite pricing](https://serpkite.com/pricing) for credits and the free tier. Requests for more than ten results use a deeper search and cost more credits.
+
+| Input | Description |
+| --- | --- |
+| Search Query (`input_value`) | The search query; supports tool mode. |
+| SerpKite Key (`serpkite_api_key`) | Your API key, stored as a secret input. |
+| Country (`country`) | Optional two-letter country code, such as `us` or `de`. |
+| Language (`language`) | Optional interface language, such as `en` or `de`. |
+| Location (`location`) | Optional city-level location. |
+| Max Results (`max_results`) | Search depth, from 10 to 100; default 10. Depth above 10 requires page 1. |
+| Page (`page`) | Result page, from 1 to 10; default 1. |
+
+See the [API reference](https://serpkite.com/docs/endpoints/search) for request parameters. This bundle is maintained by the SerpKite team.
+
+Google is a trademark of Google LLC.

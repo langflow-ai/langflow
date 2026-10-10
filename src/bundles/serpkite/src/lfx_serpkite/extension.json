@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-serpkite",
+  "version": "0.1.0",
+  "name": "SerpKite",
+  "description": "SerpKite Google SERP web-search component as a standalone Langflow Extension Bundle.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "bundles": [
+    {
+      "name": "serpkite",
+      "path": "components/serpkite"
+    }
+  ]
+}

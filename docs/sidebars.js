@@ -590,6 +590,7 @@ module.exports = {
             "Components/bundles-searchapi",
             "Components/bundles-serper",
             "Components/bundles-serpingapi",
+            "Components/bundles-serpkite",
             "Components/bundles-serply",
             "Components/bundles-slack",
             "Components/bundles-supabase",
