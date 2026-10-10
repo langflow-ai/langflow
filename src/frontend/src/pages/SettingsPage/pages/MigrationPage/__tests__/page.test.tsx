@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { AxiosError } from "axios";
 import { api } from "@/controllers/API/api";
 import {
+  type MigrationCopyRun,
   type MigrationState,
   type MigrationStepState,
   migrationKeys,
@@ -59,7 +60,34 @@ function open(migration: MigrationState) {
 const row = (id: MigrationStepState["id"]) =>
   within(screen.getByTestId(`migration-step-${id}`));
 
-afterEach(() => jest.restoreAllMocks());
+const originalFetch = global.fetch;
+
+afterEach(() => {
+  global.fetch = originalFetch;
+  jest.restoreAllMocks();
+});
+
+// Everything before the copies is done.
+const copied: Parameters<typeof state>[0] = {
+  check_source: ["done"],
+  connect_target: ["done"],
+  secret_key: ["done"],
+  pause: ["done"],
+  backup: ["done"],
+};
+const run = (status: MigrationCopyRun["status"]): MigrationCopyRun => ({
+  run_id: "run-1",
+  status,
+  dry_run: false,
+  started_by: "alice",
+  started_at: "2026-10-06T12:05:00Z",
+  finished_at: status === "running" ? null : "2026-10-06T12:06:00Z",
+  report:
+    status === "done"
+      ? { ok: true, tables_copied: 1059, rows_copied: 12345 }
+      : null,
+  error: null,
+});
 
 describe("the steps after the check", () => {
   it("offers a step only when the server can do it", () => {
@@ -86,11 +114,14 @@ describe("the steps after the check", () => {
         secret_key: ["done"],
         pause: ["done"],
         backup: ["done"],
-        copy_database: ["current"],
+        copy_database: ["skipped"],
+        copy_knowledge_bases: ["skipped"],
+        copy_files: ["skipped"],
+        start_target: ["current"],
       }),
     );
 
-    expect(row("copy_database").getByText("Coming soon")).toBeInTheDocument();
+    expect(row("start_target").getByText("Coming soon")).toBeInTheDocument();
   });
 
   it("opens the step the admin is on, and holds no form for one they haven't reached", () => {
@@ -102,11 +133,19 @@ describe("the steps after the check", () => {
     ).toBeVisible();
     unmount();
 
-    open(state({ check_source: ["current"], connect_target: ["locked"] }));
+    open(
+      state({
+        check_source: ["current"],
+        connect_target: ["locked"],
+        copy_database: ["locked"],
+      }),
+    );
     // Not hidden either: a locked step has nothing to fill in or to press.
-    expect(
-      row("connect_target").queryByRole("button", { hidden: true }),
-    ).not.toBeInTheDocument();
+    for (const id of ["connect_target", "copy_database"] as const) {
+      expect(
+        row(id).queryByRole("button", { hidden: true }),
+      ).not.toBeInTheDocument();
+    }
   });
 
   it("sums up where the data goes once it is saved", () => {
@@ -373,5 +412,47 @@ describe("the steps after the check", () => {
       ),
     ).toBeInTheDocument();
     expect(row("backup").queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("sums up the database copy once it is done, and keeps it one click away", async () => {
+    open(
+      state(
+        { ...copied, copy_database: ["done"] },
+        { steps: { copy_database: run("done") } },
+      ),
+    );
+
+    expect(
+      row("copy_database").getByText("Tables: 1,059. Rows: 12,345."),
+    ).toBeInTheDocument();
+    const again = row("copy_database").getByRole("button", {
+      name: "Copy again",
+      hidden: true,
+    });
+    expect(again).not.toBeVisible();
+    await userEvent.click(
+      row("copy_database").getByRole("button", { name: "Copy the database" }),
+    );
+    expect(again).toBeVisible();
+  });
+
+  it("shows a copy as working while its run is on", () => {
+    global.fetch = jest.fn(() => new Promise<Response>(() => {}));
+    const marker = () =>
+      row("copy_database").getByRole("heading").parentElement
+        ?.previousElementSibling;
+
+    const { unmount } = open(state({ ...copied, copy_database: ["current"] }));
+    expect(marker()).toHaveClass("bg-primary");
+    unmount();
+
+    open(
+      state(
+        { ...copied, copy_database: ["current"] },
+        { steps: { copy_database: run("running") } },
+      ),
+    );
+    expect(marker()).not.toHaveClass("bg-primary");
+    expect(row("copy_database").getByText("Starting…")).toBeVisible();
   });
 });
