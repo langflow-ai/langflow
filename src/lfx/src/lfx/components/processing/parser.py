@@ -131,7 +131,11 @@ class ParserComponent(Component):
             # columns (e.g. 2**53 -> 2**53) and breaking integer format
             # specifiers such as {col:d}.
             for index in range(len(df)):
-                row = {column: df[column].iloc[index] for column in df.columns}
+                # Select both the row and the column by position: with duplicate
+                # column labels `df[column]` returns a DataFrame (not a Series),
+                # so `df[column].iloc[index]` would store a Series in the row and
+                # break scalar format specifiers such as {col:d}.
+                row = {column: df.iloc[index, col_idx] for col_idx, column in enumerate(df.columns)}
                 formatted_text = self.pattern.format(**row)
                 lines.append(formatted_text)
         elif data is not None:
