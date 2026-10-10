@@ -1436,8 +1436,9 @@ def _start_settings(instance: dict[str, Any], record: dict[str, Any]) -> list[di
     # An instance already on PostgreSQL keeps its database, and the new instance runs on it.
     database = instance["database"]["location"] if on_postgresql else (saved.get("database") or {}).get("location")
     files = saved.get("files")
-    if not files and instance["files"]["storage"] == "s3":
-        # Its files are in a bucket already, and the new instance reads them there.
+    if instance["files"]["storage"] == "s3":
+        # Its files are in a bucket already, and the new instance reads them there. A bucket that an earlier
+        # move saved stays in the record, and no copy of this move wrote to it.
         endpoint = os.environ.get("AWS_ENDPOINT_URL")
         files = {
             "bucket": instance["files"]["bucket"],
@@ -1446,9 +1447,13 @@ def _start_settings(instance: dict[str, Any], record: dict[str, Any]) -> list[di
             "endpoint_url": endpoint if endpoint and _PLAIN_ENDPOINT.fullmatch(endpoint) else None,
         }
     # Knowledge bases that were copied are in the destination database. Any other one in pgvector is in
-    # the store this server's own variable names, and the new instance reads it there.
+    # the store this server's own variable names, and the new instance reads it there. A destination that an
+    # earlier move saved for them stays in the record: it counts while this move copies them, as the check
+    # of the copy read them, or when the server has no store of its own.
     own_store = os.environ.get("PGVECTOR_CONNECTION_STRING")
-    vectors = database if "vectors" in saved and not on_postgresql else own_store and location(own_store)
+    needed = (_counting_check(record) or {}).get("needed") or _needed_destinations(instance)
+    copied = "vectors" in saved and not on_postgresql and ("vectors" in needed or not own_store)
+    vectors = database if copied else own_store and location(own_store)
     auth = get_settings_service().auth_settings
     return start_settings(
         database=database, files=files, vectors=vectors, auto_login=auth.AUTO_LOGIN, superuser=auth.SUPERUSER
