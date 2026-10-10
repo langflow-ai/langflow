@@ -359,3 +359,125 @@ async def test_tool_error_string_payload_passes_through():
     error_event = {"event": "on_tool_error", "name": "t", "run_id": "r1", "data": {"error": "tool failed"}}
     message, _ = await handle_on_tool_error(error_event, message, tool_blocks_map, _passthrough, perf_counter())
     assert message.content_blocks[-1].error == "tool failed"
+
+
+async def _rehydrate(*, message: Message, **_kwargs) -> Message:
+    """Rehydrate like Component.send_message does, rebuilding all blocks.
+
+    This invalidates object references in tool_blocks_map and makes value-based
+    lookups ambiguous for parallel same-argument calls.
+    """
+    return await Message.create(**message.model_dump())
+
+
+async def test_parallel_same_args_keep_own_outputs_rehydrated():
+    """Issue #15380: parallel calls to the same tool with identical arguments.
+
+    Two model-declared ToolContent blocks (declared in start order a, b); the
+    terminal events arrive out of order (b finishes first). Each block must
+    keep its own run's output, not the first unbound block in the message.
+    """
+    msg = Message(
+        content_blocks=[
+            ToolContent(name="search", tool_input={"q": "same"}, output=None),
+            ToolContent(name="search", tool_input={"q": "same"}, output=None),
+        ],
+        sender="Machine",
+        sender_name="AI",
+    )
+    start_a = {"name": "search", "run_id": "a", "data": {"input": {"q": "same"}}}
+    start_b = {"name": "search", "run_id": "b", "data": {"input": {"q": "same"}}}
+    end_b = {"name": "search", "run_id": "b", "data": {"output": "result-b"}}
+    end_a = {"name": "search", "run_id": "a", "data": {"output": "result-a"}}
+
+    tool_blocks_map = {}
+    msg, _ = await handle_on_tool_start(start_a, msg, tool_blocks_map, _rehydrate, perf_counter())
+    msg, _ = await handle_on_tool_start(start_b, msg, tool_blocks_map, _rehydrate, perf_counter())
+    msg, _ = await handle_on_tool_end(end_b, msg, tool_blocks_map, _rehydrate, perf_counter())
+    msg, _ = await handle_on_tool_end(end_a, msg, tool_blocks_map, _rehydrate, perf_counter())
+
+    outputs = [b.output for b in msg.content_blocks if isinstance(b, ToolContent)]
+    assert outputs == ["result-a", "result-b"], f"got {outputs}"
+
+
+async def test_parallel_same_args_fallback_created_blocks():
+    """Issue #15380 variant: fallback-created blocks (no on_chat_model_end).
+
+    Both blocks are appended by handle_on_tool_start itself; terminal events
+    arriving out of order must still land on the matching run's block.
+    """
+    msg = Message(content_blocks=[], sender="Machine", sender_name="AI")
+    start_a = {"name": "search", "run_id": "a", "data": {"input": {"q": "same"}}}
+    start_b = {"name": "search", "run_id": "b", "data": {"input": {"q": "same"}}}
+    end_b = {"name": "search", "run_id": "b", "data": {"output": "result-b"}}
+    end_a = {"name": "search", "run_id": "a", "data": {"output": "result-a"}}
+
+    tool_blocks_map = {}
+    msg, _ = await handle_on_tool_start(start_a, msg, tool_blocks_map, _rehydrate, perf_counter())
+    msg, _ = await handle_on_tool_start(start_b, msg, tool_blocks_map, _rehydrate, perf_counter())
+    msg, _ = await handle_on_tool_end(end_b, msg, tool_blocks_map, _rehydrate, perf_counter())
+    msg, _ = await handle_on_tool_end(end_a, msg, tool_blocks_map, _rehydrate, perf_counter())
+
+    outputs = [b.output for b in msg.content_blocks if isinstance(b, ToolContent)]
+    assert outputs == ["result-a", "result-b"], f"got {outputs}"
+
+
+async def test_parallel_tool_error_kept_on_matching_block():
+    """Issue #15380: on_tool_error must surface on the live block.
+
+    The error handler used to mutate the stale reference directly; after a
+    publication rehydrated the message the error vanished. With b erroring
+    before a finishes, b's block must carry the error and a's block must still
+    accept its own output.
+    """
+    msg = Message(
+        content_blocks=[
+            ToolContent(name="search", tool_input={"q": "same"}, output=None),
+            ToolContent(name="search", tool_input={"q": "same"}, output=None),
+        ],
+        sender="Machine",
+        sender_name="AI",
+    )
+    start_a = {"name": "search", "run_id": "a", "data": {"input": {"q": "same"}}}
+    start_b = {"name": "search", "run_id": "b", "data": {"input": {"q": "same"}}}
+    err_b = {"name": "search", "run_id": "b", "data": {"error": RuntimeError("boom")}}
+    end_a = {"name": "search", "run_id": "a", "data": {"output": "result-a"}}
+
+    tool_blocks_map = {}
+    msg, _ = await handle_on_tool_start(start_a, msg, tool_blocks_map, _rehydrate, perf_counter())
+    msg, _ = await handle_on_tool_start(start_b, msg, tool_blocks_map, _rehydrate, perf_counter())
+    msg, _ = await handle_on_tool_error(err_b, msg, tool_blocks_map, _rehydrate, perf_counter())
+    msg, _ = await handle_on_tool_end(end_a, msg, tool_blocks_map, _rehydrate, perf_counter())
+
+    pairs = [(b.output, b.error) for b in (msg.content_blocks or []) if isinstance(b, ToolContent)]
+    assert pairs == [("result-a", None), (None, "boom")], f"got {pairs}"
+
+
+async def test_terminal_event_after_nested_model_end_keeps_binding():
+    """Issue #15380: nested model-end must not invalidate run->block binding.
+
+    A nested model-end event rehydrates the message again; the pending
+    terminal event for run b must still find b's block by its recorded index.
+    """
+    msg = Message(
+        content_blocks=[
+            ToolContent(name="search", tool_input={"q": "same"}, output=None),
+            ToolContent(name="search", tool_input={"q": "same"}, output=None),
+        ],
+        sender="Machine",
+        sender_name="AI",
+    )
+    start_a = {"name": "search", "run_id": "a", "data": {"input": {"q": "same"}}}
+    start_b = {"name": "search", "run_id": "b", "data": {"input": {"q": "same"}}}
+    _ = {"name": "search", "run_id": "ignored"}  # nested model-end event
+    end_b = {"name": "search", "run_id": "b", "data": {"output": "result-b"}}
+
+    tool_blocks_map = {}
+    msg, _ = await handle_on_tool_start(start_a, msg, tool_blocks_map, _rehydrate, perf_counter())
+    msg, _ = await handle_on_tool_start(start_b, msg, tool_blocks_map, _rehydrate, perf_counter())
+    # Nested publication: rehydrate once more without touching tool blocks.
+    msg = await _rehydrate(message=msg)
+    msg, _ = await handle_on_tool_end(end_b, msg, tool_blocks_map, _rehydrate, perf_counter())
+
+    outputs = [b.output for b in msg.content_blocks if isinstance(b, ToolContent)]
+    assert outputs[1] == "result-b", f"got {outputs}"
