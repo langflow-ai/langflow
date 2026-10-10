@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError } from "axios";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { api } from "@/controllers/API/api";
 import {
   type MigrationCopyRun,
@@ -1096,6 +1097,63 @@ describe("what another admin does meanwhile", () => {
 
     await act(() => jest.advanceTimersByTimeAsync(10 * 60 * 1000));
 
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("while the page is switched off", () => {
+  /** Opens the page by its address, as a browser tab does, with the flags the server has sent so far. */
+  function openAt(featureFlags: Record<string, unknown>) {
+    useAuthStore.setState({ userData: { is_superuser: true } as Users });
+    useUtilityStore.setState({ featureFlags });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={["/settings/migration"]}>
+          <Routes>
+            <Route path="/settings" element={<p>The settings</p>} />
+            <Route path="/settings/migration" element={<MigrationPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  it("sends the admin to the settings and asks the server nothing", async () => {
+    const get = jest.spyOn(api, "get").mockResolvedValue({
+      data: state({ check_source: ["current"] }),
+    });
+
+    openAt({ instance_migration: false });
+
+    expect(screen.getByText("The settings")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("migration-step-check_source"),
+    ).not.toBeInTheDocument();
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it("waits for the server's flags before it leaves, shows or asks anything", async () => {
+    const get = jest.spyOn(api, "get").mockResolvedValue({
+      data: state({ check_source: ["current"] }),
+    });
+
+    // The flags arrive after the first render when the page is opened by its address.
+    openAt({});
+
+    expect(screen.getByLabelText("Loading")).toBeInTheDocument();
+    // The page may be switched on, so it does not send the admin away yet.
+    expect(screen.queryByText("The settings")).not.toBeInTheDocument();
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(get).not.toHaveBeenCalled();
+
+    act(() =>
+      useUtilityStore.setState({ featureFlags: { instance_migration: true } }),
+    );
+
+    expect(
+      await screen.findByTestId("migration-step-check_source"),
+    ).toBeInTheDocument();
     expect(get).toHaveBeenCalledTimes(1);
   });
 });
