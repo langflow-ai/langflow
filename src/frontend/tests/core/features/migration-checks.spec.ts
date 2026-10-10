@@ -22,10 +22,9 @@ test(
       { times: 1 },
     );
     await page.goto("/settings/migration");
-    // The reload boots the whole app again before Settings renders, so it gets the bootstrap's wait.
-    await expect(page.getByTestId("sidebar-nav-Global Variables")).toBeVisible({
-      timeout: 30000,
-    });
+    await expect(
+      page.getByTestId("sidebar-nav-Global Variables"),
+    ).toBeVisible();
     expect(new URL(page.url()).pathname).toBe("/settings/migration");
     sendConfig();
 
