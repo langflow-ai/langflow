@@ -1,8 +1,16 @@
 name: Component Compatibility Gate
 
-# Fails when a PR removes a component, input, or output from component_index.json,
-# because saved flows reference them by name. Add the 'breaking change' label to
-# a PR to acknowledge an intentional break; the gate then reports warnings only.
+# Reports component changes in component_index.json that break saved flows, using the
+# repo's own upgrade checker (lfx.upgrade.checker.has_breaking_change). See
+# scripts/ci/check_component_compat.py for what counts as breaking.
+#
+# Rollout: FAIL_ON_BREAKING is "false", so the gate only annotates the PR and writes a job
+# summary. Set it to "true" to fail PRs; the 'breaking change' label then downgrades
+# failures to warnings.
+#
+# Keep this workflow separate from ci.yml and out of required status checks. Its paths
+# filter leaves the check pending on PRs that don't touch the index, and it has no
+# merge_group trigger, so making it required would block those PRs and the merge queue.
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
@@ -17,6 +25,10 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
+
+env:
+  FAIL_ON_BREAKING: "false"
 
 jobs:
   check:
@@ -28,30 +40,57 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
+          filter: blob:none
 
-      - name: Extract component indexes
+      - name: Extract component indexes and base-branch checker
+        id: extract
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           set -euo pipefail
           INDEX=src/lfx/src/lfx/_assets/component_index.json
-          git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
-          MERGE_BASE=$(git merge-base HEAD "origin/${BASE_REF}")
+          git fetch --no-tags --filter=blob:none origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          if ! MERGE_BASE=$(git merge-base HEAD "origin/${BASE_REF}"); then
+            echo "::error::No merge base between the PR head and ${BASE_REF}."
+            exit 1
+          fi
+          if [ "$(git merge-base --all HEAD "origin/${BASE_REF}" | wc -l)" -gt 1 ]; then
+            echo "::warning::Multiple merge bases with ${BASE_REF}; comparing against ${MERGE_BASE}."
+          fi
+          # Run the base branch's copy of the gate and checker so a PR can't change the
+          # rule it is judged by.
+          if ! git show "origin/${BASE_REF}:scripts/ci/check_component_compat.py" > "${RUNNER_TEMP}/check.py"; then
+            echo "::notice::${BASE_REF} does not have the component compatibility gate yet; skipping."
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          git show "origin/${BASE_REF}:src/lfx/src/lfx/upgrade/checker.py" > "${RUNNER_TEMP}/checker.py"
+          git show "origin/${BASE_REF}:src/lfx/src/lfx/graph/edge/base.py" > "${RUNNER_TEMP}/edge_base.py"
           git show "origin/${BASE_REF}:${INDEX}" > "${RUNNER_TEMP}/base.json"
           git show "${MERGE_BASE}:${INDEX}" > "${RUNNER_TEMP}/merge_base.json"
           cp "${INDEX}" "${RUNNER_TEMP}/head.json"
 
       - name: Compare component indexes
+        if: steps.extract.outputs.skip != 'true'
         env:
-          ALLOW_BREAKING: ${{ contains(github.event.pull_request.labels.*.name, 'breaking change') }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           ARGS=(
             --base "${RUNNER_TEMP}/base.json"
             --merge-base "${RUNNER_TEMP}/merge_base.json"
             --head "${RUNNER_TEMP}/head.json"
+            --checker "${RUNNER_TEMP}/checker.py"
+            --type-migrations "${RUNNER_TEMP}/edge_base.py"
+            --repo-root .
           )
-          if [ "${ALLOW_BREAKING}" = "true" ]; then
-            ARGS+=(--allow-breaking)
+          if [ "${FAIL_ON_BREAKING}" = "true" ]; then
+            ARGS+=(--fail)
+            # Read labels live: the event payload is stale when a failed run is re-run.
+            LABELS=$(gh pr view "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --json labels --jq '.labels[].name')
+            if grep -qx 'breaking change' <<< "${LABELS}"; then
+              ARGS+=(--allow-breaking)
+            fi
           fi
-          python3 scripts/ci/check_component_compat.py "${ARGS[@]}"
+          python3 "${RUNNER_TEMP}/check.py" "${ARGS[@]}"

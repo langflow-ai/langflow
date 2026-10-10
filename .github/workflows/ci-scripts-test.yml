@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - "scripts/ci/**"
+      # The component compatibility gate tests load these files.
+      - "src/lfx/src/lfx/upgrade/checker.py"
+      - "src/lfx/src/lfx/graph/edge/base.py"
       - "design/dedicated-integrations/**"
       - "design/dedicated-integrations-triggers/**"
       - ".github/workflows/ci-scripts-test.yml"
