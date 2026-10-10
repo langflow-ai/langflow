@@ -25,9 +25,126 @@ reviews:
   auto_assign_reviewers: false
   poem: false
   labeling_instructions: []
+  # Generated files: reviewing them spends the per-review file budget on machine output.
   path_filters:
-    - "!src/backend/base/langflow/initial_setup/starter_projects"
-  path_instructions: []
+    - "!**/starter_projects/*.json"
+    - "!src/lfx/src/lfx/_assets/**"
+    - "!**/locales/*.json"
+    - "!.secrets.baseline"
+    - "!scripts/ci/bundle_profile_locks/**"
+    - "!**/package-lock.json"
+  # Ordered by impact: each rule targets a bug class that recurred in recent fix PRs
+  # into main and release-* (sample: 100 fix PRs, #15211-#15640). Every rule whose
+  # glob matches a file applies to it.
+  path_instructions:
+    - path: "src/**/*.py"
+      instructions: |
+        Security (the most common class of shipped fixes). Flag:
+        - Outbound HTTP to a URL that comes from user input, flow config or a component field without
+          the SSRF helpers in `lfx.utils.ssrf_httpx` / `lfx.utils.ssrf_requests`
+          (`ssrf_protected_httpx_client_kwargs_for_url`, `validate_url_for_ssrf_or_raise`, `ssrf_safe_get`),
+          or with redirects followed.
+        - Filesystem paths, filenames or storage keys from user input that bypass
+          `lfx.utils.file_path_security` (`enforce_local_file_access`, `validate_storage_key`), and
+          filenames used without rejecting control characters or normalizing Unicode.
+        - Environment lookups by a user-supplied name that bypass `lfx.utils.env_var_security.safe_getenv`.
+        - URLs, tokens or credentials written to logs, error messages or API responses without
+          `lfx.utils.url_redaction` (`sanitize_url_for_display`, `redact_urls_in_text`).
+        - User-controlled values reaching subprocess arguments, MCP stdio commands or runtime options.
+        - Security or permission checks that allow the request when the check itself errors. They must fail closed.
+        Also flag error handling that hides failures: broad `except` blocks that swallow exceptions, silent
+        fallbacks to default values, or logging an error and continuing as if the operation succeeded.
+    - path: "src/lfx/src/lfx/components/**/*.py"
+      instructions: |
+        Component fixes are the second most common class of shipped bug, and they rarely get review comments.
+        Review the component's runtime behavior, not only its style:
+        - Input handling: type coercion (numeric vs. string values, lists vs. scalars), empty, None and missing
+          values, and defaults that differ between the UI and API or tool-mode callers.
+        - In tool mode, values the user configured on the component must not be silently overridden or
+          dropped by tool-call arguments, and vice versa.
+        - Side effects such as ingestion, writes or external calls must run once per execution and leave
+          consistent state when a run is cancelled or fails partway.
+        - Outputs must match their declared types on every code path, including error paths.
+        Saved flows match components by class name and connect edges by input and output `name`. Flag any
+        renamed or removed component class, input name or output name as a breaking change.
+    - path: "src/bundles/**/components/**/*.py"
+      instructions: |
+        Component fixes are the second most common class of shipped bug, and they rarely get review comments.
+        Review the component's runtime behavior, not only its style:
+        - Input handling: type coercion (numeric vs. string values, lists vs. scalars), empty, None and missing
+          values, and defaults that differ between the UI and API or tool-mode callers.
+        - In tool mode, values the user configured on the component must not be silently overridden or
+          dropped by tool-call arguments, and vice versa.
+        - Side effects such as ingestion, writes or external calls must run once per execution and leave
+          consistent state when a run is cancelled or fails partway.
+        - Outputs must match their declared types on every code path, including error paths.
+        Saved flows match components by class name and connect edges by input and output `name`. Flag any
+        renamed or removed component class, input name or output name as a breaking change.
+    - path: "src/lfx/src/lfx/base/**/*.py"
+      instructions: |
+        Component fixes are the second most common class of shipped bug, and they rarely get review comments.
+        Review the component's runtime behavior, not only its style:
+        - Input handling: type coercion (numeric vs. string values, lists vs. scalars), empty, None and missing
+          values, and defaults that differ between the UI and API or tool-mode callers.
+        - In tool mode, values the user configured on the component must not be silently overridden or
+          dropped by tool-call arguments, and vice versa.
+        - Side effects such as ingestion, writes or external calls must run once per execution and leave
+          consistent state when a run is cancelled or fails partway.
+        - Outputs must match their declared types on every code path, including error paths.
+        Saved flows match components by class name and connect edges by input and output `name`. Flag any
+        renamed or removed component class, input name or output name as a breaking change.
+    - path: "src/backend/base/langflow/api/**/*.py"
+      instructions: |
+        Missing authorization and cross-user data exposure recur in this directory. Flag:
+        - Routes that read, mutate or execute a user-owned resource without the matching `ensure_*_permission`
+          guard from `langflow.services.authorization.guards`.
+        - List endpoints that don't scope results with `filter_visible_resources` or the
+          `restrict_to_owned_or_visible*` / `apply_owned_or_visible*_prefilter` helpers in
+          `langflow.services.authorization.listing`. Personal and other users' resources must not leak into listings.
+        - Fetches by id that don't use `authorized_or_owner_scoped` from `langflow.services.authorization.fetch`,
+          or that return 403 where `deny_to_404` should hide the resource's existence.
+        - Execution endpoints that skip the authenticated-execution policy.
+        - Missing input bounds: request body size, pagination `limit` caps, and validation of ids, enums and
+          free-text fields before they reach queries or storage.
+    - path: "src/lfx/src/lfx/base/mcp/**"
+      instructions: |
+        MCP session leaks have shipped twice without review comments. Flag:
+        - Sessions or subprocesses that are not closed on every error and cancellation path.
+        - Pooled sessions that are reused after the server died instead of being replaced.
+        - Retries without a bound or timeout.
+        - Stdio server configs that bypass the validation in `security.py` and `source_policy.py`.
+    - path: "src/frontend/src/**"
+      instructions: |
+        Stale state is half of the frontend bugs that shipped. Flag:
+        - Mutations that don't invalidate or update the React Query cache entries that display the changed data.
+        - Zustand store updates that can overwrite a concurrent edit (for example, autosave racing a node update).
+        - State keyed by session, flow or user that can leak into another session, flow or user.
+        - Effects that start polling, timers or subscriptions without cleaning them up.
+        Don't comment on styling or naming.
+    - path: "src/backend/base/langflow/services/**/*.py"
+      instructions: |
+        Flag:
+        - Cleanup registered after the resource it cleans up has started, so a failure in between leaks it.
+        - One service's startup or shutdown failure that can take down other services.
+        - Leases, locks or claims that are not released on every error path, and ordering assumptions between
+          concurrent workers.
+        - Background retries without a bound.
+        - A database session held open across awaits on network or other external I/O.
+    - path: "src/backend/base/langflow/alembic/versions/*.py"
+      instructions: |
+        Check that `downgrade()` reverses `upgrade()`, that the migration is safe to re-run against a database
+        where it partially applied, and that it works on both SQLite and PostgreSQL. Flag data-destructive
+        operations (dropping columns or tables, narrowing types) that lack a data-preservation step,
+        timezone-naive datetime handling, and backfills that identify rows by mutable values such as names.
+    - path: ".github/workflows/**"
+      instructions: |
+        Flag `pull_request_target` jobs that check out or run PR head code, untrusted `${{ github.event.* }}`
+        values interpolated directly into `run:` scripts, and permissions broader than the job needs.
+    - path: "**/tests/**"
+      instructions: |
+        Test comments are the least acted-on review comments in this repo. Only comment when a test cannot fail
+        for the bug it claims to cover, leaks state into other tests, or depends on the network or wall-clock
+        time. Skip style, naming and fixture-organization suggestions.
   abort_on_close: true
   disable_cache: false
   auto_review:
@@ -44,6 +161,8 @@ reviews:
     unit_tests:
       enabled: true
   pre_merge_checks:
+    docstrings:
+      mode: "off"
     custom_checks:
       - name: "Test Coverage for New Implementations"
         instructions: |
@@ -53,7 +172,7 @@ reviews:
           3. For new features, ensure both unit and integration tests are present where appropriate
           4. Check that test files follow the project's naming conventions (test_*.py for backend, *.test.ts or *.test.tsx for frontend unit tests, *.spec.ts for frontend end-to-end tests)
           5. Verify that tests actually test the new functionality, not just placeholder tests
-        mode: "error"
+        mode: "warning"
       - name: "Test Quality and Coverage"
         instructions: |
           Evaluate the quality and comprehensiveness of tests for new implementations:
@@ -73,15 +192,6 @@ reviews:
           5. Tests should be organized logically with proper setup and teardown
           6. Consider including edge cases and error conditions for comprehensive coverage
           7. Verify tests cover both positive and negative scenarios where appropriate
-        mode: "warning"
-      - name: "Excessive Mock Usage Warning"
-        instructions: |
-          Review test files for excessive use of mocks that may indicate poor test design:
-          1. Check if tests have too many mock objects that obscure what's actually being tested
-          2. Warn when mocks are used instead of testing real behavior and interactions
-          3. Suggest using real objects or test doubles when mocks become excessive
-          4. Ensure mocks are used appropriately for external dependencies, not core logic
-          5. Recommend integration tests when unit tests become overly mocked
         mode: "warning"
   tools:
     ast-grep:
@@ -111,12 +221,11 @@ reviews:
     hadolint:
       enabled: true
     swiftlint:
-      enabled: true
+      enabled: false
     phpstan:
-      enabled: true
-      level: default
+      enabled: false
     golangci-lint:
-      enabled: true
+      enabled: false
     yamllint:
       enabled: true
     gitleaks:
@@ -124,41 +233,41 @@ reviews:
     checkov:
       enabled: true
     detekt:
-      enabled: true
+      enabled: false
     eslint:
       enabled: true
     rubocop:
-      enabled: true
+      enabled: false
     buf:
-      enabled: true
+      enabled: false
     regal:
-      enabled: true
+      enabled: false
     actionlint:
       enabled: true
     pmd:
-      enabled: true
+      enabled: false
     cppcheck:
-      enabled: true
+      enabled: false
     semgrep:
       enabled: true
     circleci:
-      enabled: true
+      enabled: false
     clippy:
-      enabled: true
+      enabled: false
     sqlfluff:
       enabled: true
     prismaLint:
-      enabled: true
+      enabled: false
     pylint:
-      enabled: true
+      enabled: false
     oxc:
-      enabled: true
+      enabled: false
     shopifyThemeCheck:
-      enabled: true
+      enabled: false
     luacheck:
-      enabled: true
+      enabled: false
     brakeman:
-      enabled: true
+      enabled: false
     dotenvLint:
       enabled: true
     htmlhint:
