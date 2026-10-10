@@ -521,13 +521,17 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
     """Start a copy. It is a process of its own, so it keeps going when this request and the page are gone."""
     if step_id not in COPY_COMMANDS:
         raise HTTPException(status_code=404, detail={"code": "unknown_step"})
-    if request and request.dry_run:
+    dry_run = bool(request and request.dry_run)
+    if dry_run and step_id == "copy_database":
         # convert-sqlite-to-postgres has no way to try a copy without making it.
         raise HTTPException(status_code=422, detail={"code": "no_dry_run"})
     record = _read_record()
     state = await _state(record)
     _require_unlocked(state, step_id)
     _require_reached(state, step_id)
+    if step_id == "copy_knowledge_bases" and _unreadable_here(state["instance"]):
+        # Asked here whatever the step reads: a copy that was made says nothing of how the server was started since.
+        raise HTTPException(status_code=409, detail={"code": "pgvector_env_missing"})
     let_in = _lets_in(record, step_id)
     held = _secrets.get("for") or {}
     # The knowledge base store has no secret of its own: it is the destination database.
@@ -536,11 +540,12 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
         # secrets of an earlier one. The page asks for it again.
         raise HTTPException(status_code=409, detail={"code": "secrets_missing"})
     try:
-        env = copy_environment(_source_env(), _secrets)
+        env = copy_environment(step_id, _source_env(), _secrets)
     except KeyError as exc:
         raise HTTPException(status_code=409, detail={"code": "secrets_missing"}) from exc
+    argv = copy_command(step_id, record.get("destinations", {}), dry_run=dry_run)
     try:
-        run_id = await start_run(step_id, copy_command(step_id), env, started_by=admin.username)
+        run_id = await start_run(step_id, argv, env, started_by=admin.username)
     except RunActiveError as exc:
         raise HTTPException(status_code=409, detail={"code": "run_active"}) from exc
     still_let_in = False
@@ -555,7 +560,7 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
             record["steps"][step_id] = {
                 "run_id": run_id,
                 "status": "running",
-                "dry_run": False,
+                "dry_run": dry_run,
                 "started_by": admin.username,
                 "started_at": read_run(run_id)["started_at"],
                 "finished_at": None,
@@ -581,7 +586,8 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
         why = "what let it in had changed, so it was stopped"
         await logger.ainfo(f"Migration: user_id={admin.id} started {_copy(step_id)} after {why} (run {run_id})")
         raise HTTPException(status_code=409, detail={"code": "state_changed"})
-    await logger.ainfo(f"Migration: user_id={admin.id} started {_copy(step_id)} (run {run_id})")
+    what = f"a test run of {_copy(step_id)}" if dry_run else _copy(step_id)
+    await logger.ainfo(f"Migration: user_id={admin.id} started {what} (run {run_id})")
     return {"run_id": run_id}
 
 
@@ -930,6 +936,7 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
         "backup": ("done", None) if _during_pause(record, backup.get("confirmed_at")) else ("current", None),
         **{step: _copy_step(record, step) for step in COPY_COMMANDS},
     }
+    unreadable_here = _unreadable_here(instance)
     steps = [first]
     # The first step neither done nor skipped is the one to do now. A later step that has not started
     # waits for it, and one that has started keeps saying where it stands.
@@ -946,9 +953,20 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
             # Nothing can be done here yet, and nothing after it waits for it.
             steps.append({"id": step, "state": "locked", "reason": "not_available"})
             continue
+        elif step == "copy_knowledge_bases" and state != "done" and unreadable_here:
+            state, reason = "blocked", "pgvector_env_missing"
         steps.append({"id": step, "state": state, "reason": reason})
         frontier_open = frontier_open and state in {"done", "skipped"}
     return steps
+
+
+def _unreadable_here(instance: dict[str, Any]) -> bool:
+    """Whether this instance could not open its knowledge bases once they are copied.
+
+    On PostgreSQL it keeps serving from its database, and it reads a knowledge base in pgvector only from the
+    store its own environment names. The copy writes to that store, so without one there is nowhere to copy to.
+    """
+    return instance["database"]["type"] == "postgresql" and not postgres_env_configured()
 
 
 async def _still_writing(admin: User) -> dict[str, Any] | None:
@@ -1042,8 +1060,13 @@ def _copy_step(record: dict[str, Any], step_id: str) -> tuple[str, str | None]:
     """Where a copy stands. It is done once a run that the pause that is on now let in copied everything."""
     run = record["steps"].get(step_id)
     pause = record.get("pause")
-    # A copy that an earlier pause let in lacks whatever changed since, whenever it started.
-    if not run or run["status"] == "running" or not pause or run.get("pause") != pause["frozen_at"]:
+    # A test run copies nothing, and a copy that an earlier pause let in lacks whatever changed since.
+    if not run or run["dry_run"] or run["status"] == "running" or not pause or run.get("pause") != pause["frozen_at"]:
+        return "current", None
+    # The database copy writes every row of the destination again, and with them what the copies after it
+    # changed there: where each knowledge base is kept, and how chat history names its attachments.
+    database = record["steps"].get("copy_database") or run
+    if datetime.fromisoformat(database["started_at"]) > datetime.fromisoformat(run["started_at"]):
         return "current", None
     code = blocking_code(run)
     return ("blocked", code) if code else ("done", None)
