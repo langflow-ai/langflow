@@ -338,7 +338,7 @@ litellm = [
     # Pull in only the modules Langflow uses from litellm[proxy] rather than
     # its much larger dependency surface.
     "apscheduler>=3.10.4,<4.0.0",
-    "cryptography",
+    "cryptography>=50.0.0",
 ]
 zep = ["zep-python==2.0.2"]
 youtube = ["youtube-transcript-api>=1.0.0,<2.0.0"]
