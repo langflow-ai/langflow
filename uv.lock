@@ -7747,7 +7747,6 @@ dev = [
     { name = "hypothesis" },
     { name = "ipykernel" },
     { name = "locust" },
-    { name = "mcp-server-fetch" },
     { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "onnxruntime", version = "1.28.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "packaging" },
@@ -7841,7 +7840,6 @@ dev = [
     { name = "hypothesis", specifier = ">=6.123.17" },
     { name = "ipykernel", specifier = ">=6.29.0" },
     { name = "locust", specifier = "~=2.43.4" },
-    { name = "mcp-server-fetch", specifier = ">=2025.1.17" },
     { name = "onnxruntime", marker = "python_full_version < '3.14'", specifier = ">=1.20,<1.24" },
     { name = "onnxruntime", marker = "python_full_version >= '3.14'", specifier = ">=1.26" },
     { name = "packaging", specifier = ">=24.1,<25.0" },
@@ -11031,24 +11029,6 @@ wheels = [
 cli = [
     { name = "python-dotenv", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "typer", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
-]
-
-[[package]]
-name = "mcp-server-fetch"
-version = "2026.7.10"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "markdownify" },
-    { name = "mcp" },
-    { name = "protego" },
-    { name = "pydantic" },
-    { name = "readabilipy" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/91/02/34edafea75b31f3e13a07c0fa205c8bf16d49d89fae82a5784a78b1113a0/mcp_server_fetch-2026.7.10.tar.gz", hash = "sha256:974d359dfc02acc3ea9904dc792902ecc5226415eaebe50c16afa6231b4d32b4", size = 89890, upload-time = "2026-07-10T03:31:07.814Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/42/05/8be7be4fbf4ba8448e08dc1ac661bd6c5e616801d3112780c49548aca76b/mcp_server_fetch-2026.7.10-py3-none-any.whl", hash = "sha256:6991b9a8133726b9f0b76d8c5e9607c8207e19e7c3a47c9e174a8b2e0742fc70", size = 9004, upload-time = "2026-07-10T03:31:06.746Z" },
 ]
 
 [[package]]
@@ -14410,15 +14390,6 @@ wheels = [
 ]
 
 [[package]]
-name = "protego"
-version = "0.6.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7d/1b/6b0ee60bb1561843bfc62f5c7c3cb1ef6147b47e829a5fd6b7fcd2752471/protego-0.6.2.tar.gz", hash = "sha256:88ff004544ce44e61269cc6f8735f7837d12e09bb77619fc94fbb26b72e5d137", size = 3137854, upload-time = "2026-06-25T09:33:16.361Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/61/10/cbd3c06603bb8b3e0e871df24ee793a6e3b53d8c4cc8763f1b8b936649aa/protego-0.6.2-py3-none-any.whl", hash = "sha256:714de21d82527c9be900066c3211b266985dd6a19b6e70c57e033fc1a589f3ff", size = 10296, upload-time = "2026-06-25T09:33:14.771Z" },
-]
-
-[[package]]
 name = "proto-plus"
 version = "1.28.2"
 source = { registry = "https://pypi.org/simple" }
@@ -16525,21 +16496,6 @@ dependencies = [
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ba/12/1e5497183bdbe782dbb91bad1d0d2297dba4d2831b2652657f7517bfc6df/rapidocr_onnxruntime-1.4.4-py3-none-any.whl", hash = "sha256:971d7d5f223a7a808662229df1ef69893809d8457d834e6373d3854bc1782cbf", size = 14915192, upload-time = "2025-01-17T01:48:25.104Z" },
-]
-
-[[package]]
-name = "readabilipy"
-version = "0.3.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "beautifulsoup4" },
-    { name = "html5lib" },
-    { name = "lxml" },
-    { name = "regex" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b8/e4/260a202516886c2e0cc6e6ae96d1f491792d829098886d9529a2439fbe8e/readabilipy-0.3.0.tar.gz", hash = "sha256:e13313771216953935ac031db4234bdb9725413534bfb3c19dbd6caab0887ae0", size = 35491, upload-time = "2024-12-02T23:03:02.311Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/dd/46/8a640c6de1a6c6af971f858b2fb178ca5e1db91f223d8ba5f40efe1491e5/readabilipy-0.3.0-py3-none-any.whl", hash = "sha256:d106da0fad11d5fdfcde21f5c5385556bfa8ff0258483037d39ea6b1d6db3943", size = 22158, upload-time = "2024-12-02T23:03:00.438Z" },
 ]
 
 [[package]]
