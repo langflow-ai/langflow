@@ -282,3 +282,276 @@ class TestPostgresEmbeddedDocumentsLive:
                 with contextlib.suppress(Exception):
                     await backend.delete_collection()
                 await backend.teardown()
+
+
+def _live_backend(tmp_path: Path, *, kb_name: str, user_id: uuid.UUID, size: int = 16):
+    from langchain_core.embeddings import DeterministicFakeEmbedding
+
+    return create_backend(
+        "postgres",
+        kb_name=kb_name,
+        kb_path=tmp_path,
+        backend_config={},
+        embedding_function=DeterministicFakeEmbedding(size=size),
+        user_id=user_id,
+    )
+
+
+@pytest.mark.api_key_required
+class TestPostgresBootstrapLive:
+    """The per-table bootstrap stays correct under concurrency and stays off the write path."""
+
+    @pytest.fixture(autouse=True)
+    def _fresh_process_memo(self):
+        # Each test starts as a process that has verified no tables yet.
+        from lfx.base.knowledge_bases.backends import postgres as pg_module
+
+        pg_module._READY_TABLES.clear()
+        yield
+        pg_module._READY_TABLES.clear()
+
+    async def _ready(self, backend) -> None:
+        await backend.ensure_ready()
+        tc = await backend.test_connection()
+        if not tc.ok:
+            pytest.skip(f"pgvector not reachable: {tc.message}")
+
+    async def _index_names(self, backend) -> set[str]:
+        from sqlalchemy import text
+
+        async with backend._ensure_async_engine().connect() as conn:
+            rows = await conn.execute(
+                text("SELECT indexname FROM pg_indexes WHERE tablename = :name"), {"name": backend.table_name}
+            )
+            return set(rows.scalars().all())
+
+    async def test_concurrent_first_ingests_create_one_table(self, tmp_path: Path) -> None:
+        _require_live_pgvector()
+        import asyncio
+
+        from langchain_core.documents import Document
+        from lfx.base.knowledge_bases.backends import postgres as pg_module
+
+        kb_name, owner = f"kb_race_{uuid.uuid4().hex[:8]}", uuid.uuid4()
+        writers = [_live_backend(tmp_path, kb_name=kb_name, user_id=owner) for _ in range(8)]
+        try:
+            await self._ready(writers[0])
+            for writer in writers[1:]:
+                await writer.ensure_ready()
+
+            async def first_write(index: int, writer) -> None:
+                # Forget the memo so every writer runs the catalog check, as
+                # separate processes would.
+                pg_module._READY_TABLES.clear()
+                await writer.add_documents([Document(page_content=f"doc {index}", metadata={})])
+
+            await asyncio.gather(*(first_write(i, w) for i, w in enumerate(writers)))
+
+            assert await writers[0].count() == len(writers)
+            names = await self._index_names(writers[0])
+            table = writers[0].table_name
+            assert {f"{table}_pkey", f"{table}_cmeta_gin", f"{table}_hnsw"} <= names
+        finally:
+            with contextlib.suppress(Exception):
+                await writers[0].delete_collection()
+            for writer in writers:
+                await writer.teardown()
+
+    async def test_write_does_not_wait_for_another_open_insert(self, tmp_path: Path) -> None:
+        # ``CREATE INDEX IF NOT EXISTS`` takes a SHARE lock on the table before
+        # it sees that the index exists, so a bootstrap that always issued it
+        # would queue behind any open insert into the same KB.
+        _require_live_pgvector()
+        import asyncio
+
+        from langchain_core.documents import Document
+        from sqlalchemy import text
+        from sqlalchemy.ext.asyncio import create_async_engine
+
+        kb_name, owner = f"kb_busy_{uuid.uuid4().hex[:8]}", uuid.uuid4()
+        first = _live_backend(tmp_path, kb_name=kb_name, user_id=owner)
+        second = _live_backend(tmp_path, kb_name=kb_name, user_id=owner)
+        holder = None
+        try:
+            await self._ready(first)
+            await second.ensure_ready()
+            await first.add_documents([Document(page_content="seed", metadata={})])
+
+            holder = create_async_engine(first._resolved_connection_string)
+            async with holder.connect() as conn:
+                await conn.execute(text("BEGIN"))
+                vector = "[" + ",".join(["0.1"] * 16) + "]"
+                await conn.execute(
+                    text(
+                        f'INSERT INTO "{first.table_name}" (id, embedding, document, cmetadata) '  # noqa: S608
+                        "VALUES ('held', CAST(:v AS vector), 'held', '{}')"
+                    ),
+                    {"v": vector},
+                )
+                # A new process (empty memo) writes while that insert is open.
+                from lfx.base.knowledge_bases.backends import postgres as pg_module
+
+                pg_module._READY_TABLES.clear()
+                await asyncio.wait_for(
+                    second.add_documents([Document(page_content="concurrent", metadata={})]), timeout=10
+                )
+                await conn.execute(text("ROLLBACK"))
+            assert await first.count() == 2
+        finally:
+            if holder is not None:
+                await holder.dispose()
+            with contextlib.suppress(Exception):
+                await first.delete_collection()
+            await first.teardown()
+            await second.teardown()
+
+    async def test_bootstrap_of_one_kb_does_not_wait_for_another(self, tmp_path: Path) -> None:
+        _require_live_pgvector()
+        import asyncio
+
+        from langchain_core.documents import Document
+        from lfx.base.knowledge_bases.backends.postgres import _ddl_lock_key
+        from sqlalchemy import text
+        from sqlalchemy.ext.asyncio import create_async_engine
+
+        busy = _live_backend(tmp_path, kb_name=f"kb_a_{uuid.uuid4().hex[:8]}", user_id=uuid.uuid4())
+        other = _live_backend(tmp_path, kb_name=f"kb_b_{uuid.uuid4().hex[:8]}", user_id=uuid.uuid4())
+        holder = None
+        try:
+            await self._ready(busy)
+            await other.ensure_ready()
+            holder = create_async_engine(busy._resolved_connection_string)
+            async with holder.connect() as conn:
+                # Hold the first KB's DDL lock as an in-progress bootstrap would.
+                await conn.execute(text("BEGIN"))
+                await conn.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": _ddl_lock_key(busy.table_name)})
+                await asyncio.wait_for(other.add_documents([Document(page_content="b", metadata={})]), timeout=10)
+                await conn.execute(text("ROLLBACK"))
+            assert await other.count() == 1
+        finally:
+            if holder is not None:
+                await holder.dispose()
+            for backend in (busy, other):
+                with contextlib.suppress(Exception):
+                    await backend.delete_collection()
+                await backend.teardown()
+
+    async def test_table_dropped_elsewhere_is_recreated_on_next_write(self, tmp_path: Path) -> None:
+        _require_live_pgvector()
+        from langchain_core.documents import Document
+        from sqlalchemy import text
+
+        backend = _live_backend(tmp_path, kb_name=f"kb_drop_{uuid.uuid4().hex[:8]}", user_id=uuid.uuid4())
+        try:
+            await self._ready(backend)
+            await backend.add_documents([Document(page_content="before", metadata={})])
+            # Another process drops the table; this process still remembers it.
+            async with backend._ensure_async_engine().begin() as conn:
+                await conn.execute(text(f'DROP TABLE "{backend.table_name}"'))
+
+            await backend.add_documents([Document(page_content="after", metadata={})])
+
+            assert await backend.count() == 1
+            assert f"{backend.table_name}_hnsw" in await self._index_names(backend)
+        finally:
+            with contextlib.suppress(Exception):
+                await backend.delete_collection()
+            await backend.teardown()
+
+    async def test_table_recreated_for_another_model_is_reported(self, tmp_path: Path) -> None:
+        _require_live_pgvector()
+        from langchain_core.documents import Document
+
+        kb_name, owner = f"kb_dim_{uuid.uuid4().hex[:8]}", uuid.uuid4()
+        old_model = _live_backend(tmp_path, kb_name=kb_name, user_id=owner, size=16)
+        new_model = _live_backend(tmp_path, kb_name=kb_name, user_id=owner, size=8)
+        try:
+            await self._ready(old_model)
+            await new_model.ensure_ready()
+            await old_model.add_documents([Document(page_content="a", metadata={})])
+            # The KB is deleted and recreated for an 8-dim model by another process.
+            await new_model.delete_collection()
+            await new_model.add_documents([Document(page_content="b", metadata={})])
+            from lfx.base.knowledge_bases.backends import postgres as pg_module
+
+            pg_module._READY_TABLES.add(old_model._ready_key(16))  # this process's stale memo
+
+            with pytest.raises(ValueError, match="was created with 8-dimensional embeddings"):
+                await old_model.add_documents([Document(page_content="c", metadata={})])
+            assert await new_model.count() == 1
+        finally:
+            with contextlib.suppress(Exception):
+                await new_model.delete_collection()
+            await old_model.teardown()
+            await new_model.teardown()
+
+
+@pytest.mark.api_key_required
+class TestPostgresTemporaryLoopLive:
+    """A call from a temporary event loop does not keep its pool once that loop is gone."""
+
+    def test_temporary_loop_connections_close_once_the_loop_is_collected(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        conn = _require_live_pgvector()
+        import asyncio
+        import gc
+        import weakref
+
+        from langchain_core.documents import Document
+        from lfx.base.knowledge_bases.backends import postgres as pg_module
+        from sqlalchemy import text
+        from sqlalchemy.ext.asyncio import create_async_engine
+
+        # Tag this test's connections so they can be counted on the server.
+        application = f"kb_loop_{uuid.uuid4().hex[:8]}"
+        separator = "&" if "?" in conn else "?"
+        monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", f"{conn}{separator}application_name={application}")
+        kb_name, owner = f"kb_loop_{uuid.uuid4().hex[:8]}", uuid.uuid4()
+        loops: list[weakref.ref] = []
+
+        async def write_and_count() -> int:
+            loops.append(weakref.ref(asyncio.get_running_loop()))
+            backend = _live_backend(tmp_path, kb_name=kb_name, user_id=owner)
+            try:
+                await backend.ensure_ready()
+                if not (await backend.test_connection()).ok:
+                    pytest.skip("pgvector not reachable")
+                await backend.add_documents([Document(page_content="doc", metadata={})])
+                return await backend.count()
+            finally:
+                await backend.teardown()  # leaves the shared engine and its pooled connections open
+
+        async def open_connections() -> int:
+            probe = create_async_engine(pg_module._normalize_driver(conn))
+            try:
+                async with probe.connect() as connection:
+                    rows = await connection.execute(
+                        text("SELECT count(*) FROM pg_stat_activity WHERE application_name = :name"),
+                        {"name": application},
+                    )
+                    return rows.scalar_one()
+            finally:
+                await probe.dispose()
+
+        async def drop_collection() -> None:
+            backend = _live_backend(tmp_path, kb_name=kb_name, user_id=owner)
+            await backend.ensure_ready()
+            await backend.delete_collection()
+            await backend.teardown()
+            for engine in pg_module._ENGINES.pop(asyncio.get_running_loop(), {}).values():
+                await engine.dispose()
+
+        gc.disable()  # collect only when the test says so
+        try:
+            assert asyncio.run(write_and_count()) == 1
+            assert asyncio.run(write_and_count()) == 2
+            assert asyncio.run(open_connections()) > 0  # each temporary loop still holds a pooled connection
+
+            gc.collect()
+
+            assert [ref() for ref in loops] == [None, None]
+            assert asyncio.run(open_connections()) == 0
+        finally:
+            gc.enable()
+            asyncio.run(drop_collection())

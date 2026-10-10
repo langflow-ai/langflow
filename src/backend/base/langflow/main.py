@@ -820,6 +820,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await close_coordination_pools()
             except Exception as exc:  # noqa: BLE001 -- failed disposal must not skip service and sandbox cleanup
                 await logger.awarning("Failed to close storage coordination pools: %s", type(exc).__name__)
+            from lfx.base.knowledge_bases.backends.postgres import dispose_shared_engines
+
+            try:
+                await dispose_shared_engines()
+            except Exception as exc:  # noqa: BLE001 -- failed disposal must not skip service and sandbox cleanup
+                await logger.awarning("Failed to close pgvector engine pools: %s", type(exc).__name__)
 
             # After the MCP cleanup above, deliberately: stopping the sampler awaits a
             # cancellation, and parking there first would both delay that guarantee and give
