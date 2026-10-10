@@ -55,14 +55,17 @@ Highlights of this release include the following changes. For all changes, see t
 - Official packages require authentication by default
 
     Official Python packages, tagged source archives, and Docker images now set `LANGFLOW_AUTO_LOGIN=false`.
-    For a new installation, set `LANGFLOW_SUPERUSER_PASSWORD` before starting Langflow, then sign in with the username `langflow` (or your configured `LANGFLOW_SUPERUSER`).
-    Setting `LANGFLOW_SUPERUSER_PASSWORD` does not replace an existing account's non-legacy password. If you are upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login) before you upgrade.
-    Development branches and local builds from those branches still default to automatic login.
-    For trusted local development with a release package or Docker image, set `LANGFLOW_AUTO_LOGIN=true`.
-
-    For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
+    For a new Langflow installation, set `LANGFLOW_SUPERUSER_PASSWORD` before starting Langflow, and then sign in with the username `langflow` (or your configured `LANGFLOW_SUPERUSER`).
+    Before upgrading to 1.13, see [upgrade from auto-login](/api-keys-and-authentication#upgrade-from-auto-login).
 
 ### New features
+
+- Audit logging
+
+    Set `LANGFLOW_AUDIT_ENABLED=true` to record an append-only history of flow and project operations, including who attempted a change, on which resource, when, how it completed, and a description of what was written.
+    Query events with `GET /api/v1/flows/audits` and `GET /api/v1/projects/audits`.
+
+    For more information, see [Audit logging](./audit-logging).
 
 - Connections
 

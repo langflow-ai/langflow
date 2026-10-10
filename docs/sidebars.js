@@ -129,6 +129,7 @@ module.exports = {
             "Develop/api-keys-and-authentication",
             "Develop/external-authentication",
             "Develop/authorization",
+            "Develop/audit-logging",
             "Develop/admin-api-cli",
             "Develop/connections",
             "Develop/connection-oauth",
