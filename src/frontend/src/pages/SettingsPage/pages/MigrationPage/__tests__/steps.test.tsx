@@ -98,7 +98,15 @@ describe("Where your data goes", () => {
       screen.queryByLabelText("Connection address"),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/db\.internal:5432\/langflow/)).toBeInTheDocument();
-    expect(screen.getByText(/needs the pgvector extension/)).toBeVisible();
+    // Here the knowledge bases go to the store this server reads them from, which is no database of the new instance's.
+    expect(
+      screen.getByText(
+        "This instance already uses PostgreSQL. Its knowledge bases are copied to the store this server reads them from, the one PGVECTOR_CONNECTION_STRING names. That database needs the pgvector extension.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/the new instance's database/),
+    ).not.toBeInTheDocument();
     for (const label of [
       "Bucket",
       "Folder in the bucket",
@@ -220,6 +228,100 @@ describe("Where your data goes", () => {
       "aria-invalid",
       "false",
     );
+  });
+
+  it.each([
+    [
+      "pgvector_missing",
+      "Run CREATE EXTENSION vector; in this database, then test again.",
+      "The database needs the pgvector extension. Ask your database admin to turn it on.",
+    ],
+    [
+      "pgvector_package_missing",
+      "This server has no pgvector package. Install langflow[pgvector].",
+      "This Langflow server doesn't have the pgvector package. Install it, restart Langflow, then test again.",
+    ],
+  ])(
+    "says under Knowledge bases why they can't be copied there: %s",
+    (code, reason, line) => {
+      show(
+        <DestinationsStep
+          migration={migration(
+            { knowledge_bases: { local: true } },
+            {
+              destinations: {
+                database: { location: "db.internal:5432/target" },
+                vectors: { kind: "pgvector" },
+                results: {
+                  database: { ok: true },
+                  vectors: { ok: false, code, reason },
+                },
+                saved_by: "alice",
+                saved_at: "2026-10-06T12:00:00Z",
+              },
+            },
+          )}
+          state={step("connect_target", "blocked", code)}
+        />,
+      );
+
+      // On an instance with its own database file, the knowledge bases go into the new instance's database.
+      expect(
+        screen.getByText(
+          /^Knowledge bases are copied into the new instance's database/,
+        ),
+      ).toBeInTheDocument();
+      const section = screen
+        .getByRole("heading", { name: "Knowledge bases" })
+        .closest("section") as HTMLElement;
+      const refusal = within(section).getByRole("alert");
+      expect(refusal).toHaveTextContent(line);
+      // The server's own words name what is missing.
+      expect(within(refusal).getByText(reason)).toHaveAttribute("lang", "en");
+      // The database itself answered, so its field is not the one to look at.
+      expect(screen.getByLabelText("Connection address")).toHaveAttribute(
+        "aria-invalid",
+        "false",
+      );
+    },
+  );
+
+  it("tells an instance on PostgreSQL what its server needs before knowledge bases can be copied", () => {
+    show(
+      <DestinationsStep
+        migration={migration(
+          {
+            database: {
+              type: "postgresql",
+              location: "db.internal:5432/langflow",
+            },
+            knowledge_bases: { local: true },
+          },
+          {
+            destinations: {
+              vectors: { kind: "pgvector" },
+              results: {
+                vectors: {
+                  ok: false,
+                  code: "pgvector_env_missing",
+                  reason: "PGVECTOR_CONNECTION_STRING is not set",
+                },
+              },
+              saved_by: "alice",
+              saved_at: "2026-10-06T12:00:00Z",
+            },
+          },
+        )}
+        state={step("connect_target", "blocked", "pgvector_env_missing")}
+      />,
+    );
+
+    // The note above it says where the knowledge bases go, so the refusal is what to do, and no more.
+    const refusal = screen.getByRole("alert");
+    expect(refusal.firstElementChild).toHaveTextContent(
+      /^Set PGVECTOR_CONNECTION_STRING on this server to that database and restart Langflow, then test again\.$/,
+    );
+    expect(refusal).toHaveTextContent("PGVECTOR_CONNECTION_STRING is not set");
   });
 
   it("marks the bucket when it is the bucket that is missing, and gives the server's code when it has no line for it", () => {
@@ -700,6 +802,33 @@ describe("Pause changes", () => {
     );
   });
 
+  it("says to try again when changes under way had not finished, and does not ask twice", async () => {
+    const post = jest
+      .spyOn(api, "post")
+      .mockRejectedValue(refused(409, { code: "requests_active" }));
+    show(
+      <PauseStep migration={migration()} state={step("pause", "current")} />,
+    );
+
+    const pause = () => screen.getByRole("button", { name: "Pause changes" });
+    await userEvent.click(pause());
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Pause",
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Changes that were already under way haven't finished yet. Try again in a moment.",
+    );
+    expect(post).toHaveBeenCalledTimes(1);
+
+    // The admin already agreed to this pause, so trying again is one click.
+    await userEvent.click(pause());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+  });
+
   it("shows a pause that never reached the server", async () => {
     jest.spyOn(api, "post").mockRejectedValue(unreachable());
     show(
@@ -1114,6 +1243,8 @@ describe("Copy the database", () => {
       "Langflow no longer holds the passwords and keys of the new instance. Enter them again in 'Where your data goes'.",
     ],
     ["run_active", "Another step is running. Wait for it to finish."],
+    // A step above opened again in another tab, and this page has not read that yet.
+    ["locked", "Finish the steps above first."],
   ])("says why the server would not start it: %s", async (code, line) => {
     jest.spyOn(api, "post").mockRejectedValue(refused(409, { code }));
     show(panel(undefined, "current"));
@@ -1480,6 +1611,152 @@ describe("Copy knowledge bases and files", () => {
     expect(post).toHaveBeenNthCalledWith(2, runs, { dry_run: false });
   });
 
+  // Every step above the knowledge base copy, as the server lists them.
+  const above = (
+    check: MigrationStepState,
+    database = step("copy_database", "done"),
+  ) => [
+    check,
+    step("connect_target", "done"),
+    step("secret_key", "done"),
+    step(
+      "pause",
+      check.state === "done" ? "done" : "blocked",
+      "recheck_failed",
+    ),
+    step("backup", "done"),
+    database,
+  ];
+
+  it("offers no start, real or test, while a step before it is open again, and says why", () => {
+    // The check failed again after this copy. The copy keeps its place, and the server would refuse to start it.
+    show(
+      <CopyStep
+        migration={{
+          ...ended("copy_knowledge_bases", {
+            report: { ok: true, counts: { relocated: 3 }, attention: [] },
+          }),
+          steps: [
+            ...above(step("check_source", "blocked", "blocking_findings")),
+            step("copy_knowledge_bases", "done"),
+            step("copy_files", "done"),
+          ],
+        }}
+        state={step("copy_knowledge_bases", "done")}
+        step="copy_knowledge_bases"
+      />,
+    );
+
+    // What the copy did is still there to read.
+    expect(
+      screen.getByText("Copied: 3. Already copied: 0. Not copied: 0."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Finish the steps above first."),
+    ).toBeInTheDocument();
+  });
+
+  it("moves the focus to its line when the state closes the gate under a focused start", () => {
+    // A copy that ran, and every step before it done: the start is offered.
+    const at = (check: MigrationStepState) => (
+      <CopyStep
+        migration={{
+          ...ended("copy_knowledge_bases", {
+            report: { ok: true, counts: { relocated: 3 }, attention: [] },
+          }),
+          steps: [
+            ...above(check),
+            step("copy_knowledge_bases", "done"),
+            step("copy_files", "done"),
+          ],
+        }}
+        state={step("copy_knowledge_bases", "done")}
+        step="copy_knowledge_bases"
+      />
+    );
+    const client = new QueryClient();
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        {at(step("check_source", "done"))}
+      </QueryClientProvider>,
+    );
+    act(() => screen.getByRole("button", { name: "Copy again" }).focus());
+
+    // A read of the state, after a refused start or on the poll, finds the check open again.
+    rerender(
+      <QueryClientProvider client={client}>
+        {at(step("check_source", "blocked", "blocking_findings"))}
+      </QueryClientProvider>,
+    );
+
+    // The button is gone, and the keyboard lands on the line that says why, which is announced.
+    // What the copy found is a status too, so the line is found by its words.
+    const line = screen.getByText("Finish the steps above first.");
+    expect(line).toHaveAttribute("role", "status");
+    expect(line).toHaveFocus();
+  });
+
+  it("leaves the focus alone when the gate closes while it is elsewhere", () => {
+    const at = (check: MigrationStepState) => (
+      <CopyStep
+        migration={{
+          ...ended("copy_knowledge_bases"),
+          steps: [
+            ...above(check),
+            step("copy_knowledge_bases", "current"),
+            step("copy_files", "locked", "earlier_step"),
+          ],
+        }}
+        state={step("copy_knowledge_bases", "current")}
+        step="copy_knowledge_bases"
+      />
+    );
+    const client = new QueryClient();
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        {at(step("check_source", "done"))}
+      </QueryClientProvider>,
+    );
+    rerender(
+      <QueryClientProvider client={client}>
+        {at(step("check_source", "blocked", "blocking_findings"))}
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("Finish the steps above first.")).not.toHaveFocus();
+  });
+
+  it("offers the start when every step before it is done or not needed, whatever comes after it", () => {
+    show(
+      <CopyStep
+        migration={{
+          ...ended("copy_knowledge_bases"),
+          steps: [
+            ...above(
+              step("check_source", "done"),
+              step("copy_database", "skipped", "already_postgresql"),
+            ),
+            step("copy_knowledge_bases", "current"),
+            step("copy_files", "locked", "earlier_step"),
+          ],
+        }}
+        state={step("copy_knowledge_bases", "current")}
+        step="copy_knowledge_bases"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Copy knowledge bases" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Test run" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Finish the steps above first."),
+    ).not.toBeInTheDocument();
+  });
+
   it("says what a test run found, and still offers the first copy", () => {
     show(
       <CopyStep
@@ -1779,6 +2056,39 @@ describe("Copy knowledge bases and files", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("says what an instance on PostgreSQL has to set before its knowledge bases are copied", async () => {
+    jest
+      .spyOn(api, "post")
+      .mockRejectedValue(refused(409, { code: "pgvector_env_missing" }));
+    show(
+      <CopyStep
+        migration={ended("copy_knowledge_bases", undefined, {
+          database: { type: "postgresql", location: "db:5432/langflow" },
+        })}
+        state={step("copy_knowledge_bases", "blocked", "pgvector_env_missing")}
+        step="copy_knowledge_bases"
+      />,
+    );
+    // The note above says the store changes but not which one, so this line names it before it asks for the variable.
+    expect(
+      screen.getByText(/^This instance uses PostgreSQL, so it switches/),
+    ).toBeInTheDocument();
+    const line =
+      "This instance already uses PostgreSQL, so its knowledge bases are copied to the store this server reads them from. Set PGVECTOR_CONNECTION_STRING on this server to that database and restart Langflow, then copy again.";
+
+    // Nothing ran, and the step says why it will not.
+    expect(screen.getByRole("alert")).toHaveTextContent(line);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Copy knowledge bases" }),
+    );
+
+    // A start is refused for the same reason, in the same words.
+    await waitFor(() => expect(screen.getAllByRole("alert")).toHaveLength(2));
+    for (const alert of screen.getAllByRole("alert"))
+      expect(alert).toHaveTextContent(line);
+  });
+
   it("warns an instance on PostgreSQL that its own knowledge bases move too", () => {
     const postgresql = {
       database: { type: "postgresql" as const, location: "db:5432/langflow" },
@@ -1974,7 +2284,7 @@ describe("What the admin decides about a copy", () => {
     // Nothing says it was decided until it is.
     expect(screen.queryByText(/^Accepted by /)).not.toBeInTheDocument();
     expect(
-      screen.queryByText("Copy again for this to apply."),
+      screen.queryByText("This applies to the next copy."),
     ).not.toBeInTheDocument();
 
     await userEvent.click(leaveOut);
@@ -2022,7 +2332,7 @@ describe("What the admin decides about a copy", () => {
     ).not.toHaveTextContent("2026-10-06T12:30:00Z");
     // An option changes the next copy, and nothing about the one that asked.
     expect(
-      screen.getByText("Copy again for this to apply."),
+      screen.getByText("This applies to the next copy."),
     ).toBeInTheDocument();
 
     await userEvent.click(leaveOut);
@@ -2093,7 +2403,7 @@ describe("What the admin decides about a copy", () => {
     expect(screen.getAllByText(/^Accepted by /)).toHaveLength(1);
     // Leaving one behind settles it at once, so nothing waits for another copy.
     expect(
-      screen.queryByText("Copy again for this to apply."),
+      screen.queryByText("This applies to the next copy."),
     ).not.toBeInTheDocument();
 
     await userEvent.click(option);
@@ -2274,7 +2584,7 @@ describe("What the admin decides about a copy", () => {
       screen.getByRole("checkbox", { name: /^Accept the new ranking/ }),
     ).toBeChecked();
     expect(
-      screen.getByText("Copy again for this to apply."),
+      screen.getByText("This applies to the next copy."),
     ).toBeInTheDocument();
   });
 

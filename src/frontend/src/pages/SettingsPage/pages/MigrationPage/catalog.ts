@@ -109,6 +109,8 @@ export const PROBES: Record<string, string> = {
   db_not_empty: "probe.dbNotEmpty",
   no_create: "probe.noCreate",
   pgvector_missing: "probe.pgvector",
+  pgvector_package_missing: "probe.pgvectorPackage",
+  pgvector_env_missing: "probe.pgvectorEnv",
   bucket_missing: "probe.bucketMissing",
   bucket_unreachable: "probe.bucketUnreachable",
   bucket_denied: "probe.denied",
@@ -203,10 +205,16 @@ export const isCopy = (id: MigrationStepId): id is CopyStepId => id in COPIES;
 export const COPY_CODES: Record<string, string> = {
   secrets_missing: "error.enterAgain", // pragma: allowlist secret
   run_active: "error.runningElsewhere",
+  // A step above opened again after the page last read the state. The page then stops offering the start.
+  locked: "notStarted",
   cancelled: "error.interrupted",
   interrupted: "error.interrupted",
   crashed: "error.crashed",
   destination_changed: "error.destinationChanged",
+  // The knowledge bases test of "Where your data goes" refuses for the same reason. Its line follows a note
+  // that names the store, so it asks only for the variable. The note above this one, kb.postgresNote, says the
+  // store changes but not which one, so this line names it before "that database" can refer to it.
+  pgvector_env_missing: "kb.postgresEnv",
   target_unreachable: "error.targetUnreachable",
   target_not_empty: "error.dbTargetNotEmpty",
   // The destination holds an earlier copy, and this instance lost a row since. Only a new, empty one takes a copy.
