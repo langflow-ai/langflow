@@ -30,6 +30,7 @@ from lfx.graph.graph.utils import (
     find_cycle_vertices,
     find_start_component_id,
     get_sorted_vertices,
+    has_group_nodes,
     process_flow,
     should_continue,
 )
@@ -229,6 +230,7 @@ class Graph:
         self._first_layer: list[str] = []
         self._lock: asyncio.Lock | None = None
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
+        self._build_from_private_copy = False
         self._is_cyclic: bool | None = None
         self._cycles: list[tuple[str, str]] | None = None
         self._cycle_vertices: set[str] | None = None
@@ -375,6 +377,9 @@ class Graph:
         return graph_dict
 
     def add_nodes_and_edges(self, nodes: list[NodeData], edges: list[EdgeData]) -> None:
+        # copy_for_run sets this for one call: the nodes and edges are its own deep copy.
+        private_copy = getattr(self, "_build_from_private_copy", False)
+        self._build_from_private_copy = False
         self._vertices = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
@@ -385,7 +390,13 @@ class Graph:
 
         self._cycle_vertices = None
         self._is_cyclic = None
-        self._graph_data = process_flow(self.raw_graph_data)
+        if private_copy and not has_group_nodes(nodes):
+            # Nothing to expand, and nobody else holds these dicts, so process_flow's deep copy
+            # would only duplicate them. Vertices then share their dicts with raw_graph_data,
+            # which belongs to this graph alone. New lists keep later additions out of it.
+            self._graph_data = {"nodes": list(nodes), "edges": list(edges)}
+        else:
+            self._graph_data = process_flow(self.raw_graph_data)
 
         # Group proxies may replace child template fields while process_flow expands the graph.
         # Re-check the effective anonymous graph before initialize instantiates those children.
@@ -1677,6 +1688,7 @@ class Graph:
         user_id: str | None,
         instantiate_components: bool,
         before_initialize: Callable[[Graph], None] | None = None,
+        build_from_private_copy: bool = False,
     ) -> Graph:
         """Copy this graph, optionally binding component construction to one user.
 
@@ -1684,6 +1696,11 @@ class Graph:
         user override on graph construction (instead of stamping it afterward)
         preserves the cold-path constructor contract for components that inspect
         ``_user_id`` during ``__init__``.
+
+        ``build_from_private_copy`` builds the vertices of a flow without group nodes
+        from the copy's own ``raw_graph_data`` instead of from a second deep copy.
+        ``copy.deepcopy`` keeps both copies: durable serving checkpoints those graphs
+        from ``raw_graph_data``, which must not show edits made during the run.
         """
         # Check if we've already copied this instance
         if id(self) in memo:
@@ -1742,6 +1759,7 @@ class Graph:
                 if before_initialize is not None:
                     before_initialize(new_graph)
                 source_graph_data = new_graph.raw_graph_data
+            new_graph._build_from_private_copy = build_from_private_copy and has_raw_graph_data  # noqa: SLF001
             new_graph.add_nodes_and_edges(source_graph_data["nodes"], source_graph_data["edges"])
             if not has_raw_graph_data and before_initialize is not None:
                 before_initialize(new_graph)
@@ -1775,12 +1793,19 @@ class Graph:
         ``before_instantiate`` can apply request-local raw-parameter overrides
         (for example the implicit streaming value) after frontend-data copying,
         before group flattening and component construction observe them.
+
+        The flow data is deep-copied once per run. For a flow without group nodes the
+        copy's vertices share their dicts with its ``raw_graph_data``, so that payload
+        reflects in-place edits made during the run. That is safe because a run copy
+        serves one run and is never checkpointed: the warm path, its only caller,
+        refuses HITL flows and checkpoint stores.
         """
         new_graph = self._copy_graph(
             {},
             user_id=user_id,
             instantiate_components=False,
             before_initialize=before_instantiate,
+            build_from_private_copy=True,
         )
         new_graph._instantiate_components_in_vertices()  # noqa: SLF001
         new_graph._instantiate_components_on_initialize = True  # noqa: SLF001
