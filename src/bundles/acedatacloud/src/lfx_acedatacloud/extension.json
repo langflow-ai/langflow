@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-acedatacloud",
+  "version": "0.1.1",
+  "name": "Ace Data Cloud",
+  "description": "Ace Data Cloud chat models and independent image, video, music, audio, search, and face service components.",
+  "lfx": {"compat": ["1"]},
+  "bundles": [{"name": "ace_data_cloud", "path": "components/acedatacloud", "display_name": "Ace Data Cloud", "icon": "Bot"}],
+  "providers": [{
+    "name": "Ace Data Cloud",
+    "provider_id": "acedatacloud",
+    "metadata": {
+      "icon": "Bot",
+      "max_tokens_field_name": "max_tokens",
+      "variables": [{
+        "variable_name": "API Key",
+        "variable_key": "ACEDATACLOUD_API_KEY",
+        "description": "Ace Data Cloud application API key. Enable the model APIs you plan to use.",
+        "required": true,
+        "is_secret": true,
+        "is_list": false,
+        "options": [],
+        "langchain_param": "api_key",
+        "component_metadata": {
+          "mapping_field": "api_key",
+          "required": true,
+          "advanced": false,
+          "info": "Create a key in Ace Data Cloud Console → Applications."
+        }
+      }],
+      "api_docs_url": "https://platform.acedata.cloud/models",
+      "mapping": {"model_class": "ChatAceDataCloud", "model_param": "model"}
+    },
+    "model_class": {"module": "lfx_acedatacloud.provider", "attr": "ChatAceDataCloud"},
+    "api_key_required": true,
+    "live": true,
+    "live_discovery": "lfx_acedatacloud.provider:fetch_live_models",
+    "catalog_loader": "lfx_acedatacloud.provider:load_catalog"
+  }],
+  "capabilities": {"requiresCredentials": true}
+}
