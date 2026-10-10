@@ -61,8 +61,21 @@ REMEDIATIONS: tuple[Remediation, ...] = (
         # Claude 5 rejects a temperature its 4.x siblings accept (GH-14291); markers
         # stay narrow so an out-of-range value, which only the user can fix, surfaces.
         name="temperature-unsupported",
-        markers=("`temperature` is deprecated", "temperature is deprecated"),
+        markers=(
+            "`temperature` is deprecated",
+            "temperature is deprecated",
+            # Amazon Bedrock wording for OpenAI GPT-6 models: Converse, then the
+            # OpenAI-compatible chat completions endpoint.
+            "doesn't support the temperature field",
+            "'temperature' does not support",
+        ),
         overrides={"temperature": None},
+    ),
+    Remediation(
+        # Bedrock rejects topP for the same models, in the same words, once temperature is gone.
+        name="top-p-unsupported",
+        markers=("doesn't support the topp field",),
+        overrides={"top_p": None},
     ),
 )
 
