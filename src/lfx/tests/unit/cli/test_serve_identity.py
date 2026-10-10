@@ -479,29 +479,80 @@ class TestJwksSourceResolution:
         # No jwt_jwks_url → the verifier must discover it from the issuer.
         return IdentityConfig(mode="jwt", jwt_issuer=ISSUER, jwt_audience=AUDIENCE, claim="email")
 
-    def test_oidc_discovery_resolves_jwks_uri_then_verifies(self, jwks, keypair):
+    @pytest.mark.parametrize("issuer", [ISSUER, f"{ISSUER}/", f"{ISSUER}/tenant"])
+    @pytest.mark.parametrize(
+        "jwks_uri", ["https://accounts.example.com/discovered-jwks", "https://keys.example.net/jwks"]
+    )
+    def test_oidc_discovery_resolves_jwks_uri_then_verifies(self, jwks, keypair, issuer, jwks_uri):
         seen = {}
 
         def openid_fetch(url):
             seen["openid"] = url
-            return {"jwks_uri": "https://accounts.example.com/discovered-jwks"}
+            return {"issuer": issuer, "jwks_uri": jwks_uri}
 
         def jwks_fetch(url):
             seen["jwks"] = url
             return jwks
 
-        v = IdentityVerifier(self._disco_config(), jwks_fetcher=jwks_fetch, openid_fetcher=openid_fetch)
-        v.prefetch()
-        token = _sign(keypair, {"email": "alice@example.com"})
+        cfg = IdentityConfig(mode="jwt", jwt_issuer=issuer, jwt_audience=AUDIENCE, claim="email")
+        v = IdentityVerifier(cfg, jwks_fetcher=jwks_fetch, openid_fetcher=openid_fetch)
+        assert v.prefetch() is True
+        token = _sign(keypair, {"email": "alice@example.com", "iss": issuer})
         assert v.authenticate({"Authorization": f"Bearer {token}"}) == "alice@example.com"
         # Discovery hit the well-known doc, then fetched the URL it advertised.
-        assert seen["openid"] == "https://accounts.example.com/.well-known/openid-configuration"
-        assert seen["jwks"] == "https://accounts.example.com/discovered-jwks"
+        assert seen["openid"] == f"{issuer.rstrip('/')}/.well-known/openid-configuration"
+        assert seen["jwks"] == jwks_uri
+
+    @pytest.mark.parametrize(
+        "metadata",
+        [
+            {},
+            {"issuer": None},
+            {"issuer": 123},
+            {"issuer": ""},
+            {"issuer": "https://other.example.com"},
+            {"issuer": f"{ISSUER}/other-tenant"},
+            {"issuer": f"{ISSUER}/"},
+            {"issuer": ISSUER.upper()},
+        ],
+        ids=["missing", "null", "number", "empty", "different-host", "different-path", "trailing-slash", "case"],
+    )
+    def test_oidc_discovery_invalid_issuer_fails_before_fetching_keys(self, metadata, jwks, keypair):
+        fetcher = _CountingFetcher(jwks)
+        document = {**metadata, "jwks_uri": "https://keys.example.net/jwks"}
+        v = IdentityVerifier(self._disco_config(), jwks_fetcher=fetcher, openid_fetcher=lambda _u: document)
+
+        self._assert_fails_closed(v, keypair)
+        assert fetcher.calls == 0
+
+    def test_oidc_discovery_retries_after_rejecting_issuer(self, jwks, keypair):
+        documents = iter(
+            [
+                {"issuer": "https://other.example.com", "jwks_uri": "https://other.example.com/jwks"},
+                {"issuer": ISSUER, "jwks_uri": "https://keys.example.net/jwks"},
+            ]
+        )
+        fetched_urls = []
+
+        def jwks_fetch(url):
+            fetched_urls.append(url)
+            return jwks
+
+        v = IdentityVerifier(self._disco_config(), jwks_fetcher=jwks_fetch, openid_fetcher=lambda _u: next(documents))
+        assert v.prefetch() is False
+        assert fetched_urls == []
+        token = _sign(keypair, {"email": "alice@example.com"})
+        assert v.authenticate({"Authorization": f"Bearer {token}"}) == "alice@example.com"
+        assert fetched_urls == ["https://keys.example.net/jwks"]
 
     def test_oidc_discovery_without_jwks_uri_degrades_to_401(self, keypair):
         # Discovery doc missing jwks_uri → IdentityConfigError, swallowed at fetch,
         # cache stays empty, prefetch does not raise, requests fail closed (401).
-        v = IdentityVerifier(self._disco_config(), jwks_fetcher=lambda _u: {"keys": []}, openid_fetcher=lambda _u: {})
+        v = IdentityVerifier(
+            self._disco_config(),
+            jwks_fetcher=lambda _u: {"keys": []},
+            openid_fetcher=lambda _u: {"issuer": ISSUER},
+        )
         v.prefetch()
         token = _sign(keypair, {"email": "a@b.c"})
         with pytest.raises(HTTPException) as exc:
@@ -551,7 +602,7 @@ class TestJwksSourceResolution:
         v = IdentityVerifier(
             self._disco_config(),
             jwks_fetcher=lambda _u: {"keys": []},
-            openid_fetcher=lambda _u: {"jwks_uri": 123},
+            openid_fetcher=lambda _u: {"issuer": ISSUER, "jwks_uri": 123},
         )
         self._assert_fails_closed(v, keypair)
 
@@ -561,7 +612,7 @@ class TestJwksSourceResolution:
         v = IdentityVerifier(
             self._disco_config(),
             jwks_fetcher=lambda _u: {"keys": []},
-            openid_fetcher=lambda _u: {"jwks_uri": "http://accounts.example.com/jwks"},
+            openid_fetcher=lambda _u: {"issuer": ISSUER, "jwks_uri": "http://accounts.example.com/jwks"},
         )
         self._assert_fails_closed(v, keypair)
 
