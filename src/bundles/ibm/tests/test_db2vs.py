@@ -280,6 +280,76 @@ class TestDB2VSClass:
     @patch("lfx_ibm.components.ibm.db2vs._get_column_names")
     @patch("lfx_ibm.components.ibm.db2vs._create_table")
     @patch("lfx_ibm.components.ibm.db2vs.DB2VS.get_embedding_dimension")
+    def test_delete_uses_ids_verbatim_as_stored_by_add_texts(
+        self, mock_get_dim, mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
+    ):
+        """delete() must query with the exact ids add_texts() stored.
+
+        add_texts only hashes/uppercases the ids it generates itself; caller-supplied
+        ids are stored verbatim (truncated to the VARCHAR(100) column width). Re-applying
+        `.upper()[:16]` in delete() therefore builds a predicate that matches no stored
+        row, and the DELETE silently affects zero rows.
+        """
+        from lfx_ibm.components.ibm.db2vs import DB2VS, DistanceStrategy
+
+        mock_get_dim.return_value = 3
+        mock_table_exists.return_value = True
+        mock_get_columns.return_value = {"id": "id", "text": "text", "embedding": "embedding", "metadata": "metadata"}
+
+        db2vs = DB2VS(
+            client=mock_client,
+            embedding_function=mock_embedding,
+            table_name="test_table",
+            distance_strategy=DistanceStrategy.COSINE,
+        )
+
+        # Ids covering the shapes add_texts stores as-is: lowercase, mixed case,
+        # longer than the 16 chars a hash produces, and exactly 16 chars.
+        stored_ids = ["custom_id_1", "Doc-2026-abcdefghij", "a" * 16]
+
+        cursor = mock_client.cursor.return_value
+        cursor.reset_mock()
+        db2vs.delete(ids=list(stored_ids))
+
+        delete_calls = [call for call in cursor.execute.call_args_list if "DELETE" in str(call.args[0])]
+        assert len(delete_calls) == 1, f"expected exactly one DELETE, got {delete_calls}"
+        assert delete_calls[0].args[1] == stored_ids
+
+    @patch("lfx_ibm.components.ibm.db2vs._table_exists")
+    @patch("lfx_ibm.components.ibm.db2vs._get_column_names")
+    @patch("lfx_ibm.components.ibm.db2vs._create_table")
+    @patch("lfx_ibm.components.ibm.db2vs.DB2VS.get_embedding_dimension")
+    def test_delete_round_trips_auto_generated_ids(
+        self, mock_get_dim, mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
+    ):
+        """Auto-generated ids stay uppercase 16-char hashes, so they keep working."""
+        from lfx_ibm.components.ibm.db2vs import DB2VS, DistanceStrategy
+
+        mock_get_dim.return_value = 3
+        mock_table_exists.return_value = True
+        mock_get_columns.return_value = {"id": "id", "text": "text", "embedding": "embedding", "metadata": "metadata"}
+
+        db2vs = DB2VS(
+            client=mock_client,
+            embedding_function=mock_embedding,
+            table_name="test_table",
+            distance_strategy=DistanceStrategy.COSINE,
+        )
+
+        # add_texts hashes the ids it generates; delete must send them back unchanged.
+        cursor = mock_client.cursor.return_value
+        cursor.reset_mock()
+        generated = ["A1B2C3D4E5F60718", "00112233445566AA"]
+        db2vs.delete(ids=list(generated))
+
+        delete_calls = [call for call in cursor.execute.call_args_list if "DELETE" in str(call.args[0])]
+        assert len(delete_calls) == 1, f"expected exactly one DELETE, got {delete_calls}"
+        assert delete_calls[0].args[1] == generated
+
+    @patch("lfx_ibm.components.ibm.db2vs._table_exists")
+    @patch("lfx_ibm.components.ibm.db2vs._get_column_names")
+    @patch("lfx_ibm.components.ibm.db2vs._create_table")
+    @patch("lfx_ibm.components.ibm.db2vs.DB2VS.get_embedding_dimension")
     def test_embedding_dimension_validation(
         self, mock_get_dim, mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
     ):
