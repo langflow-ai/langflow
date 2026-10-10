@@ -41,6 +41,27 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         assert result.text == "Name: John, Age: 30, Country: USA"
 
+    @pytest.mark.parametrize("id_template", ["{doc id}", "{doc id:d}"])
+    def test_parse_dataframe_preserves_numeric_types(self, component_class, id_template):
+        data = {"doc id": [2**53, 2**53 + 1], "_score": [0.5, 0.25]}
+        dataframe = DataFrame(data, index=[10, 20])
+        component = component_class(
+            input_data=dataframe,
+            pattern=id_template + ": {_score:.2f}",
+            sep=" | ",
+        )
+
+        result = component.parse_combined_text()
+
+        assert result.text == "9007199254740992: 0.50 | 9007199254740993: 0.25"
+        assert component.status == result.text
+        assert dataframe.to_dict(orient="list") == data
+
+    def test_parse_dataframe_without_columns(self, component_class):
+        component = component_class(input_data=DataFrame(index=[10, 20]), pattern="row", sep=" | ")
+
+        assert component.parse_combined_text().text == "row | row"
+
     def test_parse_data_object(self, component_class):
         # Arrange
         data = Data(text="Hello World")

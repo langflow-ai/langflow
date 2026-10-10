@@ -126,8 +126,9 @@ class ParserComponent(Component):
 
         lines = []
         if df is not None:
-            for _, row in df.iterrows():
-                formatted_text = self.pattern.format(**row.to_dict())
+            # Preserve column types and keep zero-column rows by iterating with the index.
+            for row in df.itertuples(name=None):
+                formatted_text = self.pattern.format(**dict(zip(df.columns, row[1:], strict=True)))
                 lines.append(formatted_text)
         elif data is not None:
             data_items = data if isinstance(data, list) else [data]
