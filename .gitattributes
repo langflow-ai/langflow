@@ -34,3 +34,4 @@ Dockerfile text
 *.csv binary
 *.wav binary
 *.raw binary
+src/backend/base/langflow/initial_setup/starter_projects/*.json linguist-generated=true
