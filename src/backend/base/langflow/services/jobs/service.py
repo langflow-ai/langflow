@@ -1023,8 +1023,11 @@ class JobService(Service):
         foreign key, so nothing cascades: they are deleted explicitly here, or
         they survive as orphans no query can reach again.
 
-        Age comes from the terminal timestamp, falling back to creation for a
-        row that reached a terminal status without one. Deletes are chunked by
+        Age comes from the terminal timestamp alone. A terminal row that carries
+        no ``finished_timestamp`` is skipped rather than dated from creation: a
+        run submitted months ago and cancelled today is one day old for
+        retention purposes, and dating it from creation deleted it on the next
+        sweep instead of after the window. Deletes are chunked by
         ``limit`` so a pass never takes a long lock or bloats one transaction;
         a caller with a backlog loops until a pass returns fewer than ``limit``.
 
@@ -1070,7 +1073,6 @@ class JobService(Service):
         from langflow.services.database.models.trigger.schemas import TriggerEventState
 
         cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
-        aged_at = func.coalesce(col(Job.finished_timestamp), col(Job.created_timestamp))
         awaiting_reconcile = exists().where(
             col(TriggerEvent.job_id) == col(Job.job_id),
             col(TriggerEvent.state) == TriggerEventState.DISPATCHED.value,
@@ -1082,7 +1084,8 @@ class JobService(Service):
                 select(Job.job_id)
                 .where(
                     col(Job.status).in_(_RETAINABLE_STATUSES),
-                    aged_at < cutoff,
+                    col(Job.finished_timestamp).is_not(None),
+                    col(Job.finished_timestamp) < cutoff,
                     ~awaiting_reconcile,
                     ~preserves_memory_state,
                 )
