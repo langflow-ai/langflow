@@ -84,6 +84,7 @@ it.each([
   ["de", "1 Berechtigung", "2 Berechtigungen"],
   ["es", "1 permiso", "2 permisos"],
   ["fr", "1 autorisation", "2 autorisations"],
+  ["id", "1 scope", "2 scope"],
   ["ja", "1 個のスコープ", "2 個のスコープ"],
   ["ko", "권한 범위 1개", "권한 범위 2개"],
   ["pt", "1 escopo", "2 escopos"],

@@ -198,7 +198,7 @@ describe("AssistantBuildTasks", () => {
   });
 
   describe("i18n key coverage", () => {
-    const locales = ["de", "en", "es", "fr", "ja", "ko", "pt", "zh-Hans"];
+    const locales = ["de", "en", "es", "fr", "id", "ja", "ko", "pt", "zh-Hans"];
 
     it.each(locales)(
       "locale %s has every inProgress key used by the component",
