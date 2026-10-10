@@ -102,10 +102,10 @@ export function ProviderConfigurationPanel({
         <div className="rounded-md border border-dashed border-border bg-muted/30 p-3 text-[13px] text-muted-foreground">
           {t("settings.dbProviders.comingSoonDescription")}
         </div>
-      ) : provider.id === "chroma" ? (
+      ) : provider.id === "sqlite" ? (
         <div className="flex flex-col gap-3">
           <div className="rounded-md border border-border bg-muted/30 p-3 text-[13px] text-muted-foreground">
-            {t("settings.dbProviders.chromaDescription")}
+            {t("settings.dbProviders.sqliteDescription")}
           </div>
           <div className="flex justify-end">
             <Button
@@ -115,8 +115,8 @@ export function ProviderConfigurationPanel({
               disabled={isPending || isActive}
             >
               {isActive
-                ? t("settings.dbProviders.chromaSelected")
-                : t("settings.dbProviders.useChroma")}
+                ? t("settings.dbProviders.sqliteSelected")
+                : t("settings.dbProviders.useSQLite")}
             </Button>
           </div>
         </div>

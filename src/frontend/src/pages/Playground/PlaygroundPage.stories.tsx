@@ -89,9 +89,7 @@ const withQueryClient = (
       );
       queryClient.setQueryData(
         ["useGetSessionsFromFlowQuery", { id: flowId }],
-        {
-          data: { sessions: [computedFlowId] },
-        },
+        { pages: [{ sessions: [computedFlowId] }], pageParams: [0] },
       );
     }, [flowId, queryClient]);
 

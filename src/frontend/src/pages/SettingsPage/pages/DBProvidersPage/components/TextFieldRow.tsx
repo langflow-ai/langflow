@@ -49,7 +49,12 @@ export function TextFieldRow({
         {field.required && <span className="ml-1 text-destructive">*</span>}
       </span>
       <Input
-        placeholder={field.placeholder}
+        // Most placeholders are example values (a URL, an index name) and
+        // stay as written; only fields with prose placeholders define a key.
+        placeholder={t(
+          `settings.dbProviders.fields.${field.variableKey}.placeholder`,
+          { defaultValue: field.placeholder },
+        )}
         value={inputValue}
         type={field.isSecret ? "password" : "text"}
         disabled={disabled}

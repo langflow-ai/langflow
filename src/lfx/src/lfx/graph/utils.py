@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import inspect
 from collections.abc import Generator
 from enum import Enum
+from functools import cache
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -240,6 +242,25 @@ def _vertex_to_primitive_dict(target: Vertex) -> dict:
     return params
 
 
+@cache
+def _accepts_attribution(log_method: Any) -> bool:
+    parameters = inspect.signature(log_method).parameters.values()
+    return any(p.kind is inspect.Parameter.VAR_KEYWORD or p.name == "session_id" for p in parameters)
+
+
+def _transaction_attribution(transaction_service: Any, graph: Any) -> dict[str, Any]:
+    """The run's message owner and session, so a data subject erase can find the row.
+
+    Omitted for a service written before these fields existed, which would reject them.
+    """
+    if graph is None or not _accepts_attribution(type(transaction_service).log_transaction):
+        return {}
+    from lfx.memory.flow_context import resolve_message_owner_id
+
+    session_id = getattr(graph, "session_id", None)
+    return {"user_id": resolve_message_owner_id(graph), "session_id": str(session_id) if session_id else None}
+
+
 async def log_transaction(
     flow_id: str | UUID,
     source: Vertex,
@@ -308,6 +329,7 @@ async def log_transaction(
             status=status,
             target_id=target.id if target else None,
             error=str(error) if error else None,
+            **_transaction_attribution(transaction_service, getattr(source, "graph", None)),
         )
 
     except Exception as exc:  # noqa: BLE001

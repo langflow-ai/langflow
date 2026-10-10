@@ -1,5 +1,8 @@
+import type { SessionsPagination } from "@/components/core/playgroundComponent/chat-view/chat-header/components/show-more-sessions";
+
 export type SidebarOpenViewProps = {
   sessions: string[];
+  sessionsPagination: SessionsPagination;
   setSelectedViewField: (
     field: { type: string; id: string } | undefined,
   ) => void;

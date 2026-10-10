@@ -133,6 +133,41 @@ def test_ambiguous_bare_name_fails(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    ("provider", "class_name"),
+    [("chroma", "ChromaVectorStoreComponent"), ("chroma", "LocalDBComponent"), ("altk", "ALTKAgentComponent")],
+)
+def test_metapackage_wrapper_and_legacy_class_share_provider(tmp_path: Path, provider: str, class_name: str) -> None:
+    components, bundles = tmp_path / "components", tmp_path / "bundles"
+    _make_component(components, provider, "legacy.py", class_name)
+    _make_component(bundles / "lfx-bundles" / "src" / "lfx_bundles", provider, "wrapper.py", class_name)
+    table = tmp_path / "table.json"
+    _write_table(table, [{"bare_class_name": class_name, "target": f"ext:{provider}:{class_name}@official"}])
+    proc = _run("--table", str(table), "--components-root", str(components), "--components-root", str(bundles))
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("legacy_first_provider", [True, False])
+def test_metapackage_different_providers_remain_ambiguous(tmp_path: Path, *, legacy_first_provider: bool) -> None:
+    components, bundles = tmp_path / "components", tmp_path / "bundles"
+    metapackage = bundles / "lfx-bundles" / "src" / "lfx_bundles"
+    _make_component(
+        components if legacy_first_provider else metapackage, "first_provider", "first.py", "SharedComponent"
+    )
+    _make_component(metapackage, "second_provider", "second.py", "SharedComponent")
+    table = tmp_path / "table.json"
+    _write_table(
+        table, [{"bare_class_name": "SharedComponent", "target": "ext:first_provider:SharedComponent@official"}]
+    )
+    proc = _run("--table", str(table), "--components-root", str(components), "--components-root", str(bundles))
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert "first_provider" in proc.stderr
+    assert "second_provider" in proc.stderr
+    assert "ambiguous" in proc.stderr
+
+
+@pytest.mark.unit
 def test_unknown_bare_name_fails(tmp_path: Path) -> None:
     """A bare-name entry referring to a class no bundle declares is a typo or stale."""
     components = tmp_path / "components"

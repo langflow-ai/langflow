@@ -1,6 +1,5 @@
 import io
 import json
-import threading
 import uuid
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
@@ -10,13 +9,19 @@ from httpx import AsyncClient
 from langchain_core.documents import Document
 from langflow.api.utils import knowledge_base_service
 from langflow.api.utils.kb_helpers import (
-    KB_DELETED_SENTINEL,
     KBAnalysisHelper,
     KBIngestionHelper,
     KBStorageHelper,
     chunk_text_for_ingestion,
 )
 from lfx.base.knowledge_bases.backends.base import BackendConfigurationError
+
+
+@pytest.fixture(autouse=True)
+def sqlite_store_root(client, monkeypatch, tmp_path):  # noqa: ARG001 - initialize app before settings patch
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(tmp_path / "sqlite_stores"))
 
 
 @pytest.fixture
@@ -72,7 +77,7 @@ def seed_kb(active_user):
     this row, so tests seed it rather than writing an on-disk sidecar.
     """
 
-    async def _seed(name: str, *, backend_type: str = "chroma", backend_config: dict | None = None, **kwargs):
+    async def _seed(name: str, *, backend_type: str = "sqlite", backend_config: dict | None = None, **kwargs):
         return await knowledge_base_service.create_record(
             user_id=active_user.id,
             name=name,
@@ -83,6 +88,22 @@ def seed_kb(active_user):
         )
 
     return _seed
+
+
+@pytest.fixture
+def seed_legacy_kb(active_user):
+    """Seed historical malformed rows directly, bypassing current create validation."""
+    from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+    from langflow.services.deps import session_scope
+
+    async def seed(name: str):
+        row = KnowledgeBaseRecord(user_id=active_user.id, name=name, backend_type="chroma")
+        async with session_scope() as session:
+            session.add(row)
+            await session.commit()
+        return row
+
+    return seed
 
 
 class TestKnowledgeBaseHelpers:
@@ -187,7 +208,7 @@ class TestWriteDocumentsRetry:
         assert backend.add_documents.await_count == 2  # retried once, then succeeded
 
 
-class TestProductionProfileRejectsLocalChroma:
+class TestProductionProfileRejectsLocalStorage:
     """Local Chroma is a dev-only backend: its vectors live on the serving box's disk."""
 
     @pytest.fixture
@@ -202,7 +223,7 @@ class TestProductionProfileRejectsLocalChroma:
 
         monkeypatch.setattr(get_settings_service().settings, "deployment_profile", "prod")
 
-    async def test_create_knowledge_base_with_explicit_local_chroma_is_rejected(
+    async def test_create_knowledge_base_with_explicit_local_sqlite_is_rejected(
         self,
         prod_profile,  # noqa: ARG002 — fixture applied for its side effect
         client: AsyncClient,
@@ -223,7 +244,7 @@ class TestProductionProfileRejectsLocalChroma:
                 "name": "Prod_Local_KB",
                 "embedding_provider": "OpenAI",
                 "embedding_model": "text-embedding-3-small",
-                "backend_type": "chroma",
+                "backend_type": "sqlite",
                 "backend_config": {},
             },
         )
@@ -232,49 +253,27 @@ class TestProductionProfileRejectsLocalChroma:
         # Nothing was persisted — the rejection happens before any state is created.
         assert await knowledge_base_service.get_by_user_and_name(active_user.id, "Prod_Local_KB") is None
 
-    async def test_create_knowledge_base_with_chroma_cloud_is_allowed(
-        self,
-        prod_profile,  # noqa: ARG002 — fixture applied for its side effect
-        client: AsyncClient,
-        logged_in_headers,
-        active_user,
-    ):
-        """Chroma *Cloud* is a remote store and stays available under prod.
+    async def test_create_knowledge_base_with_chroma_cloud_is_rejected(self, client, logged_in_headers):
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "Retired_Cloud",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+                "backend_type": "chroma",
+                "backend_config": {"mode": "cloud"},
+            },
+        )
+        assert response.status_code == 422
 
-        Both modes share ``backend_type="chroma"``; only ``backend_config["mode"]``
-        distinguishes them, so this guards against the guard being too broad.
-        """
-        from lfx.base.knowledge_bases.backends.base import TestConnectionResult
-        from lfx.base.knowledge_bases.backends.chroma import ChromaCloudBackend
-
-        connection_result = TestConnectionResult(ok=True, message="Connected")
-        with patch.object(ChromaCloudBackend, "test_connection", new=AsyncMock(return_value=connection_result)):
-            response = await client.post(
-                "api/v1/knowledge_bases",
-                headers=logged_in_headers,
-                json={
-                    "name": "Prod_Cloud_KB",
-                    "embedding_provider": "OpenAI",
-                    "embedding_model": "text-embedding-3-small",
-                    "backend_type": "chroma",
-                    "backend_config": {"mode": "cloud"},
-                },
-            )
-        assert response.status_code == 201, response.json()
-        record = await knowledge_base_service.get_by_user_and_name(active_user.id, "Prod_Cloud_KB")
-        assert record is not None
-        assert record.backend_config == {"mode": "cloud"}
-
-    async def test_dev_profile_still_allows_local_chroma(
-        self, client: AsyncClient, logged_in_headers, active_user, tmp_path, monkeypatch
-    ):
+    async def test_dev_profile_allows_local_sqlite(self, client: AsyncClient, logged_in_headers, tmp_path, monkeypatch):
         """The default profile is unaffected — local Chroma keeps working for dev."""
         from langflow.api.v1 import knowledge_bases as kb_api
         from langflow.services.deps import get_settings_service
 
         monkeypatch.setattr(get_settings_service().settings, "deployment_profile", "dev")
         monkeypatch.setattr(kb_api.KBStorageHelper, "get_root_path", MagicMock(return_value=tmp_path))
-        monkeypatch.setattr(kb_api.KBStorageHelper, "get_fresh_chroma_client", MagicMock())
 
         response = await client.post(
             "api/v1/knowledge_bases",
@@ -283,18 +282,18 @@ class TestProductionProfileRejectsLocalChroma:
                 "name": "Dev_Local_KB",
                 "embedding_provider": "OpenAI",
                 "embedding_model": "text-embedding-3-small",
-                "backend_type": "chroma",
+                "backend_type": "sqlite",
                 "backend_config": {},
             },
         )
         assert response.status_code == 201, response.json()
-        assert (tmp_path / active_user.username / "Dev_Local_KB").is_dir()
+        assert response.json()["backend_type"] == "sqlite"
 
     @pytest.mark.parametrize(
         ("backend_type", "backend_config"),
         [
             ("opensearch", {"index_name": "another_users_index"}),
-            ("chroma", {"mode": "cloud", "collection_name": "docs"}),
+            ("postgres", {"collection_name": "docs"}),
             ("opensearch", {"legacy_shared_index": "docs"}),
         ],
     )
@@ -304,13 +303,13 @@ class TestProductionProfileRejectsLocalChroma:
         # A storage name says nothing about who owns the data behind it: a regular
         # user pointing a new KB at a named index or collection could read or
         # delete another user's chunks.
-        from lfx.base.knowledge_bases.backends.chroma import ChromaCloudBackend
         from lfx.base.knowledge_bases.backends.opensearch import OpenSearchBackend
+        from lfx.base.knowledge_bases.backends.postgres import PostgresBackend
 
         connection = AsyncMock()
         with (
             patch.object(OpenSearchBackend, "test_connection", new=connection),
-            patch.object(ChromaCloudBackend, "test_connection", new=connection),
+            patch.object(PostgresBackend, "test_connection", new=connection),
         ):
             response = await client.post(
                 "api/v1/knowledge_bases",
@@ -477,7 +476,7 @@ class TestPreviewChunks:
 class TestKnowledgeBaseAPI:
     """Tests for KR CRUD endpoints."""
 
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client", create=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_knowledge_base(
         self, mock_root, mock_fresh_client, client: AsyncClient, logged_in_headers, active_user, tmp_path
@@ -523,91 +522,7 @@ class TestKnowledgeBaseAPI:
         # certainly no metadata sidecar.
         assert not (tmp_path / active_user.username / kb_name).exists()
 
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.delete_storage")
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_create_knowledge_base_retries_cleanup_of_deleted_directory(
-        self,
-        mock_root,
-        mock_fresh_client,
-        mock_delete_storage,
-        client: AsyncClient,
-        logged_in_headers,
-        active_user,
-        tmp_path,
-    ):
-        mock_root.return_value = tmp_path
-        mock_fresh_client.return_value = MagicMock()
-        kb_name = "Recreated_KB"
-        kb_path = tmp_path / active_user.username / kb_name
-        kb_path.mkdir(parents=True)
-        (kb_path / "chroma.sqlite3").touch()
-        (kb_path / KB_DELETED_SENTINEL).touch()
-        event_loop_thread_id = threading.get_ident()
-
-        def remove_released_storage(path, name):
-            assert path == kb_path
-            assert name == kb_name
-            assert threading.get_ident() != event_loop_thread_id
-            for child in path.iterdir():
-                child.unlink()
-            path.rmdir()
-            return True
-
-        mock_delete_storage.side_effect = remove_released_storage
-
-        response = await client.post(
-            "api/v1/knowledge_bases",
-            headers=logged_in_headers,
-            json={
-                "name": kb_name,
-                "embedding_provider": "OpenAI",
-                "embedding_model": "text-embedding-3-small",
-            },
-        )
-
-        assert response.status_code == 201, response.json()
-        mock_delete_storage.assert_called_once_with(kb_path, kb_name)
-        assert kb_path.is_dir()
-        assert not (kb_path / KB_DELETED_SENTINEL).exists()
-        assert await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name) is not None
-
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.delete_storage", return_value=True)
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_create_knowledge_base_keeps_409_while_deleted_directory_is_locked(
-        self,
-        mock_root,
-        mock_fresh_client,
-        mock_delete_storage,
-        client: AsyncClient,
-        logged_in_headers,
-        active_user,
-        tmp_path,
-    ):
-        mock_root.return_value = tmp_path
-        kb_name = "Locked_KB"
-        kb_path = tmp_path / active_user.username / kb_name
-        kb_path.mkdir(parents=True)
-        (kb_path / KB_DELETED_SENTINEL).touch()
-
-        response = await client.post(
-            "api/v1/knowledge_bases",
-            headers=logged_in_headers,
-            json={
-                "name": kb_name,
-                "embedding_provider": "OpenAI",
-                "embedding_model": "text-embedding-3-small",
-            },
-        )
-
-        assert response.status_code == 409
-        assert "still locked" in response.json()["detail"]
-        mock_delete_storage.assert_called_once_with(kb_path, kb_name)
-        mock_fresh_client.assert_not_called()
-        assert await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name) is None
-
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client", create=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_legacy_request_without_model_selection(
         self,
@@ -729,7 +644,7 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 422
         assert "unknown vector-store backend" in response.text.lower()
 
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client", create=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_knowledge_base_opensearch_without_index_name(
         self, mock_root, mock_fresh_client, client: AsyncClient, logged_in_headers, tmp_path
@@ -865,8 +780,8 @@ class TestKnowledgeBaseAPI:
             assert response.status_code == 422, (stubbed, response.text)
             assert "not enabled" in response.text.lower(), (stubbed, response.text)
 
-    async def test_test_connection_chroma_returns_ok(self, client: AsyncClient, logged_in_headers):
-        """Chroma succeeds against a transient temp dir.
+    async def test_test_connection_sqlite_returns_ok(self, client: AsyncClient, logged_in_headers):
+        """SQLite succeeds against a transient temp dir.
 
         The endpoint builds the backend in a tempfile that is cleaned
         up before the response is returned, so no on-disk state
@@ -875,12 +790,12 @@ class TestKnowledgeBaseAPI:
         response = await client.post(
             "api/v1/knowledge_bases/test-connection",
             headers=logged_in_headers,
-            json={"backend_type": "chroma", "backend_config": {}},
+            json={"backend_type": "sqlite", "backend_config": {}},
         )
         assert response.status_code == 200, response.text
         body = response.json()
         assert body["ok"] is True
-        assert "Chroma" in body["message"]
+        assert "SQLite" in body["message"]
 
     async def test_test_connection_rejects_unknown_backend(self, client: AsyncClient, logged_in_headers):
         response = await client.post(
@@ -1057,7 +972,7 @@ class TestKnowledgeBaseAPI:
         [
             ("opensearch", {}),
             ("postgres", {}),
-            ("chroma", {"mode": "cloud"}),
+            ("sqlite", {}),
         ],
     )
     async def test_create_kb_path_traversal_blocked_on_remote_backend(
@@ -1103,101 +1018,6 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 400
         assert "at least 3 characters" in response.json()["detail"]
 
-    @pytest.mark.parametrize(
-        "name",
-        ["Q&A docs", "catálogo-produtos", "trailing_", "docs..v2", "127.0.0.1", "a" * 513],
-    )
-    async def test_create_kb_rejects_chroma_incompatible_name_before_persistence(
-        self,
-        name,
-        client: AsyncClient,
-        logged_in_headers,
-        active_user,
-        monkeypatch,
-    ):
-        from langflow.api.v1 import knowledge_bases as kb_api
-
-        root_path = MagicMock()
-        monkeypatch.setattr(kb_api.KBStorageHelper, "get_root_path", root_path)
-
-        response = await client.post(
-            "api/v1/knowledge_bases",
-            headers=logged_in_headers,
-            json={
-                "name": name,
-                "embedding_provider": "OpenAI",
-                "embedding_model": "model",
-            },
-        )
-
-        assert response.status_code == 400, response.text
-        assert "3-512 characters" in response.json()["detail"]
-        root_path.assert_not_called()
-        normalized_name = name.strip().replace(" ", "_")
-        assert await knowledge_base_service.get_by_user_and_name(active_user.id, normalized_name) is None
-
-    @pytest.mark.parametrize("name", ["docs.v2", "a" * 100, "topology+collection"])
-    async def test_create_kb_accepts_full_chroma_name_contract(
-        self,
-        name,
-        client: AsyncClient,
-        logged_in_headers,
-        active_user,
-        tmp_path,
-        monkeypatch,
-    ):
-        from langflow.api.v1 import knowledge_bases as kb_api
-
-        mock_chroma_client = MagicMock()
-        monkeypatch.setattr(kb_api.KBStorageHelper, "get_root_path", MagicMock(return_value=tmp_path))
-        monkeypatch.setattr(
-            kb_api.KBStorageHelper,
-            "get_fresh_chroma_client",
-            MagicMock(return_value=mock_chroma_client),
-        )
-
-        response = await client.post(
-            "api/v1/knowledge_bases",
-            headers=logged_in_headers,
-            json={
-                "name": name,
-                "embedding_provider": "OpenAI",
-                "embedding_model": "model",
-            },
-        )
-
-        assert response.status_code == 201, response.text
-        mock_chroma_client.create_collection.assert_called_once()
-        assert await knowledge_base_service.get_by_user_and_name(active_user.id, name) is not None
-
-    async def test_create_kb_rejects_name_too_long_for_local_chroma(
-        self,
-        client: AsyncClient,
-        logged_in_headers,
-        active_user,
-        monkeypatch,
-    ):
-        from langflow.api.v1 import knowledge_bases as kb_api
-
-        root_path = MagicMock()
-        monkeypatch.setattr(kb_api.KBStorageHelper, "get_root_path", root_path)
-        name = "a" * 256
-
-        response = await client.post(
-            "api/v1/knowledge_bases",
-            headers=logged_in_headers,
-            json={
-                "name": name,
-                "embedding_provider": "OpenAI",
-                "embedding_model": "model",
-            },
-        )
-
-        assert response.status_code == 400, response.text
-        assert "at most 255 characters for local Chroma storage" in response.json()["detail"]
-        root_path.assert_not_called()
-        assert await knowledge_base_service.get_by_user_and_name(active_user.id, name) is None
-
     async def test_create_kb_does_not_apply_chroma_rules_to_postgres(
         self,
         client: AsyncClient,
@@ -1227,11 +1047,12 @@ class TestKnowledgeBaseAPI:
         assert record.backend_type == "postgres"
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_create_duplicate_kb(self, mock_root, client: AsyncClient, logged_in_headers, tmp_path):
+    async def test_create_duplicate_kb(self, mock_root, client: AsyncClient, logged_in_headers, tmp_path, seed_kb):
         mock_root.return_value = tmp_path
         kb_user_path = tmp_path / "activeuser"
         kb_user_path.mkdir(parents=True)
         (kb_user_path / "Duplicate_KB").mkdir()
+        await seed_kb("Duplicate_KB")
 
         response = await client.post(
             "api/v1/knowledge_bases",
@@ -1487,7 +1308,7 @@ class TestKnowledgeBaseAPI:
         assert data["backend_config"] == {"index_name": "db_only_index"}
 
     @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.create_record", new_callable=AsyncMock)
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client", create=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_knowledge_base_rolls_back_when_db_persist_fails(
         self,
@@ -1515,147 +1336,52 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 500
         assert not (tmp_path / "activeuser" / "Rollback_KB").exists()
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
-    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.delete_by_user_and_name", new_callable=AsyncMock)
-    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_delete_knowledge_base(
-        self,
-        mock_root,
-        mock_get_record,
-        mock_delete_record,
-        mock_create_backend,
-        mock_delete,
-        client: AsyncClient,
-        logged_in_headers,
-        tmp_path,
-    ):
-        mock_root.return_value = tmp_path
-        (tmp_path / "activeuser" / "To_Delete").mkdir(parents=True, exist_ok=True)
-        mock_get_record.return_value = MagicMock(
-            backend_type="opensearch",
-            backend_config={"index_name": "to_delete_index"},
-        )
-        backend = MagicMock()
-        backend.ensure_ready = AsyncMock()
-        backend.delete_collection = AsyncMock()
-        backend.teardown = AsyncMock()
-        mock_create_backend.return_value = backend
-
-        response = await client.delete("api/v1/knowledge_bases/To_Delete", headers=logged_in_headers)
-        assert response.status_code == 200
-        mock_create_backend.assert_called_once()
-        backend.ensure_ready.assert_awaited_once()
+    async def test_delete_knowledge_base(self, client, logged_in_headers, seed_kb):
+        record = await seed_kb("To_Delete", backend_type="opensearch")
+        backend = AsyncMock()
+        with (
+            patch("langflow.services.knowledge_base_storage.runtime._raw_backend", return_value=backend) as factory,
+            patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage") as legacy_delete,
+        ):
+            response = await client.delete("api/v1/knowledge_bases/To_Delete", headers=logged_in_headers)
+        assert response.status_code == 200, response.text
         backend.delete_collection.assert_awaited_once()
         backend.teardown.assert_awaited_once()
-        mock_delete_record.assert_awaited_once()
-        # An OpenSearch-backed KB has no local storage to remove, so the
-        # filesystem is never touched — not even to check.
-        mock_delete.assert_not_called()
-        assert mock_create_backend.call_args.kwargs["kb_path"] is None
+        assert factory.call_args.args[0].id == record.id
+        assert await knowledge_base_service.get_by_id(record.id) is None
+        legacy_delete.assert_not_called()
 
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
-    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.delete_by_user_and_name", new_callable=AsyncMock)
-    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_delete_knowledge_base_survives_remote_backend_auth_failure(
-        self,
-        mock_root,
-        mock_get_record,
-        mock_delete_record,  # noqa: ARG002 - patch fixture; presence is the assertion
-        mock_create_backend,
-        mock_delete,
-        client: AsyncClient,
-        logged_in_headers,
-        tmp_path,
+    async def test_delete_knowledge_base_preserves_remote_identity_for_retry(self, client, logged_in_headers, seed_kb):
+        record = await seed_kb("Retry_Remote", backend_type="opensearch")
+        backend = AsyncMock()
+        backend.delete_collection.side_effect = ValueError("Remote credential is unavailable")
+        with patch("langflow.services.knowledge_base_storage.runtime._raw_backend", return_value=backend):
+            response = await client.delete("api/v1/knowledge_bases/Retry_Remote", headers=logged_in_headers)
+            assert response.status_code == 500, response.text
+            retained = await knowledge_base_service.get_by_id(record.id)
+            assert retained.storage_state == "deleting"
+            assert retained.backend_type == "opensearch"
+            backend.delete_collection.side_effect = None
+            response = await client.delete("api/v1/knowledge_bases/Retry_Remote", headers=logged_in_headers)
+        assert response.status_code == 200, response.text
+        assert backend.delete_collection.await_count == 2
+        assert backend.teardown.await_count == 2
+        assert await knowledge_base_service.get_by_id(record.id) is None
+
+    async def test_delete_knowledge_base_cleans_up_remote_without_local_directory(
+        self, client, logged_in_headers, seed_kb, tmp_path
     ):
-        """Remote-backend cleanup failure must not block local delete.
-
-        Regression for the Astra delete bug: a missing/stale Astra
-        token used to raise ``ValueError`` from
-        ``backend.ensure_ready`` which propagated as HTTP 500. The KB
-        directory + DB row were never cleaned up and the UI showed
-        the entry indefinitely. The fix makes remote cleanup
-        best-effort and surfaces the failure as a ``warning`` field
-        alongside the successful local delete.
-        """
-        mock_root.return_value = tmp_path
-        (tmp_path / "activeuser" / "Stuck_Astra").mkdir(parents=True, exist_ok=True)
-        mock_get_record.return_value = MagicMock(
-            backend_type="astra",
-            backend_config={"collection_name": "stuck_astra"},
-        )
-        backend = MagicMock()
-        backend.ensure_ready = AsyncMock(
-            side_effect=ValueError("Required credential variable 'ASTRA_DB_APPLICATION_TOKEN' is not configured.")
-        )
-        backend.delete_collection = AsyncMock()
-        backend.teardown = AsyncMock()
-        mock_create_backend.return_value = backend
-
-        response = await client.delete("api/v1/knowledge_bases/Stuck_Astra", headers=logged_in_headers)
-
-        # The row delete still runs and succeeds. Astra keeps nothing on this
-        # box, so there is no local storage step to run.
-        assert response.status_code == 200
-        assert not mock_delete.called
-        # Teardown runs even though ensure_ready threw.
-        backend.teardown.assert_awaited_once()
-        # delete_collection is skipped because ensure_ready raised.
-        backend.delete_collection.assert_not_awaited()
-        # Response carries a user-facing warning so the UI can tell
-        # the operator the remote resources need manual cleanup.
-        data = response.json()
-        assert "warning" in data
-        assert "astra" in data["warning"].lower()
-        assert "manual" in data["warning"].lower()
-
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
-    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.delete_by_user_and_name", new_callable=AsyncMock)
-    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_delete_knowledge_base_cleans_up_orphan_db_row(
-        self,
-        mock_root,
-        mock_get_record,
-        mock_delete_record,
-        mock_create_backend,
-        client: AsyncClient,
-        logged_in_headers,
-        tmp_path,
-    ):
-        """A remote-backed KB with no local directory must still be deletable.
-
-        Regression for the Astra delete bug: the endpoint used to require the
-        directory to exist, so a remote-backed KB (which never has one) 404'd on
-        delete while the list endpoint — reading the DB row — kept showing it.
-        The UI was stuck. Existence is the row's call now, so this is the normal
-        path rather than a special case.
-        """
-        mock_root.return_value = tmp_path
-        (tmp_path / "activeuser").mkdir(parents=True, exist_ok=True)
-        # A row, and no on-disk directory — the ordinary shape for a
-        # remote-backed KB.
-        mock_get_record.return_value = MagicMock(
-            backend_type="astra",
-            backend_config={"collection_name": "orphan_astra"},
-        )
-        backend = MagicMock()
-        backend.ensure_ready = AsyncMock()
-        backend.delete_collection = AsyncMock()
-        backend.teardown = AsyncMock()
-        mock_create_backend.return_value = backend
-
-        response = await client.delete("api/v1/knowledge_bases/Orphan_KB", headers=logged_in_headers)
-
-        assert response.status_code == 200
-        # Remote collection + DB row both cleaned up.
-        backend.ensure_ready.assert_awaited_once()
+        record = await seed_kb("Remote_No_Directory", backend_type="opensearch")
+        backend = AsyncMock()
+        with (
+            patch("langflow.services.knowledge_base_storage.runtime._raw_backend", return_value=backend),
+            patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path", return_value=tmp_path),
+        ):
+            response = await client.delete("api/v1/knowledge_bases/Remote_No_Directory", headers=logged_in_headers)
+        assert response.status_code == 200, response.text
         backend.delete_collection.assert_awaited_once()
-        backend.teardown.assert_awaited_once()
-        mock_delete_record.assert_awaited_once()
+        assert await knowledge_base_service.get_by_id(record.id) is None
+        assert not list(tmp_path.iterdir())
 
     @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
@@ -1840,63 +1566,24 @@ class TestKnowledgeBaseAPI:
         data = response.json()
         assert data["deleted_count"] == 2
         assert "NonExistent" in data["not_found"]
-        assert mock_delete.called
+        mock_delete.assert_not_called()
 
-    @patch("langflow.api.utils.knowledge_base_service.get_by_user_and_name")
-    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_bulk_delete_skips_memory_base_kbs(
-        self,
-        mock_root,
-        mock_delete,
-        mock_get_record,
-        client: AsyncClient,
-        logged_in_headers,
-        tmp_path,
-    ):
-        # Memory-Base KBs in a bulk request must be reported back as
-        # ``memory_base_skipped`` and NOT touched on disk; non-MB KBs in
-        # the same request still delete normally.
-        #
-        # Detection is DB-backed: Memory Bases no longer write the on-disk
-        # sidecar, so the marker is read from the ``knowledge_base`` row's
-        # ``source_types`` (via ``get_by_user_and_name``), not ``get_metadata``.
-        mock_root.return_value = tmp_path
-        kb_user_path = tmp_path / "activeuser"
-        kb_user_path.mkdir(parents=True)
-        (kb_user_path / "PlainKB").mkdir()
-        (kb_user_path / "MBKB").mkdir()
-
-        def fake_record(_user_id, name):
-            # ``user_id`` a non-UUID so ``_guard_kb_action`` keeps the actor as
-            # the owner; ``source_types`` carries the Memory-Base marker on MBKB.
-            return MagicMock(
-                id=uuid.uuid4(),
-                user_id=MagicMock(),
-                source_types=["memory"] if name == "MBKB" else [],
-                backend_type="chroma",
-                backend_config={},
-                model_selection={"name": "m", "provider": "OpenAI"},
-            )
-
-        mock_get_record.side_effect = fake_record
-
+    async def test_bulk_delete_skips_memory_base_kbs(self, client, logged_in_headers, seed_kb):
+        plain = await seed_kb("PlainKB")
+        memory = await seed_kb("MBKB", source_types=["memory"])
         response = await client.request(
             "DELETE",
             "api/v1/knowledge_bases",
             headers=logged_in_headers,
             json={"kb_names": ["PlainKB", "MBKB"]},
         )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["deleted_count"] == 1
-        assert data.get("memory_base_skipped") == "MBKB"
-        # delete_storage must only have been called for the non-MB KB.
-        deleted_paths = [call.args[0].name for call in mock_delete.call_args_list]
-        assert "PlainKB" in deleted_paths
-        assert "MBKB" not in deleted_paths
+        assert response.status_code == 200, response.text
+        assert response.json()["deleted_count"] == 1
+        assert response.json()["memory_base_skipped"] == "MBKB"
+        assert await knowledge_base_service.get_by_id(plain.id) is None
+        assert await knowledge_base_service.get_by_id(memory.id) is not None
 
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.services.knowledge_base_storage.runtime._raw_backend")
     @patch("langflow.api.utils.knowledge_base_service.get_by_user_and_name")
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
@@ -1990,19 +1677,19 @@ class TestKnowledgeBaseAPI:
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_bulk_delete_rejects_traversal_when_a_row_carries_the_name(
-        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path, seed_kb
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path, seed_legacy_kb
     ):
         """The containment guard still fires when a row's own name traverses.
 
-        A user can create a KB whose *name* is a traversal string, which gives it
-        a legitimate row. Path resolution must still refuse to build a path
-        outside their namespace from it.
+        Historical or malformed metadata can contain a traversal-shaped name.
+        Current creates reject it, but the persisted row must remain fenced.
+        Path resolution must still refuse to build a path outside the owner namespace.
         """
         mock_root.return_value = tmp_path
         (tmp_path / "activeuser").mkdir(parents=True)
         victim_kb = tmp_path / "victim_user" / "secret_kb"
         victim_kb.mkdir(parents=True)
-        await seed_kb("../victim_user/secret_kb")
+        await seed_legacy_kb("../victim_user/secret_kb")
 
         response = await client.request(
             "DELETE",
@@ -2017,7 +1704,7 @@ class TestKnowledgeBaseAPI:
     @patch("langflow.api.v1.knowledge_bases.logger")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_bulk_delete_path_traversal_logs_warning(
-        self, mock_root, mock_logger, client: AsyncClient, logged_in_headers, tmp_path, seed_kb
+        self, mock_root, mock_logger, client: AsyncClient, logged_in_headers, tmp_path, seed_legacy_kb
     ):
         """A traversal attempt must emit a warning log with user context."""
         mock_root.return_value = tmp_path
@@ -2025,7 +1712,7 @@ class TestKnowledgeBaseAPI:
         (tmp_path / "activeuser").mkdir(parents=True)
         (tmp_path / "victim_user" / "secret_kb").mkdir(parents=True)
         # A row must exist for path resolution — and therefore the guard — to run.
-        await seed_kb("../victim_user/secret_kb")
+        await seed_legacy_kb("../victim_user/secret_kb")
 
         await client.request(
             "DELETE",
@@ -2118,7 +1805,7 @@ class TestKnowledgeBaseAPI:
         assert "chunk size" in response.json()["detail"].lower()
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.backend_for_record")
     async def test_get_chunks_pagination_and_search(
         self, mock_create_backend, mock_root, client: AsyncClient, logged_in_headers, tmp_path, seed_kb
     ):
@@ -2186,7 +1873,7 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 404
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.backend_for_record")
     async def test_get_chunks_metadata_filter(
         self, mock_create_backend, mock_root, client: AsyncClient, logged_in_headers, tmp_path, seed_kb
     ):
@@ -2266,7 +1953,7 @@ class TestKnowledgeBaseAPI:
         assert sorted(chunk["id"] for chunk in data["chunks"]) == ["2", "3"]
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.backend_for_record")
     async def test_get_metadata_keys_returns_distinct_user_keys(
         self, mock_create_backend, mock_root, client: AsyncClient, logged_in_headers, tmp_path, seed_kb
     ):
@@ -2337,7 +2024,7 @@ class TestKnowledgeBaseAPI:
         assert data["truncated"] is False
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.backend_for_record")
     async def test_get_metadata_keys_caps_distinct_values_per_key(
         self, mock_create_backend, mock_root, client: AsyncClient, logged_in_headers, tmp_path, seed_kb
     ):
@@ -2396,22 +2083,16 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 200, response.json()
         assert response.json() == {"keys": {}, "truncated": False}
 
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.backend_for_record")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_metadata_keys_reach_chroma_cloud_without_a_local_directory(
+    async def test_metadata_keys_reach_opensearch_without_a_local_directory(
         self, mock_root, mock_create_backend, client: AsyncClient, logged_in_headers, tmp_path, seed_kb
     ):
-        """A Chroma **Cloud** KB must not be short-circuited by a missing local dir.
-
-        Both Chroma modes are stored as ``backend_type="chroma"`` and the
-        discriminator is ``backend_config["mode"]``. A bare ``backend_type ==
-        CHROMA`` check therefore read a cloud KB as local and returned an empty
-        key set off a directory that should never exist for it.
-        """
+        """Remote metadata listing must not require any local storage directory."""
         from lfx.base.knowledge_bases.backends.base import IngestedDocument
 
         mock_root.return_value = tmp_path
-        await seed_kb("Cloud_KB", backend_type="chroma", backend_config={"mode": "cloud"})
+        await seed_kb("Cloud_KB", backend_type="opensearch")
 
         async def _iter_documents(*, batch_size: int = 1000, include_embeddings: bool = False):  # noqa: ARG001
             yield [IngestedDocument(content="c", metadata={"source_metadata": json.dumps({"tag": "invoice"})})]
@@ -2428,7 +2109,7 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 200, response.json()
         assert response.json()["keys"] == {"tag": ["invoice"]}
         # Cloud KBs resolve no local path at all.
-        assert mock_create_backend.call_args.kwargs["kb_path"] is None
+        assert mock_create_backend.call_args.args[0].backend_type == "opensearch"
 
 
 @pytest.mark.usefixtures("client")
@@ -2444,10 +2125,10 @@ class TestPerformIngestionTask:
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
-    @patch("langflow.api.utils.kb_helpers.create_backend")
+    @patch("langflow.api.utils.kb_helpers.backend_for_name")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
-    @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics")
+    @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics_via_backend", new_callable=AsyncMock)
     async def test_perform_ingestion_success(
         self,
         mock_update,
@@ -2518,7 +2199,7 @@ class TestPerformIngestionTask:
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
-    @patch("langflow.api.utils.kb_helpers.create_backend")
+    @patch("langflow.api.utils.kb_helpers.backend_for_name")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
     @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics_via_backend", new_callable=AsyncMock)
@@ -2568,7 +2249,7 @@ class TestPerformIngestionTask:
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
-    @patch("langflow.api.utils.kb_helpers.create_backend")
+    @patch("langflow.api.utils.kb_helpers.backend_for_name")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
     @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics_via_backend", new_callable=AsyncMock)
@@ -2639,7 +2320,7 @@ class TestPerformIngestionTask:
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
-    @patch("langflow.api.utils.kb_helpers.create_backend")
+    @patch("langflow.api.utils.kb_helpers.backend_for_name")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
     @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics_via_backend", new_callable=AsyncMock)
@@ -2696,11 +2377,8 @@ class TestPerformIngestionTask:
         mock_create_run.assert_awaited_once()
         assert mock_create_run.await_args.kwargs["kb_id"] == kb_record.id
         mock_create_backend.assert_called_once()
-        assert mock_create_backend.call_args.args == ("opensearch",)
-        backend_kwargs = mock_create_backend.call_args.kwargs
-        assert backend_kwargs["backend_config"] == kb_record.backend_config
-        assert backend_kwargs["embedding_function"] is mock_embeddings
-        assert backend_kwargs["user_id"] == current_user.id
+        assert mock_create_backend.call_args.args == (current_user.id, "test_kb")
+        assert mock_create_backend.call_args.kwargs["embedding_function"] is mock_embeddings
         # Metrics are recounted straight from the backend into a scratch dict,
         # then written to the row — there is no sidecar to read them back from.
         mock_update_metrics.assert_awaited_once()
@@ -2709,7 +2387,7 @@ class TestPerformIngestionTask:
     @patch("langflow.api.utils.ingestion_run_service.finalize_run", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.mark_running", new_callable=AsyncMock)
     @patch("langflow.api.utils.ingestion_run_service.create_run", new_callable=AsyncMock)
-    @patch("langflow.api.utils.kb_helpers.create_backend")
+    @patch("langflow.api.utils.kb_helpers.backend_for_name")
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.cleanup_chroma_chunks_by_job", new_callable=AsyncMock)
     async def test_perform_ingestion_rollback(

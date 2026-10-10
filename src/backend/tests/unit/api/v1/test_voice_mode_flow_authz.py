@@ -369,7 +369,9 @@ async def test_voice_websocket_keeps_target_scope_through_openai_socket(endpoint
         "client_websocket": websocket,
         "flow_id": str(flow.id),
         "background_tasks": BackgroundTasks(),
-        "session": SimpleNamespace(),
+        # authenticate_and_get_openai_key is mocked above, but release_db_transaction()
+        # right after it is real production code -- it needs a session that can commit.
+        "session": SimpleNamespace(commit=AsyncMock()),
         "session_id": "voice-target-scope",
     }
     if endpoint == "flow_as_tool":

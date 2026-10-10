@@ -224,6 +224,15 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Knowledge storage provider defaults.** `DBProviderInput` defaults to the
+  application-provided SQLite backend. Its public name, fields and signature
+  remain unchanged, so `BUNDLE_API_VERSION` remains `1`. Recognized historical
+  Knowledge and Memory sources resolve to current implementations without
+  loading the retired Chroma SDKs. Custom component source remains untouched.
+  Extension backends that implement only `add_documents` retain their guarded
+  ingestion path. Writing precomputed embeddings remains optional for ordinary
+  ingestion and required for migration imports.
+
 ### 2026-09-24 — Async file loader dispatch
 
 Graph outputs and the Read File tool now await `@delegates_to` coroutine methods

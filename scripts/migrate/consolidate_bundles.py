@@ -73,7 +73,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "yahoosearch": ["yfinance==0.2.50"],
     "wolframalpha": ["wolframalpha==5.1.3", _LC_COMMUNITY],
     # --- tranche 2: vector stores ---
-    "chroma": ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6"],
+    "chroma": [],  # Retired SDK, retained component compatibility alias.
     "clickhouse": ["clickhouse-connect==0.7.19", _LC_COMMUNITY],
     "couchbase": ["couchbase>=4.2.1", _LC_COMMUNITY],
     "milvus": ["langchain-milvus~=0.3.2"],
@@ -147,9 +147,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     # "google" graduated to the standalone lfx-google bundle so Gemini is
     # available in every default Langflow install.
     "vertexai": ["langchain-google-vertexai>=3.2.0"],
-    "altk": [
-        "agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
-    ],
+    "altk": [],  # Retired in 1.13.0. Keep saved-node and extra compatibility.
     "codeagents": [
         # OpenDsStar is a manual opt-in: its DiskCache dependency has no released fix.
         # Keep the component code, but never add it to managed extras or aggregates.
@@ -173,6 +171,8 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         # Temporary compatibility valve: newer releases require cryptography<49.
         "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
         "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
+        "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform != 'darwin' and python_version < '3.14'",
+        "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
     ],
     # --- tranche 9: langwatch evaluator (pure httpx REST; the langwatch SDK extra
     # is for the tracing service, not this component) ---
@@ -206,7 +206,7 @@ TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
 # generated aggregate extras because Langflow already installs them directly.
 COMPATIBILITY_EXTRAS = {
     "azure": ["lfx-azure>=0.1.0,<1.0.0"],
-    "google": ["lfx-google>=0.1.0,<1.0.0"],
+    "google": ["lfx-google>=0.2.5,<1.0.0"],
     "ollama": ["lfx-ollama>=0.1.0,<1.0.0"],
 }
 

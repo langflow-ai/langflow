@@ -280,12 +280,14 @@ describe("KnowledgeBaseUploadModal", () => {
       expect(screen.getByText("Embedding Model")).toBeInTheDocument();
     });
 
-    it("renders DB Provider selector defaulting to Chroma", () => {
+    it("renders DB Provider selector defaulting to SQLite", () => {
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
       });
       expect(screen.getByText("DB Provider")).toBeInTheDocument();
-      expect(screen.getByTestId("kb-db-provider")).toHaveTextContent("Chroma");
+      expect(screen.getByTestId("kb-db-provider")).toHaveTextContent(
+        "SQLite Local",
+      );
     });
 
     it("renders Ingest Content section open by default", () => {
@@ -653,7 +655,7 @@ describe("KnowledgeBaseUploadModal", () => {
           column_config: [
             { column_name: "text", vectorize: true, identifier: true },
           ],
-          // Omit the implicit Chroma choice so the server can apply its
+          // Omit the implicit SQLite choice so the server can apply its
           // configured default backend.
           backend_type: undefined,
           backend_config: {},
