@@ -127,6 +127,7 @@ def _ran(config_dir: Path, step: str = "copy_database", **run: Any) -> None:
     """Add to the record a run that has ended, as the endpoints leave one."""
     path = config_dir / "migrations" / "migration.json"
     record = json.loads(path.read_text())
+    saved = record["destinations"]
     record["steps"][step] = {
         "run_id": uuid4().hex,
         "status": "done",
@@ -135,6 +136,7 @@ def _ran(config_dir: Path, step: str = "copy_database", **run: Any) -> None:
         "started_at": "2026-09-30T01:00:00+00:00",
         "finished_at": "2026-09-30T01:05:00+00:00",
         "pause": PAUSED_BEFORE_THE_CHECK["frozen_at"],
+        "destination": {part: saved[part] for part in migration_module._WRITES_TO[step] if part in saved},
         "report": COPIED,
         "error": None,
         "decision_needed": None,
@@ -420,6 +422,8 @@ async def test_a_copy_the_destination_refuses_blocks_the_step_with_the_commands_
         "finished_at": run["finished_at"],
         # The pause that let it in.
         "pause": PAUSED_BEFORE_THE_CHECK["frozen_at"],
+        # Where the copy was sent, as the record names it: with no user and no password.
+        "destination": {"database": {"location": "db.internal:5432/langflow"}},
         "report": {key: value for key, value in report.items() if key not in ("event", "seq")},
         "error": None,
         "decision_needed": None,
@@ -532,6 +536,123 @@ async def test_a_copy_is_stopped_as_it_starts_when_what_let_it_in_has_changed(
     assert "copy_database" not in migration["record"]["steps"]
     steps = {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}
     assert (steps["pause"], steps["copy_database"]) == (pause, copy)
+
+
+@pytest.mark.parametrize(
+    ("part", "another", "to_make_again"),
+    [
+        # Nothing at all was copied to another database, and the two later copies change rows in it.
+        (
+            "database",
+            {"location": "db.internal:5432/another"},
+            {"copy_database", "copy_knowledge_bases", "copy_files"},
+        ),
+        # The vectors went into the store the record named then.
+        ("vectors", {"kind": "another store"}, {"copy_knowledge_bases"}),
+        # No file was copied to another folder of the bucket.
+        ("files", {"bucket": "acme", "prefix": "elsewhere", "endpoint_url": None}, {"copy_files"}),
+    ],
+)
+async def test_a_copy_made_to_another_destination_blocks_its_step(
+    client, logged_in_headers_super_user, active_super_user, config_dir, part, another, to_make_again
+):
+    record = await _three_copies_made(config_dir, active_super_user.id)
+    saved = json.loads(record.read_text())
+    saved["destinations"][part] = another
+    record.write_text(json.dumps(saved))
+
+    steps = await _steps(client, logged_in_headers_super_user)
+
+    # Each copy is held to the parts of the destination it writes to, and to no other.
+    copies = ("copy_database", "copy_knowledge_bases", "copy_files")
+    changed = ("blocked", "destination_changed")
+    assert {step: steps[step] for step in copies} == {
+        step: changed if step in to_make_again else ("done", None) for step in copies
+    }
+
+
+async def test_the_same_destination_saved_again_keeps_the_copies_and_another_takes_its_place(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers = logged_in_headers_super_user
+    record = await _three_copies_made(config_dir, active_super_user.id)
+    saved = json.loads(record.read_text())
+
+    # The same destination saved again, as after a restart, when the page asks for its password once more.
+    saved["destinations"]["saved_at"] = "2026-09-30T02:00:00+00:00"
+    record.write_text(json.dumps(saved))
+    steps = await _steps(client, headers)
+    assert [steps[step] for step in ("copy_database", "copy_knowledge_bases", "copy_files")] == [("done", None)] * 3
+
+    # Through its endpoint, a destination that is saved takes the place of the one the copies were made to,
+    # whether or not it answers.
+    elsewhere = {"database_url": f"postgresql://{NOWHERE}/elsewhere"}
+    await client.put("api/v1/migration/destinations", json=elsewhere, headers=headers)
+    steps = await _steps(client, headers)
+    assert steps["connect_target"] == ("blocked", "db_unreachable")
+    assert steps["copy_database"] == ("blocked", "destination_changed")
+
+
+@pytest.mark.parametrize(
+    ("location", "copied_to", "saved_now"),
+    [
+        # Another host in the options of the address: postgresql://ignored/langflow?host=one, then ?host=two.
+        ("ignored/langflow", "the identity of host=one", "the identity of host=two"),
+        # Another schema of the same database: ?options=-csearch_path=alpha, then beta.
+        ("db.internal:5432/langflow", "the identity of search_path=alpha", "the identity of search_path=beta"),
+    ],
+)
+async def test_the_same_location_reached_another_way_is_another_destination(
+    client, logged_in_headers_super_user, active_super_user, config_dir, location, copied_to, saved_now
+):
+    headers = logged_in_headers_super_user
+    # Both addresses read the same on the page. The identity saved next to the location tells them apart.
+    await _three_copies_to_make(config_dir, active_super_user.id)
+    record = config_dir / "migrations" / "migration.json"
+    saved = json.loads(record.read_text())
+    saved["destinations"]["database"] = {"location": location, "identity": copied_to}
+    record.write_text(json.dumps(saved))
+    _ran(config_dir)
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    _ran(config_dir, "copy_files", report=UPLOADED)
+    copies = ("copy_database", "copy_knowledge_bases", "copy_files")
+    steps = await _steps(client, headers)
+    assert [steps[step] for step in copies] == [("done", None)] * 3
+
+    saved = json.loads(record.read_text())
+    saved["destinations"]["database"] = {"location": location, "identity": saved_now}
+    record.write_text(json.dumps(saved))
+
+    # Nothing was copied to where the address leads now, and the two later copies change rows there.
+    steps = await _steps(client, headers)
+    assert [steps[step] for step in copies] == [("blocked", "destination_changed")] * 3
+
+
+async def test_a_file_the_admin_kept_in_one_bucket_is_asked_about_again_in_another(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers, user = logged_in_headers_super_user, active_super_user.id
+    await _three_copies_to_make(config_dir, user)
+    _ran(config_dir)
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    conflict = _failed("file_conflict", f"{user}/cat.txt", "keep_bucket_file")
+    report = {**UPLOADED, "ok": False, "counts": {"failed": 1}, "attention": [conflict]}
+    _ran(config_dir, "copy_files", report=report)
+    kept = await _decide(client, headers, "copy_files", "keep_bucket_file", conflict["subject"])
+    assert _states(kept)["copy_files"] == ("done", None)
+
+    # Another bucket is saved, and nothing was copied to it.
+    record = config_dir / "migrations" / "migration.json"
+    saved = json.loads(record.read_text())
+    saved["destinations"]["files"] = {"bucket": "another", "prefix": "files", "endpoint_url": None}
+    record.write_text(json.dumps(saved))
+    assert (await _steps(client, headers))["copy_files"] == ("blocked", "destination_changed")
+
+    # The files are copied to it, and it holds something else under that name too.
+    _ran(config_dir, "copy_files", report=report)
+
+    # What the admin accepted was the first bucket's file. This one is theirs to decide about.
+    assert (await _steps(client, headers))["copy_files"] == ("blocked", "file_conflict")
 
 
 async def test_a_copy_start_does_not_put_back_a_pause_that_another_worker_ended_under_it(
@@ -996,6 +1117,15 @@ async def test_on_postgresql_the_knowledge_bases_are_copied_only_when_this_serve
     assert started.status_code == status
     assert refusal is None or started.json() == refusal
     assert len(migration_runs.list_runs()) == (1 if named else 0)
+
+
+async def _three_copies_made(config_dir: Path, user_id) -> Path:
+    """The same instance with each of its three copies made and done. Hands back the file of the record."""
+    await _three_copies_to_make(config_dir, user_id)
+    _ran(config_dir)
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    _ran(config_dir, "copy_files", report=UPLOADED)
+    return config_dir / "migrations" / "migration.json"
 
 
 async def test_each_copy_waits_for_the_one_before_it_and_a_test_run_completes_nothing(

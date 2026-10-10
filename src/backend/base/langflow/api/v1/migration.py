@@ -575,6 +575,7 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
                 "started_at": read_run(run_id)["started_at"],
                 "finished_at": None,
                 "pause": let_in["pause"],
+                "destination": let_in["destination"],
                 "report": None,
                 "error": None,
                 "decision_needed": None,
@@ -692,11 +693,7 @@ def _copy(step_id: str) -> str:
 
 def _lets_in(record: dict[str, Any], step_id: str) -> dict[str, Any]:
     """What a copy is let in for: the pause that is on, and the saved parts of the destination it writes to."""
-    saved = record.get("destinations") or {}
-    return {
-        "pause": (record.get("pause") or {}).get("frozen_at"),
-        "destination": {part: saved[part] for part in _WRITES_TO[step_id] if part in saved},
-    }
+    return {"pause": (record.get("pause") or {}).get("frozen_at"), "destination": _destination(record, step_id)}
 
 
 def _find_run(step_id: str, run_id: str) -> dict[str, Any]:
@@ -1144,8 +1141,17 @@ def _copy_step(record: dict[str, Any], step_id: str) -> tuple[str, str | None]:
     database = record["steps"].get("copy_database") or run
     if datetime.fromisoformat(database["started_at"]) > datetime.fromisoformat(run["started_at"]):
         return "current", None
+    # A copy that went somewhere else is not a copy to where the data goes now.
+    if run.get("destination") != _destination(record, step_id):
+        return "blocked", "destination_changed"
     code = blocking_code(step_id, run, record.get("decisions", []))
     return ("blocked", code) if code else ("done", None)
+
+
+def _destination(record: dict[str, Any], step_id: str) -> dict[str, Any]:
+    """Where the record says a copy writes, without how the test of each part went or who saved it."""
+    saved = record.get("destinations", {})
+    return {part: saved[part] for part in _WRITES_TO[step_id] if part in saved}
 
 
 def _during_pause(record: dict[str, Any], moment: str | None) -> bool:
