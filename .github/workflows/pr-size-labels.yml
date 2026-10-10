@@ -1,0 +1,75 @@
+name: PR Size Labels
+
+# Applies one size:* label based on lines changed, ignoring generated files.
+# pull_request_target is used only so fork PRs can be labeled; this workflow
+# never checks out or runs PR code.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pr-size-labels-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply size label
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const GENERATED = [
+              /(^|\/)uv\.lock$/,
+              /(^|\/)package-lock\.json$/,
+              /^src\/lfx\/src\/lfx\/_assets\//,
+              /^src\/backend\/base\/langflow\/initial_setup\/starter_projects\//,
+            ];
+            // [label, exclusive upper bound on lines changed]
+            const SIZES = [
+              ['size:XS', 10],
+              ['size:S', 30],
+              ['size:M', 100],
+              ['size:L', 500],
+              ['size:XL', 1000],
+              ['size:XXL', Infinity],
+            ];
+            const pull_number = context.payload.pull_request.number;
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...context.repo,
+              pull_number,
+              per_page: 100,
+            });
+            const counted = files.filter(f => !GENERATED.some(re => re.test(f.filename)));
+            const lines = counted.reduce((sum, f) => sum + f.additions + f.deletions, 0);
+            const [label] = SIZES.find(([, max]) => lines < max);
+            console.log(`${lines} lines changed in ${counted.length} non-generated files -> ${label}`);
+
+            const { data: current } = await github.rest.issues.listLabelsOnIssue({
+              ...context.repo,
+              issue_number: pull_number,
+            });
+            const currentSizes = current.map(l => l.name).filter(n => n.startsWith('size:'));
+            for (const stale of currentSizes.filter(n => n !== label)) {
+              await github.rest.issues.removeLabel({ ...context.repo, issue_number: pull_number, name: stale });
+            }
+            if (currentSizes.includes(label)) {
+              return;
+            }
+            await github.rest.issues.addLabels({ ...context.repo, issue_number: pull_number, labels: [label] });
+
+            if (label === 'size:XXL') {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: pull_number,
+                body: [
+                  `This PR changes ${lines} lines across ${counted.length} files (generated files excluded).`,
+                  'Large PRs are harder to review and can exceed the file limit for automated review.',
+                  'Consider splitting it into smaller PRs if the changes are separable.',
+                ].join(' '),
+              });
+            }

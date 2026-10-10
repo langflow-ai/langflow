@@ -1,0 +1,57 @@
+name: Component Compatibility Gate
+
+# Fails when a PR removes a component, input, or output from component_index.json,
+# because saved flows reference them by name. Add the 'breaking change' label to
+# a PR to acknowledge an intentional break; the gate then reports warnings only.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    paths:
+      - "src/lfx/src/lfx/_assets/component_index.json"
+      - "scripts/ci/check_component_compat.py"
+      - ".github/workflows/component-compat-gate.yml"
+
+concurrency:
+  group: component-compat-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check component compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Extract component indexes
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set -euo pipefail
+          INDEX=src/lfx/src/lfx/_assets/component_index.json
+          git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          MERGE_BASE=$(git merge-base HEAD "origin/${BASE_REF}")
+          git show "origin/${BASE_REF}:${INDEX}" > "${RUNNER_TEMP}/base.json"
+          git show "${MERGE_BASE}:${INDEX}" > "${RUNNER_TEMP}/merge_base.json"
+          cp "${INDEX}" "${RUNNER_TEMP}/head.json"
+
+      - name: Compare component indexes
+        env:
+          ALLOW_BREAKING: ${{ contains(github.event.pull_request.labels.*.name, 'breaking change') }}
+        run: |
+          set -euo pipefail
+          ARGS=(
+            --base "${RUNNER_TEMP}/base.json"
+            --merge-base "${RUNNER_TEMP}/merge_base.json"
+            --head "${RUNNER_TEMP}/head.json"
+          )
+          if [ "${ALLOW_BREAKING}" = "true" ]; then
+            ARGS+=(--allow-breaking)
+          fi
+          python3 scripts/ci/check_component_compat.py "${ARGS[@]}"

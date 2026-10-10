@@ -1,0 +1,31 @@
+name: Mark Stale PRs
+
+# Labels PRs with no activity for 60 days and leaves a comment. It never closes
+# PRs and never touches issues. Any update to the PR removes the label.
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v11
+        with:
+          days-before-issue-stale: -1
+          days-before-issue-close: -1
+          days-before-pr-stale: 60
+          days-before-pr-close: -1
+          stale-pr-label: stale
+          exempt-pr-labels: "community,DO NOT MERGE"
+          exempt-draft-pr: true
+          operations-per-run: 100
+          stale-pr-message: >
+            This PR has had no activity for 60 days, so it has been labeled `stale`.
+            It will not be closed automatically. Push a commit or leave a comment to
+            remove the label, or close the PR if it is no longer needed.

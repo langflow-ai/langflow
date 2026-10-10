@@ -1,0 +1,40 @@
+# Path-based area labels applied by .github/workflows/pr-area-labels.yml.
+# Labels use the area: prefix so they never match a release-notes category in
+# .github/release.yml; those categories key off the conventional-commit labels.
+area:frontend:
+  - changed-files:
+      - any-glob-to-any-file: "src/frontend/**"
+
+area:backend:
+  - changed-files:
+      - any-glob-to-any-file: "src/backend/**"
+
+area:lfx:
+  - changed-files:
+      - any-glob-to-any-file: "src/lfx/**"
+
+area:components:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/lfx/src/lfx/components/**"
+          - "src/bundles/**"
+
+area:migrations:
+  - changed-files:
+      - any-glob-to-any-file: "src/backend/base/langflow/alembic/**"
+
+area:auth:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/backend/base/langflow/services/auth/**"
+          - "src/backend/base/langflow/services/authorization/**"
+
+area:docs:
+  - changed-files:
+      - any-glob-to-any-file: "docs/**"
+
+area:ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "scripts/ci/**"
