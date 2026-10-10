@@ -31,6 +31,17 @@ def test_uninspectable_system_process_does_not_block_local_upgrade(denied_method
     assert not maintenance._legacy_process(process)
 
 
+def _started_by_this_run(pid: int) -> bool:
+    """Whether this test run started the process: xdist gives its workers the id of the run, and a child inherits it."""
+    run = os.environ.get("PYTEST_XDIST_TESTRUNUID")
+    try:
+        return run is not None and psutil.Process(pid).environ().get("PYTEST_XDIST_TESTRUNUID") == run
+    except psutil.NoSuchProcess:
+        return True
+    except psutil.AccessDenied:
+        return False
+
+
 async def test_native_first_start_with_real_platform_checks(database, monkeypatch):
     """Exercise the actual process, mount and durability checks, including on Windows CI."""
     source = storage_tests.native_source(database)
@@ -40,6 +51,13 @@ async def test_native_first_start_with_real_platform_checks(database, monkeypatc
         session.add(row)
         await session.commit()
     monkeypatch.setattr(coordinator, "check_local_upgrade", automatic.check_local_upgrade)
+    # Other tests of this run start `python -m langflow` commands, and the scan takes each one for a worker.
+    scan = automatic.remaining_legacy_workers
+    monkeypatch.setattr(
+        automatic,
+        "remaining_legacy_workers",
+        lambda *, excluded_pids: [pid for pid in scan(excluded_pids=excluded_pids) if not _started_by_this_run(pid)],
+    )
     await coordinator.fence_legacy_records()
     await coordinator.run_pending()
     current = await storage_tests.read_kb(database, row.id)
