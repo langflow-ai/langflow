@@ -33,118 +33,167 @@ reviews:
     - "!.secrets.baseline"
     - "!scripts/ci/bundle_profile_locks/**"
     - "!**/package-lock.json"
-  # Ordered by impact: each rule targets a bug class that recurred in recent fix PRs
-  # into main and release-* (sample: 100 fix PRs, #15211-#15640). Every rule whose
-  # glob matches a file applies to it.
+  # Each rule targets bug classes that recurred in fix PRs and regressions (regressions/*.yaml)
+  # into main and release-*. Every rule whose glob matches a file applies to it. Helper names
+  # are the canonical ones current code uses; keep them in sync when those modules change.
   path_instructions:
-    - path: "src/**/*.py"
+    - path: "{src/backend/base/langflow,src/lfx/src,src/bundles/*/src}/**/*.py"
       instructions: |
-        Security (the most common class of shipped fixes). Flag:
-        - Outbound HTTP to a URL that comes from user input, flow config or a component field without
-          the SSRF helpers in `lfx.utils.ssrf_httpx` / `lfx.utils.ssrf_requests`
-          (`ssrf_protected_httpx_client_kwargs_for_url`, `validate_url_for_ssrf_or_raise`, `ssrf_safe_get`),
-          or with redirects followed.
-        - Filesystem paths, filenames or storage keys from user input that bypass
-          `lfx.utils.file_path_security` (`enforce_local_file_access`, `validate_storage_key`), and
-          filenames used without rejecting control characters or normalizing Unicode.
-        - Environment lookups by a user-supplied name that bypass `lfx.utils.env_var_security.safe_getenv`.
-        - URLs, tokens or credentials written to logs, error messages or API responses without
+        Flag these security mistakes:
+        - Outbound HTTP to a URL from user input, a flow field or a component field that bypasses the SSRF layer:
+          `lfx.utils.ssrf_protection.validate_and_resolve_url` with pinned IPs or
+          `lfx.utils.ssrf_transport.SSRFProtectedTransport`; `lfx.utils.ssrf_httpx`
+          (`ssrf_protected_httpx_client_kwargs_for_url`, `validate_url_for_ssrf_or_raise`) for SDK clients;
+          `lfx.utils.ssrf_requests.ssrf_safe_get` for `requests`; `lfx.base.models.provider_ssrf` for provider
+          base URLs; `enforce_kb_destination` for knowledge-base destinations. Redirects must be re-validated on
+          every hop. Don't flag URLs that come from deployment settings or operator environment variables.
+        - Local paths from user input that bypass `enforce_local_file_access(path, scope_ids=component_file_access_scopes(self))`,
+          or storage keys that bypass `validate_storage_key(self, path)` (both in `lfx.utils.file_path_security`).
+          Flag a missing `scope_ids`, and filenames used without rejecting control characters or normalizing Unicode.
+        - `os.getenv` or `os.environ` lookups whose variable name comes from a flow field, tweak or request instead
+          of `lfx.utils.env_var_security.safe_getenv`. Fixed, code-chosen names are fine, and the
+          global-variable-to-environment fallback is intentional.
+        - URLs, tokens or credentials in logs, error messages, API responses or trace spans without
           `lfx.utils.url_redaction` (`sanitize_url_for_display`, `redact_urls_in_text`).
-        - User-controlled values reaching subprocess arguments, MCP stdio commands or runtime options.
-        - Security or permission checks that allow the request when the check itself errors. They must fail closed.
-        Also flag error handling that hides failures: broad `except` blocks that swallow exceptions, silent
-        fallbacks to default values, or logging an error and continuing as if the operation succeeded.
-    - path: "src/lfx/src/lfx/components/**/*.py"
+        - User-controlled values reaching subprocess arguments, MCP stdio commands or interpreter options.
+          Code-execution features (Python REPL, jq, mustache, custom components) must go through
+          `lfx.utils.python_repl_security`, `jq_security`, `mustache_security` and the custom-component policy;
+          flag only paths that bypass them.
+        - Security or permission checks that allow the request when the check errors, or when the owner or
+          permission data is missing (for example, an owner of None). They must fail closed.
+        - A new restriction that breaks a documented allowlist: every `LANGFLOW_SSRF_ALLOWED_HOSTS` form
+          (hostname, wildcard, CIDR, IP literal) and other allowlist settings must keep working, with a test for
+          the permitted case.
+        Flag a swallowed exception only where it affects correctness: a security or permission check, a data write,
+        or a success response after a failed operation. Don't flag `except Exception` that carries a
+        `noqa: BLE001` reason such as best-effort audit, telemetry, cleanup or optional imports.
+    - path: "{src/lfx/src/lfx/components,src/bundles/*/src}/**/*.py"
       instructions: |
-        Component fixes are the second most common class of shipped bug, and they rarely get review comments.
-        Review the component's runtime behavior, not only its style:
-        - Input handling: type coercion (numeric vs. string values, lists vs. scalars), empty, None and missing
-          values, and defaults that differ between the UI and API or tool-mode callers.
-        - In tool mode, values the user configured on the component must not be silently overridden or
-          dropped by tool-call arguments, and vice versa.
-        - Side effects such as ingestion, writes or external calls must run once per execution and leave
-          consistent state when a run is cancelled or fails partway.
-        - Outputs must match their declared types on every code path, including error paths.
-        Saved flows match components by class name and connect edges by input and output `name`. Flag any
-        renamed or removed component class, input name or output name as a breaking change.
-    - path: "src/bundles/**/components/**/*.py"
+        Review the component's runtime behavior, not only its style. Flag:
+        - Input handling bugs: numeric vs. string values, lists vs. scalars, empty, None and missing values, and
+          defaults that differ between UI, API and tool-mode callers.
+        - Tool-mode arguments that silently override or drop values configured on the component, or the reverse.
+        - `getattr(self, name)` where `name` comes from an external schema (MCP tool arguments, tool-call payloads);
+          it can return a method or class attribute. Read the component's inputs instead.
+        - `isinstance` checks against a concrete class that guard cleanup, statistics or teardown; they skip
+          silently when the object is a proxy or wrapper. Check the interface instead.
+        - Side effects (ingestion, writes, external calls) that can run more than once per execution, or leave
+          inconsistent state when a run is cancelled or fails partway.
+        - Outputs that don't return their declared types on every path, including errors.
+        The component compatibility gate reports removed or narrowed inputs and outputs of in-tree lfx
+        components, so don't repeat it. For components under `src/bundles`, flag a renamed or removed component
+        class, `name`, input or output. Deprecating with `legacy = True` and `replacement = [...]` is the
+        intended path; don't flag it.
+    - path: "src/lfx/src/lfx/base/{agents,chains,composio,compressors,data,datastax,document_transformers,embeddings,flow_controls,flow_processing,huggingface,io,langchain_utilities,memory,models,processing,prompts,textsplitters,tools,vectorstores}/**/*.py"
       instructions: |
-        Component fixes are the second most common class of shipped bug, and they rarely get review comments.
-        Review the component's runtime behavior, not only its style:
-        - Input handling: type coercion (numeric vs. string values, lists vs. scalars), empty, None and missing
-          values, and defaults that differ between the UI and API or tool-mode callers.
-        - In tool mode, values the user configured on the component must not be silently overridden or
-          dropped by tool-call arguments, and vice versa.
-        - Side effects such as ingestion, writes or external calls must run once per execution and leave
-          consistent state when a run is cancelled or fails partway.
-        - Outputs must match their declared types on every code path, including error paths.
-        Saved flows match components by class name and connect edges by input and output `name`. Flag any
-        renamed or removed component class, input name or output name as a breaking change.
-    - path: "src/lfx/src/lfx/base/**/*.py"
-      instructions: |
-        Component fixes are the second most common class of shipped bug, and they rarely get review comments.
-        Review the component's runtime behavior, not only its style:
-        - Input handling: type coercion (numeric vs. string values, lists vs. scalars), empty, None and missing
-          values, and defaults that differ between the UI and API or tool-mode callers.
-        - In tool mode, values the user configured on the component must not be silently overridden or
-          dropped by tool-call arguments, and vice versa.
-        - Side effects such as ingestion, writes or external calls must run once per execution and leave
-          consistent state when a run is cancelled or fails partway.
-        - Outputs must match their declared types on every code path, including error paths.
-        Saved flows match components by class name and connect edges by input and output `name`. Flag any
-        renamed or removed component class, input name or output name as a breaking change.
+        These are component base classes, so a change here changes every subclass. Flag changes to inputs,
+        outputs, output types or output methods that subclasses inherit, and check the subclasses that override
+        the changed behavior.
     - path: "src/backend/base/langflow/api/**/*.py"
       instructions: |
-        Missing authorization and cross-user data exposure recur in this directory. Flag:
-        - Routes that read, mutate or execute a user-owned resource without the matching `ensure_*_permission`
-          guard from `langflow.services.authorization.guards`.
+        Flag:
+        - A route that fetches a user-owned resource by id with neither an owner filter
+          (`Model.user_id == current_user.id`) nor a guard: an `ensure_*_permission` guard from
+          `langflow.services.authorization.guards`, a dependency from `api/v1/authz_route_dependencies.py`, or
+          `authorized_or_owner_scoped` from `langflow.services.authorization.fetch`. In OSS the guards are
+          pass-through, so check owner scoping first. Don't flag superuser-only routes or routes that use
+          `ensure_administration_permission`.
+        - A guard denial for a caller who may not read the resource that returns 403 instead of 404
+          (`deny_to_404`, or `deny_to_404_unless_readable` when the caller can read it).
         - List endpoints that don't scope results with `filter_visible_resources` or the
           `restrict_to_owned_or_visible*` / `apply_owned_or_visible*_prefilter` helpers in
-          `langflow.services.authorization.listing`. Personal and other users' resources must not leak into listings.
-        - Fetches by id that don't use `authorized_or_owner_scoped` from `langflow.services.authorization.fetch`,
-          or that return 403 where `deny_to_404` should hide the resource's existence.
-        - Execution endpoints that skip the authenticated-execution policy.
-        - Missing input bounds: request body size, pagination `limit` caps, and validation of ids, enums and
-          free-text fields before they reach queries or storage.
+          `langflow.services.authorization.listing`. Personal and other users' resources must not appear.
+        - Execution entry points (run, webhook, chat, MCP, A2A, voice, workflow v2, triggers) that don't stamp the
+          graph with `stamp_execution_principal(graph, execution_principal_for(...))` from
+          `langflow.api.utils.execution_principal`; a new entry point must also be listed in
+          `scripts/ci/execution_principal_matrix.json`. Public or anonymous paths must keep
+          `validate_catalog_policy_for_flow`, `validate_public_flow_no_code_execution` and
+          `prepare_public_flow_build` from `lfx.utils.flow_validation`.
+        - Chat history, session and message reads or writes keyed by session name alone instead of flow and owner.
+        - A pagination `limit` without a maximum, or an unbounded request body. When a list endpoint gains or
+          lowers a cap or changes sort order, check `src/frontend` consumers that assume the full list or
+          oldest-first order.
     - path: "src/lfx/src/lfx/base/mcp/**"
       instructions: |
-        MCP session leaks have shipped twice without review comments. Flag:
-        - Sessions or subprocesses that are not closed on every error and cancellation path.
-        - Pooled sessions that are reused after the server died instead of being replaced.
-        - Retries without a bound or timeout.
-        - Stdio server configs that bypass the validation in `security.py` and `source_policy.py`.
-    - path: "src/frontend/src/**"
+        Flag:
+        - Sessions or subprocesses not closed on every error and cancellation path, and session reference counts
+          that don't balance on normal disconnect and re-acquire.
+        - A pooled session reused after its server died instead of being replaced.
+        - A `call_tool` retried after a timeout; the server may already have run it. Other retries need a bound
+          and a timeout.
+        - Stdio configs that skip `validate_mcp_stdio_config` (`security.py`) or `validate_mcp_stdio_source_policy`
+          (`source_policy.py`). A validator that returns early when a hardening flag is off must still reject
+          interpreter options such as `node --import` and shell-expansion characters.
+    - path: "src/backend/base/langflow/api/v1/{mcp,mcp_projects,mcp_utils,agentic_mcp,projects_mcp_helpers}.py"
       instructions: |
-        Stale state is half of the frontend bugs that shipped. Flag:
+        Flag:
+        - MCP server names derived from user text without a Unicode-safe, collision-free mapping.
+        - Auto-registration that isn't idempotent across restarts, or that mints an API key without removing
+          the previous one.
+        - Tool input schemas that ignore the API-exposure and allowlist settings, or are derived by running stored
+          component code.
+        - Management responses that echo server credentials or headers, and a missing server that returns 500
+          instead of 404.
+    - path: "{src/lfx/src/lfx/graph,src/lfx/src/lfx/components/flow_controls,src/lfx/src/lfx/base/flow_controls}/**/*.py"
+      instructions: |
+        Flag:
+        - Changes that can run an inactive or unselected branch, or skip an active one. Check loop,
+          conditional-router and `stop()` semantics, including inside grouped components and fan-out.
+        - Checkpoint or human-in-the-loop resume that doesn't restore state such as `user_id`, vertex scheduling
+          and model state exactly once.
+        - Result caches, such as the frozen-vertex cache, that aren't scoped to the executing user.
+    - path: "src/frontend/src/**/*.{ts,tsx}"
+      instructions: |
+        Skip tests and `icons/`. Flag:
         - Mutations that don't invalidate or update the React Query cache entries that display the changed data.
-        - Zustand store updates that can overwrite a concurrent edit (for example, autosave racing a node update).
+        - Zustand store updates that overwrite a concurrent edit (for example, autosave racing a node update), or
+          that discard a whole server response when only part of it is stale.
         - State keyed by session, flow or user that can leak into another session, flow or user.
+        - Click or submit handlers that silently do nothing while data or permissions load; disable the control
+          or queue the action instead.
         - Effects that start polling, timers or subscriptions without cleaning them up.
         Don't comment on styling or naming.
     - path: "src/backend/base/langflow/services/**/*.py"
       instructions: |
         Flag:
-        - Cleanup registered after the resource it cleans up has started, so a failure in between leaks it.
-        - One service's startup or shutdown failure that can take down other services.
-        - Leases, locks or claims that are not released on every error path, and ordering assumptions between
-          concurrent workers.
+        - Cleanup registered after the resource it cleans up has started.
+        - Optional integrations (tracers, plugins) initialized in one `try` block, so one failure skips the rest.
+          Each needs its own guard and a failure logged at a visible level.
+        - Leases, locks or claims not released on every error path, and ordering assumptions between concurrent
+          workers.
         - Background retries without a bound.
         - A database session held open across awaits on network or other external I/O.
+    - path: "src/backend/base/langflow/{main.py,initial_setup/*.py,services/settings/**/*.py,services/database/**/*.py}"
+      instructions: |
+        Startup and upgrade failures are the most common recorded regressions. Flag:
+        - Startup code that needs a writable path, makes network calls or imports optional SDKs at import time.
+        - Code that assumes rows, flows or settings written by an older version have the current shape.
+        - Deletes that cascade differently on PostgreSQL and SQLite.
+        - A new or changed setting without a safe default, or one that only works when an environment variable
+          is set.
     - path: "src/backend/base/langflow/alembic/versions/*.py"
       instructions: |
-        Check that `downgrade()` reverses `upgrade()`, that the migration is safe to re-run against a database
-        where it partially applied, and that it works on both SQLite and PostgreSQL. Flag data-destructive
-        operations (dropping columns or tables, narrowing types) that lack a data-preservation step,
-        timezone-naive datetime handling, and backfills that identify rows by mutable values such as names.
-    - path: ".github/workflows/**"
+        Migrations declare `Phase: EXPAND`, `MIGRATE` or `CONTRACT` (see `alembic/DB-MIGRATION-GUIDE.MD`). Dropping
+        columns or narrowing types is acceptable only in a CONTRACT migration; EXPAND changes must be additive and
+        nullable. Check idempotency (existence checks before create or drop), SQLite and PostgreSQL parity,
+        timezone-aware datetimes, and backfills that identify rows by mutable values such as names. Merge-head
+        migrations with empty bodies are fine. Don't repeat what the `validate-migrations` hook checks.
+    - path: "{pyproject.toml,src/**/pyproject.toml}"
+      instructions: |
+        Flag:
+        - Lower-bound-only ranges on ORM, schema, serialization or protocol SDKs (sqlmodel, sqlalchemy, alembic,
+          pydantic, mcp). Bound the next major version.
+        - A bump that changes inferred column types without a migration in the same PR.
+        - Changes to extras or bundle membership, and changes that break resolution on Python 3.10–3.14.
+    - path: ".github/workflows/*.{yml,yaml}"
       instructions: |
         Flag `pull_request_target` jobs that check out or run PR head code, untrusted `${{ github.event.* }}`
         values interpolated directly into `run:` scripts, and permissions broader than the job needs.
-    - path: "**/tests/**"
+    - path: "{**/tests/**,**/__tests__/**,**/*.test.{ts,tsx},**/*.spec.ts}"
       instructions: |
-        Test comments are the least acted-on review comments in this repo. Only comment when a test cannot fail
-        for the bug it claims to cover, leaks state into other tests, or depends on the network or wall-clock
-        time. Skip style, naming and fixture-organization suggestions.
+        Only comment when a test cannot fail for the bug it claims to cover, leaks state into other tests, or
+        depends on the network or wall-clock time. Naming, coverage and structure are handled by the pre-merge
+        checks; don't repeat them inline.
   abort_on_close: true
   disable_cache: false
   auto_review:
@@ -307,7 +356,7 @@ code_generation:
     path_instructions:
       - path: src/backend/tests/**/*.py
         instructions: We already have a client fixture and use pytest
-      - path: src/frontend/tests/**.ts
+      - path: src/frontend/tests/**/*.ts
         instructions: We use Playwright
       - path: src/frontend/src/**/*.test.ts
         instructions: We use Jest and React Testing Library for unit tests
