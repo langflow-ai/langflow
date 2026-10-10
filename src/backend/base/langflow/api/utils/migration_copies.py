@@ -90,11 +90,7 @@ def copy_environment(step_id: str, source_env: dict[str, str], secrets: dict[str
     secrets is what this worker was given of the destination. Raises KeyError when the
     step needs one that is not there, because the next place to write would be this instance.
     """
-    env = {
-        name: value
-        for name, value in source_env.items()
-        if name in _SOURCE_SETTINGS or not name.startswith(_OWN_SETTINGS)
-    }
+    env = foreign_environment(source_env, keep=_SOURCE_SETTINGS)
     own_database = source_env["LANGFLOW_DATABASE_URL"]
     if step_id == "copy_database":
         env["LANGFLOW_MIGRATION_SOURCE_URL"] = own_database
@@ -113,11 +109,23 @@ def copy_environment(step_id: str, source_env: dict[str, str], secrets: dict[str
             source_env["PGVECTOR_CONNECTION_STRING"] if on_postgresql else env["LANGFLOW_DATABASE_URL"]
         )
         return env
-    files = secrets["files"]
-    env["AWS_ACCESS_KEY_ID"] = files["access_key_id"]
-    env["AWS_SECRET_ACCESS_KEY"] = files["secret_access_key"]
-    # The server's AWS files can name a profile, keys and an endpoint of its own. An empty file takes their place.
-    env["AWS_CONFIG_FILE"] = env["AWS_SHARED_CREDENTIALS_FILE"] = os.devnull
+    return {**env, **bucket_environment(secrets["files"])}
+
+
+def foreign_environment(source_env: dict[str, str], *, keep: tuple[str, ...]) -> dict[str, str]:
+    """The server's environment without its own settings for Langflow, AWS and pgvector, but for the ones named."""
+    return {name: value for name, value in source_env.items() if name in keep or not name.startswith(_OWN_SETTINGS)}
+
+
+def bucket_environment(files: dict[str, Any]) -> dict[str, str]:
+    """What points a command at a bucket with the keys the admin gave for it."""
+    env = {
+        "AWS_ACCESS_KEY_ID": files["access_key_id"],
+        "AWS_SECRET_ACCESS_KEY": files["secret_access_key"],
+        # The server's AWS files can name a profile, keys and an endpoint of its own. An empty file takes their place.
+        "AWS_CONFIG_FILE": os.devnull,
+        "AWS_SHARED_CREDENTIALS_FILE": os.devnull,
+    }
     if files["endpoint_url"]:
         env["AWS_ENDPOINT_URL"] = files["endpoint_url"]
     if files["ca_bundle"]:

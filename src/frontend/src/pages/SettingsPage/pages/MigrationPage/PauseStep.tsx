@@ -1,7 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -15,6 +17,7 @@ import {
   type MigrationJob,
   type MigrationState,
   type MigrationStepState,
+  type MigrationWayBack,
   migrationKeys,
   runSourceChecks,
   useCancelJobMutation,
@@ -22,7 +25,7 @@ import {
   useResumeMutation,
 } from "@/controllers/API/queries/migration";
 import ConfirmationModal from "@/modals/confirmationModal";
-import { CHECK_TOTAL, formatTime, JOB_STATES } from "./catalog";
+import { CHECK_TOTAL, formatTime, hasStarted, JOB_STATES } from "./catalog";
 
 /** The body of "Pause changes": the pause, what it still waits for, and the check that has to pass again once it is on. */
 export function PauseStep({
@@ -362,7 +365,8 @@ export function PausedBanner({ migration }: { migration: MigrationState }) {
               },
             )}
           </p>
-          <ResumeButton />
+          {/* Once the new instance has started, going back takes more than a click: see "If something goes wrong". */}
+          {!hasStarted(migration) && <ResumeButton />}
         </div>
       )}
     </div>
@@ -373,24 +377,109 @@ export function PausedBanner({ migration }: { migration: MigrationState }) {
 export function Recovery({ migration }: { migration: MigrationState }) {
   const { t } = useTranslation();
   const refused = migration.record.pause ?? migration.record.pausing;
+  const started = Boolean(refused) && hasStarted(migration);
   return (
-    <details className="rounded-lg border p-4">
+    // Once the new instance has started, this is where the admin has to look, so it opens by itself.
+    <details className="rounded-lg border p-4" open={started || undefined}>
       <summary className="cursor-pointer text-sm font-medium">
         {t("settings.migration.recovery.title")}
       </summary>
-      <div className="flex flex-col items-start gap-3 pt-3">
-        <p className="text-sm text-muted-foreground">
-          {refused
-            ? t("settings.migration.recovery.paused")
-            : t("settings.migration.recovery.none")}
-        </p>
-        {refused && <ResumeButton />}
-      </div>
+      {started ? (
+        // The admin's word is about one start. After a way back and another start it is asked again.
+        <WayBack
+          key={migration.record.steps.start_target?.confirmed_at}
+          migration={migration}
+        />
+      ) : (
+        <div className="flex flex-col items-start gap-3 pt-3">
+          <p className="text-sm text-muted-foreground">
+            {refused
+              ? t("settings.migration.recovery.paused")
+              : t("settings.migration.recovery.none")}
+          </p>
+          {refused && <ResumeButton />}
+        </div>
+      )}
     </details>
   );
 }
 
-function ResumeButton() {
+/** What going back takes once the new instance has started, and the admin's word that it is done. */
+function WayBack({ migration }: { migration: MigrationState }) {
+  const { t } = useTranslation();
+  // An instance on PostgreSQL shares its database with the new instance, which has updated it.
+  const shared = migration.instance.database.type === "postgresql";
+  const id = useId();
+  const [stopped, setStopped] = useState(false);
+  const [restored, setRestored] = useState(false);
+  return (
+    <div className="flex flex-col items-start gap-3 pt-3">
+      <p id={`${id}-warning`} className="text-sm text-destructive">
+        {t("settings.migration.recovery.started")}
+      </p>
+      <ol className="list-decimal pl-5 text-sm text-muted-foreground">
+        <li>{t("settings.migration.recovery.stopTarget")}</li>
+        <li>
+          {shared
+            ? t("settings.migration.recovery.restore", {
+                location: migration.record.backup?.location ?? "",
+              })
+            : t("settings.migration.recovery.sqliteNote")}
+        </li>
+      </ol>
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id={`${id}-stopped`}
+          checked={stopped}
+          onCheckedChange={(value) => setStopped(value === true)}
+        />
+        <Label htmlFor={`${id}-stopped`} className="text-sm font-normal">
+          {t("settings.migration.recovery.ackStopped")}
+        </Label>
+      </div>
+      {shared && (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id={`${id}-restored`}
+            checked={restored}
+            onCheckedChange={(value) => setRestored(value === true)}
+          />
+          <Label htmlFor={`${id}-restored`} className="text-sm font-normal">
+            {t("settings.migration.recovery.ackRestored")}
+          </Label>
+        </div>
+      )}
+      <ResumeButton
+        back={{
+          target_stopped: true,
+          ...(shared && { database_restored: true }),
+        }}
+        ready={stopped && (!shared || restored)}
+        waitsFor={`${id}-warning`}
+        // The destination keeps the copy and what the new instance wrote, and a copy needs an empty database.
+        // Where the database is shared, the restore put it back as it was.
+        again={shared ? undefined : t("settings.migration.resume.newDatabase")}
+      />
+    </div>
+  );
+}
+
+/**
+ * Turns changes back on, after a second word. `back` is the admin's word about the new instance once it has
+ * started. `ready` is false until they gave it, and `waitsFor` names the text that says what it waits for.
+ */
+function ResumeButton({
+  back,
+  ready = true,
+  waitsFor,
+  again,
+}: {
+  back?: MigrationWayBack;
+  ready?: boolean;
+  waitsFor?: string;
+  /** What the next move takes, said before the admin gives this one up. */
+  again?: string;
+}) {
   const { t } = useTranslation();
   const resume = useResumeMutation();
   const [confirming, setConfirming] = useState(false);
@@ -400,6 +489,8 @@ function ResumeButton() {
         variant="outline"
         size="sm"
         loading={resume.isPending}
+        disabled={!ready}
+        aria-describedby={ready ? undefined : waitsFor}
         onClick={() => setConfirming(true)}
         ignoreTitleCase
       >
@@ -419,12 +510,17 @@ function ResumeButton() {
         confirmationText={t("settings.migration.resume.confirmAction")}
         onConfirm={() => {
           setConfirming(false);
-          resume.mutate();
+          resume.mutate(back);
         }}
         size="x-small"
       >
         <ConfirmationModal.Content>
-          {t("settings.migration.resume.confirmBody")}
+          {t(
+            back
+              ? "settings.migration.resume.confirmBodyStarted"
+              : "settings.migration.resume.confirmBody",
+          )}
+          {again && ` ${again}`}
         </ConfirmationModal.Content>
       </ConfirmationModal>
     </>

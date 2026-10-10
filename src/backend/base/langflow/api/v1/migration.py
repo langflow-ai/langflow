@@ -59,6 +59,13 @@ from langflow.api.utils.migration_runs import (
     read_run,
     start_run,
 )
+from langflow.api.utils.migration_target import (
+    CHECK_STEP,
+    check_command,
+    check_environment,
+    check_outcome,
+    start_settings,
+)
 from langflow.cli.migration_preflight import check_target_version
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.file.model import File
@@ -103,8 +110,8 @@ _LATER_STEPS = (
     "copy_database",
     "copy_knowledge_bases",
     "copy_files",
-    "start_target",
     "check_target",
+    "start_target",
 )
 # A report line holds every check's problems, which can pass asyncio's 64 KiB default.
 _LINE_LIMIT = 16 * 1024 * 1024
@@ -174,6 +181,19 @@ class RunRequest(BaseModel):
     dry_run: bool = False
 
 
+class ResumeRequest(BaseModel):
+    # What the admin says before changes come back on, once the new instance was started.
+    target_stopped: bool = False
+    database_restored: bool = False
+
+
+class AcceptRequest(BaseModel):
+    # The admin read what the check of the copy found different, and it is what they expect.
+    accept_differences: bool = False
+    # The check whose report they read. A page sends back the run_id that the report came with.
+    run_id: str | None = None
+
+
 class DecisionRequest(BaseModel):
     step: str
     kind: str
@@ -193,6 +213,7 @@ async def run_checks(request: CheckRequest, admin: Superuser) -> StreamingRespon
 
     Read-only, so it is safe to run while the instance serves traffic.
     """
+    _require_not_started(_read_record())
     # Admins paste what the target shows, such as "Langflow v1.13.0".
     version = re.sub(r"^(langflow\s+)?v?", "", request.target_version.strip(), flags=re.IGNORECASE)
     verdict = check_target_version(version)
@@ -231,6 +252,7 @@ async def run_checks(request: CheckRequest, admin: Superuser) -> StreamingRespon
 
 @router.post("/accepted-findings")
 async def accept_finding(request: FindingRequest, admin: Superuser) -> dict[str, Any]:
+    _require_not_started(_read_record())
     if request.name not in ACCEPTABLE_FINDINGS:
         raise HTTPException(status_code=400, detail={"code": "not_acceptable"})
     record = _read_record()
@@ -256,6 +278,7 @@ async def accept_finding(request: FindingRequest, admin: Superuser) -> dict[str,
 @router.delete("/accepted-findings")
 async def withdraw_finding(name: str, admin: Superuser) -> dict[str, Any]:
     record = _read_record()
+    _require_not_started(record)
     record["accepted_findings"] = [finding for finding in record["accepted_findings"] if finding["name"] != name]
     _write_record(record)
     await logger.ainfo(f"Migration: user_id={admin.id} withdrew the acceptance of '{name}'")
@@ -333,12 +356,24 @@ async def pause_changes(request: Request, admin: Superuser) -> dict[str, Any]:
 
 
 @router.delete("/pause")
-async def resume_changes(admin: Superuser) -> dict[str, Any]:
-    """End the pause. What was checked or copied during it no longer counts, because later changes are in none of it."""
-    ended = False
+async def resume_changes(admin: Superuser, request: ResumeRequest | None = None) -> dict[str, Any]:
+    """End the pause. What was checked or copied during it no longer counts, because later changes are in none of it.
+
+    Once the new instance was started, two instances would take changes. So the admin first says
+    that the new instance is stopped. An instance on PostgreSQL shares its database with the new
+    one, which has written to it since, so there the admin also says that the database is
+    restored from the backup.
+    """
+    said = request or ResumeRequest()
+    shared = make_url(get_db_service().database_url).get_backend_name() == "postgresql"
+    ended = after_start = False
 
     def end(record: dict[str, Any]) -> bool:
-        nonlocal ended
+        nonlocal ended, after_start
+        # Both are worked out again on each try: another worker may have saved a start in between.
+        ended, after_start = False, _started(record) is not None
+        if after_start and not (said.target_stopped and (said.database_restored or not shared)):
+            return False
         # A pause that still waited refuses changes as well, so it ends here too.
         paused, pausing = record.pop("pause", None), record.pop("pausing", None)
         ended = bool(paused or pausing)
@@ -346,8 +381,13 @@ async def resume_changes(admin: Superuser) -> dict[str, Any]:
 
     # Done again on what another worker saved in between: turning changes back on must not be lost.
     record = _save(end)
+    if after_start and not ended:
+        raise HTTPException(status_code=409, detail={"code": "new_instance_running"})
     if ended:
-        await logger.ainfo(f"Migration: user_id={admin.id} resumed changes to this instance")
+        said_so = ""
+        if after_start:
+            said_so = ", saying that the new instance is stopped" + (" and the database restored" if shared else "")
+        await logger.ainfo(f"Migration: user_id={admin.id} resumed changes to this instance{said_so}")
     return await _state(record)
 
 
@@ -366,6 +406,9 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
         errors = exc.errors(include_url=False, include_context=False, include_input=False)
         detail = [{**error, "loc": ("body", *error["loc"])} for error in errors]
         raise HTTPException(status_code=422, detail=detail) from None
+    # The new instance runs on the destination that is saved. Nothing here reads it or writes to it again,
+    # so there is nothing to test and no secret to give back.
+    _require_not_started(_read_record())
     instance = await _instance()
     needed = _needed_destinations(instance)
     sent = {"database": request.database_url, "vectors": request.vectors, "files": request.files}
@@ -435,6 +478,8 @@ async def save_destinations(http_request: Request, admin: Superuser) -> dict[str
         parts["files"] = {"bucket": files.bucket, "prefix": files.prefix, "endpoint_url": keys["endpoint_url"]}
     # A test can take seconds. The record is read only now, so that what other requests saved meanwhile is kept.
     record = _read_record()
+    # The start may have been confirmed while the tests ran.
+    _require_not_started(record)
     saved = record.setdefault("destinations", {})
     before = (saved.get("database") or {}).get("identity")
     if "database" in parts and "vectors" not in parts and parts["database"]["identity"] != before:
@@ -472,6 +517,7 @@ async def verify_secret_key(request: FingerprintRequest, admin: Superuser) -> di
     starts on another key cannot open any saved credential, and says nothing about it.
     """
     record = _read_record()
+    _require_not_started(record)
     key = get_settings_service().auth_settings.SECRET_KEY.get_secret_value()
     fingerprint = hashlib.sha256(key.encode()).hexdigest()[:_FINGERPRINT_LENGTH]
     # In constant time, so a refusal says nothing about how much of a guess was right.
@@ -510,6 +556,7 @@ async def confirm_backup(request: BackupRequest, admin: Superuser) -> dict[str, 
     state = await _state(_read_record())
     _require_unlocked(state, "backup")
     record = _read_record()
+    _require_not_started(record)
     downloaded = (record.get("backup") or {}).get("database_downloaded_at")
     # A SQLite database is backed up by the copy this server hands out, so without one from this pause
     # there is nothing to confirm. PostgreSQL is backed up with its own tools.
@@ -526,6 +573,140 @@ async def confirm_backup(request: BackupRequest, admin: Superuser) -> dict[str, 
     return await _state(record)
 
 
+@router.post(f"/steps/{CHECK_STEP}/runs", status_code=202)
+async def start_check(admin: Superuser) -> dict[str, str]:
+    """Start the check of the copy: Langflow's own integrity check, pointed at what the copies wrote.
+
+    It runs before the new instance is started, while the destination holds what the copies left
+    there and nothing else, so a copy that went well reads the same as this instance. It reads the
+    destination and writes nothing there. Like a copy it is a process of its own, followed and
+    stopped through the same two routes.
+    """
+    record = _read_record()
+    state = await _state(record)
+    _require_unlocked(state, CHECK_STEP)
+    _require_reached(state, CHECK_STEP)
+    # The new instance has written to the destination since, so it no longer reads as the copies left it.
+    _require_not_started(record)
+    needed, skipped = _needs(state["instance"])
+    let_in = _check_reads(record, needed)
+    held = _secrets.get("for") or {}
+    # The knowledge base store has no secret of its own: it is the destination database.
+    if any(held.get(part) != saved for part, saved in let_in["destination"].items() if part != "vectors"):
+        raise HTTPException(status_code=409, detail={"code": "secrets_missing"})
+    # The new instance has folders of its own. The check is given an empty one, so that it reads
+    # nothing of this instance's. The folder stays empty: the check only reads, and it saves no key.
+    folder = _record_path().parent / "new-instance"
+    folder.mkdir(parents=True, exist_ok=True)
+    files = state["instance"]["files"]
+    try:
+        env = check_environment(
+            _source_env(), _secrets, let_in["destination"], files if files["storage"] == "s3" else None, str(folder)
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=409, detail={"code": "secrets_missing"}) from exc
+    try:
+        run_id = await start_run(CHECK_STEP, check_command(), env, started_by=admin.username)
+    except RunActiveError as exc:
+        raise HTTPException(status_code=409, detail={"code": "run_active"}) from exc
+    still_let_in = False
+
+    def admit(record: dict[str, Any]) -> bool:
+        nonlocal still_let_in
+        # The record as it is now: changes may have been turned back on while the command was started.
+        still_let_in = _check_reads(record, needed) == let_in
+        if still_let_in:
+            record["steps"][CHECK_STEP] = {
+                "run_id": run_id,
+                "status": "running",
+                "started_by": admin.username,
+                "started_at": read_run(run_id)["started_at"],
+                "finished_at": None,
+                # What it reads. A check of another pause, or of another destination, says nothing of this move.
+                "pause": let_in["pause"],
+                "destination": let_in["destination"],
+                # What this instance had to move, as it stood now: paused, and with no new instance running.
+                # On PostgreSQL the new instance will write to the database that this server reads these from.
+                "needed": needed,
+                "skipped": {step: reason for step, reason in skipped.items() if reason},
+                "report": None,
+                "error": None,
+            }
+        return still_let_in
+
+    try:
+        _save(admit)
+    except Exception:
+        # The record says nothing of the command, so nothing could follow it or stop it later.
+        await cancel_run(run_id)
+        why = "its run could not be saved, so it was stopped"
+        await logger.ainfo(f"Migration: user_id={admin.id} started {_copy(CHECK_STEP)} and {why} (run {run_id})")
+        raise
+    if not still_let_in:
+        # Changes were turned back on, or another destination was saved, between the look above and the save.
+        await cancel_run(run_id)
+        why = "what let it in had changed, so it was stopped"
+        await logger.ainfo(f"Migration: user_id={admin.id} started {_copy(CHECK_STEP)} after {why} (run {run_id})")
+        raise HTTPException(status_code=409, detail={"code": "state_changed"})
+    await logger.ainfo(f"Migration: user_id={admin.id} started {_copy(CHECK_STEP)} (run {run_id})")
+    return {"run_id": run_id}
+
+
+@router.post(f"/steps/{CHECK_STEP}/confirm")
+async def accept_differences(admin: Superuser, request: AcceptRequest | None = None) -> dict[str, Any]:
+    """Record that the admin read what the check of the copy found different, and that it is what they expect.
+
+    A report that matches needs no word: its step is done as it is. One with a difference keeps
+    the start of the new instance waiting until the admin copies again or says this. A knowledge
+    base can have been left behind on purpose.
+    """
+    state = await _state(_read_record())
+    record = _read_record()
+    _require_reached_now(state, record, CHECK_STEP)
+    check = _counting_check(record)
+    if not check or not check["report"]:
+        raise HTTPException(status_code=409, detail={"code": "not_checked"})
+    if check["report"]["ok"] or check.get("confirmed_at"):
+        # Nothing differs, or what differs was accepted already.
+        return await _state(record)
+    if not (request and request.accept_differences):
+        raise HTTPException(status_code=409, detail={"code": "differences"})
+    if request.run_id != check["run_id"]:
+        # Another check has ended since the page showed its report, and nobody read what this one found.
+        raise HTTPException(status_code=409, detail={"code": "report_changed"})
+    different = [row["name"] for row in check["report"]["checks"] if not row["same"]]
+    check.update(confirmed_by=admin.username, confirmed_at=_now(), accepted_differences=different)
+    _write_record(record)
+    # A report with no check in it did not pass either, and has no name to give.
+    named = ", ".join(different) or "a report with no check in it"
+    await logger.ainfo(f"Migration: user_id={admin.id} accepted what {_copy(CHECK_STEP)} found different: {named}")
+    return await _state(record)
+
+
+@router.post("/steps/start_target/confirm")
+async def confirm_start(admin: Superuser) -> dict[str, Any]:
+    """Record that the admin started the new instance on what the copies wrote. This ends the move.
+
+    It is the one-way point. From here a copy would write over what the new instance has written
+    since, so no copy starts while this stands, and the destination stays the one that was checked.
+    """
+    state = await _state(_read_record())
+    record = _read_record()
+    _require_reached_now(state, record, "start_target")
+    if _started(record):
+        # Said already in this pause.
+        return await _state(record)
+    record["steps"]["start_target"] = {
+        "confirmed_by": admin.username,
+        "confirmed_at": _now(),
+        # The pause it was confirmed in. A start that another pause saw belongs to a move that was given up.
+        "pause": record["pause"]["frozen_at"],
+    }
+    _write_record(record)
+    await logger.ainfo(f"Migration: user_id={admin.id} confirmed that the new instance was started")
+    return await _state(record)
+
+
 @router.post("/steps/{step_id}/runs", status_code=202)
 async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None = None) -> dict[str, str]:
     """Start a copy. It is a process of its own, so it keeps going when this request and the page are gone."""
@@ -539,6 +720,8 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
     state = await _state(record)
     _require_unlocked(state, step_id)
     _require_reached(state, step_id)
+    # The new instance runs on what the copies wrote. Another copy would write over what it has written since.
+    _require_not_started(record)
     if step_id == "copy_knowledge_bases" and _unreadable_here(state["instance"]):
         # Asked here whatever the step reads: a copy that was made says nothing of how the server was started since.
         raise HTTPException(status_code=409, detail={"code": "pgvector_env_missing"})
@@ -567,6 +750,9 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
         # is taken again on what that worker saved.
         still_let_in = _lets_in(record, step_id) == let_in
         if still_let_in:
+            # It writes to the destination again, so a check of what was there says nothing of what will be.
+            # No check runs now: one run is live at a time.
+            record["steps"].pop(CHECK_STEP, None)
             record["steps"][step_id] = {
                 "run_id": run_id,
                 "status": "running",
@@ -626,8 +812,9 @@ async def stop_copy(step_id: str, run_id: str, admin: Superuser) -> dict[str, st
 @router.post("/decisions")
 async def decide(request: DecisionRequest, admin: Superuser) -> dict[str, Any]:
     """Record what the admin decided about a copy: an option for its next run, or a failed item to accept as it is."""
-    decision = _decision(request)
     record = _read_record()
+    _require_not_started(record)
+    decision = _decision(request)
     latest = (record["steps"].get(request.step) or {}).get("run_id")
     if decision["subject"] and (not request.run_id or request.run_id != latest):
         # The copy was made again since the report this acceptance was read from, so it is consent to
@@ -642,8 +829,9 @@ async def decide(request: DecisionRequest, admin: Superuser) -> dict[str, Any]:
 
 @router.delete("/decisions")
 async def withdraw_decision(request: DecisionRequest, admin: Superuser) -> dict[str, Any]:
-    decision = _decision(request)
     record = _read_record()
+    _require_not_started(record)
+    decision = _decision(request)
     record["decisions"] = _other_decisions(record, decision)
     _write_record(record)
     await logger.ainfo(f"Migration: user_id={admin.id} withdrew the decision {_named(decision)}")
@@ -687,13 +875,37 @@ def _named(decision: dict[str, Any]) -> str:
 
 
 def _copy(step_id: str) -> str:
-    """A copy step as an audit line names it, such as "the copy of the knowledge bases"."""
+    """A step with a run as an audit line names it, such as "the copy of the knowledge bases"."""
+    if step_id == CHECK_STEP:
+        return "the check of the copy"
     return f"the copy of the {step_id.removeprefix('copy_').replace('_', ' ')}"
 
 
 def _lets_in(record: dict[str, Any], step_id: str) -> dict[str, Any]:
-    """What a copy is let in for: the pause that is on, and the saved parts of the destination it writes to."""
-    return {"pause": (record.get("pause") or {}).get("frozen_at"), "destination": _destination(record, step_id)}
+    """What a copy is let in for.
+
+    That is the pause that is on, the saved parts of the destination it writes to, and that no new
+    instance was started in that pause.
+    """
+    return {
+        "pause": (record.get("pause") or {}).get("frozen_at"),
+        "destination": _destination(record, step_id),
+        "started": _started(record) is not None,
+    }
+
+
+def _check_reads(record: dict[str, Any], needed: list[str]) -> dict[str, Any]:
+    """What the check of the copy is let in for, as _lets_in says it for a copy.
+
+    It reads each part of the destination that this instance needs. A part that is saved and has no use
+    any more, such as a bucket for files that are gone, is not read, and no secret is asked for it.
+    """
+    saved = record.get("destinations", {})
+    return {
+        "pause": (record.get("pause") or {}).get("frozen_at"),
+        "destination": {part: saved[part] for part in needed if part in saved},
+        "started": _started(record) is not None,
+    }
 
 
 def _find_run(step_id: str, run_id: str) -> dict[str, Any]:
@@ -707,13 +919,13 @@ def _find_run(step_id: str, run_id: str) -> dict[str, Any]:
     return run
 
 
-async def _settle_copies(record: dict[str, Any]) -> None:
-    """Write down how a copy ended, the first time anything reads the record after it did.
+async def _settle_runs(record: dict[str, Any]) -> None:
+    """Write down how a copy or the check of the copy ended, the first time anything reads the record after.
 
     A run belongs to no request, so nothing waits for it to end. Its events are read
     once, here, and the record keeps what a page needs to draw the step.
     """
-    for step_id in COPY_COMMANDS:
+    for step_id in (*COPY_COMMANDS, CHECK_STEP):
         step = record["steps"].get(step_id)
         if not step or step["status"] != "running":
             continue
@@ -727,7 +939,12 @@ async def _settle_copies(record: dict[str, Any]) -> None:
         except RunNotFoundError:
             # Its files are gone, so all that can be said is that it did not finish.
             run, events = {"status": "interrupted", "finished_at": None}, {}
-        step.update(copy_outcome(step_id, run, events))
+        if step_id == CHECK_STEP:
+            here = (record["steps"].get("check_source") or {}).get("report") or {"checks": []}
+            accepted = set(_failing_checks(record)) - set(_blocking_findings(record))
+            step.update(check_outcome(run, events, here["checks"], accepted))
+        else:
+            step.update(copy_outcome(step_id, run, events))
 
         def settle(saved: dict[str, Any], step_id: str = step_id, step: dict[str, Any] = step) -> bool:
             # Saved into the record as it is now: a request that read it earlier may have saved a change since.
@@ -896,18 +1113,28 @@ async def _state(record: dict[str, Any]) -> dict[str, Any]:
     if check and check["status"] == "running" and not _is_live(check):
         # The server restarted mid-run, or the run's request was dropped.
         check["status"] = "cancelled"
-    await _settle_copies(record)
+    await _settle_runs(record)
     instance = await _instance()
     blocking = _blocking_findings(record)
     # A page is given each copy with what it may decide about it and what was decided. The record is not changed.
     decisions = record.get("decisions", [])
     copies = {step: shown(step, record["steps"][step], decisions) for step in COPY_COMMANDS if step in record["steps"]}
+    steps = _steps(instance, record, blocking)
+    reached = next(step for step in steps if step["id"] == "start_target")["state"] != "locked"
+    runs = {**record["steps"], **copies}
+    check = record["steps"].get(CHECK_STEP)
+    if check and check["status"] != "running" and not _counting_check(record):
+        # A page is given the check only while it counts, or still runs and can be stopped. One of another
+        # pause, of another destination or older than a copy says nothing of what the destination holds now.
+        del runs[CHECK_STEP]
     return {
         "instance": instance,
-        "record": {**record, "steps": {**record["steps"], **copies}},
-        "steps": _steps(instance, record, blocking),
+        "record": {**record, "steps": runs},
+        "steps": steps,
         "blocking_findings": blocking,
         "acceptable_checks": sorted(ACCEPTABLE_FINDINGS),
+        # A new instance starts on finished copies, so its settings are given once the start is reached.
+        "start": {"settings": _start_settings(instance, record) if reached else []},
     }
 
 
@@ -992,18 +1219,13 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
         first = {"id": "check_source", "state": "blocked", "reason": "blocking_findings"}
     else:
         first = {"id": "check_source", "state": "done", "reason": None}
-    postgresql = instance["database"]["type"] == "postgresql"
-    local_kbs = instance["knowledge_bases"]["local"]
-    files = instance["files"]
-    needed = _needed_destinations(instance)
-    # Skipped always wins, even before a step ships.
-    skipped = {
-        "connect_target": None if needed else "nothing_to_connect",
-        "copy_database": "already_postgresql" if postgresql else None,
-        "copy_knowledge_bases": None if local_kbs else "no_local_knowledge_bases",
-        "copy_files": "files_in_s3" if files["storage"] == "s3" else None if files["local"] else "no_local_files",
-    }
-    # What each later step says for itself. A step with no entry is not built yet.
+    needed, skipped = _needs(instance)
+    if checked := _counting_check(record):
+        # Settled when the copy was checked. The admin starts the new instance before saying so, and what
+        # it writes into a database it shares with this instance is its own: no reason to name a
+        # destination or to copy.
+        needed, skipped = checked["needed"], {**dict.fromkeys(skipped), **checked["skipped"]}
+    # What each later step says for itself.
     backup = record.get("backup") or {}
     own = {
         "connect_target": _connect_step(record, needed),
@@ -1012,6 +1234,8 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
         # A backup made in an earlier pause lacks whatever changed since.
         "backup": ("done", None) if _during_pause(record, backup.get("confirmed_at")) else ("current", None),
         **{step: _copy_step(record, step) for step in COPY_COMMANDS},
+        CHECK_STEP: _check_step(record),
+        "start_target": _start_step(record),
     }
     unreadable_here = _unreadable_here(instance)
     steps = [first]
@@ -1019,22 +1243,32 @@ def _steps(instance: dict[str, Any], record: dict[str, Any], blocking: list[str]
     # waits for it, and one that has started keeps saying where it stands.
     frontier_open = first["state"] == "done"
     for step in _LATER_STEPS:
-        state, reason = own.get(step, ("current", None))
-        # A copy whose command still runs has started too, so a page can still follow it and stop it.
-        running = step in COPY_COMMANDS and (record["steps"].get(step) or {}).get("status") == "running"
+        state, reason = own[step]
+        # A step whose command still runs has started too, so a page can still follow it and stop it.
+        running = (record["steps"].get(step) or {}).get("status") == "running"
         if skipped.get(step):
             state, reason = "skipped", skipped[step]
         elif state == "current" and not frontier_open and not running:
             state, reason = "locked", "earlier_step"
-        elif step not in own:
-            # Nothing can be done here yet, and nothing after it waits for it.
-            steps.append({"id": step, "state": "locked", "reason": "not_available"})
-            continue
         elif step == "copy_knowledge_bases" and state != "done" and unreadable_here:
             state, reason = "blocked", "pgvector_env_missing"
         steps.append({"id": step, "state": state, "reason": reason})
         frontier_open = frontier_open and state in {"done", "skipped"}
     return steps
+
+
+def _needs(instance: dict[str, Any]) -> tuple[list[str], dict[str, str | None]]:
+    """The parts of a destination this instance has to name, and why each step it has no use for is skipped."""
+    files = instance["files"]
+    needed = _needed_destinations(instance)
+    # Skipped always wins, even before a step ships.
+    skipped = {
+        "connect_target": None if needed else "nothing_to_connect",
+        "copy_database": "already_postgresql" if instance["database"]["type"] == "postgresql" else None,
+        "copy_knowledge_bases": None if instance["knowledge_bases"]["local"] else "no_local_knowledge_bases",
+        "copy_files": "files_in_s3" if files["storage"] == "s3" else None if files["local"] else "no_local_files",
+    }
+    return needed, skipped
 
 
 def _unreadable_here(instance: dict[str, Any]) -> bool:
@@ -1152,6 +1386,80 @@ def _copy_step(record: dict[str, Any], step_id: str) -> tuple[str, str | None]:
     return ("blocked", code) if code else ("done", None)
 
 
+def _check_step(record: dict[str, Any]) -> tuple[str, str | None]:
+    """Where the check of the copy stands. It is done once its report matches, or the admin accepted what differs."""
+    check = _counting_check(record)
+    # No check of what the copies left, one that still runs, or one that ended without a report.
+    if not check or not check["report"]:
+        return "current", None
+    if check["report"]["ok"] or check.get("confirmed_at"):
+        return "done", None
+    return "blocked", "differences"
+
+
+def _counting_check(record: dict[str, Any]) -> dict[str, Any] | None:
+    """The check of the copy that counts: one that read the destination as the copies left it.
+
+    It read the parts of the destination that are saved, in the pause that is on. A copy that starts
+    after it takes it off the record, because a copy writes to the destination again.
+    """
+    check = record["steps"].get(CHECK_STEP)
+    if not check:
+        return None
+    reads = _check_reads(record, check["needed"])
+    return (
+        check
+        if reads["pause"] and (check["pause"], check["destination"]) == (reads["pause"], reads["destination"])
+        else None
+    )
+
+
+def _start_step(record: dict[str, Any]) -> tuple[str, str | None]:
+    """Where the start stands. It is done once the admin confirmed it in the pause that is on, which ends the move."""
+    return ("done", None) if _started(record) else ("current", None)
+
+
+def _started(record: dict[str, Any]) -> dict[str, Any] | None:
+    """The start of the new instance, when the admin confirmed one in the pause that is on.
+
+    A start that an earlier pause saw belongs to a move that was given up.
+    """
+    started = record["steps"].get("start_target")
+    pause = record.get("pause")
+    return started if started and pause and started["pause"] == pause["frozen_at"] else None
+
+
+def _start_settings(instance: dict[str, Any], record: dict[str, Any]) -> list[dict[str, Any]]:
+    """The settings the new instance starts with, from what the record and this server say. No secret is in them."""
+    saved = record.get("destinations") or {}
+    on_postgresql = instance["database"]["type"] == "postgresql"
+    # An instance already on PostgreSQL keeps its database, and the new instance runs on it.
+    database = instance["database"]["location"] if on_postgresql else (saved.get("database") or {}).get("location")
+    files = saved.get("files")
+    if instance["files"]["storage"] == "s3":
+        # Its files are in a bucket already, and the new instance reads them there. A bucket that an earlier
+        # move saved stays in the record, and no copy of this move wrote to it.
+        endpoint = os.environ.get("AWS_ENDPOINT_URL")
+        files = {
+            "bucket": instance["files"]["bucket"],
+            "prefix": instance["files"]["prefix"],
+            # An endpoint in any other shape can hold a user, a password or a token.
+            "endpoint_url": endpoint if endpoint and _PLAIN_ENDPOINT.fullmatch(endpoint) else None,
+        }
+    # Knowledge bases that were copied are in the destination database. Any other one in pgvector is in
+    # the store this server's own variable names, and the new instance reads it there. A destination that an
+    # earlier move saved for them stays in the record: it counts while this move copies them, as the check
+    # of the copy read them, or when the server has no store of its own.
+    own_store = os.environ.get("PGVECTOR_CONNECTION_STRING")
+    needed = (_counting_check(record) or {}).get("needed") or _needed_destinations(instance)
+    copied = "vectors" in saved and not on_postgresql and ("vectors" in needed or not own_store)
+    vectors = database if copied else own_store and location(own_store)
+    auth = get_settings_service().auth_settings
+    return start_settings(
+        database=database, files=files, vectors=vectors, auto_login=auth.AUTO_LOGIN, superuser=auth.SUPERUSER
+    )
+
+
 def _destination(record: dict[str, Any], step_id: str) -> dict[str, Any]:
     """Where the record says a copy writes, without how the test of each part went or who saved it."""
     saved = record.get("destinations", {})
@@ -1169,6 +1477,28 @@ def _require_unlocked(state: dict[str, Any], step_id: str) -> None:
     step = next(step for step in state["steps"] if step["id"] == step_id)
     if step["state"] in {"locked", "skipped"}:
         raise HTTPException(status_code=409, detail={"code": step["state"], "reason": step["reason"]})
+
+
+def _require_not_started(record: dict[str, Any]) -> None:
+    """Refuse to change a move whose new instance was started.
+
+    The move is over then: the new instance runs on what was checked, and the steps before the start
+    say what that was. The one way on from there is back, by turning changes back on.
+    """
+    if _started(record):
+        raise HTTPException(status_code=409, detail={"code": "new_instance_started"})
+
+
+def _require_reached_now(state: dict[str, Any], record: dict[str, Any], step_id: str) -> None:
+    """Refuse to act on a step that waits, is skipped or stands behind an open one, on the record as it is now.
+
+    The state was worked out before this request waited on the database, and another request may have
+    saved since: a copy that was let in, changes that were turned back on. Nothing is awaited between
+    this look and the save that follows it.
+    """
+    now = {"steps": _steps(state["instance"], record, _blocking_findings(record))}
+    _require_unlocked(now, step_id)
+    _require_reached(now, step_id)
 
 
 def _require_reached(state: dict[str, Any], step_id: str) -> None:
