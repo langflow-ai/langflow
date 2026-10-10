@@ -1071,6 +1071,14 @@ def create_app():
     app.add_middleware(JavaScriptMIMETypeMiddleware)
     app.add_middleware(AuditRequestContextMiddleware)
 
+    # Optional fastapi-guard security middleware (off unless
+    # LANGFLOW_GUARD_ENABLED). Added after CORS so it wraps every route
+    # middleware registered above; layers alongside the slowapi endpoint
+    # limiters, which it does not touch.
+    from langflow.services.security import attach_guard
+
+    attach_guard(app)
+
     @app.middleware("http")
     async def bind_execution_client(request: Request, call_next):
         """Bind the caller's self-declared client for the life of the request.
