@@ -1814,3 +1814,498 @@ describe("Copy knowledge bases and files", () => {
     expect(note()).not.toBeInTheDocument();
   });
 });
+
+describe("What the admin decides about a copy", () => {
+  const panel = (
+    id: "copy_database" | "copy_knowledge_bases" | "copy_files",
+    run: Partial<MigrationCopyRun>,
+    state: MigrationStepState["state"] = "blocked",
+  ) => (
+    <CopyStep
+      migration={migration(
+        {},
+        {
+          steps: {
+            [id]: {
+              run_id: "run-3",
+              status: "done",
+              dry_run: false,
+              started_by: "alice",
+              started_at: "2026-10-06T12:20:00Z",
+              finished_at: "2026-10-06T12:21:00Z",
+              report: null,
+              error: null,
+              ...run,
+            },
+          },
+        },
+      )}
+      state={step(id, state, state === "blocked" ? "decide" : undefined)}
+      step={id}
+    />
+  );
+  // A failed item as the record holds it. The server says which decision answers its code, if one does,
+  // and who made it when it is in effect. One that names the item accepts it, and one that names none
+  // is an option for the whole step.
+  const alice = { by: "alice", at: "2026-10-06T12:30:00Z" };
+  const item = (
+    code: string,
+    name: string,
+    kind?: string,
+    { files = false, option = false, made = false } = {},
+  ) => {
+    const subject = files ? `u-1/${name}` : `id-${name}`;
+    return {
+      subject,
+      [files ? "file_name" : "kb_name"]: name,
+      owner: files ? "u-1" : "bob",
+      code,
+      reason: null,
+      decision: kind
+        ? {
+            kind,
+            subject: option ? null : subject,
+            run_id: option ? null : "run-3",
+            made: made ? alice : null,
+          }
+        : null,
+    };
+  };
+  const boxes = () =>
+    screen
+      .getAllByRole("checkbox")
+      .map((box) => box.getAttribute("aria-label"));
+  const orphans = (
+    decision: {
+      kind: string;
+      subject: null;
+      run_id: null;
+      made: typeof alice | null;
+    } | null,
+  ) => ({
+    report: {
+      ok: false,
+      problems: [{ code: "orphans_droppable", message: "re-run the copy" }],
+    },
+    decision_needed: {
+      code: "orphans_droppable",
+      details: {
+        orphans: [
+          {
+            table: "span",
+            column: "trace_id",
+            parent: "trace",
+            ondelete: "CASCADE",
+            rows: 2,
+          },
+        ],
+      },
+      decision,
+    },
+  });
+  const dropOrphans = (made = false) => ({
+    kind: "drop_orphans",
+    subject: null,
+    run_id: null,
+    made: made ? alice : null,
+  });
+  const note = () => screen.queryByText(/^Accepting a finding/);
+
+  it("says a row whose key is cleared is copied, not left out", () => {
+    const asked = orphans(dropOrphans());
+    asked.decision_needed.details.orphans.push({
+      table: "authz_role_assignment",
+      column: "assigned_by",
+      parent: "user",
+      ondelete: "SET NULL",
+      rows: 3,
+    });
+    show(panel("copy_database", asked));
+
+    expect(
+      screen.getAllByRole("listitem").map((item) => item.textContent),
+    ).toEqual([
+      "Rows in span that point at deleted rows of trace: 2",
+      "Rows in authz_role_assignment that point at deleted rows of user: 3. They are copied with assigned_by cleared.",
+    ]);
+  });
+
+  it("shows the rows a database copy would leave out, and asks before it does", async () => {
+    const post = jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <CopyStep
+          migration={migration(
+            {},
+            {
+              steps: {
+                copy_database: {
+                  run_id: "run-3",
+                  status: "done",
+                  dry_run: false,
+                  started_by: "alice",
+                  started_at: "2026-10-06T12:20:00Z",
+                  finished_at: "2026-10-06T12:21:00Z",
+                  error: null,
+                  ...orphans(dropOrphans()),
+                },
+              },
+            },
+          )}
+          state={step("copy_database", "blocked", "orphans_droppable")}
+          step="copy_database"
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getAllByRole("alert")[0]).toHaveTextContent(
+      "Some rows belong to deleted items",
+    );
+    expect(
+      screen.getByText(/^They point at items deleted earlier/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("listitem")).toHaveTextContent(
+      "Rows in span that point at deleted rows of trace: 2",
+    );
+    const leaveOut = screen.getByRole("checkbox", {
+      name: "Leave out or unlink these rows and copy the rest",
+    });
+    expect(leaveOut).not.toBeChecked();
+    // Nothing says it was decided until it is.
+    expect(screen.queryByText(/^Accepted by /)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Copy again for this to apply."),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(leaveOut);
+
+    // The decision goes back as the server named it, and no more. An option belongs to no one run.
+    expect(post).toHaveBeenCalledWith(expect.stringContaining("decisions"), {
+      step: "copy_database",
+      kind: "drop_orphans",
+      subject: null,
+      run_id: null,
+    });
+    expect(
+      await screen.findByText("Something went wrong. Try again."),
+    ).toBeInTheDocument();
+  });
+
+  it("asks nothing the server does not offer, and nothing about a copy that no longer counts", () => {
+    const { unmount } = show(panel("copy_database", orphans(null)));
+    // The rows are what the copy found. Whether they can be left out is the server's to say.
+    expect(screen.getByRole("listitem")).toHaveTextContent(
+      "Rows in span that point at deleted rows of trace: 2",
+    );
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    unmount();
+
+    show(panel("copy_database", orphans(dropOrphans()), "current"));
+    expect(screen.getByText(/out of date/)).toBeInTheDocument();
+    expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("ticks a decision the server says is in effect, says who made it, and takes it back", async () => {
+    const withdrawn = jest
+      .spyOn(api, "delete")
+      .mockRejectedValue(unreachable());
+    show(panel("copy_database", orphans(dropOrphans(true))));
+
+    const leaveOut = screen.getByRole("checkbox", {
+      name: "Leave out or unlink these rows and copy the rest",
+    });
+    expect(leaveOut).toBeChecked();
+    // Who decided and when come with the decision, and the time reads as times do on this page.
+    expect(
+      screen.getByText(/^Accepted by alice on .*2026/),
+    ).not.toHaveTextContent("2026-10-06T12:30:00Z");
+    // An option changes the next copy, and nothing about the one that asked.
+    expect(
+      screen.getByText("Copy again for this to apply."),
+    ).toBeInTheDocument();
+
+    await userEvent.click(leaveOut);
+
+    expect(withdrawn).toHaveBeenCalledWith(
+      expect.stringContaining("decisions"),
+      {
+        data: {
+          step: "copy_database",
+          kind: "drop_orphans",
+          subject: null,
+          run_id: null,
+        },
+      },
+    );
+  });
+
+  it("asks once about an option several knowledge bases wait for, and offers each what the server offers it", async () => {
+    const post = jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    const withdrawn = jest
+      .spyOn(api, "delete")
+      .mockRejectedValue(unreachable());
+    const ranking = { option: true };
+    show(
+      panel("copy_knowledge_bases", {
+        report: {
+          ok: false,
+          counts: { relocated: 1, failed: 6 },
+          attention: [
+            item("kb_metric_change", "notes", "accept_ranking_change", ranking),
+            item("kb_metric_change", "wiki", "accept_ranking_change", ranking),
+            // The server says this one's acceptance is in effect, and the next one's is not.
+            item("kb_backend_missing", "legacy", "leave_behind", {
+              made: true,
+            }),
+            item("kb_backend_missing", "lost", "leave_behind"),
+            // One that can be put right and copied again has no decision.
+            item("kb_upgrade_pending", "old"),
+            // An option of a later server, which this page cannot explain.
+            item("kb_failed", "odd", "retry_slowly", ranking),
+          ],
+        },
+      }),
+    );
+
+    // The option is one for the whole copy, so the question is asked once, after the list.
+    expect(boxes()).toEqual([
+      "Leave it behind, legacy",
+      "Leave it behind, lost",
+      null,
+    ]);
+    const option = screen.getByRole("checkbox", {
+      name: /^Accept the new ranking for every knowledge base listed with it\./,
+    });
+    expect(option).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Leave it behind, legacy" }),
+    ).toBeChecked();
+    const lost = screen.getByRole("checkbox", {
+      name: "Leave it behind, lost",
+    });
+    expect(lost).not.toBeChecked();
+    // Who left the first one behind stands in its own row, and nowhere else.
+    const [, , legacy] = screen.getAllByRole("listitem");
+    expect(
+      within(legacy).getByText(/^Accepted by alice on /),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/^Accepted by /)).toHaveLength(1);
+    // Leaving one behind settles it at once, so nothing waits for another copy.
+    expect(
+      screen.queryByText("Copy again for this to apply."),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(option);
+    await userEvent.click(lost);
+
+    const decisions = expect.stringContaining("decisions");
+    expect(post).toHaveBeenNthCalledWith(1, decisions, {
+      step: "copy_knowledge_bases",
+      kind: "accept_ranking_change",
+      subject: null,
+      run_id: null,
+    });
+    // The choice that did not go through says so under its own box, and under no other.
+    const failed = await screen.findAllByText(
+      "Something went wrong. Try again.",
+    );
+    expect(failed).toHaveLength(1);
+    expect(screen.getAllByRole("listitem")[3]).toContainElement(failed[0]);
+    // An acceptance names the copy whose list the item is in, so a page that is behind accepts nothing by mistake.
+    expect(post).toHaveBeenNthCalledWith(2, decisions, {
+      step: "copy_knowledge_bases",
+      kind: "leave_behind",
+      subject: "id-lost",
+      run_id: "run-3",
+    });
+
+    // Taking one back names the same copy.
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Leave it behind, legacy" }),
+    );
+    expect(withdrawn).toHaveBeenCalledWith(decisions, {
+      data: {
+        step: "copy_knowledge_bases",
+        kind: "leave_behind",
+        subject: "id-legacy",
+        run_id: "run-3",
+      },
+    });
+  });
+
+  it("accepts a file with the decision the server gave it, and none it has no words for", async () => {
+    const post = jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    const files = { files: true };
+    show(
+      panel("copy_files", {
+        report: {
+          ok: false,
+          counts: { copied: 9, failed: 5 },
+          attention: [
+            item("file_conflict", "cat.txt", "keep_bucket_file", files),
+            item(
+              "no_source_bytes",
+              "gone.txt",
+              "accept_missing_attachment",
+              files,
+            ),
+            item("bad_name", "odd.txt", undefined, files),
+            // The page has no table of its own: a code the server offers nothing for gets nothing.
+            item("file_conflict", "dog.txt", undefined, files),
+            // A decision of a later server, which this page cannot explain.
+            item("verify_failed", "new.txt", "accept_unverified", files),
+          ],
+        },
+      }),
+    );
+
+    expect(boxes()).toEqual([
+      "Keep the bucket's file, cat.txt",
+      "Move without this file, gone.txt",
+    ]);
+    // The check in the first step may have asked about a file like this already. The step says why it asks again.
+    expect(
+      screen.getByText(
+        "Accepting a finding in 'Check this instance' lets the move go on. This copy names each one it left, so each is accepted here, for this copy only.",
+      ),
+    ).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Keep the bucket's file, cat.txt" }),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", {
+        name: "Move without this file, gone.txt",
+      }),
+    );
+
+    const decisions = expect.stringContaining("decisions");
+    expect(post).toHaveBeenNthCalledWith(1, decisions, {
+      step: "copy_files",
+      kind: "keep_bucket_file",
+      subject: "u-1/cat.txt",
+      run_id: "run-3",
+    });
+    expect(post).toHaveBeenNthCalledWith(2, decisions, {
+      step: "copy_files",
+      kind: "accept_missing_attachment",
+      subject: "u-1/gone.txt",
+      run_id: "run-3",
+    });
+  });
+
+  it("says a choice the server refused for another reason did not go through", async () => {
+    jest
+      .spyOn(api, "post")
+      .mockRejectedValue(refused(400, { code: "unknown_decision" }));
+    show(
+      panel("copy_files", {
+        report: {
+          ok: false,
+          counts: { copied: 2, failed: 1 },
+          attention: [
+            item("file_conflict", "cat.txt", "keep_bucket_file", {
+              files: true,
+            }),
+          ],
+        },
+      }),
+    );
+
+    await userEvent.click(screen.getByRole("checkbox"));
+
+    expect(
+      await screen.findByText("Something went wrong. Try again."),
+    ).toBeInTheDocument();
+    // Only a copy made over since gets the line about a new list.
+    expect(
+      screen.queryByText(/made again in the meantime/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("says nothing about accepting when the only decision on offer is one it has no words for", () => {
+    show(
+      panel("copy_files", {
+        report: {
+          ok: false,
+          counts: { copied: 2, failed: 1 },
+          attention: [
+            item("verify_failed", "new.txt", "accept_unverified", {
+              files: true,
+            }),
+          ],
+        },
+      }),
+    );
+
+    expect(screen.getByRole("listitem")).toHaveTextContent("new.txt");
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(note()).not.toBeInTheDocument();
+  });
+
+  it("offers an option after a test run, and no acceptance of what no copy has left yet", () => {
+    show(
+      panel(
+        "copy_knowledge_bases",
+        {
+          dry_run: true,
+          report: {
+            ok: false,
+            counts: { would_relocate: 1, failed: 2 },
+            attention: [
+              item("kb_backend_missing", "legacy", "leave_behind"),
+              // The option was taken before this test run, so the server says it is in effect.
+              item("kb_metric_change", "notes", "accept_ranking_change", {
+                option: true,
+                made: true,
+              }),
+            ],
+          },
+        },
+        "current",
+      ),
+    );
+
+    // An option changes the next run, which may be the copy. An item is accepted in the copy that left it.
+    expect(boxes()).toEqual([null]);
+    expect(note()).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: /^Accept the new ranking/ }),
+    ).toBeChecked();
+    expect(
+      screen.getByText("Copy again for this to apply."),
+    ).toBeInTheDocument();
+  });
+
+  it("says why nothing can be accepted one by one when more failed than the list holds, and still asks about an option", () => {
+    show(
+      panel("copy_knowledge_bases", {
+        report: {
+          ok: false,
+          counts: { failed: 250 },
+          attention: [
+            // The server offers no acceptance on a list it cut short: it cannot tell which of the others were accepted.
+            item("kb_backend_missing", "legacy"),
+            // An option holds for all of them, the ones the list does not show included, so it is still on offer.
+            item("kb_metric_change", "notes", "accept_ranking_change", {
+              option: true,
+            }),
+          ],
+        },
+      }),
+    );
+
+    expect(boxes()).toEqual([null]);
+    expect(
+      screen.getByRole("checkbox", { name: /^Accept the new ranking/ }),
+    ).not.toBeChecked();
+    expect(note()).not.toBeInTheDocument();
+    expect(screen.getByText("Showing the first 2 of 250.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "More were not copied than this list holds, so they can't be accepted one by one.",
+      ),
+    ).toBeInTheDocument();
+  });
+});
