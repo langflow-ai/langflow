@@ -538,7 +538,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if not prompt:
             return prompt
         replacements = {
-            "{current_date}": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "{current_date}": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d"),
             "{model_name}": self._get_resolved_model_name(),
             "{optional_user_context}": "",
         }
