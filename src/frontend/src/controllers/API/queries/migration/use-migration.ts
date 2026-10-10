@@ -163,17 +163,23 @@ export const useConfirmBackupMutation = () =>
     }),
   );
 
-/** Starts a copy. It is a process of its own on the server, so it keeps going when the page is gone. */
+/**
+ * Starts a copy, or a test run of one, which copies nothing.
+ * It is a process of its own on the server, so it keeps going when the page is gone.
+ */
 export const useStartCopyMutation = (step: CopyStepId) => {
   const client = useQueryClient();
-  return useMutation<unknown, AxiosError<{ detail?: MigrationError }>, void>({
-    mutationFn: () =>
-      api.post(getURL("MIGRATION", { path: `steps/${step}/runs` }), {
-        dry_run: false,
-      }),
-    // The record now says the run is on, or what changed for the server to refuse it.
-    onSettled: () => client.invalidateQueries({ queryKey: migrationKeys.all }),
-  });
+  return useMutation<unknown, AxiosError<{ detail?: MigrationError }>, boolean>(
+    {
+      mutationFn: (dryRun) =>
+        api.post(getURL("MIGRATION", { path: `steps/${step}/runs` }), {
+          dry_run: dryRun,
+        }),
+      // The record now says the run is on, or what changed for the server to refuse it.
+      onSettled: () =>
+        client.invalidateQueries({ queryKey: migrationKeys.all }),
+    },
+  );
 };
 
 /** Stops a run. The page learns that it ended from the run's own events. */

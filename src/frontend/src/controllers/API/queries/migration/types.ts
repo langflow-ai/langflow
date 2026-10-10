@@ -32,6 +32,18 @@ export type CopyStepId =
   | "copy_knowledge_bases"
   | "copy_files";
 
+/** A knowledge base or a file that a copy did not make, as the command reported it. */
+export interface CopyItem {
+  /** The name a decision about this item uses: a knowledge base's id, or a file's owner and name. */
+  subject: string;
+  kb_name?: string;
+  file_name?: string;
+  owner: string;
+  code: string | null;
+  /** The command's own words for what happened. */
+  reason: string | null;
+}
+
 /** The latest run of a copy step, as the record keeps it. */
 export interface MigrationCopyRun {
   run_id: string;
@@ -47,6 +59,10 @@ export interface MigrationCopyRun {
     tables_copied?: number;
     rows_copied?: number;
     problems?: { code: string; message: string }[];
+    /** Knowledge bases and files: how many ended in each status, a test run's `would_` ones included. */
+    counts?: Record<string, number>;
+    /** The first hundred that failed. `counts.failed` says how many did. */
+    attention?: CopyItem[];
   } | null;
   /** Set when the run did not end done: the command's own code and message, or `crashed`, `cancelled` or `interrupted`. */
   error: { code: string; message?: string } | null;
@@ -60,6 +76,8 @@ export interface CopyEvent {
   phase?: string;
   done?: number;
   total?: number | null;
+  /** The file copy: how much it has copied so far. */
+  bytes?: number;
 }
 
 export type MigrationStepId =

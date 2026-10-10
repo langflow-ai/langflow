@@ -1420,3 +1420,397 @@ describe("Copy the database", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("Copy knowledge bases and files", () => {
+  const ended = (
+    step: "copy_knowledge_bases" | "copy_files",
+    run?: Partial<MigrationCopyRun>,
+    instance: Parameters<typeof migration>[0] = {},
+  ) =>
+    migration(instance, {
+      steps: {
+        [step]: run && {
+          run_id: "run-2",
+          status: "done",
+          dry_run: false,
+          started_by: "alice",
+          started_at: "2026-10-06T12:10:00Z",
+          finished_at: "2026-10-06T12:11:00Z",
+          report: null,
+          error: null,
+          ...run,
+        },
+      },
+    });
+  const kb = (code: string, name: string, reason: string | null = null) => ({
+    subject: `id-${name}`,
+    kb_name: name,
+    owner: "bob",
+    code,
+    reason,
+  });
+  const file = (code: string, name: string, reason: string | null = null) => ({
+    subject: `u-1/${name}`,
+    file_name: name,
+    owner: "u-1",
+    code,
+    reason,
+  });
+
+  it("offers a test run before the copy, and sends each as what it is", async () => {
+    const post = jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    show(
+      <CopyStep
+        migration={ended("copy_knowledge_bases")}
+        state={step("copy_knowledge_bases", "current")}
+        step="copy_knowledge_bases"
+      />,
+    );
+    expect(
+      screen.getByText(/^A test run says what would be copied/),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Test run" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Copy knowledge bases" }),
+    );
+
+    const runs = expect.stringContaining("steps/copy_knowledge_bases/runs");
+    expect(post).toHaveBeenNthCalledWith(1, runs, { dry_run: true });
+    expect(post).toHaveBeenNthCalledWith(2, runs, { dry_run: false });
+  });
+
+  it("says what a test run found, and still offers the first copy", () => {
+    show(
+      <CopyStep
+        migration={ended("copy_knowledge_bases", {
+          dry_run: true,
+          report: {
+            ok: false,
+            counts: { would_relocate: 2, skipped: 1, failed: 1 },
+            attention: [kb("kb_ingesting", "handbook")],
+          },
+        })}
+        state={step("copy_knowledge_bases", "current")}
+        step="copy_knowledge_bases"
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Test run: nothing was copied. To copy: 2. Already copied: 1. Can't be copied: 1.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("listitem")).toHaveTextContent(
+      "handbook (bob)It is still adding content.",
+    );
+    // A test run completes nothing and blocks nothing, and it is no copy that could be out of date.
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText(/out of date/)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copy knowledge bases" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Copy again" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sends one start at a time", async () => {
+    // The first start is still on its way.
+    const post = jest
+      .spyOn(api, "post")
+      .mockImplementation(() => new Promise(() => {}));
+    show(
+      <CopyStep
+        migration={ended("copy_files")}
+        state={step("copy_files", "current")}
+        step="copy_files"
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Copy files" }));
+    const test = screen.getByRole("button", { name: "Test run" });
+    expect(test).toBeDisabled();
+    await userEvent.click(test);
+
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledWith(
+      expect.stringContaining("steps/copy_files/runs"),
+      { dry_run: false },
+    );
+  });
+
+  it("reads out what a test run found, in the node that read its progress", () => {
+    // The run's progress never comes.
+    global.fetch = jest.fn(() => new Promise<Response>(() => {}));
+    const running = { status: "running" as const, dry_run: true };
+    const { rerender } = show(
+      <CopyStep
+        migration={ended("copy_knowledge_bases", running)}
+        state={step("copy_knowledge_bases", "current")}
+        step="copy_knowledge_bases"
+      />,
+    );
+    const said = screen.getByRole("status");
+    expect(said).toHaveTextContent("Starting…");
+
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <CopyStep
+          migration={ended("copy_knowledge_bases", {
+            dry_run: true,
+            report: { ok: true, counts: { would_relocate: 3 } },
+          })}
+          state={step("copy_knowledge_bases", "current")}
+          step="copy_knowledge_bases"
+        />
+      </QueryClientProvider>,
+    );
+
+    // A screen reader reads a change to a live region it already knows, not a new one.
+    expect(screen.getByRole("status")).toBe(said);
+    expect(said).toHaveAttribute("aria-live", "polite");
+    expect(said).toHaveTextContent(
+      /^Test run: nothing was copied\. To copy: 3\./,
+    );
+  });
+
+  it("offers no test run once the copy is done, since one would take the copy's place", () => {
+    show(
+      <CopyStep
+        migration={ended("copy_knowledge_bases", {
+          report: { ok: true, counts: { relocated: 1 } },
+        })}
+        state={step("copy_knowledge_bases", "done")}
+        step="copy_knowledge_bases"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Copy again" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Test run" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lists each knowledge base a copy left, with the page's line and the tool's words", () => {
+    show(
+      <CopyStep
+        migration={ended("copy_knowledge_bases", {
+          report: {
+            ok: false,
+            counts: { relocated: 3, failed: 250 },
+            attention: [
+              kb("kb_backend_missing", "legacy", "backend 'astra' is gone"),
+              kb("kb_upgrade_pending", "old"),
+              kb("kb_metric_unknown", "odd", "no metric in the mapping"),
+            ],
+          },
+        })}
+        state={step("copy_knowledge_bases", "blocked", "kb_backend_missing")}
+        step="copy_knowledge_bases"
+      />,
+    );
+
+    expect(
+      screen.getByText("Copied: 3. Already copied: 0. Not copied: 250."),
+    ).toBeInTheDocument();
+    // What stops the step is in the list, so the step's own line only points at it.
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /^Some were not copied\. Each one below says why\.$/,
+    );
+    const [legacy, old, odd] = screen.getAllByRole("listitem");
+    expect(legacy).toHaveTextContent(
+      "legacy (bob)It uses a store this version can't open.",
+    );
+    expect(within(legacy).getByText("backend 'astra' is gone")).toHaveAttribute(
+      "lang",
+      "en",
+    );
+    // The command gives this code to an upgrade that has not finished and to a store it can never read.
+    expect(old).toHaveTextContent(
+      "This version can't read its storage as it is now. Details says why.",
+    );
+    expect(old.querySelector("pre")).toBeNull();
+    // A code this page has no line for.
+    expect(odd).toHaveTextContent("It wasn't copied.");
+    expect(odd).toHaveTextContent("no metric in the mapping");
+    // The record keeps the first of them only.
+    expect(screen.getByText("Showing the first 3 of 250.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copy again" }),
+    ).toBeInTheDocument();
+  });
+
+  it("words each file that was not copied", () => {
+    show(
+      <CopyStep
+        migration={ended("copy_files", {
+          report: {
+            ok: false,
+            counts: { copied: 1200, skipped: 34, failed: 4 },
+            attention: [
+              file("file_conflict", "cat.txt"),
+              file("bad_name", "a\\b.txt"),
+              file("no_source_bytes", "gone.txt"),
+              file("bucket_error", "big.bin", "SlowDown"),
+            ],
+          },
+        })}
+        state={step("copy_files", "blocked", "file_conflict")}
+        step="copy_files"
+      />,
+    );
+
+    expect(
+      screen.getByText("Copied: 1,200. Already copied: 34. Not copied: 4."),
+    ).toBeInTheDocument();
+    const lines = screen
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+    expect(lines).toEqual([
+      "cat.txt (u-1)The bucket already holds a different file with this name. Nothing is overwritten.",
+      "a\\b.txt (u-1)This file's stored name has a backslash or \"..\" in it, which Langflow's file storage refuses, so it can't be copied.",
+      "gone.txt (u-1)Nothing is stored for this name, so there is nothing to copy. It will show as missing.",
+      "big.bin (u-1)Can't write to the bucket. Check 'Where your data goes', then try again.Details, big.binSlowDown",
+    ]);
+    expect(screen.queryByText(/^Showing the first/)).not.toBeInTheDocument();
+    // The file copy can be tried first as well.
+    expect(
+      screen.getByRole("button", { name: "Test run" }),
+    ).toBeInTheDocument();
+  });
+
+  it("lists two chat messages that miss the same file apart", () => {
+    // The command reports one for each message, under the same owner and name.
+    const logged = jest.spyOn(console, "error").mockImplementation(() => {});
+    show(
+      <CopyStep
+        migration={ended("copy_files", {
+          report: {
+            ok: false,
+            counts: { copied: 3, failed: 2 },
+            attention: [
+              file("attachment_unmatched", "cat.png", "in message 1"),
+              file("attachment_unmatched", "cat.png", "in message 2"),
+            ],
+          },
+        })}
+        state={step("copy_files", "blocked", "attachment_unmatched")}
+        step="copy_files"
+      />,
+    );
+
+    const rows = screen.getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("in message 1");
+    expect(rows[1]).toHaveTextContent("in message 2");
+    // React says so when two rows of a list go by the same key.
+    expect(logged).not.toHaveBeenCalled();
+  });
+
+  it("shows nothing of a copy the step no longer counts, and says to copy again", () => {
+    show(
+      <CopyStep
+        migration={ended("copy_files", {
+          report: {
+            ok: false,
+            counts: { copied: 9, failed: 1 },
+            attention: [file("file_conflict", "cat.txt", "sizes differ")],
+          },
+        })}
+        state={step("copy_files", "current")}
+        step="copy_files"
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "This copy is out of date, so it no longer counts. Copy again.",
+      ),
+    ).toBeInTheDocument();
+    // What it found is no result any more.
+    expect(screen.queryByText(/^Copied:/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copy again" }),
+    ).toBeInTheDocument();
+  });
+
+  it("says why a run ended without a report, whether it was a test or the copy", () => {
+    const stopped = {
+      status: "failed" as const,
+      error: { code: "bucket_error", message: "AccessDenied on HeadBucket" },
+    };
+    const { unmount } = show(
+      <CopyStep
+        migration={ended("copy_files", { ...stopped, dry_run: true })}
+        state={step("copy_files", "current")}
+        step="copy_files"
+      />,
+    );
+    const why = () => screen.getByRole("alert");
+    expect(why()).toHaveTextContent(
+      "Can't write to the bucket. Check 'Where your data goes', then try again.",
+    );
+    expect(why()).toHaveTextContent("AccessDenied on HeadBucket");
+    unmount();
+
+    const { unmount: unmount2 } = show(
+      <CopyStep
+        migration={ended("copy_files", stopped)}
+        state={step("copy_files", "blocked", "bucket_error")}
+        step="copy_files"
+      />,
+    );
+    expect(why()).toHaveTextContent("Can't write to the bucket.");
+    unmount2();
+
+    // A copy from an earlier pause no longer counts, and what went wrong with it is no longer news.
+    show(
+      <CopyStep
+        migration={ended("copy_files", stopped)}
+        state={step("copy_files", "current")}
+        step="copy_files"
+      />,
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("warns an instance on PostgreSQL that its own knowledge bases move too", () => {
+    const postgresql = {
+      database: { type: "postgresql" as const, location: "db:5432/langflow" },
+    };
+    const note = () => screen.queryByText(/^This instance uses PostgreSQL/);
+    const { unmount } = show(
+      <CopyStep
+        migration={ended("copy_knowledge_bases", undefined, postgresql)}
+        state={step("copy_knowledge_bases", "current")}
+        step="copy_knowledge_bases"
+      />,
+    );
+    expect(note()).toBeInTheDocument();
+    unmount();
+
+    const files = show(
+      <CopyStep
+        migration={ended("copy_files", undefined, postgresql)}
+        state={step("copy_files", "current")}
+        step="copy_files"
+      />,
+    );
+    expect(note()).not.toBeInTheDocument();
+    files.unmount();
+
+    show(
+      <CopyStep
+        migration={ended("copy_knowledge_bases")}
+        state={step("copy_knowledge_bases", "current")}
+        step="copy_knowledge_bases"
+      />,
+    );
+    expect(note()).not.toBeInTheDocument();
+  });
+});

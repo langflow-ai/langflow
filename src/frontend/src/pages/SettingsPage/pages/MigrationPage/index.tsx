@@ -21,7 +21,7 @@ import { cn } from "@/utils/utils";
 import { BackupStep } from "./BackupStep";
 import { CheckStep } from "./CheckStep";
 import { CopyStep } from "./CopyStep";
-import { formatTime, isCopy, PARTS } from "./catalog";
+import { copyCounts, formatTime, isCopy, PARTS } from "./catalog";
 import { DestinationsStep } from "./DestinationsStep";
 import { PausedBanner, PauseStep, Recovery } from "./PauseStep";
 import { SecretKeyStep } from "./SecretKeyStep";
@@ -295,6 +295,16 @@ function Migration({ migration }: { migration: MigrationState }) {
                       i18n.language,
                     ),
                   });
+                } else if (copy?.report?.counts && state.state === "done") {
+                  const { copied, skipped, failed } = copyCounts(
+                    copy.report.counts,
+                  );
+                  summary = t("settings.migration.copy.done", {
+                    done: (copied + skipped).toLocaleString(i18n.language),
+                    total: (copied + skipped + failed).toLocaleString(
+                      i18n.language,
+                    ),
+                  });
                 }
                 // A step the admin has reached, and that this server can do.
                 const live =
@@ -390,8 +400,9 @@ function StepItem({
   }, [frontier]);
   const locked = state.state === "locked";
   const bodyId = `migration-step-${state.id}-body`;
-  // The admin has reached this step, and either the server or this page can't do it yet.
-  const comingSoon = frontier && !children;
+  // The server can't do this step yet, or the admin has reached one this page has no form for.
+  const comingSoon =
+    state.reason === "not_available" || (frontier && !children);
   // When the step before this one finishes, keyboard and screen reader users land on what to do next.
   const heading = useRef<HTMLHeadingElement>(null);
   const wasLocked = useRef(locked);
@@ -438,7 +449,7 @@ function StepItem({
           {/* A summary can hold an address with nowhere to break, which has to fit a phone. */}
           <span className="flex items-center gap-2 text-sm text-muted-foreground [overflow-wrap:anywhere]">
             {summary}
-            {locked && (
+            {locked && !comingSoon && (
               <span className="sr-only">
                 {t("settings.migration.notStarted")}
               </span>
