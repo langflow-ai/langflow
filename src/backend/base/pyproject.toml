@@ -215,6 +215,12 @@ audio = [
 postgresql = [
     "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
     "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+    # Compiled libpq wrapper; without it psycopg falls back to the much slower
+    # pure-Python (ctypes) implementation. psycopg-binary ships wheels only (no
+    # sdist), so limit it to the architectures it publishes wheels for; other
+    # platforms keep installing and run the pure-Python implementation, which
+    # Langflow reports with a startup warning.
+    "psycopg[binary]>=3.1,<4.0; platform_machine == 'x86_64' or platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'arm64' or platform_machine == 'ppc64le' or platform_machine == 'riscv64'",
 ]
 
 local = [

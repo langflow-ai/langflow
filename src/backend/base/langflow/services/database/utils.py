@@ -20,12 +20,14 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
 
     database_service: DatabaseService = get_db_service()
     await database_service.ensure_postgresql_version()
+    from langflow.services.database.service import check_sqlite_database_path, warn_if_psycopg_pure_python
+
+    # One startup warning when PostgreSQL runs on psycopg's slow pure-Python libpq wrapper.
+    warn_if_psycopg_pure_python(database_service.database_url)
     # Fail fast with a clear, actionable message when a SQLite path cannot be
     # opened (e.g. a relative LANGFLOW_DATABASE_URL whose parent directory does
     # not exist), instead of the opaque "Error creating DB and tables" below.
     # See issue #13634.
-    from langflow.services.database.service import check_sqlite_database_path
-
     check_sqlite_database_path(database_service.database_url)
     try:
         if database_service.settings_service.settings.database_connection_retry:

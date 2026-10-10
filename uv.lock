@@ -8235,6 +8235,7 @@ pinecone = [
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
 ]
 postgresql = [
+    { name = "psycopg", extra = ["binary"], marker = "platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'arm64' or platform_machine == 'ppc64le' or platform_machine == 'riscv64' or platform_machine == 'x86_64'" },
     { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
 ]
 pyarrow = [
@@ -8528,6 +8529,7 @@ requires-dist = [
     { name = "pip", specifier = ">=26.2.1,<27.0.0" },
     { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
     { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
+    { name = "psycopg", extras = ["binary"], marker = "(platform_machine == 'AMD64' and extra == 'postgresql') or (platform_machine == 'aarch64' and extra == 'postgresql') or (platform_machine == 'arm64' and extra == 'postgresql') or (platform_machine == 'ppc64le' and extra == 'postgresql') or (platform_machine == 'riscv64' and extra == 'postgresql') or (platform_machine == 'x86_64' and extra == 'postgresql')", specifier = ">=3.1,<4.0" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'pgvector'", specifier = ">=3.1,<4.0" },
     { name = "pyarrow", marker = "extra == 'pyarrow'", specifier = ">=23.0.1,<24.0.0" },
     { name = "pyasn1", specifier = ">=0.6.3,<0.7.0" },

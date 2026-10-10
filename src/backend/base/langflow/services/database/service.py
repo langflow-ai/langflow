@@ -254,6 +254,49 @@ def check_sqlite_database_path(database_url: str) -> None:
     raise ValueError(msg)
 
 
+_PSYCOPG_DRIVER_NAMES = frozenset({"psycopg", "psycopg_async"})
+_psycopg_pure_python_warned = False
+
+
+def warn_if_psycopg_pure_python(database_url: str) -> bool:
+    """Warn once per process when PostgreSQL runs on psycopg's pure-Python libpq wrapper.
+
+    Without ``psycopg[binary]`` or ``psycopg[c]`` installed, psycopg talks to libpq
+    through ``ctypes``, which costs noticeable CPU on every query. Stays quiet for
+    non-psycopg URLs (SQLite, asyncpg, psycopg2), when psycopg has not been imported,
+    and when ``PSYCOPG_IMPL=python`` selects the pure-Python implementation on purpose.
+
+    Returns ``True`` when the warning was logged by this call.
+    """
+    global _psycopg_pure_python_warned  # noqa: PLW0603 - once-per-process flag
+
+    if _psycopg_pure_python_warned:
+        return False
+    try:
+        url = make_url(database_url)
+    except Exception:  # noqa: BLE001 - defensive: malformed URLs are handled elsewhere
+        return False
+    if url.get_backend_name() != "postgresql" or url.get_driver_name() not in _PSYCOPG_DRIVER_NAMES:
+        return False
+    psycopg = sys.modules.get("psycopg")
+    if psycopg is None:
+        return False
+    impl = getattr(getattr(psycopg, "pq", None), "__impl__", None)
+    if impl != "python" or os.environ.get("PSYCOPG_IMPL", "").strip().lower() == "python":
+        return False
+
+    _psycopg_pure_python_warned = True
+    version = getattr(psycopg, "__version__", "")
+    logger.warning(
+        "psycopg is using its pure-Python libpq wrapper (psycopg.pq.__impl__ == 'python'), which adds "
+        "CPU overhead to every PostgreSQL query. Install the compiled implementation matching the installed "
+        f"psycopg {version}: 'pip install \"psycopg[binary]=={version}\"' (bundled libpq) or "
+        f"'pip install \"psycopg[c]=={version}\"' (builds against the system libpq). "
+        "Set PSYCOPG_IMPL=python to keep the pure-Python implementation and silence this warning."
+    )
+    return True
+
+
 class DatabaseService(Service):
     name = "database_service"
 
