@@ -109,9 +109,11 @@ export function PauseStep({
   }
 
   const refusal = pause.error?.response?.data?.detail;
-  const waiting = refusal?.code === "jobs_active" ? refusal : undefined;
-  // Changes that were already under way had not finished. They do in a moment, with nothing for the admin to do.
-  const unfinished = refusal?.code === "requests_active";
+  // Either way the pause waits for something that has not ended, and the server says what.
+  const waiting =
+    refusal?.code === "jobs_active" || refusal?.code === "requests_active"
+      ? refusal
+      : undefined;
   return (
     <div className="flex flex-col items-start gap-4">
       <p className="text-sm text-muted-foreground">
@@ -120,22 +122,18 @@ export function PauseStep({
       {waiting && <Waiting refusal={waiting} />}
       {pause.isError && !waiting && (
         <p role="alert" className="text-sm text-destructive">
-          {unfinished
-            ? t("settings.migration.pause.requestsActive")
-            : t(
-                refusal?.code === "pause_ended"
-                  ? "settings.migration.pause.ended"
-                  : "settings.migration.failed",
-              )}
+          {t(
+            refusal?.code === "pause_ended"
+              ? "settings.migration.pause.ended"
+              : "settings.migration.failed",
+          )}
         </p>
       )}
       <Button
         className="w-full sm:w-fit"
         loading={pause.isPending}
-        // Asked once: checking or trying again is the same pause the admin already agreed to.
-        onClick={() =>
-          waiting || unfinished ? pauseNow() : setConfirming(true)
-        }
+        // Asked once: checking again is the same pause the admin already agreed to.
+        onClick={() => (waiting ? pauseNow() : setConfirming(true))}
         ignoreTitleCase
       >
         {waiting
@@ -165,9 +163,10 @@ export function PauseStep({
 
 /** What is still writing to this instance. The server lists it and stops none of it, so the admin decides. */
 export function Waiting({ refusal }: { refusal: MigrationError }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const jobs = refusal.jobs ?? [];
   const listeners = refusal.listeners ?? [];
+  const changes = refusal.changes ?? [];
   return (
     <div className="flex w-full flex-col gap-3">
       {jobs.length > 0 && (
@@ -219,6 +218,65 @@ export function Waiting({ refusal }: { refusal: MigrationError }) {
           </ul>
         </>
       )}
+      {changes.length > 0 && (
+        <>
+          <p role="alert" className="text-sm">
+            {t("settings.migration.pause.changes", { count: changes.length })}
+          </p>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    {t("settings.migration.pause.col.what")}
+                  </TableHead>
+                  <TableHead>
+                    {t("settings.migration.pause.col.started")}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {changes.map((change, index) => (
+                  <TableRow
+                    // The server gives a change no id, and two can be alike.
+                    key={index}
+                    data-testid={`migration-change-${index}`}
+                  >
+                    <TableCell>
+                      {t(`settings.migration.pause.change.${change.kind}`)}{" "}
+                      <span
+                        // Each kind fills the parts it has: a request its method and path, a websocket its path, the rest a name.
+                        lang="en"
+                        className="font-mono text-xs text-muted-foreground"
+                      >
+                        {[change.method, change.path, change.name]
+                          .filter(Boolean)
+                          .join(" ")}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {formatTime(change.since, i18n.language)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
+      {refusal.elsewhere && (
+        <p role="alert" className="text-sm">
+          {t("settings.migration.pause.elsewhere")}
+        </p>
+      )}
+      {refusal.code === "requests_active" &&
+        changes.length === 0 &&
+        !refusal.elsewhere && (
+          // Whatever held the pause back ended as the server answered, so it has nothing to name.
+          <p role="alert" className="text-sm">
+            {t("settings.migration.pause.requestsActive")}
+          </p>
+        )}
     </div>
   );
 }

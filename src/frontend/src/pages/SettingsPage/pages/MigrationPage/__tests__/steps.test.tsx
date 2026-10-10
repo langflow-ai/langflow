@@ -802,16 +802,198 @@ describe("Pause changes", () => {
     );
   });
 
-  it("says to try again when changes under way had not finished, and does not ask twice", async () => {
-    const post = jest
-      .spyOn(api, "post")
-      .mockRejectedValue(refused(409, { code: "requests_active" }));
+  it("lists the changes that were let in before the pause and have not ended, and checks again without asking twice", async () => {
+    const post = jest.spyOn(api, "post").mockRejectedValue(
+      refused(409, {
+        code: "requests_active",
+        jobs: [],
+        listeners: [],
+        changes: [
+          {
+            kind: "request",
+            method: "POST",
+            path: "/api/v2/files",
+            name: null,
+            since: "2026-10-06T11:58:00Z",
+          },
+          {
+            kind: "websocket",
+            method: null,
+            path: "/api/v1/voice/ws/flow_tts/flow-1",
+            name: null,
+            since: "2026-10-06T11:40:00Z",
+          },
+        ],
+        elsewhere: false,
+      }),
+    );
     show(
       <PauseStep migration={migration()} state={step("pause", "current")} />,
     );
 
-    const pause = () => screen.getByRole("button", { name: "Pause changes" });
-    await userEvent.click(pause());
+    await userEvent.click(
+      screen.getByRole("button", { name: "Pause changes" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Pause",
+      }),
+    );
+
+    expect(
+      await screen.findByText(/^Changes still under way: 2\./),
+    ).toBeInTheDocument();
+    const upload = screen.getByTestId("migration-change-0");
+    expect(upload).toHaveTextContent("Request POST /api/v2/files");
+    // The server's own words for a change are English in every language.
+    expect(within(upload).getByText("POST /api/v2/files")).toHaveAttribute(
+      "lang",
+      "en",
+    );
+    // When it started is in the reader's own time, as it is for a run.
+    expect(upload).toHaveTextContent(
+      new Date("2026-10-06T11:58:00Z").toLocaleString("en"),
+    );
+    expect(screen.getByTestId("migration-change-1")).toHaveTextContent(
+      "Live connection /api/v1/voice/ws/flow_tts/flow-1",
+    );
+    // The list says why, so neither the line for nothing to name nor the one for a failed request shows.
+    expect(screen.queryByText(/has just finished/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Something went wrong. Try again."),
+    ).not.toBeInTheDocument();
+
+    // The admin agreed to this pause already.
+    await userEvent.click(screen.getByRole("button", { name: "Check again" }));
+
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("names work that a request left running, and a periodic task, by the server's name for it", () => {
+    show(
+      <Waiting
+        refusal={{
+          code: "requests_active",
+          jobs: [],
+          listeners: [],
+          changes: [
+            {
+              kind: "task",
+              method: null,
+              path: null,
+              name: "webhook_run",
+              since: "2026-10-06T11:59:00Z",
+            },
+            {
+              kind: "loop",
+              method: null,
+              path: null,
+              name: "trigger_dispatcher",
+              since: "2026-10-06T09:00:00Z",
+            },
+          ],
+          elsewhere: false,
+        }}
+      />,
+    );
+
+    const task = screen.getByTestId("migration-change-0");
+    expect(task).toHaveTextContent("Work a request left running webhook_run");
+    const loop = screen.getByTestId("migration-change-1");
+    expect(loop).toHaveTextContent(
+      "Periodic task of the server trigger_dispatcher",
+    );
+    // A part the server left out is left out here too.
+    for (const row of [task, loop]) {
+      expect(row).not.toHaveTextContent("null");
+    }
+  });
+
+  it("lists the changes that have not ended under the runs the pause waits for", () => {
+    show(
+      <Waiting
+        refusal={{
+          code: "jobs_active",
+          jobs: [
+            {
+              id: "job-1",
+              flow_name: "Support bot",
+              owner: "bob",
+              state: "in_progress",
+              started_at: "2026-10-06T11:00:00Z",
+              cancel: null,
+            },
+          ],
+          listeners: [],
+          changes: [
+            {
+              kind: "request",
+              method: "POST",
+              path: "/api/v1/webhook/support",
+              name: null,
+              since: "2026-10-06T11:59:00Z",
+            },
+          ],
+        }}
+      />,
+    );
+
+    const [runs, changes] = screen.getAllByRole("table");
+    expect(screen.getByText(/^Still running: 1\./)).toBeInTheDocument();
+    expect(within(runs).getByTestId("migration-job-job-1")).toHaveTextContent(
+      "Support bot",
+    );
+    expect(
+      screen.getByText(/^Changes still under way: 1\./),
+    ).toBeInTheDocument();
+    expect(
+      within(changes)
+        .getAllByRole("columnheader")
+        .map((head) => head.textContent),
+    ).toEqual(["What", "Started"]);
+    expect(within(changes).getByTestId("migration-change-0")).toHaveTextContent(
+      "POST /api/v1/webhook/support",
+    );
+  });
+
+  it("says when another worker process is still handling a change this one cannot name", () => {
+    show(
+      <Waiting
+        refusal={{
+          code: "requests_active",
+          jobs: [],
+          listeners: [],
+          changes: [],
+          elsewhere: true,
+        }}
+      />,
+    );
+
+    // The only line: something is still under way, so nothing says it has finished.
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Another worker process of this server is still handling a change. This page can't see which one. Wait a moment, then check again.",
+    );
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("says to check again when what held the pause back ended as the server answered, and does not ask twice", async () => {
+    const post = jest.spyOn(api, "post").mockRejectedValue(
+      refused(409, {
+        code: "requests_active",
+        jobs: [],
+        listeners: [],
+        changes: [],
+        elsewhere: false,
+      }),
+    );
+    show(
+      <PauseStep migration={migration()} state={step("pause", "current")} />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Pause changes" }),
+    );
     await userEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: "Pause",
@@ -819,12 +1001,13 @@ describe("Pause changes", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Changes that were already under way haven't finished yet. Try again in a moment.",
+      /^What was still under way has just finished\. Check again\.$/,
     );
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(post).toHaveBeenCalledTimes(1);
 
-    // The admin already agreed to this pause, so trying again is one click.
-    await userEvent.click(pause());
+    // The admin already agreed to this pause, so checking again is one click.
+    await userEvent.click(screen.getByRole("button", { name: "Check again" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
   });
@@ -1030,6 +1213,47 @@ describe("Back up this instance", () => {
     );
     expect(confirm()).toBeEnabled();
     expect(screen.getByRole("status")).toHaveTextContent(/^Downloaded .+\.$/);
+  });
+
+  it.each([
+    ["while the step is on the page", false],
+    // Another step opened, or the admin went to another page. The server counts the copy as made either way.
+    ["after the step has left the page", true],
+  ])("hands the browser the copy that arrives %s", async (_when, gone) => {
+    let arrive: (response: object) => void = () => {};
+    jest.spyOn(api, "post").mockReturnValue(
+      new Promise((resolve) => {
+        arrive = resolve;
+      }) as never,
+    );
+    // jsdom has neither.
+    URL.createObjectURL = jest.fn(() => "blob:copy");
+    URL.revokeObjectURL = jest.fn();
+    const saved: string[] = [];
+    jest
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        saved.push(this.download);
+      });
+    const { unmount } = show(
+      <BackupStep migration={migration(sqlite, { pause: paused })} />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Download the database" }),
+    );
+    if (gone) unmount();
+    await act(async () =>
+      arrive({
+        data: new Blob(["copy"]),
+        headers: {
+          "content-disposition":
+            'attachment; filename="langflow-backup-20261006.db"',
+        },
+      }),
+    );
+
+    await waitFor(() => expect(saved).toEqual(["langflow-backup-20261006.db"]));
   });
 
   it("shows a download that did not finish, and keeps waiting for one", async () => {

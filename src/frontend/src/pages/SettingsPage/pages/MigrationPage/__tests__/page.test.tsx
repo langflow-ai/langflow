@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -65,6 +66,7 @@ const originalFetch = global.fetch;
 afterEach(() => {
   global.fetch = originalFetch;
   jest.restoreAllMocks();
+  jest.useRealTimers();
 });
 
 // Everything before the copies is done.
@@ -692,5 +694,118 @@ describe("the steps after the check", () => {
         "Tables: 59. Rows: 57. Rows left out: 1,202",
       ),
     ).toBeInTheDocument();
+  });
+});
+
+describe("what another admin does meanwhile", () => {
+  const BANNER = "Changes are paused on this instance.";
+  const pause = { frozen_at: "2026-10-06T12:00:00Z", frozen_by: "alice" };
+
+  /** Opens the page on a query that asks the server, as a browser tab does. */
+  function openLive() {
+    useAuthStore.setState({ userData: { is_superuser: true } as Users });
+    useUtilityStore.setState({ featureFlags: { instance_migration: true } });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MigrationPage />
+      </QueryClientProvider>,
+    );
+  }
+
+  it("leaves the pause within seconds of another admin turning changes back on", async () => {
+    jest.useFakeTimers();
+    const get = jest.spyOn(api, "get").mockResolvedValue({
+      data: state(
+        { ...copied, copy_database: ["done"] },
+        { pause, steps: { copy_database: run("done") } },
+      ),
+    });
+    openLive();
+    await act(() => jest.advanceTimersByTimeAsync(0));
+    expect(screen.getByText(BANNER)).toBeInTheDocument();
+
+    // The other admin resumes: the pause is gone and the copy has to be made again.
+    get.mockResolvedValue({
+      data: state(
+        {
+          ...copied,
+          pause: ["current"],
+          backup: ["locked", "earlier_step"],
+          copy_database: ["locked", "earlier_step"],
+        },
+        { steps: { copy_database: run("done") } },
+      ),
+    });
+    // The page asks again every five seconds.
+    await act(() => jest.advanceTimersByTimeAsync(6000));
+
+    expect(screen.queryByText(BANNER)).not.toBeInTheDocument();
+    expect(
+      row("pause").getByRole("button", { name: "Pause changes" }),
+    ).toBeInTheDocument();
+  });
+
+  it("follows a pause that another admin's request still waits on", async () => {
+    jest.useFakeTimers();
+    const steps: Parameters<typeof state>[0] = {
+      ...copied,
+      pause: ["current"],
+      backup: ["locked", "earlier_step"],
+      copy_database: ["locked", "earlier_step"],
+    };
+    // Changes are refused from the moment the pause is asked for, so a banner is up.
+    const waiting =
+      "Changes are refused. A pause was asked for and has not begun.";
+    const get = jest.spyOn(api, "get").mockResolvedValue({
+      data: state(steps, { pausing: pause }),
+    });
+    openLive();
+    await act(() => jest.advanceTimersByTimeAsync(0));
+    expect(screen.getByText(waiting)).toBeInTheDocument();
+
+    // The request was refused, because a change was still under way. Nothing is paused.
+    get.mockResolvedValue({ data: state(steps) });
+    await act(() => jest.advanceTimersByTimeAsync(6000));
+
+    expect(screen.queryByText(waiting)).not.toBeInTheDocument();
+  });
+
+  it("follows a copy that is still running after the pause is gone, until it ends", async () => {
+    jest.useFakeTimers();
+    const steps: Parameters<typeof state>[0] = {
+      ...copied,
+      pause: ["current"],
+      backup: ["locked", "earlier_step"],
+      copy_database: ["locked", "earlier_step"],
+    };
+    const get = jest.spyOn(api, "get").mockResolvedValue({
+      data: state(steps, { steps: { copy_database: run("running") } }),
+    });
+    openLive();
+    await act(() => jest.advanceTimersByTimeAsync(0));
+    expect(get).toHaveBeenCalledTimes(1);
+
+    get.mockResolvedValue({
+      data: state(steps, { steps: { copy_database: run("cancelled") } }),
+    });
+    await act(() => jest.advanceTimersByTimeAsync(5000));
+    expect(get).toHaveBeenCalledTimes(2);
+
+    // Nothing is paused and nothing runs any more, so the page stops asking.
+    await act(() => jest.advanceTimersByTimeAsync(10 * 60 * 1000));
+    expect(get).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks the server nothing more while nothing is paused or running", async () => {
+    jest.useFakeTimers();
+    const get = jest.spyOn(api, "get").mockResolvedValue({
+      data: state({ check_source: ["done"], connect_target: ["current"] }),
+    });
+    openLive();
+    await act(() => jest.advanceTimersByTimeAsync(0));
+
+    await act(() => jest.advanceTimersByTimeAsync(10 * 60 * 1000));
+
+    expect(get).toHaveBeenCalledTimes(1);
   });
 });
