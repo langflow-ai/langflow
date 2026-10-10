@@ -7,6 +7,10 @@ on:
       - "design/dedicated-integrations/**"
       - "design/dedicated-integrations-triggers/**"
       - ".github/workflows/ci-scripts-test.yml"
+      - ".github/workflows/backend-unit-tests.yml"
+      - ".github/workflows/python_test.yml"
+      - ".github/workflows/store_pytest_durations.yml"
+      - ".github/workflows/test-coverage-advisor.yml"
       - ".github/workflows/release.yml"
       - "pyproject.toml"
       - "src/bundles/*/pyproject.toml"
@@ -94,7 +98,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install jsonschema orjson packaging pytest requests
+        run: pip install jsonschema orjson packaging pytest pytest-xdist pytest-rerunfailures pytest-timeout pyyaml requests
 
       - name: Run CI script tests
         run: python -m pytest scripts/ci/ -v

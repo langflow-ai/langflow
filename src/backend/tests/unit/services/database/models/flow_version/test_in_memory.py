@@ -28,8 +28,13 @@ from langflow.services.database.models.flow_version.crud import (
     delete_flow_version_entry,
     get_flow_versions_with_provider_status,
     has_deployment_attachments,
+    set_flow_version_retained,
 )
-from langflow.services.database.models.flow_version.exceptions import FlowVersionDeployedError, FlowVersionNotFoundError
+from langflow.services.database.models.flow_version.exceptions import (
+    FlowVersionDeployedError,
+    FlowVersionNotFoundError,
+    FlowVersionRetainedError,
+)
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     count_attachments_by_deployment_ids,
@@ -976,3 +981,67 @@ class TestGetFlowVersionsWithProviderStatus:
         by_id = {version.id: is_deployed for version, is_deployed in rows}
         assert by_id[v1.id] is True
         assert by_id[v2.id] is False
+
+
+@pytest.mark.asyncio
+class TestRetainedVersions:
+    async def test_prune_skips_retained_until_cleared(self, db: AsyncSession, flow: Flow, user: User):
+        settings_mock = SimpleNamespace(settings=SimpleNamespace(max_flow_version_entries_per_flow=1))
+        with patch(
+            "langflow.services.database.models.flow_version.crud.get_settings_service",
+            return_value=settings_mock,
+        ):
+            v1 = await _create_version(db, flow, user, n=1)
+            await set_flow_version_retained(db, v1.id, retained=True, reason="deploy")
+            await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+            await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+            numbers = {v.version_number for v in (await db.exec(select(FlowVersion))).all()}
+            assert numbers == {1, 3}
+
+            await set_flow_version_retained(db, v1.id, retained=False)
+            await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+            numbers = {v.version_number for v in (await db.exec(select(FlowVersion))).all()}
+            assert numbers == {4}
+
+    async def test_retained_versions_do_not_count_toward_the_limit(self, db: AsyncSession, flow: Flow, user: User):
+        settings_mock = SimpleNamespace(settings=SimpleNamespace(max_flow_version_entries_per_flow=2))
+        with patch(
+            "langflow.services.database.models.flow_version.crud.get_settings_service",
+            return_value=settings_mock,
+        ):
+            await _create_version(db, flow, user, n=1)
+            v2 = await _create_version(db, flow, user, n=2)
+            await set_flow_version_retained(db, v2.id, retained=True, reason="deploy")
+            await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+            numbers = {v.version_number for v in (await db.exec(select(FlowVersion))).all()}
+            # Two unretained versions (1 and 3) fit the limit beside the retained one.
+            assert numbers == {1, 2, 3}
+
+    async def test_delete_refuses_retained_with_reason(self, db: AsyncSession, flow: Flow, user: User):
+        v1 = await _create_version(db, flow, user, n=1)
+        await set_flow_version_retained(db, v1.id, retained=True, reason="cp-deploy")
+        with pytest.raises(FlowVersionRetainedError, match="cp-deploy"):
+            await delete_flow_version_entry(db, v1.id, user.id)
+        await set_flow_version_retained(db, v1.id, retained=False)
+        await delete_flow_version_entry(db, v1.id, user.id)
+
+    async def test_helper_sets_clears_and_rolls_back(self, db: AsyncSession, flow: Flow, user: User):
+        v1 = await _create_version(db, flow, user, n=1)
+        await db.commit()
+        assert v1.retained is False
+        assert v1.retained_reason is None
+
+        v = await set_flow_version_retained(db, v1.id, retained=True, reason="r")
+        assert (v.retained, v.retained_reason) == (True, "r")
+        await db.rollback()
+        await db.refresh(v1)
+        assert v1.retained is False
+
+        await set_flow_version_retained(db, v1.id, retained=True, reason="r")
+        await db.commit()
+        v = await set_flow_version_retained(db, v1.id, retained=False, reason="ignored")
+        assert (v.retained, v.retained_reason) == (False, None)
+
+    async def test_helper_missing_version_raises(self, db: AsyncSession):
+        with pytest.raises(FlowVersionNotFoundError):
+            await set_flow_version_retained(db, uuid4(), retained=True)

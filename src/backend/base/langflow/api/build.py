@@ -106,6 +106,14 @@ def _project_event_to_v1(raw: str) -> str:
     return json.dumps(event) + "\n\n"
 
 
+def _vertex_build_data_for_event(response: VertexBuildResponse, *, redact_build_params: bool) -> dict:
+    """Serialize a vertex event while withholding raw parameters from shared callers."""
+    build_data = json.loads(response.model_dump_json())
+    if redact_build_params:
+        build_data["params"] = None
+    return build_data
+
+
 def _output_meta_for_vertex(graph: Graph, vertex_id: str) -> dict:
     """Authoritative per-output metadata for the v2 ``output`` stream event.
 
@@ -205,6 +213,7 @@ async def start_flow_build(
     source_flow_owner_id: uuid.UUID | None = None,
     expose_error_details: bool = False,
     execution_family: str = FAMILY_INTERACTIVE_CHAT,
+    redact_build_params: bool = False,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
 
@@ -230,6 +239,7 @@ async def start_flow_build(
         execution_family: The caller's row in ``scripts/ci/execution_principal_matrix.json``
             (interactive_chat, legacy_public_chat, or voice). It decides the identity the
             built graph resolves connections under.
+        redact_build_params: Hide raw vertex parameters from non-owner event consumers.
 
     Returns:
         the job_id.
@@ -259,6 +269,7 @@ async def start_flow_build(
             source_flow_owner_id=source_flow_owner_id,
             expose_error_details=expose_error_details,
             execution_family=execution_family,
+            redact_build_params=redact_build_params,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
@@ -479,6 +490,7 @@ async def _generate_flow_events(
     track_job_status: bool = True,
     tweaks: dict | None = None,
     expose_error_details: bool = False,
+    redact_build_params: bool = False,
     persist_messages: bool = True,
     end_user_id: str | None = None,
     execution_family: str = FAMILY_INTERACTIVE_CHAT,
@@ -816,7 +828,7 @@ async def _generate_flow_events(
                     flow_id=flow_id_str,
                     vertex_id=vertex_id,
                     valid=valid,
-                    params=params,
+                    params=None if redact_build_params else params,
                     data=result_data_response,
                     artifacts=artifacts,
                     # Key the persisted build by the run id so job-tracked runs can
@@ -928,8 +940,7 @@ async def _generate_flow_events(
 
         # send built event or error event
         try:
-            vertex_build_response_json = vertex_build_response.model_dump_json()
-            build_data = json.loads(vertex_build_response_json)
+            build_data = _vertex_build_data_for_event(vertex_build_response, redact_build_params=redact_build_params)
         except Exception as exc:
             msg = f"Error serializing vertex build response: {exc}"
             raise ValueError(msg) from exc
@@ -990,6 +1001,10 @@ async def _generate_flow_events(
                     flow_id=flow_id,
                     user_id=current_user.id,
                     job_type=JobType.WORKFLOW,
+                    # Live from insert, then kept alive by execute_with_status, so an orphan
+                    # sweep cannot fail it mid-run. The pause path writes job_metadata only
+                    # for a runner-owned job, never for this one.
+                    heartbeat=True,
                 )
     except Exception:  # noqa: BLE001
         await logger.awarning(
@@ -1059,7 +1074,7 @@ async def _generate_flow_events(
         # still covers them, so the operator sees the request, just not a unit of work.
         with graph.flow_execution_span() as flow_span:
             if _build_job_svc and _build_run_id and not runner_owns_status:
-                await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
+                await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build, keep_alive=True)
             else:
                 await _run_vertex_build()
             if build_error_type is not None:

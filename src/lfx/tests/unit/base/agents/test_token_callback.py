@@ -282,3 +282,40 @@ class TestErrorPathCaptureInputTokens:
         handler = TokenUsageCallbackHandler()
         handler.on_llm_error(RuntimeError("boom"), run_id=uuid.uuid4())
         assert handler.get_usage() is None
+
+
+class TestRunsInline:
+    """LangChain's async callback manager must call the handler on the loop, not the thread pool."""
+
+    async def test_should_not_hop_to_the_thread_pool_for_any_event(self, monkeypatch):
+        import asyncio
+        import uuid
+
+        from langchain_core.callbacks import AsyncCallbackManager, BaseCallbackHandler
+        from langchain_core.messages import HumanMessage
+
+        class _Plain(BaseCallbackHandler):
+            """A sync handler without run_inline, to prove the executor hop is observable."""
+
+        loop = asyncio.get_running_loop()
+        executor_calls = []
+        original = loop.run_in_executor
+
+        def _spy(executor, func, *args):
+            executor_calls.append(getattr(func, "args", (func,))[0])
+            return original(executor, func, *args)
+
+        monkeypatch.setattr(loop, "run_in_executor", _spy)
+
+        handler = TokenUsageCallbackHandler()
+        assert handler.run_inline is True
+        manager = AsyncCallbackManager(handlers=[handler, _Plain()])
+        [run] = await manager.on_chat_model_start({}, [[HumanMessage(content="z" * 40)]], run_id=uuid.uuid4())
+        for token in ("a", "b", "c"):
+            await run.on_llm_new_token(token)
+        await run.on_llm_end(_make_llm_result(llm_output={"token_usage": {"prompt_tokens": 7, "completion_tokens": 3}}))
+
+        # The plain control handler went through the executor for every event, one hop per token.
+        assert [fn.__name__ for fn in executor_calls].count("on_llm_new_token") == 3
+        assert all(fn.__self__ is not handler for fn in executor_calls)
+        assert handler.get_usage() == Usage(input_tokens=7, output_tokens=3, total_tokens=10)

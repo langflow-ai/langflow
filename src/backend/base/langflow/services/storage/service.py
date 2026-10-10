@@ -13,6 +13,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 import anyio
+from lfx.services.storage.namespace import validate_namespace
 from lfx.services.storage.service import StorageReadiness
 
 from langflow.services.base import Service
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
 
-__all__ = ["StorageReadiness", "StorageService"]
+__all__ = ["StorageReadiness", "StorageService", "validate_namespace"]
 
 
 class StorageService(Service):
@@ -116,9 +117,26 @@ class StorageService(Service):
     async def get_file_size(self, flow_id: str, file_name: str):
         raise NotImplementedError
 
+    async def get_file_md5(self, flow_id: str, file_name: str) -> str | None:  # noqa: ARG002
+        """The file's MD5 when the backend already has it, or None when it would have to read the file."""
+        return None
+
     @abstractmethod
     async def delete_file(self, flow_id: str, file_name: str) -> None:
         raise NotImplementedError
+
+    async def delete_namespace(self, namespace: str) -> int:
+        """Delete every object stored under a flow or user namespace and return how many were removed.
+
+        ``namespace`` must be a UUID string. The default implementation deletes the
+        flat file list; backends that can store nested keys override it.
+        """
+        validated = validate_namespace(namespace)
+        removed = 0
+        for file_name in await self.list_files(validated):
+            await self.delete_file(validated, file_name)
+            removed += 1
+        return removed
 
     @abstractmethod
     async def teardown(self) -> None:

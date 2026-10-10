@@ -88,20 +88,19 @@ export default function IOModal({
   );
   const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
 
+  const sessionsQuery = useGetSessionsFromFlowQuery({
+    id: currentFlowId,
+    enabled: open,
+  });
   const {
     data: sessionsFromDb,
     isLoading: sessionsLoading,
     refetch: refetchSessions,
-  } = useGetSessionsFromFlowQuery(
-    {
-      id: currentFlowId,
-    },
-    { enabled: open },
-  );
+  } = sessionsQuery;
 
   useEffect(() => {
     if (sessionsFromDb && !sessionsLoading) {
-      const sessions = [...sessionsFromDb.sessions];
+      const sessions = [...sessionsFromDb];
       // Always include the currentFlowId as the default session if it's not already present
       if (!sessions.includes(currentFlowId)) {
         sessions.unshift(currentFlowId);
@@ -232,14 +231,13 @@ export default function IOModal({
       window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
     }
     if (newChatOnPlayground && !sessionsLoading) {
+      // "New chat" sends under the generated `sessionId`. Select it by id: the
+      // refetched list is newest first and may not be complete.
+      const newSessionId = sessionId;
       const handleRefetchAndSetSession = async () => {
         try {
-          const result = await refetchSessions();
-          if (result.data?.sessions && result.data.sessions.length > 0) {
-            setvisibleSession(
-              result.data.sessions[result.data.sessions.length - 1],
-            );
-          }
+          await refetchSessions();
+          setvisibleSession(newSessionId);
         } catch (error) {
           console.error("Error refetching sessions:", error);
         }
@@ -419,6 +417,7 @@ export default function IOModal({
                 {sidebarOpen && !sessionsLoading && (
                   <SidebarOpenView
                     sessions={sessions}
+                    sessionsPagination={sessionsQuery}
                     setSelectedViewField={setSelectedViewField}
                     setvisibleSession={setvisibleSession}
                     handleDeleteSession={handleDeleteSession}

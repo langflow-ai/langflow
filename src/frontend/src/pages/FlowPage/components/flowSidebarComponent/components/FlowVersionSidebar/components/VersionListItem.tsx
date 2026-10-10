@@ -51,8 +51,13 @@ export default function VersionListItem({
             description={entry.description}
             className="w-full truncate font-medium text-sm pb-1"
           />
-          <span className="text-xs text-muted-foreground">
-            {formatTimestamp(entry.created_at)}
+          <span className="w-full truncate text-xs text-muted-foreground">
+            {entry.username
+              ? t("version.lastModifiedBy", {
+                  time: formatTimestamp(entry.created_at),
+                  name: entry.username,
+                })
+              : formatTimestamp(entry.created_at)}
           </span>
         </div>
         <div className="flex items-center">

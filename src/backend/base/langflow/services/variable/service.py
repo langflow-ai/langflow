@@ -331,6 +331,8 @@ class DatabaseVariableService(VariableService, Service):
             ]
             if not visibility.all_resources:
                 shared_clauses.append(col(Variable.id).in_(visibility.resource_ids))
+            if visibility.excluded_resource_ids:
+                shared_clauses.append(col(Variable.id).not_in(visibility.excluded_resource_ids))
             shared_variables = list((await session.exec(select(Variable).where(*shared_clauses))).all())
             if not shared_variables:
                 raise

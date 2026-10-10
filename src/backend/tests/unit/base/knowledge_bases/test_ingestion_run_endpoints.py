@@ -28,7 +28,7 @@ from unittest.mock import patch
 import pytest
 from langflow.api.utils import knowledge_base_service
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_job_service, session_scope
 from lfx.base.knowledge_bases.ingestion_sources.base import IngestionRunStatus
 
 if TYPE_CHECKING:
@@ -78,6 +78,9 @@ async def _insert_run(
     succeeded: int = 1,
     failed: int = 0,
     source_config: dict | None = None,
+    job_status: JobStatus = JobStatus.COMPLETED,
+    job_error: dict | None = None,
+    error_message: str | None = None,
 ) -> uuid.UUID:
     """Seed a ``Job`` row carrying KB ingestion-run data on its metadata.
 
@@ -85,6 +88,9 @@ async def _insert_run(
     is not supplied) so the new asset_id-indexed read path is
     exercised. Returns the ``job_id`` so callers can use it as the
     URL ``run_id`` — the two are equal post-unification.
+
+    ``job_status`` and ``status`` are independent so a test can seed a
+    job the sweep ended while its metadata still reads in flight.
     """
     if kb_id is None:
         kb_id = await _ensure_kb_record(user_id=user_id, kb_name=kb_name)
@@ -100,17 +106,19 @@ async def _insert_run(
         }
     ]
     started_at = _next_created_timestamp()
+    in_flight = job_status in {JobStatus.QUEUED, JobStatus.IN_PROGRESS}
     async with session_scope() as session:
         job = Job(
             job_id=run_id,
             flow_id=run_id,
-            status=JobStatus.COMPLETED,
+            status=job_status,
             type=JobType.INGESTION,
             user_id=user_id,
             asset_id=kb_id,
             asset_type="knowledge_base",
             created_timestamp=started_at,
-            finished_timestamp=started_at,
+            finished_timestamp=None if in_flight else started_at,
+            error=job_error,
             job_metadata={
                 "kind": "kb_ingestion",
                 "kb_name": kb_name,
@@ -118,7 +126,7 @@ async def _insert_run(
                 "source_type": source_type,
                 "source_config": {"source_name": "demo"} if source_config is None else source_config,
                 "status": status.value,
-                "error_message": None,
+                "error_message": error_message,
                 "total_items": succeeded + failed,
                 "succeeded": succeeded,
                 "failed": failed,
@@ -338,6 +346,117 @@ class TestGetIngestionRun:
         assert response.status_code == 404
 
 
+class TestRunStatusAfterJobEnds:
+    """A run whose job ended without finalizing must not read as in flight.
+
+    Only the ingestion's own ``finalize_run`` writes a terminal
+    ``job_metadata.status``. When something else ends the job (the orphan
+    sweep after a worker dies, a timeout, a cancel the run never saw), run
+    history must follow the job instead of reading RUNNING forever.
+    """
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_run_orphaned_by_the_sweep_reads_failed(
+        self, mock_root, client: AsyncClient, logged_in_headers, active_user, tmp_path
+    ):
+        mock_root.return_value = tmp_path
+        (tmp_path / active_user.username / "orphan_kb").mkdir(parents=True)
+        # The worker died mid-run: no heartbeat, metadata still RUNNING.
+        run_id = await _insert_run(
+            user_id=active_user.id,
+            kb_name="orphan_kb",
+            status=IngestionRunStatus.RUNNING,
+            job_status=JobStatus.IN_PROGRESS,
+            items=[],
+            succeeded=0,
+        )
+
+        swept = await get_job_service().sweep_orphans(lease_ttl_s=45.0)
+        assert run_id in swept
+
+        listed = await client.get("api/v1/knowledge_bases/orphan_kb/runs", headers=logged_in_headers)
+        assert listed.status_code == 200, listed.text
+        [run] = listed.json()["runs"]
+        assert run["status"] == "failed"
+        assert "worker" in run["error_message"]
+        assert run["finished_at"] is not None
+
+        detail = await client.get(f"api/v1/knowledge_bases/orphan_kb/runs/{run_id}", headers=logged_in_headers)
+        assert detail.status_code == 200, detail.text
+        assert detail.json()["status"] == "failed"
+        assert detail.json()["error_message"] == run["error_message"]
+
+    @pytest.mark.parametrize(
+        ("job_status", "job_error", "run_status", "expected_status", "expected_error"),
+        [
+            (JobStatus.FAILED, {"type": "worker_lost"}, IngestionRunStatus.PENDING, "failed", "worker"),
+            (JobStatus.FAILED, None, IngestionRunStatus.RUNNING, "failed", "recorded a result"),
+            (JobStatus.TIMED_OUT, None, IngestionRunStatus.RUNNING, "failed", "timed out"),
+            (JobStatus.CANCELLED, None, IngestionRunStatus.RUNNING, "cancelled", None),
+            (JobStatus.COMPLETED, None, IngestionRunStatus.RUNNING, "succeeded", None),
+            # Still in flight: the run's own status stands.
+            (JobStatus.IN_PROGRESS, None, IngestionRunStatus.RUNNING, "running", None),
+            (JobStatus.QUEUED, None, IngestionRunStatus.PENDING, "pending", None),
+            # The run recorded its own outcome, which is more precise than the job's.
+            (JobStatus.COMPLETED, None, IngestionRunStatus.PARTIAL, "partial", None),
+            (JobStatus.FAILED, {"type": "worker_lost"}, IngestionRunStatus.CANCELLED, "cancelled", None),
+        ],
+    )
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_in_flight_run_follows_its_ended_job(
+        self,
+        mock_root,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+        job_status,
+        job_error,
+        run_status,
+        expected_status,
+        expected_error,
+    ):
+        mock_root.return_value = tmp_path
+        (tmp_path / active_user.username / "ended_kb").mkdir(parents=True)
+        run_id = await _insert_run(
+            user_id=active_user.id,
+            kb_name="ended_kb",
+            status=run_status,
+            job_status=job_status,
+            job_error=job_error,
+        )
+
+        response = await client.get(f"api/v1/knowledge_bases/ended_kb/runs/{run_id}", headers=logged_in_headers)
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert payload["status"] == expected_status
+        if expected_error is None:
+            assert payload["error_message"] is None
+        else:
+            assert expected_error in payload["error_message"]
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_run_keeps_the_error_it_recorded(
+        self, mock_root, client: AsyncClient, logged_in_headers, active_user, tmp_path
+    ):
+        mock_root.return_value = tmp_path
+        (tmp_path / active_user.username / "recorded_kb").mkdir(parents=True)
+        # Finalize wrote its reason, then the status write was lost.
+        run_id = await _insert_run(
+            user_id=active_user.id,
+            kb_name="recorded_kb",
+            status=IngestionRunStatus.RUNNING,
+            job_status=JobStatus.FAILED,
+            job_error={"type": "worker_lost"},
+            error_message="embedding provider rejected the key",
+        )
+
+        response = await client.get(f"api/v1/knowledge_bases/recorded_kb/runs/{run_id}", headers=logged_in_headers)
+        assert response.status_code == 200, response.text
+        assert response.json()["status"] == "failed"
+        assert response.json()["error_message"] == "embedding provider rejected the key"
+
+
 class TestChunksFilters:
     """Sanity-check the metadata filters on the chunks endpoint.
 
@@ -376,14 +495,12 @@ class TestChunksFilters:
             ("?job_id=deadbeef", {"file_upload"}),
         ],
     )
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.release_chroma_resources")
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.backend_for_record")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_single_metadata_filter_narrows_results(
         self,
         mock_root,
         mock_create_backend,
-        mock_release,  # noqa: ARG002
         query,
         expected_source_types,
         client: AsyncClient,
@@ -394,8 +511,6 @@ class TestChunksFilters:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "filter_kb"
         kb_dir.mkdir(parents=True)
-        # A dummy chroma.sqlite3 so the local-Chroma "has_data" guard passes.
-        (kb_dir / "chroma.sqlite3").write_bytes(b"")
         await _ensure_kb_record(user_id=active_user.id, kb_name="filter_kb")
 
         mock_create_backend.return_value = self._fake_backend(
@@ -413,14 +528,12 @@ class TestChunksFilters:
         body = response.json()
         assert {chunk["metadata"]["source_type"] for chunk in body["chunks"]} == expected_source_types
 
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.release_chroma_resources")
-    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.backend_for_record")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_multiple_filters_combine_with_and(
         self,
         mock_root,
         mock_create_backend,
-        mock_release,  # noqa: ARG002
         client: AsyncClient,
         logged_in_headers,
         active_user,
@@ -429,10 +542,7 @@ class TestChunksFilters:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "filter_multi"
         kb_dir.mkdir(parents=True)
-        # A dummy chroma.sqlite3 so the local-Chroma "has_data" guard passes.
-        (kb_dir / "chroma.sqlite3").write_bytes(b"")
         await _ensure_kb_record(user_id=active_user.id, kb_name="filter_multi")
-        (kb_dir / "chroma.sqlite3").write_bytes(b"")
 
         mock_create_backend.return_value = self._fake_backend(
             [

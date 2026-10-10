@@ -23,7 +23,7 @@ without another schema change:
 
 from __future__ import annotations
 
-from datetime import datetime  # noqa: TC003 - SQLModel resolves annotations at runtime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -274,3 +274,59 @@ class TriggerSubscription(SQLModel, table=True):  # type: ignore[call-arg]
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
     )
+
+
+class TriggerSourceVersion(SQLModel, table=True):  # type: ignore[call-arg]
+    """Last observed provider version, retained independently of ledger purges.
+
+    A rejected delta/sync token forces a full scan. Comparing against this
+    durable high-water mark keeps that scan from replaying unchanged resources
+    even after the 30-day event ledger retention window has elapsed.
+    """
+
+    __tablename__ = "trigger_source_version"
+
+    trigger_id: UUID = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("trigger.id", ondelete="CASCADE"), primary_key=True, nullable=False),
+    )
+    item_key: str = Field(sa_column=Column(sa.String(64), primary_key=True, nullable=False))
+    provider: str = Field(sa_column=Column(sa.String(32), nullable=False))
+    resource: str = Field(sa_column=Column(sa.String(512), nullable=False))
+    provider_item_id: str = Field(sa_column=Column(sa.String(512), nullable=False))
+    version: str = Field(sa_column=Column(sa.String(255), nullable=False))
+    updated_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
+    )
+
+
+class TriggerCleanup(SQLModel, table=True):  # type: ignore[call-arg]
+    """A remote revocation intent that outlives deletion of local trigger rows.
+
+    No foreign keys: deleting an owner or flow must not erase outstanding
+    cleanup. User deletion may retain a bounded encrypted access-token snapshot
+    exclusively for this task; ordinary deletion resolves the owner connection.
+    """
+
+    __tablename__ = "trigger_cleanup"
+    id: UUID = Field(primary_key=True)
+    trigger_id: UUID
+    connection_id: UUID | None = Field(default=None)
+    user_id: UUID
+    provider: str = Field(sa_column=Column(sa.String(64), nullable=False))
+    kind: str = Field(sa_column=Column(sa.String(64), nullable=False))
+    provider_subscription_id: str = Field(sa_column=Column(sa.String(255), nullable=False))
+    provider_state: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JsonVariant, nullable=False))
+    expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    encrypted_credential: str | None = Field(
+        default=None, exclude=True, repr=False, sa_column=Column(sa.Text(), nullable=True)
+    )
+    credential_expires_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    available_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True),
+    )
+    attempt: int = Field(default=0, sa_column=Column(sa.Integer(), nullable=False, server_default="0"))
+    last_error: str | None = Field(default=None, sa_column=Column(sa.String(128), nullable=True))

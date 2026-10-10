@@ -38,7 +38,12 @@ jest.mock("@/stores/utilityStore", () => ({
 }));
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: { getState: jest.fn(() => ({ componentsToUpdate: [] })) },
+  default: {
+    getState: jest.fn(() => ({ componentsToUpdate: [] })),
+    // Requesting a save marks the flow as user-edited, which the conflict
+    // guards read to tell a real edit from hydration.
+    setState: jest.fn(),
+  },
 }));
 jest.mock("@/contexts/permissionsContext", () => ({
   usePermissions: () => mockUsePermissions(),
@@ -184,6 +189,76 @@ describe("useAutoSaveFlow", () => {
     ]);
   });
 
+  it("runs an enqueued save after in-flight saves and before later autosaves", async () => {
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) =>
+        selector({
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        }),
+    );
+    const events: string[] = [];
+    const settlers: Record<string, () => void> = {};
+    mockSaveFlow.mockImplementation((flow: FlowType) => {
+      events.push(`start:${flow.name}`);
+      return new Promise<void>((resolve) => {
+        settlers[flow.name] = () => {
+          events.push(`settle:${flow.name}`);
+          resolve();
+        };
+      });
+    });
+    const { result } = renderHook(() => useAutoSaveFlow());
+
+    result.current({ ...makeMockFlow(), name: "Canvas" });
+    await waitFor(() => expect(mockSaveFlow).toHaveBeenCalledTimes(1));
+    const settingsSave = result.current.enqueue({
+      ...makeMockFlow(),
+      name: "Settings",
+    });
+    result.current({ ...makeMockFlow(), name: "Later" });
+    await Promise.resolve();
+    expect(mockSaveFlow).toHaveBeenCalledTimes(1);
+
+    act(() => settlers.Canvas());
+    await waitFor(() => expect(mockSaveFlow).toHaveBeenCalledTimes(2));
+    act(() => settlers.Settings());
+    await settingsSave;
+    await waitFor(() => expect(mockSaveFlow).toHaveBeenCalledTimes(3));
+    act(() => settlers.Later());
+
+    await waitFor(() =>
+      expect(events).toEqual([
+        "start:Canvas",
+        "settle:Canvas",
+        "start:Settings",
+        "settle:Settings",
+        "start:Later",
+        "settle:Later",
+      ]),
+    );
+  });
+
+  it("rejects a failed enqueued save without blocking later saves", async () => {
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) =>
+        selector({
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        }),
+    );
+    const failure = new Error("Flow is locked");
+    mockSaveFlow.mockRejectedValueOnce(failure).mockResolvedValue(undefined);
+    const { result } = renderHook(() => useAutoSaveFlow());
+
+    await expect(result.current.enqueue(makeMockFlow())).rejects.toBe(failure);
+    result.current(makeMockFlow());
+
+    await waitFor(() => expect(mockSaveFlow).toHaveBeenCalledTimes(2));
+  });
+
   it("should not call saveFlow when autoSaving is disabled", () => {
     (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
       (selector) => {
@@ -274,6 +349,9 @@ describe("useAutoSaveFlow", () => {
     expect(useDebounce).toHaveBeenCalledWith(
       expect.any(Function),
       customInterval,
+      // A ceiling proportional to the interval, so continuous editing cannot
+      // defer the save indefinitely however an install configures the debounce.
+      { maxWait: customInterval * 3 },
     );
   });
 

@@ -180,6 +180,59 @@ async def test_snapshot_captures_current_flow_data(client: AsyncClient, logged_i
     assert r2.json()["data"] == new_data
 
 
+async def test_snapshot_archives_a_graph_the_server_never_had(client: AsyncClient, logged_in_headers):
+    """The state worth keeping is the one on somebody's canvas, not the one already stored.
+
+    Discarding a conflicted edit has to leave the abandoned work recoverable, and
+    that work only exists in the browser — a snapshot of what the server already
+    holds would archive precisely the version that was never at risk.
+    """
+    flow = await _create_flow(client, logged_in_headers)
+    stored = {"nodes": [{"id": "on-the-server"}], "edges": []}
+    await _patch_flow_data(client, logged_in_headers, flow["id"], stored)
+
+    abandoned = {"nodes": [{"id": "only-on-my-canvas"}], "edges": [], "viewport": {"x": 0, "y": 0, "zoom": 1}}
+    response = await client.post(
+        f"api/v1/flows/{flow['id']}/versions/",
+        json={"description": "Saved when discarding a conflict", "data": abandoned},
+        headers=logged_in_headers,
+    )
+    assert response.status_code in (status.HTTP_200_OK, status.HTTP_201_CREATED), response.text
+
+    entry = await client.get(f"api/v1/flows/{flow['id']}/versions/{response.json()['id']}", headers=logged_in_headers)
+    assert entry.json()["data"] == abandoned, "the canvas state is what got archived"
+
+    current = await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
+    assert current.json()["data"] == stored, "archiving must not touch the flow itself"
+
+
+async def test_snapshot_without_a_graph_still_captures_the_stored_one(client: AsyncClient, logged_in_headers):
+    """Omitting the graph keeps the original behaviour every other caller relies on."""
+    flow = await _create_flow(client, logged_in_headers)
+    stored = {"nodes": [{"id": "stored"}], "edges": []}
+    await _patch_flow_data(client, logged_in_headers, flow["id"], stored)
+
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"], description="no data supplied")
+
+    entry = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
+    assert entry.json()["data"] == stored
+
+
+async def test_archiving_a_canvas_does_not_take_the_writers_turn(client: AsyncClient, logged_in_headers):
+    """A discard must not look like an edit to everyone else holding the flow open."""
+    flow = await _create_flow(client, logged_in_headers)
+    token_before = (await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)).json()["version_token"]
+
+    await client.post(
+        f"api/v1/flows/{flow['id']}/versions/",
+        json={"description": "Saved when discarding a conflict", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+
+    token_after = (await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)).json()["version_token"]
+    assert token_after == token_before, "archiving is history only; it never claims the write turn"
+
+
 async def test_delete_version_entry(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])
@@ -306,6 +359,55 @@ async def test_deleting_flow_cascades_to_versions(client: AsyncClient, logged_in
     # Versions endpoint for the deleted flow should 404
     resp = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def _set_retained(version_id: str, *, retained: bool, reason: str | None = None) -> None:
+    from uuid import UUID
+
+    from langflow.services.database.models.flow_version.crud import set_flow_version_retained
+    from langflow.services.deps import session_scope
+
+    async with session_scope() as session:
+        await set_flow_version_retained(session, UUID(version_id), retained=retained, reason=reason)
+
+
+async def test_delete_retained_version_conflicts_until_cleared(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+    assert snap["retained"] is False
+    assert snap["retained_reason"] is None
+    url = f"api/v1/flows/{flow['id']}/versions/{snap['id']}"
+
+    await _set_retained(snap["id"], retained=True, reason="cp-deploy")
+    got = (await client.get(url, headers=logged_in_headers)).json()
+    assert got["retained"] is True
+    assert got["retained_reason"] == "cp-deploy"
+    listed = await _list_versions(client, logged_in_headers, flow["id"])
+    assert listed[0]["retained"] is True
+    resp = await client.delete(url, headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_409_CONFLICT
+    assert "cp-deploy" in resp.json()["detail"]
+
+    await _set_retained(snap["id"], retained=False)
+    resp = await client.delete(url, headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+
+async def test_deleting_flow_removes_retained_versions(client: AsyncClient, logged_in_headers):
+    from uuid import UUID
+
+    from langflow.services.database.models.flow_version.model import FlowVersion
+    from langflow.services.deps import session_scope
+    from sqlmodel import select
+
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+    await _set_retained(snap["id"], retained=True)
+
+    resp = await client.delete(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_200_OK
+    async with session_scope() as session:
+        assert (await session.exec(select(FlowVersion).where(FlowVersion.id == UUID(snap["id"])))).first() is None
 
 
 # ---------------------------------------------------------------------------

@@ -33,6 +33,7 @@ from langflow.services.authorization.actions import (
     VariableAction,
     VoiceAction,
 )
+from langflow.services.authorization.refusal import mark_authorization_refusal
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
@@ -145,6 +146,11 @@ def capability_probe() -> Iterator[None]:
         yield
     finally:
         _capability_probe.reset(token)
+
+
+def is_decision_audit_suppressed() -> bool:
+    """True while a check runs that must leave no decision row, for plugins that write their own."""
+    return _capability_probe.get()
 
 
 async def _audit_suppressed() -> None:
@@ -300,9 +306,11 @@ async def ensure_permission(
             result=_audit.AUDIT_DENY,
             details={**audit_details, "error": str(exc)},
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=deny_detail,
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=deny_detail,
+            )
         ) from exc
 
     await _audit_guard_decision(
@@ -314,9 +322,11 @@ async def ensure_permission(
     )
 
     if not allowed:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=deny_detail,
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=deny_detail,
+            )
         )
 
 
@@ -347,9 +357,11 @@ async def _ensure_resource_permission(
                 "external_access_level": external_context.level,
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="External credentials do not allow this action",
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="External credentials do not allow this action",
+            )
         )
 
     if (
@@ -510,6 +522,7 @@ async def _ensure_typed(
     act_str: str,
     kwargs: dict[str, Any],
     domain_override: str | None,
+    allow_owner_override: bool = True,
 ) -> None:
     """Shared body for ``ensure_*_permission`` helpers.
 
@@ -557,10 +570,10 @@ async def _ensure_typed(
     container_owner_id = kwargs.get(spec.create_container_owner_kw) if spec.create_container_owner_kw else None
     if is_create and spec.create_container_owner_kw is not None:
         override_owner_id = container_owner_id
-        owner_override_allowed = True
+        owner_override_allowed = allow_owner_override
     else:
         override_owner_id = owner_id
-        owner_override_allowed = not is_create or spec.owner_override_on_create
+        owner_override_allowed = allow_owner_override and (not is_create or spec.owner_override_on_create)
 
     await _ensure_resource_permission(
         user,
@@ -611,6 +624,35 @@ async def ensure_flow_permission(
         },
         domain_override=domain,
     )
+
+
+async def ensure_flow_audit_read_permission(
+    user: User | UserRead,
+    *,
+    flow_id: UUID | None = None,
+    flow_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+    folder_id: UUID | None = None,
+) -> None:
+    """Require ``flow:audit_read`` without the ordinary resource-owner override.
+
+    Reading a trail must not add to it, so the decision is enforced but never recorded.
+    """
+    with capability_probe():
+        await _ensure_typed(
+            user,
+            spec_key="flow",
+            act_str=FlowAction.AUDIT_READ.value,
+            kwargs={
+                "flow_id": flow_id,
+                "flow_user_id": flow_user_id,
+                "workspace_id": workspace_id,
+                "folder_id": folder_id,
+                "folder_user_id": None,
+            },
+            domain_override=None,
+            allow_owner_override=False,
+        )
 
 
 async def _audit_flow_decision_batch(
@@ -676,9 +718,11 @@ async def ensure_flows_permission(
                 "flow_count": len(flow_ids),
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="External credentials do not allow this action",
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="External credentials do not allow this action",
+            )
         )
 
     settings = get_settings_service()
@@ -691,7 +735,19 @@ async def ensure_flows_permission(
         )
         return
 
-    auth_context = _auth_context(user)
+    # Mirrors the extra_context ensure_flow_permission -> _ensure_typed builds
+    # for the "flow" resource spec (workspace_id, folder_id, flow_user_id,
+    # folder_user_id) so a plugin sees the same context fields whether a flow
+    # is authorized individually or as part of this batch. folder_user_id is
+    # always None here: it only carries the destination-project owner for
+    # CREATE, and CREATE has no existing flow owner to batch against.
+    extra_context: dict[str, Any] = {
+        "workspace_id": workspace_id,
+        "folder_id": folder_id,
+        "flow_user_id": flow_user_id,
+        "folder_user_id": None,
+    }
+    auth_context = {**extra_context, **_auth_context(user)}
     owner_override_enabled = await should_apply_owner_override()
     if owner_override_enabled and user_id is not None and flow_user_id == user_id:
         await _audit_flow_decision_batch(
@@ -720,9 +776,11 @@ async def ensure_flows_permission(
             result=_audit.AUDIT_DENY,
             details={"domain": resolved_domain, "error": str(exc), **_auth_audit_details()},
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=_DEFAULT_DENY_DETAIL,
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=_DEFAULT_DENY_DETAIL,
+            )
         ) from exc
 
     if len(results) != len(flow_ids):
@@ -744,9 +802,11 @@ async def ensure_flows_permission(
                 **_auth_audit_details(),
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=_DEFAULT_DENY_DETAIL,
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=_DEFAULT_DENY_DETAIL,
+            )
         )
 
     await _audit_flow_decision_batch(
@@ -759,9 +819,11 @@ async def ensure_flows_permission(
         ],
     )
     if not all(results):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=_DEFAULT_DENY_DETAIL,
+        raise mark_authorization_refusal(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=_DEFAULT_DENY_DETAIL,
+            )
         )
 
 
@@ -874,6 +936,32 @@ async def ensure_project_permission(
         },
         domain_override=domain,
     )
+
+
+async def ensure_project_audit_read_permission(
+    user: User | UserRead,
+    *,
+    project_id: UUID | None = None,
+    project_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+) -> None:
+    """Require ``project:audit_read`` without the ordinary resource-owner override.
+
+    Reading a trail must not add to it, so the decision is enforced but never recorded.
+    """
+    with capability_probe():
+        await _ensure_typed(
+            user,
+            spec_key="project",
+            act_str=ProjectAction.AUDIT_READ.value,
+            kwargs={
+                "project_id": project_id,
+                "project_user_id": project_user_id,
+                "workspace_id": workspace_id,
+            },
+            domain_override=None,
+            allow_owner_override=False,
+        )
 
 
 async def ensure_knowledge_base_permission(

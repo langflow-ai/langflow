@@ -6,7 +6,12 @@ from typing import TYPE_CHECKING
 
 from sqlmodel import col, delete
 
-from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerSubscription
+from langflow.services.database.models.trigger.model import (
+    Trigger,
+    TriggerEvent,
+    TriggerSourceVersion,
+    TriggerSubscription,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -24,6 +29,11 @@ async def delete_triggers(session: AsyncSession, *, trigger_ids: Sequence[UUID])
     """
     if not trigger_ids:
         return
+    from langflow.services.triggers.subscriptions import revoke_for_trigger
+
+    for trigger_id in trigger_ids:
+        await revoke_for_trigger(session, trigger_id=trigger_id)
     await session.exec(delete(TriggerSubscription).where(col(TriggerSubscription.trigger_id).in_(trigger_ids)))
+    await session.exec(delete(TriggerSourceVersion).where(col(TriggerSourceVersion.trigger_id).in_(trigger_ids)))
     await session.exec(delete(TriggerEvent).where(col(TriggerEvent.trigger_id).in_(trigger_ids)))
     await session.exec(delete(Trigger).where(col(Trigger.id).in_(trigger_ids)))

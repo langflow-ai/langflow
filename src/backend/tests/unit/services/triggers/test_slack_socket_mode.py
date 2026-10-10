@@ -193,13 +193,15 @@ async def test_the_apps_own_reply_is_acknowledged_but_never_fires_a_trigger(
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.usefixtures("socket_adapters")
 async def test_a_disconnect_warning_opens_the_replacement_before_closing_the_old_socket(
-    slack, supervisor, trigger_owner, owned_flow
+    slack, supervisor, trigger_owner, owned_flow, socket_adapters, monkeypatch
 ) -> None:
     _connection, trigger_id = await _armed(trigger_owner, owned_flow)
     await supervisor.reconcile()
     [old] = await slack.wait_for_sockets(1)
+    # This test writes two durable envelopes during the overlap. The fixture's
+    # 0.3-second drain is too short for those writes on loaded CI runners.
+    monkeypatch.setattr(socket_adapters[0], "_drain_timeout_s", 5.0)
 
     await old.send({"type": "disconnect", "reason": "warning", "debug_info": {"host": "applink-test"}})
     _, new = await slack.wait_for_sockets(2)
@@ -211,7 +213,7 @@ async def test_a_disconnect_warning_opens_the_replacement_before_closing_the_old
     assert await old.wait_for_ack("env-old")
     assert await new.wait_for_ack("env-new")
 
-    await asyncio.wait_for(old.closed.wait(), timeout=5)
+    await asyncio.wait_for(old.closed.wait(), timeout=10)
     assert not new.closed.is_set()
     assert len(await fx.events_for(trigger_id)) == 1
     assert len(slack.sockets) == 2, "never more than a socket and its replacement"

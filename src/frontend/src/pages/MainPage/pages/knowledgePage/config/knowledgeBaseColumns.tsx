@@ -61,6 +61,9 @@ function KnowledgeBaseRowActions({
 }: KnowledgeBaseRowActionsProps) {
   const status = knowledgeBase?.status;
   const isBusy = isBusyStatus(status);
+  const isStorageBlocked =
+    knowledgeBase.storage_state !== undefined &&
+    knowledgeBase.storage_state !== "ready";
   const isCancelling = status === "cancelling";
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -82,7 +85,7 @@ function KnowledgeBaseRowActions({
             <Button
               variant="ghost"
               size="icon"
-              disabled={isBusy}
+              disabled={isBusy || isStorageBlocked}
               data-testid="kb-row-update-button"
               aria-label={t("knowledge.action.ingestFiles")}
               onClick={(e) => {
@@ -126,7 +129,7 @@ function KnowledgeBaseRowActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" container={menuContainer ?? undefined}>
           <DropdownMenuItem
-            disabled={isBusy}
+            disabled={isBusy || isStorageBlocked}
             onClick={(e) => {
               e.stopPropagation();
               callbacks?.onAddSources?.(knowledgeBase);
@@ -136,6 +139,7 @@ function KnowledgeBaseRowActions({
             {t("knowledge.action.ingestFiles")}
           </DropdownMenuItem>
           <DropdownMenuItem
+            disabled={isStorageBlocked}
             onClick={(e) => {
               e.stopPropagation();
               callbacks?.onViewChunks?.(knowledgeBase);
@@ -164,6 +168,7 @@ function KnowledgeBaseRowActions({
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem
+              disabled={knowledgeBase.storage_state === "migrating"}
               onClick={(e) => {
                 e.stopPropagation();
                 callbacks?.onDelete?.(knowledgeBase);

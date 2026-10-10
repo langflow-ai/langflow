@@ -12,9 +12,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
+import {
+  type SessionsPagination,
+  ShowMoreSessions,
+} from "./show-more-sessions";
 
 interface ChatSessionsDropdownProps {
   sessions: string[];
+  sessionsPagination: SessionsPagination;
   onNewChat?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   currentSessionId?: string;
@@ -24,6 +29,7 @@ interface ChatSessionsDropdownProps {
 
 export function ChatSessionsDropdown({
   sessions,
+  sessionsPagination,
   onNewChat,
   onSessionSelect,
   currentSessionId,
@@ -72,6 +78,7 @@ export function ChatSessionsDropdown({
                     {session === currentFlowId ? "Default Session" : session}
                   </DropdownMenuItem>
                 ))}
+                <ShowMoreSessions pagination={sessionsPagination} asMenuItem />
               </DropdownMenuGroup>
             </div>
             <DropdownMenuSeparator className="!my-0" />

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
 import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-version/use-post-create-snapshot";
+import { handleBlockedSave } from "@/hooks/flows/handle-blocked-save";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import i18n from "@/i18n";
 import { useErrorAlert } from "@/pages/MainPage/pages/deploymentsPage/hooks/use-error-alert";
@@ -75,7 +76,11 @@ export function usePrepareDeploy() {
       }
     } catch (err: unknown) {
       setPendingSnapshotVersionId("");
-      showError(i18n.t("deployments.failedToPrepareDeployment"), err);
+      // A blocked save means the graph on screen is not the one on the server, so
+      // deploying it would ship a snapshot of a version nobody agreed on.
+      if (!handleBlockedSave(err)) {
+        showError(i18n.t("deployments.failedToPrepareDeployment"), err);
+      }
     } finally {
       setIsPreparingDeploy(false);
     }
