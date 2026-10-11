@@ -257,23 +257,25 @@ class TestApplyFlowOperations:
             )
         ]
 
-    def test_update_nodes_delete_missing_optional_key_is_noop(self):
+    def test_update_nodes_delete_missing_optional_key_records_nothing(self):
         flow_data = _base_flow_data()
         result = apply_flow_operations(
             flow_data,
             [
                 {
                     "type": "update_nodes",
-                    "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}],
+                    "updates": [
+                        {"id": "a", "op": "delete_field", "path": ["data", "customColor"]},
+                        {"id": "a", "op": "set_field", "path": ["position", "x"], "value": 5},
+                    ],
                 }
             ],
         )
 
-        assert result.flow_data == flow_data
         assert result.forward_ops == [
             UpdateNodesOp(
                 type="update_nodes",
-                updates=[{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}],
+                updates=[{"id": "a", "op": "set_field", "path": ["position", "x"], "value": 5}],
             )
         ]
 
