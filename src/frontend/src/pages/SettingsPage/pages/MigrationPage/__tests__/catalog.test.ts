@@ -178,7 +178,9 @@ describe("PROBES", () => {
       "db_not_empty",
       "db_unreachable",
       "no_create",
+      "pgvector_env_missing",
       "pgvector_missing",
+      "pgvector_package_missing",
       "secrets_missing",
     ]);
     expect(
@@ -247,8 +249,10 @@ describe("COPY_CODES", () => {
       "crashed",
       "destination_changed",
       "interrupted",
+      "locked",
       "orphans_droppable",
       "orphans_no_rule",
+      "pgvector_env_missing",
       "run_active",
       "secrets_missing",
       "target_not_empty",

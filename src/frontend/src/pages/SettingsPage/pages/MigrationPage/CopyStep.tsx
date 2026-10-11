@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -64,6 +64,22 @@ export function CopyStep({
       step: destinations,
     });
   const refusal = start.error?.response?.data?.detail?.code ?? "";
+  // The server starts a copy only when every step before it is done or skipped. A copy that ran keeps its
+  // place when one of them opens again, so the page offers no start until that step is finished.
+  const place = migration.steps.findIndex(({ id }) => id === step);
+  const reached = migration.steps
+    .slice(0, place)
+    .every((earlier) => ["done", "skipped"].includes(earlier.state));
+  // The state can close the gate under a focused start button: a refused start reads it again, and so does the
+  // poll. The button is then gone and the browser drops focus on <body>, so focus goes to the line in its place.
+  const gate = useRef<HTMLParagraphElement>(null);
+  const focused = useRef(false);
+  useEffect(() => {
+    if (reached || !focused.current) return;
+    focused.current = false;
+    if (!document.activeElement || document.activeElement === document.body)
+      gate.current?.focus();
+  }, [reached]);
   const running = run?.status === "running";
   const [key, counts] = progress
     ? copyProgress(step, progress, i18n.language)
@@ -310,48 +326,74 @@ export function CopyStep({
               <p>{t("settings.migration.copy.tooManyToAccept")}</p>
             </div>
           )}
-          {start.isError && (
-            <p role="alert" className="text-sm text-destructive">
-              {refusal in COPY_CODES
-                ? line(refusal)
-                : t("settings.migration.failed")}
+          {reached ? (
+            <>
+              {start.isError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {refusal in COPY_CODES
+                    ? line(refusal)
+                    : t("settings.migration.failed")}
+                </p>
+              )}
+              <div
+                role="group"
+                className="flex w-full flex-col gap-2 sm:flex-row"
+                onFocus={() => {
+                  focused.current = true;
+                }}
+                onBlur={(event) => {
+                  // A button that is removed leaves no element behind, so only a move to another one counts.
+                  if (event.relatedTarget)
+                    focused.current = event.currentTarget.contains(
+                      event.relatedTarget,
+                    );
+                }}
+              >
+                <Button
+                  className="w-full sm:w-fit"
+                  // One start at a time: a second one while the first is on its way is refused as running elsewhere.
+                  disabled={start.isPending}
+                  loading={start.isPending && !start.variables}
+                  onClick={() => {
+                    // A new copy leaves the last choice, and how it went, behind.
+                    decide.reset();
+                    start.mutate(false);
+                  }}
+                  ignoreTitleCase
+                >
+                  {/* A test run copied nothing, so the copy after it is still the first. */}
+                  {run && !run.dry_run
+                    ? t("settings.migration.copy.again")
+                    : t(`settings.migration.step.${STEP_SLUGS[step]}.title`)}
+                </Button>
+                {/* A test run takes the copy's place in the record, so a done step offers none. */}
+                {testRun && state.state !== "done" && (
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-fit"
+                    disabled={start.isPending}
+                    loading={start.isPending && start.variables}
+                    onClick={() => {
+                      decide.reset();
+                      start.mutate(true);
+                    }}
+                    ignoreTitleCase
+                  >
+                    {t("settings.migration.copy.testRun")}
+                  </Button>
+                )}
+              </div>
+            </>
+          ) : (
+            <p
+              ref={gate}
+              role="status"
+              tabIndex={-1}
+              className="text-sm outline-none"
+            >
+              {t("settings.migration.notStarted")}
             </p>
           )}
-          <div className="flex w-full flex-col gap-2 sm:flex-row">
-            <Button
-              className="w-full sm:w-fit"
-              // One start at a time: a second one while the first is on its way is refused as running elsewhere.
-              disabled={start.isPending}
-              loading={start.isPending && !start.variables}
-              onClick={() => {
-                // A new copy leaves the last choice, and how it went, behind.
-                decide.reset();
-                start.mutate(false);
-              }}
-              ignoreTitleCase
-            >
-              {/* A test run copied nothing, so the copy after it is still the first. */}
-              {run && !run.dry_run
-                ? t("settings.migration.copy.again")
-                : t(`settings.migration.step.${STEP_SLUGS[step]}.title`)}
-            </Button>
-            {/* A test run takes the copy's place in the record, so a done step offers none. */}
-            {testRun && state.state !== "done" && (
-              <Button
-                variant="outline"
-                className="w-full sm:w-fit"
-                disabled={start.isPending}
-                loading={start.isPending && start.variables}
-                onClick={() => {
-                  decide.reset();
-                  start.mutate(true);
-                }}
-                ignoreTitleCase
-              >
-                {t("settings.migration.copy.testRun")}
-              </Button>
-            )}
-          </div>
         </>
       )}
     </div>
