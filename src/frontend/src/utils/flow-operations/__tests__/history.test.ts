@@ -7,7 +7,7 @@ import {
   type FlowGraph,
   type FlowOperation,
 } from "../apply";
-import { canonicalGraphJson } from "../canonical";
+import { canonicalGraphJson, graphsEqual } from "../canonical";
 import {
   buildHistoryTimeline,
   entryContaining,
@@ -198,7 +198,13 @@ describe("buildHistoryTimeline", () => {
         nodes: [
           {
             id: "a",
-            data: { node: { display_name: "Prompt", template: {} } },
+            data: {
+              node: {
+                display_name: "Prompt",
+                template: {},
+                outputs: [{ name: "prompt" }],
+              },
+            },
           },
         ],
         edges: [],
@@ -221,13 +227,30 @@ describe("buildHistoryTimeline", () => {
             nodes: [
               {
                 id: "b",
-                data: { node: { display_name: "Agent", template: {} } },
+                data: {
+                  node: {
+                    display_name: "Agent",
+                    template: { input_value: { type: "str" } },
+                  },
+                },
               },
             ],
           }),
           recorded(3, {
             type: "add_edges",
-            edges: [{ id: "e", source: "a", target: "b" }],
+            edges: [
+              {
+                id: "e",
+                source: "a",
+                target: "b",
+                sourceHandle: "{œnameœ:œpromptœ}",
+                targetHandle: "{œfieldNameœ:œinput_valueœ}",
+                data: {
+                  sourceHandle: { name: "prompt" },
+                  targetHandle: { fieldName: "input_value" },
+                },
+              },
+            ],
           }),
         ]),
       ],
@@ -360,8 +383,8 @@ describe("inverse operations", () => {
                 type: "table",
                 // Not in (_pos, _id) order, as a stored table may be.
                 value: [
-                  { _id: "r2", _pos: "a1", v: "y" },
-                  { _id: "r1", _pos: "a0", v: "x" },
+                  { _id: "r2", _pos: 2, v: "y" },
+                  { _id: "r1", _pos: 1, v: "x" },
                 ],
               },
             },
@@ -398,13 +421,13 @@ describe("inverse operations", () => {
     expect(undone.nodes[0]).toEqual(before.nodes[0]);
   });
 
-  it("puts back the order of a table a write sorted", () => {
+  it("appends an added row and removes it again", () => {
     const { after, undone, before } = roundTrip([
       {
         id: "k",
         op: "set_field",
         path: ["data", "node", "template", "rows", "value", { id: "r3" }],
-        value: { _id: "r3", _pos: "a2", v: "z" },
+        value: { _id: "r3", _pos: 3, v: "z" },
       },
     ]);
 
@@ -413,11 +436,24 @@ describe("inverse operations", () => {
     ).toMatchObject({
       node: {
         template: {
-          rows: { value: [{ _id: "r1" }, { _id: "r2" }, { _id: "r3" }] },
+          rows: { value: [{ _id: "r2" }, { _id: "r1" }, { _id: "r3" }] },
         },
       },
     });
     expect(undone.nodes[0]).toEqual(before.nodes[0]);
+  });
+
+  it("puts a removed row back, wherever it lands in the array", () => {
+    const { after, undone, before } = roundTrip([
+      {
+        id: "k",
+        op: "delete_field",
+        path: ["data", "node", "template", "rows", "value", { id: "r2" }],
+      },
+    ]);
+
+    expect(graphsEqual(after, before)).toBe(false);
+    expect(graphsEqual(undone, before)).toBe(true);
   });
 
   it("undoes writes to one path in the reverse order they were made", () => {

@@ -11,7 +11,8 @@ import {
   type FlowOperation,
   FlowOperationError,
 } from "../apply";
-import { canonicalGraphJson } from "../canonical";
+import { canonicalGraphJson, graphsEqual } from "../canonical";
+import { keyedListAt, NODE_SCHEMA } from "../schema";
 
 type GoldenCase = {
   name: string;
@@ -52,6 +53,36 @@ function caught(run: () => unknown): FlowOperationError {
   throw new Error("expected the operations to be refused");
 }
 
+/** Compare the ids a delete names as a set: node and edge order is not state. */
+function ignoringIdOrder(operations: unknown[]): unknown[] {
+  return operations.map((operation) => {
+    const { type, ids } = operation as { type: string; ids?: string[] };
+    return type === "delete_nodes" || type === "delete_edges"
+      ? { ...(operation as object), ids: [...ids!].sort() }
+      : operation;
+  });
+}
+
+/** Compare table rows as a collection keyed by `_id`: a table's order is its rows' positions, not the array. */
+function ignoringRowOrder(flowData: unknown): unknown {
+  const graph = cloneDeep(flowData) as FlowGraph;
+  for (const node of graph.nodes ?? []) {
+    const template = (node.data as { node?: { template?: object } })?.node
+      ?.template as Record<string, { value?: unknown }> | undefined;
+    for (const [name, field] of Object.entries(template ?? {})) {
+      const path = ["data", "node", "template", name, "value"];
+      if (
+        Array.isArray(field?.value) &&
+        keyedListAt(node, path) === NODE_SCHEMA.table
+      )
+        field.value = [...(field.value as { _id: string }[])].sort((a, b) =>
+          a._id < b._id ? -1 : a._id > b._id ? 1 : 0,
+        );
+    }
+  }
+  return graph;
+}
+
 function graphHash(graph: FlowGraph): string {
   return createHash("sha256")
     .update(canonicalGraphJson(graph), "utf8")
@@ -86,11 +117,13 @@ describe("applyFlowOperations matches the server engine", () => {
           base,
           cloneDeep(testCase.operations),
         );
-        expect(result.flowData).toEqual(testCase.expected);
+        expect(ignoringRowOrder(result.flowData)).toEqual(
+          ignoringRowOrder(testCase.expected),
+        );
         // Cases whose normalized operations equal what they submit leave
         // forward_operations out.
-        expect(result.forwardOperations).toEqual(
-          testCase.forward_operations ?? testCase.operations,
+        expect(ignoringIdOrder(result.forwardOperations)).toEqual(
+          ignoringIdOrder(testCase.forward_operations ?? testCase.operations),
         );
       }
       expect(base).toEqual(testCase.base);
@@ -124,7 +157,7 @@ describe("transactions applied in order merge as on the server", () => {
     }
 
     expect(outcomes).toEqual(testCase.outcomes);
-    expect(graph).toEqual(testCase.expected);
+    expect(graphsEqual(graph, testCase.expected as FlowGraph)).toBe(true);
   });
 });
 
@@ -252,6 +285,8 @@ describe("applyFlowOperations while restoring", () => {
         id: "e",
         source: "s",
         target: "d",
+        sourceHandle: "{œnameœ:œoutœ}",
+        targetHandle: "{œfieldNameœ:œgoneœ}",
         data: {
           sourceHandle: { name: "out" },
           targetHandle: { fieldName: "gone" },

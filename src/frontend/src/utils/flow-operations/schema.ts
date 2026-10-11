@@ -15,8 +15,8 @@ type KeyPath = (string | number)[];
 /**
  * A list whose items are addressed by a key instead of an index. Natural
  * lists (outputs, tool actions) are selected with `{key}` and keep the order
- * writes leave them in; tables are selected with `{id}` and kept sorted by
- * `(position, id)`.
+ * writes leave them in; tables are selected with `{id}`, and their order is
+ * their rows' numeric `(position, id)`, not their places in the array.
  */
 export type KeyedList = {
   kind: "natural" | "table";
@@ -43,46 +43,6 @@ export function keyOf(list: KeyedList, item: unknown): string | null {
     else return null;
   }
   return typeof value === "string" ? value : null;
-}
-
-/** The index of the first item with `key`, or -1. */
-export function findItem(
-  list: KeyedList,
-  items: unknown[],
-  key: string,
-): number {
-  return items.findIndex((item) => keyOf(list, item) === key);
-}
-
-// JavaScript compares strings by UTF-16 code units, as the engine does.
-function compare(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-
-function orderOf(list: KeyedList, item: unknown): [string, string] {
-  const position = isObject(item) ? item[list.position as string] : undefined;
-  return [
-    typeof position === "string" ? position : "",
-    keyOf(list, item) ?? "",
-  ];
-}
-
-/** Sort table rows in place by `(position, id)`; natural lists are left alone. */
-export function sortItems(list: KeyedList, items: unknown[]): void {
-  if (list.kind !== "table" || !list.position) return;
-  items.sort((left, right) => {
-    const [leftPosition, leftId] = orderOf(list, left);
-    const [rightPosition, rightId] = orderOf(list, right);
-    return compare(leftPosition, rightPosition) || compare(leftId, rightId);
-  });
-}
-
-/** Whether table rows are already in `(position, id)` order. */
-export function isSorted(list: KeyedList, items: unknown[]): boolean {
-  if (list.kind !== "table") return true;
-  const sorted = [...items];
-  sortItems(list, sorted);
-  return sorted.every((item, index) => item === items[index]);
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

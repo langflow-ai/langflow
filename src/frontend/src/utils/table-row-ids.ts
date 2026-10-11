@@ -1,17 +1,15 @@
 import { isEqual } from "lodash";
 import ShortUniqueId from "short-unique-id";
-import {
-  generateKeyBetween,
-  generateNKeysBetween,
-  isValidOrderKey,
-} from "./fractional-indexing";
+import { isRowPosition, orderedRows } from "./flow-operations/canonical";
 
 /**
- * Table rows carry their own identity and order: `_id` names a row and
- * `_pos` is its fractional position, and the stored array is sorted by
- * `(_pos, _id)`. A flow's history then records an edit to one cell, an added
- * row or a moved row as a write to that row, so concurrent edits to different
- * rows merge.
+ * Table rows carry their own identity and order: `_id` names a row and `_pos`
+ * is its numeric position. The table's order is the rows' `(_pos, _id)`, not
+ * their places in the stored array, which nothing keeps sorted: whatever
+ * hands rows out (the grid, an export, the backend before a component runs)
+ * puts them in order. A flow's history then records an edit to one cell, an
+ * added row or a moved row as a write to that row, so concurrent edits to
+ * different rows merge.
  *
  * The editor owns both keys: it assigns them whenever a row appears, and the
  * backend only validates them. Components never see them (the backend strips
@@ -55,18 +53,9 @@ function rowId(row: TableRow): string | null {
   return typeof id === "string" && id.length > 0 ? id : null;
 }
 
-function rowPos(row: TableRow): string | null {
+function rowPos(row: TableRow): number | null {
   const pos = row[TABLE_ROW_POS_KEY];
-  return isValidOrderKey(pos) ? pos : null;
-}
-
-function compareRows(a: TableRow, b: TableRow): number {
-  const posA = rowPos(a) ?? "";
-  const posB = rowPos(b) ?? "";
-  if (posA !== posB) return posA < posB ? -1 : 1;
-  const idA = rowId(a) ?? "";
-  const idB = rowId(b) ?? "";
-  return idA < idB ? -1 : idA > idB ? 1 : 0;
+  return isRowPosition(pos) ? pos : null;
 }
 
 /** A row without the editor's keys: what a component or an export sees. */
@@ -78,26 +67,20 @@ export function stripRowKeys(row: unknown): unknown {
   return rest;
 }
 
-/** Rows without the editor's keys. */
+/** Rows in order and without the editor's keys: what a component or an export sees. */
 export function stripTableRowIds(rows: unknown[]): unknown[] {
-  return rows.map(stripRowKeys);
+  return orderedRows(rows).map(stripRowKeys);
 }
 
-/**
- * Whether every row has a unique `_id` and a valid `_pos`, in strictly
- * increasing `(_pos, _id)` order: the shape the backend accepts.
- */
+/** Whether every row has a unique `_id` and a numeric `_pos`: the shape the backend accepts. */
 export function hasTableRowIds(rows: unknown): boolean {
   if (!Array.isArray(rows)) return false;
   const seen = new Set<string>();
-  let previous: TableRow | null = null;
   for (const row of rows) {
     if (!isRow(row)) return false;
     const id = rowId(row);
     if (id === null || rowPos(row) === null || seen.has(id)) return false;
     seen.add(id);
-    if (previous && compareRows(previous, row) >= 0) return false;
-    previous = row;
   }
   return true;
 }
@@ -154,48 +137,80 @@ export function withTableRowIds<T>(rows: T[], previousRows?: unknown): T[] {
     row[TABLE_ROW_ID_KEY] = id;
   }
 
-  // Positions: keep each valid one that still sorts after the last kept row,
-  // and spread new keys over the gaps between kept rows.
-  let lastKept: TableRow | null = null;
-  let pending: TableRow[] = [];
-  const place = (upper: string | null) => {
-    if (pending.length === 0) return;
-    const lower = lastKept ? (rowPos(lastKept) as string) : null;
-    const keys = generateNKeysBetween(lower, upper, pending.length);
-    pending.forEach((row, index) => {
-      row[TABLE_ROW_POS_KEY] = keys[index];
-    });
-    pending = [];
-  };
-  for (const row of result) {
-    const pos = rowPos(row);
-    const keeps =
-      pos !== null && (lastKept === null || compareRows(lastKept, row) < 0);
-    // A kept row must leave room before it for the rows waiting to be placed.
-    const roomBefore =
-      pending.length === 0 ||
-      pos === null ||
-      lastKept === null ||
-      (rowPos(lastKept) as string) < pos;
-    if (keeps && roomBefore) {
-      place(pos);
-      lastKept = row;
-    } else {
-      pending.push(row);
-    }
-  }
-  place(null);
+  fillMissingPositions(result);
   return result as T[];
 }
 
 /**
- * Rows appended after `rows`, each with a new `_id` and a `_pos` after the
- * last row. Keys the new rows carried (a duplicated row's) are replaced.
+ * Give each row without a valid position one that keeps it where it is
+ * stored, in place: the engine's `fill_missing_positions`. Positioned rows
+ * keep their positions. A run of rows without one is spread evenly between
+ * the positioned rows stored before and after it, or placed one apart before
+ * the first or after the last; when those neighbours are out of order, the
+ * run follows the one before it. A table with no positions at all gets `1..n`.
+ *
+ * When the gap between two neighbours has no room left for the run (doubles
+ * run out after about fifty halvings), the whole table is renumbered `1..n`
+ * in stored order instead. Only the editor renumbers; the engine never
+ * changes a position.
+ */
+function fillMissingPositions(rows: TableRow[]): void {
+  let index = 0;
+  while (index < rows.length) {
+    if (rowPos(rows[index]) !== null) {
+      index++;
+      continue;
+    }
+    let end = index;
+    while (end < rows.length && rowPos(rows[end]) === null) end++;
+    const count = end - index;
+    const before = index > 0 ? rowPos(rows[index - 1]) : null;
+    const after = end < rows.length ? rowPos(rows[end]) : null;
+    const positions: number[] = [];
+    for (let step = 1; step <= count; step++) {
+      if (before !== null && after !== null && before < after)
+        positions.push(before + ((after - before) * step) / (count + 1));
+      else if (before !== null) positions.push(before + step);
+      else if (after !== null) positions.push(after - count - 1 + step);
+      else positions.push(step);
+    }
+    if (!fitsBetween(positions, before, after)) {
+      rows.forEach((row, slot) => {
+        row[TABLE_ROW_POS_KEY] = slot + 1;
+      });
+      return;
+    }
+    positions.forEach((position, step) => {
+      rows[index + step][TABLE_ROW_POS_KEY] = position;
+    });
+    index = end;
+  }
+}
+
+/** Whether new positions are distinct and strictly between their neighbours, when those are in order. */
+function fitsBetween(
+  positions: number[],
+  before: number | null,
+  after: number | null,
+): boolean {
+  if (before === null || after === null || before >= after) return true;
+  let previous = before;
+  for (const position of positions) {
+    if (position <= previous) return false;
+    previous = position;
+  }
+  return previous < after;
+}
+
+/**
+ * Rows appended after `rows`, each with a new `_id` and a `_pos` one past the
+ * last position. Keys the new rows carried (a duplicated row's) are replaced.
  */
 export function appendTableRows<T>(rows: T[], newRows: unknown[]): T[] {
   const base = withTableRowIds(rows);
   const used = new Set(base.map((row) => rowId(row as TableRow)));
-  let last = base.length > 0 ? rowPos(base[base.length - 1] as TableRow) : null;
+  let last = 0;
+  for (const row of base) last = Math.max(last, rowPos(row as TableRow)!);
   const appended = newRows.map((row) => {
     const fresh = { ...(stripRowKeys(row) as TableRow) };
     let id: string;
@@ -203,7 +218,7 @@ export function appendTableRows<T>(rows: T[], newRows: unknown[]): T[] {
       id = newTableRowId();
     } while (used.has(id));
     used.add(id);
-    last = generateKeyBetween(last, null);
+    last = Math.floor(last) + 1;
     fresh[TABLE_ROW_ID_KEY] = id;
     fresh[TABLE_ROW_POS_KEY] = last;
     return fresh as T;
