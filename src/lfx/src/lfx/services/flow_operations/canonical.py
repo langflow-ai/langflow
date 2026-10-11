@@ -1,23 +1,29 @@
 """Canonical form of flow data, for equality and checkpoint hashes.
 
-Two graphs are equal when their canonical forms are byte-identical. The form is
-RFC 8785 (JSON Canonicalization Scheme) applied to the graph with its view
-state removed and its nodes and edges ordered by ID:
+Two graphs are equal when their canonical forms are the same JSON value. The
+form is the graph with its view state removed, and with everything whose order
+is not state keyed by id:
 
-- JCS sorts object keys and prints numbers the way JavaScript does, so ``1``
-  and ``1.0`` are the same value, ``true`` and ``1`` are not, and key order is
-  never a change. JavaScript cannot tell integers from floats, so a ``0.0``
-  that comes back from the editor as ``0`` must not count as an edit.
-- ``nodes`` and ``edges`` are collections keyed by ID. Their array order is not
-  state, so a save that only reorders them changes nothing.
+- JSON values compare as RFC 8785 (JSON Canonicalization Scheme) prints them:
+  ``1`` and ``1.0`` are the same value, ``true`` and ``1`` are not, and key
+  order is never a change. JavaScript cannot tell integers from floats, so a
+  ``0.0`` that comes back from the editor as ``0`` must not count as an edit.
+- ``nodes``, ``edges`` and table rows are collections keyed by id. Their array
+  order is not state, so a save that only reorders them changes nothing; a
+  table's order is its rows' ``(_pos, _id)``.
 - View state is everything ``node_schema.json`` declares display-only: one
   person's view of the canvas (pan and zoom, selection, drag and resize flags,
   sizes), stamps the editor refreshes on its own (``last_updated``,
   ``lf_version``), and the display-only keys of template fields (labels,
   options, help text). It is stored but never recorded and never compared.
 - An edge's ``sourceHandle`` and ``targetHandle`` strings are JSON with
-  ``œ`` standing for ``"``. They are compared by what they encode, so two
+  ``œ`` standing for ``"``. They compare by the object they encode, so two
   spellings of one handle are the same value. Edge ids are left as they are.
+
+Equality compares the form structurally and stops at the first difference;
+only ``graph_hash`` serializes it, with collections ordered, as RFC 8785 text.
+The form is defined for any JSON graph, valid or not: enforcing the rules is
+validation's job.
 """
 
 from __future__ import annotations
@@ -29,7 +35,7 @@ from decimal import Decimal
 from typing import Any
 
 from lfx.services.flow_operations.exceptions import FlowDataValidationError
-from lfx.services.flow_operations.limits import check_graph_limits
+from lfx.services.flow_operations.limits import broken_limit, check_graph_limits
 from lfx.services.flow_operations.schema import load_node_schema
 
 _SCHEMA = load_node_schema()
@@ -37,6 +43,7 @@ FLOW_VIEW_STATE_KEYS = _SCHEMA.flow_view_state
 NODE_VIEW_STATE_KEYS = _SCHEMA.node_view_state
 EDGE_VIEW_STATE_KEYS = _SCHEMA.edge_view_state
 EDGE_HANDLE_KEYS = ("sourceHandle", "targetHandle")
+_NODE_DATA_VIEW_STATE = frozenset(path[-1] for path in _SCHEMA.node_view_state_paths if path[:-1] == ("data", "node"))
 _HANDLE_QUOTE = "œ"
 
 # Largest integer a JavaScript number holds exactly. Larger integers are
@@ -191,29 +198,18 @@ def _without(mapping: dict[str, Any], keys: frozenset[str]) -> dict[str, Any]:
     return {key: item for key, item in mapping.items() if key not in keys}
 
 
-def _by_id(entries: list[Any]) -> list[Any]:
-    return sorted(
-        entries,
-        key=lambda entry: utf16_sort_key(entry["id"])
-        if isinstance(entry, dict) and isinstance(entry.get("id"), str)
-        else b"",
-    )
+def parse_handle(handle: Any) -> dict[str, Any] | None:
+    """Return the object a handle string encodes (JSON with ``œ`` for ``"``), or None when it encodes none.
 
-
-def canonical_handle(handle: Any) -> Any:
-    """Return a handle string re-serialized canonically, or the value unchanged if it is not one.
-
-    ``{œaœ: 1}`` and ``{œaœ:1}`` encode the same handle and give the same result.
+    A handle that breaks the JSON limits (``limits.py``) encodes none.
     """
     if not isinstance(handle, str):
-        return handle
+        return None
     try:
         parsed = json.loads(handle.replace(_HANDLE_QUOTE, '"'))
-        if not isinstance(parsed, (dict, list)):
-            return handle
-        return canonical_json(parsed).replace('"', _HANDLE_QUOTE)
-    except (ValueError, FlowDataValidationError):
-        return handle
+    except ValueError:
+        return None
+    return parsed if isinstance(parsed, dict) and broken_limit(parsed) is None else None
 
 
 def canonical_template_field(field: Any) -> Any:
@@ -223,21 +219,25 @@ def canonical_template_field(field: Any) -> Any:
     return _without(field, _SCHEMA.field_view_state)
 
 
-def canonical_node(node: Any) -> Any:
-    """Return a node without view state. Shares unchanged values with ``node``."""
+def canonical_node(node: Any, *, keyed: bool = True) -> Any:
+    """Return a node without view state and with its table rows as a collection.
+
+    Shares unchanged values with ``node``. With ``keyed``, a table whose rows
+    all carry ids becomes a mapping from row id to row; otherwise its rows are
+    put in order. A legacy table without row ids keeps its array, which is its
+    order.
+    """
     if not isinstance(node, dict):
         return node
     node = _without(node, NODE_VIEW_STATE_KEYS)
     data = node.get("data")
     if not isinstance(data, dict) or not isinstance(data.get("node"), dict):
         return node
-    node_data = data["node"]
-    hidden = {path[-1] for path in _SCHEMA.node_view_state_paths if path[:-1] == ("data", "node")}
-    node_data = _without(node_data, frozenset(hidden))
+    node_data = _without(data["node"], _NODE_DATA_VIEW_STATE)
     template = node_data.get("template")
     if isinstance(template, dict):
         node_data["template"] = {
-            key: _ordered_table(node, key, canonical_template_field(field))
+            key: _table_as_collection(node, key, canonical_template_field(field), keyed=keyed)
             for key, field in template.items()
             if key not in _SCHEMA.template_view_state
         }
@@ -245,43 +245,77 @@ def canonical_node(node: Any) -> Any:
     return node
 
 
-def _ordered_table(node: dict[str, Any], key: str, field: Any) -> Any:
-    """Put a table field's rows in order, since their places in the array are not state."""
+def _table_as_collection(node: dict[str, Any], key: str, field: Any, *, keyed: bool) -> Any:
     if not (isinstance(field, dict) and isinstance(field.get("value"), list)):
         return field
     if _SCHEMA.keyed_list_at(node, ("data", "node", "template", key, "value")) is not _SCHEMA.table:
         return field
-    return {**field, "value": ordered_rows(field["value"])}
+    rows = field["value"]
+    if keyed:
+        by_id = _by_id(rows, _SCHEMA.table.key[0])
+        return {**field, "value": by_id} if by_id is not None else field
+    return {**field, "value": ordered_rows(rows)}
 
 
 def canonical_edge(edge: Any) -> Any:
-    """Return an edge without view state and with its handle strings spelled canonically."""
+    """Return an edge without view state, its handle strings replaced by the objects they encode."""
     if not isinstance(edge, dict):
         return edge
     edge = _without(edge, EDGE_VIEW_STATE_KEYS)
     for key in EDGE_HANDLE_KEYS:
         if key in edge:
-            edge[key] = canonical_handle(edge[key])
+            parsed = parse_handle(edge[key])
+            if parsed is not None:
+                edge[key] = parsed
     return edge
 
 
-def canonical_graph(flow_data: dict[str, Any]) -> dict[str, Any]:
-    """Return flow data without view state, with canonical handles, and nodes and edges ordered by ID.
+def canonical_graph(flow_data: dict[str, Any], *, keyed: bool = True) -> dict[str, Any]:
+    """Return flow data in canonical form.
 
-    The result shares nested values with ``flow_data``; it is meant to be
-    serialized or compared, not mutated.
+    With ``keyed``, nodes, edges and table rows whose ids are unique become
+    mappings from id to entry, for comparison. Without it they stay lists,
+    ordered by id (rows by ``(_pos, _id)``), for serialization. The result
+    shares nested values with ``flow_data``; it is meant to be compared or
+    serialized, not mutated.
     """
     graph = _without(flow_data, FLOW_VIEW_STATE_KEYS)
-    if isinstance(graph.get("nodes"), list):
-        graph["nodes"] = _by_id([canonical_node(node) for node in graph["nodes"]])
-    if isinstance(graph.get("edges"), list):
-        graph["edges"] = _by_id([canonical_edge(edge) for edge in graph["edges"]])
+    for key, canonical in (("nodes", canonical_node), ("edges", canonical_edge)):
+        entries = graph.get(key)
+        if not isinstance(entries, list):
+            continue
+        if key == "nodes":
+            entries = [canonical_node(entry, keyed=keyed) for entry in entries]
+        else:
+            entries = [canonical(entry) for entry in entries]
+        if keyed:
+            by_id = _by_id(entries, "id")
+            graph[key] = by_id if by_id is not None else entries
+        else:
+            graph[key] = sorted(entries, key=_id_sort_key)
     return graph
 
 
+def _by_id(entries: list[Any], id_key: str) -> dict[str, Any] | None:
+    """Map each entry's id to it, or return None when an entry has no string id or two share one."""
+    by_id: dict[str, Any] = {}
+    for entry in entries:
+        entry_id = entry.get(id_key) if isinstance(entry, dict) else None
+        if not isinstance(entry_id, str) or entry_id in by_id:
+            return None
+        by_id[entry_id] = entry
+    return by_id
+
+
+def _id_sort_key(entry: Any) -> bytes:
+    entry_id = entry.get("id") if isinstance(entry, dict) else None
+    # Entries without a string id sort first; a graph that has them fails validation anyway.
+    return utf16_sort_key(entry_id) if isinstance(entry_id, str) else b""
+
+
 def canonical_graph_json(flow_data: dict[str, Any]) -> str:
-    """Serialize flow data in canonical graph form."""
-    return canonical_json(canonical_graph(flow_data))
+    """Serialize flow data in canonical graph form, as RFC 8785 text."""
+    return canonical_json(canonical_graph(flow_data, keyed=False))
 
 
 def graph_hash(flow_data: dict[str, Any]) -> str:
@@ -291,8 +325,8 @@ def graph_hash(flow_data: dict[str, Any]) -> str:
 
 
 def graphs_equal(left: dict[str, Any], right: dict[str, Any]) -> bool:
-    """Return whether two flow data mappings are the same graph."""
-    return canonical_graph_json(left) == canonical_graph_json(right)
+    """Return whether two flow data mappings are the same graph, stopping at the first difference."""
+    return values_equal(canonical_graph(left), canonical_graph(right))
 
 
 def values_equal(left: Any, right: Any) -> bool:

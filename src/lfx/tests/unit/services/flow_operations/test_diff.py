@@ -215,13 +215,13 @@ def test_a_changed_edge_between_the_same_nodes_is_updated_in_place():
         UpdateEdgesOp(
             type="update_edges",
             updates=[
-                {"id": "e-ab", "op": "set_field", "path": ["data"], "value": target["edges"][0]["data"]},
                 {
                     "id": "e-ab",
                     "op": "set_field",
                     "path": ["targetHandle"],
                     "value": target["edges"][0]["targetHandle"],
                 },
+                {"id": "e-ab", "op": "set_field", "path": ["data"], "value": target["edges"][0]["data"]},
             ],
         )
     ]
@@ -251,7 +251,7 @@ def test_deleting_a_node_deletes_its_edges_explicitly_first():
     ]
 
 
-def test_operation_types_come_in_a_fixed_order_and_list_items_by_id():
+def test_operation_types_come_in_a_fixed_order_and_items_in_the_order_the_target_lists_them():
     target = _graph()
     target["nodes"] = [node for node in target["nodes"] if node["id"] != "b"]
     target["nodes"] += [_node("d"), _node("c", text={"type": "str", "list": True})]
@@ -273,10 +273,10 @@ def test_operation_types_come_in_a_fixed_order_and_list_items_by_id():
     ]
     add_nodes = operations[2]
     assert isinstance(add_nodes, AddNodesOp)
-    assert [node["id"] for node in add_nodes.nodes] == ["c", "d"]
+    assert [node["id"] for node in add_nodes.nodes] == ["d", "c"]
     # Added nodes carry no view state.
     assert all("selected" not in node for node in add_nodes.nodes)
-    assert [edge["id"] for edge in operations[4].edges] == ["e-ac", "e-dc"]
+    assert [edge["id"] for edge in operations[4].edges] == ["e-dc", "e-ac"]
 
 
 def test_metadata_changes_exclude_viewport_and_graph_collections():

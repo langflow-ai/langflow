@@ -205,3 +205,48 @@ def test_non_finite_numbers_are_not_json(left, right):
 def test_object_keys_must_be_strings():
     with pytest.raises(FlowDataValidationError, match="is not a string"):
         values_equal({1: "a"}, {"1": "a"})
+
+
+def _table_graph(rows: list[dict]) -> dict:
+    template = {"rows": {"type": "table", "value": rows}}
+    return {"nodes": [{"id": "t", "data": {"node": {"template": template}}}], "edges": []}
+
+
+def test_table_row_order_is_not_state():
+    rows = [{"_id": "a", "_pos": 1, "v": "x"}, {"_id": "b", "_pos": 2, "v": "y"}]
+    reordered = _table_graph(list(reversed(rows)))
+
+    assert graphs_equal(_table_graph(rows), reordered)
+    assert graph_hash(_table_graph(rows)) == graph_hash(reordered)
+
+
+def test_a_legacy_table_without_row_ids_keeps_its_order():
+    rows = [{"v": "x"}, {"v": "y"}]
+
+    assert not graphs_equal(_table_graph(rows), _table_graph(list(reversed(rows))))
+
+
+def test_handles_compare_by_the_object_they_encode():
+    edge = {"id": "e", "source": "a", "target": "b", "sourceHandle": "{œnameœ:œoutœ,œidœ:œaœ}"}
+    respelled = {**edge, "sourceHandle": "{œidœ: œaœ, œnameœ: œoutœ}"}
+    graph = _graph(edges=[edge])
+    other = _graph(edges=[respelled])
+
+    assert graphs_equal(graph, other)
+    assert graph_hash(graph) == graph_hash(other)
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda graph: graph["nodes"][0]["position"].update(x=5),
+        lambda graph: graph["edges"][0].update(target="a"),
+        lambda graph: graph.update(description="changed"),
+        lambda graph: graph["nodes"].pop(),
+    ],
+)
+def test_equality_agrees_with_the_hash(change):
+    changed = _graph()
+    change(changed)
+
+    assert graphs_equal(_graph(), changed) is (graph_hash(_graph()) == graph_hash(changed))
