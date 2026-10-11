@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 
 import pytest
 from lfx.services.flow_operations import (
@@ -24,15 +25,34 @@ from lfx.services.flow_operations import (
 )
 from lfx.services.flow_operations.factory import FlowOperationServiceFactory
 
-NODE_A = {"id": "a", "type": "generic", "position": {"x": 0, "y": 0}, "data": {}}
-NODE_B = {"id": "b", "type": "generic", "position": {"x": 100, "y": 0}, "data": {}}
-EDGE_AB = {
-    "id": "e-ab",
-    "source": "a",
-    "target": "b",
-    "sourceHandle": "out",
-    "targetHandle": "in",
-}
+
+def _node(node_id: str, x: int) -> dict:
+    template = {"text": {"type": "str", "value": ""}, "many": {"type": "str", "list": True, "value": []}}
+    return {
+        "id": node_id,
+        "type": "genericNode",
+        "position": {"x": x, "y": 0},
+        "data": {"node": {"template": template, "outputs": [{"name": "out"}]}},
+    }
+
+
+def _edge(edge_id: str, source: str, target: str, field: str = "text") -> dict:
+    """An edge from ``source``'s output to ``target``'s field, with both forms of its handles."""
+    source_handle = {"id": source, "name": "out"}
+    target_handle = {"fieldName": field, "id": target}
+    return {
+        "id": edge_id,
+        "source": source,
+        "target": target,
+        "sourceHandle": json.dumps(source_handle, separators=(",", ":")).replace('"', "œ"),
+        "targetHandle": json.dumps(target_handle, separators=(",", ":")).replace('"', "œ"),
+        "data": {"sourceHandle": source_handle, "targetHandle": target_handle},
+    }
+
+
+NODE_A = _node("a", 0)
+NODE_B = _node("b", 100)
+EDGE_AB = _edge("e-ab", "a", "b")
 
 
 def _base_flow_data() -> dict:
@@ -427,8 +447,8 @@ class TestApplyFlowOperations:
 
     def test_add_edges_after_add_nodes_in_same_batch(self):
         flow_data = _base_flow_data()
-        new_node = {"id": "c", "type": "generic", "position": {"x": 0, "y": 0}, "data": {}}
-        new_edge = {"id": "e-bc", "source": "b", "target": "c"}
+        new_node = _node("c", 200)
+        new_edge = _edge("e-bc", "b", "c")
         result = apply_flow_operations(
             flow_data,
             [
@@ -589,8 +609,8 @@ class TestApplyFlowOperations:
 
     def test_rejects_duplicate_edge_id_in_add_edges(self):
         flow_data = _base_flow_data()
-        duplicate_current_edge = {"id": "e-ab", "source": "a", "target": "b"}
-        new_edge = {"id": "e-new", "source": "a", "target": "b"}
+        duplicate_current_edge = _edge("e-ab", "a", "b")
+        new_edge = _edge("e-new", "a", "b", field="many")
 
         with pytest.raises(FlowOperationValidationError, match="edge id already exists"):
             apply_flow_operations(flow_data, [{"type": "add_edges", "edges": [duplicate_current_edge]}])

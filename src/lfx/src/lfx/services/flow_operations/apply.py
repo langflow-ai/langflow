@@ -5,16 +5,12 @@ from __future__ import annotations
 import copy
 import json
 from collections import Counter, defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from lfx.services.flow_operations.canonical import values_equal
-from lfx.services.flow_operations.exceptions import (
-    FlowDataValidationError,
-    FlowOperationError,
-    FlowOperationPreconditionError,
-    FlowOperationValidationError,
-)
+from lfx.services.flow_operations.edge_rules import HANDLE_KEYS, OUTPUTS_PATH, check_edge, node_outputs
+from lfx.services.flow_operations.exceptions import FlowOperationPreconditionError, FlowOperationValidationError
 from lfx.services.flow_operations.keyed_lists import ListIndex, RowOrder
 from lfx.services.flow_operations.ops import (
     GRAPH_COLLECTION_KEYS,
@@ -35,7 +31,17 @@ from lfx.services.flow_operations.ops import (
     deduplicate_delete_ids,
     normalize_requested_ops,
 )
-from lfx.services.flow_operations.schema import KeyedList, load_node_schema
+from lfx.services.flow_operations.schema import load_node_schema
+from lfx.services.flow_operations.state import (
+    GraphState,
+    build_graph_state,
+    copy_base_flow_edge_before_mutation,
+    copy_base_flow_node_before_mutation,
+    copy_mutable_graph_value,
+    finalize_graph,
+    require_edge_endpoints,
+    require_node_id,
+)
 
 
 @dataclass(frozen=True)
@@ -45,107 +51,6 @@ class FlowOperationsApplyResult:
     flow_data: dict[str, Any]
     forward_ops: list[FlowOperation]
     deleted_edges: tuple[str, ...] = ()
-
-
-@dataclass
-class GraphState:
-    """Indexed mutable graph state used while applying a batch."""
-
-    flow_data: dict[str, Any]
-    nodes_by_id: dict[str, dict[str, Any]] = field(default_factory=dict)
-    edges_by_id: dict[str, dict[str, Any]] = field(default_factory=dict)
-    edge_ids_by_node_id: dict[str, set[str]] = field(default_factory=dict)
-    # Node ids read from base_flow["nodes"] before applying operations.
-    base_flow_node_ids: set[str] = field(default_factory=set)
-    # Base-flow node ids whose payload has already been copied before mutation.
-    copied_base_flow_node_ids: set[str] = field(default_factory=set)
-    # The same two sets for edges.
-    base_flow_edge_ids: set[str] = field(default_factory=set)
-    copied_base_flow_edge_ids: set[str] = field(default_factory=set)
-    # Keyed lists indexed so far, by the identity of the list object.
-    list_indexes: dict[int, ListIndex] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.flow_data.get("nodes"), list):
-            msg = "flow.data.nodes must be a list"
-            raise FlowDataValidationError(msg)
-        if not isinstance(self.flow_data.get("edges"), list):
-            msg = "flow.data.edges must be a list"
-            raise FlowDataValidationError(msg)
-
-    @property
-    def nodes(self) -> list[Any]:
-        return self.flow_data["nodes"]
-
-    @property
-    def edges(self) -> list[Any]:
-        return self.flow_data["edges"]
-
-    def list_index(self, keyed: KeyedList, items: list[Any], *, context: str) -> ListIndex:
-        """Return the index of ``items``, building it the first time the list is addressed."""
-        index = self.list_indexes.get(id(items))
-        if index is None or index.items is not items:
-            index = ListIndex(keyed, items, context=context)
-            self.list_indexes[id(items)] = index
-        return index
-
-
-def build_graph_state(base_flow: dict[str, Any]) -> GraphState:
-    """Shallow-copy flow.data and index graph payloads by reference."""
-    state = GraphState(flow_data=dict(base_flow), edge_ids_by_node_id=defaultdict(set))
-    for node in state.nodes:
-        node_id = _require_node_id(node, context="flow.data.nodes", error_cls=FlowDataValidationError)
-        if node_id in state.nodes_by_id:
-            msg = f"flow.data.nodes: duplicate node id: {node_id!r}"
-            raise FlowDataValidationError(msg)
-        state.nodes_by_id[node_id] = node
-        state.base_flow_node_ids.add(node_id)
-
-    for edge in state.edges:
-        edge_id, source, target = _require_edge_endpoints(
-            edge,
-            context="flow.data.edges",
-            error_cls=FlowDataValidationError,
-        )
-        if edge_id in state.edges_by_id:
-            msg = f"flow.data.edges: duplicate edge id: {edge_id!r}"
-            raise FlowDataValidationError(msg)
-        state.edges_by_id[edge_id] = edge
-        state.base_flow_edge_ids.add(edge_id)
-        state.edge_ids_by_node_id[source].add(edge_id)
-        state.edge_ids_by_node_id[target].add(edge_id)
-
-    return state
-
-
-def finalize_graph(state: GraphState) -> dict[str, Any]:
-    """Write indexed nodes and edges back into flow.data."""
-    state.flow_data["nodes"] = list(state.nodes_by_id.values())
-    state.flow_data["edges"] = list(state.edges_by_id.values())
-    return state.flow_data
-
-
-def _copy_mutable_graph_value(value: Any) -> Any:
-    """Deep-copy mutable JSON values to prevent shared state between the original and applied graph."""
-    if value is None or isinstance(value, (bool, int, float, str)):
-        return value
-    return copy.deepcopy(value)
-
-
-def _copy_base_flow_node_before_mutation(state: GraphState, node_id: str) -> dict[str, Any]:
-    """Deep-copy mutable node payloads to prevent shared state between the original and applied graph."""
-    if node_id in state.base_flow_node_ids and node_id not in state.copied_base_flow_node_ids:
-        state.nodes_by_id[node_id] = copy.deepcopy(state.nodes_by_id[node_id])
-        state.copied_base_flow_node_ids.add(node_id)
-    return state.nodes_by_id[node_id]
-
-
-def _copy_base_flow_edge_before_mutation(state: GraphState, edge_id: str) -> dict[str, Any]:
-    """Deep-copy an edge from the base flow before its first write."""
-    if edge_id in state.base_flow_edge_ids and edge_id not in state.copied_base_flow_edge_ids:
-        state.edges_by_id[edge_id] = copy.deepcopy(state.edges_by_id[edge_id])
-        state.copied_base_flow_edge_ids.add(edge_id)
-    return state.edges_by_id[edge_id]
 
 
 def apply_flow_operations(
@@ -198,7 +103,7 @@ def _apply_add_nodes(state: GraphState, nodes: list[dict[str, Any]]) -> list[Flo
     seen_in_request: set[str] = set()
 
     for index, node in enumerate(nodes):
-        node_id = _require_node_id(node, context=f"add_nodes[{index}]")
+        node_id = require_node_id(node, context=f"add_nodes[{index}]")
         if node_id in seen_in_request:
             msg = f"add_nodes: duplicate node id in request: {node_id!r}"
             raise FlowOperationValidationError(msg)
@@ -206,7 +111,7 @@ def _apply_add_nodes(state: GraphState, nodes: list[dict[str, Any]]) -> list[Flo
             msg = f"add_nodes: node id already exists: {node_id!r}"
             raise FlowOperationValidationError(msg)
         seen_in_request.add(node_id)
-        payload = _copy_mutable_graph_value(node)
+        payload = copy_mutable_graph_value(node)
         state.nodes_by_id[node_id] = payload
         payloads.append(payload)
 
@@ -231,11 +136,10 @@ FORBIDDEN_WHOLE_NODE_UPDATE_PATHS_ERROR_LABEL = ", ".join(
 )
 # An edge's endpoints are its identity: connecting other nodes is another edge.
 FORBIDDEN_EDGE_UPDATE_ROOTS = frozenset({"id", "source", "target"})
-# Writes under these edge keys change which output or field the edge connects.
-EDGE_HANDLE_ROOTS = frozenset({"sourceHandle", "targetHandle", "data"})
+# Writes under these edge keys can change which output or input the edge connects.
+EDGE_HANDLE_ROOTS = frozenset({*HANDLE_KEYS, "data"})
 
 _TEMPLATE_PATH = ("data", "node", "template")
-_OUTPUTS_PATH = ("data", "node", "outputs")
 
 
 def _apply_update_nodes(state: GraphState, updates: list[UpdateNodeEntry]) -> tuple[list[FlowOperation], list[str]]:
@@ -243,7 +147,7 @@ def _apply_update_nodes(state: GraphState, updates: list[UpdateNodeEntry]) -> tu
         return [], []
 
     _validate_update_entries(updates, kind="update_nodes")
-    cascaded_edge_ids: list[str] = []
+    detached_edge_ids: set[str] = set()
     for index, update in enumerate(updates):
         node_id = update.id
         context = f"update_nodes[{index}]"
@@ -254,16 +158,57 @@ def _apply_update_nodes(state: GraphState, updates: list[UpdateNodeEntry]) -> tu
             msg = f"update_nodes: cannot update node that does not exist in the original flow: {node_id!r}"
             raise FlowOperationValidationError(msg)
         _validate_node_field_path(update.path, context=f"{context}.path")
-        node = _copy_base_flow_node_before_mutation(state, node_id)
-        removed = _apply_field_update(state, node, node, update, context=context)
-        if removed is not _ABSENT:
-            cascaded_edge_ids.extend(_edges_attached_to(state, node_id, update.path, removed))
+        node = copy_base_flow_node_before_mutation(state, node_id)
+        before = _apply_field_update(state, node, node, update, context=context)
+        detached_edge_ids |= _detached_edges(state, node_id, update, before)
 
     forward_ops: list[FlowOperation] = [UpdateNodesOp(type="update_nodes", updates=copy.deepcopy(updates))]
-    removed_edge_ids = _remove_edges(state, cascaded_edge_ids)
+    removed_edge_ids = state.remove_edges(list(detached_edge_ids))
     if removed_edge_ids:
         forward_ops.append(DeleteEdgesOp(type="delete_edges", ids=removed_edge_ids))
     return forward_ops, removed_edge_ids
+
+
+def _detached_edges(state: GraphState, node_id: str, update: UpdateNodeEntry, before: Any) -> set[str]:
+    """Return the edges a write left without an end: into a removed template field, or from or into a removed output."""
+    path = update.path
+    if before is _ABSENT:
+        return set()
+    if (
+        isinstance(update, DeleteNodeFieldUpdate)
+        and len(path) == len(_TEMPLATE_PATH) + 1
+        and path[:-1] == _TEMPLATE_PATH
+    ):
+        return set(state.connections(node_id).inputs.get(("field", path[-1]), ()))
+    if path[: len(OUTPUTS_PATH)] != OUTPUTS_PATH:
+        return set()
+    if len(path) == len(OUTPUTS_PATH) + 1 and isinstance(update, DeleteNodeFieldUpdate):
+        removed_outputs = {path[-1].key}
+    elif len(path) == len(OUTPUTS_PATH):
+        # The whole list was replaced or deleted: the outputs it no longer has are gone.
+        outputs_after = node_outputs(state, node_id)
+        removed_outputs = set(_outputs_by_name(before, node_id=node_id)) - set(
+            outputs_after.by_key if outputs_after is not None else ()
+        )
+    else:
+        return set()
+    if not removed_outputs:
+        return set()
+    connections = state.connections(node_id)
+    detached: set[str] = set()
+    for name in removed_outputs:
+        detached |= connections.outputs.get(name, set())
+        detached |= connections.inputs.get(("output", name), set())
+    return detached
+
+
+def _outputs_by_name(outputs: Any, *, node_id: str) -> dict[str, dict[str, Any]]:
+    """Index an outputs list a write replaced, which follows the same rules as the one that replaces it."""
+    if not isinstance(outputs, list):
+        msg = f"node {node_id!r}: data.node.outputs must be a list"
+        raise FlowOperationValidationError(msg)
+    keyed = load_node_schema().keyed_list_at({}, OUTPUTS_PATH)
+    return ListIndex(keyed, outputs, context=f"node {node_id!r}: data.node.outputs").by_key
 
 
 def _apply_update_edges(state: GraphState, updates: list[UpdateNodeEntry]) -> list[FlowOperation]:
@@ -271,7 +216,8 @@ def _apply_update_edges(state: GraphState, updates: list[UpdateNodeEntry]) -> li
         return []
 
     _validate_update_entries(updates, kind="update_edges")
-    endpoints_before: dict[str, tuple[Any, Any]] = {}
+    # The handles of each edge the batch writes under a handle key, as they were before.
+    handles_before: dict[str, dict[str, Any]] = {}
     for index, update in enumerate(updates):
         edge_id = update.id
         context = f"update_edges[{index}]"
@@ -288,20 +234,31 @@ def _apply_update_edges(state: GraphState, updates: list[UpdateNodeEntry]) -> li
                 "connecting different nodes is a different edge, so delete it and add another"
             )
             raise FlowOperationValidationError(msg)
-        edge = _copy_base_flow_edge_before_mutation(state, edge_id)
-        if root in EDGE_HANDLE_ROOTS and edge_id not in endpoints_before:
-            endpoints_before[edge_id] = _edge_endpoint_names(edge)
+        edge = copy_base_flow_edge_before_mutation(state, edge_id)
+        if root in EDGE_HANDLE_ROOTS and edge_id not in handles_before:
+            handles_before[edge_id] = _raw_handles(edge)
         _apply_field_update(state, edge, None, update, context=context)
 
-    for edge_id, before in endpoints_before.items():
+    # An edge whose handles the batch changed is rewired, so it is checked like a new one.
+    for edge_id, before in handles_before.items():
         edge = state.edges_by_id[edge_id]
-        # Only an edge that now connects a different output or field makes a
-        # new claim; rewriting the types or data of an edge where it stands
-        # keeps legacy edges editable.
-        if _edge_endpoint_names(edge) != before:
-            _check_edge_rules(state, edge, context=f"update_edges: edge {edge_id!r}")
+        if not values_equal(_raw_handles(edge), before):
+            state.forget_handles(edge)
+            check_edge(state, edge)
+            state.reindex_handles(edge)
 
     return [UpdateEdgesOp(type="update_edges", updates=copy.deepcopy(updates))]
+
+
+def _raw_handles(edge: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of both forms of an edge's handles, whatever their shape, to tell whether a write changed them."""
+    data = edge.get("data")
+    return copy.deepcopy(
+        {
+            "strings": {key: edge[key] for key in HANDLE_KEYS if key in edge},
+            "data": {key: data[key] for key in HANDLE_KEYS if key in data} if isinstance(data, dict) else data,
+        }
+    )
 
 
 def _validate_update_entries(updates: list[UpdateNodeEntry], *, kind: str) -> None:
@@ -332,7 +289,7 @@ def _path_label(path: NodeFieldPath) -> str:
 
 # --- Walking a path ----------------------------------------------------------------------
 
-# What a write removed when there was nothing there; None is a value a field can hold.
+# What a write replaced or removed when there was nothing there; None is a value a field can hold.
 _ABSENT = object()
 
 
@@ -358,7 +315,8 @@ def _apply_field_update(
     """Apply one set_field or delete_field to ``root``, a node or an edge, walking its path once.
 
     ``node`` is the node whose schema declares keyed lists, or None for an
-    edge, which has none. Return what a delete removed, or ``_ABSENT``.
+    edge, which has none. Return the value the write replaced or removed, or
+    ``_ABSENT`` when there was none.
     """
     path = update.path
     parent, steps, missing_at = _walk(state, root, node, path, context=context)
@@ -374,7 +332,7 @@ def _apply_field_update(
             msg = f"{context}.path[{missing_at}]: list item does not exist: {_selector_key(part)!r}"
         raise FlowOperationValidationError(msg)
 
-    removed = _write_last(state, node, parent, update, context=context)
+    before = _write_last(state, node, parent, update, context=context)
     # A write inside a keyed list item must leave its key alone; a table row whose
     # position changed goes back in order.
     for step in reversed(steps):
@@ -383,7 +341,7 @@ def _apply_field_update(
             raise FlowOperationValidationError(msg)
         if step.order is not None:
             step.items.reorder(step.item, step.order, context=context)
-    return removed
+    return before
 
 
 def _walk(
@@ -450,7 +408,7 @@ def _write_last(
     *,
     context: str,
 ) -> Any:
-    """Write or delete the last segment of the update's path. Return what a delete removed, or ``_ABSENT``."""
+    """Write or delete the last segment of the update's path. Return what it replaced or removed, or ``_ABSENT``."""
     path = update.path
     last = path[-1]
     if isinstance(last, str):
@@ -459,23 +417,23 @@ def _write_last(
             raise FlowOperationValidationError(msg)
         if isinstance(update, DeleteNodeFieldUpdate):
             return parent.pop(last, _ABSENT)
+        before = parent.get(last, _ABSENT)
         # Prevent stored graph state from sharing mutable objects with the
         # operation payload returned in forward_ops.
-        parent[last] = _copy_mutable_graph_value(update.value)
-        return _ABSENT
+        parent[last] = copy_mutable_graph_value(update.value)
+        return before
 
     items = _keyed_list(state, node, path, len(path) - 1, parent, context=context)
     key = _selector_key(last)
     if isinstance(update, DeleteNodeFieldUpdate):
         return items.remove(key, context=context) if key in items.by_key else _ABSENT
-    value = _copy_mutable_graph_value(update.value)
+    value = copy_mutable_graph_value(update.value)
     if items.keyed.key_of(value) != key:
         msg = f"{context}: a list item written at a selector must carry the same key: {key!r}"
         raise FlowOperationValidationError(msg)
     if key in items.by_key:
-        items.replace(key, value, context=context)
-    else:
-        items.add(value, context=context)
+        return items.replace(key, value, context=context)
+    items.add(value, context=context)
     return _ABSENT
 
 
@@ -520,167 +478,7 @@ def _check_expectation(update: UpdateNodeEntry, *, exists: bool, current: Any, c
         raise FlowOperationPreconditionError(msg)
 
 
-# --- Edges attached to a removed field or output ---------------------------------------
-
-
-def _edges_attached_to(state: GraphState, node_id: str, path: NodeFieldPath, removed: Any) -> list[str]:
-    """Return the edges a removed template field or output was connected through."""
-    field_name = None
-    output_name = None
-    if len(path) == len(_TEMPLATE_PATH) + 1 and path[:-1] == _TEMPLATE_PATH and isinstance(removed, dict):
-        field_name = path[-1]
-    elif len(path) == len(_OUTPUTS_PATH) + 1 and path[:-1] == _OUTPUTS_PATH and isinstance(path[-1], KeySelector):
-        output_name = path[-1].key
-    else:
-        return []
-
-    attached: list[str] = []
-    for edge_id in state.edge_ids_by_node_id.get(node_id, ()):
-        edge = state.edges_by_id[edge_id]
-        source_handle, target_handle = _edge_handles(edge)
-        if field_name is not None:
-            if edge["target"] == node_id and target_handle is not None and target_handle.get("fieldName") == field_name:
-                attached.append(edge_id)
-            continue
-        source_name = source_handle.get("name") if source_handle is not None else None
-        from_output = edge["source"] == node_id and source_name == output_name
-        into_loop_output = edge["target"] == node_id and _loop_target_output(target_handle) == output_name
-        if from_output or into_loop_output:
-            attached.append(edge_id)
-    return attached
-
-
-# --- Edge rules --------------------------------------------------------------------------
-
-
-def _parse_handle(handle: Any) -> dict[str, Any] | None:
-    """Parse a handle string, JSON with ``œ`` standing for ``"``, into its object."""
-    if isinstance(handle, dict):
-        return handle
-    if not isinstance(handle, str):
-        return None
-    try:
-        parsed = json.loads(handle.replace("œ", '"'))
-    except ValueError:
-        return None
-    return parsed if isinstance(parsed, dict) else None
-
-
-def _edge_handles(edge: dict[str, Any]) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
-    """Return an edge's source and target handle objects, preferring ``data`` over the strings."""
-    data = edge.get("data") if isinstance(edge.get("data"), dict) else {}
-    source = data.get("sourceHandle") if isinstance(data.get("sourceHandle"), dict) else None
-    target = data.get("targetHandle") if isinstance(data.get("targetHandle"), dict) else None
-    return (
-        source if source is not None else _parse_handle(edge.get("sourceHandle")),
-        target if target is not None else _parse_handle(edge.get("targetHandle")),
-    )
-
-
-def _loop_target_output(target_handle: dict[str, Any] | None) -> str | None:
-    """Return the output a loop feedback edge targets, or None.
-
-    A Loop component takes its feedback on one of its own outputs: the target
-    handle then names an output (``name``) instead of a template field
-    (``fieldName``), as in the Research Translation Loop starter project.
-    """
-    if target_handle is None or "fieldName" in target_handle:
-        return None
-    name = target_handle.get("name")
-    return name if isinstance(name, str) else None
-
-
-def _edge_endpoint_names(edge: dict[str, Any]) -> tuple[Any, Any]:
-    source_handle, target_handle = _edge_handles(edge)
-    source_name = source_handle.get("name") if source_handle is not None else None
-    if target_handle is None:
-        target_name = None
-    elif "fieldName" in target_handle:
-        target_name = ("field", target_handle.get("fieldName"))
-    else:
-        target_name = ("output", target_handle.get("name"))
-    return source_name, target_name
-
-
-def _is_exempt_node(node: dict[str, Any]) -> bool:
-    """Group nodes and notes have no fixed fields or outputs to check edges against."""
-    if node.get("type") == "noteNode":
-        return True
-    data = node.get("data")
-    node_data = data.get("node") if isinstance(data, dict) else None
-    return not isinstance(node_data, dict) or "flow" in node_data
-
-
-def _node_part(node: dict[str, Any], key: str) -> Any:
-    data = node.get("data")
-    node_data = data.get("node") if isinstance(data, dict) else None
-    return node_data.get(key) if isinstance(node_data, dict) else None
-
-
-def _output_names(node: dict[str, Any]) -> set[str] | None:
-    """Return a node's output names, or None when it has no outputs list to check against."""
-    if _is_exempt_node(node):
-        return None
-    outputs = _node_part(node, "outputs")
-    if not isinstance(outputs, list):
-        return None
-    return {output["name"] for output in outputs if isinstance(output, dict) and isinstance(output.get("name"), str)}
-
-
-def _template_fields(node: dict[str, Any]) -> dict[str, Any] | None:
-    if _is_exempt_node(node):
-        return None
-    template = _node_part(node, "template")
-    return template if isinstance(template, dict) else None
-
-
-def _check_edge_rules(state: GraphState, edge: dict[str, Any], *, context: str) -> None:
-    """Check that an edge's handles name an existing output and field, and a single input stays single.
-
-    Edges without handle data, and the ends of edges at group nodes, notes and
-    nodes without a template or outputs, are not checked.
-    """
-    source_handle, target_handle = _edge_handles(edge)
-    source = state.nodes_by_id[edge["source"]]
-    target = state.nodes_by_id[edge["target"]]
-
-    if source_handle is not None and isinstance(source_handle.get("name"), str):
-        names = _output_names(source)
-        if names is not None and source_handle["name"] not in names:
-            msg = f"{context}: source node {edge['source']!r} has no output {source_handle['name']!r}"
-            raise FlowOperationValidationError(msg, code="EDGE_HANDLE_NOT_FOUND")
-
-    if target_handle is None:
-        return
-    loop_output = _loop_target_output(target_handle)
-    if loop_output is not None:
-        names = _output_names(target)
-        if names is not None and loop_output not in names:
-            msg = f"{context}: target node {edge['target']!r} has no output {loop_output!r}"
-            raise FlowOperationValidationError(msg, code="EDGE_HANDLE_NOT_FOUND")
-        return
-
-    field_name = target_handle.get("fieldName")
-    template = _template_fields(target)
-    if template is None or not isinstance(field_name, str):
-        return
-    template_field = template.get(field_name)
-    if not isinstance(template_field, dict):
-        msg = f"{context}: target node {edge['target']!r} has no field {field_name!r}"
-        raise FlowOperationValidationError(msg, code="EDGE_HANDLE_NOT_FOUND")
-    if template_field.get("list") is True:
-        return
-    for other_id in state.edge_ids_by_node_id.get(edge["target"], ()):
-        other = state.edges_by_id[other_id]
-        if other_id == edge["id"] or other["target"] != edge["target"]:
-            continue
-        _, other_target_handle = _edge_handles(other)
-        if other_target_handle is not None and other_target_handle.get("fieldName") == field_name:
-            msg = (
-                f"{context}: field {field_name!r} of node {edge['target']!r} takes one connection "
-                f"and already has one ({other_id!r})"
-            )
-            raise FlowOperationValidationError(msg, code="EDGE_TARGET_OCCUPIED")
+# --- Nodes, edges and metadata -----------------------------------------------------------
 
 
 def _apply_delete_nodes(state: GraphState, ids: list[str]) -> tuple[list[FlowOperation], list[str]]:
@@ -694,19 +492,18 @@ def _apply_delete_nodes(state: GraphState, ids: list[str]) -> tuple[list[FlowOpe
             raise FlowOperationValidationError(msg)
 
     removed_node_ids: list[str] = []
-    incident_edge_ids: list[str] = []
+    incident_edge_ids: set[str] = set()
 
     for node_id in delete_ids:
         if node_id not in state.nodes_by_id:
             continue
-        del state.nodes_by_id[node_id]
+        incident_edge_ids |= state.remove_node(node_id)
         removed_node_ids.append(node_id)
-        incident_edge_ids.extend(state.edge_ids_by_node_id.pop(node_id, ()))
 
     if not removed_node_ids:
         return [], []
 
-    removed_edge_ids = _remove_edges(state, incident_edge_ids)
+    removed_edge_ids = state.remove_edges(list(incident_edge_ids))
     forward_ops: list[FlowOperation] = [DeleteNodesOp(type="delete_nodes", ids=removed_node_ids)]
     if removed_edge_ids:
         forward_ops.append(DeleteEdgesOp(type="delete_edges", ids=removed_edge_ids))
@@ -721,7 +518,7 @@ def _apply_add_edges(state: GraphState, edges: list[dict[str, Any]]) -> list[Flo
     seen_in_request: set[str] = set()
 
     for index, edge in enumerate(edges):
-        edge_id, source, target = _require_edge_endpoints(edge, context=f"add_edges[{index}]")
+        edge_id, source, target = require_edge_endpoints(edge, context=f"add_edges[{index}]")
         if edge_id in seen_in_request:
             msg = f"add_edges: duplicate edge id in request: {edge_id!r}"
             raise FlowOperationValidationError(msg)
@@ -735,16 +532,16 @@ def _apply_add_edges(state: GraphState, edges: list[dict[str, Any]]) -> list[Flo
             msg = f"add_edges: target node does not exist: {target!r}"
             raise FlowOperationValidationError(msg)
         seen_in_request.add(edge_id)
-        payload = _copy_mutable_graph_value(edge)
-        _check_edge_rules(state, payload, context=f"add_edges[{index}]")
-        _insert_edge(state, payload)
+        payload = copy_mutable_graph_value(edge)
+        check_edge(state, payload)
+        state.insert_edge(payload)
         payloads.append(payload)
 
     return [AddEdgesOp(type="add_edges", edges=payloads)]
 
 
 def _apply_delete_edges(state: GraphState, ids: list[str]) -> list[FlowOperation]:
-    removed_edge_ids = _remove_edges(state, ids)
+    removed_edge_ids = state.remove_edges(ids)
     if not removed_edge_ids:
         return []
     return [DeleteEdgesOp(type="delete_edges", ids=removed_edge_ids)]
@@ -769,7 +566,7 @@ def _apply_update_metadata(
         return []
 
     for key, value in fields.items():
-        state.flow_data[key] = _copy_mutable_graph_value(value)
+        state.flow_data[key] = copy_mutable_graph_value(value)
     for key in keys_to_delete:
         state.flow_data.pop(key, None)
 
@@ -780,70 +577,3 @@ def _apply_update_metadata(
             delete_keys=keys_to_delete,
         )
     ]
-
-
-def _remove_edges(state: GraphState, ids: list[str]) -> list[str]:
-    removed_edge_ids: list[str] = []
-    for edge_id in deduplicate_delete_ids(ids):
-        edge = state.edges_by_id.pop(edge_id, None)
-        if edge is None:
-            continue
-        removed_edge_ids.append(edge_id)
-        source = edge["source"]
-        target = edge["target"]
-        state.edge_ids_by_node_id[source].discard(edge_id)
-        state.edge_ids_by_node_id[target].discard(edge_id)
-        if not state.edge_ids_by_node_id[source]:
-            del state.edge_ids_by_node_id[source]
-        if not state.edge_ids_by_node_id[target]:
-            del state.edge_ids_by_node_id[target]
-    return removed_edge_ids
-
-
-def _insert_edge(state: GraphState, edge: dict[str, Any]) -> None:
-    edge_id = edge["id"]
-    source = edge["source"]
-    target = edge["target"]
-    state.edges_by_id[edge_id] = edge
-    state.edge_ids_by_node_id[source].add(edge_id)
-    state.edge_ids_by_node_id[target].add(edge_id)
-
-
-def _require_node_id(
-    node: Any,
-    *,
-    context: str,
-    error_cls: type[FlowOperationError] = FlowOperationValidationError,
-) -> str:
-    if not isinstance(node, dict):
-        msg = f"{context}: node must be a dict"
-        raise error_cls(msg)
-    node_id = node.get("id")
-    if not isinstance(node_id, str) or not node_id:
-        msg = f"{context}: node must have a non-empty string id"
-        raise error_cls(msg)
-    return node_id
-
-
-def _require_edge_endpoints(
-    edge: Any,
-    *,
-    context: str,
-    error_cls: type[FlowOperationError] = FlowOperationValidationError,
-) -> tuple[str, str, str]:
-    if not isinstance(edge, dict):
-        msg = f"{context}: edge must be a dict"
-        raise error_cls(msg)
-    edge_id = edge.get("id")
-    source = edge.get("source")
-    target = edge.get("target")
-    if not isinstance(edge_id, str) or not edge_id:
-        msg = f"{context}: edge must have a non-empty string id"
-        raise error_cls(msg)
-    if not isinstance(source, str) or not source:
-        msg = f"{context}: edge must have a non-empty string source"
-        raise error_cls(msg)
-    if not isinstance(target, str) or not target:
-        msg = f"{context}: edge must have a non-empty string target"
-        raise error_cls(msg)
-    return edge_id, source, target
