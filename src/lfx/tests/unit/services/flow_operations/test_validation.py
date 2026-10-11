@@ -191,6 +191,45 @@ def test_rewiring_a_stored_edge_checks_it():
     assert [v.code for v in find_graph_violations(graph, base=base)] == [GraphViolationCode.EDGE_HANDLE_NOT_FOUND]
 
 
+def _legacy_edge() -> dict:
+    """An edge in a format older editors wrote: handle strings that are not JSON, and no data."""
+    return {"id": "old", "source": "a", "target": "b", "sourceHandle": "x|y", "targetHandle": "z"}
+
+
+def test_an_edge_violation_names_its_edge():
+    graph = _connectable()
+    graph["edges"].append(_edge_to("missing"))
+
+    [violation] = find_graph_violations(graph, base={"nodes": [], "edges": []})
+
+    assert violation.edge_id == "e"
+    assert violation.to_dict()["edge_id"] == "e"
+
+
+def test_a_broken_edge_found_while_checking_another_is_reported_once_at_itself():
+    graph = _connectable()
+    graph["edges"] += [_legacy_edge(), _edge_to("f", "good")]
+
+    violations = find_graph_violations(graph, base={"nodes": [], "edges": []})
+
+    assert [(v.code, v.path, v.edge_id) for v in violations] == [
+        (GraphViolationCode.EDGE_HANDLE_INVALID, ("edges", 0), "old")
+    ]
+
+
+def test_a_stored_broken_edge_fails_the_check_of_an_edge_added_into_its_node():
+    base = _connectable()
+    base["edges"].append(_legacy_edge())
+    graph = _connectable()
+    graph["edges"] += [_legacy_edge(), _edge_to("f", "good")]
+
+    violations = find_graph_violations(graph, base=base)
+
+    assert [(v.code, v.path, v.edge_id) for v in violations] == [
+        (GraphViolationCode.EDGE_HANDLE_INVALID, ("edges", 0), "old")
+    ]
+
+
 def test_edge_rules_wait_for_a_sound_structure():
     graph = _connectable()
     graph["edges"].append(_edge_to("missing"))
