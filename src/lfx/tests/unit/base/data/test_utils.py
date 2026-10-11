@@ -23,6 +23,35 @@ class TestReadTextFile:
         result = read_text_file(str(f))
         assert "caf" in result
 
+    def test_cp1252_file_with_smart_quotes(self, tmp_path):
+        """A Windows-1252 file must not come back as latin-1 control characters.
+
+        chardet reports Windows-1252 for this file; latin-1 maps those bytes to
+        control characters, so the file must be decoded as cp1252 instead.
+        """
+        content = "He said “hello” and it costs 5€ – really.\n"  # noqa: RUF001
+        f = tmp_path / "smart.txt"
+        f.write_bytes(content.encode("cp1252"))
+        assert read_text_file(str(f)) == content
+
+    def test_cp1252_file_detected_as_macroman(self, tmp_path):
+        """gb18030 decodes some cp1252 punctuation, so cp1252 must be tried first.
+
+        chardet reports MacRoman for this file, and gb18030 accepts those bytes as
+        a CJK sequence, which silently turned the apostrophe into mojibake.
+        """
+        content = "It’s fine\n"  # noqa: RUF001
+        f = tmp_path / "apostrophe.txt"
+        f.write_bytes(content.encode("cp1252"))
+        assert read_text_file(str(f)) == content
+
+    def test_cp1252_fallback_does_not_shadow_gb18030(self):
+        """cp1252 stays behind gb18030 for files chardet does not call Windows-1252."""
+        from lfx.base.data.utils import _detect_encoding_with_fallbacks
+
+        chain = _detect_encoding_with_fallbacks("中文测试文件内容\n".encode("gb18030"))
+        assert chain.index("gb18030") < chain.index("cp1252")
+
     def test_chardet_returns_none(self, tmp_path):
         """read_text_file should not crash when chardet returns None encoding."""
         f = tmp_path / "test.txt"
