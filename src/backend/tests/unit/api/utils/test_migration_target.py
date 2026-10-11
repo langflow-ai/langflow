@@ -124,6 +124,54 @@ def test_start_settings_preserve_destination_policy_and_redact_opensearch_enviro
         enforce_kb_destination("https://search.internal", source="variable", description="saved URL")
 
 
+def test_start_settings_print_no_empty_policy_no_secret_in_a_host_list_and_no_protected_name():
+    planted = "planted-password-5d2e"  # pragma: allowlist secret
+    settings = start_settings(
+        database="db.internal/langflow",
+        files=None,
+        vectors=None,
+        auto_login=True,
+        superuser="langflow",
+        source_env={
+            # Set and empty, as a copy of .env.example leaves it.
+            "LANGFLOW_SSRF_PROTECTION_ENABLED": "",
+            # A URL where a host belongs. It matches no host, and its password is not handed out.
+            "LANGFLOW_SSRF_ALLOWED_HOSTS": f"https://svc:{planted}@gateway.internal,10.0.0.0/8",
+            "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "false",
+            # Written over two lines, with a range given by its width, one by its mask, and a comma at the end.
+            "LANGFLOW_KB_ALLOWED_HOSTS": (
+                "search.internal,*.dev.internal, 10.0.0.0/8,\n 192.168.1.0/255.255.255.0, [::1]:9200,"
+            ),
+            "LANGFLOW_CONFIG_DIR": "/app/config",
+            "GITHUB_TOKEN": planted,
+            "SEARCH_CLUSTER": "https://search.internal",
+        },
+        # A knowledge base can name any variable. It never reads a protected one from the environment.
+        opensearch_variables=["LANGFLOW_CONFIG_DIR", "GITHUB_TOKEN", "SEARCH_CLUSTER"],
+    )
+
+    assert _printed(settings)[2:] == [
+        "LANGFLOW_AUTO_LOGIN=true",
+        "LANGFLOW_SSRF_ALLOWED_HOSTS=<same value as this instance>",
+        "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED=false",
+        # The entries as the policy reads them, on one line with no space in it, so that a shell takes it whole.
+        "LANGFLOW_KB_ALLOWED_HOSTS=search.internal,*.dev.internal,10.0.0.0/8,192.168.1.0/255.255.255.0,[::1]:9200",
+        "SEARCH_CLUSTER=<same value as this instance>",
+    ]
+    assert [setting["fill"] for setting in settings[3:]] == [True, False, False, True]
+    assert planted not in str(settings)
+    # A list with no entry in it is an empty list.
+    blank = start_settings(
+        database=None,
+        files=None,
+        vectors=None,
+        auto_login=True,
+        superuser="langflow",
+        source_env={"LANGFLOW_SSRF_ALLOWED_HOSTS": " ,\n"},
+    )
+    assert _printed(blank) == ["LANGFLOW_SECRET_KEY=<secret key>", "LANGFLOW_AUTO_LOGIN=true"]
+
+
 def test_opensearch_variable_names_include_defaults_and_custom_names_only():
     from langflow.api.utils.migration_target import opensearch_variables
 

@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from lfx.utils.env_var_security import is_protected_env_var
+
 from langflow.api.utils.migration_copies import bucket_environment, foreign_environment
 from langflow.services.database.sqlite_to_postgres import _sync_postgres_url
 
@@ -32,6 +34,10 @@ _DIAL_SETTINGS = (
     "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED",
     "LANGFLOW_KB_ALLOWED_HOSTS",
 )
+# One entry of such a setting: a switch, a host, an address, or a range with its width or its mask.
+_HOST = re.compile(r"[\w.*:\[\]-]+(/[\d.]{1,15})?")
+# What stands in for a value that is not printed.
+_SAME = "<same value as this instance>"
 
 
 def start_settings(
@@ -80,13 +86,24 @@ def start_settings(
     # The integrity check keeps these policies. Without them, an existing remote knowledge base can
     # pass the check here and be refused by the new instance, even when its URL is a copied variable.
     for name in _DIAL_SETTINGS:
-        if name in environment:
-            add(name, environment[name])
+        # As the policies read a list: what stands between the commas, with the space around it dropped.
+        # No space is put back, so that a shell takes the line as one value.
+        entries = [entry.strip() for entry in environment.get(name, "").split(",") if entry.strip()]
+        if not entries:
+            continue
+        # A switch, or a list of hosts and ranges, is printed. Any other shape, a URL above all, can hold
+        # a user, a password or a token, so only its name is.
+        if all(_HOST.fullmatch(entry) for entry in entries):
+            add(name, ",".join(entries))
+        else:
+            add(name, _SAME, fill=True)
     named = {setting["name"] for setting in settings}
     for name in sorted(set(opensearch_variables) - named):
-        if environment.get(name):
+        # A knowledge base never reads a protected name from the environment, so the new instance has
+        # no use for it there.
+        if environment.get(name) and not is_protected_env_var(name):
             # Even a URL can contain credentials. Keep only its variable name, never its value.
-            add(name, "<same value as this instance>", fill=True)
+            add(name, _SAME, fill=True)
     return settings
 
 

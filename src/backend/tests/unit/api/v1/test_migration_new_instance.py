@@ -19,7 +19,7 @@ from uuid import uuid4
 import psutil
 import pytest
 import sqlalchemy as sa
-from langflow.api.utils import migration_runs
+from langflow.api.utils import migration_runs, migration_target
 from langflow.api.v1 import migration as migration_module
 from langflow.cli.integrity import check_instance
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
@@ -1419,6 +1419,9 @@ async def test_an_instance_on_postgresql_with_its_own_bucket_and_store_is_given_
     )
     monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", f"postgresql+psycopg://vectors:{DB_PASSWORD}@pg.internal:5432/kb")
     monkeypatch.setenv("AWS_ENDPOINT_URL", endpoint)
+    # What the shell of whoever runs this lets its servers reach is no part of what this server runs on.
+    for name in migration_target._DIAL_SETTINGS:
+        monkeypatch.delenv(name, raising=False)
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "storage_type", "s3")
     monkeypatch.setattr(settings, "object_storage_bucket_name", "own-bucket")
