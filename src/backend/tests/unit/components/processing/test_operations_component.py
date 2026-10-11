@@ -142,6 +142,30 @@ class TestJsonOperations:
         assert result.data["key1"] == "value1"
         assert result.data["key2"] == "value2"
 
+    @pytest.mark.parametrize("component_class", [OperationsComponent, DataOperationsComponent])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"data": {"id": 1}},
+            {"data": 42},
+            {"text_key": "body", "default_value": "fallback", "body": "content"},
+            {"text_key": ["literal"], "default_value": {"missing": True}},
+        ],
+    )
+    def test_combine_preserves_payload_keys(self, component_class, payload):
+        """Business keys must not be interpreted as Data constructor fields."""
+        original = Data(data=payload)
+        operation_field = "operation" if component_class is OperationsComponent else "operations"
+        component = component_class(
+            data=[original, Data(data={"source": "memo"})],
+            **{operation_field: [{"name": "Combine"}]},
+        )
+        result = component.as_data()
+        assert result.data == {**payload, "source": "memo"}
+        assert result.text_key == "text"
+        assert result.default_value == ""
+        assert original.data == payload
+
     def test_append_update(self):
         component = OperationsComponent(
             data=Data(data={"existing_key": "existing_value"}),
