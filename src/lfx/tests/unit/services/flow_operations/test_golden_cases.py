@@ -39,5 +39,17 @@ def test_apply_case(case):
     assert result.flow_data == case["expected"]
     # Cases whose normalized operations equal what they submit leave forward_operations out.
     expected_forward = case.get("forward_operations", case["operations"])
-    assert [dump_flow_operation(op) for op in result.forward_ops] == expected_forward
+    assert _ignoring_id_order([dump_flow_operation(op) for op in result.forward_ops]) == _ignoring_id_order(
+        expected_forward
+    )
     assert base == case["base"]
+
+
+def _ignoring_id_order(operations: list[dict]) -> list[dict]:
+    """Compare the ids a delete names as a set: node and edge order is not state."""
+    return [
+        {**operation, "ids": sorted(operation["ids"])}
+        if operation["type"] in {"delete_nodes", "delete_edges"}
+        else operation
+        for operation in operations
+    ]

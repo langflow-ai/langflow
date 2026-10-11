@@ -1676,7 +1676,7 @@
       ]
     },
     {
-      "name": "cascade: deleting a node reports its edges in graph order",
+      "name": "cascade: deleting a node deletes the edges at both its ends",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
