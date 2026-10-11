@@ -19,12 +19,19 @@ from typing import TYPE_CHECKING, Any, TypeVar
 from lfx.services.flow_operations.edge_rules import Connections, Handles, read_handles
 from lfx.services.flow_operations.exceptions import FlowOperationValidationError
 from lfx.services.flow_operations.keyed_lists import ListIndex
-from lfx.services.flow_operations.validation import NODE_OBJECT_PATHS, validate_flow_data
 
 if TYPE_CHECKING:
     from lfx.services.flow_operations.schema import KeyedList
 
 _Container = TypeVar("_Container", dict[str, Any], list[Any])
+
+# Every node carries these as objects for its whole lifetime; operations patch
+# inside them instead of replacing them.
+NODE_OBJECT_PATHS: tuple[tuple[str, ...], ...] = (
+    ("data",),
+    ("data", "node"),
+    ("data", "node", "template"),
+)
 
 
 @dataclass
@@ -153,15 +160,13 @@ def _disconnect(connections: Connections, node_id: str, edge: dict[str, Any], ha
         connections.outputs[handles.output].discard(edge["id"])
 
 
-def build_graph_state(base_flow: dict[str, Any]) -> GraphState:
-    """Validate flow.data, shallow-copy it, and index graph payloads by reference.
+def index_graph(flow_data: dict[str, Any]) -> GraphState:
+    """Shallow-copy flow.data and index its payloads by reference.
 
-    Values are not walked for NaN here: that check belongs to whoever accepts
-    a graph from outside, and skipping it keeps each apply proportional to the
-    number of nodes and edges rather than to the size of the flow.
+    The graph must already pass structural validation: unique ids, and edges
+    whose endpoints exist.
     """
-    validate_flow_data(base_flow, check_values=False)
-    state = GraphState(flow_data=dict(base_flow))
+    state = GraphState(flow_data=dict(flow_data))
     for node in state.nodes:
         state.nodes_by_id[node["id"]] = node
         state.base_flow_node_ids.add(node["id"])

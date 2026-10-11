@@ -8,8 +8,8 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Any
 
-from lfx.services.flow_operations.canonical import json_type
-from lfx.services.flow_operations.edge_rules import HANDLE_KEYS, OUTPUTS_PATH, check_edge, node_outputs
+from lfx.services.flow_operations.canonical import json_type, values_equal
+from lfx.services.flow_operations.edge_rules import HANDLE_KEYS, OUTPUTS_PATH, check_edge, handle_forms, node_outputs
 from lfx.services.flow_operations.exceptions import FlowOperationValidationError
 from lfx.services.flow_operations.keyed_lists import ListIndex
 from lfx.services.flow_operations.ops import (
@@ -30,15 +30,16 @@ from lfx.services.flow_operations.ops import (
 from lfx.services.flow_operations.schema import load_node_schema
 from lfx.services.flow_operations.state import (
     GraphState,
-    build_graph_state,
     copy_mutable_graph_value,
     finalize_graph,
+    index_graph,
     require_edge_endpoints,
     require_node_id,
     require_node_objects,
     writable_edge,
     writable_node,
 )
+from lfx.services.flow_operations.validation import validate_flow_data
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,17 @@ class FlowOperationsApplyResult:
     flow_data: dict[str, Any]
     forward_ops: list[FlowOperation]
     deleted_edges: tuple[str, ...] = ()
+
+
+def build_graph_state(base_flow: dict[str, Any]) -> GraphState:
+    """Validate flow.data, shallow-copy it, and index graph payloads by reference.
+
+    Values are not walked for NaN here: that check belongs to whoever accepts
+    a graph from outside, and skipping it keeps each apply proportional to the
+    number of nodes and edges rather than to the size of the flow.
+    """
+    validate_flow_data(base_flow, check_values=False)
+    return index_graph(base_flow)
 
 
 def apply_flow_operations(
@@ -204,6 +216,49 @@ def _outputs_by_name(outputs: Any, *, node_id: str) -> dict[str, dict[str, Any]]
         raise FlowOperationValidationError(msg)
     keyed = load_node_schema().keyed_list_at({}, OUTPUTS_PATH)
     return ListIndex(keyed, outputs, context=f"node {node_id!r}: data.node.outputs").by_key
+
+
+def _apply_update_edges(state: GraphState, updates: list[UpdateNodeEntry]) -> list[FlowOperation]:
+    if not updates:
+        return []
+
+    _validate_update_entries(updates, kind="update_edges")
+    applied: list[UpdateNodeEntry] = []
+    # The handles of each edge the batch writes under a handle key, as they were before.
+    handles_before: dict[str, dict[str, Any]] = {}
+    for index, update in enumerate(updates):
+        edge_id = update.id
+        context = f"update_edges[{index}]"
+        if edge_id not in state.edges_by_id:
+            msg = f"update_edges: edge does not exist: {edge_id!r}"
+            raise FlowOperationValidationError(msg)
+        if edge_id not in state.base_flow_edge_ids:
+            msg = f"update_edges: cannot update edge that does not exist in the original flow: {edge_id!r}"
+            raise FlowOperationValidationError(msg)
+        root = update.path[0]
+        if root in FORBIDDEN_EDGE_UPDATE_ROOTS:
+            msg = (
+                f"{context}.path: cannot modify an edge's {root}; "
+                "connecting different nodes is a different edge, so delete it and add another"
+            )
+            raise FlowOperationValidationError(msg)
+        edge = writable_edge(state, edge_id)
+        if root in EDGE_HANDLE_ROOTS and edge_id not in handles_before:
+            handles_before[edge_id] = handle_forms(edge)
+        if _changed(update, _apply_field_update(state, edge, None, update, context=context)):
+            applied.append(update)
+
+    # An edge whose handles the batch changed is rewired, so it is checked like a new one.
+    for edge_id, before in handles_before.items():
+        edge = state.edges_by_id[edge_id]
+        if not values_equal(handle_forms(edge), before):
+            state.forget_handles(edge)
+            check_edge(state, edge)
+            state.reindex_handles(edge)
+
+    if not applied:
+        return []
+    return [UpdateEdgesOp(type="update_edges", updates=copy.deepcopy(applied))]
 
 
 def _changed(update: UpdateNodeEntry, before: Any) -> bool:

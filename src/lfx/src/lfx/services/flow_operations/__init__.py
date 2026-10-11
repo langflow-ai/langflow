@@ -9,7 +9,7 @@ has no transport or database dependencies, so the same rules apply wherever an
 operation comes from.
 """
 
-from lfx.services.flow_operations.apply import FlowOperationsApplyResult, apply_flow_operations
+from lfx.services.flow_operations.apply import FlowOperationsApplyResult, apply_flow_operations, build_graph_state
 from lfx.services.flow_operations.canonical import (
     canonical_edge,
     canonical_graph,
@@ -22,6 +22,7 @@ from lfx.services.flow_operations.canonical import (
     json_type,
     values_equal,
 )
+from lfx.services.flow_operations.codes import CLIENT_FIXED_CODES, GraphViolationCode, Resolution, resolution_of
 from lfx.services.flow_operations.diff import DerivedFlowOperations, derive_flow_operations, diff_flow_data
 from lfx.services.flow_operations.exceptions import (
     FlowDataValidationError,
@@ -53,7 +54,7 @@ from lfx.services.flow_operations.python import PythonFlowOperationService
 from lfx.services.flow_operations.repair import REPAIRS, GraphFix, RepairResult, repair_flow_data
 from lfx.services.flow_operations.schema import KeyedList, NodeSchema, load_node_schema
 from lfx.services.flow_operations.service import BaseFlowOperationService
-from lfx.services.flow_operations.state import GraphState, build_graph_state, finalize_graph
+from lfx.services.flow_operations.state import GraphState, finalize_graph
 from lfx.services.flow_operations.table_rows import (
     ROW_ID_KEY,
     ROW_POSITION_KEY,
@@ -66,13 +67,13 @@ from lfx.services.flow_operations.table_rows import (
 )
 from lfx.services.flow_operations.validation import (
     GraphViolation,
-    GraphViolationCode,
     find_graph_violations,
     find_table_violations,
     validate_flow_data,
 )
 
 __all__ = [
+    "CLIENT_FIXED_CODES",
     "REPAIRS",
     "ROW_ID_KEY",
     "ROW_POSITION_KEY",
@@ -101,6 +102,7 @@ __all__ = [
     "NodeSchema",
     "PythonFlowOperationService",
     "RepairResult",
+    "Resolution",
     "SetNodeFieldUpdate",
     "UpdateNodeEntry",
     "UpdateNodesOp",
@@ -132,6 +134,7 @@ __all__ = [
     "parse_flow_operation",
     "parse_flow_operations",
     "repair_flow_data",
+    "resolution_of",
     "strip_flow_table_row_keys",
     "strip_node_table_row_keys",
     "strip_row_keys",

@@ -11,6 +11,7 @@ from lfx.services.flow_operations import (
     find_graph_violations,
     validate_flow_data,
 )
+from lfx.services.flow_operations.edge_rules import escape_handle
 
 
 def _node(node_id: str) -> dict:
@@ -123,4 +124,78 @@ def test_validate_raises_with_every_violation():
         "code": "NODE_ID_DUPLICATE",
         "path": ["nodes", 2, "id"],
         "message": "duplicate node id",
+        "resolution": "repair",
     }
+
+
+# --- Edge rules on the edges a write adds or rewires ----------------------------------
+
+
+def _connectable() -> dict:
+    return {
+        "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}}, "outputs": []}}},
+        ],
+        "edges": [],
+    }
+
+
+def _edge_to(field: str, edge_id: str = "e") -> dict:
+    source_handle, target_handle = {"name": "out"}, {"fieldName": field}
+    return {
+        "id": edge_id,
+        "source": "a",
+        "target": "b",
+        "sourceHandle": escape_handle(source_handle),
+        "targetHandle": escape_handle(target_handle),
+        "data": {"sourceHandle": source_handle, "targetHandle": target_handle},
+    }
+
+
+def test_an_added_edge_is_checked_and_its_violation_is_for_the_client():
+    graph = _connectable()
+    graph["edges"].append(_edge_to("missing"))
+
+    violations = find_graph_violations(graph, base={"nodes": [], "edges": []})
+
+    assert [violation.to_dict()["code"] for violation in violations] == ["EDGE_HANDLE_NOT_FOUND"]
+    assert violations[0].path == ("edges", 0)
+    assert violations[0].to_dict()["resolution"] == "client"
+
+
+def test_a_second_edge_into_a_single_input_is_refused():
+    graph = _connectable()
+    graph["edges"] += [_edge_to("f", "e1"), _edge_to("f", "e2")]
+    base = _connectable()
+    base["edges"].append(_edge_to("f", "e1"))
+
+    assert [(v.code, v.path) for v in find_graph_violations(graph, base=base)] == [
+        (GraphViolationCode.EDGE_TARGET_OCCUPIED, ("edges", 1))
+    ]
+
+
+def test_a_stored_edge_the_write_leaves_alone_is_not_checked():
+    graph = _connectable()
+    graph["edges"].append(_edge_to("missing"))
+
+    assert find_graph_violations(graph, base=graph) == []
+
+
+def test_rewiring_a_stored_edge_checks_it():
+    base = _connectable()
+    base["edges"].append(_edge_to("f"))
+    graph = _connectable()
+    graph["edges"].append(_edge_to("missing"))
+
+    assert [v.code for v in find_graph_violations(graph, base=base)] == [GraphViolationCode.EDGE_HANDLE_NOT_FOUND]
+
+
+def test_edge_rules_wait_for_a_sound_structure():
+    graph = _connectable()
+    graph["edges"].append(_edge_to("missing"))
+    graph["nodes"].append({"id": "a", "data": {"node": {"template": {}}}})
+
+    assert [v.code for v in find_graph_violations(graph, base={"nodes": [], "edges": []})] == [
+        GraphViolationCode.NODE_ID_DUPLICATE
+    ]

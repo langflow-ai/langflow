@@ -1,56 +1,39 @@
 """The rules every stored flow graph follows.
 
 These rules are the flow's write contract. The engine checks them on the graph
-it starts from, the diff checks them on the graph a save asks for, and
-``repair_flow_data`` knows a fix for every one of them. Each rule has a stable
-code so a refused write can name what is wrong and where.
+it starts from, and the diff checks them on the graph a save asks for. Each
+rule has a stable code (``codes.py``) so a refused write can name what is wrong
+and where, and each violation says who fixes it: ``repair_flow_data``, or the
+client.
 
-Table rows follow extra rules, checked only against the stored graph a write
-replaces (``base``): every table value the write adds or changes must have
-rows with a unique ``_id`` and a numeric ``_pos``. Their order in the array is
-not state, so it is never checked. A table the write leaves unchanged is
-accepted as stored, so legacy tables without row ids stay valid until someone
-edits them.
+Two groups of rules are checked only against the stored graph a write replaces
+(``base``), so what is stored stays acceptable until someone touches it:
+
+- table rows: every table value the write adds or changes must have rows with
+  a unique ``_id`` and a numeric ``_pos``. Their order in the array is not
+  state, so it is never checked, and legacy tables without row ids stay valid
+  until someone edits them;
+- edge rules (``edge_rules.py``): every edge the write adds or rewires must
+  carry valid handles that name an output and an input that exist, must not
+  take an input that is already taken, and must not touch a note. They are
+  the same checks the engine makes when it applies ``add_edges`` and
+  ``update_edges``, so validation and apply never disagree.
 """
 
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any
 
 from lfx.services.flow_operations.canonical import is_row_position, values_equal
-from lfx.services.flow_operations.exceptions import FlowDataValidationError
+from lfx.services.flow_operations.codes import GraphViolationCode, resolution_of
+from lfx.services.flow_operations.edge_rules import check_edge, handle_forms
+from lfx.services.flow_operations.exceptions import FlowDataValidationError, FlowOperationValidationError
 from lfx.services.flow_operations.schema import load_node_schema
+from lfx.services.flow_operations.state import NODE_OBJECT_PATHS, index_graph
 
 GraphPath = tuple[str | int, ...]
-
-# Every node carries these as objects for its whole lifetime; operations patch
-# inside them instead of replacing them.
-NODE_OBJECT_PATHS: tuple[GraphPath, ...] = (
-    ("data",),
-    ("data", "node"),
-    ("data", "node", "template"),
-)
-
-
-class GraphViolationCode(str, Enum):
-    FLOW_DATA_NOT_OBJECT = "FLOW_DATA_NOT_OBJECT"
-    COLLECTION_NOT_LIST = "COLLECTION_NOT_LIST"
-    NODE_NOT_OBJECT = "NODE_NOT_OBJECT"
-    EDGE_NOT_OBJECT = "EDGE_NOT_OBJECT"
-    NODE_ID_MISSING = "NODE_ID_MISSING"
-    NODE_ID_DUPLICATE = "NODE_ID_DUPLICATE"
-    EDGE_ID_MISSING = "EDGE_ID_MISSING"
-    EDGE_ID_DUPLICATE = "EDGE_ID_DUPLICATE"
-    EDGE_ENDPOINT_INVALID = "EDGE_ENDPOINT_INVALID"
-    NODE_DATA_NOT_OBJECT = "NODE_DATA_NOT_OBJECT"
-    NON_FINITE_NUMBER = "NON_FINITE_NUMBER"
-    TABLE_ROW_NOT_OBJECT = "TABLE_ROW_NOT_OBJECT"
-    TABLE_ROW_ID_MISSING = "TABLE_ROW_ID_MISSING"
-    TABLE_ROW_ID_DUPLICATE = "TABLE_ROW_ID_DUPLICATE"
-    TABLE_ROW_POS_INVALID = "TABLE_ROW_POS_INVALID"
 
 
 @dataclass(frozen=True)
@@ -62,7 +45,12 @@ class GraphViolation:
     message: str
 
     def to_dict(self) -> dict[str, Any]:
-        return {"code": self.code.value, "path": list(self.path), "message": self.message}
+        return {
+            "code": self.code.value,
+            "path": list(self.path),
+            "message": self.message,
+            "resolution": resolution_of(self.code).value,
+        }
 
 
 def find_graph_violations(
@@ -79,8 +67,9 @@ def find_graph_violations(
     edges rather than to the size of the flow.
 
     ``base`` is the stored graph a write replaces. When it is given, every
-    table value ``flow_data`` adds or changes relative to it is checked too;
-    pass an empty graph for a flow that has no stored graph yet.
+    table value ``flow_data`` adds or changes relative to it is checked too,
+    and so is every edge it adds or rewires, once the graph's structure is
+    sound; pass an empty graph for a flow that has no stored graph yet.
     """
     if not isinstance(flow_data, dict):
         return [GraphViolation(GraphViolationCode.FLOW_DATA_NOT_OBJECT, (), "flow data must be an object")]
@@ -105,7 +94,10 @@ def find_graph_violations(
             violations.extend(_edge_violations(edge, ("edges", index), edge_ids, node_ids))
 
     if base is not None and isinstance(nodes, list):
+        structural = not violations
         violations.extend(find_table_violations(base, flow_data))
+        if structural:
+            violations.extend(find_edge_violations(base, flow_data))
     if check_values:
         violations.extend(_non_finite_violations(flow_data))
     return violations
@@ -197,6 +189,47 @@ def _non_finite_violations(flow_data: dict[str, Any]) -> list[GraphViolation]:
             stack.extend((item, (*path, key)) for key, item in reversed(value.items()))
         elif isinstance(value, list):
             stack.extend((item, (*path, index)) for index, item in reversed(list(enumerate(value))))
+    return violations
+
+
+# --- Edges a write adds or rewires ----------------------------------------------------
+
+
+def changed_edges(base: Any, target: dict[str, Any]) -> list[int]:
+    """Return the indexes of the edges ``target`` adds or rewires relative to ``base``.
+
+    An edge is rewired when it connects other nodes or either form of a handle
+    changed.
+    """
+    stored = {edge["id"]: edge for edge in _list(base, "edges") if isinstance(edge, dict) and "id" in edge}
+    changed: list[int] = []
+    for index, edge in enumerate(target["edges"]):
+        before = stored.get(edge["id"])
+        if (
+            before is None
+            or (before.get("source"), before.get("target")) != (edge["source"], edge["target"])
+            or not values_equal(handle_forms(before), handle_forms(edge))
+        ):
+            changed.append(index)
+    return changed
+
+
+def find_edge_violations(base: Any, target: dict[str, Any]) -> list[GraphViolation]:
+    """Return the edge rules broken by the edges ``target`` adds or rewires relative to ``base``.
+
+    ``target`` must be structurally sound: unique ids, and edges whose
+    endpoints exist.
+    """
+    indexes = changed_edges(base, target)
+    if not indexes:
+        return []
+    state = index_graph(target)
+    violations: list[GraphViolation] = []
+    for index in indexes:
+        try:
+            check_edge(state, target["edges"][index])
+        except FlowOperationValidationError as error:
+            violations.append(GraphViolation(GraphViolationCode(error.code), ("edges", index), str(error)))
     return violations
 
 
