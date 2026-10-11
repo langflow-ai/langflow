@@ -21,15 +21,7 @@ class IdSelector(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    id: str
-
-    @field_validator("id")
-    @classmethod
-    def validate_id(cls, value: str) -> str:
-        if not value:
-            msg = "an id selector must name a non-empty id"
-            raise ValueError(msg)
-        return value
+    id: str = Field(min_length=1)
 
 
 class KeySelector(BaseModel):
@@ -37,15 +29,7 @@ class KeySelector(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    key: str
-
-    @field_validator("key")
-    @classmethod
-    def validate_key(cls, value: str) -> str:
-        if not value:
-            msg = "a key selector must name a non-empty key"
-            raise ValueError(msg)
-        return value
+    key: str = Field(min_length=1)
 
 
 ListSelector = IdSelector | KeySelector

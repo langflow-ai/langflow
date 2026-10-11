@@ -198,20 +198,27 @@ def copy_mutable_graph_value(value: Any) -> Any:
     return copy.deepcopy(value)
 
 
-def copy_base_flow_node_before_mutation(state: GraphState, node_id: str) -> dict[str, Any]:
-    """Deep-copy mutable node payloads to prevent shared state between the original and applied graph."""
-    if node_id in state.base_flow_node_ids and node_id not in state.copied_base_flow_node_ids:
-        state.nodes_by_id[node_id] = copy.deepcopy(state.nodes_by_id[node_id])
-        state.copied_base_flow_node_ids.add(node_id)
-    return state.nodes_by_id[node_id]
+def writable_node(state: GraphState, node_id: str) -> dict[str, Any]:
+    """Return the node to write to, deep-copying it from the base flow before its first write."""
+    return _copy_on_write(state.nodes_by_id, state.base_flow_node_ids, state.copied_base_flow_node_ids, node_id)
 
 
-def copy_base_flow_edge_before_mutation(state: GraphState, edge_id: str) -> dict[str, Any]:
-    """Deep-copy an edge from the base flow before its first write."""
-    if edge_id in state.base_flow_edge_ids and edge_id not in state.copied_base_flow_edge_ids:
-        state.edges_by_id[edge_id] = copy.deepcopy(state.edges_by_id[edge_id])
-        state.copied_base_flow_edge_ids.add(edge_id)
-    return state.edges_by_id[edge_id]
+def writable_edge(state: GraphState, edge_id: str) -> dict[str, Any]:
+    """Return the edge to write to, deep-copying it from the base flow before its first write."""
+    return _copy_on_write(state.edges_by_id, state.base_flow_edge_ids, state.copied_base_flow_edge_ids, edge_id)
+
+
+def _copy_on_write(
+    items_by_id: dict[str, dict[str, Any]],
+    base_ids: set[str],
+    copied_ids: set[str],
+    item_id: str,
+) -> dict[str, Any]:
+    # The base flow is never mutated: its payloads are shared until the first write.
+    if item_id in base_ids and item_id not in copied_ids:
+        items_by_id[item_id] = copy.deepcopy(items_by_id[item_id])
+        copied_ids.add(item_id)
+    return items_by_id[item_id]
 
 
 def require_node_id(
