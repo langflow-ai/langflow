@@ -221,11 +221,13 @@ async def compact_to(session: AsyncSession, flow: Flow, checkpoint: FlowVersion,
             col(FlowOperation.end_revision) < first_kept,
         ),
     )
+    # A retained checkpoint stays as a snapshot, like a saved version.
     await session.exec(
         delete(FlowVersion).where(
             FlowVersion.flow_id == flow.id,
             col(FlowVersion.version_number).is_(None),
             col(FlowVersion.operation_revision) < revision,
+            col(FlowVersion.retained).is_(False),
         )
     )
 
