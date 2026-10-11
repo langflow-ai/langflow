@@ -10,7 +10,14 @@ import os
 import sys
 
 import pytest
-from langflow.api.utils.migration_copies import blocking_code, copy_command, copy_environment, copy_outcome
+from langflow.api.utils.migration_copies import (
+    DECISIONS,
+    blocking_code,
+    copy_command,
+    copy_environment,
+    copy_outcome,
+    shown,
+)
 
 DB_PASSWORD = "db-password-9f3a61c2"  # noqa: S105  # pragma: allowlist secret
 S3_SECRET = "s3-secret-key-7be04d15"  # noqa: S105  # pragma: allowlist secret
@@ -45,6 +52,7 @@ SERVER = {
     "AWS_ENDPOINT_URL": "http://the-servers-own-storage",
 }
 ENDED = {"status": "done", "finished_at": "2026-10-01T00:05:00+00:00", "stderr": ""}
+RUN = "the run that reported"
 LANGFLOW = [sys.executable, "-m", "langflow"]
 REPORT = {"ok": True, "revision": "head", "tables_copied": 59, "rows_copied": 48, "orphans": [], "problems": []}
 ORPHANS = {"table": "message", "column": "flow_id", "parent": "flow", "ondelete": "CASCADE", "rows": 3}
@@ -54,9 +62,21 @@ def _refused(*codes: str) -> dict:
     return {"error": None, "report": {**REPORT, "ok": False, "problems": [{"code": code} for code in codes]}}
 
 
+def _decided(step: str, kind: str, subject: str | None = None, run_id: str = RUN) -> dict:
+    """A decision as the record keeps one. Accepting an item is for the run whose report listed it."""
+    about = {"subject": subject, "run_id": run_id if subject else None}
+    return {"step": step, "kind": kind, **about, "by": "alice", "at": "2026-10-01T00:10:00+00:00"}
+
+
+def _not_copied(step: str, *items: dict) -> dict:
+    """A run of the knowledge base or the file copy that ended with these items failed, as the record keeps it."""
+    report = {"event": "report", "seq": 9, "ok": False, "counts": {"failed": len(items)}, "attention": list(items)}
+    return {**copy_outcome(step, ENDED, {"report": report}), "run_id": RUN}
+
+
 def test_each_copy_runs_its_own_command_and_names_no_address_or_key_on_it():
-    assert copy_command("copy_database", {}) == [*LANGFLOW, "convert-sqlite-to-postgres", "--json"]
-    assert copy_command("copy_knowledge_bases", {}) == [
+    assert copy_command("copy_database", {}, []) == [*LANGFLOW, "convert-sqlite-to-postgres", "--json"]
+    assert copy_command("copy_knowledge_bases", {}, []) == [
         *LANGFLOW,
         "relocate-kb",
         "--to",
@@ -65,9 +85,27 @@ def test_each_copy_runs_its_own_command_and_names_no_address_or_key_on_it():
         "--no-verify-skipped",
     ]
     files = [*LANGFLOW, "relocate-files", "--json", "--bucket", "acme", "--prefix", "moved/files"]
-    assert copy_command("copy_files", BUCKET) == files
+    assert copy_command("copy_files", BUCKET, []) == files
     # A test run is the same command, told to write nothing.
-    assert copy_command("copy_files", BUCKET, dry_run=True) == [*files, "--dry-run"]
+    assert copy_command("copy_files", BUCKET, [], dry_run=True) == [*files, "--dry-run"]
+
+
+def test_an_option_the_admin_decided_on_is_added_to_the_command_of_its_own_step():
+    decisions = [
+        _decided("copy_database", "drop_orphans"),
+        _decided("copy_knowledge_bases", "accept_ranking_change"),
+        # Accepting an item changes what its step makes of a report, and nothing about the command.
+        _decided("copy_knowledge_bases", "leave_behind", "kb-2"),
+        _decided("copy_files", "keep_bucket_file", "alice/cat.txt"),
+    ]
+
+    assert copy_command("copy_database", {}, decisions)[-2:] == ["--json", "--drop-orphans"]
+    assert copy_command("copy_knowledge_bases", {}, decisions, dry_run=True)[-3:] == [
+        "--no-verify-skipped",
+        "--allow-metric-change",
+        "--dry-run",
+    ]
+    assert copy_command("copy_files", BUCKET, decisions)[-2:] == ["--prefix", "moved/files"]
 
 
 def test_the_database_copy_reads_this_instance_and_writes_to_the_destination_and_nowhere_else():
@@ -158,11 +196,18 @@ def test_a_copy_from_sqlite_has_the_command_count_a_knowledge_base_before_it_ski
     moved = {"database": {"location": "db.internal:5432/langflow"}, "vectors": {"kind": "pgvector"}}
     command = [*LANGFLOW, "relocate-kb", "--to", "postgres", "--json", "--verify-skipped"]
 
-    assert copy_command("copy_knowledge_bases", moved) == command
-    assert copy_command("copy_knowledge_bases", moved, dry_run=True) == [*command, "--dry-run"]
+    assert copy_command("copy_knowledge_bases", moved, []) == command
+    assert copy_command("copy_knowledge_bases", moved, [], dry_run=True) == [*command, "--dry-run"]
+    # A decision's option comes after it.
+    decided = [_decided("copy_knowledge_bases", "accept_ranking_change")]
+    assert copy_command("copy_knowledge_bases", moved, decided, dry_run=True)[-3:] == [
+        "--verify-skipped",
+        "--allow-metric-change",
+        "--dry-run",
+    ]
     # An instance on PostgreSQL names no database to move to. Its copy reads the server's own store, where such
     # a row is, so the command is told not to count there. It counts unless it is told not to.
-    assert copy_command("copy_knowledge_bases", {"vectors": {"kind": "pgvector"}})[-1] == "--no-verify-skipped"
+    assert copy_command("copy_knowledge_bases", {"vectors": {"kind": "pgvector"}}, [])[-1] == "--no-verify-skipped"
 
 
 @pytest.mark.parametrize(
@@ -189,12 +234,13 @@ def test_the_record_keeps_the_report_of_a_run_and_not_its_place_in_the_log():
         "error": {"event": "error", "seq": 148, "code": "orphans_droppable", "message": "3 rows point at nothing"},
     }
 
-    assert copy_outcome(ENDED, events) == {
+    assert copy_outcome("copy_database", ENDED, events) == {
         "status": "done",
         "finished_at": ENDED["finished_at"],
         "report": REPORT,
         "error": None,
-        "decision_needed": asked,
+        # What the command asked comes with the decision that answers it: an option, which is for the whole step.
+        "decision_needed": {**asked, "decision": {"kind": "drop_orphans", "subject": None}},
     }
 
 
@@ -218,14 +264,16 @@ def test_the_record_keeps_the_report_of_a_run_and_not_its_place_in_the_log():
 def test_a_run_that_did_not_end_done_is_kept_with_the_code_that_explains_it(status, events, error):
     run = {**ENDED, "status": status, "stderr": "Traceback (most recent call last):"}
 
-    kept = copy_outcome(run, events)
+    kept = copy_outcome("copy_database", run, events)
 
     assert (kept["status"], kept["error"]) == (status, error)
-    assert blocking_code(kept) == error["code"]
+    assert blocking_code("copy_database", kept, []) == error["code"]
 
 
 def test_a_run_that_reported_ok_completes_its_step():
-    assert blocking_code(copy_outcome(ENDED, {"report": {"event": "report", "seq": 150, **REPORT}})) is None
+    run = copy_outcome("copy_database", ENDED, {"report": {"event": "report", "seq": 150, **REPORT}})
+
+    assert blocking_code("copy_database", run, []) is None
 
 
 @pytest.mark.parametrize(
@@ -238,21 +286,215 @@ def test_a_run_that_reported_ok_completes_its_step():
     ],
 )
 def test_a_database_copy_that_was_refused_blocks_with_what_the_command_found(codes, code):
-    assert blocking_code(_refused(*codes)) == code
+    assert blocking_code("copy_database", _refused(*codes), []) == code
+    # Deciding to drop the orphans changes the next run. This one copied nothing.
+    assert blocking_code("copy_database", _refused(*codes), [_decided("copy_database", "drop_orphans")]) == code
 
 
-def test_a_copy_with_a_failed_item_blocks_with_that_items_code():
-    failed = [{"kb_id": "kb-1", "code": "kb_short"}, {"kb_id": "kb-2", "code": "kb_backend_missing"}]
-    report = {"ok": False, "dry_run": False, "counts": {"relocated": 3, "failed": 2}, "attention": failed}
+# A knowledge base and a file as each command reports one that failed, and the name each has in the record.
+ITEMS = {
+    "copy_knowledge_bases": {"kb_id": "0b6c5a0e-kb", "kb_name": "handbook", "owner": "alice"},
+    "copy_files": {"owner": "0b6c5a0e-user", "file_name": "cat.txt", "key": ""},
+}
+NAMED = {"copy_knowledge_bases": "0b6c5a0e-kb", "copy_files": "0b6c5a0e-user/cat.txt"}
 
-    assert blocking_code({"error": None, "report": report}) == "kb_short"
+
+@pytest.mark.parametrize(
+    ("step", "code", "kind", "names_the_item"),
+    [
+        # Copying again gets past neither: this version has no backend for the store, or the store holds fewer
+        # chunks than its row says and someone has to look. Left behind, the knowledge base stays where it is.
+        ("copy_knowledge_bases", "kb_backend_missing", "leave_behind", True),
+        ("copy_knowledge_bases", "kb_short", "leave_behind", True),
+        # Its row names the destination and its chunks are not there. This copy does not read the store they
+        # are in.
+        ("copy_knowledge_bases", "kb_target_short", "leave_behind", True),
+        # An option of the command is for the whole step, so it names no item.
+        ("copy_knowledge_bases", "kb_metric_change", "accept_ranking_change", False),
+        ("copy_files", "file_conflict", "keep_bucket_file", True),
+        # The database names a file that this instance holds no bytes for.
+        ("copy_files", "no_source_bytes", "accept_missing_attachment", True),
+        ("copy_files", "attachment_unmatched", "accept_missing_attachment", True),
+    ],
+)
+def test_the_record_says_which_decision_answers_a_failed_item(step, code, kind, names_the_item):
+    item = {**ITEMS[step], "code": code}
+
+    [kept] = _not_copied(step, item)["report"]["attention"]
+
+    assert kept == {
+        **item,
+        "subject": NAMED[step],
+        "decision": {"kind": kind, "subject": NAMED[step] if names_the_item else None},
+    }
 
 
-def test_the_record_keeps_the_first_hundred_failed_items_and_the_count_of_all_of_them():
-    failed = [{"owner": "alice", "file_name": f"{number}.txt", "code": "bucket_error"} for number in range(250)]
+@pytest.mark.parametrize(
+    ("step", "code"),
+    [
+        # Each of these is put right, on this instance or at the destination, and the copy is run again.
+        ("copy_knowledge_bases", "kb_upgrade_pending"),
+        ("copy_knowledge_bases", "kb_ingesting"),
+        ("copy_knowledge_bases", "kb_target_unreachable"),
+        ("copy_knowledge_bases", "kb_metric_unknown"),
+        ("copy_knowledge_bases", "kb_no_vectors"),
+        ("copy_knowledge_bases", "kb_read_short"),
+        ("copy_knowledge_bases", "kb_target_more"),
+        ("copy_knowledge_bases", "kb_changed"),
+        ("copy_knowledge_bases", "kb_routing_changed"),
+        ("copy_knowledge_bases", "kb_deleted"),
+        ("copy_knowledge_bases", "kb_failed"),
+        ("copy_files", "bad_name"),
+        ("copy_files", "bucket_error"),
+        ("copy_files", "verify_failed"),
+        ("copy_files", "copy_failed"),
+        # A decision answers a code of its own step's command, and of no other.
+        ("copy_files", "kb_backend_missing"),
+        ("copy_knowledge_bases", "file_conflict"),
+    ],
+)
+def test_a_failed_item_that_no_decision_answers_blocks_its_step_whatever_the_admin_decides(step, code):
+    run = _not_copied(step, {**ITEMS[step], "code": code})
+    everything = [_decided(decision["step"], kind, NAMED[step]) for kind, decision in DECISIONS.items()]
+
+    assert blocking_code(step, run, everything) == code
+    # And the record offers the admin nothing to decide about it.
+    assert run["report"]["attention"][0]["decision"] is None
+
+
+def test_a_failed_item_blocks_its_step_until_the_admin_accepts_it():
+    run = _not_copied(
+        "copy_knowledge_bases",
+        {"kb_id": "kb-1", "code": "kb_short"},
+        {"kb_id": "kb-2", "code": "kb_backend_missing"},
+    )
+    first, second = (_decided("copy_knowledge_bases", "leave_behind", subject) for subject in ("kb-1", "kb-2"))
+
+    assert blocking_code("copy_knowledge_bases", run, []) == "kb_short"
+    assert blocking_code("copy_knowledge_bases", run, [first]) == "kb_backend_missing"
+    assert blocking_code("copy_knowledge_bases", run, [second, first]) is None
+    # A decision is about its own step. Another step's item of the same name is still to be decided.
+    assert blocking_code("copy_knowledge_bases", run, [second, _decided("copy_files", "keep_bucket_file", "kb-1")]) == (
+        "kb_short"
+    )
+
+
+def test_a_decision_accepts_only_an_item_whose_code_it_answers():
+    run = _not_copied(
+        "copy_files",
+        {"owner": "alice", "file_name": "cat.txt", "code": "file_conflict"},
+        {"owner": "alice", "file_name": "gone.txt", "code": "no_source_bytes"},
+    )
+    kept = _decided("copy_files", "keep_bucket_file", "alice/cat.txt")
+    let_go = _decided("copy_files", "accept_missing_attachment", "alice/gone.txt")
+    # Each decision made about the other one's file. Both are on record, and neither file is accepted.
+    crossed = [
+        _decided("copy_files", "keep_bucket_file", "alice/gone.txt"),
+        _decided("copy_files", "accept_missing_attachment", "alice/cat.txt"),
+    ]
+
+    assert blocking_code("copy_files", run, crossed) == "file_conflict"
+    assert blocking_code("copy_files", run, [*crossed, kept]) == "no_source_bytes"
+    assert blocking_code("copy_files", run, [*crossed, kept, let_go]) is None
+
+
+def test_accepting_an_item_is_for_the_report_that_listed_it():
+    run = _not_copied("copy_files", {"owner": "alice", "file_name": "cat.txt", "code": "file_conflict"})
+    kept = _decided("copy_files", "keep_bucket_file", "alice/cat.txt")
+    assert blocking_code("copy_files", run, [kept]) is None
+
+    # The copy is made again, to another bucket say, and that one holds something under the same name too.
+    again = {**run, "run_id": "another run"}
+
+    # Nobody has seen that report yet, so nobody has accepted what it says.
+    assert blocking_code("copy_files", again, [kept]) == "file_conflict"
+    here = _decided("copy_files", "keep_bucket_file", "alice/cat.txt", run_id="another run")
+    assert blocking_code("copy_files", again, [kept, here]) is None
+
+
+def test_an_option_of_the_command_accepts_no_item_of_the_run_that_asked_for_it():
+    run = _not_copied("copy_knowledge_bases", {"kb_id": "kb-1", "code": "kb_metric_change"})
+    decisions = [
+        # Accepting the change of ranking changes the next run. This one did not copy the knowledge base.
+        _decided("copy_knowledge_bases", "accept_ranking_change"),
+        # Nor is it one to leave behind: it can be copied.
+        _decided("copy_knowledge_bases", "leave_behind", "kb-1"),
+    ]
+
+    assert blocking_code("copy_knowledge_bases", run, decisions) == "kb_metric_change"
+
+
+def test_the_record_keeps_the_first_hundred_failed_items_and_they_cannot_stand_for_the_rest():
+    failed = [{"owner": "alice", "file_name": f"{number}.txt", "code": "no_source_bytes"} for number in range(250)]
     report = {"event": "report", "seq": 600, "ok": False, "counts": {"copied": 7, "failed": 250}, "attention": failed}
 
-    kept = copy_outcome(ENDED, {"report": report})["report"]
+    run = {**copy_outcome("copy_files", ENDED, {"report": report}), "run_id": RUN}
 
-    assert kept["attention"] == failed[:100]
-    assert kept["counts"] == {"copied": 7, "failed": 250}
+    kept = run["report"]["attention"]
+    assert [item["subject"] for item in kept] == [f"alice/{number}.txt" for number in range(100)]
+    assert run["report"]["counts"] == {"copied": 7, "failed": 250}
+    # Accepting every item the record holds leaves 150 that nobody was shown.
+    accepted = [_decided("copy_files", "accept_missing_attachment", item["subject"]) for item in kept]
+    assert blocking_code("copy_files", run, accepted) == "no_source_bytes"
+    # With all of them on record, the same decisions complete the step.
+    whole = {**report, "counts": {"failed": 100}, "attention": failed[:100]}
+    assert (
+        blocking_code("copy_files", {**copy_outcome("copy_files", ENDED, {"report": whole}), "run_id": RUN}, accepted)
+        is None
+    )
+
+
+def test_a_list_the_record_cut_short_offers_only_what_is_for_the_whole_step():
+    def offered(step: str, items: list[dict]) -> list:
+        report = {"event": "report", "seq": 9, "ok": False, "counts": {"failed": len(items)}, "attention": items}
+        return [item["decision"] for item in copy_outcome(step, ENDED, {"report": report})["report"]["attention"]]
+
+    files = [{"owner": "alice", "file_name": f"{number}.txt", "code": "no_source_bytes"} for number in range(101)]
+    bases = [{"kb_id": f"kb-{number}", "code": "kb_metric_change"} for number in range(101)]
+
+    # No acceptance can clear a step whose list is cut, so none is offered.
+    assert offered("copy_files", files) == [None] * 100
+    assert offered("copy_files", files[:100]) == [
+        {"kind": "accept_missing_attachment", "subject": f"alice/{number}.txt"} for number in range(100)
+    ]
+    # An option answers every item of its code at the next run, however many there are.
+    assert offered("copy_knowledge_bases", bases) == [{"kind": "accept_ranking_change", "subject": None}] * 100
+
+
+def test_a_page_is_told_the_run_a_decision_is_for_and_who_made_it():
+    run = _not_copied(
+        "copy_knowledge_bases",
+        {"kb_id": "kb-1", "code": "kb_backend_missing"},
+        {"kb_id": "kb-2", "code": "kb_metric_change"},
+        {"kb_id": "kb-3", "code": "kb_ingesting"},
+    )
+
+    def told(*decisions: dict) -> list:
+        return [item["decision"] for item in shown("copy_knowledge_bases", run, list(decisions))["report"]["attention"]]
+
+    # Leaving one behind is said of this run's report. An option is for every run, and names none.
+    assert told() == [
+        {"kind": "leave_behind", "subject": "kb-1", "run_id": RUN, "made": None},
+        {"kind": "accept_ranking_change", "subject": None, "run_id": None, "made": None},
+        None,
+    ]
+    who = {"by": "alice", "at": "2026-10-01T00:10:00+00:00"}
+    left = _decided("copy_knowledge_bases", "leave_behind", "kb-1")
+    ranked = _decided("copy_knowledge_bases", "accept_ranking_change")
+    assert [decision and decision["made"] for decision in told(left, ranked)] == [who, who, None]
+    # What was accepted of another run's report, or for another step, is not made here.
+    earlier = _decided("copy_knowledge_bases", "leave_behind", "kb-1", run_id="another run")
+    assert told(earlier, _decided("copy_files", "keep_bucket_file", "kb-1"))[0]["made"] is None
+    # The run is left as the record keeps it.
+    assert run["report"]["attention"][0]["decision"] == {"kind": "leave_behind", "subject": "kb-1"}
+
+
+def test_a_page_is_told_who_answered_what_the_database_copy_asks():
+    asked = {"event": "decision_needed", "seq": 149, "code": "orphans_droppable", "flag": "--drop-orphans"}
+    run = {**copy_outcome("copy_database", ENDED, {"decision_needed": asked}), "run_id": RUN}
+
+    unanswered = shown("copy_database", run, [])["decision_needed"]["decision"]
+    answered = shown("copy_database", run, [_decided("copy_database", "drop_orphans")])["decision_needed"]["decision"]
+
+    assert unanswered == {"kind": "drop_orphans", "subject": None, "run_id": None, "made": None}
+    assert answered == {**unanswered, "made": {"by": "alice", "at": "2026-10-01T00:10:00+00:00"}}

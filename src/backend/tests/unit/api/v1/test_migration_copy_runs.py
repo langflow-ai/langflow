@@ -25,6 +25,7 @@ from langflow.services.database.models.file.model import File
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.message.model import MessageTable
+from langflow.services.database.models.traces.model import SpanTable, TraceTable
 from langflow.services.deps import get_db_service, session_scope
 from langflow.services.knowledge_base_storage.runtime import backend_for_record
 from lfx.base.knowledge_bases.backends import IngestedDocument
@@ -65,10 +66,12 @@ pytestmark = pytest.mark.timeout(300)
 # Every wait below ends as soon as what it waits for happens. This only bounds a test that is failing.
 _TIMEOUT = 120
 RUNS = "api/v1/migration/steps/{}/runs"
+DECISIONS = "api/v1/migration/decisions"
 BACKED_UP = {"location": "s3://backups/langflow", "confirmed_by": "alice", "confirmed_at": "2026-09-30T00:30:00+00:00"}
 COPIED = {"ok": True, "revision": "head", "tables_copied": 59, "rows_copied": 48, "orphans": [], "problems": []}
 MOVED = {"ok": True, "dry_run": False, "counts": {"relocated": 1}, "attention": []}
 UPLOADED = {"ok": True, "dry_run": False, "scope": "all users", "counts": {"copied": 1}, "bytes": 4, "attention": []}
+ORPHANS = {"table": "span", "column": "trace_id", "parent": "trace", "ondelete": "CASCADE", "rows": 2}
 # What a worker holds of a bucket once its test passed.
 S3_KEYS = {"access_key_id": "AKIAEXAMPLE", "secret_access_key": S3_SECRET, "endpoint_url": None, "ca_bundle": None}
 
@@ -140,6 +143,11 @@ def _ran(config_dir: Path, step: str = "copy_database", **run: Any) -> None:
     path.write_text(json.dumps(record))
 
 
+def _failed(code: str, subject: str, kind: str | None = None) -> dict:
+    """An item that was not copied, as the record keeps one, with the decision that answers it when one does."""
+    return {"code": code, "subject": subject, "decision": kind and {"kind": kind, "subject": subject}}
+
+
 def _send_to(monkeypatch: pytest.MonkeyPatch, address: str, files: dict | None = None) -> None:
     """Give this worker a destination database, and the keys of a bucket if one is named, as testing them does."""
     url = f"postgresql://migrator:{DB_PASSWORD}@{address}/langflow"
@@ -169,6 +177,23 @@ async def _events(client, headers, run_id: str, step: str = "copy_database", aft
 async def _copy(client, headers, step: str, **body: Any) -> list[dict]:
     """Run a copy to its end, and hand back its events."""
     return await _events(client, headers, await _start(client, headers, step, **body), step)
+
+
+async def _decide(client, headers, step: str, kind: str, subject: str | None = None, method: str = "POST") -> dict:
+    """Record a decision, or withdraw it with DELETE, and hand back what the page is then shown.
+
+    Accepting an item says which report it was read from, as a page that has just loaded the step does.
+    """
+    decision = {"step": step, "kind": kind, "subject": subject}
+    if subject and method == "POST":
+        decision["run_id"] = (await _migration(client, headers))["record"]["steps"].get(step, {}).get("run_id")
+    response = await client.request(method, DECISIONS, json=decision, headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def _states(migration: dict) -> dict[str, tuple[str, str | None]]:
+    return {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}
 
 
 async def _connected(client, headers, config_dir: Path, **destination: Any):
@@ -246,16 +271,20 @@ async def _hang_up_after_the_first_event(client, headers, path: str) -> dict:
     return seen[0]
 
 
-async def test_only_a_superuser_can_run_follow_or_stop_a_copy(client, logged_in_headers):
+async def test_only_a_superuser_can_run_follow_or_stop_a_copy_or_decide_about_one(client, logged_in_headers):
     run = f"{RUNS.format('copy_database')}/{uuid4().hex}"
+
+    decision = {"step": "copy_database", "kind": "drop_orphans"}
 
     refused = [
         await client.post(RUNS.format("copy_database"), json={}, headers=logged_in_headers),
         await client.get(f"{run}/events", headers=logged_in_headers),
         await client.delete(run, headers=logged_in_headers),
+        await client.post(DECISIONS, json=decision, headers=logged_in_headers),
+        await client.request("DELETE", DECISIONS, json=decision, headers=logged_in_headers),
     ]
 
-    assert [response.status_code for response in refused] == [403, 403, 403]
+    assert [response.status_code for response in refused] == [403] * len(refused)
 
 
 async def test_a_step_that_is_not_a_copy_and_a_run_that_is_not_there_are_not_found(
@@ -988,12 +1017,7 @@ async def test_each_copy_waits_for_the_one_before_it_and_a_test_run_completes_no
     # A test run says what a copy would do. The step is still to do.
     _ran(config_dir, "copy_files", dry_run=True, report={**UPLOADED, "dry_run": True, "counts": {"would_copy": 1}})
     assert await copies() == [("done", None), ("done", None), ("current", None), waiting]
-    missing = {
-        "owner": str(active_super_user.id),
-        "file_name": "gone.txt",
-        "status": "failed",
-        "code": "no_source_bytes",
-    }
+    missing = _failed("no_source_bytes", f"{active_super_user.id}/gone.txt", "accept_missing_attachment")
     _ran(config_dir, "copy_files", report={**UPLOADED, "ok": False, "counts": {"failed": 1}, "attention": [missing]})
     assert await copies() == [("done", None), ("done", None), ("blocked", "no_source_bytes"), waiting]
     _ran(config_dir, "copy_files", report=UPLOADED)
@@ -1170,14 +1194,22 @@ async def test_knowledge_bases_are_copied_into_the_destination_and_this_instance
     assert (await _steps(client, headers))["copy_knowledge_bases"] == ("done", None)
 
 
-async def test_a_knowledge_base_that_cannot_be_copied_blocks_the_step_with_its_code(
+async def test_a_knowledge_base_that_cannot_be_copied_blocks_the_step_until_the_admin_decides(
     client, logged_in_headers_super_user, active_super_user, config_dir, scratch_database
 ):
     pytest.importorskip("pgvector", reason="needs the pgvector extra")
-    headers = logged_in_headers_super_user
-    await _knowledge_base(active_super_user.id, "handbook", 5)
+    headers, user = logged_in_headers_super_user, active_super_user.id
+    await _knowledge_base(user, "handbook", 5)
     # Vectors that are not unit length rank differently under the destination's metric, so the copy asks first.
-    notes = await _knowledge_base(active_super_user.id, "notes", 5, unit_length=False)
+    notes = await _knowledge_base(user, "notes", 5, unit_length=False)
+    # A knowledge base in a store this Langflow has no backend for cannot be read, so it cannot be copied.
+    elsewhere = uuid4()
+    await _add(KnowledgeBaseRecord(id=elsewhere, user_id=user, name="elsewhere", backend_type="astra"))
+    # Nor is one whose store holds fewer chunks than its row says. The command leaves that for someone to look at.
+    thin = await _knowledge_base(user, "thin", 3)
+    async with session_scope() as session:
+        (await session.get(KnowledgeBaseRecord, thin.id)).chunks = 9
+        await session.commit()
     _sql(scratch_database, "CREATE EXTENSION vector")
     address = scratch_database.render_as_string(hide_password=False)
     await _connected(client, headers, config_dir, database_url=address, vectors={"kind": "pgvector"})
@@ -1185,15 +1217,86 @@ async def test_a_knowledge_base_that_cannot_be_copied_blocks_the_step_with_its_c
 
     *_, report, end = await _copy(client, headers, "copy_knowledge_bases")
 
-    assert (report["ok"], report["counts"]) == (False, {"relocated": 1, "failed": 1})
+    assert (report["ok"], report["counts"]) == (False, {"relocated": 1, "failed": 3})
     assert (end["status"], end["exit_code"]) == ("done", 1)
     migration = await _migration(client, headers)
-    # The record keeps the knowledge base that needs attention, with what the command said about it.
-    [failed] = migration["record"]["steps"]["copy_knowledge_bases"]["report"]["attention"]
-    assert (failed["kb_id"], failed["kb_name"], failed["code"]) == (str(notes.id), "notes", "kb_metric_change")
-    assert failed["flag"] == "--allow-metric-change"
-    steps = {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}
-    assert steps["copy_knowledge_bases"] == ("blocked", "kb_metric_change")
+    # The record keeps each knowledge base that needs attention, with what the command said about it.
+    failed = {
+        item["kb_name"]: item for item in migration["record"]["steps"]["copy_knowledge_bases"]["report"]["attention"]
+    }
+    assert {name: (item["subject"], item["code"]) for name, item in failed.items()} == {
+        "notes": (str(notes.id), "kb_metric_change"),
+        "elsewhere": (str(elsewhere), "kb_backend_missing"),
+        "thin": (str(thin.id), "kb_short"),
+    }
+    assert failed["notes"]["flag"] == "--allow-metric-change"
+    # And with what the admin may decide about it: an option for the whole step, or leaving that one behind.
+    # Leaving one behind is said of this run's report. Nothing has been decided yet.
+    first = migration["record"]["steps"]["copy_knowledge_bases"]["run_id"]
+    assert {name: item["decision"] for name, item in failed.items()} == {
+        "notes": {"kind": "accept_ranking_change", "subject": None, "run_id": None, "made": None},
+        "elsewhere": {"kind": "leave_behind", "subject": str(elsewhere), "run_id": first, "made": None},
+        "thin": {"kind": "leave_behind", "subject": str(thin.id), "run_id": first, "made": None},
+    }
+    assert _states(migration)["copy_knowledge_bases"] == ("blocked", "kb_metric_change")
+
+    # Leaving the two behind accepts them as they are.
+    await _decide(client, headers, "copy_knowledge_bases", "leave_behind", str(elsewhere))
+    left = await _decide(client, headers, "copy_knowledge_bases", "leave_behind", str(thin.id))
+    assert _states(left)["copy_knowledge_bases"] == ("blocked", "kb_metric_change")
+    # The third can be copied, so it is not one to leave behind. Saying so is kept, and changes nothing.
+    said = await _decide(client, headers, "copy_knowledge_bases", "leave_behind", str(notes.id))
+    assert [made["subject"] for made in said["record"]["decisions"]] == [str(elsewhere), str(thin.id), str(notes.id)]
+    assert _states(said)["copy_knowledge_bases"] == ("blocked", "kb_metric_change")
+    # Accepting the change of ranking is an option of the command, so nothing changes until the copy is run again.
+    accepted = await _decide(client, headers, "copy_knowledge_bases", "accept_ranking_change")
+    assert _states(accepted)["copy_knowledge_bases"] == ("blocked", "kb_metric_change")
+
+    run_id = await _start(client, headers, "copy_knowledge_bases")
+    command = _command_line(run_id)
+    *_, report, end = await _events(client, headers, run_id, "copy_knowledge_bases")
+
+    assert command.endswith("relocate-kb --to postgres --json --verify-skipped --allow-metric-change")
+    assert (report["ok"], report["counts"]) == (False, {"relocated": 1, "skipped": 1, "failed": 2})
+    migration = await _migration(client, headers)
+    still_failed = migration["record"]["steps"]["copy_knowledge_bases"]["report"]["attention"]
+    assert {item["kb_name"] for item in still_failed} == {"elsewhere", "thin"}
+    # What the admin accepted was the report of the run before. This one is theirs to read, and to accept, again.
+    assert _states(migration)["copy_knowledge_bases"] == ("blocked", still_failed[0]["code"])
+    await _decide(client, headers, "copy_knowledge_bases", "leave_behind", str(elsewhere))
+    again = await _decide(client, headers, "copy_knowledge_bases", "leave_behind", str(thin.id))
+    assert _states(again)["copy_knowledge_bases"] == ("done", None)
+    left_behind = [made for made in again["record"]["decisions"] if made["subject"] in (str(elsewhere), str(thin.id))]
+    assert [made["run_id"] for made in left_behind] == [run_id, run_id]
+
+    withdrawn = await _decide(client, headers, "copy_knowledge_bases", "leave_behind", str(elsewhere), method="DELETE")
+    assert _states(withdrawn)["copy_knowledge_bases"] == ("blocked", "kb_backend_missing")
+
+
+async def test_a_knowledge_base_that_is_still_ingesting_is_not_the_admins_to_leave_behind(
+    client, logged_in_headers_super_user, active_super_user, config_dir, scratch_database
+):
+    pytest.importorskip("pgvector", reason="needs the pgvector extra")
+    headers, user = logged_in_headers_super_user, active_super_user.id
+    growing = uuid4()
+    await _add(KnowledgeBaseRecord(id=growing, user_id=user, name="growing", status="ingesting"))
+    _sql(scratch_database, "CREATE EXTENSION vector")
+    address = scratch_database.render_as_string(hide_password=False)
+    await _connected(client, headers, config_dir, database_url=address, vectors={"kind": "pgvector"})
+    await _copy(client, headers, "copy_database")
+
+    *_, report, _ = await _copy(client, headers, "copy_knowledge_bases")
+
+    assert (report["ok"], report["counts"]) == (False, {"failed": 1})
+    migration = await _migration(client, headers)
+    [waiting] = migration["record"]["steps"]["copy_knowledge_bases"]["report"]["attention"]
+    # It can be copied once it has finished, so the record offers no decision about it.
+    assert (waiting["subject"], waiting["code"], waiting["decision"]) == (str(growing), "kb_ingesting", None)
+
+    left = await _decide(client, headers, "copy_knowledge_bases", "leave_behind", str(growing))
+
+    assert [(made["kind"], made["subject"]) for made in left["record"]["decisions"]] == [("leave_behind", str(growing))]
+    assert _states(left)["copy_knowledge_bases"] == ("blocked", "kb_ingesting")
 
 
 @pytest.mark.api_key_required
@@ -1258,7 +1361,7 @@ async def test_files_are_copied_into_the_bucket_and_this_instance_keeps_its_own(
 
 
 @pytest.mark.api_key_required
-async def test_a_file_that_cannot_be_copied_blocks_the_step_with_its_code(
+async def test_a_file_that_cannot_be_copied_blocks_the_step_until_the_admin_accepts_it(
     client, logged_in_headers_super_user, active_super_user, config_dir, scratch_database, bucket
 ):
     from aiobotocore.session import get_session
@@ -1280,15 +1383,30 @@ async def test_a_file_that_cannot_be_copied_blocks_the_step_with_its_code(
     assert (end["status"], end["exit_code"]) == ("done", 1)
     migration = await _migration(client, headers)
     failed = migration["record"]["steps"]["copy_files"]["report"]["attention"]
-    assert [(item["owner"], item["file_name"], item["code"]) for item in failed] == [
-        (str(user), "cat.txt", "file_conflict"),
-        (str(user), "gone.txt", "no_source_bytes"),
+    assert [(item["subject"], item["code"], item["decision"]["kind"]) for item in failed] == [
+        (f"{user}/cat.txt", "file_conflict", "keep_bucket_file"),
+        (f"{user}/gone.txt", "no_source_bytes", "accept_missing_attachment"),
     ]
-    steps = {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}
-    assert steps["copy_files"] == ("blocked", "file_conflict")
+    # Each decision names the item and the run whose report lists it, which is what a page sends back.
+    run_id = migration["record"]["steps"]["copy_files"]["run_id"]
+    assert [(item["decision"]["subject"], item["decision"]["run_id"]) for item in failed] == [
+        (f"{user}/cat.txt", run_id),
+        (f"{user}/gone.txt", run_id),
+    ]
+    assert _states(migration)["copy_files"] == ("blocked", "file_conflict")
     async with get_session().create_client("s3") as s3:
         kept = await s3.get_object(Bucket=bucket, Key=f"files/{user}/cat.txt")
         assert await kept["Body"].read() == b"not the same cat"
+
+    # Each one is the admin's to accept, with the decision made for it: a file the bucket holds another version of
+    # is not a missing one.
+    wrong = await _decide(client, headers, "copy_files", "accept_missing_attachment", f"{user}/cat.txt")
+    assert _states(wrong)["copy_files"] == ("blocked", "file_conflict")
+    # What the bucket holds stays, and the file with no bytes is let go.
+    one = await _decide(client, headers, "copy_files", "keep_bucket_file", f"{user}/cat.txt")
+    assert _states(one)["copy_files"] == ("blocked", "no_source_bytes")
+    both = await _decide(client, headers, "copy_files", "accept_missing_attachment", f"{user}/gone.txt")
+    assert _states(both)["copy_files"] == ("done", None)
 
 
 @pytest.mark.api_key_required
@@ -1327,3 +1445,275 @@ async def test_the_copies_that_follow_the_database_give_no_password_or_key_away(
 
     assert {step["id"]: step["state"] for step in responses[-1].json()["steps"]}["copy_files"] == "done"
     _nowhere([url.password, key, S3_SECRET], " ".join(commands), responses, config_dir, server_log, caplog, capfd)
+
+
+@pytest.mark.parametrize(
+    ("decision", "code"),
+    [
+        ({"step": "copy_database", "kind": "leave_behind", "subject": "kb-1"}, "unknown_decision"),
+        ({"step": "copy_files", "kind": "drop_orphans"}, "unknown_decision"),
+        ({"step": "backup", "kind": "drop_orphans"}, "unknown_decision"),
+        # Accepting an item says which one.
+        ({"step": "copy_files", "kind": "keep_bucket_file"}, "subject_missing"),
+    ],
+)
+async def test_a_decision_its_step_does_not_have_is_refused(client, logged_in_headers_super_user, decision, code):
+    headers = logged_in_headers_super_user
+
+    refused = [await client.request(method, DECISIONS, json=decision, headers=headers) for method in ("POST", "DELETE")]
+
+    assert [response.status_code for response in refused] == [400, 400]
+    assert [response.json()["detail"] for response in refused] == [{"code": code}] * 2
+    assert "decisions" not in (await _migration(client, headers))["record"]
+
+
+async def test_accepting_a_failed_item_completes_its_step_until_the_acceptance_is_withdrawn(
+    client, logged_in_headers_super_user, active_super_user, config_dir, server_log
+):
+    headers, user = logged_in_headers_super_user, active_super_user.id
+    await _add_file_without_bytes(user)
+    files = {"bucket": "acme", "prefix": "files", "endpoint_url": None}
+    results = {"database": {"ok": True}, "files": {"ok": True}}
+    _ready_to_copy(config_dir, destinations={**PREPARED["destinations"], "files": files, "results": results})
+    _ran(config_dir)
+    conflict = _failed("file_conflict", f"{user}/cat.txt", "keep_bucket_file")
+    missing = _failed("no_source_bytes", f"{user}/gone.txt", "accept_missing_attachment")
+    report = {**UPLOADED, "ok": False, "counts": {"failed": 2}, "attention": [conflict, missing]}
+    _ran(config_dir, "copy_files", report=report)
+    assert (await _steps(client, headers))["copy_files"] == ("blocked", "file_conflict")
+
+    one = await _decide(client, headers, "copy_files", "keep_bucket_file", conflict["subject"])
+    both = await _decide(client, headers, "copy_files", "accept_missing_attachment", missing["subject"])
+    # Deciding the same thing twice is deciding it once.
+    again = await _decide(client, headers, "copy_files", "keep_bucket_file", conflict["subject"])
+
+    assert _states(one)["copy_files"] == ("blocked", "no_source_bytes")
+    assert _states(both)["copy_files"] == ("done", None)
+    assert _states(again)["copy_files"] == ("done", None)
+    # The record says who decided what, and when.
+    decisions = again["record"]["decisions"]
+    assert {(made["step"], made["kind"], made["subject"], made["by"]) for made in decisions} == {
+        ("copy_files", "keep_bucket_file", conflict["subject"], "activeuser"),
+        ("copy_files", "accept_missing_attachment", missing["subject"], "activeuser"),
+    }
+    assert len(decisions) == 2
+    assert all(
+        datetime.fromisoformat(made["at"]) > datetime.fromisoformat(BACKED_UP["confirmed_at"]) for made in decisions
+    )
+    # And which report was accepted: the one of the run that stands.
+    assert {made["run_id"] for made in decisions} == {again["record"]["steps"]["copy_files"]["run_id"]}
+    # A page draws each item from the record alone: the decision that answers it comes with who made it, and when.
+    kept, let_go = (item["decision"] for item in again["record"]["steps"]["copy_files"]["report"]["attention"])
+    assert [item["decision"]["made"] for item in one["record"]["steps"]["copy_files"]["report"]["attention"]] == [
+        {"by": "activeuser", "at": one["record"]["decisions"][0]["at"]},
+        None,
+    ]
+    assert (kept["made"]["by"], let_go["made"]) == ("activeuser", {"by": "activeuser", "at": decisions[0]["at"]})
+
+    withdrawn = await _decide(client, headers, "copy_files", "keep_bucket_file", conflict["subject"], method="DELETE")
+
+    assert [item["decision"]["made"] for item in withdrawn["record"]["steps"]["copy_files"]["report"]["attention"]] == [
+        None,
+        let_go["made"],
+    ]
+    assert _states(withdrawn)["copy_files"] == ("blocked", "file_conflict")
+    assert [made["kind"] for made in withdrawn["record"]["decisions"]] == ["accept_missing_attachment"]
+    named = f"'keep_bucket_file' for the copy of the files: '{conflict['subject']}'"
+    assert f"Migration: user_id={user} decided {named}" in server_log.getvalue()
+    assert f"Migration: user_id={user} withdrew the decision {named}" in server_log.getvalue()
+
+
+async def test_what_was_accepted_of_one_run_is_asked_again_by_the_next(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers, user = logged_in_headers_super_user, active_super_user.id
+    await _three_copies_to_make(config_dir, user)
+    _ran(config_dir)
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    conflict = _failed("file_conflict", f"{user}/cat.txt", "keep_bucket_file")
+    report = {**UPLOADED, "ok": False, "counts": {"failed": 1}, "attention": [conflict]}
+    _ran(config_dir, "copy_files", report=report)
+    kept = await _decide(client, headers, "copy_files", "keep_bucket_file", conflict["subject"])
+    assert _states(kept)["copy_files"] == ("done", None)
+
+    # The files are copied again, and what they are copied to holds something under that name as well.
+    _ran(config_dir, "copy_files", report=report)
+
+    # Nobody has read this report, so nobody has accepted what it says.
+    migration = await _migration(client, headers)
+    assert _states(migration)["copy_files"] == ("blocked", "file_conflict")
+    [asked] = migration["record"]["steps"]["copy_files"]["report"]["attention"]
+    assert (asked["decision"]["run_id"], asked["decision"]["made"]) == (
+        migration["record"]["steps"]["copy_files"]["run_id"],
+        None,
+    )
+    again = await _decide(client, headers, "copy_files", "keep_bucket_file", conflict["subject"])
+    assert _states(again)["copy_files"] == ("done", None)
+    # The record holds one acceptance of that file: the one for the run that stands.
+    [made] = again["record"]["decisions"]
+    assert made["run_id"] == again["record"]["steps"]["copy_files"]["run_id"]
+    assert made["run_id"] != kept["record"]["steps"]["copy_files"]["run_id"]
+
+
+async def test_an_acceptance_read_from_the_report_before_is_refused(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers, user = logged_in_headers_super_user, active_super_user.id
+    await _three_copies_to_make(config_dir, user)
+    _ran(config_dir)
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    conflict = _failed("file_conflict", f"{user}/cat.txt", "keep_bucket_file")
+    report = {**UPLOADED, "ok": False, "counts": {"failed": 1}, "attention": [conflict]}
+    _ran(config_dir, "copy_files", report=report)
+    # One page has the report of this copy before it.
+    [read] = (await _migration(client, headers))["record"]["steps"]["copy_files"]["report"]["attention"]
+    # From another one the files are copied again, to another bucket say, and that one holds the name as well.
+    _ran(config_dir, "copy_files", report=report)
+
+    # The first page sends back the decision it was given, which names the report it read.
+    sent = {"step": "copy_files", **{key: read["decision"][key] for key in ("kind", "subject", "run_id")}}
+    refused = await client.post(DECISIONS, json=sent, headers=headers)
+
+    assert (refused.status_code, refused.json()) == (409, {"detail": {"code": "report_changed"}})
+    migration = await _migration(client, headers)
+    assert migration["record"].get("decisions", []) == []
+    assert _states(migration)["copy_files"] == ("blocked", "file_conflict")
+    # So is an acceptance that names no report at all.
+    unnamed = await client.post(DECISIONS, json={**sent, "run_id": None}, headers=headers)
+    assert (unnamed.status_code, unnamed.json()) == (409, {"detail": {"code": "report_changed"}})
+
+
+async def test_an_item_is_accepted_only_from_a_report_that_lists_it(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers, user = logged_in_headers_super_user, active_super_user.id
+    await _three_copies_to_make(config_dir, user)
+    _ran(config_dir)
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    conflict = _failed("file_conflict", f"{user}/cat.txt", "keep_bucket_file")
+    # The files are being copied again. A page that has not caught up still shows what the copy before reported.
+    again = uuid4().hex
+    _ran(config_dir, "copy_files", run_id=again, status="running", finished_at=None, report=None)
+
+    kept = await _decide(client, headers, "copy_files", "keep_bucket_file", conflict["subject"])
+
+    # This run has reported nothing yet, so there is nothing of it to accept. The decision is kept, and is for no run.
+    assert [(made["kind"], made["run_id"]) for made in kept["record"]["decisions"]] == [("keep_bucket_file", None)]
+    # When it ends with that file refused, the admin has still to read its report.
+    report = {**UPLOADED, "ok": False, "counts": {"failed": 1}, "attention": [conflict]}
+    _ran(config_dir, "copy_files", run_id=again, report=report)
+    assert (await _steps(client, headers))["copy_files"] == ("blocked", "file_conflict")
+
+
+async def test_a_decision_that_does_not_answer_what_failed_is_kept_and_completes_nothing(
+    client, logged_in_headers_super_user, active_super_user, config_dir
+):
+    headers, user = logged_in_headers_super_user, active_super_user.id
+    await _three_copies_to_make(config_dir, user)
+    _ran(config_dir)
+    _ran(config_dir, "copy_knowledge_bases", report=MOVED)
+    conflict = _failed("file_conflict", f"{user}/cat.txt", "keep_bucket_file")
+    # A file that did not arrive whole is copied again. Nothing the admin decides stands in for that.
+    unverified = _failed("verify_failed", f"{user}/big.bin")
+    report = {**UPLOADED, "ok": False, "counts": {"failed": 2}, "attention": [conflict, unverified]}
+    _ran(config_dir, "copy_files", report=report)
+
+    await _decide(client, headers, "copy_files", "accept_missing_attachment", conflict["subject"])
+    decided = await _decide(client, headers, "copy_files", "accept_missing_attachment", unverified["subject"])
+
+    assert [(made["kind"], made["subject"]) for made in decided["record"]["decisions"]] == [
+        ("accept_missing_attachment", conflict["subject"]),
+        ("accept_missing_attachment", unverified["subject"]),
+    ]
+    assert _states(decided)["copy_files"] == ("blocked", "file_conflict")
+    # The decision made for the first file accepts it, and the second still blocks.
+    kept = await _decide(client, headers, "copy_files", "keep_bucket_file", conflict["subject"])
+    assert _states(kept)["copy_files"] == ("blocked", "verify_failed")
+
+
+async def test_an_option_the_admin_decided_on_is_on_the_command_line_of_the_next_run(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch, server_log
+):
+    headers = logged_in_headers_super_user
+    _ready_to_copy(config_dir)
+    # A copy that was refused over rows it could leave out, which is the admin's to decide.
+    refused = {**COPIED, "ok": False, "tables_copied": 0, "rows_copied": 0, "problems": [{"code": "orphans_droppable"}]}
+    asked = {"code": "orphans_droppable", "flag": "--drop-orphans", "details": {"orphans": [ORPHANS]}}
+    _ran(config_dir, report=refused, decision_needed={**asked, "decision": {"kind": "drop_orphans", "subject": None}})
+    _send_to(monkeypatch, NOWHERE)
+    undecided = (await _migration(client, headers))["record"]["steps"]["copy_database"]["decision_needed"]
+    assert undecided["decision"] == {"kind": "drop_orphans", "subject": None, "run_id": None, "made": None}
+
+    # An option holds for the whole step, so whatever it is said to be about is not kept.
+    decided = await _decide(client, headers, "copy_database", "drop_orphans", "the spans")
+
+    # The run that asked copied nothing, so the step waits for the next one.
+    assert _states(decided)["copy_database"] == ("blocked", "orphans_droppable")
+    [made] = decided["record"]["decisions"]
+    # What the command asked now says that it was answered, by whom and when.
+    answered = decided["record"]["steps"]["copy_database"]["decision_needed"]["decision"]
+    assert answered["made"] == {"by": "activeuser", "at": made["at"]}
+    # Nor is the run that asked: an option is for every run of the step.
+    assert (made["step"], made["kind"], made["subject"], made["run_id"], made["by"]) == (
+        "copy_database",
+        "drop_orphans",
+        None,
+        None,
+        "activeuser",
+    )
+    run_id = await _start(client, headers)
+    assert _command_line(run_id).endswith("convert-sqlite-to-postgres --json --drop-orphans")
+    await _events(client, headers, run_id)
+
+    await _decide(client, headers, "copy_database", "drop_orphans", method="DELETE")
+
+    run_id = await _start(client, headers)
+    assert _command_line(run_id).endswith("convert-sqlite-to-postgres --json")
+    named = "'drop_orphans' for the copy of the database"
+    assert f"Migration: user_id={active_super_user.id} decided {named}" in server_log.getvalue()
+    assert f"Migration: user_id={active_super_user.id} withdrew the decision {named}" in server_log.getvalue()
+
+
+async def test_rows_that_point_at_nothing_are_left_out_once_the_admin_says_so(
+    client, logged_in_headers_super_user, active_super_user, config_dir, scratch_database
+):
+    headers = logged_in_headers_super_user
+    flow_id, trace_id = uuid4(), uuid4()
+    await _add(
+        Flow(id=flow_id, name="traced", data={}, user_id=active_super_user.id),
+        TraceTable(id=trace_id, name="run", flow_id=flow_id),
+        SpanTable(name="root", trace_id=trace_id),
+        SpanTable(name="child", trace_id=trace_id),
+    )
+    async with session_scope() as session:
+        # Clearing a flow's traces left their spans behind: SQLite was never told to enforce the foreign key.
+        await session.exec(sa.text("DELETE FROM trace"))
+        await session.commit()
+    await _connected(client, headers, config_dir, database_url=scratch_database.render_as_string(hide_password=False))
+
+    events = await _copy(client, headers, "copy_database")
+
+    asked = next(event for event in events if event["event"] == "decision_needed")
+    assert asked["details"]["orphans"] == [ORPHANS]
+    migration = await _migration(client, headers)
+    # What a page that was reloaded draws the question from, with the decision that answers it.
+    run = migration["record"]["steps"]["copy_database"]
+    assert run["decision_needed"] == {
+        **{key: value for key, value in asked.items() if key not in ("event", "seq")},
+        "decision": {"kind": "drop_orphans", "subject": None, "run_id": None, "made": None},
+    }
+    assert (run["report"]["ok"], run["report"]["rows_copied"]) == (False, 0)
+    assert _states(migration)["copy_database"] == ("blocked", "orphans_droppable")
+
+    await _decide(client, headers, "copy_database", "drop_orphans")
+    *_, report, end = await _copy(client, headers, "copy_database")
+
+    assert (report["ok"], report["orphans"]) == (True, [ORPHANS])
+    assert (end["status"], end["exit_code"]) == ("done", 0)
+    engine = sa.create_engine(scratch_database)
+    with engine.connect() as destination:
+        assert destination.scalar(sa.text("SELECT count(*) FROM span")) == 0
+    engine.dispose()
+    migration = await _migration(client, headers)
+    assert migration["record"]["steps"]["copy_database"]["decision_needed"] is None
+    assert _states(migration)["copy_database"] == ("done", None)
