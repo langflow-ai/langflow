@@ -8,6 +8,7 @@ import type {
   MigrationState,
   MigrationStepState,
 } from "@/controllers/API/queries/migration";
+import { BackupStep } from "../BackupStep";
 import { DestinationsStep } from "../DestinationsStep";
 import { PausedBanner, PauseStep, Recovery, Waiting } from "../PauseStep";
 import { SecretKeyStep } from "../SecretKeyStep";
@@ -830,5 +831,195 @@ describe("Pause changes", () => {
     expect(
       screen.getByRole("button", { name: "Turn changes back on" }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("Back up this instance", () => {
+  const sqlite = {
+    database: { type: "sqlite" as const },
+    knowledge_bases: { local: true, folder: "/app/data/knowledge_bases" },
+    files: { storage: "local" as const, local: false, folder: "/app/data" },
+  };
+
+  it("waits for this pause's copy of a SQLite database", () => {
+    const { unmount } = show(
+      <BackupStep migration={migration(sqlite, { pause: paused })} />,
+    );
+    const confirm = () =>
+      screen.getByRole("button", { name: "I've backed up everything" });
+
+    expect(
+      screen.getByRole("button", { name: "Download the database" }),
+    ).toBeEnabled();
+    expect(confirm()).toBeDisabled();
+    expect(confirm()).toHaveAccessibleDescription(
+      "Download the database first.",
+    );
+    const location = screen.getByLabelText("Where is the backup?");
+    expect(location).toBeRequired();
+    expect(location).toHaveAccessibleDescription(
+      /^Required\. Say where you put the backup/,
+    );
+    // Nothing is said of a copy until this pause has one.
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    // Only the folders this instance keeps data in.
+    expect(
+      screen.getByText("Knowledge bases folder: /app/data/knowledge_bases"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/^Files folder/)).not.toBeInTheDocument();
+    // The download is the database alone, and the folders are copied by hand.
+    expect(
+      screen.getByText(/^This file is the database only\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/^The database copy doesn't hold these folders\./),
+    ).toBeInTheDocument();
+    unmount();
+
+    // A copy made before changes stopped misses what changed since.
+    const stale = show(
+      <BackupStep
+        migration={migration(sqlite, {
+          pause: paused,
+          backup: { database_downloaded_at: "2026-10-06T11:59:00Z" },
+        })}
+      />,
+    );
+    expect(confirm()).toBeDisabled();
+    stale.unmount();
+
+    show(
+      <BackupStep
+        migration={migration(sqlite, {
+          pause: paused,
+          backup: { database_downloaded_at: "2026-10-06T12:01:00Z" },
+        })}
+      />,
+    );
+    expect(confirm()).toBeEnabled();
+    expect(screen.getByRole("status")).toHaveTextContent(/^Downloaded .+\.$/);
+  });
+
+  it("shows a download that did not finish, and keeps waiting for one", async () => {
+    jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    show(<BackupStep migration={migration(sqlite, { pause: paused })} />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Download the database" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The download didn't finish. Try again.",
+    );
+    expect(
+      screen.getByRole("button", { name: "I've backed up everything" }),
+    ).toBeDisabled();
+  });
+
+  it("says to download first when the server finds no copy from this pause", async () => {
+    jest
+      .spyOn(api, "post")
+      .mockRejectedValue(refused(409, { code: "database_not_downloaded" }));
+    // The page still holds a copy the server no longer counts, as after a pause that started again elsewhere.
+    show(
+      <BackupStep
+        migration={migration(sqlite, {
+          pause: paused,
+          backup: {
+            database_downloaded_at: "2026-10-06T12:01:00Z",
+            location: "s3://backups/langflow",
+          },
+        })}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "I've backed up everything" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /^Download the database first\.$/,
+    );
+  });
+
+  it("gives a PostgreSQL instance a command with its host and database, and no user", () => {
+    show(
+      <BackupStep
+        migration={migration(
+          {
+            database: {
+              type: "postgresql",
+              location: "db.internal:5432/langflow",
+            },
+            // The folder is there, with nothing of this instance's in it.
+            knowledge_bases: {
+              local: false,
+              folder: "/app/data/knowledge_bases",
+            },
+            files: { storage: "local", local: true, folder: "/app/data" },
+          },
+          { pause: paused },
+        )}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "pg_dump -h db.internal -p 5432 -d langflow -F c -f langflow-backup.dump",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/^Knowledge bases folder/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Download the database" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Files folder: /app/data")).toBeInTheDocument();
+    // No download on this page, so the line under the folders speaks of the database copy.
+    expect(
+      screen.getByText(/^The database copy doesn't hold these folders\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/^This file is the database only\./),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "I've backed up everything" }),
+    ).toBeEnabled();
+  });
+
+  it("starts from the place the record already names, and shows a confirmation that never reached the server", async () => {
+    const post = jest.spyOn(api, "post").mockRejectedValue(unreachable());
+    show(
+      <BackupStep
+        migration={migration(
+          {
+            database: {
+              type: "postgresql",
+              location: "db.internal:5432/langflow",
+            },
+          },
+          { pause: paused, backup: { location: "s3://backups/langflow" } },
+        )}
+      />,
+    );
+    expect(screen.getByLabelText("Where is the backup?")).toHaveValue(
+      "s3://backups/langflow",
+    );
+    // Nothing on this server to copy by hand, so no advice about folders.
+    expect(
+      screen.queryByText(/^The database copy doesn't hold these folders\./),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "I've backed up everything" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Something went wrong. Try again.",
+    );
+    expect(post).toHaveBeenCalledWith(
+      expect.stringContaining("steps/backup/confirm"),
+      { location: "s3://backups/langflow" },
+    );
   });
 });

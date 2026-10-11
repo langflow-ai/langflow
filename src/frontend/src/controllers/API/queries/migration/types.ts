@@ -51,8 +51,8 @@ export interface MigrationState {
     version: string;
     /** `location` is the host, the port and the database name. It holds no user and no password. */
     database: { type: "sqlite" | "postgresql"; location?: string };
-    knowledge_bases: { local: boolean };
-    files: { storage: "local" | "s3"; local: boolean };
+    knowledge_bases: { local: boolean; folder?: string | null };
+    files: { storage: "local" | "s3"; local: boolean; folder?: string };
     /** Where this instance's secret key is. The key itself never leaves the server. */
     secret_key?: { source: "file" | "env"; path?: string };
   };
@@ -79,6 +79,12 @@ export interface MigrationState {
      * It stays when the server stopped during that wait.
      */
     pausing?: { frozen_at: string; frozen_by: string };
+    backup?: {
+      location?: string;
+      database_downloaded_at?: string;
+      confirmed_by?: string;
+      confirmed_at?: string;
+    };
   };
   steps: MigrationStepState[];
   blocking_findings: string[];

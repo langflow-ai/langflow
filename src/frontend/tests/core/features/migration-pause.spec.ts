@@ -1,9 +1,10 @@
+import fs from "node:fs";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { NO_DESTINATION, prepare, startOver } from "../../utils/migration-walk";
 
 test(
-  "an admin pauses changes and turns them back on",
+  "an admin pauses changes, backs up this instance and turns changes back on",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
     // Pausing refuses every change to the instance, so this walk can't share a server with other specs.
@@ -36,6 +37,38 @@ test(
       await expect(pause).toContainText(/Paused .+ by /, { timeout: 120000 });
       expect(await change()).toBe(503);
 
+      // That check passed, so the backup opens and takes the focus.
+      const backup = page.getByTestId("migration-step-backup");
+      await expect(
+        backup.getByRole("heading", { name: "Back up this instance" }),
+      ).toBeFocused();
+      const confirm = backup.getByRole("button", {
+        name: "I've backed up everything",
+      });
+      await expect(confirm).toBeDisabled();
+      const download = page.waitForEvent("download");
+      await backup
+        .getByRole("button", { name: "Download the database" })
+        .click();
+      const copy = await download;
+      expect(copy.suggestedFilename()).toMatch(/^langflow-backup-\d{8}\.db$/);
+      // The copy starts with the header every SQLite database has.
+      expect(
+        fs
+          .readFileSync(await copy.path())
+          .subarray(0, 15)
+          .toString(),
+      ).toBe("SQLite format 3");
+      await expect(backup.getByText(/^Downloaded .+\.$/)).toBeVisible();
+      // Pasted with a space on each side, which the server drops.
+      await backup
+        .getByLabel("Where is the backup?")
+        .fill(" s3://backups/langflow ");
+      await confirm.click();
+      await expect(backup).toContainText(
+        /Backed up .+ to s3:\/\/backups\/langflow\./,
+      );
+
       // The banner stays in view down at the end of the page, where the way back is.
       const recovery = page.locator("details", {
         hasText: "If something goes wrong",
@@ -49,11 +82,12 @@ test(
       await expect(asked).toContainText("out of date");
       await asked.getByRole("button", { name: "Resume", exact: true }).click();
 
-      // Changes are back on.
+      // Changes are back on, and what was backed up during the pause no longer counts.
       await expect(banner).toHaveCount(0);
       await expect(
         pause.getByRole("button", { name: "Pause changes" }),
       ).toBeVisible();
+      await expect(backup.getByRole("button")).toHaveCount(0);
       expect(await change()).not.toBe(503);
     } finally {
       // A walk that stops midway must not leave the instance refusing changes, nor past its first steps.

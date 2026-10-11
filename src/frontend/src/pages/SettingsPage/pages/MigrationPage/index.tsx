@@ -18,6 +18,7 @@ import { downloadJson } from "@/pages/FlowPage/components/TraceComponent/traceVi
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
+import { BackupStep } from "./BackupStep";
 import { CheckStep } from "./CheckStep";
 import { formatTime, PARTS } from "./catalog";
 import { DestinationsStep } from "./DestinationsStep";
@@ -270,6 +271,14 @@ function Migration({ migration }: { migration: MigrationState }) {
                     time: formatTime(record.pause?.frozen_at, i18n.language),
                     user: record.pause?.frozen_by,
                   });
+                } else if (step.id === "backup" && state.state === "done") {
+                  summary = t("settings.migration.backup.done", {
+                    time: formatTime(
+                      record.backup?.confirmed_at,
+                      i18n.language,
+                    ),
+                    location: record.backup?.location,
+                  });
                 }
                 // A step the admin has reached, and that this server can do.
                 const live =
@@ -288,6 +297,8 @@ function Migration({ migration }: { migration: MigrationState }) {
                   body = <SecretKeyStep migration={migration} state={state} />;
                 } else if (unfinished && step.id === "pause") {
                   body = <PauseStep migration={migration} state={state} />;
+                } else if (unfinished && step.id === "backup") {
+                  body = <BackupStep migration={migration} />;
                 }
                 return (
                   <StepItem
