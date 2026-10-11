@@ -9,7 +9,10 @@ import pytest
 from lfx.services.flow_operations import (
     FlowDataValidationError,
     GraphViolationCode,
+    derive_flow_operations,
+    diff_flow_data,
     find_graph_violations,
+    graphs_equal,
     repair_flow_data,
     validate_flow_data,
 )
@@ -331,3 +334,15 @@ def test_assigning_changed_tables_gives_new_nodes_ids():
 
     validate_flow_data(target, base=EMPTY)
     assert strip_row_keys(_rows(target)) == LEGACY
+
+
+def test_a_stored_table_without_numeric_positions_is_written_whole():
+    # Rows with ids but no numeric positions (an older position format) are not
+    # a keyed table yet, so the write that brings them within the rules replaces it.
+    stored = _graph([{"_id": "r1", "_pos": "a0", "key": "Accept", "value": "json"}])
+    target = _graph([{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}])
+
+    (operation,) = diff_flow_data(stored, target)
+
+    assert [update.path for update in operation.updates] == [("data", "node", "template", "headers", "value")]
+    assert graphs_equal(derive_flow_operations(stored, target).flow_data, target)
