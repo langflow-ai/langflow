@@ -1,47 +1,49 @@
 """Row identity in table values.
 
 Every row of a table value stored in a flow carries a stable ``_id`` and a
-fractional position ``_pos`` so that concurrent edits address rows instead of
-indexes. They are bookkeeping for the flow's history, not data: components
-never see them, so every place that hands a stored table to component code
-strips them first.
+numeric position ``_pos``, so that concurrent edits address rows instead of
+indexes. The table's order is its rows' ``(_pos, _id)``, not their places in
+the stored array, which nothing keeps sorted. Both keys are bookkeeping for the
+flow's history, not data: components never see them, so every place that
+hands a stored table to anything outside the engine strips them first, and
+puts the rows in order as it does.
 """
 
 from __future__ import annotations
 
-import itertools
 from typing import Any
 
-from lfx.services.flow_operations.canonical import values_equal
-from lfx.services.flow_operations.exceptions import FlowDataValidationError
-from lfx.services.flow_operations.fractional_index import generate_n_keys_between, is_order_key
+from lfx.services.flow_operations.canonical import is_row_position, ordered_rows, values_equal
 from lfx.services.flow_operations.ids import new_table_row_id
 from lfx.services.flow_operations.schema import load_node_schema
 
-ROW_ID_KEY = "_id"
-ROW_POSITION_KEY = "_pos"
+ROW_ID_KEY = load_node_schema().table.key[0]
+ROW_POSITION_KEY = load_node_schema().table.position
 ROW_KEYS = frozenset({ROW_ID_KEY, ROW_POSITION_KEY})
 
 
 def strip_row_keys(rows: Any) -> Any:
-    """Return table rows without ``_id`` and ``_pos``; anything that is not a list of rows is returned as is."""
+    """Return table rows in order and without ``_id`` and ``_pos``; a value that is not a list is returned as is."""
     if not isinstance(rows, list):
         return rows
     return [
         {key: value for key, value in row.items() if key not in ROW_KEYS} if isinstance(row, dict) else row
-        for row in rows
+        for row in ordered_rows(rows)
     ]
 
 
 def strip_node_table_row_keys(node: Any) -> Any:
-    """Strip ``_id`` and ``_pos`` from every table value of a flow node, in place, and return the node."""
+    """Order the rows of every table value of a flow node and strip ``_id`` and ``_pos``, in place.
+
+    Returns the node.
+    """
     for value_path, field in _table_fields(node):
         field[value_path[-1]] = strip_row_keys(field[value_path[-1]])
     return node
 
 
 def strip_flow_table_row_keys(flow_data: Any) -> Any:
-    """Strip ``_id`` and ``_pos`` from the table values of every node of ``flow_data``, in place, and return it."""
+    """Order and strip the table values of every node of ``flow_data``, in place, and return it."""
     for node in _nodes(flow_data):
         strip_node_table_row_keys(node)
     return flow_data
@@ -50,24 +52,18 @@ def strip_flow_table_row_keys(flow_data: Any) -> Any:
 def assign_row_ids(rows: list[Any], previous: Any = None) -> list[Any]:
     """Give one table value's rows the ids and positions a write needs, in place, and return them.
 
-    Rows that already have a unique ``_id`` keep it. A row without one that
-    equals a not yet matched row of ``previous`` (the stored value, apart from
-    ids and positions) takes that row's id and position, so rewriting a table
-    with the rows it already held does not turn every row into a new one; the
-    others get a new random id. Rows keep their order: valid positions that
-    already follow it are kept and the rest are filled in between them (or all
-    rows get evenly spaced positions when the existing ones are out of order).
-    A table with a row that is not an object is left for validation to report.
+    Rows that already have a unique ``_id`` keep it, and rows with a position
+    keep it. A row without an id that equals a not yet matched row of
+    ``previous`` (the stored value, apart from ids and positions) takes that
+    row's id and position; the others get a new random id. Rows still without
+    a position get one that keeps them where they are stored
+    (``fill_missing_positions``), so a legacy table keeps its order. A table
+    with a row that is not an object is left for validation to report.
     """
     if not all(isinstance(row, dict) for row in rows):
         return rows
     match_row_ids(rows, previous)
-    positions = [row.get(ROW_POSITION_KEY) for row in rows]
-    if not all(_is_key(position) for position in positions) or positions_keeping_order(positions) is None:
-        filled = positions_keeping_order(positions) or generate_n_keys_between(None, None, len(rows))
-        for row, position in zip(rows, filled, strict=True):
-            row[ROW_POSITION_KEY] = position
-    load_node_schema().table.sort(rows)
+    fill_missing_positions(rows)
     return rows
 
 
@@ -83,14 +79,14 @@ def match_row_ids(rows: list[dict[str, Any]], previous: Any = None) -> None:
     need_id: list[dict[str, Any]] = []
     for row in rows:
         row_id = row.get(ROW_ID_KEY)
-        if _is_key(row_id) and row_id not in used:
+        if _is_id(row_id) and row_id not in used:
             used.add(row_id)
         else:
             need_id.append(row)
     candidates = [
         row
         for row in (previous if isinstance(previous, list) else [])
-        if isinstance(row, dict) and _is_key(row.get(ROW_ID_KEY))
+        if isinstance(row, dict) and _is_id(row.get(ROW_ID_KEY))
     ]
     for row in need_id:
         content = _without_row_keys(row)
@@ -98,13 +94,13 @@ def match_row_ids(rows: list[dict[str, Any]], previous: Any = None) -> None:
             (
                 candidate
                 for candidate in candidates
-                if candidate[ROW_ID_KEY] not in used and _without_row_keys(candidate) == content
+                if candidate[ROW_ID_KEY] not in used and values_equal(_without_row_keys(candidate), content)
             ),
             None,
         )
         if match is not None:
             new_id = match[ROW_ID_KEY]
-            if not _is_key(row.get(ROW_POSITION_KEY)) and _is_key(match.get(ROW_POSITION_KEY)):
+            if not is_row_position(row.get(ROW_POSITION_KEY)) and is_row_position(match.get(ROW_POSITION_KEY)):
                 row[ROW_POSITION_KEY] = match[ROW_POSITION_KEY]
         else:
             new_id = new_table_row_id()
@@ -112,6 +108,42 @@ def match_row_ids(rows: list[dict[str, Any]], previous: Any = None) -> None:
                 new_id = new_table_row_id()
         used.add(new_id)
         row[ROW_ID_KEY] = new_id
+
+
+def fill_missing_positions(rows: list[dict[str, Any]]) -> list[int]:
+    """Give each row without a valid position one that keeps it where it is stored, in place.
+
+    Positioned rows keep their positions. A run of rows without one is spread
+    evenly between the positioned rows stored before and after it, or placed one
+    apart before the first or after the last; when those neighbours are out of
+    order, the run follows the one before it. A table with no positions at all
+    gets ``1..n``. Returns the indexes of the rows it gave a position.
+    """
+    filled: list[int] = []
+    index = 0
+    while index < len(rows):
+        if is_row_position(rows[index].get(ROW_POSITION_KEY)):
+            index += 1
+            continue
+        end = index
+        while end < len(rows) and not is_row_position(rows[end].get(ROW_POSITION_KEY)):
+            end += 1
+        count = end - index
+        before = rows[index - 1][ROW_POSITION_KEY] if index > 0 else None
+        after = rows[end][ROW_POSITION_KEY] if end < len(rows) else None
+        if before is not None and after is not None and before < after:
+            positions = [before + (after - before) * step / (count + 1) for step in range(1, count + 1)]
+        elif before is not None:
+            positions = [before + step for step in range(1, count + 1)]
+        elif after is not None:
+            positions = [after - count + step for step in range(count)]
+        else:
+            positions = list(range(1, count + 1))
+        for offset, position in enumerate(positions):
+            rows[index + offset][ROW_POSITION_KEY] = position
+            filled.append(index + offset)
+        index = end
+    return filled
 
 
 def assign_table_row_ids(node: Any) -> Any:
@@ -140,33 +172,10 @@ def assign_changed_table_row_ids(base: Any, target: Any) -> Any:
         stored_tables = stored.get(node.get("id"), {})
         for value_path, field in _table_fields(node):
             field_name = value_path[-2]
-            if field_name in stored_tables and _equal(stored_tables[field_name], field["value"]):
+            if field_name in stored_tables and values_equal(stored_tables[field_name], field["value"]):
                 continue
             assign_row_ids(field["value"], previous=stored_tables.get(field_name))
     return target
-
-
-def positions_keeping_order(positions: list[Any]) -> list[str] | None:
-    """Fill missing positions between their neighbours, or return None when the others are out of order."""
-    present = [position for position in positions if _is_key(position)]
-    if not all(is_order_key(position) for position in present):
-        return None
-    if any(left >= right for left, right in itertools.pairwise(present)):
-        return None
-    filled = list(positions)
-    index = 0
-    while index < len(filled):
-        if _is_key(filled[index]):
-            index += 1
-            continue
-        end = index
-        while end < len(filled) and not _is_key(filled[end]):
-            end += 1
-        before = filled[index - 1] if index > 0 else None
-        after = filled[end] if end < len(filled) else None
-        filled[index:end] = generate_n_keys_between(before, after, end - index)
-        index = end
-    return filled
 
 
 def _table_fields(node: Any) -> list[tuple[tuple[str, ...], dict[str, Any]]]:
@@ -198,12 +207,5 @@ def _without_row_keys(row: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in row.items() if key not in ROW_KEYS}
 
 
-def _equal(left: Any, right: Any) -> bool:
-    try:
-        return values_equal(left, right)
-    except FlowDataValidationError:
-        return False
-
-
-def _is_key(value: Any) -> bool:
+def _is_id(value: Any) -> bool:
     return isinstance(value, str) and bool(value)

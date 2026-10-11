@@ -29,12 +29,6 @@ from lfx.services.flow_operations.exceptions import (
     FlowOperationReplayError,
     FlowOperationValidationError,
 )
-from lfx.services.flow_operations.fractional_index import (
-    FractionalIndexError,
-    generate_key_between,
-    generate_n_keys_between,
-    is_order_key,
-)
 from lfx.services.flow_operations.ids import new_edge_id, new_table_row_id
 from lfx.services.flow_operations.ops import (
     AddEdgesOp,
@@ -105,7 +99,6 @@ __all__ = [
     "FlowOperationReplayError",
     "FlowOperationValidationError",
     "FlowOperationsApplyResult",
-    "FractionalIndexError",
     "GraphFix",
     "GraphState",
     "GraphViolation",
@@ -141,11 +134,8 @@ __all__ = [
     "finalize_graph",
     "find_graph_violations",
     "find_table_violations",
-    "generate_key_between",
-    "generate_n_keys_between",
     "graph_hash",
     "graphs_equal",
-    "is_order_key",
     "json_type",
     "load_node_schema",
     "new_edge_id",

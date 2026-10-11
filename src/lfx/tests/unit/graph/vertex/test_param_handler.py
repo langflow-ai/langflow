@@ -279,19 +279,20 @@ class TestParameterHandlerTableRowIdentity:
         self.mock_vertex.data = {"node": {"template": {"table_field": {"type": "table", "table_schema": []}}}}
         self.handler = ParameterHandler(self.mock_vertex, storage_service=None)
 
-    def test_handle_table_field_strips_row_ids_and_positions(self):
+    def test_handle_table_field_strips_row_ids_and_positions_and_orders_rows(self):
+        # Stored rows are in no particular order; their positions are the order.
         rows = [
-            {"_id": "r1", "_pos": "a0", "key": "Accept", "value": "json"},
-            {"_id": "r2", "_pos": "a1", "key": "Auth", "value": "token"},
+            {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"},
+            {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"},
         ]
 
         params = self.handler._handle_table_field("table_field", rows, {})
 
         assert params["table_field"] == [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
-        assert rows[0]["_id"] == "r1"
+        assert rows[0]["_id"] == "r2"
 
     def test_table_branch_of_other_direct_types_strips_row_ids_and_positions(self):
-        rows = [{"_id": "r1", "_pos": "a0", "name": "x"}]
+        rows = [{"_id": "r1", "_pos": 1, "name": "x"}]
 
         params = self.handler._handle_other_direct_types("table_field", {"type": "table"}, rows, {})
 

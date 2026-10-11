@@ -371,10 +371,8 @@ def _diff_keyed_list(
     target_items = _items_by_key(keyed, target)
     if base_items is None or target_items is None:
         return False
-    if keyed.kind == "table":
-        if not (_is_sorted_table(keyed, base) and _is_sorted_table(keyed, target)):
-            return False
-    else:
+    if keyed.kind != "table":
+        # A natural list's order is state; a table's order is its rows' positions.
         kept = [key for key in base_items if key in target_items]
         added = [key for key in target_items if key not in base_items]
         if list(target_items) != kept + added:
@@ -407,14 +405,6 @@ def _items_by_key(keyed: KeyedList, items: Any) -> dict[str, dict[str, Any]] | N
             return None
         by_key[key] = item
     return by_key
-
-
-def _is_sorted_table(keyed: KeyedList, rows: list[Any]) -> bool:
-    if any(not isinstance(row.get(keyed.position), str) for row in rows):
-        return False
-    ordered = list(rows)
-    keyed.sort(ordered)
-    return all(left is right for left, right in zip(ordered, rows, strict=True))
 
 
 def _selector(keyed: KeyedList, key: str) -> IdSelector | KeySelector:
