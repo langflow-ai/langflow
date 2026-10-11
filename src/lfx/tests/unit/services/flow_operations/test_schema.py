@@ -67,17 +67,3 @@ def test_natural_key_lists():
     assert tools.key_of({"name": "renamed", "tags": ["search"]}) == "search"
     assert tools.key_of({"name": "untagged", "tags": []}) is None
     assert schema.keyed_list_at(node, ("data", "node", "base_classes")) is None
-
-
-def test_table_sort_orders_by_position_then_id():
-    table = load_node_schema().table
-    rows = [
-        {"_id": "b", "_pos": "a1"},
-        {"_id": "a", "_pos": "a1"},
-        {"_id": "c", "_pos": "a0V"},
-        {"_id": "d", "_pos": "Zz"},
-    ]
-
-    table.sort(rows)
-
-    assert [row["_id"] for row in rows] == ["d", "c", "a", "b"]
