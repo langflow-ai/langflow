@@ -363,8 +363,10 @@ def _walk(
     *,
     context: str,
 ) -> tuple[Any, list[_ItemStep], int | None]:
-    """Follow ``path[:-1]`` from ``root``.
+    """Follow ``path[:-1]`` from ``root``, a node or an edge this call owns.
 
+    Every container on the way is replaced by one this call owns
+    (``GraphState.own``), so the write changes only containers the call made.
     Return the value holding the last segment, the keyed list items passed
     through, and the index of the first segment that does not exist (None when
     every one does). A segment that does not fit the value it reads, such as a
@@ -379,15 +381,21 @@ def _walk(
                 raise FlowOperationValidationError(msg)
             if part not in value:
                 return None, steps, index
-            value = value[part]
+            child = value[part]
+            if isinstance(child, (dict, list)):
+                child = value[part] = state.own(child)
+            value = child
             continue
         items = _keyed_list(state, node, path, index, value, context=context)
         key = _selector_key(part)
         item = items.by_key.get(key)
         if item is None:
             return None, steps, index
-        steps.append(_ItemStep(items=items, item=item, key=key))
-        value = item
+        owned = state.own(item)
+        if owned is not item:
+            items.replace(key, owned, context=context)
+        steps.append(_ItemStep(items=items, item=owned, key=key))
+        value = owned
     return value, steps, None
 
 

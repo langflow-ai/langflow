@@ -187,6 +187,37 @@ class TestApplyFlowOperations:
         assert stored_node_b is original_node_b
         assert original_node_a["position"]["x"] == 0
 
+    def test_update_nodes_copies_only_the_written_path(self):
+        flow_data = _base_flow_data()
+        original = flow_data["nodes"][0]
+        original_template = original["data"]["node"]["template"]
+        text_path = ["data", "node", "template", "text", "value"]
+        output_path = ["data", "node", "outputs", {"key": "out"}, "display_name"]
+
+        result = apply_flow_operations(
+            flow_data,
+            [
+                {
+                    "type": "update_nodes",
+                    "updates": [
+                        {"id": "a", "op": "set_field", "path": text_path, "value": "hi"},
+                        {"id": "a", "op": "set_field", "path": output_path, "value": "Out"},
+                    ],
+                }
+            ],
+        )
+
+        stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
+        template = stored["data"]["node"]["template"]
+        assert template["text"]["value"] == "hi"
+        assert stored["data"]["node"]["outputs"] == [{"name": "out", "display_name": "Out"}]
+        # The fields and keys the writes did not pass through are the base flow's own.
+        assert template["many"] is original_template["many"]
+        assert stored["position"] is original["position"]
+        # The base flow is unchanged.
+        assert original_template["text"]["value"] == ""
+        assert original["data"]["node"]["outputs"] == [{"name": "out"}]
+
     def test_add_nodes(self):
         flow_data = _base_flow_data()
         new_node = {"id": "c", "type": "generic", "position": {"x": 200, "y": 0}, "data": {}}
