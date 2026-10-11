@@ -250,6 +250,7 @@ describe("COPY_CODES", () => {
       "destination_changed",
       "interrupted",
       "locked",
+      "new_instance_started",
       "orphans_droppable",
       "orphans_no_rule",
       "pgvector_env_missing",

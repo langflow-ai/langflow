@@ -20,11 +20,13 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { BackupStep } from "./BackupStep";
 import { CheckStep } from "./CheckStep";
+import { CheckTargetStep } from "./CheckTargetStep";
 import { CopyStep } from "./CopyStep";
-import { copyCounts, formatTime, isCopy, PARTS } from "./catalog";
+import { copyCounts, formatTime, isCopy, PARTS, targetCheck } from "./catalog";
 import { DestinationsStep } from "./DestinationsStep";
 import { PausedBanner, PauseStep, Recovery } from "./PauseStep";
 import { SecretKeyStep } from "./SecretKeyStep";
+import { MoveComplete, StartStep } from "./StartStep";
 
 const MARKER_ICONS: Partial<Record<MigrationStepState["state"], string>> = {
   locked: "Lock",
@@ -163,6 +165,16 @@ function Migration({ migration }: { migration: MigrationState }) {
     },
   ];
 
+  // What has to be ready elsewhere, each thing only when this instance's move calls for it.
+  const needs = [
+    instance.database.type === "sqlite" && "database",
+    instance.knowledge_bases.local && "vectors",
+    instance.files.local && "bucket",
+    "access",
+    "backup",
+    "window",
+  ].filter(Boolean);
+
   let number = 0;
   return (
     <>
@@ -200,6 +212,24 @@ function Migration({ migration }: { migration: MigrationState }) {
           {t("settings.migration.oneWay")}
         </p>
       </section>
+
+      <details
+        // Read before the first step. Once the check is done it closes, and stays one click away.
+        open={stateOf("check_source").state !== "done"}
+        className="rounded-lg border p-4 text-sm"
+      >
+        <summary className="cursor-pointer font-medium">
+          {t("settings.migration.need.title")}
+        </summary>
+        <ul
+          className="mt-2 list-disc pl-5 text-muted-foreground"
+          data-testid="migration-needs"
+        >
+          {needs.map((need) => (
+            <li key={String(need)}>{t(`settings.migration.need.${need}`)}</li>
+          ))}
+        </ul>
+      </details>
 
       {PARTS.map((part, index) => (
         <Fragment key={part.slug}>
@@ -286,6 +316,43 @@ function Migration({ migration }: { migration: MigrationState }) {
                     location: record.backup?.location,
                   });
                 } else if (
+                  step.id === "start_target" &&
+                  state.state === "done"
+                ) {
+                  summary = t("settings.migration.start.done", {
+                    time: formatTime(
+                      record.steps.start_target?.confirmed_at,
+                      i18n.language,
+                    ),
+                    user: record.steps.start_target?.confirmed_by,
+                  });
+                } else if (
+                  step.id === "check_target" &&
+                  state.state === "done"
+                ) {
+                  const differed =
+                    record.steps.check_target?.accepted_differences ?? [];
+                  summary = t(
+                    differed.length
+                      ? "settings.migration.checkTarget.doneAccepted"
+                      : "settings.migration.checkTarget.done",
+                    {
+                      time: formatTime(
+                        record.steps.check_target?.finished_at ?? undefined,
+                        i18n.language,
+                      ),
+                      user: record.steps.check_target?.confirmed_by,
+                      names: differed
+                        .map((name) => {
+                          const known = targetCheck(name);
+                          return known
+                            ? t(`settings.migration.check.${known.slug}.title`)
+                            : name;
+                        })
+                        .join(", "),
+                    },
+                  );
+                } else if (
                   step.id === "copy_database" &&
                   state.state === "done"
                 ) {
@@ -333,6 +400,34 @@ function Migration({ migration }: { migration: MigrationState }) {
                   body = <PauseStep migration={migration} state={state} />;
                 } else if (unfinished && step.id === "backup") {
                   body = <BackupStep migration={migration} />;
+                } else if (
+                  unfinished &&
+                  (step.id === "start_target" || step.id === "check_target") &&
+                  // The check of the copy, while it runs, is still followed and can be stopped.
+                  !(
+                    step.id === "check_target" &&
+                    record.steps.check_target?.status === "running"
+                  ) &&
+                  // A step above opened again, for example after the destination changed. The server takes
+                  // neither of the last two steps until it is finished, so the page offers neither.
+                  !migration.steps
+                    .slice(
+                      0,
+                      migration.steps.findIndex(({ id }) => id === step.id),
+                    )
+                    .every((earlier) =>
+                      ["done", "skipped"].includes(earlier.state),
+                    )
+                ) {
+                  body = (
+                    <p className="text-sm text-muted-foreground">
+                      {t("settings.migration.notStarted")}
+                    </p>
+                  );
+                } else if (unfinished && step.id === "start_target") {
+                  body = <StartStep migration={migration} />;
+                } else if (unfinished && step.id === "check_target") {
+                  body = <CheckTargetStep migration={migration} />;
                 } else if (live && isCopy(step.id)) {
                   body = (
                     <CopyStep
@@ -352,6 +447,8 @@ function Migration({ migration }: { migration: MigrationState }) {
                     // The pause waits on the same run while it is checked again.
                     running={
                       copy?.status === "running" ||
+                      (step.id === "check_target" &&
+                        record.steps.check_target?.status === "running") ||
                       (run?.status === "running" &&
                         (isCheck || state.reason === "recheck_pending"))
                     }
@@ -366,6 +463,7 @@ function Migration({ migration }: { migration: MigrationState }) {
         </Fragment>
       ))}
 
+      <MoveComplete migration={migration} />
       {stateOf("pause").reason !== "not_available" && (
         <Recovery migration={migration} />
       )}

@@ -44,7 +44,7 @@ from langflow.services.deps import get_settings_service
 from langflow.services.knowledge_base_storage.maintenance import identity_matches, process_identity
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable
 
 # A report line holds every failed item, which can pass asyncio's 64 KiB default.
 # ponytail: a line longer than this is skipped, and a run whose report is skipped ends as failed.
@@ -73,10 +73,21 @@ class RunNotFoundError(Exception):
     """No run has this id. A step's earlier run is deleted when the step is run again."""
 
 
-async def start_run(step_id: str, argv: list[str], env: dict[str, str], *, started_by: str) -> str:
+async def start_run(
+    step_id: str,
+    argv: list[str],
+    env: dict[str, str],
+    *,
+    started_by: str,
+    before_spawn: Callable[[], Callable[[], Any] | None] | None = None,
+) -> str:
     """Spawn the command and return the id of its run at once. Its events are read in the background.
 
-    Raises RunActiveError while another run is live, and whatever the spawn raises.
+    before_spawn runs under the start lock, before any child can write. It may refuse
+    admission or persist the state that prevents a concurrent cutover. What it returns,
+    if anything, takes that state back, and is called when the spawn failed with an error
+    that names a file, which shows that the command never ran.
+    Raises RunActiveError while another run is live, and whatever admission or the spawn raises.
     """
     runs = _runs_dir()
     runs.mkdir(parents=True, exist_ok=True)
@@ -86,14 +97,26 @@ async def start_run(step_id: str, argv: list[str], env: dict[str, str], *, start
             earlier = list_runs()
             if any(run["status"] == "running" for run in earlier):
                 raise RunActiveError
-            process = await asyncio.create_subprocess_exec(
-                *argv,
-                env=env,
-                stdin=asyncio.subprocess.DEVNULL,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                limit=_LINE_LIMIT,
-            )
+            take_back = before_spawn() if before_spawn is not None else None
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *argv,
+                    env=env,
+                    stdin=asyncio.subprocess.DEVNULL,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    limit=_LINE_LIMIT,
+                )
+            except OSError as exc:
+                # An error that names a file comes from before the command runs: from the open of /dev/null,
+                # or from the spawn or the exec of the command. Nothing wrote. Any other error is no proof
+                # of that: out of file descriptors, the loop can fail to watch a child it has already made,
+                # and that child runs on. A request that is cancelled here may have started its child as well.
+                if take_back is not None and exc.filename is not None:
+                    # Still under the start lock. If this fails, the state stays as admission left it.
+                    with contextlib.suppress(Exception):
+                        take_back()
+                raise
             try:
                 status = {
                     "run_id": uuid4().hex,
