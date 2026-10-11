@@ -346,7 +346,6 @@
         ],
         "lfx-acedatacloud": [
           "lfx_acedatacloud/extension.json",
-          "lfx_acedatacloud/chat_models.json",
           "lfx_acedatacloud/components/acedatacloud/gpt_image.py"
         ],
         "lfx-openai": [

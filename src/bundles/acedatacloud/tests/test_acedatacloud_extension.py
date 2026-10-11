@@ -25,9 +25,10 @@ from lfx_acedatacloud.components.acedatacloud.suno_task import SunoRetrieveTaskC
 from lfx_acedatacloud.components.base import _payload, generation_inputs
 from lfx_acedatacloud.provider import (
     API_BASE,
+    PUBLIC_CHAT_CATALOG,
     ChatAceDataCloud,
-    _chat_model_ids,
     _is_chat_model,
+    fetch_live_models,
     load_catalog,
 )
 from lfx_acedatacloud.specs import SERVICES
@@ -66,10 +67,78 @@ def test_ui_templates_keep_generation_and_retrieval_forms_separate() -> None:
 def test_branded_chat_model_cannot_change_api_host() -> None:
     model = ChatAceDataCloud(model="gpt-4.1-mini", api_key="test-only", base_url="https://example.org/v1")
     assert str(model.openai_api_base).rstrip("/") == API_BASE
+    assert model.max_retries == 0
     assert any(item["name"] == "gpt-4.1-mini" for item in load_catalog())
-    assert _is_chat_model({"id": "gpt-4.1-mini", "modalities": {"output": ["text"]}})
-    assert not _is_chat_model({"id": "gpt-image-2", "modalities": {"output": ["image"]}})
-    assert len(_chat_model_ids()) == 84
+    assert not any(item["tool_calling"] for item in load_catalog())
+    assert _is_chat_model({"id": "gpt-4.1-mini", "type": "chat"})
+    assert not _is_chat_model({"id": "gpt-image-2", "type": "image"})
+    assert not _is_chat_model({"id": "gpt-4o-image", "type": "chat", "capabilities": ["image_generation"]})
+
+
+def test_live_models_use_current_typed_catalog_and_account_visibility(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+
+    def fake_get(url: str, **kwargs: object) -> httpx.Response:
+        calls.append(url)
+        if url == PUBLIC_CHAT_CATALOG:
+            assert kwargs["params"] == {"type": "chat", "limit": 200}
+            assert "headers" not in kwargs
+            rows = [
+                {"id": "gpt-4.1-mini", "type": "chat", "capabilities": []},
+                {"id": "new-chat-model", "type": "chat", "capabilities": ["reasoning"]},
+                {
+                    "id": "gpt-4o-image",
+                    "type": "chat",
+                    "capabilities": ["image_generation"],
+                },
+                {"id": "image-only", "type": "image"},
+            ]
+        else:
+            assert url == f"{API_BASE}/models"
+            assert kwargs["headers"] == {"Authorization": "Bearer test-secret"}
+            rows = [
+                {"id": "gpt-4.1-mini"},
+                {"id": "new-chat-model"},
+                {"id": "gpt-4o-image"},
+                {"id": "account-only-model"},
+            ]
+        return httpx.Response(200, json={"data": rows}, request=httpx.Request("GET", url))
+
+    monkeypatch.setattr(
+        "lfx_acedatacloud.provider.get_provider_variable_value",
+        lambda *_: "test-secret",
+    )
+    monkeypatch.setattr("lfx_acedatacloud.provider.httpx.get", fake_get)
+    models = fetch_live_models("user-1")
+    assert [item["name"] for item in models] == ["gpt-4.1-mini", "new-chat-model"]
+    assert models[1]["reasoning"] is True
+    assert all(item["tool_calling"] is False for item in models)
+    assert calls == [f"{API_BASE}/models", PUBLIC_CHAT_CATALOG]
+
+
+def test_live_models_do_not_claim_availability_without_both_catalogs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("lfx_acedatacloud.provider.get_provider_variable_value", lambda *_: None)
+    assert fetch_live_models("user-1") == []
+
+    monkeypatch.setattr(
+        "lfx_acedatacloud.provider.get_provider_variable_value",
+        lambda *_: "test-secret",
+    )
+
+    def fake_get(url: str, **_kwargs: object) -> httpx.Response:
+        status = 503 if url == PUBLIC_CHAT_CATALOG else 200
+        return httpx.Response(
+            status,
+            json={"data": [{"id": "gpt-4.1-mini"}]},
+            request=httpx.Request("GET", url),
+        )
+
+    monkeypatch.setattr("lfx_acedatacloud.provider.httpx.get", fake_get)
+    assert fetch_live_models("user-1") == []
 
 
 def test_protocol_special_cases() -> None:

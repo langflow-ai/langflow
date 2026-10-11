@@ -13,7 +13,7 @@ The **Ace Data Cloud** Extension Bundle adds a named chat model provider and ind
 
 ## Model provider
 
-After installation, open **Settings → Model Providers → Ace Data Cloud**. Create an application API key in the [Ace Data Cloud Console](https://platform.acedata.cloud/console/applications), then save it as a Langflow **Credential** global variable named `ACEDATACLOUD_API_KEY`. The provider uses Ace Data Cloud's fixed OpenAI-compatible endpoint and discovers chat model IDs from its authenticated model list. Select a model your account may use; availability and price can change.
+After installation, open **Settings → Model Providers → Ace Data Cloud**. Create an application API key in the [Ace Data Cloud Console](https://platform.acedata.cloud/console/applications), then save it as a Langflow **Credential** global variable named `ACEDATACLOUD_API_KEY`. The provider uses Ace Data Cloud's fixed OpenAI-compatible endpoint and intersects the current public chat catalog with the models visible to your key. New text models can appear without updating the bundle; image-generation variants are excluded. Select a model your account may use; availability and price can change. Agent tool calling is not advertised because the catalog does not declare per-model support.
 
 The [no-key chat model flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/main/examples/chat_model.json) selects `gpt-4.1-mini` and connects Language Model to Chat Output. Configure the Credential variable before running it.
 

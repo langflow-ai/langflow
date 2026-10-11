@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from functools import lru_cache
-from importlib.resources import files
 from typing import Any
 
 import httpx
@@ -13,6 +10,7 @@ from lfx.base.models.model_metadata import create_model_metadata
 from lfx.base.models.model_utils import get_provider_variable_value
 
 API_BASE = "https://api.acedata.cloud/v1"
+PUBLIC_CHAT_CATALOG = "https://platform.acedata.cloud/api/v1/models/"
 PROVIDER = "Ace Data Cloud"
 ICON = "Bot"
 _CATALOG = (
@@ -29,6 +27,7 @@ class ChatAceDataCloud(ChatOpenAI):
 
     def __init__(self, **kwargs: Any) -> None:
         kwargs["base_url"] = API_BASE
+        kwargs["max_retries"] = 0
         super().__init__(**kwargs)
 
 
@@ -40,7 +39,7 @@ def load_catalog() -> list[dict[str, Any]]:
             name=name,
             icon=ICON,
             model_type="llm",
-            tool_calling=True,
+            tool_calling=False,
             default=name == "gpt-4.1-mini",
         )
         for name in _CATALOG
@@ -55,49 +54,49 @@ def fetch_live_models(user_id: Any, model_type: str = "llm") -> list[dict[str, A
     if not key:
         return []
     try:
-        response = httpx.get(
+        available_response = httpx.get(
             f"{API_BASE}/models",
             headers={"Authorization": f"Bearer {key}"},
             timeout=8,
             follow_redirects=False,
         )
-        response.raise_for_status()
-        rows = response.json().get("data", [])
-        names = sorted(
-            {
-                row["id"]
-                for row in rows
-                if isinstance(row, dict) and isinstance(row.get("id"), str) and row["id"] and _is_chat_model(row)
-            }
+        available_response.raise_for_status()
+        available = {
+            row["id"]
+            for row in available_response.json()["data"]
+            if isinstance(row, dict) and isinstance(row.get("id"), str)
+        }
+        catalog_response = httpx.get(
+            PUBLIC_CHAT_CATALOG,
+            params={"type": "chat", "limit": 200},
+            timeout=8,
+            follow_redirects=False,
         )
+        catalog_response.raise_for_status()
+        catalog_rows = catalog_response.json()["data"]
+        chat_models = {row["id"]: row for row in catalog_rows if isinstance(row, dict) and _is_chat_model(row)}
         return [
             create_model_metadata(
                 provider=PROVIDER,
                 name=name,
                 icon=ICON,
                 model_type="llm",
-                tool_calling=True,
+                # The public catalog does not declare tool support per model.
+                tool_calling=False,
+                reasoning="reasoning" in chat_models[name].get("capabilities", []),
                 default=name == "gpt-4.1-mini",
             )
-            for name in names
+            for name in sorted(chat_models.keys() & available)
         ]
-    except (httpx.HTTPError, ValueError, TypeError, AttributeError):
+    except (httpx.HTTPError, KeyError, ValueError, TypeError, AttributeError):
         return []
 
 
 def _is_chat_model(row: dict[str, Any]) -> bool:
-    """Offer only public chat models verified in the Ace model catalog."""
-    if row["id"] not in _chat_model_ids():
-        return False
-    modalities = row.get("modalities") or row.get("architecture") or {}
-    if isinstance(modalities, dict):
-        outputs = modalities.get("output") or modalities.get("output_modalities")
-        if isinstance(outputs, list):
-            return "text" in outputs
-    return True
-
-
-@lru_cache(maxsize=1)
-def _chat_model_ids() -> frozenset[str]:
-    data = json.loads(files("lfx_acedatacloud").joinpath("chat_models.json").read_text())
-    return frozenset(data["models"])
+    """Keep image-generating variants out of the text-model selector."""
+    return (
+        isinstance(row.get("id"), str)
+        and bool(row["id"])
+        and row.get("type") == "chat"
+        and "image_generation" not in row.get("capabilities", [])
+    )
