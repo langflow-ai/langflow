@@ -21,11 +21,24 @@ if TYPE_CHECKING:
     from guard import SecurityConfig
 
 DEFAULT_EXCLUDED_PATHS = "/health,/docs,/redoc,/openapi.json,/api/version"
-DEFAULT_TRUSTED_PROXIES = "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+# Empty by default on purpose: langflow is frequently deployed with clients
+# on the same private network, and trusting private-range peers would let
+# any of them spoof X-Forwarded-For. Behind a reverse proxy, set
+# LANGFLOW_GUARD_TRUSTED_PROXIES to the proxy's addresses.
+DEFAULT_TRUSTED_PROXIES = ""
 
 
-def _env_bool(name: str) -> bool:
-    return os.environ.get(name, "False").strip().lower() in ("1", "true", "yes")
+def _env_bool(name: str, *, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    normalized = raw.strip().lower()
+    if normalized in ("1", "true", "yes", "on"):
+        return True
+    if normalized in ("", "0", "false", "no", "off"):
+        return False
+    msg = f"{name} must be a boolean (1/true/yes/on or 0/false/no/off), got {raw!r}"
+    raise ValueError(msg)
 
 
 def _env_int(name: str, default: int) -> int:
@@ -53,7 +66,17 @@ def build_guard_config() -> SecurityConfig:
         "enable_ip_banning": True,
         "auto_ban_threshold": _env_int("LANGFLOW_GUARD_AUTO_BAN_THRESHOLD", 10),
         "auto_ban_duration": _env_int("LANGFLOW_GUARD_AUTO_BAN_DURATION", 300),
+        # On by default: the advertised behavior is that repeated rate-limit
+        # violations ban the source, not just 429 it. Set
+        # LANGFLOW_GUARD_RATE_LIMIT_AUTO_BAN=0 to keep 429-only enforcement.
+        "enable_rate_limit_auto_ban": _env_bool("LANGFLOW_GUARD_RATE_LIMIT_AUTO_BAN", default=True),
         "enable_penetration_detection": True,
+        # Flow specs, chat prompts, and file uploads are data, not commands
+        # this API executes: signature-scanning bodies false-positives on
+        # ordinary content (SQL/HTML/shell text inside messages). Detection
+        # keeps screening the URL path, query params, and headers; body
+        # scanning is opt-in via LANGFLOW_GUARD_SCAN_BODY.
+        "detection_scan_body": _env_bool("LANGFLOW_GUARD_SCAN_BODY"),
         # In-memory state unless a Redis URL is configured; reuse the
         # deployment's REDIS_URL when present so counters and bans survive
         # langflow's default multi-worker gunicorn setup.
@@ -61,7 +84,7 @@ def build_guard_config() -> SecurityConfig:
         "passive_mode": _env_bool("LANGFLOW_GUARD_PASSIVE_MODE"),
         "blacklist": _env_csv("LANGFLOW_GUARD_BLOCKED_IPS"),
         "blocked_user_agents": list(_env_csv("LANGFLOW_GUARD_BLOCKED_USER_AGENTS")),
-        "trusted_proxies": _env_csv("LANGFLOW_GUARD_TRUSTED_PROXIES", DEFAULT_TRUSTED_PROXIES) or (),
+        "trusted_proxies": _env_csv("LANGFLOW_GUARD_TRUSTED_PROXIES", DEFAULT_TRUSTED_PROXIES),
         "trusted_proxy_depth": _env_int("LANGFLOW_GUARD_TRUSTED_PROXY_DEPTH", 1),
         "exclude_paths": list(_env_csv("LANGFLOW_GUARD_EXCLUDED_PATHS", DEFAULT_EXCLUDED_PATHS)),
         "custom_log_file": _env_str("LANGFLOW_GUARD_LOG_FILE"),
@@ -79,6 +102,14 @@ def build_guard_config() -> SecurityConfig:
         ),
         "enforce_https": _env_bool("LANGFLOW_GUARD_ENFORCE_HTTPS"),
     }
+
+    # Behind a TLS-terminating proxy, enforce_https must read the forwarded
+    # scheme or every request looks like plain HTTP.
+    explicit_xfp = _env_str("LANGFLOW_GUARD_TRUST_X_FORWARDED_PROTO")
+    if explicit_xfp is not None:
+        kwargs["trust_x_forwarded_proto"] = _env_bool("LANGFLOW_GUARD_TRUST_X_FORWARDED_PROTO")
+    else:
+        kwargs["trust_x_forwarded_proto"] = _env_bool("LANGFLOW_GUARD_ENFORCE_HTTPS")
 
     if allowed_ips := _env_csv("LANGFLOW_GUARD_ALLOWED_IPS"):
         kwargs["whitelist"] = allowed_ips

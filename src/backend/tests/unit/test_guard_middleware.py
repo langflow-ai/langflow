@@ -86,3 +86,56 @@ async def test_passive_mode_never_blocks(monkeypatch):
         LANGFLOW_GUARD_BLOCKED_IPS=blocked,
     )
     assert response.status_code == 200
+
+
+async def test_invalid_boolean_fails_loudly(monkeypatch):
+    """LANGFLOW_GUARD_ENABLED=tru must not silently run unprotected."""
+    from langflow.services.security import attach_guard
+
+    monkeypatch.setenv("LANGFLOW_GUARD_ENABLED", "tru")
+    with pytest.raises(ValueError, match="LANGFLOW_GUARD_ENABLED"):
+        attach_guard(FastAPI())
+
+
+async def test_zero_trust_proxy_default(monkeypatch):
+    """No proxy is trusted unless explicitly listed.
+
+    On a LAN deployment a private-range peer must not be able to spoof
+    X-Forwarded-For.
+    """
+    from langflow.services.security import build_guard_config
+
+    monkeypatch.delenv("LANGFLOW_GUARD_ENABLED", raising=False)
+    monkeypatch.delenv("LANGFLOW_GUARD_TRUSTED_PROXIES", raising=False)
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    config = build_guard_config()
+    assert config.trusted_proxies == ()
+    # Bodies are data here (flow specs, prompts, uploads): signature
+    # scanning of bodies is opt-in, URL/query/header screening stays on.
+    assert config.detection_scan_body is False
+
+    monkeypatch.setenv("LANGFLOW_GUARD_TRUSTED_PROXIES", "10.0.0.1, 10.0.0.2")
+    config = build_guard_config()
+    assert config.trusted_proxies == ("10.0.0.1", "10.0.0.2")
+
+
+async def test_rate_limit_auto_ban_flag(monkeypatch):
+    """Rate-limit violations feed the ban engine by default.
+
+    That is the advertised behavior; operators can keep 429-only
+    enforcement, and invalid values fail loudly.
+    """
+    from langflow.services.security import build_guard_config
+
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    monkeypatch.delenv("LANGFLOW_GUARD_RATE_LIMIT_AUTO_BAN", raising=False)
+    config = build_guard_config()
+    assert config.enable_rate_limit_auto_ban is True
+
+    monkeypatch.setenv("LANGFLOW_GUARD_RATE_LIMIT_AUTO_BAN", "0")
+    config = build_guard_config()
+    assert config.enable_rate_limit_auto_ban is False
+
+    monkeypatch.setenv("LANGFLOW_GUARD_RATE_LIMIT_AUTO_BAN", "sometimes")
+    with pytest.raises(ValueError, match="LANGFLOW_GUARD_RATE_LIMIT_AUTO_BAN"):
+        build_guard_config()
