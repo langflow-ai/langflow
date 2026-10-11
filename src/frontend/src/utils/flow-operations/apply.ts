@@ -18,16 +18,30 @@
 import { cloneDeep } from "lodash";
 import { jsonType, valuesEqual } from "./canonical";
 import {
-  findItem,
-  isSorted,
-  type KeyedList,
-  keyedListAt,
-  keyOf,
-  selectorName,
-  sortItems,
-} from "./schema";
+  checkEdge,
+  HANDLE_KEYS,
+  handleForms,
+  inputKey,
+  nodeOutputs,
+  OUTPUTS_PATH,
+} from "./edge-rules";
+import { failedExpectation, invalidOperation } from "./errors";
+import { ListIndex } from "./keyed-lists";
+import { type KeyedList, keyedListAt, keyOf, selectorName } from "./schema";
+import {
+  type ApplyOptions,
+  type FlowGraph,
+  GraphState,
+  NODE_OBJECT_PATHS,
+  requireNodeObjects,
+} from "./state";
 
 export { jsonType } from "./canonical";
+export {
+  FlowOperationError,
+  type FlowOperationErrorName,
+} from "./errors";
+export type { ApplyOptions, FlowGraph } from "./state";
 
 type JsonObject = Record<string, unknown>;
 
@@ -48,29 +62,7 @@ export type FieldUpdate = {
   expect?: Expectation;
 };
 
-export type FlowGraph = JsonObject & {
-  nodes: JsonObject[];
-  edges: JsonObject[];
-};
-
 export type FlowOperation = JsonObject & { type: string };
-
-export type FlowOperationErrorName =
-  | "FlowOperationValidationError"
-  | "FlowOperationPreconditionError"
-  | "FlowDataValidationError";
-
-export class FlowOperationError extends Error {
-  constructor(
-    public readonly name: FlowOperationErrorName,
-    public readonly code: string,
-    message: string,
-  ) {
-    super(message);
-    // Keep instanceof working when compiled to an ES5 target.
-    Object.setPrototypeOf(this, FlowOperationError.prototype);
-  }
-}
 
 export type ApplyResult = {
   flowData: FlowGraph;
@@ -83,42 +75,16 @@ export type ApplyResult = {
   inverseOperations?: FlowOperation[][];
 };
 
-export type ApplyOptions = {
-  /**
-   * Skip the `from_type` checks. The history API redacts every secret
-   * field's value to null, whether it was set or not, so a reader can't tell
-   * which secrets are populated; in a redacted graph a value's JSON type no
-   * longer says anything, and replaying for display must not fail on it.
-   * Never set this when applying operations that will be stored.
-   */
-  redacted?: boolean;
-  /**
-   * Skip the edge rules. Inverses put back a state the history already held,
-   * whatever rules it broke (a stored flow may hold an edge into a field that
-   * no longer exists). Never set this when applying operations that will be
-   * stored.
-   */
-  restoring?: boolean;
-  /** Also compute each operation's inverse; see `ApplyResult`. */
-  inverse?: boolean;
-};
-
 const GRAPH_COLLECTION_KEYS = new Set(["nodes", "edges"]);
-const NODE_OBJECT_PATHS: string[][] = [
-  ["data"],
-  ["data", "node"],
-  ["data", "node", "template"],
-];
 // Replacing these whole objects would record an entire node as one opaque value.
 const FORBIDDEN_WHOLE_NODE_PATHS = new Set(
   NODE_OBJECT_PATHS.map((path) => JSON.stringify(path)),
 );
 // An edge's endpoints are its identity: connecting other nodes is another edge.
 const FORBIDDEN_EDGE_UPDATE_ROOTS = new Set(["id", "source", "target"]);
-// Writes under these edge keys change which output or field the edge connects.
-const EDGE_HANDLE_ROOTS = new Set(["sourceHandle", "targetHandle", "data"]);
+// Writes under these edge keys can change which output or input the edge connects.
+const EDGE_HANDLE_ROOTS = new Set<string>([...HANDLE_KEYS, "data"]);
 const TEMPLATE_PATH = ["data", "node", "template"];
-const OUTPUTS_PATH = ["data", "node", "outputs"];
 const JSON_TYPE_NAMES = new Set([
   "object",
   "array",
@@ -127,29 +93,6 @@ const JSON_TYPE_NAMES = new Set([
   "boolean",
   "null",
 ]);
-
-function invalidOperation(
-  message: string,
-  code = "FLOW_OPERATION_INVALID",
-): FlowOperationError {
-  return new FlowOperationError("FlowOperationValidationError", code, message);
-}
-
-function failedExpectation(message: string): FlowOperationError {
-  return new FlowOperationError(
-    "FlowOperationPreconditionError",
-    "EXPECTATION_FAILED",
-    message,
-  );
-}
-
-function invalidGraph(message: string): FlowOperationError {
-  return new FlowOperationError(
-    "FlowDataValidationError",
-    "FLOW_GRAPH_INVALID",
-    message,
-  );
-}
 
 function isObject(value: unknown): value is JsonObject {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -335,164 +278,103 @@ function parseOperation(operation: unknown): ParsedOperation {
   }
 }
 
-// --- Graph state ---------------------------------------------------------------------
+// --- Walking a path --------------------------------------------------------------------
 
-class GraphState {
-  readonly flowData: JsonObject;
-  readonly nodes = new Map<string, JsonObject>();
-  readonly edges = new Map<string, JsonObject>();
-  readonly edgeIdsByNode = new Map<string, Set<string>>();
-  readonly baseNodeIds = new Set<string>();
-  readonly baseEdgeIds = new Set<string>();
-  // Containers this call made, and so may change. Everything else is shared
-  // with the base graph and is never changed.
-  private readonly owned = new WeakSet<object>();
+// What a write replaced or removed when there was nothing there; undefined is not JSON, but null is a value.
+const ABSENT = Symbol("absent");
 
-  constructor(
-    base: unknown,
-    readonly options: ApplyOptions,
-  ) {
-    validateBase(base);
-    const graph = base as FlowGraph;
-    this.flowData = { ...graph };
-    for (const node of graph.nodes) {
-      this.nodes.set(node.id as string, node);
-      this.baseNodeIds.add(node.id as string);
-    }
-    for (const edge of graph.edges) {
-      this.insertEdge(edge);
-      this.baseEdgeIds.add(edge.id as string);
-    }
-  }
+/** A keyed list item a path passes through. */
+type ItemStep = { items: ListIndex; key: string };
 
-  insertEdge(edge: JsonObject): void {
-    const id = edge.id as string;
-    this.edges.set(id, edge);
-    for (const endpoint of [edge.source, edge.target] as string[]) {
-      if (!this.edgeIdsByNode.has(endpoint))
-        this.edgeIdsByNode.set(endpoint, new Set());
-      this.edgeIdsByNode.get(endpoint)!.add(id);
-    }
-  }
+type Walk = {
+  parent: unknown;
+  steps: ItemStep[];
+  // The index of the first segment that does not exist, or null when every one does.
+  missingAt: number | null;
+};
 
-  /** Remove edges by id; return the ones that existed, in the order given. */
-  removeEdges(ids: string[]): JsonObject[] {
-    const removed: JsonObject[] = [];
-    for (const id of dedupe(ids)) {
-      const edge = this.edges.get(id);
-      if (!edge) continue;
-      this.edges.delete(id);
-      removed.push(edge);
-      for (const endpoint of [edge.source, edge.target] as string[]) {
-        const incident = this.edgeIdsByNode.get(endpoint);
-        incident?.delete(id);
-        if (incident && incident.size === 0)
-          this.edgeIdsByNode.delete(endpoint);
-      }
-    }
-    return removed;
-  }
-
-  /** Edge ids in the order the graph lists the edges. */
-  edgesInGraphOrder(ids: Iterable<string> | undefined): string[] {
-    const wanted = new Set(ids ?? []);
-    if (wanted.size === 0) return [];
-    return [...this.edges.keys()].filter((id) => wanted.has(id));
-  }
-
-  /**
-   * A container this call may change: `value` itself if this call made it,
-   * else a shallow copy. Copying only the containers along a written path
-   * keeps the base untouched and shares everything else with it.
-   */
-  readonly own = <T extends object>(value: T): T => {
-    if (this.owned.has(value)) return value;
-    const copy = (Array.isArray(value) ? [...value] : { ...value }) as T;
-    this.owned.add(copy);
-    return copy;
+/**
+ * Follow `path` to the value holding its last segment, once. Every container
+ * on the way is replaced by one this call owns, so the write changes only
+ * containers the call made. A segment that does not fit the value it reads,
+ * such as a key of a list, is an error rather than a missing value.
+ */
+function walk(
+  state: GraphState,
+  root: JsonObject,
+  node: JsonObject | null,
+  path: PathSegment[],
+  context: string,
+): Walk {
+  let value: unknown = root;
+  const steps: ItemStep[] = [];
+  const enter = (container: JsonObject | unknown[], at: string | number) => {
+    const child = (container as Record<string | number, unknown>)[at];
+    if (child === null || typeof child !== "object") return child;
+    const owned = state.own(child);
+    (container as Record<string | number, unknown>)[at] = owned;
+    return owned;
   };
-
-  writableNode(id: string): JsonObject {
-    const node = this.own(this.nodes.get(id)!);
-    this.nodes.set(id, node);
-    return node;
-  }
-
-  writableEdge(id: string): JsonObject {
-    const edge = this.own(this.edges.get(id)!);
-    this.edges.set(id, edge);
-    return edge;
-  }
-
-  finalize(): FlowGraph {
-    return {
-      ...this.flowData,
-      nodes: [...this.nodes.values()],
-      edges: [...this.edges.values()],
-    } as FlowGraph;
-  }
-}
-
-function validateBase(base: unknown): void {
-  if (!isObject(base)) throw invalidGraph("flow data must be an object");
-  const { nodes, edges } = base;
-  if (!Array.isArray(nodes))
-    throw invalidGraph("flow data nodes must be a list");
-  if (!Array.isArray(edges))
-    throw invalidGraph("flow data edges must be a list");
-  const nodeIds = new Set<string>();
-  for (const node of nodes) {
-    if (!isObject(node)) throw invalidGraph("node must be an object");
-    if (!isNonEmptyString(node.id))
-      throw invalidGraph("node must have a non-empty string id");
-    if (nodeIds.has(node.id)) throw invalidGraph("duplicate node id");
-    nodeIds.add(node.id);
-    requireNodeObjects(node, invalidGraph);
-  }
-  const edgeIds = new Set<string>();
-  for (const edge of edges) {
-    if (!isObject(edge)) throw invalidGraph("edge must be an object");
-    if (!isNonEmptyString(edge.id))
-      throw invalidGraph("edge must have a non-empty string id");
-    if (edgeIds.has(edge.id)) throw invalidGraph("duplicate edge id");
-    edgeIds.add(edge.id);
-    for (const endpoint of [edge.source, edge.target]) {
-      if (!isNonEmptyString(endpoint) || !nodeIds.has(endpoint))
-        throw invalidGraph("edge endpoint must name an existing node");
+  for (let index = 0; index < path.length - 1; index++) {
+    const part = path[index];
+    if (!isSelector(part)) {
+      if (!isObject(value))
+        throw invalidOperation(
+          `${context}.path[${index}]: ${part} reads a key of a value that is not an object`,
+        );
+      if (!(part in value))
+        return { parent: undefined, steps, missingAt: index };
+      value = enter(value, part);
+      continue;
     }
+    const items = keyedList(state, node, path, index, value, context);
+    const key = selectorKey(part);
+    const slot = items.slots.get(key);
+    if (slot === undefined)
+      return { parent: undefined, steps, missingAt: index };
+    value = enter(items.items, slot);
+    steps.push({ items, key });
   }
+  return { parent: value, steps, missingAt: null };
 }
 
-function requireNodeObjects(
-  node: JsonObject,
-  error: (message: string) => FlowOperationError,
-): void {
-  let value: unknown = node;
-  for (const path of NODE_OBJECT_PATHS) {
-    value = isObject(value) ? value[path[path.length - 1]] : undefined;
-    if (!isObject(value))
-      throw error(`node ${path.join(".")} must be an object`);
+/** Whether the last segment of `path` exists in `parent`, and its value. */
+function readLast(
+  state: GraphState,
+  node: JsonObject | null,
+  parent: unknown,
+  path: PathSegment[],
+  context: string,
+): { exists: boolean; value?: unknown } {
+  const last = path[path.length - 1];
+  if (!isSelector(last)) {
+    if (!isObject(parent))
+      throw invalidOperation(
+        `${context}.path[${path.length - 1}]: ${last} reads a key of a value that is not an object`,
+      );
+    return last in parent
+      ? { exists: true, value: parent[last] }
+      : { exists: false };
   }
+  const items = keyedList(state, node, path, path.length - 1, parent, context);
+  const slot = items.slots.get(selectorKey(last));
+  return slot === undefined
+    ? { exists: false }
+    : { exists: true, value: items.items[slot] };
 }
 
-// --- Walking paths ---------------------------------------------------------------------
-
-type ListAt = (prefix: PathSegment[]) => KeyedList | null;
-
-const noKeyedLists: ListAt = () => null;
-
-function nodeListAt(node: JsonObject): ListAt {
-  return (prefix) => keyedListAt(node, prefix);
-}
-
-/** Check that `path[index]` is the right kind of selector on a list the schema declares keyed. */
-function keyedListFor(
+/** The index of the keyed list `path[index]` selects from, checking the selector fits it. */
+function keyedList(
+  state: GraphState,
+  node: JsonObject | null,
   path: PathSegment[],
   index: number,
-  listAt: ListAt,
+  value: unknown,
   context: string,
-): KeyedList {
-  const list = listAt(path.slice(0, index));
+): ListIndex {
+  const list: KeyedList | null = node
+    ? keyedListAt(node, path.slice(0, index))
+    : null;
   if (!list)
     throw invalidOperation(
       `${context}.path[${index}]: selector on a list the node schema does not declare keyed`,
@@ -502,109 +384,29 @@ function keyedListFor(
     throw invalidOperation(
       `${context}.path[${index}]: items of this list are selected with {"${name}": ...}`,
     );
-  return list;
-}
-
-function selectedList(
-  container: unknown,
-  path: PathSegment[],
-  index: number,
-  listAt: ListAt,
-  context: string,
-): [KeyedList, unknown[]] {
-  const list = keyedListFor(path, index, listAt, context);
-  if (!Array.isArray(container))
+  if (!Array.isArray(value))
     throw invalidOperation(
       `${context}.path[${index}]: selector on a value that is not a list`,
     );
-  return [list, container];
-}
-
-type Own = <T extends object>(value: T) => T;
-
-/**
- * The container holding the last path segment; every earlier segment must
- * exist. Each container on the way is replaced by `own(container)`, so the
- * write changes only containers the caller owns.
- */
-function walkToParent(
-  root: JsonObject,
-  path: PathSegment[],
-  listAt: ListAt,
-  context: string,
-  own: Own,
-): unknown {
-  let value: unknown = root;
-  const enter = (container: JsonObject | unknown[], at: string | number) => {
-    const child = (container as Record<string | number, unknown>)[at];
-    if (child === null || typeof child !== "object") return child;
-    const owned = own(child);
-    (container as Record<string | number, unknown>)[at] = owned;
-    return owned;
-  };
-  for (let index = 0; index < path.length - 1; index++) {
-    const part = path[index];
-    if (!isSelector(part)) {
-      if (!isObject(value) || !(part in value))
-        throw invalidOperation(
-          `${context}.path[${index}]: object path part must be an existing string key: ${part}`,
-        );
-      value = enter(value, part);
-      continue;
-    }
-    const [list, items] = selectedList(value, path, index, listAt, context);
-    const position = findItem(list, items, selectorKey(part));
-    if (position === -1)
-      throw invalidOperation(
-        `${context}.path[${index}]: list item does not exist: ${selectorKey(part)}`,
-      );
-    value = enter(items, position);
-  }
-  return value;
-}
-
-/** Whether `path` exists, and its value, without changing anything. */
-function readPath(
-  root: JsonObject,
-  path: PathSegment[],
-  listAt: ListAt,
-  context: string,
-): { exists: boolean; value?: unknown } {
-  let value: unknown = root;
-  for (let index = 0; index < path.length; index++) {
-    const part = path[index];
-    if (!isSelector(part)) {
-      if (!isObject(value) || !(part in value)) return { exists: false };
-      value = value[part];
-      continue;
-    }
-    const list = keyedListFor(path, index, listAt, context);
-    if (!Array.isArray(value)) return { exists: false };
-    const position = findItem(list, value, selectorKey(part));
-    if (position === -1) return { exists: false };
-    value = value[position];
-  }
-  return { exists: true, value };
+  return state.listIndex(list, value, `${context}.path[${index}]`);
 }
 
 function checkExpectation(
-  root: JsonObject,
   update: FieldUpdate,
-  listAt: ListAt,
+  current: { exists: boolean; value?: unknown },
   context: string,
 ): void {
   if (!update.expect) return;
-  const { exists, value } = readPath(root, update.path, listAt, context);
   if ("absent" in update.expect) {
-    if (exists)
+    if (current.exists)
       throw failedExpectation(
         `${context}: expected ${pathLabel(update.path)} to be absent, but it exists`,
       );
     return;
   }
-  if (!exists || !valuesEqual(value, update.expect.value))
+  if (!current.exists || !valuesEqual(current.value, update.expect.value))
     throw failedExpectation(
-      `${context}: expected ${pathLabel(update.path)} to hold the given value, but found ${exists ? "a different value" : "nothing"}`,
+      `${context}: expected ${pathLabel(update.path)} to hold the given value, but found ${current.exists ? "a different value" : "nothing"}`,
     );
 }
 
@@ -613,7 +415,6 @@ function checkExpectation(
  * is declared with `from_type`, which also makes it a precondition.
  */
 function checkTypeChange(
-  exists: boolean,
   current: unknown,
   update: FieldUpdate,
   context: string,
@@ -621,6 +422,7 @@ function checkTypeChange(
 ): void {
   // Types in a redacted graph are not reliable; see ApplyOptions.
   if (redacted) return;
+  const exists = current !== ABSENT;
   if (update.from_type == null) {
     if (exists && jsonType(current) !== jsonType(update.value))
       throw invalidOperation(
@@ -636,100 +438,93 @@ function checkTypeChange(
     );
 }
 
-/** Apply one set_field or delete_field. Return what a delete removed, if anything. */
-function applyFieldUpdate(
-  root: JsonObject,
+/** Write or delete the last segment of the update's path. Return what it replaced or removed, or ABSENT. */
+function writeLast(
+  state: GraphState,
+  node: JsonObject | null,
+  parent: unknown,
   update: FieldUpdate,
-  listAt: ListAt,
   context: string,
-  redacted: boolean,
-  own: Own,
-): { removed: boolean; value?: unknown } {
+): unknown {
   const { path } = update;
-  const parent = walkToParent(root, path, listAt, context, own);
   const last = path[path.length - 1];
-  let result: { removed: boolean; value?: unknown } = { removed: false };
-
+  const redacted = state.options.redacted ?? false;
   if (!isSelector(last)) {
     if (!isObject(parent))
       throw invalidOperation(
-        update.op === "delete_field"
-          ? `${context}: delete only supports object properties and keyed list items`
-          : `${context}: path must end at an object property or a keyed list item`,
+        `${context}: path must end at an object property or a keyed list item`,
       );
-    if (update.op === "set_field") {
-      checkTypeChange(last in parent, parent[last], update, context, redacted);
-      parent[last] = clone(update.value);
-    } else if (last in parent) {
-      result = { removed: true, value: parent[last] };
+    const before = last in parent ? parent[last] : ABSENT;
+    if (update.op === "delete_field") {
       delete parent[last];
+      return before;
     }
-  } else {
-    const [list, items] = selectedList(
-      parent,
-      path,
-      path.length - 1,
-      listAt,
-      context,
-    );
-    const key = selectorKey(last);
-    const position = findItem(list, items, key);
-    if (update.op === "set_field") {
-      if (keyOf(list, update.value) !== key)
-        throw invalidOperation(
-          `${context}: a list item written at a selector must carry the same key: ${key}`,
-        );
-      checkTypeChange(
-        position !== -1,
-        position !== -1 ? items[position] : undefined,
-        update,
-        context,
-        redacted,
-      );
-      const value = clone(update.value);
-      if (position === -1) items.push(value);
-      else items[position] = value;
-      sortItems(list, items);
-    } else if (position !== -1) {
-      result = { removed: true, value: items.splice(position, 1)[0] };
-    }
+    checkTypeChange(before, update, context, redacted);
+    parent[last] = clone(update.value);
+    return before;
   }
-
-  checkItemKeysUnchanged(root, path, listAt, context);
-  return result;
+  const items = keyedList(state, node, path, path.length - 1, parent, context);
+  const key = selectorKey(last);
+  const exists = items.slots.has(key);
+  if (update.op === "delete_field") return exists ? items.remove(key) : ABSENT;
+  if (keyOf(items.list, update.value) !== key)
+    throw invalidOperation(
+      `${context}: a list item written at a selector must carry the same key: ${key}`,
+    );
+  checkTypeChange(
+    exists ? items.items[items.slots.get(key)!] : ABSENT,
+    update,
+    context,
+    redacted,
+  );
+  const value = clone(update.value);
+  if (exists) return items.replace(key, value, context, invalidOperation);
+  items.add(value, context, invalidOperation);
+  return ABSENT;
 }
 
-/** After a write inside a keyed list item, the item must keep its key; re-sort a moved table row. */
-function checkItemKeysUnchanged(
+/**
+ * Apply one set_field or delete_field to `root`, a node or an edge, walking its
+ * path once. `node` is the node whose schema declares keyed lists, or null for
+ * an edge, which has none. Returns the value the write replaced or removed
+ * (ABSENT when there was none), and records its inverse first when asked.
+ */
+function applyFieldUpdate(
+  state: GraphState,
   root: JsonObject,
-  path: PathSegment[],
-  listAt: ListAt,
+  node: JsonObject | null,
+  update: FieldUpdate,
   context: string,
-): void {
-  let value: unknown = root;
-  for (let index = 0; index < path.length - 1; index++) {
-    const part = path[index];
-    if (!isSelector(part)) {
-      value = isObject(value) ? value[part] : undefined;
-      continue;
-    }
-    const list = listAt(path.slice(0, index)) as KeyedList;
-    const items = value as unknown[];
-    const position = findItem(list, items, selectorKey(part));
-    if (position === -1)
-      throw invalidOperation(
-        `${context}: cannot change a list item's ${selectorName(list)}`,
-      );
-    if (
-      list.kind === "table" &&
-      index + 2 === path.length &&
-      path[index + 1] === list.position
-    ) {
-      sortItems(list, items);
-      return;
-    }
-    value = items[position];
+  inverses: FieldInverses | null,
+): unknown {
+  const { path } = update;
+  const { parent, steps, missingAt } = walk(state, root, node, path, context);
+  const current =
+    missingAt === null
+      ? readLast(state, node, parent, path, context)
+      : { exists: false };
+  checkExpectation(update, current, context);
+  if (missingAt !== null) {
+    const part = path[missingAt];
+    throw invalidOperation(
+      isSelector(part)
+        ? `${context}.path[${missingAt}]: list item does not exist: ${selectorKey(part)}`
+        : `${context}.path[${missingAt}]: object path part must be an existing string key: ${part}`,
+    );
   }
+  inverses?.record(state, node, parent, update, current, context);
+  const before = writeLast(state, node, parent, update, context);
+  // A write inside a keyed list item must leave its key alone, and a table row its position.
+  for (const step of [...steps].reverse()) {
+    const item = step.items.items[step.items.slots.get(step.key)!];
+    if (keyOf(step.items.list, item) !== step.key)
+      throw invalidOperation(
+        `${context}: cannot change a list item's ${selectorName(step.items.list)}`,
+      );
+    if (step.items.list.kind === "table")
+      step.items.requirePosition(item, context, invalidOperation);
+  }
+  return before;
 }
 
 // --- Inverses of field writes ------------------------------------------------------------
@@ -742,81 +537,59 @@ function checkItemKeysUnchanged(
 class FieldInverses {
   private readonly entries: FieldUpdate[] = [];
 
-  /** Record what undoes `update`; call before applying it. */
-  before(
-    root: JsonObject,
+  /** Record what undoes `update`; called before it is applied. */
+  record(
+    state: GraphState,
+    node: JsonObject | null,
+    parent: unknown,
     update: FieldUpdate,
-    listAt: ListAt,
+    current: { exists: boolean; value?: unknown },
     context: string,
-  ) {
-    const whole = this.wholeListToRestore(root, update, listAt, context);
-    if (whole) {
-      this.entries.push(whole);
-      return;
-    }
-    const { exists, value } = readPath(root, update.path, listAt, context);
-    if (!exists) {
-      if (update.op === "set_field")
+  ): void {
+    const { path } = update;
+    const last = path[path.length - 1];
+    if (isSelector(last) && update.op === "delete_field" && current.exists) {
+      // Removing a natural-list item that is not last cannot be undone by a
+      // selector write, which appends; the whole list is written back. A
+      // table's order is its rows' positions, so its rows need no such care.
+      const items = keyedList(
+        state,
+        node,
+        path,
+        path.length - 1,
+        parent,
+        context,
+      );
+      if (
+        items.list.kind === "natural" &&
+        items.slots.get(selectorKey(last)) !== items.items.length - 1
+      ) {
         this.entries.push({
           id: update.id,
-          op: "delete_field",
-          path: update.path,
+          op: "set_field",
+          path: path.slice(0, -1),
+          value: cloneDeep(items.items),
         });
+        return;
+      }
+    }
+    if (!current.exists) {
+      if (update.op === "set_field")
+        this.entries.push({ id: update.id, op: "delete_field", path });
       return;
     }
     const entry: FieldUpdate = {
       id: update.id,
       op: "set_field",
-      path: update.path,
-      value,
+      path,
+      value: current.value,
     };
-    if (update.op === "set_field" && jsonType(value) !== jsonType(update.value))
+    if (
+      update.op === "set_field" &&
+      jsonType(current.value) !== jsonType(update.value)
+    )
       entry.from_type = jsonType(update.value);
     this.entries.push(entry);
-  }
-
-  /**
-   * A write that reorders a list in a way a selector write cannot reverse
-   * (removing a natural-key item that was not last, or sorting a table that
-   * was not sorted) is undone by writing the whole list back.
-   */
-  private wholeListToRestore(
-    root: JsonObject,
-    update: FieldUpdate,
-    listAt: ListAt,
-    context: string,
-  ): FieldUpdate | null {
-    const { path } = update;
-    let value: unknown = root;
-    for (let index = 0; index < path.length; index++) {
-      const part = path[index];
-      if (!isSelector(part)) {
-        value = isObject(value) ? value[part] : undefined;
-        continue;
-      }
-      const list = keyedListFor(path, index, listAt, context);
-      if (!Array.isArray(value)) return null;
-      const items = value;
-      const position = findItem(list, items, selectorKey(part));
-      const last = index === path.length - 1;
-      const reorders =
-        list.kind === "table"
-          ? !isSorted(list, items)
-          : last &&
-            update.op === "delete_field" &&
-            position !== -1 &&
-            position !== items.length - 1;
-      if (reorders)
-        return {
-          id: update.id,
-          op: "set_field",
-          path: path.slice(0, index),
-          value: cloneDeep(items),
-        };
-      if (position === -1) return null;
-      value = items[position];
-    }
-    return null;
   }
 
   operations(type: string): FlowOperation[] {
@@ -846,6 +619,11 @@ const NOTHING: Applied = { forward: [], inverse: [] };
 
 function forwardUpdates(type: string, updates: FieldUpdate[]): FlowOperation {
   return { type, updates: cloneDeep(updates) };
+}
+
+/** False for a delete that found nothing to remove, which is not recorded. */
+function changed(update: FieldUpdate, before: unknown): boolean {
+  return !(update.op === "delete_field" && before === ABSENT);
 }
 
 function applyAddNodes(state: GraphState, nodes: JsonObject[]): Applied {
@@ -891,60 +669,74 @@ function rejectRepeatedPaths(updates: FieldUpdate[], kind: string): void {
 }
 
 function samePrefix(path: PathSegment[], prefix: string[]): boolean {
-  return prefix.every((part, index) => path[index] === part);
+  return (
+    path.length >= prefix.length &&
+    prefix.every((part, index) => path[index] === part)
+  );
 }
 
-/** The edges a removed template field or output was connected through. */
-function edgesAttachedTo(
+/** The edges a write left without an end: into a removed template field, or from or into a removed output. */
+function detachedEdges(
   state: GraphState,
   nodeId: string,
-  path: PathSegment[],
-  removed: unknown,
-): string[] {
-  let fieldName: string | null = null;
-  let outputName: string | null = null;
-  const last = path[path.length - 1];
+  update: FieldUpdate,
+  before: unknown,
+): Set<string> {
+  const { path } = update;
+  if (before === ABSENT) return new Set();
   if (
+    update.op === "delete_field" &&
     path.length === TEMPLATE_PATH.length + 1 &&
-    samePrefix(path, TEMPLATE_PATH) &&
-    typeof last === "string" &&
-    isObject(removed)
-  )
-    fieldName = last;
-  else if (
-    path.length === OUTPUTS_PATH.length + 1 &&
-    samePrefix(path, OUTPUTS_PATH) &&
-    isSelector(last) &&
-    "key" in last
-  )
-    outputName = last.key;
-  else return [];
-
-  const attached: string[] = [];
-  for (const edgeId of state.edgesInGraphOrder(
-    state.edgeIdsByNode.get(nodeId),
-  )) {
-    const edge = state.edges.get(edgeId)!;
-    const [sourceHandle, targetHandle] = edgeHandles(edge);
-    if (fieldName !== null) {
-      if (edge.target === nodeId && targetHandle?.fieldName === fieldName)
-        attached.push(edgeId);
-      continue;
-    }
-    const fromOutput =
-      edge.source === nodeId && sourceHandle?.name === outputName;
-    const intoLoopOutput =
-      edge.target === nodeId && loopTargetOutput(targetHandle) === outputName;
-    if (fromOutput || intoLoopOutput) attached.push(edgeId);
+    samePrefix(path, TEMPLATE_PATH)
+  ) {
+    const field = path[path.length - 1] as string;
+    return new Set(
+      state
+        .connections(nodeId)
+        .inputs.get(inputKey({ kind: "field", name: field })) ?? [],
+    );
   }
-  return attached;
+  if (!samePrefix(path, OUTPUTS_PATH)) return new Set();
+  let removedOutputs: string[];
+  if (path.length === OUTPUTS_PATH.length + 1 && update.op === "delete_field") {
+    removedOutputs = [selectorKey(path[path.length - 1] as Selector)];
+  } else if (path.length === OUTPUTS_PATH.length) {
+    // The whole list was replaced or deleted: the outputs it no longer has are gone.
+    if (!Array.isArray(before))
+      throw invalidOperation(
+        `node ${nodeId}: data.node.outputs must be a list`,
+      );
+    const list = keyedListAt(state.nodes.get(nodeId), OUTPUTS_PATH)!;
+    const old = new ListIndex(
+      list,
+      before,
+      `node ${nodeId}: data.node.outputs`,
+      invalidOperation,
+    );
+    const now = nodeOutputs(state, nodeId);
+    removedOutputs = [...old.slots.keys()].filter(
+      (name) => !now?.slots.has(name),
+    );
+  } else return new Set();
+  if (removedOutputs.length === 0) return new Set();
+  const connections = state.connections(nodeId);
+  const detached = new Set<string>();
+  for (const name of removedOutputs) {
+    for (const id of connections.outputs.get(name) ?? []) detached.add(id);
+    for (const id of connections.inputs.get(
+      inputKey({ kind: "output", name }),
+    ) ?? [])
+      detached.add(id);
+  }
+  return detached;
 }
 
 function applyUpdateNodes(state: GraphState, updates: FieldUpdate[]): Applied {
   if (updates.length === 0) return NOTHING;
   rejectRepeatedPaths(updates, "update_nodes");
   const inverses = state.options.inverse ? new FieldInverses() : null;
-  const cascaded: string[] = [];
+  const applied: FieldUpdate[] = [];
+  const detached = new Set<string>();
   updates.forEach((update, index) => {
     const context = `update_nodes[${index}]`;
     if (!state.nodes.has(update.id))
@@ -959,30 +751,26 @@ function applyUpdateNodes(state: GraphState, updates: FieldUpdate[]): Applied {
       throw invalidOperation(
         `${context}.path: cannot update entire node data objects at path ${pathLabel(update.path)}`,
       );
-    checkExpectation(
-      state.nodes.get(update.id)!,
-      update,
-      nodeListAt(state.nodes.get(update.id)!),
-      context,
-    );
     const node = state.writableNode(update.id);
-    const listAt = nodeListAt(node);
-    inverses?.before(node, update, listAt, context);
-    const { removed, value } = applyFieldUpdate(
+    const before = applyFieldUpdate(
+      state,
+      node,
       node,
       update,
-      listAt,
       context,
-      state.options.redacted ?? false,
-      state.own,
+      inverses,
     );
-    if (removed)
-      cascaded.push(...edgesAttachedTo(state, update.id, update.path, value));
+    if (changed(update, before)) applied.push(update);
+    // Inverses add back every edge they take away, so restoring never cascades.
+    if (!state.options.restoring)
+      for (const id of detachedEdges(state, update.id, update, before))
+        detached.add(id);
   });
 
-  const forward = [forwardUpdates("update_nodes", updates)];
+  const forward =
+    applied.length > 0 ? [forwardUpdates("update_nodes", applied)] : [];
   const inverse = inverses?.operations("update_nodes") ?? [];
-  const removedEdges = state.removeEdges(cascaded);
+  const removedEdges = state.removeEdges(detached);
   if (removedEdges.length > 0) {
     forward.push({
       type: "delete_edges",
@@ -997,7 +785,9 @@ function applyUpdateEdges(state: GraphState, updates: FieldUpdate[]): Applied {
   if (updates.length === 0) return NOTHING;
   rejectRepeatedPaths(updates, "update_edges");
   const inverses = state.options.inverse ? new FieldInverses() : null;
-  const endpointsBefore = new Map<string, string>();
+  const applied: FieldUpdate[] = [];
+  // The handles of each edge the batch writes under a handle key, as they were before.
+  const handlesBefore = new Map<string, JsonObject>();
   updates.forEach((update, index) => {
     const context = `update_edges[${index}]`;
     if (!state.edges.has(update.id))
@@ -1011,36 +801,35 @@ function applyUpdateEdges(state: GraphState, updates: FieldUpdate[]): Applied {
       throw invalidOperation(
         `${context}.path: cannot modify an edge's ${root}; connecting different nodes is a different edge, so delete it and add another`,
       );
-    const current = state.edges.get(update.id)!;
+    const edge = state.writableEdge(update.id);
     if (
       typeof root === "string" &&
       EDGE_HANDLE_ROOTS.has(root) &&
-      !endpointsBefore.has(update.id)
+      !handlesBefore.has(update.id)
     )
-      endpointsBefore.set(update.id, edgeEndpointNames(current));
-    checkExpectation(current, update, noKeyedLists, context);
-    const edge = state.writableEdge(update.id);
-    inverses?.before(edge, update, noKeyedLists, context);
-    applyFieldUpdate(
+      handlesBefore.set(update.id, handleForms(edge));
+    const before = applyFieldUpdate(
+      state,
       edge,
+      null,
       update,
-      noKeyedLists,
       context,
-      state.options.redacted ?? false,
-      state.own,
+      inverses,
     );
+    if (changed(update, before)) applied.push(update);
   });
 
-  for (const [edgeId, before] of endpointsBefore) {
+  // An edge whose handles the batch changed is rewired, so it is checked like a new one.
+  for (const [edgeId, before] of handlesBefore) {
     const edge = state.edges.get(edgeId)!;
-    // Only an edge that now connects a different output or field makes a new
-    // claim; rewriting the types or data of an edge where it stands keeps
-    // legacy edges editable.
-    if (edgeEndpointNames(edge) !== before)
-      checkEdgeRules(state, edge, `update_edges: edge ${edgeId}`);
+    if (valuesEqual(handleForms(edge), before)) continue;
+    state.forgetHandles(edge);
+    if (!state.options.restoring) checkEdge(state, edge);
+    state.reindexHandles(edge);
   }
   return {
-    forward: [forwardUpdates("update_edges", updates)],
+    forward:
+      applied.length > 0 ? [forwardUpdates("update_edges", applied)] : [],
     inverse: inverses?.operations("update_edges") ?? [],
   };
 }
@@ -1055,17 +844,15 @@ function applyDeleteNodes(state: GraphState, requested: string[]): Applied {
       );
   }
   const removedNodes: JsonObject[] = [];
-  const incidentEdges: string[] = [];
+  const incident = new Set<string>();
   for (const id of ids) {
     const node = state.nodes.get(id);
     if (!node) continue;
-    state.nodes.delete(id);
+    for (const edgeId of state.removeNode(id)) incident.add(edgeId);
     removedNodes.push(node);
-    incidentEdges.push(...state.edgesInGraphOrder(state.edgeIdsByNode.get(id)));
-    state.edgeIdsByNode.delete(id);
   }
   if (removedNodes.length === 0) return NOTHING;
-  const removedEdges = state.removeEdges(incidentEdges);
+  const removedEdges = state.removeEdges(incident);
   const forward: FlowOperation[] = [
     {
       type: "delete_nodes",
@@ -1110,7 +897,7 @@ function applyAddEdges(state: GraphState, edges: JsonObject[]): Applied {
       );
     seen.add(id);
     const payload = clone(edge);
-    if (!state.options.restoring) checkEdgeRules(state, payload, context);
+    if (!state.options.restoring) checkEdge(state, payload);
     state.insertEdge(payload);
     payloads.push(payload);
   });
@@ -1169,139 +956,6 @@ function applyUpdateMetadata(
   if (Object.keys(restore).length > 0) inverse.fields = restore;
   if (remove.length > 0) inverse.delete_keys = remove;
   return { forward: [forward], inverse: [inverse] };
-}
-
-// --- Edge rules ------------------------------------------------------------------------
-
-/** Parse a handle string, JSON with `œ` standing for `"`, into its object. */
-function parseHandle(handle: unknown): JsonObject | null {
-  if (isObject(handle)) return handle;
-  if (typeof handle !== "string") return null;
-  try {
-    const parsed = JSON.parse(handle.replaceAll("œ", '"'));
-    return isObject(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-/** An edge's source and target handle objects, preferring `data` over the strings. */
-function edgeHandles(edge: JsonObject): [JsonObject | null, JsonObject | null] {
-  const data = isObject(edge.data) ? edge.data : {};
-  const source = isObject(data.sourceHandle) ? data.sourceHandle : null;
-  const target = isObject(data.targetHandle) ? data.targetHandle : null;
-  return [
-    source ?? parseHandle(edge.sourceHandle),
-    target ?? parseHandle(edge.targetHandle),
-  ];
-}
-
-/**
- * The output a loop feedback edge targets, or null. A Loop component takes
- * its feedback on one of its own outputs: the target handle then names an
- * output (`name`) instead of a template field (`fieldName`).
- */
-function loopTargetOutput(targetHandle: JsonObject | null): string | null {
-  if (!targetHandle || "fieldName" in targetHandle) return null;
-  return typeof targetHandle.name === "string" ? targetHandle.name : null;
-}
-
-function edgeEndpointNames(edge: JsonObject): string {
-  const [sourceHandle, targetHandle] = edgeHandles(edge);
-  const target = !targetHandle
-    ? null
-    : "fieldName" in targetHandle
-      ? ["field", targetHandle.fieldName ?? null]
-      : ["output", targetHandle.name ?? null];
-  return JSON.stringify([sourceHandle?.name ?? null, target]);
-}
-
-/** Group nodes and notes have no fixed fields or outputs to check edges against. */
-function isExemptNode(node: JsonObject): boolean {
-  if (node.type === "noteNode") return true;
-  const nodeData = isObject(node.data) ? node.data.node : undefined;
-  return !isObject(nodeData) || "flow" in nodeData;
-}
-
-function nodePart(node: JsonObject, key: string): unknown {
-  const nodeData = isObject(node.data) ? node.data.node : undefined;
-  return isObject(nodeData) ? nodeData[key] : undefined;
-}
-
-function outputNames(node: JsonObject): Set<string> | null {
-  if (isExemptNode(node)) return null;
-  const outputs = nodePart(node, "outputs");
-  if (!Array.isArray(outputs)) return null;
-  return new Set(
-    outputs
-      .filter((output) => isObject(output) && typeof output.name === "string")
-      .map((output) => output.name as string),
-  );
-}
-
-function templateFields(node: JsonObject): JsonObject | null {
-  if (isExemptNode(node)) return null;
-  const template = nodePart(node, "template");
-  return isObject(template) ? template : null;
-}
-
-/**
- * Check that an edge's handles name an existing output and field, and that a
- * single input stays single. Edges without handle data, and the ends of edges
- * at group nodes, notes and nodes without a template or outputs, are exempt.
- */
-function checkEdgeRules(
-  state: GraphState,
-  edge: JsonObject,
-  context: string,
-): void {
-  const [sourceHandle, targetHandle] = edgeHandles(edge);
-  const source = state.nodes.get(edge.source as string)!;
-  const target = state.nodes.get(edge.target as string)!;
-
-  if (typeof sourceHandle?.name === "string") {
-    const names = outputNames(source);
-    if (names && !names.has(sourceHandle.name))
-      throw invalidOperation(
-        `${context}: source node ${edge.source} has no output ${sourceHandle.name}`,
-        "EDGE_HANDLE_NOT_FOUND",
-      );
-  }
-
-  if (!targetHandle) return;
-  const loopOutput = loopTargetOutput(targetHandle);
-  if (loopOutput !== null) {
-    const names = outputNames(target);
-    if (names && !names.has(loopOutput))
-      throw invalidOperation(
-        `${context}: target node ${edge.target} has no output ${loopOutput}`,
-        "EDGE_HANDLE_NOT_FOUND",
-      );
-    return;
-  }
-
-  const fieldName = targetHandle.fieldName;
-  const template = templateFields(target);
-  if (!template || typeof fieldName !== "string") return;
-  const field = template[fieldName];
-  if (!isObject(field))
-    throw invalidOperation(
-      `${context}: target node ${edge.target} has no field ${fieldName}`,
-      "EDGE_HANDLE_NOT_FOUND",
-    );
-  if (field.list === true) return;
-  for (const otherId of state.edgesInGraphOrder(
-    state.edgeIdsByNode.get(edge.target as string),
-  )) {
-    const other = state.edges.get(otherId)!;
-    if (otherId === edge.id || other.target !== edge.target) continue;
-    const [, otherTarget] = edgeHandles(other);
-    if (otherTarget?.fieldName === fieldName)
-      throw invalidOperation(
-        `${context}: field ${fieldName} of node ${edge.target} takes one connection and already has one (${otherId})`,
-        "EDGE_TARGET_OCCUPIED",
-      );
-  }
 }
 
 // --- Entry point -----------------------------------------------------------------------

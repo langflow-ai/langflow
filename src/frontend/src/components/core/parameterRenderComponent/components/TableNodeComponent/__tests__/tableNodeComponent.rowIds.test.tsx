@@ -83,8 +83,8 @@ describe("TableNodeComponent row ids", () => {
 
   it("gives an added row a new id after the last row", () => {
     const rows = [
-      { _id: "r1", _pos: "a0", key: "Accept", value: "json" },
-      { _id: "r2", _pos: "a1", key: "Auth", value: "x" },
+      { _id: "r1", _pos: 1, key: "Accept", value: "json" },
+      { _id: "r2", _pos: 2, key: "Auth", value: "x" },
     ];
     const handleOnNewValue = renderTable(rows);
 
@@ -93,12 +93,12 @@ describe("TableNodeComponent row ids", () => {
 
     const saved: Row[] = handleOnNewValue.mock.calls[0][0].value;
     expect(saved.slice(0, 2)).toEqual(rows);
-    expect(saved[2]).toMatchObject({ _pos: "a2", key: null, value: null });
+    expect(saved[2]).toMatchObject({ _pos: 3, key: null, value: null });
     expect(saved[2]._id).not.toMatch(/^r[12]$/);
   });
 
   it("never shows the row keys as columns", () => {
-    renderTable([{ _id: "r1", _pos: "a0", name: "x" }], { columns: undefined });
+    renderTable([{ _id: "r1", _pos: 1, name: "x" }], { columns: undefined });
 
     const fields = modalProps.columnDefs.map(
       (column: { field?: string }) => column.field,
