@@ -62,6 +62,8 @@ class NodeSchema:
     edge_view_state: frozenset[str]
     value_unit: tuple[str, ...]
     toggles: tuple[str, ...]
+    # Node paths the diff splits into their keys; any other value is written whole.
+    recursed_paths: frozenset[SchemaPath]
     natural_lists: tuple[tuple[SchemaPath, KeyedList], ...]
     table_path: SchemaPath
     table_when_field: tuple[dict[str, Any], ...]
@@ -121,6 +123,7 @@ def load_node_schema() -> NodeSchema:
         edge_view_state=frozenset(view_state["edge"]),
         value_unit=tuple(raw["field_units"]["value"]),
         toggles=tuple(raw["field_units"]["toggles"]),
+        recursed_paths=frozenset(_paths(raw["whole_values"]["recursed"])),
         natural_lists=tuple(
             (tuple(entry["path"]), KeyedList(kind="natural", key=tuple(entry["key"])))
             for entry in keyed_lists["natural"]

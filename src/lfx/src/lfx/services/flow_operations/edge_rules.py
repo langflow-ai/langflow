@@ -25,7 +25,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from lfx.services.flow_operations.canonical import values_equal
+from lfx.services.flow_operations.canonical import parse_handle, values_equal
 from lfx.services.flow_operations.codes import GraphViolationCode
 from lfx.services.flow_operations.exceptions import FlowDataValidationError, FlowOperationValidationError
 from lfx.services.flow_operations.schema import load_node_schema
@@ -90,7 +90,7 @@ def _handle(edge: dict[str, Any], key: str) -> dict[str, Any]:
     if has_object and not isinstance(data[key], dict):
         raise _error(edge, GraphViolationCode.EDGE_HANDLE_INVALID, f"data.{key} must be an object")
     if has_string:
-        parsed = _parse_handle(edge[key])
+        parsed = parse_handle(edge[key])
         if parsed is None:
             raise _error(edge, GraphViolationCode.EDGE_HANDLE_INVALID, f"{key} must be an escaped JSON object")
         if has_object and not values_equal(parsed, data[key]):
@@ -121,22 +121,12 @@ def derive_missing_handle_forms(edge: dict[str, Any]) -> None:
         if key in data and key not in edge:
             edge[key] = escape_handle(data[key])
         elif key in edge and key not in data:
-            data[key] = _parse_handle(edge[key])
+            data[key] = parse_handle(edge[key])
 
 
 def escape_handle(handle: dict[str, Any]) -> str:
     """Return a handle's string form: compact JSON with ``œ`` standing for ``"``."""
     return json.dumps(handle, separators=(",", ":"), ensure_ascii=False).replace('"', HANDLE_QUOTE)
-
-
-def _parse_handle(handle: Any) -> dict[str, Any] | None:
-    if not isinstance(handle, str):
-        return None
-    try:
-        parsed = json.loads(handle.replace(HANDLE_QUOTE, '"'))
-    except ValueError:
-        return None
-    return parsed if isinstance(parsed, dict) else None
 
 
 def check_edge(state: GraphState, edge: dict[str, Any]) -> Handles:
@@ -164,11 +154,7 @@ def check_edge(state: GraphState, edge: dict[str, Any]) -> Handles:
     kind, name = handles.input
     target_id = edge["target"]
     if kind == "field":
-        template = node_body(state, target_id).get("template")
-        if not isinstance(template, dict):
-            msg = f"node {target_id!r}: data.node.template must be an object"
-            raise FlowDataValidationError(msg)
-        target_field = template.get(name)
+        target_field = node_body(state, target_id)["template"].get(name)
         if not isinstance(target_field, dict):
             raise _error(
                 edge, GraphViolationCode.EDGE_HANDLE_NOT_FOUND, f"target node {target_id!r} has no field {name!r}"
@@ -195,13 +181,8 @@ def check_edge(state: GraphState, edge: dict[str, Any]) -> Handles:
 
 
 def node_body(state: GraphState, node_id: str) -> dict[str, Any]:
-    """Return a node's ``data.node``, which every node carries as an object."""
-    data = state.nodes_by_id[node_id].get("data")
-    body = data.get("node") if isinstance(data, dict) else None
-    if not isinstance(body, dict):
-        msg = f"node {node_id!r}: data.node must be an object"
-        raise FlowDataValidationError(msg)
-    return body
+    """Return a node's ``data.node``. Validation and ``add_nodes`` keep it, and its template, an object."""
+    return state.nodes_by_id[node_id]["data"]["node"]
 
 
 def node_outputs(state: GraphState, node_id: str) -> ListIndex | None:
