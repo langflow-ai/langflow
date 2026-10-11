@@ -2,18 +2,25 @@
 
 Flows stored before the engine enforced its rules, imported flows, and flows
 edited directly in the database can break them, and such a flow cannot take
-any edit until it is repaired. ``repair_flow_data`` fixes every violation
-``find_graph_violations`` reports and lists what it changed.
+any edit until it is repaired. ``repair_flow_data`` fixes every direct
+violation ``find_graph_violations`` reports, the ones with exactly one fix, and
+lists what it changed. It never touches an intent-dependent violation (an edge
+that names an output that does not exist, or a second edge into a single
+input): fixing one means choosing what the person meant, so the client does.
 
 Repair is never implicit: callers invoke it only when a request asks for it,
 and they keep the original first, so even a fix that discards a value (an edge
 to a node that does not exist) loses nothing permanently. Replay and ordinary
 saves never repair.
 
-Given the stored graph a write replaces (``base``), repair also fixes the rows
-of every table the write adds or changes: it assigns missing row ids,
-regenerates duplicate ids, and gives rows without a position one that keeps
-them where they are stored.
+Given the stored graph a write replaces (``base``), repair also fixes what
+the write adds or changes:
+
+- the rows of every table: it assigns missing row ids, regenerates duplicate
+  ids, and gives rows without a position one that keeps them where they are
+  stored;
+- every edge it adds or rewires: it derives a handle's missing form from the
+  one present, and drops an edge that touches a note.
 """
 
 from __future__ import annotations
@@ -25,19 +32,22 @@ from dataclasses import dataclass
 from typing import Any
 
 from lfx.services.flow_operations.canonical import canonical_json, is_row_position
+from lfx.services.flow_operations.codes import CLIENT_FIXED_CODES, GraphViolationCode
+from lfx.services.flow_operations.edge_rules import derive_missing_handle_forms
 from lfx.services.flow_operations.ids import new_edge_id
 from lfx.services.flow_operations.schema import load_node_schema
+from lfx.services.flow_operations.state import NODE_OBJECT_PATHS
 from lfx.services.flow_operations.table_rows import fill_missing_positions, match_row_ids
 from lfx.services.flow_operations.validation import (
-    NODE_OBJECT_PATHS,
     GraphPath,
-    GraphViolationCode,
     changed_tables,
+    find_edge_violations,
     validate_flow_data,
 )
 
-# The fix applied for every rule. A rule without an entry here would leave a
-# flow that can neither be saved nor repaired, so tests require one per code.
+# The fix for every direct violation. A direct rule without an entry here would
+# leave a flow that can neither be saved nor repaired, so tests require one per
+# code that the client does not fix.
 REPAIRS: dict[GraphViolationCode, str] = {
     GraphViolationCode.FLOW_DATA_NOT_OBJECT: "replaced with an empty flow",
     GraphViolationCode.COLLECTION_NOT_LIST: "replaced with an empty list",
@@ -54,6 +64,8 @@ REPAIRS: dict[GraphViolationCode, str] = {
     GraphViolationCode.TABLE_ROW_ID_MISSING: "assigned a generated row id",
     GraphViolationCode.TABLE_ROW_ID_DUPLICATE: "assigned a generated row id; the first row keeps the id",
     GraphViolationCode.TABLE_ROW_POS_INVALID: "assigned a position that keeps the row where it is stored",
+    GraphViolationCode.EDGE_HANDLE_FORM_MISSING: "derived the missing form of the handle from the one present",
+    GraphViolationCode.EDGE_TOUCHES_NOTE: "dropped the edge",
 }
 
 _GENERATED_ID_LENGTH = 5
@@ -79,7 +91,10 @@ class RepairResult:
 
 
 def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
-    """Return a copy of ``flow_data`` that follows every rule, and the fixes applied.
+    """Return a copy of ``flow_data`` with every direct violation fixed, and the fixes applied.
+
+    Raises ``FlowDataValidationError`` listing what is left when the graph also
+    breaks a rule only the client can fix, so a repaired save writes nothing.
 
     Generated node IDs are derived from the node's content and position, so
     repairing the same graph twice gives the same nodes. Generated edge IDs are
@@ -113,6 +128,7 @@ def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
         for table in changed_tables(base, repaired):
             node_id = repaired["nodes"][table.path[1]]["id"]
             _repair_table(table.rows, table.path, fix, stored.get((node_id, table.path[-2])))
+        _repair_changed_edges(repaired, base, fix)
 
     # Repair must never return a graph the strict path would refuse.
     validate_flow_data(repaired, context="repaired flow.data", base=base)
@@ -188,6 +204,22 @@ def _repair_edges(edges: list[Any], node_ids: set[str], fix) -> list[dict[str, A
         seen_ids.add(new_id)
         edge["id"] = new_id
     return [edge for _, edge in kept]
+
+
+def _repair_changed_edges(graph: dict[str, Any], base: Any, fix) -> None:
+    """Fix the direct edge rules broken by the edges ``graph`` adds or rewires relative to ``base``."""
+    dropped: set[int] = set()
+    for violation in find_edge_violations(base, graph):
+        if violation.code in CLIENT_FIXED_CODES:
+            continue
+        index = violation.path[1]
+        fix(violation.code, violation.path)
+        if violation.code == GraphViolationCode.EDGE_TOUCHES_NOTE:
+            dropped.add(index)
+        else:
+            derive_missing_handle_forms(graph["edges"][index])
+    if dropped:
+        graph["edges"] = [edge for index, edge in enumerate(graph["edges"]) if index not in dropped]
 
 
 def _stored_tables(base: Any) -> dict[tuple[str, str], Any]:
