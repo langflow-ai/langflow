@@ -13,8 +13,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
-from lfx.services.flow_operations.canonical import utf16_sort_key
-
 NODE_SCHEMA_PATH = Path(__file__).with_name("node_schema.json")
 WILDCARD = "*"
 
@@ -28,7 +26,8 @@ class KeyedList:
 
     ``natural`` lists (outputs, tool actions) are selected with
     ``{"key": ...}`` and keep the order writes leave them in. ``table`` lists
-    are selected with ``{"id": ...}`` and kept sorted by ``(position, id)``.
+    are selected with ``{"id": ...}`` and kept in order of their numeric
+    ``position``, then ``id``.
     """
 
     kind: Literal["natural", "table"]
@@ -51,28 +50,6 @@ class KeyedList:
                 return None
         return value if isinstance(value, str) else None
 
-    def find(self, items: list[Any], key: str) -> int | None:
-        """Return the index of the first item with ``key``, or None."""
-        for index, item in enumerate(items):
-            if self.key_of(item) == key:
-                return index
-        return None
-
-    def sort(self, items: list[Any]) -> None:
-        """Sort table rows in place by ``(position, id)``, comparing UTF-16 code units."""
-        if self.kind != "table" or self.position is None:
-            return
-
-        def order(item: Any) -> tuple[bytes, bytes]:
-            position = item.get(self.position) if isinstance(item, dict) else None
-            row_id = self.key_of(item)
-            return (
-                utf16_sort_key(position) if isinstance(position, str) else b"",
-                utf16_sort_key(row_id) if row_id is not None else b"",
-            )
-
-        items.sort(key=order)
-
 
 @dataclass(frozen=True)
 class NodeSchema:
@@ -85,8 +62,6 @@ class NodeSchema:
     edge_view_state: frozenset[str]
     value_unit: tuple[str, ...]
     toggles: tuple[str, ...]
-    whole_value_paths: tuple[SchemaPath, ...]
-    recursed_paths: tuple[SchemaPath, ...]
     natural_lists: tuple[tuple[SchemaPath, KeyedList], ...]
     table_path: SchemaPath
     table_when_field: tuple[dict[str, Any], ...]
@@ -146,8 +121,6 @@ def load_node_schema() -> NodeSchema:
         edge_view_state=frozenset(view_state["edge"]),
         value_unit=tuple(raw["field_units"]["value"]),
         toggles=tuple(raw["field_units"]["toggles"]),
-        whole_value_paths=_paths(raw["whole_values"]["paths"]),
-        recursed_paths=_paths(raw["whole_values"]["recursed"]),
         natural_lists=tuple(
             (tuple(entry["path"]), KeyedList(kind="natural", key=tuple(entry["key"])))
             for entry in keyed_lists["natural"]
