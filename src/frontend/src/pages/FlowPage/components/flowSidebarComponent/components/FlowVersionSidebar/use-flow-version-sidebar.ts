@@ -27,11 +27,13 @@ import useRevisionPlaybackStore from "@/stores/revisionPlaybackStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
+import type { FlowOperation } from "@/utils/flow-operations/apply";
 import {
   type DescribeOptions,
   describeOperation,
   fieldLabelsFrom,
 } from "@/utils/flow-operations/describe";
+import { edgeFixes } from "@/utils/flow-operations/edge-fixes";
 import {
   entryContaining,
   graphAt,
@@ -265,6 +267,7 @@ export function useFlowVersionSidebar(flowId: string) {
     nodes: any[];
     // biome-ignore lint/suspicious/noExplicitAny: legacy
     edges: any[];
+    fixes?: FlowOperation[];
     error?: boolean;
     errorMessage?: string;
   } | null>(() => {
@@ -279,7 +282,14 @@ export function useFlowVersionSidebar(flowId: string) {
       // As when a flow is opened: rebuild the edges' handle ids from the
       // nodes, or edges stored in another spelling attach to nothing.
       const { edges } = cleanEdges(flow.data.nodes, flow.data.edges);
-      return { nodes: flow.data.nodes, edges };
+      return {
+        nodes: flow.data.nodes,
+        edges,
+        fixes: edgeFixes(
+          (selectedEntryFull.data.edges ?? []) as Record<string, unknown>[],
+          edges,
+        ),
+      };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error("Failed to process version flow data for preview:", err);
@@ -336,6 +346,7 @@ export function useFlowVersionSidebar(flowId: string) {
         tag,
         selectedId,
         selectedEntryFull?.description ?? null,
+        processedPreview.fixes,
       );
     } else if (selectedId === CURRENT_DRAFT_ID || processedPreview?.error) {
       setPreview(
