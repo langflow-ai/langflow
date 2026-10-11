@@ -49,6 +49,7 @@ from lfx.services.flow_operations.canonical import (
     FLOW_VIEW_STATE_KEYS,
     NODE_VIEW_STATE_KEYS,
     graphs_equal,
+    is_row_position,
     json_type,
     parse_handle,
     values_equal,
@@ -347,13 +348,20 @@ def _diff_keyed_list(
 
 
 def _items_by_key(keyed: KeyedList, items: Any) -> dict[str, dict[str, Any]] | None:
-    """Index a list by item key, or return None when an item has no key or keys repeat."""
+    """Index a list by item key, or return None when it cannot be written item by item.
+
+    That is a list whose items do not all carry a unique key, or a table whose
+    rows do not all carry a numeric position: such a list (a legacy table) is
+    written whole, which brings it within the rules.
+    """
     if not isinstance(items, list):
         return None
     by_key: dict[str, dict[str, Any]] = {}
     for item in items:
         key = keyed.key_of(item)
-        if key is None or not key or key in by_key:
+        if not key or key in by_key:
+            return None
+        if keyed.kind == "table" and not is_row_position(item.get(keyed.position)):
             return None
         by_key[key] = item
     return by_key
