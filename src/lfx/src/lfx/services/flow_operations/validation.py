@@ -38,19 +38,27 @@ GraphPath = tuple[str | int, ...]
 
 @dataclass(frozen=True)
 class GraphViolation:
-    """One broken rule, where it was found, and a message without graph values."""
+    """One broken rule, where it was found, and a message without graph values.
+
+    An edge rule violation also names its edge, so a client can fix that edge
+    without counting its way through the edge list.
+    """
 
     code: GraphViolationCode
     path: GraphPath
     message: str
+    edge_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result = {
             "code": self.code.value,
             "path": list(self.path),
             "message": self.message,
             "resolution": resolution_of(self.code).value,
         }
+        if self.edge_id is not None:
+            result["edge_id"] = self.edge_id
+        return result
 
 
 def find_graph_violations(
@@ -224,13 +232,22 @@ def find_edge_violations(base: Any, target: dict[str, Any]) -> list[GraphViolati
     if not indexes:
         return []
     state = index_graph(target)
-    violations: list[GraphViolation] = []
+    edges = target["edges"]
+    index_of = {edge["id"]: index for index, edge in enumerate(edges)}
+    # Checking one edge reads the other edges into its input, so it can fail on
+    # one of them: each violation is reported once, at the edge that broke the rule.
+    violations: dict[str, GraphViolation] = {}
     for index in indexes:
         try:
-            check_edge(state, target["edges"][index])
+            check_edge(state, edges[index])
         except FlowOperationValidationError as error:
-            violations.append(GraphViolation(GraphViolationCode(error.code), ("edges", index), str(error)))
-    return violations
+            if error.edge_id is None:
+                raise
+            if error.edge_id not in violations:
+                violations[error.edge_id] = GraphViolation(
+                    GraphViolationCode(error.code), ("edges", index_of[error.edge_id]), str(error), error.edge_id
+                )
+    return sorted(violations.values(), key=lambda violation: violation.path[1])
 
 
 # --- Table rows ------------------------------------------------------------------------
