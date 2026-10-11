@@ -14,7 +14,7 @@
               "input_value": {"type": "str", "value": ""},
               "headers": {
                 "type": "table",
-                "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
               },
               "legacy": {"type": "table", "value": [{"v": "1"}]}
             },
@@ -30,7 +30,9 @@
         "id": "e-chat-model",
         "source": "ChatInput-1",
         "target": "Model-1",
-        "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+        "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+        "sourceHandle": "{œnameœ:œmessageœ}",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ}"
       }
     ]
   },
@@ -67,7 +69,7 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": "a0", "v": "xml"}, {"_id": "r2", "_pos": "a1", "v": "X-Auth"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                    "value": [{"_id": "r1", "_pos": 1, "v": "xml"}, {"_id": "r2", "_pos": 2, "v": "X-Auth"}, {"_id": "r3", "_pos": 3, "v": "en"}]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -83,7 +85,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -120,7 +124,7 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": "a0", "v": "from B"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                    "value": [{"_id": "r1", "_pos": 1, "v": "from B"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -136,7 +140,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -173,7 +179,7 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": "a0", "v": "from A"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                    "value": [{"_id": "r1", "_pos": 1, "v": "from A"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -189,7 +195,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -221,7 +229,7 @@
                   "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
                   "temperature": {"type": "float", "value": 0.1},
                   "input_value": {"type": "str", "value": ""},
-                  "headers": {"type": "table", "value": [{"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]},
+                  "headers": {"type": "table", "value": [{"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]},
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
                 "outputs": [{"name": "text_output"}, {"name": "model_output"}]
@@ -236,7 +244,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -268,7 +278,7 @@
                   "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
                   "temperature": {"type": "float", "value": 0.1},
                   "input_value": {"type": "str", "value": ""},
-                  "headers": {"type": "table", "value": [{"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]},
+                  "headers": {"type": "table", "value": [{"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]},
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
                 "outputs": [{"name": "text_output"}, {"name": "model_output"}]
@@ -283,7 +293,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -294,13 +306,13 @@
         "A": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "_pos"], "value": "a3"}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "_pos"], "value": 4}]
           }
         ],
         "B": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r3"}, "_pos"], "value": "Zz"}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r3"}, "_pos"], "value": 0}]
           }
         ]
       },
@@ -320,7 +332,7 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r3", "_pos": "Zz", "v": "en"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r1", "_pos": "a3", "v": "json"}]
+                    "value": [{"_id": "r3", "_pos": 0, "v": "en"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r1", "_pos": 4, "v": "json"}]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -336,7 +348,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -347,13 +361,13 @@
         "A": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "_pos"], "value": "a3"}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "_pos"], "value": 4}]
           }
         ],
         "B": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "_pos"], "value": "a1V"}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "_pos"], "value": 2.5}]
           }
         ]
       },
@@ -373,7 +387,7 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r1", "_pos": "a1V", "v": "json"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                    "value": [{"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r1", "_pos": 2.5, "v": "json"}, {"_id": "r3", "_pos": 3, "v": "en"}]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -389,7 +403,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -405,7 +421,7 @@
                 "id": "Model-1",
                 "op": "set_field",
                 "path": ["data", "node", "template", "headers", "value", {"id": "rB"}],
-                "value": {"_id": "rB", "_pos": "a0V", "v": "b"}
+                "value": {"_id": "rB", "_pos": 1.5, "v": "b"}
               }
             ]
           }
@@ -418,7 +434,7 @@
                 "id": "Model-1",
                 "op": "set_field",
                 "path": ["data", "node", "template", "headers", "value", {"id": "rA"}],
-                "value": {"_id": "rA", "_pos": "a0V", "v": "a"}
+                "value": {"_id": "rA", "_pos": 1.5, "v": "a"}
               }
             ]
           }
@@ -441,11 +457,11 @@
                   "headers": {
                     "type": "table",
                     "value": [
-                      {"_id": "r1", "_pos": "a0", "v": "json"},
-                      {"_id": "rA", "_pos": "a0V", "v": "a"},
-                      {"_id": "rB", "_pos": "a0V", "v": "b"},
-                      {"_id": "r2", "_pos": "a1", "v": "token"},
-                      {"_id": "r3", "_pos": "a2", "v": "en"}
+                      {"_id": "r1", "_pos": 1, "v": "json"},
+                      {"_id": "rA", "_pos": 1.5, "v": "a"},
+                      {"_id": "rB", "_pos": 1.5, "v": "b"},
+                      {"_id": "r2", "_pos": 2, "v": "token"},
+                      {"_id": "r3", "_pos": 3, "v": "en"}
                     ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
@@ -462,7 +478,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -508,7 +526,7 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -524,7 +542,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -569,7 +589,7 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -585,7 +605,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -628,7 +650,7 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -644,7 +666,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -681,7 +705,7 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -697,7 +721,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -713,7 +739,7 @@
                 "id": "Model-1",
                 "op": "set_field",
                 "path": ["data", "node", "template", "legacy", "value"],
-                "value": [{"_id": "a1", "_pos": "a0", "v": "from A"}],
+                "value": [{"_id": "a1", "_pos": 1, "v": "from A"}],
                 "expect": {"value": [{"v": "1"}]}
               }
             ]
@@ -727,7 +753,7 @@
                 "id": "Model-1",
                 "op": "set_field",
                 "path": ["data", "node", "template", "legacy", "value"],
-                "value": [{"_id": "b1", "_pos": "a0", "v": "from B"}],
+                "value": [{"_id": "b1", "_pos": 1, "v": "from B"}],
                 "expect": {"value": [{"v": "1"}]}
               }
             ]
@@ -750,9 +776,9 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
                   },
-                  "legacy": {"type": "table", "value": [{"_id": "a1", "_pos": "a0", "v": "from A"}]}
+                  "legacy": {"type": "table", "value": [{"_id": "a1", "_pos": 1, "v": "from A"}]}
                 },
                 "outputs": [{"name": "text_output"}, {"name": "model_output"}]
               }
@@ -766,7 +792,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -783,7 +811,9 @@
                 "id": "e-a",
                 "source": "Prompt-1",
                 "target": "Model-1",
-                "data": {"sourceHandle": {"name": "prompt"}, "targetHandle": {"fieldName": "input_value"}}
+                "data": {"sourceHandle": {"name": "prompt"}, "targetHandle": {"fieldName": "input_value"}},
+                "sourceHandle": "{œnameœ:œpromptœ}",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ}"
               }
             ]
           }
@@ -797,7 +827,9 @@
                 "id": "e-b",
                 "source": "ChatInput-1",
                 "target": "Model-1",
-                "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+                "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+                "sourceHandle": "{œnameœ:œmessageœ}",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ}"
               }
             ]
           }
@@ -819,7 +851,7 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -831,7 +863,14 @@
           {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
         ],
         "edges": [
-          {"id": "e-a", "source": "Prompt-1", "target": "Model-1", "data": {"sourceHandle": {"name": "prompt"}, "targetHandle": {"fieldName": "input_value"}}}
+          {
+            "id": "e-a",
+            "source": "Prompt-1",
+            "target": "Model-1",
+            "data": {"sourceHandle": {"name": "prompt"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œpromptœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
+          }
         ]
       }
     },
@@ -862,7 +901,7 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -878,7 +917,9 @@
             "id": "e-chat-model",
             "source": "ChatInput-1",
             "target": "Model-1",
-            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}}
+            "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value"}},
+            "sourceHandle": "{œnameœ:œmessageœ}",
+            "targetHandle": "{œfieldNameœ:œinput_valueœ}"
           }
         ]
       }
@@ -890,7 +931,15 @@
         "B": [
           {
             "type": "update_edges",
-            "updates": [{"id": "e-chat-model", "op": "set_field", "path": ["data", "targetHandle", "inputTypes"], "value": ["Message", "Data"]}]
+            "updates": [
+              {
+                "id": "e-chat-model",
+                "op": "set_field",
+                "path": ["data", "targetHandle"],
+                "value": {"fieldName": "input_value", "inputTypes": ["Message", "Data"]}
+              },
+              {"id": "e-chat-model", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œinput_valueœ,œinputTypesœ:[œMessageœ,œDataœ]}"}
+            ]
           }
         ]
       },
@@ -909,7 +958,7 @@
                   "temperature": {"type": "float", "value": 0.1},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": "a0", "v": "json"}, {"_id": "r2", "_pos": "a1", "v": "token"}, {"_id": "r3", "_pos": "a2", "v": "en"}]
+                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },

@@ -351,7 +351,7 @@
         "nodes": [
           {
             "id": "n",
-            "data": {"node": {"template": {"t": {"type": "table", "value": [{"_id": "r1", "_pos": "a0", "v": "x"}, {"_id": "r2", "_pos": "a1", "v": "y"}]}}}}
+            "data": {"node": {"template": {"t": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]}}}}
           }
         ],
         "edges": []
@@ -360,7 +360,7 @@
         "nodes": [
           {
             "id": "n",
-            "data": {"node": {"template": {"t": {"type": "table", "value": [{"_id": "r1", "_pos": "a0", "v": "x"}, {"_id": "r2", "_pos": "a1", "v": "z"}]}}}}
+            "data": {"node": {"template": {"t": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "z"}]}}}}
           }
         ],
         "edges": []
@@ -389,10 +389,7 @@
             "data": {
               "node": {
                 "template": {
-                  "t": {
-                    "type": "table",
-                    "value": [{"_id": "r1", "_pos": "a0", "v": "x"}, {"_id": "r2", "_pos": "a1", "v": "y"}, {"_id": "r3", "_pos": "a2", "v": "z"}]
-                  }
+                  "t": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}, {"_id": "r3", "_pos": 3, "v": "z"}]}
                 }
               }
             }
@@ -407,10 +404,7 @@
             "data": {
               "node": {
                 "template": {
-                  "t": {
-                    "type": "table",
-                    "value": [{"_id": "r2", "_pos": "a1", "v": "y"}, {"_id": "r1", "_pos": "a2", "v": "x"}, {"_id": "r4", "_pos": "a3", "v": "w"}]
-                  }
+                  "t": {"type": "table", "value": [{"_id": "r2", "_pos": 2, "v": "y"}, {"_id": "r1", "_pos": 3, "v": "x"}, {"_id": "r4", "_pos": 4, "v": "w"}]}
                 }
               }
             }
@@ -426,14 +420,14 @@
               "id": "n",
               "path": ["data", "node", "template", "t", "value", {"id": "r1"}, "_pos"],
               "op": "set_field",
-              "value": "a2",
+              "value": 3,
               "template_field": {"type": "table"}
             },
             {
               "id": "n",
               "path": ["data", "node", "template", "t", "value", {"id": "r4"}],
               "op": "set_field",
-              "value": {"_id": "r4", "_pos": "a3", "v": "w"},
+              "value": {"_id": "r4", "_pos": 4, "v": "w"},
               "template_field": {"type": "table"}
             },
             {"id": "n", "path": ["data", "node", "template", "t", "value", {"id": "r3"}], "op": "delete_field"}
@@ -444,10 +438,7 @@
     {
       "name": "the first edit of a legacy table writes it whole with ids",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"t": {"type": "table", "value": [{"v": "x"}]}}}}}], "edges": []},
-      "target": {
-        "nodes": [{"id": "n", "data": {"node": {"template": {"t": {"type": "table", "value": [{"_id": "r1", "_pos": "a0", "v": "z"}]}}}}}],
-        "edges": []
-      },
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"t": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "z"}]}}}}}], "edges": []},
       "operations": [
         {
           "type": "update_nodes",
@@ -456,7 +447,7 @@
               "id": "n",
               "path": ["data", "node", "template", "t", "value"],
               "op": "set_field",
-              "value": [{"_id": "r1", "_pos": "a0", "v": "z"}],
+              "value": [{"_id": "r1", "_pos": 1, "v": "z"}],
               "template_field": {"type": "table"}
             }
           ]
@@ -464,13 +455,22 @@
       ]
     },
     {
-      "name": "an edge's data changes in place",
+      "name": "an edge's handles change in place, both forms together",
       "base": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
         ],
-        "edges": [{"id": "e", "source": "a", "target": "b", "data": {"targetHandle": {"fieldName": "f", "id": "b", "type": "str"}}}]
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str"}}
+          }
+        ]
       },
       "target": {
         "nodes": [
@@ -478,14 +478,28 @@
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
         ],
         "edges": [
-          {"id": "e", "source": "a", "target": "b", "data": {"targetHandle": {"fieldName": "f", "id": "b", "type": "str", "inputTypes": ["Data"]}}, "type": "x"}
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ,œinputTypesœ:[œDataœ]}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str", "inputTypes": ["Data"]}},
+            "type": "x"
+          }
         ]
       },
       "operations": [
         {
           "type": "update_edges",
           "updates": [
-            {"id": "e", "path": ["data"], "op": "set_field", "value": {"targetHandle": {"fieldName": "f", "id": "b", "type": "str", "inputTypes": ["Data"]}}},
+            {
+              "id": "e",
+              "path": ["data"],
+              "op": "set_field",
+              "value": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str", "inputTypes": ["Data"]}}
+            },
+            {"id": "e", "path": ["targetHandle"], "op": "set_field", "value": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ,œinputTypesœ:[œDataœ]}"},
             {"id": "e", "path": ["type"], "op": "set_field", "value": "x"}
           ]
         }
@@ -498,16 +512,35 @@
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
         ],
-        "edges": [{"id": "e", "source": "a", "target": "b", "data": {}}]
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str"}},
+            "style": {"stroke": "#555"}
+          }
+        ]
       },
       "target": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
         ],
-        "edges": [{"id": "e", "source": "a", "target": "b"}]
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str"}}
+          }
+        ]
       },
-      "operations": [{"type": "update_edges", "updates": [{"id": "e", "path": ["data"], "op": "delete_field"}]}]
+      "operations": [{"type": "update_edges", "updates": [{"id": "e", "path": ["style"], "op": "delete_field"}]}]
     },
     {
       "name": "an edge reconnected to another node is deleted and added",
@@ -516,7 +549,16 @@
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
         ],
-        "edges": [{"id": "e", "source": "a", "target": "b"}]
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str"}}
+          }
+        ]
       },
       "target": {
         "nodes": [
@@ -524,12 +566,33 @@
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}},
           {"id": "c", "data": {"node": {"template": {"f": {"type": "str"}}}}}
         ],
-        "edges": [{"id": "e", "source": "a", "target": "c"}]
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "c",
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œcœ,œtypeœ:œstrœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "c", "type": "str"}}
+          }
+        ]
       },
       "operations": [
         {"type": "delete_edges", "ids": ["e"]},
         {"type": "add_nodes", "nodes": [{"id": "c", "data": {"node": {"template": {"f": {"type": "str"}}}}}]},
-        {"type": "add_edges", "edges": [{"id": "e", "source": "a", "target": "c"}]}
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "c",
+              "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ,œidœ:œcœ,œtypeœ:œstrœ}",
+              "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "c", "type": "str"}}
+            }
+          ]
+        }
       ]
     },
     {
@@ -540,11 +603,33 @@
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}}}}, "selected": true, "width": 5}
         ],
-        "edges": [{"id": "e", "source": "a", "target": "b", "selected": true}]
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str"}},
+            "selected": true
+          }
+        ]
       },
       "operations": [
         {"type": "add_nodes", "nodes": [{"id": "b", "data": {"node": {"template": {"f": {"type": "str"}}}}}]},
-        {"type": "add_edges", "edges": [{"id": "e", "source": "a", "target": "b"}]}
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ}",
+              "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str"}}
+            }
+          ]
+        }
       ]
     },
     {
@@ -554,7 +639,16 @@
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
         ],
-        "edges": [{"id": "e", "source": "a", "target": "b"}]
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str"}}
+          }
+        ]
       },
       "target": {"nodes": [{"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}], "edges": []},
       "operations": [{"type": "delete_edges", "ids": ["e"]}, {"type": "delete_nodes", "ids": ["b"]}]

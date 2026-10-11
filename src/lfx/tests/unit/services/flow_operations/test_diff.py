@@ -210,18 +210,27 @@ def test_a_changed_edge_between_the_same_nodes_is_updated_in_place():
 
     operations = _replays(_graph(), target)
 
+    # Both forms of the handle change together; ``data`` is written whole.
     assert operations == [
         UpdateEdgesOp(
             type="update_edges",
-            updates=[{"id": "e-ab", "op": "set_field", "path": ["targetHandle"], "value": "other"}],
+            updates=[
+                {"id": "e-ab", "op": "set_field", "path": ["data"], "value": target["edges"][0]["data"]},
+                {
+                    "id": "e-ab",
+                    "op": "set_field",
+                    "path": ["targetHandle"],
+                    "value": target["edges"][0]["targetHandle"],
+                },
+            ],
         )
     ]
 
 
 def test_an_edge_reconnected_to_another_node_is_deleted_and_added():
     target = _graph()
-    target["nodes"].append(_node("c"))
-    target["edges"][0]["target"] = "c"
+    target["nodes"].append(_node("c", text={"type": "str"}))
+    target["edges"][0] = _edge("e-ab", "a", "c")
 
     operations = _replays(_graph(), target)
 

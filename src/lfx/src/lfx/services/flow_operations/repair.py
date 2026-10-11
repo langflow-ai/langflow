@@ -11,9 +11,9 @@ to a node that does not exist) loses nothing permanently. Replay and ordinary
 saves never repair.
 
 Given the stored graph a write replaces (``base``), repair also fixes the rows
-of every table the write adds or changes: it assigns missing row ids and
-positions (evenly spaced keys that keep the rows in their current order),
-regenerates duplicate ids, and sorts the rows.
+of every table the write adds or changes: it assigns missing row ids,
+regenerates duplicate ids, and gives rows without a position one that keeps
+them where they are stored.
 """
 
 from __future__ import annotations
@@ -24,17 +24,15 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-from lfx.services.flow_operations.canonical import canonical_json
-from lfx.services.flow_operations.fractional_index import generate_n_keys_between
+from lfx.services.flow_operations.canonical import canonical_json, is_row_position
 from lfx.services.flow_operations.ids import new_edge_id
 from lfx.services.flow_operations.schema import load_node_schema
-from lfx.services.flow_operations.table_rows import match_row_ids, positions_keeping_order
+from lfx.services.flow_operations.table_rows import fill_missing_positions, match_row_ids
 from lfx.services.flow_operations.validation import (
     NODE_OBJECT_PATHS,
     GraphPath,
     GraphViolationCode,
     changed_tables,
-    is_sorted_table,
     validate_flow_data,
 )
 
@@ -55,8 +53,7 @@ REPAIRS: dict[GraphViolationCode, str] = {
     GraphViolationCode.TABLE_ROW_NOT_OBJECT: "dropped the row",
     GraphViolationCode.TABLE_ROW_ID_MISSING: "assigned a generated row id",
     GraphViolationCode.TABLE_ROW_ID_DUPLICATE: "assigned a generated row id; the first row keeps the id",
-    GraphViolationCode.TABLE_ROW_POS_INVALID: "assigned a position that keeps the row where it is",
-    GraphViolationCode.TABLE_ROWS_UNSORTED: "sorted the rows by position",
+    GraphViolationCode.TABLE_ROW_POS_INVALID: "assigned a position that keeps the row where it is stored",
 }
 
 _GENERATED_ID_LENGTH = 5
@@ -208,18 +205,15 @@ def _stored_tables(base: Any) -> dict[tuple[str, str], Any]:
 
 
 def _repair_table(rows: list[Any], path: GraphPath, fix, previous: Any = None) -> None:
-    """Fix one table value in place: rows are objects with unique ids and positions, in order."""
-    table = load_node_schema().table
-    id_key, position_key = table.key[0], table.position
+    """Fix one table value in place: rows are objects with unique ids and numeric positions."""
+    id_key, position_key = load_node_schema().table.key[0], load_node_schema().table.position
 
     for index, row in enumerate(rows):
         if not isinstance(row, dict):
             fix(GraphViolationCode.TABLE_ROW_NOT_OBJECT, (*path, index))
     rows[:] = [row for row in rows if isinstance(row, dict)]
 
-    # Rows that arrive without a position are ordered by where they are in
-    # the list, even when they take a stored row's position below.
-    missing = [index for index, row in enumerate(rows) if not _is_id(row.get(position_key))]
+    missing = [index for index, row in enumerate(rows) if not is_row_position(row.get(position_key))]
     seen_ids: set[str] = set()
     for index, row in enumerate(rows):
         row_id = row.get(id_key)
@@ -229,22 +223,13 @@ def _repair_table(rows: list[Any], path: GraphPath, fix, previous: Any = None) -
         code = GraphViolationCode.TABLE_ROW_ID_DUPLICATE if _is_id(row_id) else GraphViolationCode.TABLE_ROW_ID_MISSING
         fix(code, (*path, index, id_key))
         # A duplicate gives up its id; match_row_ids gives every row without one
-        # the id of an identical stored row, or a new random id.
+        # the id (and position) of an identical stored row, or a new random id.
         row.pop(id_key, None)
     match_row_ids(rows, previous)
 
-    if missing:
-        for index in missing:
-            fix(GraphViolationCode.TABLE_ROW_POS_INVALID, (*path, index, position_key))
-        positions = positions_keeping_order([row.get(position_key) for row in rows])
-        if positions is None:
-            positions = generate_n_keys_between(None, None, len(rows))
-        for row, position in zip(rows, positions, strict=True):
-            row[position_key] = position
-
-    if not is_sorted_table(rows):
-        fix(GraphViolationCode.TABLE_ROWS_UNSORTED, path)
-        table.sort(rows)
+    for index in missing:
+        fix(GraphViolationCode.TABLE_ROW_POS_INVALID, (*path, index, position_key))
+    fill_missing_positions(rows)
 
 
 def _replace_non_finite(value: Any, path: GraphPath, fix) -> Any:

@@ -166,6 +166,27 @@ def canonical_json(value: Any) -> str:
     return "".join(parts)
 
 
+def is_row_position(value: Any) -> bool:
+    """Return whether ``value`` is a valid table row position: a finite number."""
+    return not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value)
+
+
+def ordered_rows(rows: list[Any]) -> list[Any]:
+    """Return a table's rows in order: by ``(_pos, _id)``, or as stored for a legacy table without them.
+
+    A table's order is its rows' positions, not their places in the array.
+    Positions compare as the doubles JavaScript holds and ids by UTF-16 code
+    units, as the editor sorts them.
+    """
+    id_key, position_key = _SCHEMA.table.key[0], _SCHEMA.table.position
+    if not all(
+        isinstance(row, dict) and is_row_position(row.get(position_key)) and isinstance(row.get(id_key), str)
+        for row in rows
+    ):
+        return list(rows)
+    return sorted(rows, key=lambda row: (float(row[position_key]), utf16_sort_key(row[id_key])))
+
+
 def _without(mapping: dict[str, Any], keys: frozenset[str]) -> dict[str, Any]:
     return {key: item for key, item in mapping.items() if key not in keys}
 
@@ -216,12 +237,21 @@ def canonical_node(node: Any) -> Any:
     template = node_data.get("template")
     if isinstance(template, dict):
         node_data["template"] = {
-            key: canonical_template_field(field)
+            key: _ordered_table(node, key, canonical_template_field(field))
             for key, field in template.items()
             if key not in _SCHEMA.template_view_state
         }
     node["data"] = {**data, "node": node_data}
     return node
+
+
+def _ordered_table(node: dict[str, Any], key: str, field: Any) -> Any:
+    """Put a table field's rows in order, since their places in the array are not state."""
+    if not (isinstance(field, dict) and isinstance(field.get("value"), list)):
+        return field
+    if _SCHEMA.keyed_list_at(node, ("data", "node", "template", key, "value")) is not _SCHEMA.table:
+        return field
+    return {**field, "value": ordered_rows(field["value"])}
 
 
 def canonical_edge(edge: Any) -> Any:

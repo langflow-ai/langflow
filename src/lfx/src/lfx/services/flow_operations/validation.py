@@ -7,9 +7,10 @@ code so a refused write can name what is wrong and where.
 
 Table rows follow extra rules, checked only against the stored graph a write
 replaces (``base``): every table value the write adds or changes must have
-rows with a unique ``_id`` and a ``_pos``, sorted by ``(_pos, _id)``. A table
-the write leaves unchanged is accepted as stored, so legacy tables without
-row ids stay valid until someone edits them.
+rows with a unique ``_id`` and a numeric ``_pos``. Their order in the array is
+not state, so it is never checked. A table the write leaves unchanged is
+accepted as stored, so legacy tables without row ids stay valid until someone
+edits them.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from lfx.services.flow_operations.canonical import values_equal
+from lfx.services.flow_operations.canonical import is_row_position, values_equal
 from lfx.services.flow_operations.exceptions import FlowDataValidationError
 from lfx.services.flow_operations.schema import load_node_schema
 
@@ -50,7 +51,6 @@ class GraphViolationCode(str, Enum):
     TABLE_ROW_ID_MISSING = "TABLE_ROW_ID_MISSING"
     TABLE_ROW_ID_DUPLICATE = "TABLE_ROW_ID_DUPLICATE"
     TABLE_ROW_POS_INVALID = "TABLE_ROW_POS_INVALID"
-    TABLE_ROWS_UNSORTED = "TABLE_ROWS_UNSORTED"
 
 
 @dataclass(frozen=True)
@@ -232,12 +232,12 @@ def changed_tables(base: Any, target: dict[str, Any]) -> list[ChangedTable]:
             if schema.keyed_list_at(node, value_path) is not schema.table or not isinstance(field.get("value"), list):
                 continue
             stored_field = stored.get(field_name)
-            if isinstance(stored_field, dict) and "value" in stored_field:
-                try:
-                    if values_equal(stored_field["value"], field["value"]):
-                        continue
-                except FlowDataValidationError:
-                    pass
+            if (
+                isinstance(stored_field, dict)
+                and "value" in stored_field
+                and values_equal(stored_field["value"], field["value"])
+            ):
+                continue
             tables.append(ChangedTable(path=("nodes", index, *value_path), rows=field["value"]))
     return tables
 
@@ -277,31 +277,15 @@ def table_row_violations(rows: list[Any], path: GraphPath) -> list[GraphViolatio
             )
         else:
             seen_ids.add(row_id)
-        position = row.get(position_key)
-        if not isinstance(position, str) or not position:
+        if not is_row_position(row.get(position_key)):
             violations.append(
                 GraphViolation(
                     GraphViolationCode.TABLE_ROW_POS_INVALID,
                     (*path, index, position_key),
-                    f"table row must have a non-empty string {position_key}",
+                    f"table row must have a finite numeric {position_key}",
                 )
             )
-    if not violations and not is_sorted_table(rows):
-        violations.append(
-            GraphViolation(
-                GraphViolationCode.TABLE_ROWS_UNSORTED,
-                path,
-                f"table rows must be sorted by {position_key}, then {id_key}",
-            )
-        )
     return violations
-
-
-def is_sorted_table(rows: list[Any]) -> bool:
-    """Return whether rows are in ``(_pos, _id)`` order."""
-    ordered = list(rows)
-    load_node_schema().table.sort(ordered)
-    return all(left is right for left, right in zip(ordered, rows, strict=True))
 
 
 def _list(graph: Any, key: str) -> list[Any]:

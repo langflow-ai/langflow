@@ -17,6 +17,7 @@ covered by tests that load them at test time instead.
 from __future__ import annotations
 
 import copy
+import json
 import random
 import string
 import sys
@@ -31,7 +32,6 @@ from lfx.services.flow_operations import (
     load_node_schema,
     parse_flow_operations,
 )
-from lfx.services.flow_operations.fractional_index import generate_key_between, generate_n_keys_between
 
 sys.path.insert(0, str(Path(__file__).parent))
 from fixture_json import dumps
@@ -44,12 +44,21 @@ TEMPLATE = ("data", "node", "template")
 OUTPUTS = ("data", "node", "outputs")
 
 
+def _escaped(handle: dict[str, Any]) -> str:
+    """A handle's string form: its JSON with ``œ`` standing for ``"``, as the editor writes it."""
+    return json.dumps(handle, separators=(",", ":")).replace('"', "œ")
+
+
 def _edge(edge_id: str, source: str, output: str, target: str, field: str) -> dict[str, Any]:
+    source_handle = {"name": output}
+    target_handle = {"fieldName": field, "inputTypes": ["Message"]}
     return {
         "id": edge_id,
         "source": source,
         "target": target,
-        "data": {"sourceHandle": {"name": output}, "targetHandle": {"fieldName": field, "inputTypes": ["Message"]}},
+        "sourceHandle": _escaped(source_handle),
+        "targetHandle": _escaped(target_handle),
+        "data": {"sourceHandle": source_handle, "targetHandle": target_handle},
     }
 
 
@@ -76,7 +85,7 @@ def base_graph() -> dict[str, Any]:
                             "flag": {"type": "bool", "value": False, "advanced": False},
                             "rows": {
                                 "type": "table",
-                                "value": [{"_id": "r1", "_pos": "a0", "v": "x"}, {"_id": "r2", "_pos": "a1", "v": "y"}],
+                                "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}],
                             },
                             "legacy": {"type": "table", "value": [{"v": "1"}, {"v": "2"}]},
                             "tools_metadata": {
@@ -197,14 +206,10 @@ class Generator:
         rows = field["value"]
         path = (*TEMPLATE, name, "value")
         if not rows or not all(isinstance(row, dict) and row.get("_id") for row in rows):
-            # The first edit of a legacy table writes it whole, with ids and positions.
-            positions = generate_n_keys_between(None, None, len(rows))
-            keyed = [
-                {**row, "_id": self.next_id("row"), "_pos": position}
-                for row, position in zip(rows, positions, strict=True)
-            ]
+            # The first edit of a legacy table writes it whole, with ids and positions in stored order.
+            keyed = [{**row, "_id": self.next_id("row"), "_pos": position} for position, row in enumerate(rows, 1)]
             if not keyed:
-                keyed = [{"_id": self.next_id("row"), "_pos": "a0", "name": self.text()}]
+                keyed = [{"_id": self.next_id("row"), "_pos": 1, "name": self.text()}]
             entry = {"id": node["id"], "op": "set_field", "path": list(path), "value": keyed, "expect": {"value": rows}}
             return [{"type": "update_nodes", "updates": [entry]}]
         action = self.rng.choice(["cell", "add", "delete", "move"])
@@ -216,24 +221,19 @@ class Generator:
                 node["id"], (*path, selector, column), self.text(), row.get(column), exists=column in row
             )
         elif action == "add":
-            index = rows.index(row)
-            after = rows[index + 1]["_pos"] if index + 1 < len(rows) else None
+            # Insert after ``row``: halfway to the next position, or one past the last.
+            later = [other["_pos"] for other in rows if other["_pos"] > row["_pos"]]
+            position = (row["_pos"] + min(later)) / 2 if later else row["_pos"] + 1
             new_id = self.next_id("row")
-            new_row = {"_id": new_id, "_pos": generate_key_between(row["_pos"], after), "name": self.text()}
+            new_row = {"_id": new_id, "_pos": position, "name": self.text()}
             entry = {"id": node["id"], "op": "set_field", "path": [*path, {"id": new_id}], "value": new_row}
         elif action == "delete":
             entry = {"id": node["id"], "op": "delete_field", "path": [*path, selector]}
         else:
-            positions = sorted(other["_pos"] for other in rows)
-            entry = self.set_entry(
-                node["id"],
-                (*path, selector, "_pos"),
-                generate_key_between(None, positions[0])
-                if self.rng.random() < 0.5
-                else generate_key_between(positions[-1], None),
-                row["_pos"],
-                exists=True,
-            )
+            # Move to the start or the end of the table.
+            positions = [other["_pos"] for other in rows]
+            position = min(positions) - 1 if self.rng.random() < 0.5 else max(positions) + 1
+            entry = self.set_entry(node["id"], (*path, selector, "_pos"), position, row["_pos"], exists=True)
         return [{"type": "update_nodes", "updates": [entry]}]
 
     def toggle_output(self, graph):
@@ -308,16 +308,17 @@ class Generator:
         if not edges:
             return []
         edge = self.rng.choice(edges)
-        current = edge["data"]["targetHandle"].get("inputTypes")
-        value = sorted({*(current or []), self.rng.choice(["Message", "Data", "Text", "DataFrame"])})
-        entry = self.set_entry(
-            edge["id"],
-            ("data", "targetHandle", "inputTypes"),
-            value,
-            current,
-            exists="inputTypes" in edge["data"]["targetHandle"],
+        current = edge["data"]["targetHandle"]
+        input_types = sorted(
+            {*(current.get("inputTypes") or []), self.rng.choice(["Message", "Data", "Text", "DataFrame"])}
         )
-        return [{"type": "update_edges", "updates": [entry]}]
+        handle = {**current, "inputTypes": input_types}
+        # A handle is written in both forms together, or they would disagree.
+        entries = [
+            self.set_entry(edge["id"], ("data", "targetHandle"), handle, current, exists=True),
+            self.set_entry(edge["id"], ("targetHandle",), _escaped(handle), edge["targetHandle"], exists=True),
+        ]
+        return [{"type": "update_edges", "updates": entries}]
 
     def remove_field(self, graph):
         node = self.rng.choice(self.components(graph))
@@ -389,7 +390,7 @@ def generate() -> dict[str, Any]:
             "Cross-language property fixture, generated by property_cases.py. For each sequence, apply each "
             "transaction in order to `base`, one apply call per transaction; every one is accepted. `graph_hash` is "
             "the SHA-256 of the final graph's canonical form (view state removed, handles canonical, nodes and edges "
-            "ordered by id, RFC 8785)."
+            "ordered by id, table rows ordered by (_pos, _id), RFC 8785)."
         ),
         "seed": SEED,
         "base": base,

@@ -44,8 +44,8 @@ def _graph(rows) -> dict:
 
 LEGACY = [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
 KEYED = [
-    {"_id": "r1", "_pos": "a0", "key": "Accept", "value": "json"},
-    {"_id": "r2", "_pos": "a1", "key": "Auth", "value": "token"},
+    {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"},
+    {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"},
 ]
 EMPTY = {"nodes": [], "edges": []}
 
@@ -96,24 +96,35 @@ def test_the_first_edit_of_a_legacy_table_writes_it_whole_with_ids():
     assert find_graph_violations(_graph(KEYED), base=_graph(LEGACY)) == []
 
 
-def test_duplicate_ids_and_unsorted_rows_are_refused():
+def test_duplicate_ids_are_refused():
     duplicate = [dict(KEYED[0]), {**KEYED[1], "_id": "r1"}]
-    unsorted = [KEYED[1], KEYED[0]]
 
     assert _codes(find_graph_violations(_graph(duplicate), base=EMPTY)) == [
         (GraphViolationCode.TABLE_ROW_ID_DUPLICATE, (*TABLE_PATH, 1, "_id"))
     ]
-    assert _codes(find_graph_violations(_graph(unsorted), base=EMPTY)) == [
-        (GraphViolationCode.TABLE_ROWS_UNSORTED, TABLE_PATH)
+
+
+def test_the_stored_order_of_rows_is_not_checked():
+    assert find_graph_violations(_graph([KEYED[1], KEYED[0]]), base=EMPTY) == []
+
+
+@pytest.mark.parametrize("position", ["a0", True, None, float("inf")])
+def test_a_position_must_be_a_finite_number(position):
+    rows = [{**KEYED[0], "_pos": position}]
+
+    assert _codes(find_graph_violations(_graph(rows), base=EMPTY, check_values=False)) == [
+        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 0, "_pos"))
     ]
 
 
-def test_rows_with_equal_positions_sort_by_id():
-    tied = [{"_id": "b", "_pos": "a0"}, {"_id": "a", "_pos": "a0"}]
-
-    assert _codes(find_graph_violations(_graph(tied), base=EMPTY)) == [
-        (GraphViolationCode.TABLE_ROWS_UNSORTED, TABLE_PATH)
+def test_rows_are_read_in_position_order_and_ties_by_id():
+    rows = [
+        {"_id": "b", "_pos": 2, "key": "third"},
+        {"_id": "c", "_pos": 1.5, "key": "first"},
+        {"_id": "a", "_pos": 2, "key": "second"},
     ]
+
+    assert [row["key"] for row in strip_row_keys(rows)] == ["first", "second", "third"]
 
 
 def test_only_table_fields_are_checked():
@@ -150,7 +161,7 @@ def test_repair_assigns_ids_and_evenly_spaced_positions_in_row_order():
     rows = result.flow_data["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
 
     assert [row["key"] for row in rows] == ["Accept", "Auth"]
-    assert [row["_pos"] for row in rows] == ["a0", "a1"]
+    assert [row["_pos"] for row in rows] == [1, 2]
     assert all(isinstance(row["_id"], str) and len(row["_id"]) == 10 for row in rows)
     assert rows[0]["_id"] != rows[1]["_id"]
     assert [fix.code for fix in result.fixes] == [
@@ -175,24 +186,24 @@ def test_repair_fills_a_missing_position_between_its_neighbours():
     repaired = result.flow_data["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
 
     assert [row["_id"] for row in repaired] == ["r1", "r9", "r2"]
-    assert [row["_pos"] for row in repaired] == ["a0", "a0V", "a1"]
+    assert [row["_pos"] for row in repaired] == [1, 1.5, 2]
     assert [(fix.code, fix.path) for fix in result.fixes] == [
         (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 1, "_pos"))
     ]
 
 
-def test_repair_regenerates_duplicate_ids_and_sorts():
+def test_repair_regenerates_duplicate_ids_and_leaves_the_stored_order():
     rows = [{**KEYED[1]}, {**KEYED[0], "_id": "r2"}, "not a row"]
     result = repair_flow_data(_graph(rows), base=EMPTY)
     repaired = result.flow_data["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
 
-    assert [row["key"] for row in repaired] == ["Accept", "Auth"]
-    assert repaired[1]["_id"] == "r2"
-    assert repaired[0]["_id"] != "r2"
+    assert [row["key"] for row in repaired] == ["Auth", "Accept"]
+    assert repaired[0]["_id"] == "r2"
+    assert repaired[1]["_id"] != "r2"
+    assert [row["key"] for row in strip_row_keys(repaired)] == ["Accept", "Auth"]
     assert [fix.code for fix in result.fixes] == [
         GraphViolationCode.TABLE_ROW_NOT_OBJECT,
         GraphViolationCode.TABLE_ROW_ID_DUPLICATE,
-        GraphViolationCode.TABLE_ROWS_UNSORTED,
     ]
 
 
@@ -215,7 +226,7 @@ def test_repair_gives_only_a_new_row_a_new_id():
     repaired = repair_flow_data(_graph(rows), base=_graph(KEYED)).flow_data
     repaired_rows = repaired["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
 
-    assert [row["key"] for row in repaired_rows] == ["Trace", "Accept", "Auth"]
+    assert [row["key"] for row in strip_row_keys(repaired_rows)] == ["Trace", "Accept", "Auth"]
     assert [row["_id"] for row in repaired_rows[1:]] == ["r1", "r2"]
     assert repaired_rows[0]["_id"] not in {"r1", "r2"}
     assert find_graph_violations(repaired, base=_graph(KEYED)) == []
@@ -250,9 +261,9 @@ def test_assigning_ids_makes_a_new_node_pass_strict_validation_and_keeps_row_ord
 
 def test_assigning_ids_keeps_existing_ids_and_positions_and_fills_the_gaps():
     rows = [
-        {"_id": "r1", "_pos": "a0", "key": "first"},
+        {"_id": "r1", "_pos": 1, "key": "first"},
         {"key": "second"},
-        {"_id": "r1", "_pos": "a1", "key": "duplicate id"},
+        {"_id": "r1", "_pos": 2, "key": "duplicate id"},
     ]
     graph = _graph(rows)
 
@@ -260,9 +271,9 @@ def test_assigning_ids_keeps_existing_ids_and_positions_and_fills_the_gaps():
 
     result = _rows(graph)
     assert [row["key"] for row in result] == ["first", "second", "duplicate id"]
-    assert result[0] == {"_id": "r1", "_pos": "a0", "key": "first"}
-    assert result[2]["_pos"] == "a1"
-    assert "a0" < result[1]["_pos"] < "a1"
+    assert result[0] == {"_id": "r1", "_pos": 1, "key": "first"}
+    assert result[2]["_pos"] == 2
+    assert 1 < result[1]["_pos"] < 2
     assert len({row["_id"] for row in result}) == 3
     validate_flow_data(graph, base=EMPTY)
 
@@ -296,9 +307,9 @@ def test_assigning_changed_tables_keeps_the_ids_of_rows_the_table_still_holds():
 
     rows = _rows(target)
     assert [row["_id"] for row in rows[:2]] == ["r1", "r2"]
-    assert [row["_pos"] for row in rows[:2]] == ["a0", "a1"]
+    assert [row["_pos"] for row in rows[:2]] == [1, 2]
     assert rows[2]["key"] == "New"
-    assert rows[2]["_pos"] > "a1"
+    assert rows[2]["_pos"] > 2
     validate_flow_data(target, base=stored)
 
 
