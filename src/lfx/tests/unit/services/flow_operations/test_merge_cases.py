@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 
 import pytest
-from lfx.services.flow_operations import FlowOperationError, apply_flow_operations, parse_flow_operations
+from lfx.services.flow_operations import FlowOperationError, apply_flow_operations, graphs_equal, parse_flow_operations
 
 DOCUMENT = json.loads((Path(__file__).parent / "fixtures" / "merge_cases.json").read_text())
 CASES = DOCUMENT["cases"]
@@ -36,4 +36,4 @@ def test_merge_case(case):
             outcomes[name] = "applied"
 
     assert outcomes == case["outcomes"]
-    assert graph == case["expected"]
+    assert graphs_equal(graph, case["expected"])
