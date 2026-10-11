@@ -16,6 +16,7 @@ from lfx.services.flow_operations import (
     FlowOperationError,
     apply_flow_operations,
     dump_flow_operation,
+    load_node_schema,
     parse_flow_operations,
 )
 
@@ -36,7 +37,7 @@ def test_apply_case(case):
 
     result = apply_flow_operations(base, parse_flow_operations(copy.deepcopy(case["operations"])))
 
-    assert result.flow_data == case["expected"]
+    assert _ignoring_row_order(result.flow_data) == _ignoring_row_order(case["expected"])
     # Cases whose normalized operations equal what they submit leave forward_operations out.
     expected_forward = case.get("forward_operations", case["operations"])
     assert _ignoring_id_order([dump_flow_operation(op) for op in result.forward_ops]) == _ignoring_id_order(
@@ -53,3 +54,17 @@ def _ignoring_id_order(operations: list[dict]) -> list[dict]:
         else operation
         for operation in operations
     ]
+
+
+def _ignoring_row_order(flow_data: dict) -> dict:
+    """Compare table rows as a collection keyed by ``_id``: a table's order is its rows' positions, not the array."""
+    flow_data = copy.deepcopy(flow_data)
+    schema = load_node_schema()
+    for node in flow_data.get("nodes", []):
+        template = node.get("data", {}).get("node", {}).get("template", {})
+        for name, field in template.items():
+            path = ("data", "node", "template", name, "value")
+            rows = field.get("value") if isinstance(field, dict) else None
+            if isinstance(rows, list) and schema.keyed_list_at(node, path) is schema.table:
+                field["value"] = sorted(rows, key=lambda row: row["_id"])
+    return flow_data
