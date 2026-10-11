@@ -41,7 +41,7 @@ const flowWithTable = (rows: Record<string, unknown>[]) =>
 
 describe("exports", () => {
   it("export flows without the editor's row ids and positions", async () => {
-    const rows = [{ _id: "r1", _pos: "a0", key: "Accept", value: "json" }];
+    const rows = [{ _id: "r1", _pos: 1, key: "Accept", value: "json" }];
 
     await downloadFlow(flowWithTable(rows), "Flow", "");
 
@@ -54,7 +54,7 @@ describe("exports", () => {
   });
 
   it("export components without the editor's row ids and positions", async () => {
-    const rows = [{ _id: "r1", _pos: "a0", key: "Accept", value: "json" }];
+    const rows = [{ _id: "r1", _pos: 1, key: "Accept", value: "json" }];
 
     await downloadNode(flowWithTable(rows));
 
@@ -62,6 +62,6 @@ describe("exports", () => {
     expect(exported.data.nodes[0].data.node.template.headers.value).toEqual([
       { key: "Accept", value: "json" },
     ]);
-    expect(rows[0]._pos).toBe("a0");
+    expect(rows[0]._pos).toBe(1);
   });
 });

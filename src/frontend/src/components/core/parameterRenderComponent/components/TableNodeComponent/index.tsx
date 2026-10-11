@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableModal from "@/modals/tableModal";
+import { orderedRows } from "@/utils/flow-operations/canonical";
 import { isMarkdownTable } from "@/utils/markdownUtils";
 import {
   appendTableRows,
@@ -83,8 +84,9 @@ export default function TableNodeComponent({
   }, []);
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
-  // The rows being edited, each with an `_id` and `_pos` (see table-row-ids).
-  // A legacy table gets them here, and keeps them only if it is saved.
+  // The rows being edited, in order, each with an `_id` and `_pos` (see
+  // table-row-ids). A legacy table gets them here, and keeps them only if it
+  // is saved.
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [tempValue, setTempValue] = useState<any[]>(() => editableRows(value));
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -160,13 +162,12 @@ export default function TableNodeComponent({
 
   function handleSave() {
     // Saving an unedited table writes nothing, so a legacy table only gets
-    // row ids from an actual edit (which then writes it whole, with ids).
-    const unchanged = isEqual(
-      Array.isArray(value) && value.some(hasRowId)
-        ? tempValue
-        : stripTableRowIds(tempValue),
-      value ?? [],
-    );
+    // row ids from an actual edit (which then writes it whole, with ids). The
+    // rows being edited are in order, and the stored ones need not be.
+    const stored = Array.isArray(value) ? value : [];
+    const unchanged = stored.some(hasRowId)
+      ? isEqual(tempValue, orderedRows(stored))
+      : isEqual(stripTableRowIds(tempValue), stored);
     if (!unchanged) handleOnNewValue({ value: tempValue });
     setIsModalOpen(false);
   }
@@ -351,7 +352,9 @@ export default function TableNodeComponent({
 
 // biome-ignore lint/suspicious/noExplicitAny: legacy row values
 function editableRows(value: any): any[] {
-  return withTableRowIds(Array.isArray(value) ? cloneDeep(value) : []);
+  return orderedRows(
+    withTableRowIds(Array.isArray(value) ? cloneDeep(value) : []),
+  );
 }
 
 function hasRowId(row: unknown): boolean {
