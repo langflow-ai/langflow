@@ -20,7 +20,8 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { BackupStep } from "./BackupStep";
 import { CheckStep } from "./CheckStep";
-import { formatTime, PARTS } from "./catalog";
+import { CopyStep } from "./CopyStep";
+import { formatTime, isCopy, PARTS } from "./catalog";
 import { DestinationsStep } from "./DestinationsStep";
 import { PausedBanner, PauseStep, Recovery } from "./PauseStep";
 import { SecretKeyStep } from "./SecretKeyStep";
@@ -226,6 +227,9 @@ function Migration({ migration }: { migration: MigrationState }) {
                 number += 1;
                 const state = stateOf(step.id);
                 const isCheck = step.id === "check_source";
+                const copy = isCopy(step.id)
+                  ? record.steps[step.id]
+                  : undefined;
                 let summary: ReactNode = t(
                   `settings.migration.step.${step.slug}.purpose`,
                 );
@@ -279,6 +283,18 @@ function Migration({ migration }: { migration: MigrationState }) {
                     ),
                     location: record.backup?.location,
                   });
+                } else if (
+                  step.id === "copy_database" &&
+                  state.state === "done"
+                ) {
+                  summary = t("settings.migration.copyDb.done", {
+                    tables: copy?.report?.tables_copied?.toLocaleString(
+                      i18n.language,
+                    ),
+                    rows: copy?.report?.rows_copied?.toLocaleString(
+                      i18n.language,
+                    ),
+                  });
                 }
                 // A step the admin has reached, and that this server can do.
                 const live =
@@ -299,6 +315,14 @@ function Migration({ migration }: { migration: MigrationState }) {
                   body = <PauseStep migration={migration} state={state} />;
                 } else if (unfinished && step.id === "backup") {
                   body = <BackupStep migration={migration} />;
+                } else if (live && isCopy(step.id)) {
+                  body = (
+                    <CopyStep
+                      migration={migration}
+                      state={state}
+                      step={step.id}
+                    />
+                  );
                 }
                 return (
                   <StepItem
@@ -309,8 +333,9 @@ function Migration({ migration }: { migration: MigrationState }) {
                     state={state}
                     // The pause waits on the same run while it is checked again.
                     running={
-                      run?.status === "running" &&
-                      (isCheck || state.reason === "recheck_pending")
+                      copy?.status === "running" ||
+                      (run?.status === "running" &&
+                        (isCheck || state.reason === "recheck_pending"))
                     }
                     expandable={Boolean(body) && state.state === "done"}
                   >

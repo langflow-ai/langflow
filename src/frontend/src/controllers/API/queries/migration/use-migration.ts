@@ -3,6 +3,8 @@ import type { AxiosError, AxiosResponse } from "axios";
 import { api, performStreamingRequest } from "../../api";
 import { getURL } from "../../helpers/constants";
 import type {
+  CopyEvent,
+  CopyStepId,
   DestinationsRequest,
   DestinationsSaved,
   MigrationCheckEvent,
@@ -160,3 +162,62 @@ export const useConfirmBackupMutation = () =>
       location,
     }),
   );
+
+/** Starts a copy. It is a process of its own on the server, so it keeps going when the page is gone. */
+export const useStartCopyMutation = (step: CopyStepId) => {
+  const client = useQueryClient();
+  return useMutation<unknown, AxiosError<{ detail?: MigrationError }>, void>({
+    mutationFn: () =>
+      api.post(getURL("MIGRATION", { path: `steps/${step}/runs` }), {
+        dry_run: false,
+      }),
+    // The record now says the run is on, or what changed for the server to refuse it.
+    onSettled: () => client.invalidateQueries({ queryKey: migrationKeys.all }),
+  });
+};
+
+/** Stops a run. The page learns that it ended from the run's own events. */
+export const useStopCopyMutation = (step: CopyStepId) =>
+  useMutation<unknown, AxiosError, string>({
+    mutationFn: (runId) =>
+      api.delete(getURL("MIGRATION", { path: `steps/${step}/runs/${runId}` })),
+  });
+
+/**
+ * Hands over each event of a run that comes after the one numbered `after`, as it happens, down to its end.
+ * Resolves with the refusal when the server has no such run, or status 0 if the connection fails.
+ * Aborting the controller stops nothing on the server.
+ */
+export async function followCopy({
+  step,
+  runId,
+  after,
+  controller,
+  onEvent,
+}: {
+  step: CopyStepId;
+  runId: string;
+  after: number;
+  controller: AbortController;
+  onEvent: (event: CopyEvent) => void;
+}): Promise<{ status: number } | undefined> {
+  let refused: { status: number } | undefined;
+  await performStreamingRequest({
+    method: "GET",
+    url: `${getURL("MIGRATION", { path: `steps/${step}/runs/${runId}/events` })}?after=${after}`,
+    buildController: controller,
+    onError: (status) => {
+      refused = { status };
+    },
+    onData: async (data) => {
+      // A refusal answers with one JSON error body in place of the events. Let it end on its own:
+      // returning false would abort the caller's controller, which every later attempt shares.
+      if (!refused) onEvent(data as CopyEvent);
+      return true;
+    },
+    onNetworkError: () => {
+      if (!controller.signal.aborted) refused ??= { status: 0 };
+    },
+  });
+  return refused;
+}
