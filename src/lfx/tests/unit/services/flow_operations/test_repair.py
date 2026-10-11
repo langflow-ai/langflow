@@ -1,4 +1,4 @@
-"""Repair: every rule the engine enforces has a fix, and the result follows the rules."""
+"""Repair: every direct rule has a fix, the result follows the rules, and client-fixed rules are left alone."""
 
 from __future__ import annotations
 
@@ -8,11 +8,14 @@ import re
 
 import pytest
 from lfx.services.flow_operations import (
+    CLIENT_FIXED_CODES,
     REPAIRS,
+    FlowDataValidationError,
     GraphViolationCode,
     find_graph_violations,
     repair_flow_data,
 )
+from lfx.services.flow_operations.edge_rules import escape_handle
 
 
 def _node(node_id: str, **extra) -> dict:
@@ -27,9 +30,89 @@ def _codes(result) -> list[GraphViolationCode]:
     return [fix.code for fix in result.fixes]
 
 
-def test_every_rule_has_a_repair():
-    # A new engine rule cannot ship without a way out for flows that break it.
-    assert set(REPAIRS) == set(GraphViolationCode)
+def test_every_rule_is_repaired_or_left_to_the_client():
+    # A new rule cannot ship until someone has decided which kind it is: a direct
+    # rule needs a fix, and a rule only the client can fix must have none.
+    assert set(REPAIRS) | CLIENT_FIXED_CODES == set(GraphViolationCode)
+    assert not set(REPAIRS) & CLIENT_FIXED_CODES
+
+
+# --- Edges a write adds or rewires ---------------------------------------------------
+
+EMPTY = {"nodes": [], "edges": []}
+SOURCE_HANDLE = {"id": "a", "name": "out"}
+TARGET_HANDLE = {"fieldName": "f", "id": "b"}
+
+
+def _connectable() -> dict:
+    return {
+        "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}},
+        ],
+        "edges": [],
+    }
+
+
+def _handled_edge(edge_id: str, target: str = "b", target_handle: dict | None = None) -> dict:
+    target_handle = target_handle or TARGET_HANDLE
+    return {
+        "id": edge_id,
+        "source": "a",
+        "target": target,
+        "sourceHandle": escape_handle(SOURCE_HANDLE),
+        "targetHandle": escape_handle(target_handle),
+        "data": {"sourceHandle": SOURCE_HANDLE, "targetHandle": target_handle},
+    }
+
+
+def test_a_handle_missing_one_form_gets_it_from_the_other():
+    graph = _connectable()
+    edge = _handled_edge("e")
+    del edge["sourceHandle"]
+    del edge["data"]["targetHandle"]
+    graph["edges"].append(edge)
+
+    result = repair_flow_data(graph, base=EMPTY)
+
+    assert result.flow_data["edges"] == [_handled_edge("e")]
+    assert [(fix.code, fix.path) for fix in result.fixes] == [
+        (GraphViolationCode.EDGE_HANDLE_FORM_MISSING, ("edges", 0))
+    ]
+
+
+def test_an_edge_that_touches_a_note_is_dropped():
+    graph = _connectable()
+    graph["edges"].append(_handled_edge("e", target="note"))
+
+    result = repair_flow_data(graph, base=EMPTY)
+
+    assert result.flow_data["edges"] == []
+    assert _codes(result) == [GraphViolationCode.EDGE_TOUCHES_NOTE]
+
+
+def test_a_rule_only_the_client_can_fix_is_left_and_refused():
+    graph = _connectable()
+    graph["edges"].append(_handled_edge("e", target_handle={"fieldName": "missing", "id": "b"}))
+    graph["edges"].append(_handled_edge("e-note", target="note"))
+    original = copy.deepcopy(graph)
+
+    with pytest.raises(FlowDataValidationError) as exc_info:
+        repair_flow_data(graph, base=EMPTY)
+
+    assert [violation.to_dict()["resolution"] for violation in exc_info.value.violations] == ["client"]
+    assert exc_info.value.violations[0].code == GraphViolationCode.EDGE_HANDLE_NOT_FOUND
+    assert graph == original
+
+
+def test_stored_edges_the_write_leaves_alone_are_not_repaired():
+    graph = _connectable()
+    edge = _handled_edge("e")
+    del edge["sourceHandle"]
+    graph["edges"].append(edge)
+
+    assert repair_flow_data(graph, base=copy.deepcopy(graph)).fixes == []
 
 
 def test_a_valid_graph_is_returned_unchanged_with_no_fixes():
