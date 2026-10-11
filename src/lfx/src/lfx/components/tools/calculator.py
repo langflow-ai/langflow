@@ -103,4 +103,6 @@ class CalculatorToolComponent(LCToolComponent):
             ast.Mult: operator.mul,
             ast.Div: operator.truediv,
             ast.Pow: operator.pow,
+            ast.UAdd: operator.pos,
+            ast.USub: operator.neg,
         }

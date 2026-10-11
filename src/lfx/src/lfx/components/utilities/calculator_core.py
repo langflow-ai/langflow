@@ -23,6 +23,11 @@ class CalculatorComponent(Component):
         ast.Pow: operator.pow,
     }
 
+    UNARY_OPERATORS: dict[type[ast.unaryop], Callable] = {
+        ast.UAdd: operator.pos,
+        ast.USub: operator.neg,
+    }
+
     inputs = [
         MessageTextInput(
             name="expression",
@@ -53,6 +58,14 @@ class CalculatorComponent(Component):
             left = self._eval_expr(node.left)
             right = self._eval_expr(node.right)
             return self.OPERATORS[op_type](left, right)
+
+        if isinstance(node, ast.UnaryOp):
+            op_type = type(node.op)
+            if op_type not in self.UNARY_OPERATORS:
+                error_msg = f"Unsupported unary operator: {op_type.__name__}"
+                raise TypeError(error_msg)
+
+            return self.UNARY_OPERATORS[op_type](self._eval_expr(node.operand))
 
         error_msg = f"Unsupported operation or expression type: {type(node).__name__}"
         raise TypeError(error_msg)
