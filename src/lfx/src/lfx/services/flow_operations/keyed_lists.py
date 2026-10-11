@@ -61,7 +61,8 @@ class ListIndex:
         if isinstance(position, bool) or not isinstance(position, (int, float)) or not math.isfinite(position):
             msg = f"{context}: a table row's {self.keyed.position} must be a finite number"
             raise FlowOperationValidationError(msg)
-        return position, utf16_sort_key(row[self.keyed.key[0]])
+        # Compared as doubles, as JavaScript holds them, so both engines order rows alike.
+        return float(position), utf16_sort_key(row[self.keyed.key[0]])
 
     def add(self, item: dict[str, Any], *, context: str) -> None:
         """Add an item whose key is not in the list yet."""
