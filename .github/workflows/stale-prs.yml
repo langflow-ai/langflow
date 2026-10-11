@@ -10,6 +10,9 @@ on:
 permissions:
   pull-requests: write
   issues: write
+  # actions/stale saves its progress in the actions cache so the next run resumes where this
+  # one stopped; without it, each run re-reads the newest PRs and never reaches older ones.
+  actions: write
 
 jobs:
   stale:
@@ -22,9 +25,11 @@ jobs:
           days-before-pr-stale: 60
           days-before-pr-close: -1
           stale-pr-label: stale
+          # Outside contributors' PRs are exempt so they aren't nagged; stale tracking covers
+          # team PRs.
           exempt-pr-labels: "community,DO NOT MERGE"
           exempt-draft-pr: true
-          operations-per-run: 100
+          operations-per-run: 300
           stale-pr-message: >
             This PR has had no activity for 60 days, so it has been labeled `stale`.
             It will not be closed automatically. Push a commit or leave a comment to

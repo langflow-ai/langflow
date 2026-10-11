@@ -11,6 +11,8 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  # Required to create the area:* labels on first use.
+  issues: write
 
 jobs:
   label:

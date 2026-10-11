@@ -46,7 +46,8 @@ jobs:
             });
             const counted = files.filter(f => !GENERATED.some(re => re.test(f.filename)));
             const lines = counted.reduce((sum, f) => sum + f.additions + f.deletions, 0);
-            const [label] = SIZES.find(([, max]) => lines < max);
+            // The files API returns at most 3000 files, so a PR at the cap is undercounted.
+            const [label] = files.length >= 3000 ? SIZES[SIZES.length - 1] : SIZES.find(([, max]) => lines < max);
             console.log(`${lines} lines changed in ${counted.length} non-generated files -> ${label}`);
 
             const { data: current } = await github.rest.issues.listLabelsOnIssue({
@@ -55,18 +56,27 @@ jobs:
             });
             const currentSizes = current.map(l => l.name).filter(n => n.startsWith('size:'));
             for (const stale of currentSizes.filter(n => n !== label)) {
-              await github.rest.issues.removeLabel({ ...context.repo, issue_number: pull_number, name: stale });
+              try {
+                await github.rest.issues.removeLabel({ ...context.repo, issue_number: pull_number, name: stale });
+              } catch (error) {
+                if (error.status !== 404) throw error;  // already removed by someone else
+              }
             }
             if (currentSizes.includes(label)) {
               return;
             }
             await github.rest.issues.addLabels({ ...context.repo, issue_number: pull_number, labels: [label] });
 
-            if (label === 'size:XXL') {
+            const MARKER = '<!-- pr-size-labels:xxl -->';
+            const comments = label === 'size:XXL'
+              ? await github.paginate(github.rest.issues.listComments, { ...context.repo, issue_number: pull_number, per_page: 100 })
+              : [];
+            if (label === 'size:XXL' && !comments.some(c => c.body?.includes(MARKER))) {
               await github.rest.issues.createComment({
                 ...context.repo,
                 issue_number: pull_number,
                 body: [
+                  MARKER,
                   `This PR changes ${lines} lines across ${counted.length} files (generated files excluded).`,
                   'Large PRs are harder to review and can exceed the file limit for automated review.',
                   'Consider splitting it into smaller PRs if the changes are separable.',
