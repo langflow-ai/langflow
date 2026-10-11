@@ -8,10 +8,10 @@ CONFIG_DIR/migrations/runs:
                      then one last "end" event that says how the run ended
     <run_id>.json    the status: the step, who started it and when, how it ended
 
-Following, cancelling and listing read those files and nothing in memory, so any
-worker can serve a run that another worker started. Only the worker that started a
-run writes them. A cancel leaves a <run_id>.cancel file beside them, which tells that
-worker why the child exited.
+Following, cancelling and listing work from those files, so any worker can serve a
+run that another worker started. The worker that started a run also holds its reader
+task and its child, and asks them first. Only that worker writes the files. A cancel
+leaves a <run_id>.cancel file beside them, which tells that worker why the child exited.
 
 A run is live while its status says running and its child, or the worker reading the
 child, still exists. A run that says running with both gone was interrupted: the
@@ -61,8 +61,8 @@ _READ_BYTES = 1024 * 1024
 # How long a cancelled child has to stop after SIGTERM, before SIGKILL.
 _GRACE_S = 5.0
 
-# The loop keeps only a weak reference to a task, so the ones reading a child are held here.
-_readers: set[asyncio.Task] = set()
+# The loop keeps only a weak reference to a task, so the ones reading a child are held here, each with that child.
+_readers: dict[asyncio.Task, asyncio.subprocess.Process] = {}
 
 
 class RunActiveError(Exception):
@@ -119,9 +119,9 @@ async def start_run(step_id: str, argv: list[str], env: dict[str, str], *, start
     except Timeout:
         # Another worker is starting a run at this moment.
         raise RunActiveError from None
-    reader = asyncio.create_task(_read_child(status, process))
-    _readers.add(reader)
-    reader.add_done_callback(_readers.discard)
+    reader = asyncio.create_task(_read_child(status, process), name=status["run_id"])
+    _readers[reader] = process
+    reader.add_done_callback(_readers.pop)
     return status["run_id"]
 
 
@@ -132,7 +132,7 @@ def read_run(run_id: str) -> dict[str, Any]:
     except (FileNotFoundError, ValueError):
         # A status is replaced whole, so one that is not JSON is what a machine that lost power left.
         raise RunNotFoundError(run_id) from None
-    if run["status"] == "running" and not (_process(run["worker"]) or _process(run["child"])):
+    if run["status"] == "running" and not (_read_here(run_id) or _process(run["worker"]) or _process(run["child"])):
         # Nothing is left to write how it ended.
         run["status"] = "interrupted"
     return run
@@ -181,7 +181,7 @@ async def cancel_run(run_id: str) -> None:
     that is over, or whose child has already exited, is left alone. Raises RunNotFoundError.
     """
     run = read_run(run_id)
-    child = _process(run["child"])
+    child = _child(run)
     if run["status"] != "running" or child is None:
         return
     # Tells the worker reading the child why it exited.
@@ -189,7 +189,7 @@ async def cancel_run(run_id: str) -> None:
     with contextlib.suppress(psutil.NoSuchProcess):
         child.terminate()
         for _ in range(round(_GRACE_S / _POLL_S)):
-            if _process(run["child"]) is None:
+            if _child(run) is None:
                 return
             await asyncio.sleep(_POLL_S)
         child.kill()
@@ -280,6 +280,33 @@ def _identity(pid: int) -> dict[str, Any] | None:
     except (psutil.NoSuchProcess, ProcessLookupError):
         # Linux answers with the second when the process is reaped while its entry in /proc is read.
         return None
+
+
+def _child(run: dict[str, Any]) -> psutil.Process | None:
+    """The child of a run while it can still write, or None.
+
+    When the system no longer matches what the status recorded, the worker that reads the child still
+    holds it. The handle says the child has not exited until one loop turn after it was reaped, and in
+    that gap its pid may be free, so the process with that pid must also have this worker as its parent.
+    """
+    found = _process(run["child"])
+    own = next((child for reader, child in _readers.items() if reader.get_name() == run["run_id"]), None)
+    if found is None and own is not None and own.returncode is None:
+        with contextlib.suppress(psutil.Error, ProcessLookupError):
+            process = psutil.Process(own.pid)
+            if process.status() != psutil.STATUS_ZOMBIE and process.ppid() == os.getpid():
+                return process
+    return found
+
+
+def _read_here(run_id: str) -> bool:
+    """Whether this worker is the one reading the run's child, which it knows without asking the system.
+
+    A process is told apart by when it started. On macOS that time moves when the system clock is set:
+    psutil shifts it once the boot time differs by a second or more from the one it read at import, and
+    a status written before then matches no process.
+    """
+    return any(reader.get_name() == run_id for reader in _readers)
 
 
 def _process(identity: dict[str, Any] | None) -> psutil.Process | None:
