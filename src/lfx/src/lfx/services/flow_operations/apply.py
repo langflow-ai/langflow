@@ -147,6 +147,7 @@ def _apply_update_nodes(state: GraphState, updates: list[UpdateNodeEntry]) -> tu
         return [], []
 
     _validate_update_entries(updates, kind="update_nodes")
+    applied: list[UpdateNodeEntry] = []
     detached_edge_ids: set[str] = set()
     for index, update in enumerate(updates):
         node_id = update.id
@@ -160,9 +161,13 @@ def _apply_update_nodes(state: GraphState, updates: list[UpdateNodeEntry]) -> tu
         _validate_node_field_path(update.path, context=f"{context}.path")
         node = writable_node(state, node_id)
         before = _apply_field_update(state, node, node, update, context=context)
+        if _changed(update, before):
+            applied.append(update)
         detached_edge_ids |= _detached_edges(state, node_id, update, before)
 
-    forward_ops: list[FlowOperation] = [UpdateNodesOp(type="update_nodes", updates=copy.deepcopy(updates))]
+    forward_ops: list[FlowOperation] = []
+    if applied:
+        forward_ops.append(UpdateNodesOp(type="update_nodes", updates=copy.deepcopy(applied)))
     removed_edge_ids = state.remove_edges(list(detached_edge_ids))
     if removed_edge_ids:
         forward_ops.append(DeleteEdgesOp(type="delete_edges", ids=removed_edge_ids))
@@ -216,6 +221,7 @@ def _apply_update_edges(state: GraphState, updates: list[UpdateNodeEntry]) -> li
         return []
 
     _validate_update_entries(updates, kind="update_edges")
+    applied: list[UpdateNodeEntry] = []
     # The handles of each edge the batch writes under a handle key, as they were before.
     handles_before: dict[str, dict[str, Any]] = {}
     for index, update in enumerate(updates):
@@ -237,7 +243,8 @@ def _apply_update_edges(state: GraphState, updates: list[UpdateNodeEntry]) -> li
         edge = writable_edge(state, edge_id)
         if root in EDGE_HANDLE_ROOTS and edge_id not in handles_before:
             handles_before[edge_id] = _raw_handles(edge)
-        _apply_field_update(state, edge, None, update, context=context)
+        if _changed(update, _apply_field_update(state, edge, None, update, context=context)):
+            applied.append(update)
 
     # An edge whose handles the batch changed is rewired, so it is checked like a new one.
     for edge_id, before in handles_before.items():
@@ -247,7 +254,14 @@ def _apply_update_edges(state: GraphState, updates: list[UpdateNodeEntry]) -> li
             check_edge(state, edge)
             state.reindex_handles(edge)
 
-    return [UpdateEdgesOp(type="update_edges", updates=copy.deepcopy(updates))]
+    if not applied:
+        return []
+    return [UpdateEdgesOp(type="update_edges", updates=copy.deepcopy(applied))]
+
+
+def _changed(update: UpdateNodeEntry, before: Any) -> bool:
+    """Return False for a delete that found nothing to remove, which is not recorded."""
+    return not (isinstance(update, DeleteNodeFieldUpdate) and before is _ABSENT)
 
 
 def _raw_handles(edge: dict[str, Any]) -> dict[str, Any]:

@@ -522,7 +522,7 @@
       }
     },
     {
-      "name": "delete_field of a missing key is a no-op",
+      "name": "delete_field of a missing key changes and records nothing",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -557,7 +557,8 @@
           }
         ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
-      }
+      },
+      "forward_operations": []
     },
     {
       "name": "delete_field rejects an integer path segment",
@@ -1167,7 +1168,7 @@
       }
     },
     {
-      "name": "selector: delete_field of a missing row is a no-op",
+      "name": "selector: delete_field of a missing row changes and records nothing",
       "base": {
         "nodes": [
           {
@@ -1202,7 +1203,8 @@
           }
         ],
         "edges": []
-      }
+      },
+      "forward_operations": []
     },
     {
       "name": "selector: editing a cell of a missing row fails",
