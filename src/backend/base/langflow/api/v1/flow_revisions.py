@@ -16,8 +16,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from lfx.services.flow_operations import DeleteEdgesOp, FlowOperationError, UpdateEdgesOp, apply_flow_operations
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlmodel import col, select
 
@@ -35,7 +34,7 @@ from langflow.services.deps import get_catalog_policy_service, get_storage_servi
 from langflow.services.flow_history.envelope import RESTORE_CAUSE
 from langflow.services.flow_history.errors import FlowHistoryError
 from langflow.services.flow_history.replay import reconstruct_graph
-from langflow.services.flow_history.restore_fixes import check_restore_fixes
+from langflow.services.flow_history.restore_fixes import RESTORE_FIXES_DESCRIPTION, RestoreFix, apply_restore_fixes
 from langflow.services.flow_history.secrets import strip_graph_secrets
 from langflow.services.flow_history.timeline import TimelineEntry, read_timeline
 from langflow.services.storage.service import StorageService
@@ -98,13 +97,7 @@ class RevisionGraph(BaseModel):
 class RevisionRestore(BaseModel):
     request_id: UUID | None = Field(None, description="Identifies this restore across retries")
     repair_revision_mismatch: bool = False
-    fixes: list[Annotated[DeleteEdgesOp | UpdateEdgesOp, Field(discriminator="type")]] | None = Field(
-        None,
-        description=(
-            "The client's fixes for a restore refused with violations the client fixes: edge deletes and "
-            "handle rewrites, applied to the revision before it is saved."
-        ),
-    )
+    fixes: list[RestoreFix] | None = Field(None, description=RESTORE_FIXES_DESCRIPTION)
 
 
 @router.get("", response_model=RevisionPage)
@@ -209,18 +202,11 @@ async def restore_revision(
     except FlowHistoryError as exc:
         raise history_http_error(exc) from exc
     if options.fixes:
-        try:
-            check_restore_fixes(graph, flow.data or {}, options.fixes)
-        except FlowHistoryError as exc:
-            raise history_http_error(exc) from exc
         unfixed = graph
         try:
-            graph = apply_flow_operations(unfixed, list(options.fixes)).flow_data
-        except FlowOperationError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={"code": exc.code, "message": f"A fix cannot be applied to this revision: {exc}"},
-            ) from exc
+            graph = apply_restore_fixes(unfixed, flow.data or {}, options.fixes)
+        except FlowHistoryError as exc:
+            raise history_http_error(exc) from exc
         # Kept in the same transaction as the write, so a refused restore keeps nothing.
         await create_flow_version_entry(
             session,
