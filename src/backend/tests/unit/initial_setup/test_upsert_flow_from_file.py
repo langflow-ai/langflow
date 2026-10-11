@@ -27,6 +27,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.flow_history.envelope import decode_row
 from langflow.services.flow_history.recorder import projection_matches
 from lfx.services.deps import get_settings_service
+from lfx.services.flow_operations.edge_rules import escape_handle
 from sqlmodel import select
 
 import lfx
@@ -69,6 +70,19 @@ def _node_with_field(node_id: str, *, value: str, load_from_db: bool) -> dict:
                 }
             }
         },
+    }
+
+
+def _self_edge(edge_id: str, node_id: str) -> dict:
+    """An edge from a node's output into its own api_key field, with both forms of its handles."""
+    source_handle, target_handle = {"id": node_id, "name": "out"}, {"fieldName": "api_key", "id": node_id}
+    return {
+        "id": edge_id,
+        "source": node_id,
+        "target": node_id,
+        "sourceHandle": escape_handle(source_handle),
+        "targetHandle": escape_handle(target_handle),
+        "data": {"sourceHandle": source_handle, "targetHandle": target_handle},
     }
 
 
@@ -370,10 +384,9 @@ async def test_upsert_flow_from_file_preserves_existing_variable_binding(incomin
         user_id=user_id,
         data={"nodes": [existing_node], "edges": []},
     )
-    incoming_data = {
-        "nodes": [_node_with_field("n1", value="", load_from_db=incoming_load_from_db)],
-        "edges": [{"id": "updated-edge", "source": "n1", "target": "n1"}],
-    }
+    incoming_node = _node_with_field("n1", value="", load_from_db=incoming_load_from_db)
+    incoming_node["data"]["node"]["outputs"] = [{"name": "out"}]
+    incoming_data = {"nodes": [incoming_node], "edges": [_self_edge("updated-edge", "n1")]}
     incoming_data["nodes"][0]["data"]["node"]["template"]["api_key"]["display_name"] = "New label"
     file_content = orjson.dumps({"id": str(original.id), "name": original.name, "data": incoming_data})
 
@@ -746,7 +759,7 @@ def _api_request_node(node_id: str) -> dict:
     }
     headers = node["data"]["node"]["template"]["headers"]
     assert headers["value"], "the API Request component has default header rows"
-    headers["value"] = [{**row, "_id": f"editor{i}", "_pos": f"a{i}"} for i, row in enumerate(headers["value"])]
+    headers["value"] = [{**row, "_id": f"editor{i}", "_pos": i} for i, row in enumerate(headers["value"], 1)]
     return node
 
 
@@ -839,3 +852,24 @@ async def test_syncing_a_file_that_adds_a_row_records_only_that_row() -> None:
     assert len(writes) == 1
     assert writes[0].op == "set_field"
     assert writes[0].value["key"] == "X-Trace"
+
+
+@pytest.mark.usefixtures("client")
+async def test_a_file_whose_edges_only_the_client_can_fix_is_skipped() -> None:
+    """Repair cannot choose which handle an edge meant, so the sync leaves the stored flow as it is."""
+    user_id = uuid4()
+    stored = {"nodes": [_node_with_field("n1", value="kept", load_from_db=False)], "edges": []}
+    original = await _create_flow(name="BadEdgeFlow", user_id=user_id, data=stored)
+    incoming = copy.deepcopy(stored)
+    incoming["nodes"][0]["data"]["node"]["outputs"] = [{"name": "out"}]
+    incoming["edges"] = [{"id": "no-handles", "source": "n1", "target": "n1"}]
+    file_content = orjson.dumps({"id": str(original.id), "name": original.name, "data": incoming})
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(file_content, original.name, session, user_id)
+        await session.commit()
+
+    async with session_scope() as session:
+        unchanged = await session.get(Flow, original.id)
+        assert unchanged.data == stored
+    assert await _operations(original.id) == []

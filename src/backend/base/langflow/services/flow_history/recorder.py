@@ -44,6 +44,7 @@ from lfx.services.flow_operations import (
     AddNodesOp,
     DeleteEdgesOp,
     DeleteNodesOp,
+    FlowDataValidationError,
     FlowOperation,
     FlowOperationError,
     GraphFix,
@@ -206,7 +207,11 @@ async def write_flow_graph(
     if violations:
         if not repair_invalid:
             raise FlowGraphInvalidError(violations, graph="submitted")
-        repaired = repair_flow_data(target, base=base)
+        try:
+            repaired = repair_flow_data(target, base=base)
+        except FlowDataValidationError as exc:
+            # What repair leaves needs the person's intent, so the client fixes it.
+            raise FlowGraphInvalidError(exc.violations, graph="submitted") from exc
         target = repaired.flow_data
         result.graph_repairs.extend(_fix_entry("submitted", fix) for fix in repaired.fixes)
 

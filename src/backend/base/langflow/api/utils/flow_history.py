@@ -62,8 +62,9 @@ def history_http_error(exc: FlowHistoryError) -> HTTPException:
             detail={
                 "code": exc.code,
                 "message": (
-                    f"The {exc.graph} flow breaks the flow graph rules. Correct it, or resend with "
-                    "repair_invalid_graph to repair it and keep the stored original as a version."
+                    f"The {exc.graph} flow breaks the flow graph rules. Each violation's resolution says "
+                    "who fixes it: resend with repair_invalid_graph to repair the ones marked repair and keep "
+                    "the stored original as a version; the ones marked client need the client to correct the flow."
                 ),
                 "graph": exc.graph,
                 "violations": [violation.to_dict() for violation in exc.violations],

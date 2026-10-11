@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from httpx import AsyncClient
 
 KEYED_ROWS = [
-    {"_id": "r1", "_pos": "a0", "key": "Accept", "value": "json"},
-    {"_id": "r2", "_pos": "a1", "key": "Auth", "value": "token"},
+    {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"},
+    {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"},
 ]
 PLAIN_ROWS = [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
 
@@ -77,7 +77,8 @@ class RowsProbe(Component):
     outputs = [Output(display_name="Out", name="out", method="run")]
 
     def update_build_config(self, build_config, field_value, field_name=None):
-        build_config["seen"]["value"] = repr(self.headers)
+        raw_keys = [row["key"] for row in build_config["headers"]["value"]]
+        build_config["seen"]["value"] = repr({"attribute": self.headers, "raw": raw_keys})
         return build_config
 
     def run(self) -> Message:
@@ -120,3 +121,21 @@ async def test_flow_download_leaves_out_row_ids(client: AsyncClient, logged_in_h
     # The stored flow keeps them.
     stored = await client.get(f"api/v1/flows/{created.json()['id']}", headers=logged_in_headers)
     assert stored.json()["data"]["nodes"][0]["data"]["node"]["template"]["headers"]["value"] == KEYED_ROWS
+
+
+async def test_component_hooks_see_raw_rows_in_position_order(client: AsyncClient, logged_in_headers):
+    # Stored rows are in no particular order; their positions are the order.
+    template = {
+        "headers": _table_field(list(reversed(KEYED_ROWS))),
+        "seen": {"name": "seen", "type": "str", "_input_type": "MessageTextInput", "value": ""},
+    }
+    request = UpdateCustomComponentRequest(
+        code=PROBE_CODE, frontend_node={"outputs": []}, field="seen", field_value="", template=template
+    )
+
+    response = await client.post("api/v1/custom_component/update", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    seen = response.json()["template"]["seen"]["value"]
+    assert "'raw': ['Accept', 'Auth']" in seen
+    assert seen.index("Accept") < seen.index("Auth")
