@@ -513,7 +513,7 @@ def _edges_attached_to(state: GraphState, node_id: str, path: NodeFieldPath, rem
         return []
 
     attached: list[str] = []
-    for edge_id in _edges_in_graph_order(state, state.edge_ids_by_node_id.get(node_id, ())):
+    for edge_id in state.edge_ids_by_node_id.get(node_id, ()):
         edge = state.edges_by_id[edge_id]
         source_handle, target_handle = _edge_handles(edge)
         if field_name is not None:
@@ -648,7 +648,7 @@ def _check_edge_rules(state: GraphState, edge: dict[str, Any], *, context: str) 
         raise FlowOperationValidationError(msg, code="EDGE_HANDLE_NOT_FOUND")
     if template_field.get("list") is True:
         return
-    for other_id in _edges_in_graph_order(state, state.edge_ids_by_node_id.get(edge["target"], ())):
+    for other_id in state.edge_ids_by_node_id.get(edge["target"], ()):
         other = state.edges_by_id[other_id]
         if other_id == edge["id"] or other["target"] != edge["target"]:
             continue
@@ -679,7 +679,7 @@ def _apply_delete_nodes(state: GraphState, ids: list[str]) -> tuple[list[FlowOpe
             continue
         del state.nodes_by_id[node_id]
         removed_node_ids.append(node_id)
-        incident_edge_ids.extend(_edges_in_graph_order(state, state.edge_ids_by_node_id.pop(node_id, set())))
+        incident_edge_ids.extend(state.edge_ids_by_node_id.pop(node_id, ()))
 
     if not removed_node_ids:
         return [], []
@@ -758,13 +758,6 @@ def _apply_update_metadata(
             delete_keys=keys_to_delete,
         )
     ]
-
-
-def _edges_in_graph_order(state: GraphState, edge_ids: set[str]) -> list[str]:
-    """Return edge ids in the order the graph lists the edges, so results never depend on set order."""
-    if not edge_ids:
-        return []
-    return [edge_id for edge_id in state.edges_by_id if edge_id in edge_ids]
 
 
 def _remove_edges(state: GraphState, ids: list[str]) -> list[str]:
