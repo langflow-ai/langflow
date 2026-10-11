@@ -4,6 +4,9 @@ Nodes and edges are indexed by id, and edges by the nodes they touch. Indexes
 that only some writes need are built the first time a write asks for them and
 kept up to date afterwards: keyed lists by item key, each edge's handles, and
 each node's connections by the input or output they use.
+
+Application is copy-on-write: the base flow is never changed, and the result
+shares every container a write did not pass through.
 """
 
 from __future__ import annotations
@@ -11,7 +14,7 @@ from __future__ import annotations
 import copy
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from lfx.services.flow_operations.edge_rules import Connections, Handles, read_handles
 from lfx.services.flow_operations.exceptions import (
@@ -24,6 +27,8 @@ from lfx.services.flow_operations.keyed_lists import ListIndex
 if TYPE_CHECKING:
     from lfx.services.flow_operations.schema import KeyedList
 
+_Container = TypeVar("_Container", dict[str, Any], list[Any])
+
 
 @dataclass
 class GraphState:
@@ -35,11 +40,12 @@ class GraphState:
     edge_ids_by_node_id: defaultdict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
     # Node ids read from base_flow["nodes"] before applying operations.
     base_flow_node_ids: set[str] = field(default_factory=set)
-    # Base-flow node ids whose payload has already been copied before mutation.
-    copied_base_flow_node_ids: set[str] = field(default_factory=set)
-    # The same two sets for edges.
+    # The same set for edges.
     base_flow_edge_ids: set[str] = field(default_factory=set)
-    copied_base_flow_edge_ids: set[str] = field(default_factory=set)
+    # Containers this call made, and so may change, by identity. Everything else
+    # is shared with the base flow and is never changed. Holding the containers
+    # keeps their identities from being reused.
+    owned: dict[int, dict[str, Any] | list[Any]] = field(default_factory=dict)
     # Keyed lists indexed so far, by the identity of the list object.
     list_indexes: dict[int, ListIndex] = field(default_factory=dict)
     # Handles read so far, by edge id.
@@ -63,6 +69,18 @@ class GraphState:
     @property
     def edges(self) -> list[Any]:
         return self.flow_data["edges"]
+
+    def own(self, value: _Container) -> _Container:
+        """Return a container this call may change: ``value`` itself if this call made it, else a shallow copy.
+
+        Copying only the containers along a written path keeps the base flow
+        untouched and shares everything else with it.
+        """
+        if id(value) in self.owned:
+            return value
+        copied = list(value) if isinstance(value, list) else dict(value)
+        self.owned[id(copied)] = copied
+        return copied
 
     def list_index(self, keyed: KeyedList, items: list[Any], *, context: str) -> ListIndex:
         """Return the index of ``items``, building it the first time the list is addressed."""
@@ -199,26 +217,17 @@ def copy_mutable_graph_value(value: Any) -> Any:
 
 
 def writable_node(state: GraphState, node_id: str) -> dict[str, Any]:
-    """Return the node to write to, deep-copying it from the base flow before its first write."""
-    return _copy_on_write(state.nodes_by_id, state.base_flow_node_ids, state.copied_base_flow_node_ids, node_id)
+    """Return the node to write to: one this call owns (``GraphState.own``)."""
+    node = state.own(state.nodes_by_id[node_id])
+    state.nodes_by_id[node_id] = node
+    return node
 
 
 def writable_edge(state: GraphState, edge_id: str) -> dict[str, Any]:
-    """Return the edge to write to, deep-copying it from the base flow before its first write."""
-    return _copy_on_write(state.edges_by_id, state.base_flow_edge_ids, state.copied_base_flow_edge_ids, edge_id)
-
-
-def _copy_on_write(
-    items_by_id: dict[str, dict[str, Any]],
-    base_ids: set[str],
-    copied_ids: set[str],
-    item_id: str,
-) -> dict[str, Any]:
-    # The base flow is never mutated: its payloads are shared until the first write.
-    if item_id in base_ids and item_id not in copied_ids:
-        items_by_id[item_id] = copy.deepcopy(items_by_id[item_id])
-        copied_ids.add(item_id)
-    return items_by_id[item_id]
+    """Return the edge to write to: one this call owns (``GraphState.own``)."""
+    edge = state.own(state.edges_by_id[edge_id])
+    state.edges_by_id[edge_id] = edge
+    return edge
 
 
 def require_node_id(
