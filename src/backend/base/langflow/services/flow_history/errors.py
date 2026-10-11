@@ -82,6 +82,12 @@ class RestoreFixNotAllowedError(FlowHistoryError):
 
     code = "RESTORE_FIX_NOT_ALLOWED"
 
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        super().__init__(message)
+        if code is not None:
+            # A fix the engine could not apply keeps the engine's code.
+            self.code = code
+
 
 class FlowRevisionNotFoundError(FlowHistoryError):
     """The revision was never recorded for this flow."""
