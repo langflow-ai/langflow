@@ -123,6 +123,41 @@ def gate(tmp_path: Path) -> Path:
     return tmp_path / "gate"
 
 
+async def test_admission_finishes_before_the_child_can_write(config_dir):
+    admitted = config_dir / "admitted"
+    argv = _child("assert os.path.exists(sys.argv[-1]); emit(event='report', ok=True)", admitted)
+
+    run_id = await migration_runs.start_run(
+        "copy_database", argv, dict(os.environ), started_by="alice", before_spawn=admitted.touch
+    )
+    events = await _follow(run_id)
+
+    assert any(event.get("event") == "report" for event in events)
+    assert events[-1]["status"] == "done"
+
+
+async def test_refused_admission_never_starts_the_child_or_replaces_the_previous_run(config_dir):
+    previous = await _start("emit(event='report', ok=True)")
+    await _follow(previous)
+    marker = config_dir / "must-not-write"
+
+    def refuse():
+        message = "cutover already confirmed"
+        raise ValueError(message)
+
+    with pytest.raises(ValueError, match="cutover already confirmed"):
+        await migration_runs.start_run(
+            "copy_database",
+            _child("open(sys.argv[-1], 'w').close()", marker),
+            dict(os.environ),
+            started_by="alice",
+            before_spawn=refuse,
+        )
+
+    assert not marker.exists()
+    assert [run["run_id"] for run in migration_runs.list_runs()] == [previous]
+
+
 @pytest.fixture
 def unreaped():
     """A process nothing reaps: once killed it keeps its pid, as the child of a dead worker can in a container."""

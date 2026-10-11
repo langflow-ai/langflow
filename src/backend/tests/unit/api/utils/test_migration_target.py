@@ -91,6 +91,58 @@ def test_the_settings_leave_out_what_this_instance_did_not_move():
     ]
 
 
+def test_start_settings_preserve_destination_policy_and_redact_opensearch_environment():
+    from lfx.base.knowledge_bases.backends.destination_policy import enforce_kb_destination
+
+    source = {
+        "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true",
+        "LANGFLOW_KB_ALLOWED_HOSTS": "search.internal",
+        "LANGFLOW_SSRF_ALLOWED_HOSTS": "search.internal",
+        "SEARCH_CLUSTER": "https://search.internal",
+        "SEARCH_PASSWORD": S3_SECRET,
+    }
+    settings = start_settings(
+        database="db.internal/langflow",
+        files=None,
+        vectors=None,
+        auto_login=False,
+        superuser="admin",
+        source_env=source,
+        opensearch_variables=["SEARCH_CLUSTER", "SEARCH_PASSWORD", "MISSING", "LANGFLOW_SECRET_KEY"],
+    )
+    printed = {setting["name"]: setting["value"] for setting in settings}
+    assert printed["SEARCH_CLUSTER"] == "<same value as this instance>"
+    assert printed["SEARCH_PASSWORD"] == "<same value as this instance>"  # noqa: S105
+    assert "MISSING" not in printed
+    assert len(printed) == len(settings)
+    assert S3_SECRET not in str(settings)
+    assert "https://search.internal" not in str(settings)
+    with pytest.MonkeyPatch.context() as env:
+        for name, value in printed.items():
+            env.setenv(name, value)
+        # A URL stored in the copied database still needs the operator's allowlist.
+        enforce_kb_destination("https://search.internal", source="variable", description="saved URL")
+
+
+def test_opensearch_variable_names_include_defaults_and_custom_names_only():
+    from langflow.api.utils.migration_target import opensearch_variables
+
+    assert opensearch_variables(
+        [
+            ("opensearch", {}),
+            (
+                "opensearch",
+                {
+                    "url_variable": "SEARCH_CLUSTER",
+                    "password_variable": "SEARCH_PASSWORD",  # pragma: allowlist secret
+                },
+            ),
+            ("postgres", {"url_variable": "NOT_OPENSEARCH"}),
+            ("opensearch", {"url_variable": ["invalid"], "password_variable": "bad\nname"}),  # pragma: allowlist secret
+        ]
+    ) == ["OPENSEARCH_PASSWORD", "OPENSEARCH_URL", "OPENSEARCH_USERNAME", "SEARCH_CLUSTER", "SEARCH_PASSWORD"]
+
+
 def test_the_check_is_the_integrity_command_and_names_no_address():
     assert check_command() == [sys.executable, "-m", "langflow", "check-integrity", "--json"]
 

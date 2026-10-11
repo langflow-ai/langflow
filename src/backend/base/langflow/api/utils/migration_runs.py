@@ -44,7 +44,7 @@ from langflow.services.deps import get_settings_service
 from langflow.services.knowledge_base_storage.maintenance import identity_matches, process_identity
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable
 
 # A report line holds every failed item, which can pass asyncio's 64 KiB default.
 # ponytail: a line longer than this is skipped, and a run whose report is skipped ends as failed.
@@ -73,10 +73,19 @@ class RunNotFoundError(Exception):
     """No run has this id. A step's earlier run is deleted when the step is run again."""
 
 
-async def start_run(step_id: str, argv: list[str], env: dict[str, str], *, started_by: str) -> str:
+async def start_run(
+    step_id: str,
+    argv: list[str],
+    env: dict[str, str],
+    *,
+    started_by: str,
+    before_spawn: Callable[[], None] | None = None,
+) -> str:
     """Spawn the command and return the id of its run at once. Its events are read in the background.
 
-    Raises RunActiveError while another run is live, and whatever the spawn raises.
+    before_spawn runs under the start lock, before any child can write. It may refuse
+    admission or persist the state that prevents a concurrent cutover.
+    Raises RunActiveError while another run is live, and whatever admission or the spawn raises.
     """
     runs = _runs_dir()
     runs.mkdir(parents=True, exist_ok=True)
@@ -86,6 +95,8 @@ async def start_run(step_id: str, argv: list[str], env: dict[str, str], *, start
             earlier = list_runs()
             if any(run["status"] == "running" for run in earlier):
                 raise RunActiveError
+            if before_spawn is not None:
+                before_spawn()
             process = await asyncio.create_subprocess_exec(
                 *argv,
                 env=env,

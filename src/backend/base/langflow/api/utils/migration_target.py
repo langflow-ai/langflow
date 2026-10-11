@@ -9,12 +9,16 @@ What is here holds no state.
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langflow.api.utils.migration_copies import bucket_environment, foreign_environment
 from langflow.services.database.sqlite_to_postgres import _sync_postgres_url
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 # The step that checks what the copies wrote. Its command is a run, like a copy.
 CHECK_STEP = "check_target"
@@ -37,6 +41,8 @@ def start_settings(
     vectors: str | None,
     auto_login: bool,
     superuser: str,
+    source_env: dict[str, str] | None = None,
+    opensearch_variables: Iterable[str] = (),
 ) -> list[dict[str, Any]]:
     """The settings a new instance starts with, in the order a page prints them.
 
@@ -70,7 +76,35 @@ def start_settings(
     if not auto_login:
         add("LANGFLOW_SUPERUSER", superuser)
         add("LANGFLOW_SUPERUSER_PASSWORD", "<password>", fill=True)
+    environment = source_env or {}
+    # The integrity check keeps these policies. Without them, an existing remote knowledge base can
+    # pass the check here and be refused by the new instance, even when its URL is a copied variable.
+    for name in _DIAL_SETTINGS:
+        if name in environment:
+            add(name, environment[name])
+    named = {setting["name"] for setting in settings}
+    for name in sorted(set(opensearch_variables) - named):
+        if environment.get(name):
+            # Even a URL can contain credentials. Keep only its variable name, never its value.
+            add(name, "<same value as this instance>", fill=True)
     return settings
+
+
+def opensearch_variables(knowledge_bases: Iterable[tuple[str, dict[str, Any] | None]]) -> list[str]:
+    """The environment variable names an existing OpenSearch knowledge base may still need."""
+    names = set()
+    for backend, config in knowledge_bases:
+        if backend != "opensearch":
+            continue
+        for field, default in (
+            ("url_variable", "OPENSEARCH_URL"),
+            ("username_variable", "OPENSEARCH_USERNAME"),
+            ("password_variable", "OPENSEARCH_PASSWORD"),
+        ):
+            name = (config or {}).get(field) or default
+            if isinstance(name, str) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+                names.add(name)
+    return sorted(names)
 
 
 def check_command() -> list[str]:

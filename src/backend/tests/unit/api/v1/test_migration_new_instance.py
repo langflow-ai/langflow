@@ -901,7 +901,7 @@ async def test_no_copy_starts_once_the_new_instance_was_started(
     assert migration_runs.list_runs() == []
 
 
-async def test_a_copy_at_the_door_is_stopped_when_the_start_is_confirmed_before_its_command_starts(
+async def test_a_copy_at_the_door_never_spawns_when_the_start_was_confirmed(
     client, logged_in_headers_super_user, config_dir, monkeypatch, at_the_door
 ):
     headers = logged_in_headers_super_user
@@ -919,8 +919,46 @@ async def test_a_copy_at_the_door_is_stopped_when_the_start_is_confirmed_before_
     refused = await asyncio.wait_for(starting, _TIMEOUT)
 
     assert (refused.status_code, refused.json()["detail"]) == (409, {"code": "state_changed"})
-    [run] = migration_runs.list_runs()
-    assert run["status"] == "cancelled"
+    assert migration_runs.list_runs() == []
+
+
+async def test_cutover_is_refused_while_a_copy_is_being_spawned(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _copied(config_dir)
+    _checked_copy(config_dir)
+    _send_to(monkeypatch, NOWHERE)
+    marker = config_dir / "child-wrote"
+    command = [
+        sys.executable,
+        "-c",
+        "import pathlib,sys,time; pathlib.Path(sys.argv[1]).touch(); print('ready', flush=True); time.sleep(120)",
+        str(marker),
+    ]
+    monkeypatch.setattr(migration_module, "copy_command", lambda *_args, **_kwargs: command)
+    spawned, release = asyncio.Event(), asyncio.Event()
+    spawn = asyncio.create_subprocess_exec
+
+    async def delayed_spawn(*args, **kwargs):
+        process = await spawn(*args, **kwargs)
+        assert process.stdout is not None
+        assert await asyncio.wait_for(process.stdout.readline(), _TIMEOUT) == b"ready\n"
+        assert marker.exists()
+        spawned.set()
+        await release.wait()
+        return process
+
+    monkeypatch.setattr(migration_runs.asyncio, "create_subprocess_exec", delayed_spawn)
+    copying = asyncio.create_task(client.post(RUNS.format("copy_database"), json={}, headers=headers))
+    try:
+        await asyncio.wait_for(spawned.wait(), _TIMEOUT)
+        started = await client.post(START, headers=headers)
+        assert started.status_code == 409, started.text
+        assert started.json()["detail"] == {"code": "locked", "reason": "earlier_step"}
+    finally:
+        release.set()
+        await asyncio.wait_for(copying, _TIMEOUT)
 
 
 async def test_a_check_at_the_door_is_stopped_when_the_start_is_confirmed_before_its_command_starts(
@@ -1202,6 +1240,39 @@ async def test_this_instance_has_nothing_more_to_name_once_its_copy_was_checked_
 
 
 # ---- the settings of the new instance
+
+
+async def test_start_settings_include_remote_kb_policy_and_custom_secret_placeholders(
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch
+):
+    await _add(
+        KnowledgeBaseRecord(
+            user_id=active_super_user.id,
+            name="remote-search",
+            backend_type="opensearch",
+            backend_config={
+                "url_variable": "SEARCH_CLUSTER",
+                "password_variable": "SEARCH_PASSWORD",  # pragma: allowlist secret
+            },
+        )
+    )
+    monkeypatch.setenv("SEARCH_CLUSTER", "https://search.internal")
+    monkeypatch.setenv("SEARCH_PASSWORD", S3_SECRET)
+    monkeypatch.setenv("LANGFLOW_KB_ALLOWED_HOSTS", "search.internal")
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "search.internal")
+    _copied(config_dir)
+    _checked_copy(config_dir)
+
+    response = await _migration(client, logged_in_headers_super_user)
+
+    settings = {setting["name"]: setting for setting in response["start"]["settings"]}
+    assert settings["LANGFLOW_KB_ALLOWED_HOSTS"]["value"] == "search.internal"
+    assert settings["LANGFLOW_SSRF_ALLOWED_HOSTS"]["value"] == "search.internal"
+    for name in ("SEARCH_CLUSTER", "SEARCH_PASSWORD"):
+        assert settings[name]["fill"] is True
+        assert settings[name]["value"] == "<same value as this instance>"
+    assert S3_SECRET not in json.dumps(response)
+    assert "https://search.internal" not in json.dumps(response)
 
 
 async def test_the_settings_are_given_once_the_copy_was_checked(client, logged_in_headers_super_user, config_dir):

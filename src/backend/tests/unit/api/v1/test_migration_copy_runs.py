@@ -493,7 +493,7 @@ async def test_a_copy_from_before_the_pause_was_lifted_has_to_be_made_again(
         ("another database saved", ("done", None), ("current", None)),
     ],
 )
-async def test_a_copy_is_stopped_as_it_starts_when_what_let_it_in_has_changed(
+async def test_a_copy_never_spawns_when_what_let_it_in_has_changed(
     client,
     logged_in_headers_super_user,
     active_super_user,
@@ -527,12 +527,10 @@ async def test_a_copy_is_stopped_as_it_starts_when_what_let_it_in_has_changed(
 
     assert refused.status_code == 409
     assert refused.json()["detail"] == {"code": "state_changed"}
-    # The command had started by then, and was stopped. The record keeps nothing of it.
-    [run] = migration_runs.list_runs()
-    assert run["status"] == "cancelled"
-    stopped = "after what let it in had changed, so it was stopped"
+    # Admission is refused before any command can write.
+    assert migration_runs.list_runs() == []
     started = f"Migration: user_id={active_super_user.id} started the copy of the database"
-    assert f"{started} {stopped} (run {run['run_id']})" in server_log.getvalue()
+    assert started not in server_log.getvalue()
     migration = await _migration(client, headers)
     assert "copy_database" not in migration["record"]["steps"]
     steps = {step["id"]: (step["state"], step["reason"]) for step in migration["steps"]}

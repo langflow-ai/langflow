@@ -64,6 +64,7 @@ from langflow.api.utils.migration_target import (
     check_command,
     check_environment,
     check_outcome,
+    opensearch_variables,
     start_settings,
 )
 from langflow.cli.migration_preflight import check_target_version
@@ -737,8 +738,20 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
     except KeyError as exc:
         raise HTTPException(status_code=409, detail={"code": "secrets_missing"}) from exc
     argv = copy_command(step_id, record.get("destinations", {}), record.get("decisions", []), dry_run=dry_run)
+
+    def reserve() -> None:
+        def invalidate(record: dict[str, Any]) -> None:
+            if _lets_in(record, step_id) != let_in:
+                raise HTTPException(status_code=409, detail={"code": "state_changed"})
+            # A child may write before spawn returns. Close the cutover gate now, under the record's
+            # generation check, so either the start wins and no child spawns, or this copy wins and
+            # the start waits for another check. Cancelling a child afterwards cannot undo its writes.
+            record["steps"].pop(CHECK_STEP, None)
+
+        _save(invalidate)
+
     try:
-        run_id = await start_run(step_id, argv, env, started_by=admin.username)
+        run_id = await start_run(step_id, argv, env, started_by=admin.username, before_spawn=reserve)
     except RunActiveError as exc:
         raise HTTPException(status_code=409, detail={"code": "run_active"}) from exc
     still_let_in = False
@@ -1180,6 +1193,7 @@ async def _instance() -> dict[str, Any]:
         "knowledge_bases": {
             "folder": str(Path(settings.knowledge_bases_dir).expanduser()) if settings.knowledge_bases_dir else None,
             "local": any(is_local_backend(backend, config) for backend, config in knowledge_bases),
+            "environment_variables": opensearch_variables(knowledge_bases),
         },
         "files": files,
         "secret_key": secret_key,
@@ -1456,7 +1470,13 @@ def _start_settings(instance: dict[str, Any], record: dict[str, Any]) -> list[di
     vectors = database if copied else own_store and location(own_store)
     auth = get_settings_service().auth_settings
     return start_settings(
-        database=database, files=files, vectors=vectors, auto_login=auth.AUTO_LOGIN, superuser=auth.SUPERUSER
+        database=database,
+        files=files,
+        vectors=vectors,
+        auto_login=auth.AUTO_LOGIN,
+        superuser=auth.SUPERUSER,
+        source_env=dict(os.environ),
+        opensearch_variables=instance["knowledge_bases"].get("environment_variables", []),
     )
 
 
