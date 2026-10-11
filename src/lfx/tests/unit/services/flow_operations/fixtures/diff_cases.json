@@ -83,16 +83,16 @@
           "updates": [
             {
               "id": "n",
-              "path": ["data", "node", "template", "f", "load_from_db"],
+              "path": ["data", "node", "template", "f", "value"],
               "op": "set_field",
-              "value": false,
+              "value": "b",
               "template_field": {"type": "str", "load_from_db": false}
             },
             {
               "id": "n",
-              "path": ["data", "node", "template", "f", "value"],
+              "path": ["data", "node", "template", "f", "load_from_db"],
               "op": "set_field",
-              "value": "b",
+              "value": false,
               "template_field": {"type": "str", "load_from_db": false}
             }
           ]
@@ -154,8 +154,8 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "n", "path": ["data", "node", "template", "f", "input_types"], "op": "set_field", "value": ["A", "B"], "template_field": {"type": "str"}},
-            {"id": "n", "path": ["data", "node", "template", "f", "type"], "op": "set_field", "value": "str", "template_field": {"type": "str"}}
+            {"id": "n", "path": ["data", "node", "template", "f", "type"], "op": "set_field", "value": "str", "template_field": {"type": "str"}},
+            {"id": "n", "path": ["data", "node", "template", "f", "input_types"], "op": "set_field", "value": ["A", "B"], "template_field": {"type": "str"}}
           ]
         }
       ]
@@ -224,8 +224,8 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "n", "path": ["data", "node", "field_order"], "op": "set_field", "value": ["f"]},
             {"id": "n", "path": ["data", "node", "metadata"], "op": "set_field", "value": {"hash": "b"}},
+            {"id": "n", "path": ["data", "node", "field_order"], "op": "set_field", "value": ["f"]},
             {"id": "n", "path": ["data", "selected_output"], "op": "set_field", "value": "o"},
             {"id": "n", "path": ["position"], "op": "set_field", "value": {"x": 5, "y": 0}}
           ]
@@ -294,16 +294,16 @@
           "updates": [
             {
               "id": "n",
-              "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "name"],
+              "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "on"],
               "op": "set_field",
-              "value": "fetch_page",
+              "value": false,
               "template_field": {"type": "tools"}
             },
             {
               "id": "n",
-              "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "on"],
+              "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "name"],
               "op": "set_field",
-              "value": false,
+              "value": "fetch_page",
               "template_field": {"type": "tools"}
             }
           ]
@@ -493,13 +493,13 @@
         {
           "type": "update_edges",
           "updates": [
+            {"id": "e", "path": ["targetHandle"], "op": "set_field", "value": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ,œinputTypesœ:[œDataœ]}"},
             {
               "id": "e",
               "path": ["data"],
               "op": "set_field",
               "value": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str", "inputTypes": ["Data"]}}
             },
-            {"id": "e", "path": ["targetHandle"], "op": "set_field", "value": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ,œinputTypesœ:[œDataœ]}"},
             {"id": "e", "path": ["type"], "op": "set_field", "value": "x"}
           ]
         }
