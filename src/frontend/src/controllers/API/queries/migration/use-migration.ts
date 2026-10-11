@@ -25,11 +25,16 @@ export const useMigrationQuery = (enabled = true) =>
     enabled,
     // An HTTP error such as record_unreadable answers the same on every try, so only a dropped connection is retried.
     retry: (count, error) => !(error as AxiosError).response && count < 3,
-    // While another admin runs the check, the page follows it until it finishes.
-    refetchInterval: (query) =>
-      query.state.data?.record.steps.check_source?.status === "running"
-        ? 5000
-        : false,
+    // Another admin can turn changes back on, or start, stop or finish a check or a copy. While changes are paused
+    // or something runs, the page follows the record, so it never shows a pause or a copy that is no longer there.
+    refetchInterval: (query) => {
+      const record = query.state.data?.record;
+      const running = Object.values(record?.steps ?? {}).some(
+        (step) => step?.status === "running",
+      );
+      // A pause that still waits refuses changes as well, and another admin's request can end it either way.
+      return (record?.pause ?? record?.pausing) || running ? 5000 : false;
+    },
   });
 
 /**
@@ -143,14 +148,21 @@ export const useCancelJobMutation = () =>
       api.request({ method, url, data: body }),
   });
 
-/** Fetches a consistent copy of this instance's SQLite database. The server keeps no copy of its own. */
-export const useDownloadDatabaseMutation = () => {
+/**
+ * Fetches a consistent copy of this instance's SQLite database. The server keeps no copy of its own.
+ * `onSuccess` gets the copy even when the step that asked for it has left the page. The server counts the copy as made
+ * once it is sent, so it must always reach the browser.
+ */
+export const useDownloadDatabaseMutation = (
+  onSuccess: (response: AxiosResponse<Blob>) => void,
+) => {
   const client = useQueryClient();
   return useMutation<AxiosResponse<Blob>, AxiosError>({
     mutationFn: () =>
       api.post(getURL("MIGRATION", { path: "backup/database" }), undefined, {
         responseType: "blob",
       }),
+    onSuccess,
     // The record now says when the copy was made, or why there can't be one, such as a pause that ended.
     onSettled: () => client.invalidateQueries({ queryKey: migrationKeys.all }),
   });
