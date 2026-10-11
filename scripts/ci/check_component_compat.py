@@ -22,7 +22,9 @@ A component missing from the PR head is diagnosed before it is reported:
 
 Stdlib-only by design so it runs on a bare runner without ``uv sync``. The checker module and
 type migrations are loaded from files the workflow extracts from the base branch, so a PR
-cannot weaken the rule it is judged by.
+cannot weaken the rule it is judged by. Aliases and bundle sources are read from the PR head,
+because adding an alias or moving a component legitimately changes whether saved flows
+resolve; an alias must point at a component that exists.
 """
 
 from __future__ import annotations
@@ -46,6 +48,17 @@ ComponentIndex = dict[str, dict[str, Any]]
 
 ALIASES_FILE = Path("src/lfx/src/lfx/utils/component_aliases.py")
 BUNDLES_DIR = Path("src/bundles")
+EXTERNAL_ALIAS = re.compile(r"^ext:[^:]+:([A-Za-z_][A-Za-z0-9_]*)@")
+
+# Field types the editor renders as plain widgets rather than connection handles. Mirrors
+# LANGFLOW_SUPPORTED_TYPES in src/frontend/src/constants/constants.ts; keep the two in sync.
+FRONTEND_WIDGET_TYPES = frozenset(
+    {
+        "str", "bool", "float", "code", "prompt", "mustache", "file", "int", "dict", "NestedDict", "table",
+        "link", "slider", "tab", "sortableList", "actionPicker", "duration", "connect", "auth", "query", "mcp",
+        "tools", "data_display",
+    }
+)  # fmt: skip
 
 
 @dataclass(frozen=True)
@@ -56,6 +69,10 @@ class Problem:
 
 class IndexReadError(Exception):
     """An index or helper file could not be read or has an unexpected shape."""
+
+
+class CheckerTooOldError(IndexReadError):
+    """The base branch's upgrade checker predates ``has_breaking_change``."""
 
 
 def load_index(path: Path) -> tuple[ComponentIndex, list[str]]:
@@ -97,8 +114,8 @@ def load_checker(path: Path) -> ModuleType:
         msg = f"Could not load upgrade checker from {path}: {type(exc).__name__}: {exc}"
         raise IndexReadError(msg) from exc
     if not hasattr(module, "has_breaking_change"):
-        msg = f"{path} does not define has_breaking_change"
-        raise IndexReadError(msg)
+        msg = f"{path} predates has_breaking_change, so the gate can't run against this base branch."
+        raise CheckerTooOldError(msg)
     return module
 
 
@@ -155,15 +172,45 @@ def breaks_saved_node(checker: ModuleType, new: dict[str, Any], old: dict[str, A
         # that declares no outputs at all builds them dynamically (Run Flow), which the
         # checker deliberately doesn't compare.
         return True
-    return checker.has_breaking_change(trimmed, old)
+    if checker.has_breaking_change(trimmed, old):
+        return True
+    return _loses_tool_mode(checker, new, old)
 
 
-def _connectable_fields(entry: dict[str, Any]) -> set[str]:
-    return {
-        key
-        for key, field in (entry.get("template") or {}).items()
-        if not key.startswith("_") and isinstance(field, dict) and field.get("input_types")
-    }
+def _supports_tool_mode(entry: dict[str, Any]) -> bool:
+    return any(isinstance(field, dict) and field.get("tool_mode") for field in (entry.get("template") or {}).values())
+
+
+def _loses_tool_mode(checker: ModuleType, new: dict[str, Any], old: dict[str, Any]) -> bool:
+    """Return True if nodes saved in tool mode break because the component dropped tool mode.
+
+    An index entry is never itself in tool mode, so check a tool-mode projection of it. Older
+    checkers have no tool-mode branch and would misread the projection, so skip them.
+    """
+    if not hasattr(checker, "TOOL_OUTPUT_NAME") or not _supports_tool_mode(old):
+        return False
+    tool_node = {**old, "outputs": [{"name": checker.TOOL_OUTPUT_NAME, "types": ["Tool"]}]}
+    return checker.has_breaking_change(new, tool_node)
+
+
+def handle_fields(entry: dict[str, Any], transient: frozenset[str] = frozenset()) -> set[str]:
+    """Return the fields the editor draws a connection handle for.
+
+    Mirrors ``computeDisplayHandle`` in
+    src/frontend/src/CustomNodes/GenericNode/components/RenderInputParameters/utils.ts
+    (outside tool mode): model fields always get a handle; other fields get one when they accept
+    ``input_types`` or aren't a plain widget type, unless they have a refresh button.
+    """
+    fields = set()
+    for key, field in (entry.get("template") or {}).items():
+        if key.startswith("_") or key in transient or not isinstance(field, dict):
+            continue
+        field_type = field.get("type")
+        if field_type == "model" or (
+            (field_type not in FRONTEND_WIDGET_TYPES or field.get("input_types")) and not field.get("refresh_button")
+        ):
+            fields.add(key)
+    return fields
 
 
 def _describe_change(old: dict[str, Any], new: dict[str, Any]) -> str:
@@ -192,6 +239,8 @@ def _describe_change(old: dict[str, Any], new: dict[str, Any]) -> str:
             continue
         if lost := sorted(set(before.get("input_types") or []) - set(after["input_types"])):
             details.append(f"input {key!r} no longer accepts {', '.join(lost)}")
+    if _supports_tool_mode(old) and not _supports_tool_mode(new):
+        details.append("no longer supports tool mode")
     return "; ".join(details) or "see lfx.upgrade.checker.has_breaking_change"
 
 
@@ -210,6 +259,8 @@ def _source_defines_class(repo_root: Path, module_path: str) -> bool:
 
 def _bundle_defining(repo_root: Path, key: str, class_name: str) -> str | None:
     """Return the bundle directory that defines the component, if any."""
+    # ponytail: the `name =` pattern also matches input and output names in bundle source. No
+    # component key collides with one today; parse class bodies with ast if that changes.
     patterns = [re.compile(rf"^\s*name\s*=\s*[\"']{re.escape(key)}[\"']", re.MULTILINE)]
     if class_name:
         patterns.append(re.compile(rf"^class {re.escape(class_name)}\b", re.MULTILINE))
@@ -246,19 +297,31 @@ def find_problems(
 
         new = migrate_types(head[key], migrations)
         if breaks_saved_node(checker, new, old_base) and breaks_saved_node(checker, new, old_merge_base):
+            # Describe against the merge base so changes that landed on base aren't attributed to the PR.
             problems.append(
-                Problem("error", f"Component {key!r} changed incompatibly: {_describe_change(old_base, new)}.")
+                Problem("error", f"Component {key!r} changed incompatibly: {_describe_change(old_merge_base, new)}.")
             )
             continue
 
-        removed = (_connectable_fields(old_base) & _connectable_fields(old_merge_base)) - set(new.get("template") or {})
-        if removed:
-            names = ", ".join(repr(name) for name in sorted(removed))
+        transient = getattr(checker, "TRANSIENT_TEMPLATE_KEYS", frozenset())
+        lost = (handle_fields(old_base, transient) & handle_fields(old_merge_base, transient)) - handle_fields(
+            new, transient
+        )
+        if lost:
+            names = ", ".join(repr(name) for name in sorted(lost))
             problems.append(
                 Problem(
                     "error",
-                    f"Component {key!r} removed connectable input(s) {names}; "
+                    f"Component {key!r} input(s) {names} no longer accept connections; "
                     "updating a saved node drops edges into them.",
+                )
+            )
+        elif old_base.get("outputs") and old_merge_base.get("outputs") and not new.get("outputs"):
+            problems.append(
+                Problem(
+                    "notice",
+                    f"Component {key!r} no longer declares static outputs; saved edges from them resolve only "
+                    "if the outputs it builds at runtime keep the same names.",
                 )
             )
     return problems
@@ -277,14 +340,6 @@ def _diagnose_removal(
     module_path = (raw_entry.get("metadata") or {}).get("module") or ""
     class_name = module_path.rpartition(".")[2]
 
-    if module_path and _source_defines_class(repo_root, module_path):
-        return Problem(
-            "error",
-            f"Component {key!r} is missing from the index but {module_path} still defines it. "
-            "Index regeneration likely dropped it (for example, a missing optional dependency); "
-            "add the `fix-index` label to rebuild the index.",
-        )
-
     target = aliases.get(key)
     if target in head:
         new = migrate_types(head[target], migrations)
@@ -295,7 +350,30 @@ def _diagnose_removal(
             )
         return Problem("notice", f"Component {key!r} was renamed to {target!r}; saved flows resolve through the alias.")
     if target:
-        return Problem("notice", f"Component {key!r} is aliased to {target!r} outside the in-tree index.")
+        external = EXTERNAL_ALIAS.match(target)
+        if external and (bundle := _bundle_defining(repo_root, external.group(1), external.group(1))):
+            return Problem("notice", f"Component {key!r} is aliased to {target!r} in the {bundle!r} bundle.")
+        return Problem("error", f"Component {key!r} is aliased to {target!r}, which doesn't exist.")
+
+    renamed_to = [
+        other
+        for other, entry in head.items()
+        if module_path and (entry.get("metadata") or {}).get("module") == module_path
+    ]
+    if renamed_to:
+        return Problem(
+            "error",
+            f"Component {key!r} was renamed to {renamed_to[0]!r}; saved flows that use the old name will no longer "
+            f"load. Add {key!r} to LEGACY_TYPE_ALIASES in {ALIASES_FILE}.",
+        )
+
+    if module_path and _source_defines_class(repo_root, module_path):
+        return Problem(
+            "error",
+            f"Component {key!r} is missing from the index but {module_path} still defines it. "
+            "Index regeneration likely dropped it (for example, a missing optional dependency); "
+            "add the `fix-index` label to rebuild the index.",
+        )
 
     if bundle := _bundle_defining(repo_root, key, class_name):
         return Problem(
@@ -342,6 +420,9 @@ def main(argv: list[str] | None = None) -> int:
         migrations = load_literal_dict(args.type_migrations, "TYPE_MIGRATIONS")
         aliases_file = args.repo_root / ALIASES_FILE
         aliases = load_literal_dict(aliases_file, "LEGACY_TYPE_ALIASES") if aliases_file.is_file() else {}
+    except CheckerTooOldError as exc:
+        print(f"::notice::{_escape(str(exc))}")
+        return 0
     except IndexReadError as exc:
         print(f"::{'error' if args.fail else 'warning'}::{_escape(str(exc))}")
         return 2 if args.fail else 0
@@ -354,11 +435,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     if not problems:
         print("No breaking component changes found.")
+        _write_summary(["## Component compatibility", "", "No breaking component changes found."])
         return 0
 
     for problem in problems:
         level = error_level if problem.level == "error" else "notice"
         print(f"::{level}::{_escape(problem.message)}")
+    # GitHub shows only the first few annotations per step; the summary has the full list.
+    print(f"{len(problems)} finding(s); see the job summary for the full list.")
     errors = [p for p in problems if p.level == "error"]
     summary = ["## Component compatibility", "", *(f"- **{p.level}**: {p.message}" for p in problems)]
     if errors and args.fail:

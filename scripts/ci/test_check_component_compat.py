@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 REAL_INDEX = REPO_ROOT / "src/lfx/src/lfx/_assets/component_index.json"
 CHECKER = REPO_ROOT / "src/lfx/src/lfx/upgrade/checker.py"
 TYPE_MIGRATIONS_FILE = REPO_ROOT / "src/lfx/src/lfx/graph/edge/base.py"
+LOST_HANDLE = "no longer accept connections; updating a saved node drops edges into them."
 
 
 @pytest.fixture(scope="module")
@@ -79,12 +80,18 @@ def test_removed_output_is_breaking(checker, migrations):
     ]
 
 
-def test_component_with_dynamic_outputs_is_not_compared(checker, migrations):
+def test_component_switching_to_dynamic_outputs_is_a_notice(checker, migrations):
     # Components like Run Flow declare no static outputs and build them per flow.
     base = {"A": _component(outputs=[_output("out")])}
     head = {"A": _component(outputs=[])}
 
-    assert _problems(base, head, checker=checker, migrations=migrations) == []
+    assert _problems(base, head, checker=checker, migrations=migrations) == [
+        (
+            "notice",
+            "Component 'A' no longer declares static outputs; saved edges from them resolve only "
+            "if the outputs it builds at runtime keep the same names.",
+        )
+    ]
 
 
 def test_replacing_every_output_is_breaking(checker, migrations):
@@ -149,7 +156,82 @@ def test_removed_connectable_input_is_breaking(checker, migrations):
     head = {"A": _component({"verbose": _field()})}
 
     assert _problems(base, head, checker=checker, migrations=migrations) == [
-        ("error", "Component 'A' removed connectable input(s) 'llm'; updating a saved node drops edges into them.")
+        (
+            "error",
+            f"Component 'A' input(s) 'llm' {LOST_HANDLE}",
+        )
+    ]
+
+
+def test_input_that_loses_its_handle_is_breaking(checker, migrations):
+    base = {"A": _component({"url": _field(["Message"])})}
+    head = {"A": _component({"url": _field()})}
+
+    assert _problems(base, head, checker=checker, migrations=migrations) == [
+        (
+            "error",
+            f"Component 'A' input(s) 'url' {LOST_HANDLE}",
+        )
+    ]
+
+
+def test_model_field_keeps_its_handle_without_input_types(checker, migrations):
+    base = {"A": _component({"model": {"type": "model", "input_types": ["LanguageModel"], "refresh_button": True}})}
+    head = {"A": _component({"model": {"type": "model", "refresh_button": True}})}
+
+    assert _problems(base, head, checker=checker, migrations=migrations) == []
+
+
+def test_removed_model_field_is_breaking_despite_refresh_button(checker, migrations):
+    # The editor always draws a handle for model fields, even with a refresh button.
+    base = {"A": _component({"model": {"type": "model", "refresh_button": True}})}
+    head = {"A": _component()}
+
+    assert _problems(base, head, checker=checker, migrations=migrations) == [
+        (
+            "error",
+            f"Component 'A' input(s) 'model' {LOST_HANDLE}",
+        )
+    ]
+
+
+def test_removed_non_widget_field_is_breaking(checker, migrations):
+    # A type the editor has no widget for is rendered as a handle even without input_types.
+    base = {"A": _component({"handle": {"type": "other"}})}
+    head = {"A": _component()}
+
+    assert _problems(base, head, checker=checker, migrations=migrations) == [
+        (
+            "error",
+            f"Component 'A' input(s) 'handle' {LOST_HANDLE}",
+        )
+    ]
+
+
+def test_removed_field_with_refresh_button_had_no_handle(checker, migrations):
+    base = {"A": _component({"x": {**_field(["Message"]), "refresh_button": True}})}
+    head = {"A": _component()}
+
+    assert _problems(base, head, checker=checker, migrations=migrations) == []
+
+
+def test_losing_tool_mode_is_breaking(checker, migrations):
+    base = {"A": _component({"q": {**_field(), "tool_mode": True}}, [_output("out")])}
+    head = {"A": _component({"q": _field()}, [_output("out")])}
+
+    assert _problems(base, head, checker=checker, migrations=migrations) == [
+        ("error", "Component 'A' changed incompatibly: no longer supports tool mode.")
+    ]
+
+
+def test_change_is_described_against_the_merge_base(checker, migrations):
+    # `new` landed on base after branching; only `gone` is the PR's removal.
+    merge_base = {"A": _component(outputs=[_output("out"), _output("gone")])}
+    base = {"A": _component(outputs=[_output("out"), _output("gone"), _output("new")])}
+    head = {"A": _component(outputs=[_output("out")])}
+
+    assert _problems(base, head, merge_base, checker=checker, migrations=migrations) == [
+        ("error", "Component 'A' changed incompatibly: outputs removed: gone.")
     ]
 
 
@@ -192,7 +274,10 @@ def test_pr_removal_is_reported_despite_unrelated_base_changes(checker, migratio
     head = {"A": _component({"x": _field(["Message"])})}
 
     assert _problems(base, head, merge_base, checker=checker, migrations=migrations) == [
-        ("error", "Component 'A' removed connectable input(s) 'y'; updating a saved node drops edges into them.")
+        (
+            "error",
+            f"Component 'A' input(s) 'y' {LOST_HANDLE}",
+        )
     ]
 
 
@@ -244,6 +329,51 @@ def test_rename_through_incompatible_alias_is_breaking(checker, migrations):
 
     assert _problems(base, head, checker=checker, migrations=migrations, aliases={"Old": "New"}) == [
         ("error", "Component 'Old' is aliased to 'New', which is incompatible: outputs removed: out.")
+    ]
+
+
+def test_rename_of_name_attribute_asks_for_an_alias(checker, migrations):
+    base = {"Old": _component(outputs=[_output("out")])}
+    head = {"New": _component(outputs=[_output("out")])}
+
+    [(level, message)] = _problems(base, head, checker=checker, migrations=migrations)
+
+    assert level == "error"
+    assert message.startswith("Component 'Old' was renamed to 'New'")
+    assert "LEGACY_TYPE_ALIASES" in message
+
+
+def test_rename_of_name_attribute_with_alias_is_a_notice(checker, migrations):
+    base = {"Old": _component(outputs=[_output("out")])}
+    head = {"New": _component(outputs=[_output("out")])}
+
+    assert _problems(base, head, checker=checker, migrations=migrations, aliases={"Old": "New"}) == [
+        ("notice", "Component 'Old' was renamed to 'New'; saved flows resolve through the alias.")
+    ]
+
+
+def test_alias_to_missing_component_is_breaking(checker, migrations):
+    base = {"Gone": _component(module="lfx.components.x.gone.Gone")}
+
+    assert _problems(base, {}, checker=checker, migrations=migrations, aliases={"Gone": "Typo"}) == [
+        ("error", "Component 'Gone' is aliased to 'Typo', which doesn't exist.")
+    ]
+
+
+def test_alias_into_a_bundle_is_a_notice_only_if_the_bundle_defines_it(checker, migrations, tmp_path):
+    base = {"Old": _component(module="lfx.components.x.old.Old")}
+    aliases = {"Old": "ext:acme:AcmeComponent@official"}
+
+    assert _problems(base, {}, checker=checker, migrations=migrations, aliases=aliases, repo_root=tmp_path) == [
+        ("error", "Component 'Old' is aliased to 'ext:acme:AcmeComponent@official', which doesn't exist.")
+    ]
+
+    source = tmp_path / "src/bundles/acme/src/lfx_acme/components/acme.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("class AcmeComponent(Component):\n    pass\n", encoding="utf-8")
+
+    assert _problems(base, {}, checker=checker, migrations=migrations, aliases=aliases, repo_root=tmp_path) == [
+        ("notice", "Component 'Old' is aliased to 'ext:acme:AcmeComponent@official' in the 'acme' bundle.")
     ]
 
 
@@ -320,9 +450,23 @@ def test_main_label_downgrades_failures(tmp_path, capsys):
     assert "::warning::Component 'A' changed incompatibly" in capsys.readouterr().out
 
 
-def test_main_passes_without_changes(tmp_path, capsys):
+def test_main_passes_without_changes(tmp_path, capsys, monkeypatch):
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+
     assert main([*_write_scenario(tmp_path, ["out"]), "--fail"]) == 0
     assert "No breaking component changes found." in capsys.readouterr().out
+    assert "No breaking component changes found." in summary.read_text(encoding="utf-8")
+
+
+def test_main_skips_a_base_checker_that_predates_the_rule(tmp_path, capsys):
+    args = _write_scenario(tmp_path, [])
+    old_checker = tmp_path / "old_checker.py"
+    old_checker.write_text("def check_flow(flow):\n    return []\n", encoding="utf-8")
+    args[args.index("--checker") + 1] = str(old_checker)
+
+    assert main([*args, "--fail"]) == 0
+    assert "::notice::" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize(("flag", "expected_code", "level"), [([], 0, "warning"), (["--fail"], 2, "error")])
