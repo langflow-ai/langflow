@@ -28,7 +28,7 @@ from lfx.log.logger import logger
 from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
-from lfx.services.flow_operations import load_node_schema, strip_row_keys
+from lfx.services.flow_operations import load_node_schema, ordered_rows, strip_row_keys
 from lfx.services.integration_policy import IntegrationPolicyError
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
@@ -1897,6 +1897,13 @@ def _component_value(field_template: Mapping[str, Any], value: Any) -> Any:
     return parse_value(value, str(field_template.get("_input_type")))
 
 
+def _order_table_rows(build_config: dict[str, Any]) -> None:
+    """Put the raw rows of every table field in order, keeping their keys: stored rows are in no particular order."""
+    for field in build_config.values():
+        if isinstance(field, dict) and _is_table_field(field) and isinstance(field.get("value"), list):
+            field["value"] = ordered_rows(field["value"])
+
+
 def _is_table_field(field_template: Mapping[str, Any]) -> bool:
     return any(
         all(field_template.get(key) == expected for key, expected in condition.items())
@@ -2103,10 +2110,16 @@ async def custom_component_update(
                 )
                 cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
+        # Hooks read the raw rows, keys and all, so they get them in the table's order.
+        _order_table_rows(updated_build_config)
+        field_value = code_request.field_value
+        changed_field = updated_build_config.get(code_request.field) if code_request.field else None
+        if isinstance(changed_field, dict) and _is_table_field(changed_field) and isinstance(field_value, list):
+            field_value = ordered_rows(field_value)
         await update_component_build_config(
             cc_instance,
             build_config=updated_build_config,
-            field_value=code_request.field_value,
+            field_value=field_value,
             field_name=code_request.field,
         )
         if "code" not in updated_build_config or not updated_build_config.get("code", {}).get("value"):
