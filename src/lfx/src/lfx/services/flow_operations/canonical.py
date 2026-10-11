@@ -44,11 +44,6 @@ def json_type(value: Any) -> str:
     raise FlowDataValidationError(msg)
 
 
-def is_finite_json_number(value: Any) -> bool:
-    """Return False for NaN and the infinities, which JSON cannot represent."""
-    return not isinstance(value, float) or math.isfinite(value)
-
-
 def _format_number(value: float) -> str:
     if isinstance(value, int):
         if abs(value) <= _MAX_SAFE_INTEGER:
@@ -129,12 +124,37 @@ def canonical_json(value: Any) -> str:
 
 
 def values_equal(left: Any, right: Any) -> bool:
-    """Return whether two JSON values are equal under canonical comparison."""
+    """Return whether two JSON values have the same canonical form, stopping at the first difference.
+
+    The comparison never serializes: objects compare key by key in any order,
+    arrays item by item, and numbers as the doubles JavaScript would hold.
+    """
     if left is right:
         return True
     left_type = json_type(left)
     if left_type != json_type(right):
         return False
-    if left_type in {"string", "boolean", "null"}:
-        return left == right
-    return canonical_json(left) == canonical_json(right)
+    if left_type == "number":
+        return _as_double(left) == _as_double(right)
+    if left_type == "array":
+        return len(left) == len(right) and all(values_equal(a, b) for a, b in zip(left, right, strict=True))
+    if left_type == "object":
+        if len(left) != len(right):
+            return False
+        for key, value in left.items():
+            if not isinstance(key, str):
+                msg = f"object key {key!r} is not a string"
+                raise FlowDataValidationError(msg)
+            if key not in right or not values_equal(value, right[key]):
+                return False
+        return True
+    return left == right
+
+
+def _as_double(value: float) -> float:
+    """Return a JSON number as the double JavaScript holds, which is what its canonical form prints."""
+    double = float(value)
+    if not math.isfinite(double):
+        msg = "NaN and Infinity are not valid JSON numbers"
+        raise FlowDataValidationError(msg)
+    return double
