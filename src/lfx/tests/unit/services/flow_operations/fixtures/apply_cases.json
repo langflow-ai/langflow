@@ -1009,7 +1009,7 @@
       }
     },
     {
-      "name": "selector: set_field at a new row id adds the row in position order",
+      "name": "selector: set_field at a new row id appends the row",
       "base": {
         "nodes": [
           {
@@ -1043,7 +1043,7 @@
                 "template": {
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r3", "_pos": 1.5, "v": "z"}, {"_id": "r2", "_pos": 2, "v": "y"}]
+                    "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}, {"_id": "r3", "_pos": 1.5, "v": "z"}]
                   },
                   "text": {"type": "str", "value": "a"}
                 }
@@ -1055,7 +1055,7 @@
       }
     },
     {
-      "name": "selector: setting a row's _pos moves the row",
+      "name": "selector: setting a row's _pos changes only its position",
       "base": {
         "nodes": [
           {
@@ -1085,7 +1085,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r2", "_pos": 2, "v": "y"}, {"_id": "r1", "_pos": 3, "v": "x"}]},
+                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 3, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1096,7 +1096,7 @@
       }
     },
     {
-      "name": "selector: rows with equal positions are ordered by id",
+      "name": "selector: two rows may share a position",
       "base": {
         "nodes": [
           {
@@ -1126,7 +1126,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r0", "_pos": 2}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}, {"_id": "r0", "_pos": 2}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1162,6 +1162,47 @@
           {
             "id": "t",
             "data": {"node": {"template": {"rows": {"type": "table", "value": [{"_id": "r2", "_pos": 2, "v": "y"}]}, "text": {"type": "str", "value": "a"}}}}
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "selector: deleting a row lets the last row take its slot",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {
+                    "type": "table",
+                    "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}, {"_id": "r3", "_pos": 3, "v": "z"}]
+                  },
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}]}]}
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"_id": "r3", "_pos": 3, "v": "z"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
           }
         ],
         "edges": []
@@ -1493,7 +1534,7 @@
       }
     },
     {
-      "name": "selector: a table out of (_pos, _id) order is rejected",
+      "name": "selector: a table stored out of position order is accepted",
       "base": {
         "nodes": [
           {
@@ -1509,8 +1550,15 @@
           "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "v"], "value": "z"}]
         }
       ],
-      "error": "FlowOperationValidationError",
-      "code": "FLOW_OPERATION_INVALID"
+      "expected": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {"node": {"template": {"rows": {"type": "table", "value": [{"_id": "r1", "_pos": 2, "v": "z"}, {"_id": "r2", "_pos": 1, "v": "y"}]}}}}
+          }
+        ],
+        "edges": []
+      }
     },
     {
       "name": "selector: a table with two rows of one id is rejected",

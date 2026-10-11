@@ -11,7 +11,7 @@ from typing import Any
 from lfx.services.flow_operations.canonical import values_equal
 from lfx.services.flow_operations.edge_rules import HANDLE_KEYS, OUTPUTS_PATH, check_edge, node_outputs
 from lfx.services.flow_operations.exceptions import FlowOperationPreconditionError, FlowOperationValidationError
-from lfx.services.flow_operations.keyed_lists import ListIndex, RowOrder
+from lfx.services.flow_operations.keyed_lists import ListIndex
 from lfx.services.flow_operations.ops import (
     GRAPH_COLLECTION_KEYS,
     AddEdgesOp,
@@ -314,8 +314,6 @@ class _ItemStep:
     items: ListIndex
     item: dict[str, Any]
     key: str
-    # A table row's place before the write, to put it back in order if its position changes.
-    order: RowOrder | None
 
 
 def _apply_field_update(
@@ -347,14 +345,13 @@ def _apply_field_update(
         raise FlowOperationValidationError(msg)
 
     before = _write_last(state, node, parent, update, context=context)
-    # A write inside a keyed list item must leave its key alone; a table row whose
-    # position changed goes back in order.
+    # A write inside a keyed list item must leave its key alone, and a table row its position.
     for step in reversed(steps):
         if step.items.keyed.key_of(step.item) != step.key:
             msg = f"{context}: cannot change a list item's {step.items.keyed.selector_name}"
             raise FlowOperationValidationError(msg)
-        if step.order is not None:
-            step.items.reorder(step.item, step.order, context=context)
+        if step.items.slots is not None:
+            step.items.require_position(step.item, context=context)
     return before
 
 
@@ -389,8 +386,7 @@ def _walk(
         item = items.by_key.get(key)
         if item is None:
             return None, steps, index
-        order = items.order(item, context=context) if items.keyed.kind == "table" else None
-        steps.append(_ItemStep(items=items, item=item, key=key, order=order))
+        steps.append(_ItemStep(items=items, item=item, key=key))
         value = item
     return value, steps, None
 
@@ -440,7 +436,7 @@ def _write_last(
     items = _keyed_list(state, node, path, len(path) - 1, parent, context=context)
     key = _selector_key(last)
     if isinstance(update, DeleteNodeFieldUpdate):
-        return items.remove(key, context=context) if key in items.by_key else _ABSENT
+        return items.remove(key) if key in items.by_key else _ABSENT
     value = copy_mutable_graph_value(update.value)
     if items.keyed.key_of(value) != key:
         msg = f"{context}: a list item written at a selector must carry the same key: {key!r}"
