@@ -192,4 +192,4 @@ def node_outputs(state: GraphState, node_id: str) -> ListIndex | None:
 
 
 def _error(edge: dict[str, Any], code: EdgeRuleCode, reason: str) -> FlowOperationValidationError:
-    return FlowOperationValidationError(f"edge {edge.get('id')!r}: {reason}", code=code.value)
+    return FlowOperationValidationError(f"edge {edge['id']!r}: {reason}", code=code.value, edge_id=edge["id"])

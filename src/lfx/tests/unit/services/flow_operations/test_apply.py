@@ -465,6 +465,19 @@ class TestApplyFlowOperations:
         assert result.flow_data["edges"] == []
         assert result.forward_ops == [DeleteEdgesOp(type="delete_edges", ids=["e-ab"])]
 
+    def test_an_edge_whose_handles_do_not_read_fails_another_edges_check_under_its_own_id(self):
+        flow_data = _base_flow_data()
+        # An edge in a format older editors wrote: handle strings that are not JSON, and no data.
+        flow_data["edges"] = [
+            {"id": "legacy", "source": "a", "target": "b", "sourceHandle": "x|y", "targetHandle": "z"}
+        ]
+
+        with pytest.raises(FlowOperationValidationError) as exc_info:
+            apply_flow_operations(flow_data, [{"type": "add_edges", "edges": [EDGE_AB]}])
+
+        assert exc_info.value.edge_id == "legacy"
+        assert exc_info.value.code == "EDGE_HANDLE_INVALID"
+
     def test_add_edges_requires_existing_endpoints(self):
         flow_data = _base_flow_data()
         with pytest.raises(FlowOperationValidationError, match="source node does not exist"):
