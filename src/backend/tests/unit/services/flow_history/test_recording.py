@@ -19,6 +19,7 @@ from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.flow_history.envelope import decode_row
 from langflow.services.flow_history.replay import reconstruct_graph
 from lfx.services.flow_operations import graphs_equal
+from lfx.services.flow_operations.edge_rules import escape_handle
 from sqlalchemy import Uuid, bindparam, text
 from sqlmodel import col, select
 
@@ -37,6 +38,7 @@ def _node(node_id: str, value: str = "hi", **extra) -> dict:
             "node": {
                 "display_name": f"Prompt {node_id}",
                 "template": {"text": {"name": "text", "type": "str", "value": value}},
+                "outputs": [{"name": "out"}],
             },
         },
         **extra,
@@ -44,7 +46,17 @@ def _node(node_id: str, value: str = "hi", **extra) -> dict:
 
 
 def _edge(edge_id: str, source: str, target: str) -> dict:
-    return {"id": edge_id, "source": source, "target": target, "sourceHandle": "out", "targetHandle": "in"}
+    """An edge from ``source``'s output to ``target``'s text field, with both forms of its handles."""
+    source_handle = {"id": source, "name": "out"}
+    target_handle = {"fieldName": "text", "id": target}
+    return {
+        "id": edge_id,
+        "source": source,
+        "target": target,
+        "sourceHandle": escape_handle(source_handle),
+        "targetHandle": escape_handle(target_handle),
+        "data": {"sourceHandle": source_handle, "targetHandle": target_handle},
+    }
 
 
 def _graph(*nodes: dict, edges: list[dict] | None = None) -> dict:
@@ -143,7 +155,7 @@ async def test_first_graph_edit_starts_history_and_records_attributed_operations
 async def test_an_edge_changed_in_place_records_update_edges(client: AsyncClient, logged_in_headers):
     edge = _edge("e", "a", "b")
     flow = await _create_flow(client, logged_in_headers, _graph(_node("a"), _node("b"), edges=[edge]))
-    changed = {**edge, "data": {"note": "rewired"}}
+    changed = {**edge, "data": {**edge["data"], "note": "rewired"}}
 
     response = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a"), _node("b"), edges=[changed]))
 
@@ -670,3 +682,30 @@ async def test_a_graph_write_takes_the_writers_turn(client: AsyncClient, logged_
 
     assert response.json()["version_token"] != flow["version_token"]
     assert (await _flow(flow["id"])).last_modified_by == active_user.id
+
+
+async def test_a_repaired_save_that_needs_the_clients_fix_writes_nothing(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a"), _node("b")))
+    stored = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a"), _node("b")))
+    assert stored.status_code == status.HTTP_200_OK, stored.text
+    rows_before = await _rows(flow["id"])
+    unknown_field = _edge("e", "a", "b")
+    unknown_field["data"]["targetHandle"]["fieldName"] = "missing"
+    unknown_field["targetHandle"] = escape_handle(unknown_field["data"]["targetHandle"])
+    # Missing one form is fixable by repair; naming a field that does not exist is not.
+    del unknown_field["sourceHandle"]
+
+    response = await _patch(
+        client,
+        logged_in_headers,
+        flow["id"],
+        data=_graph(_node("a"), _node("b"), edges=[unknown_field]),
+        repair_invalid_graph=True,
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    violations = response.json()["detail"]["violations"]
+    assert [(violation["code"], violation["resolution"]) for violation in violations] == [
+        ("EDGE_HANDLE_NOT_FOUND", "client")
+    ]
+    assert await _rows(flow["id"]) == rows_before
