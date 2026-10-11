@@ -1,5 +1,5 @@
 {
-  "description": "Shared apply cases for every flow operation engine. Each case applies `operations` to `base` in order; it either yields `expected` and the normalized `forward_operations` (optional fields left unset are omitted; when absent they equal `operations`), or raises the named `error` with its `code` and leaves `base` unchanged. Keyed lists follow node_schema.json.",
+  "description": "Shared apply cases for every flow operation engine. Each case applies `operations` to `base` in order; it either yields `expected` and the normalized `forward_operations` (optional fields left unset are omitted; when absent they equal `operations`; the ids a delete reports are compared as a set, since node and edge order is not state), or raises the named `error` with its `code` and leaves `base` unchanged. Keyed lists follow node_schema.json. Edges carry each handle in both forms, the `data` object and the escaped string, as the editor writes them.",
   "cases": [
     {
       "name": "empty operation list leaves the flow unchanged",
@@ -8,7 +8,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [],
@@ -17,7 +26,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       }
     },
@@ -28,7 +46,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [
@@ -45,7 +72,16 @@
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       }
     },
@@ -56,7 +92,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [
@@ -77,7 +122,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [
@@ -99,7 +153,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "add_nodes", "nodes": [{"type": "genericNode"}]}],
@@ -113,7 +176,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [
@@ -124,7 +196,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hello", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       }
     },
@@ -135,7 +216,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "customColor"], "value": "#fff"}]}],
@@ -148,7 +238,16 @@
           },
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       }
     },
@@ -159,7 +258,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [
@@ -174,7 +282,16 @@
           },
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       }
     },
@@ -185,7 +302,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["position"], "value": {"x": 5, "y": 6}}]}],
@@ -194,7 +320,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 5, "y": 6}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       }
     },
@@ -205,7 +340,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "outputs", 3, "selected"], "value": "x"}]}],
@@ -219,7 +363,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "missing", "value"], "value": 1}]}],
@@ -233,7 +386,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["id"], "value": "z"}]}],
@@ -247,7 +409,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template"], "value": {}}]}],
@@ -261,7 +432,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "zz", "op": "set_field", "path": ["position"], "value": {"x": 1, "y": 1}}]}],
@@ -275,7 +455,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [
@@ -301,7 +490,16 @@
           },
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}]}],
@@ -310,7 +508,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       }
     },
@@ -321,7 +528,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}]}],
@@ -330,7 +546,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       }
     },
@@ -341,7 +566,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "node", "outputs", 0]}]}],
@@ -355,7 +589,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "delete_nodes", "ids": ["a"]}],
@@ -375,7 +618,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "delete_nodes", "ids": ["zz"]}],
@@ -389,11 +641,32 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [
-        {"type": "add_edges", "edges": [{"id": "e-ba", "source": "b", "target": "a", "sourceHandle": "b-out", "targetHandle": "a-in", "data": {}}]}
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-ba",
+              "source": "b",
+              "target": "a",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œtextœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+            }
+          ]
+        }
       ],
       "expected": {
         "nodes": [
@@ -401,8 +674,22 @@
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
         "edges": [
-          {"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}},
-          {"id": "e-ba", "source": "b", "target": "a", "sourceHandle": "b-out", "targetHandle": "a-in", "data": {}}
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          },
+          {
+            "id": "e-ba",
+            "source": "b",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
         ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       }
@@ -414,11 +701,32 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [
-        {"type": "add_edges", "edges": [{"id": "e-az", "source": "a", "target": "zz", "sourceHandle": "a-out", "targetHandle": "zz-in", "data": {}}]}
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-az",
+              "source": "a",
+              "target": "zz",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œtextœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+            }
+          ]
+        }
       ],
       "error": "FlowOperationValidationError",
       "code": "FLOW_OPERATION_INVALID"
@@ -430,11 +738,32 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [
-        {"type": "add_edges", "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}]}
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-ab",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œtextœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+            }
+          ]
+        }
       ],
       "error": "FlowOperationValidationError",
       "code": "FLOW_OPERATION_INVALID"
@@ -446,7 +775,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [
@@ -456,7 +794,19 @@
             {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
           ]
         },
-        {"type": "add_edges", "edges": [{"id": "e-bc", "source": "b", "target": "c", "sourceHandle": "b-out", "targetHandle": "c-in", "data": {}}]}
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-bc",
+              "source": "b",
+              "target": "c",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œtextœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+            }
+          ]
+        }
       ],
       "expected": {
         "nodes": [
@@ -465,8 +815,22 @@
           {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
         "edges": [
-          {"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}},
-          {"id": "e-bc", "source": "b", "target": "c", "sourceHandle": "b-out", "targetHandle": "c-in", "data": {}}
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          },
+          {
+            "id": "e-bc",
+            "source": "b",
+            "target": "c",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
         ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       }
@@ -478,7 +842,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "delete_edges", "ids": ["zz", "e-ab", "e-ab"]}],
@@ -499,7 +872,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1},
         "description": "old",
         "flag": true
@@ -510,7 +892,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1},
         "description": "new"
       }
@@ -522,7 +913,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_metadata", "fields": {"nodes": []}, "delete_keys": []}],
@@ -536,7 +936,16 @@
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
         ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [],
@@ -1426,16 +1835,31 @@
       "code": "EXPECTATION_FAILED"
     },
     {
-      "name": "update_edges: writes an edge's data in place",
+      "name": "update_edges: writes an edge's handles in place, both forms together",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
       },
       "operations": [
-        {"type": "update_edges", "updates": [{"id": "e1", "op": "set_field", "path": ["data", "targetHandle", "inputTypes"], "value": ["Message"]}]}
+        {
+          "type": "update_edges",
+          "updates": [
+            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "one", "inputTypes": ["Message"]}},
+            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œoneœ,œinputTypesœ:[œMessageœ]}"}
+          ]
+        }
       ],
       "expected": {
         "nodes": [
@@ -1443,7 +1867,14 @@
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
         "edges": [
-          {"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one", "inputTypes": ["Message"]}}}
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ,œinputTypesœ:[œMessageœ]}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one", "inputTypes": ["Message"]}}
+          }
         ]
       }
     },
@@ -1454,7 +1885,16 @@
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
       },
       "operations": [{"type": "update_edges", "updates": [{"id": "e1", "op": "set_field", "path": ["target"], "value": "s"}]}],
       "error": "FlowOperationValidationError",
@@ -1467,7 +1907,16 @@
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
       },
       "operations": [{"type": "update_edges", "updates": [{"id": "e9", "op": "set_field", "path": ["type"], "value": "x"}]}],
       "error": "FlowOperationValidationError",
@@ -1480,9 +1929,26 @@
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
       },
-      "operations": [{"type": "update_edges", "updates": [{"id": "e1", "op": "set_field", "path": ["data", "targetHandle", "fieldName"], "value": "nope"}]}],
+      "operations": [
+        {
+          "type": "update_edges",
+          "updates": [
+            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "nope"}},
+            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œnopeœ}"}
+          ]
+        }
+      ],
       "error": "FlowOperationValidationError",
       "code": "EDGE_HANDLE_NOT_FOUND"
     },
@@ -1493,31 +1959,25 @@
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]
-      },
-      "operations": [{"type": "update_edges", "updates": [{"id": "e1", "op": "set_field", "path": ["data", "targetHandle", "fieldName"], "value": "many"}]}],
-      "expected": {
-        "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
-        ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}}]
-      }
-    },
-    {
-      "name": "update_edges: rewriting an edge where it stands is not checked again",
-      "base": {
-        "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
-        ],
         "edges": [
-          {"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}},
-          {"id": "e-stale", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed"}}}
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
         ]
       },
       "operations": [
-        {"type": "update_edges", "updates": [{"id": "e-stale", "op": "set_field", "path": ["data", "targetHandle", "inputTypes"], "value": ["Data"]}]}
+        {
+          "type": "update_edges",
+          "updates": [
+            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "many"}},
+            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œmanyœ}"}
+          ]
+        }
       ],
       "expected": {
         "nodes": [
@@ -1525,15 +1985,136 @@
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
         "edges": [
-          {"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}},
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "update_edges: changing a stale edge's handles checks it again",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
           {
             "id": "e-stale",
             "source": "s",
             "target": "d",
-            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed", "inputTypes": ["Data"]}}
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œremovedœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "update_edges",
+          "updates": [
+            {"id": "e-stale", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "removed", "inputTypes": ["Data"]}},
+            {"id": "e-stale", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œremovedœ,œinputTypesœ:[œDataœ]}"}
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
+    },
+    {
+      "name": "update_edges: a write beside the handles leaves a stale edge alone",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-stale",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œremovedœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed"}}
+          }
+        ]
+      },
+      "operations": [{"type": "update_edges", "updates": [{"id": "e-stale", "op": "set_field", "path": ["data", "note"], "value": "kept"}]}],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-stale",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œremovedœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed"}, "note": "kept"}
           }
         ]
       }
+    },
+    {
+      "name": "update_edges: changing one form of a handle alone fails",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-stale",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œremovedœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed"}}
+          }
+        ]
+      },
+      "operations": [{"type": "update_edges", "updates": [{"id": "e1", "op": "set_field", "path": ["data", "targetHandle", "fieldName"], "value": "many"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
     },
     {
       "name": "edge rules: add_edges rejects a target field that does not exist",
@@ -1542,12 +2123,30 @@
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
       },
       "operations": [
         {
           "type": "add_edges",
-          "edges": [{"id": "e2", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "nope"}}}]
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œnopeœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "nope"}}
+            }
+          ]
         }
       ],
       "error": "FlowOperationValidationError",
@@ -1560,12 +2159,30 @@
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
       },
       "operations": [
         {
           "type": "add_edges",
-          "edges": [{"id": "e2", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "nope"}, "targetHandle": {"fieldName": "many"}}}]
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œnopeœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "nope"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
         }
       ],
       "error": "FlowOperationValidationError",
@@ -1578,12 +2195,30 @@
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
       },
       "operations": [
         {
           "type": "add_edges",
-          "edges": [{"id": "e2", "source": "d", "target": "d", "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "one"}}}]
+          "edges": [
+            {
+              "id": "e2",
+              "source": "d",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œresœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "one"}}
+            }
+          ]
         }
       ],
       "error": "FlowOperationValidationError",
@@ -1596,14 +2231,37 @@
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
       },
       "operations": [
         {
           "type": "add_edges",
           "edges": [
-            {"id": "e2", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}},
-            {"id": "e3", "source": "d", "target": "d", "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many"}}}
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            },
+            {
+              "id": "e3",
+              "source": "d",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œresœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many"}}
+            }
           ]
         }
       ],
@@ -1613,26 +2271,240 @@
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
         "edges": [
-          {"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}},
-          {"id": "e2", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}},
-          {"id": "e3", "source": "d", "target": "d", "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many"}}}
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e2",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "e3",
+            "source": "d",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many"}}
+          }
         ]
       }
     },
     {
-      "name": "edge rules: handles are read from the escaped strings when data has none",
+      "name": "edge rules: a handle given only as a string is missing its data form",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
       },
       "operations": [
-        {"type": "add_edges", "edges": [{"id": "e2", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œnopeœ}"}]}
+        {"type": "add_edges", "edges": [{"id": "e2", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œmanyœ}"}]}
       ],
       "error": "FlowOperationValidationError",
-      "code": "EDGE_HANDLE_NOT_FOUND"
+      "code": "EDGE_HANDLE_FORM_MISSING"
+    },
+    {
+      "name": "edge rules: a handle given only in data is missing its string form",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [{"id": "e2", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_FORM_MISSING"
+    },
+    {
+      "name": "edge rules: a handle string that disagrees with its data fails",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: a handle string that does not parse fails",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "d-many",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: an edge without handles fails",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [{"type": "add_edges", "edges": [{"id": "e2", "source": "s", "target": "d"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: edge data that is not an object fails",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [{"id": "e2", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œmanyœ}", "data": "handles"}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: a target handle naming both a field and an output fails",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ,œnameœ:œresœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many", "name": "res"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
     },
     {
       "name": "edge rules: replacing a connection deletes before it adds",
@@ -1641,13 +2513,31 @@
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
       },
       "operations": [
         {"type": "delete_edges", "ids": ["e1"]},
         {
           "type": "add_edges",
-          "edges": [{"id": "e2", "source": "d", "target": "d", "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "one"}}}]
+          "edges": [
+            {
+              "id": "e2",
+              "source": "d",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œresœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "one"}}
+            }
+          ]
         }
       ],
       "expected": {
@@ -1655,30 +2545,106 @@
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e2", "source": "d", "target": "d", "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "one"}}}]
+        "edges": [
+          {
+            "id": "e2",
+            "source": "d",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
       }
     },
     {
-      "name": "edge rules: group nodes and notes are not checked",
+      "name": "edge rules: group nodes are checked like any node",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item"}, {"name": "done"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
           {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
         ],
         "edges": [
-          {"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}},
-          {"id": "e-fb", "source": "d", "target": "loop", "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}}
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
         ]
       },
       "operations": [
         {
           "type": "add_edges",
           "edges": [
-            {"id": "e2", "source": "s", "target": "group", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "nope"}}},
-            {"id": "e3", "source": "group", "target": "note", "data": {"sourceHandle": {"name": "nope"}, "targetHandle": {"fieldName": "nope"}}}
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "group",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œnopeœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "nope"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
+    },
+    {
+      "name": "edge rules: an edge into a group's own field applies",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "group",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œxœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "x"}}
+            }
           ]
         }
       ],
@@ -1686,17 +2652,226 @@
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item"}, {"name": "done"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
           {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
         ],
         "edges": [
-          {"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}},
-          {"id": "e-fb", "source": "d", "target": "loop", "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}},
-          {"id": "e2", "source": "s", "target": "group", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "nope"}}},
-          {"id": "e3", "source": "group", "target": "note", "data": {"sourceHandle": {"name": "nope"}, "targetHandle": {"fieldName": "nope"}}}
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          },
+          {
+            "id": "e2",
+            "source": "s",
+            "target": "group",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œxœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "x"}}
+          }
         ]
       }
+    },
+    {
+      "name": "edge rules: an edge may not touch a note",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "group",
+              "target": "note",
+              "sourceHandle": "{œnameœ:œyœ}",
+              "targetHandle": "{œfieldNameœ:œtextœ}",
+              "data": {"sourceHandle": {"name": "y"}, "targetHandle": {"fieldName": "text"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_TOUCHES_NOTE"
+    },
+    {
+      "name": "edge rules: a loop edge must target an output that allows loops",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "loop",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œnameœ:œdoneœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "done"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
+    },
+    {
+      "name": "edge rules: a loop output takes one connection",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "loop",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œnameœ:œitemœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "item"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_TARGET_OCCUPIED"
+    },
+    {
+      "name": "edge rules: a node without outputs has no handle to leave from",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}},
+          {"id": "bare", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "bare",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
     },
     {
       "name": "edge rules: a loop feedback edge must target an existing output",
@@ -1704,19 +2879,42 @@
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item"}, {"name": "done"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
           {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
         ],
         "edges": [
-          {"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}},
-          {"id": "e-fb", "source": "d", "target": "loop", "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}}
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
         ]
       },
       "operations": [
         {
           "type": "add_edges",
-          "edges": [{"id": "e2", "source": "s", "target": "loop", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "nope"}}}]
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "loop",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œnameœ:œnopeœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "nope"}}
+            }
+          ]
         }
       ],
       "error": "FlowOperationValidationError",
@@ -1729,7 +2927,16 @@
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [{"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "one"]}]}],
       "expected": {
@@ -1745,18 +2952,101 @@
       ]
     },
     {
+      "name": "cascade: replacing the outputs list deletes the edges of the outputs it drops",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "other"}]}]}],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "other"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": []
+      },
+      "forward_operations": [
+        {"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "other"}]}]},
+        {"type": "delete_edges", "ids": ["e1"]}
+      ]
+    },
+    {
+      "name": "cascade: an outputs list that keeps its names keeps its edges",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "out", "hidden": true}]}]}
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "hidden": true}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      }
+    },
+    {
       "name": "cascade: deleting an output deletes the edges from it and into it",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item"}, {"name": "done"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
           {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
         ],
         "edges": [
-          {"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}},
-          {"id": "e-fb", "source": "d", "target": "loop", "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}}
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
         ]
       },
       "operations": [
@@ -1786,26 +3076,132 @@
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
           {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item"}, {"name": "done"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
           {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
         ],
         "edges": [
-          {"id": "e1", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}},
-          {"id": "e-fb", "source": "d", "target": "loop", "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}}
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
         ]
       },
       "operations": [{"type": "delete_nodes", "ids": ["d"]}],
       "expected": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item"}, {"name": "done"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
           {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
         ],
         "edges": []
       },
       "forward_operations": [{"type": "delete_nodes", "ids": ["d"]}, {"type": "delete_edges", "ids": ["e1", "e-fb"]}]
+    },
+    {
+      "name": "cascade: an edge rewired earlier in the batch goes with its new field",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "update_edges",
+          "updates": [
+            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "many"}},
+            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œmanyœ}"}
+          ]
+        },
+        {"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "many"]}]}
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": []
+      },
+      "forward_operations": [
+        {
+          "type": "update_edges",
+          "updates": [
+            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "many"}},
+            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œmanyœ}"}
+          ]
+        },
+        {"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "many"]}]},
+        {"type": "delete_edges", "ids": ["e1"]}
+      ]
+    },
+    {
+      "name": "edge rules: an edge added earlier in the batch takes its single input",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+            },
+            {
+              "id": "e3",
+              "source": "d",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œresœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "one"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_TARGET_OCCUPIED"
     }
   ]
 }

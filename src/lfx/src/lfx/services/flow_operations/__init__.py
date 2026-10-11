@@ -8,13 +8,7 @@ has no transport or database dependencies, so the same rules apply wherever an
 operation comes from.
 """
 
-from lfx.services.flow_operations.apply import (
-    FlowOperationsApplyResult,
-    GraphState,
-    apply_flow_operations,
-    build_graph_state,
-    finalize_graph,
-)
+from lfx.services.flow_operations.apply import FlowOperationsApplyResult, apply_flow_operations
 from lfx.services.flow_operations.canonical import values_equal
 from lfx.services.flow_operations.exceptions import (
     FlowDataValidationError,
@@ -50,6 +44,7 @@ from lfx.services.flow_operations.ops import (
 from lfx.services.flow_operations.python import PythonFlowOperationService
 from lfx.services.flow_operations.schema import KeyedList, NodeSchema, load_node_schema
 from lfx.services.flow_operations.service import BaseFlowOperationService
+from lfx.services.flow_operations.state import GraphState, build_graph_state, finalize_graph
 
 __all__ = [
     "AddEdgesOp",
