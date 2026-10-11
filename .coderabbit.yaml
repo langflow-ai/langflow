@@ -54,13 +54,16 @@ reviews:
           of `lfx.utils.env_var_security.safe_getenv`. Fixed, code-chosen names are fine, and the
           global-variable-to-environment fallback is intentional.
         - URLs, tokens or credentials in logs, error messages, API responses or trace spans without
-          `lfx.utils.url_redaction` (`sanitize_url_for_display`, `redact_urls_in_text`).
+          `lfx.utils.url_redaction` (`sanitize_url_for_display`, `redact_urls_in_text`), and user-submitted
+          request values echoed into logs (for example, validation errors that include the request body).
         - User-controlled values reaching subprocess arguments, MCP stdio commands or interpreter options.
           Code-execution features (Python REPL, jq, mustache, custom components) must go through
           `lfx.utils.python_repl_security`, `jq_security`, `mustache_security` and the custom-component policy;
           flag only paths that bypass them.
         - Security or permission checks that allow the request when the check errors, or when the owner or
-          permission data is missing (for example, an owner of None). They must fail closed.
+          permission data is missing (for example, an owner of None). They must fail closed. The OSS
+          pass-through authorization service is allow-all by design; flag only a registered plugin path or a guard
+          that swallows its own error.
         - A new restriction that breaks a documented allowlist: every `LANGFLOW_SSRF_ALLOWED_HOSTS` form
           (hostname, wildcard, CIDR, IP literal) and other allowlist settings must keep working, with a test for
           the permitted case.
@@ -98,11 +101,12 @@ reviews:
           `authorized_or_owner_scoped` from `langflow.services.authorization.fetch`. In OSS the guards are
           pass-through, so check owner scoping first. Don't flag superuser-only routes or routes that use
           `ensure_administration_permission`.
-        - A guard denial for a caller who may not read the resource that returns 403 instead of 404
-          (`deny_to_404`, or `deny_to_404_unless_readable` when the caller can read it).
+        - A guard denial that returns 403 to a caller who can't read the resource; use `deny_to_404` so its
+          existence isn't revealed. A caller who can read it should get 403 via `deny_to_404_unless_readable`.
         - List endpoints that don't scope results with `filter_visible_resources` or the
           `restrict_to_owned_or_visible*` / `apply_owned_or_visible*_prefilter` helpers in
-          `langflow.services.authorization.listing`. Personal and other users' resources must not appear.
+          `langflow.services.authorization.listing`. Other users' personal projects, and resources inside them,
+          must not appear.
         - Execution entry points (run, webhook, chat, MCP, A2A, voice, workflow v2, triggers) that don't stamp the
           graph with `stamp_execution_principal(graph, execution_principal_for(...))` from
           `langflow.api.utils.execution_principal`; a new entry point must also be listed in
@@ -113,6 +117,8 @@ reviews:
         - A pagination `limit` without a maximum, or an unbounded request body. When a list endpoint gains or
           lowers a cap or changes sort order, check `src/frontend` consumers that assume the full list or
           oldest-first order.
+        - A database session (`DbSession`, `session_scope`) held open across a websocket or stream lifetime, or
+          across an await on network or other external I/O; release it first.
     - path: "src/lfx/src/lfx/base/mcp/**"
       instructions: |
         Flag:
@@ -192,8 +198,8 @@ reviews:
     - path: "{**/tests/**,**/__tests__/**,**/*.test.{ts,tsx},**/*.spec.ts}"
       instructions: |
         Only comment when a test cannot fail for the bug it claims to cover, leaks state into other tests, or
-        depends on the network or wall-clock time. Naming, coverage and structure are handled by the pre-merge
-        checks; don't repeat them inline.
+        depends on the network or wall-clock time. Coverage is handled by the pre-merge check; don't repeat it
+        inline. Mocking isn't a defect by itself; flag it only when the mock replaces the behavior under test.
   abort_on_close: true
   disable_cache: false
   auto_review:
@@ -219,28 +225,9 @@ reviews:
           1. For new components or functionality, ensure corresponding tests are included in the PR
           2. For bug fixes, verify that regression tests are included
           3. For new features, ensure both unit and integration tests are present where appropriate
-          4. Check that test files follow the project's naming conventions (test_*.py for backend, *.test.ts or *.test.tsx for frontend unit tests, *.spec.ts for frontend end-to-end tests)
-          5. Verify that tests actually test the new functionality, not just placeholder tests
-        mode: "warning"
-      - name: "Test Quality and Coverage"
-        instructions: |
-          Evaluate the quality and comprehensiveness of tests for new implementations:
-          1. Tests should cover the main functionality being implemented
-          2. For async functions, ensure proper async testing patterns are used (pytest for backend)
-          3. Check that tests are not just smoke tests but actually validate behavior
-          4. Ensure tests follow the project's testing patterns (pytest for backend, Jest and React Testing Library for frontend unit tests, Playwright for frontend end-to-end tests)
-          5. For API endpoints, verify both success and error response testing
-        mode: "warning"
-      - name: "Test File Naming and Structure"
-        instructions: |
-          Verify that test files follow the correct patterns and structure:
-          1. Backend tests: test_*.py with proper pytest structure
-          2. Frontend unit tests: *.test.ts or *.test.tsx under src/frontend/src using Jest and React Testing Library; end-to-end tests: *.spec.ts under src/frontend/tests using Playwright
-          3. Integration tests should be clearly marked and in appropriate directories
-          4. Test files should have descriptive test function names that explain what is being tested
-          5. Tests should be organized logically with proper setup and teardown
-          6. Consider including edge cases and error conditions for comprehensive coverage
-          7. Verify tests cover both positive and negative scenarios where appropriate
+          4. Check that test files follow the project's naming conventions (test_*.py for backend; *.test.ts(x) or *.spec.ts(x) under src/frontend/src for Jest unit tests; *.spec.ts under src/frontend/tests for Playwright end-to-end tests)
+          5. Verify that tests actually test the new functionality, not just placeholder tests or smoke tests
+          6. For async code, check that tests use proper async patterns (pytest-asyncio for backend)
         mode: "warning"
   tools:
     ast-grep:
@@ -284,7 +271,7 @@ reviews:
     detekt:
       enabled: false
     eslint:
-      enabled: true
+      enabled: false
     rubocop:
       enabled: false
     buf:
@@ -304,7 +291,7 @@ reviews:
     clippy:
       enabled: false
     sqlfluff:
-      enabled: true
+      enabled: false
     prismaLint:
       enabled: false
     pylint:
