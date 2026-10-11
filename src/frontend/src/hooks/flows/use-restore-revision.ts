@@ -4,35 +4,15 @@ import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
+import {
+  clientViolations,
+  type GraphViolation,
+  previewFixesFor,
+} from "@/hooks/flows/refused-restore";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import type { FlowOperation } from "@/utils/flow-operations/apply";
-import { fixesForEdges } from "@/utils/flow-operations/edge-fixes";
-
-type GraphViolation = {
-  code: string;
-  message: string;
-  resolution: string;
-  edge_id?: string;
-};
-
-/**
- * The violations a restore was refused for, when the client fixes every one
- * of them (an edge naming an output the revision's nodes no longer have), or
- * null for any other failure.
- */
-// biome-ignore lint/suspicious/noExplicitAny: axios error shape
-function clientViolations(err: any): GraphViolation[] | null {
-  const detail = err?.response?.data?.detail;
-  if (err?.response?.status !== 422 || detail?.code !== "FLOW_GRAPH_INVALID")
-    return null;
-  const violations: GraphViolation[] = detail.violations ?? [];
-  return violations.length > 0 &&
-    violations.every((violation) => violation.resolution === "client")
-    ? violations
-    : null;
-}
 
 /**
  * Make an earlier point in the flow's history its current state.
@@ -73,10 +53,7 @@ export default function useRestoreRevision(flowId: string) {
         } catch (err) {
           fixed = clientViolations(err);
           if (!fixed) throw err;
-          const fixes = fixesForEdges(
-            useVersionPreviewStore.getState().previewFixes,
-            new Set(fixed.map((violation) => violation.edge_id ?? "")),
-          );
+          const fixes = previewFixesFor(fixed);
           if (fixes.length === 0) throw err;
           response = await send(fixes);
         }

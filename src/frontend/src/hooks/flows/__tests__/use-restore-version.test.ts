@@ -37,15 +37,28 @@ jest.mock("@/stores/alertStore", () => ({
 const clearPreviewMock = jest.fn();
 const setPreviewStateMock = jest.fn();
 jest.mock("@/stores/versionPreviewStore", () => {
-  const store = Object.assign(
-    (selector: (state: Record<string, unknown>) => unknown) =>
-      selector({ clearPreview: clearPreviewMock }),
-    {
-      getState: () => ({ clearPreview: clearPreviewMock, didRestore: false }),
-      setState: (...args: unknown[]) => setPreviewStateMock(...args),
-    },
-  );
-  return { __esModule: true, default: store };
+  const store = (selector: (state: object) => unknown) =>
+    selector({ clearPreview: clearPreviewMock });
+  const getState = () => ({
+    clearPreview: clearPreviewMock,
+    didRestore: false,
+    // The preview dropped the broken edge "e" and respelled the handles of
+    // "fine", which breaks no rule.
+    previewFixes: [
+      { type: "delete_edges", ids: ["e"] },
+      {
+        type: "update_edges",
+        updates: [
+          { id: "fine", op: "set_field", path: ["sourceHandle"], value: "s" },
+        ],
+      },
+    ],
+  });
+  const setState = (...args: unknown[]) => setPreviewStateMock(...args);
+  return {
+    __esModule: true,
+    default: Object.assign(store, { getState, setState }),
+  };
 });
 
 // ---------------------------------------------------------------------------
@@ -235,6 +248,51 @@ describe("useRestoreVersion", () => {
       expect(apiPostMock.mock.calls[0][2]).not.toHaveProperty("headers");
     },
   );
+
+  it("resends a version refused for edges the client fixes with the preview's fixes for them", async () => {
+    const flowData = { id: "flow-1", data: { nodes: [], edges: [] } };
+    apiPostMock
+      .mockRejectedValueOnce({
+        response: {
+          status: 422,
+          data: {
+            detail: {
+              code: "FLOW_GRAPH_INVALID",
+              message: "The submitted flow breaks the flow graph rules.",
+              violations: [
+                {
+                  code: "EDGE_HANDLE_INVALID",
+                  path: ["edges", 0],
+                  edge_id: "e",
+                  message:
+                    "edge 'e': sourceHandle must be an escaped JSON object",
+                  resolution: "client",
+                },
+              ],
+            },
+          },
+        },
+      })
+      .mockResolvedValueOnce({ data: flowData });
+
+    const { result } = renderHook(() => useRestoreVersion("flow-1"));
+    await act(async () => {
+      await result.current.restore("entry-1");
+    });
+
+    expect(apiPostMock).toHaveBeenCalledTimes(2);
+    expect(apiPostMock.mock.calls[1]).toEqual([
+      "/api/v1/flows/flow-1/versions/entry-1/activate",
+      { fixes: [{ type: "delete_edges", ids: ["e"] }] },
+      { params: { save_draft: true } },
+    ]);
+    expect(applyFlowToCanvasMock).toHaveBeenCalledWith(flowData);
+    expect(setSuccessDataMock).toHaveBeenCalledWith({
+      title:
+        "Version restored without the connections its components no longer have",
+      list: ["edge 'e': sourceHandle must be an escaped JSON object"],
+    });
+  });
 
   it("calls onSuccess callback after successful restore", async () => {
     apiPostMock.mockResolvedValueOnce({
