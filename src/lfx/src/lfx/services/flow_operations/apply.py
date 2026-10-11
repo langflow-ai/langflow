@@ -35,12 +35,12 @@ from lfx.services.flow_operations.schema import load_node_schema
 from lfx.services.flow_operations.state import (
     GraphState,
     build_graph_state,
-    copy_base_flow_edge_before_mutation,
-    copy_base_flow_node_before_mutation,
     copy_mutable_graph_value,
     finalize_graph,
     require_edge_endpoints,
     require_node_id,
+    writable_edge,
+    writable_node,
 )
 
 
@@ -158,7 +158,7 @@ def _apply_update_nodes(state: GraphState, updates: list[UpdateNodeEntry]) -> tu
             msg = f"update_nodes: cannot update node that does not exist in the original flow: {node_id!r}"
             raise FlowOperationValidationError(msg)
         _validate_node_field_path(update.path, context=f"{context}.path")
-        node = copy_base_flow_node_before_mutation(state, node_id)
+        node = writable_node(state, node_id)
         before = _apply_field_update(state, node, node, update, context=context)
         detached_edge_ids |= _detached_edges(state, node_id, update, before)
 
@@ -234,7 +234,7 @@ def _apply_update_edges(state: GraphState, updates: list[UpdateNodeEntry]) -> li
                 "connecting different nodes is a different edge, so delete it and add another"
             )
             raise FlowOperationValidationError(msg)
-        edge = copy_base_flow_edge_before_mutation(state, edge_id)
+        edge = writable_edge(state, edge_id)
         if root in EDGE_HANDLE_ROOTS and edge_id not in handles_before:
             handles_before[edge_id] = _raw_handles(edge)
         _apply_field_update(state, edge, None, update, context=context)

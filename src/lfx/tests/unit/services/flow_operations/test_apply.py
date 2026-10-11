@@ -701,3 +701,10 @@ class TestApplyFlowOperations:
         flow_data = _base_flow_data()
         result = apply_flow_operations(flow_data, [{"type": "delete_edges", "ids": ["e-ab"]}])
         assert result.flow_data["viewport"] == flow_data["viewport"]
+
+
+@pytest.mark.parametrize("selector", [{"id": ""}, {"key": ""}])
+def test_selectors_must_name_a_non_empty_key(selector):
+    path = ["data", "node", "template", "rows", "value", selector]
+    with pytest.raises(FlowOperationValidationError, match="at least 1 character"):
+        parse_flow_operations([{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": path}]}])
