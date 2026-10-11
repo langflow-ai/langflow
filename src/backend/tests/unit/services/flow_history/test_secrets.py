@@ -120,7 +120,7 @@ def test_table_cells_addressed_by_row_id_are_stripped():
                 "name": "headers",
                 "type": "table",
                 "table_schema": [{"name": "key"}, {"name": "value"}],
-                "value": [{"_id": "r1", "_pos": "a0", "key": "Authorization", "value": "Bearer old"}],
+                "value": [{"_id": "r1", "_pos": 1, "key": "Authorization", "value": "Bearer old"}],
             },
         )
     )
@@ -146,7 +146,7 @@ def test_a_whole_table_row_is_stripped_like_a_stored_row():
                 "id": "a",
                 "op": "set_field",
                 "path": ["data", "node", "template", "headers", "value", {"id": "r2"}],
-                "value": {"_id": "r2", "_pos": "a1", "key": "Authorization", "value": "Bearer sk-new"},
+                "value": {"_id": "r2", "_pos": 2, "key": "Authorization", "value": "Bearer sk-new"},
                 "template_field": {"name": "headers", "type": "table"},
             }
         ],
@@ -154,7 +154,7 @@ def test_a_whole_table_row_is_stripped_like_a_stored_row():
 
     stripped = strip_operation_secrets(update, KNOWN_VARIABLES)["updates"][0]["value"]
 
-    assert stripped == {"_id": "r2", "_pos": "a1", "key": "Authorization", "value": None}
+    assert stripped == {"_id": "r2", "_pos": 2, "key": "Authorization", "value": None}
 
 
 def test_ordinary_values_pass_through():

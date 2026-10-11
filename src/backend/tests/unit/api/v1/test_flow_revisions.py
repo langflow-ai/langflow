@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -208,3 +209,122 @@ async def test_another_users_flow_history_is_not_found(client: AsyncClient, logg
     response = await client.get(f"api/v1/flows/{flow['id']}/revisions", headers=other_headers)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+STORED_KEY = "sk-stored"  # pragma: allowlist secret
+
+
+def _legacy_edge(source: str, target: str) -> dict:
+    """An edge in a format older editors wrote: handle strings that are not JSON, and no data."""
+    return {"id": "legacy-edge", "source": source, "target": target, "sourceHandle": "x|y", "targetHandle": "z|w"}
+
+
+def _with_output(node: dict) -> dict:
+    node["data"]["node"]["outputs"] = [{"name": "out", "types": ["Message"]}]
+    return node
+
+
+def _handle_fixes(edge_id: str, output: str, field: str) -> list[dict]:
+    """An ``update_edges`` fix that rewrites both forms of an edge's handles."""
+    handles = {"sourceHandle": {"name": output}, "targetHandle": {"fieldName": field}}
+    updates = [
+        {"id": edge_id, "op": "set_field", "path": [key], "value": json.dumps(value).replace('"', "œ")}
+        for key, value in handles.items()
+    ]
+    updates.append({"id": edge_id, "op": "set_field", "path": ["data"], "value": handles})
+    return [{"type": "update_edges", "updates": updates}]
+
+
+async def _refused_legacy_flow(client: AsyncClient, headers: dict) -> tuple[dict, str]:
+    """A flow whose revision 0 holds an old-format edge, and that revision's URL; restoring it is refused."""
+    # A flow stored before history, with an old-format edge, becomes revision 0 on its first edit.
+    stored = {"nodes": [_with_output(_node("a")), _node("b", api_key=STORED_KEY)], "edges": [_legacy_edge("a", "b")]}
+    flow = await _flow_with_history(
+        client, headers, stored, _graph(_with_output(_node("a")), _node("b", "edited", STORED_KEY))
+    )
+    url = f"api/v1/flows/{flow['id']}/revisions/0"
+    refused = await client.post(f"{url}/restore", json={}, headers=headers)
+    assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, refused.text
+    assert {violation["resolution"] for violation in refused.json()["detail"]["violations"]} == {"client"}
+    return flow, url
+
+
+async def _stored(flow: dict) -> dict:
+    async with session_scope() as session:
+        return (await session.get(Flow, UUID(flow["id"]))).data
+
+
+async def _versions(client: AsyncClient, headers: dict, flow: dict) -> list[dict]:
+    return (await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=headers)).json()["entries"]
+
+
+async def test_a_restore_with_the_clients_fixes_keeps_the_revisions_secrets(client: AsyncClient, logged_in_headers):
+    flow, url = await _refused_legacy_flow(client, logged_in_headers)
+
+    response = await client.post(
+        f"{url}/restore",
+        json={"fixes": [{"type": "delete_edges", "ids": ["legacy-edge"]}]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    restored = await _stored(flow)
+    node_b = next(node for node in restored["nodes"] if node["id"] == "b")
+    assert node_b["data"]["node"]["template"]["api_key"]["value"] == STORED_KEY
+    assert node_b["data"]["node"]["template"]["text"]["value"] == "hi"
+    assert restored["edges"] == []
+    versions = await _versions(client, logged_in_headers, flow)
+    assert any("before the client fixed it" in (version.get("description") or "") for version in versions)
+
+
+async def test_a_fix_can_reconnect_an_edge(client: AsyncClient, logged_in_headers):
+    flow, url = await _refused_legacy_flow(client, logged_in_headers)
+
+    response = await client.post(
+        f"{url}/restore", json={"fixes": _handle_fixes("legacy-edge", "out", "text")}, headers=logged_in_headers
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    [edge] = (await _stored(flow))["edges"]
+    assert edge["data"] == {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+
+
+async def test_a_fix_that_does_not_apply_is_refused_and_keeps_nothing(client: AsyncClient, logged_in_headers):
+    flow, url = await _refused_legacy_flow(client, logged_in_headers)
+    before = await _stored(flow)
+
+    response = await client.post(
+        f"{url}/restore", json={"fixes": _handle_fixes("legacy-edge", "missing", "text")}, headers=logged_in_headers
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.json()["detail"]["code"] == "EDGE_HANDLE_NOT_FOUND"
+    assert await _stored(flow) == before
+    assert not await _versions(client, logged_in_headers, flow)
+
+
+async def test_a_fix_that_addresses_no_violation_is_refused_and_keeps_nothing(client: AsyncClient, logged_in_headers):
+    flow, url = await _refused_legacy_flow(client, logged_in_headers)
+    before = await _stored(flow)
+
+    response = await client.post(
+        f"{url}/restore", json={"fixes": [{"type": "delete_edges", "ids": ["no-such-edge"]}]}, headers=logged_in_headers
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.json()["detail"]["code"] == "RESTORE_FIX_NOT_ALLOWED"
+    assert await _stored(flow) == before
+    assert not await _versions(client, logged_in_headers, flow)
+
+
+async def test_fixes_are_only_edge_deletes_and_handle_rewrites(client: AsyncClient, logged_in_headers):
+    flow, url = await _refused_legacy_flow(client, logged_in_headers)
+
+    response = await client.post(
+        f"{url}/restore",
+        json={"fixes": [{"type": "add_nodes", "nodes": [_node("c")]}]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert not await _versions(client, logged_in_headers, flow)

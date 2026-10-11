@@ -13,6 +13,7 @@ from langflow.services.flow_history.errors import (
     FlowRevisionMismatchError,
     FlowRevisionNotFoundError,
     FlowVersionConflictError,
+    RestoreFixNotAllowedError,
 )
 from langflow.services.flow_history.recorder import GraphWriteResult
 
@@ -69,6 +70,11 @@ def history_http_error(exc: FlowHistoryError) -> HTTPException:
                 "graph": exc.graph,
                 "violations": [violation.to_dict() for violation in exc.violations],
             },
+        )
+    if isinstance(exc, RestoreFixNotAllowedError):
+        return HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": exc.code, "message": str(exc)},
         )
     if isinstance(exc, FlowRevisionNotFoundError):
         return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"code": exc.code, "message": str(exc)})

@@ -16,7 +16,8 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from lfx.services.flow_operations import DeleteEdgesOp, FlowOperationError, UpdateEdgesOp, apply_flow_operations
 from pydantic import BaseModel, Field
 from sqlmodel import col, select
 
@@ -27,12 +28,14 @@ from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.flows_helpers import _export_variable_names, _patch_flow
 from langflow.services.database.models.flow.guards import lock_flow_for_read, lock_flow_for_update
 from langflow.services.database.models.flow.model import FlowUpdate, FlowWriteRead
+from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_catalog_policy_service, get_storage_service
 from langflow.services.flow_history.envelope import RESTORE_CAUSE
 from langflow.services.flow_history.errors import FlowHistoryError
 from langflow.services.flow_history.replay import reconstruct_graph
+from langflow.services.flow_history.restore_fixes import check_restore_fixes
 from langflow.services.flow_history.secrets import strip_graph_secrets
 from langflow.services.flow_history.timeline import TimelineEntry, read_timeline
 from langflow.services.storage.service import StorageService
@@ -95,6 +98,13 @@ class RevisionGraph(BaseModel):
 class RevisionRestore(BaseModel):
     request_id: UUID | None = Field(None, description="Identifies this restore across retries")
     repair_revision_mismatch: bool = False
+    fixes: list[Annotated[DeleteEdgesOp | UpdateEdgesOp, Field(discriminator="type")]] | None = Field(
+        None,
+        description=(
+            "The client's fixes for a restore refused with violations the client fixes: edge deletes and "
+            "handle rewrites, applied to the revision before it is saved."
+        ),
+    )
 
 
 @router.get("", response_model=RevisionPage)
@@ -180,6 +190,13 @@ async def restore_revision(
     The graph is replayed here rather than sent by the client: what a client
     can read has its secrets removed, and saving that back would blank them.
     Restoring the recorded graph restores its secrets too.
+
+    A restore refused with violations only the client can fix (an edge naming
+    an output that no longer exists) is resent with ``fixes``: edge deletes
+    and handle rewrites, each of which must address one of those violations
+    (``restore_fixes``). They are applied to the rebuilt revision, which keeps
+    its secrets, the result takes the normal save path, and the unfixed
+    revision is kept as a view-only version.
     """
     options = body or RevisionRestore()
     await lock_flow_for_update(session, flow)
@@ -191,6 +208,29 @@ async def restore_revision(
         )
     except FlowHistoryError as exc:
         raise history_http_error(exc) from exc
+    if options.fixes:
+        try:
+            check_restore_fixes(graph, flow.data or {}, options.fixes)
+        except FlowHistoryError as exc:
+            raise history_http_error(exc) from exc
+        unfixed = graph
+        try:
+            graph = apply_flow_operations(unfixed, list(options.fixes)).flow_data
+        except FlowOperationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"code": exc.code, "message": f"A fix cannot be applied to this revision: {exc}"},
+            ) from exc
+        # Kept in the same transaction as the write, so a refused restore keeps nothing.
+        await create_flow_version_entry(
+            session,
+            flow_id=flow.id,
+            user_id=flow.user_id,
+            data=unfixed,
+            description=f"Revision {revision} before the client fixed it for a restore",
+            view_only=True,
+            saved_by_user_id=current_user.id,
+        )
     _validate_catalog_policy_for_write(graph, snapshot=get_catalog_policy_service().snapshot)
     return await _patch_flow(
         session=session,

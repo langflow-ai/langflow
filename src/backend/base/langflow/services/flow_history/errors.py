@@ -73,6 +73,16 @@ class FlowGraphInvalidError(FlowHistoryError):
         self.violations = violations
 
 
+class RestoreFixNotAllowedError(FlowHistoryError):
+    """A restore's fix does not address a violation the restore would hit.
+
+    A client may only fix what the edge rules leave to it (see
+    ``restore_fixes``); anything else is an edit, which takes the save path.
+    """
+
+    code = "RESTORE_FIX_NOT_ALLOWED"
+
+
 class FlowRevisionNotFoundError(FlowHistoryError):
     """The revision was never recorded for this flow."""
 
