@@ -11,7 +11,7 @@ jest.mock("@tanstack/react-query", () => ({
 
 const apiPostMock = jest.fn();
 jest.mock("@/controllers/API/api", () => ({
-  api: { post: (...args: any[]) => apiPostMock(...args) },
+  api: { post: (...args: unknown[]) => apiPostMock(...args) },
 }));
 jest.mock("@/controllers/API/helpers/constants", () => ({
   getURL: () => "/api/v1/flows",
@@ -27,7 +27,7 @@ const setSuccessDataMock = jest.fn();
 const setErrorDataMock = jest.fn();
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
-  default: (selector: any) =>
+  default: (selector: (state: object) => unknown) =>
     selector({
       setSuccessData: setSuccessDataMock,
       setErrorData: setErrorDataMock,
@@ -37,14 +37,28 @@ jest.mock("@/stores/alertStore", () => ({
 const clearPreviewMock = jest.fn();
 const setPreviewStateMock = jest.fn();
 jest.mock("@/stores/versionPreviewStore", () => {
-  const store: any = (selector: any) =>
+  const store = (selector: (state: object) => unknown) =>
     selector({ clearPreview: clearPreviewMock });
-  store.getState = () => ({
+  const getState = () => ({
     clearPreview: clearPreviewMock,
     didRestore: false,
+    // The preview dropped the broken edge "e" and respelled the handles of
+    // "fine", which breaks no rule.
+    previewFixes: [
+      { type: "delete_edges", ids: ["e"] },
+      {
+        type: "update_edges",
+        updates: [
+          { id: "fine", op: "set_field", path: ["sourceHandle"], value: "s" },
+        ],
+      },
+    ],
   });
-  store.setState = (...args: any[]) => setPreviewStateMock(...args);
-  return { __esModule: true, default: store };
+  const setState = (...args: unknown[]) => setPreviewStateMock(...args);
+  return {
+    __esModule: true,
+    default: Object.assign(store, { getState, setState }),
+  };
 });
 
 // ---------------------------------------------------------------------------
@@ -103,6 +117,51 @@ describe("useRestoreVersion", () => {
 
     // isRestoring should be false after completion
     expect(result.current.isRestoring).toBe(false);
+  });
+
+  it("resends a version refused for edges the client fixes with the preview's fixes for them", async () => {
+    const flowData = { id: "flow-1", data: { nodes: [], edges: [] } };
+    apiPostMock
+      .mockRejectedValueOnce({
+        response: {
+          status: 422,
+          data: {
+            detail: {
+              code: "FLOW_GRAPH_INVALID",
+              message: "The submitted flow breaks the flow graph rules.",
+              violations: [
+                {
+                  code: "EDGE_HANDLE_INVALID",
+                  path: ["edges", 0],
+                  edge_id: "e",
+                  message:
+                    "edge 'e': sourceHandle must be an escaped JSON object",
+                  resolution: "client",
+                },
+              ],
+            },
+          },
+        },
+      })
+      .mockResolvedValueOnce({ data: flowData });
+
+    const { result } = renderHook(() => useRestoreVersion("flow-1"));
+    await act(async () => {
+      await result.current.restore("entry-1");
+    });
+
+    expect(apiPostMock).toHaveBeenCalledTimes(2);
+    expect(apiPostMock.mock.calls[1]).toEqual([
+      "/api/v1/flows/flow-1/versions/entry-1/activate",
+      { fixes: [{ type: "delete_edges", ids: ["e"] }] },
+      { params: { save_draft: true } },
+    ]);
+    expect(applyFlowToCanvasMock).toHaveBeenCalledWith(flowData);
+    expect(setSuccessDataMock).toHaveBeenCalledWith({
+      title:
+        "Version restored without the connections its components no longer have",
+      list: ["edge 'e': sourceHandle must be an escaped JSON object"],
+    });
   });
 
   it("calls onSuccess callback after successful restore", async () => {
@@ -184,7 +243,7 @@ describe("useRestoreVersion", () => {
   });
 
   it("sets isRestoring to true during restore and false after", async () => {
-    let resolvePost: (value: any) => void;
+    let resolvePost: (value: unknown) => void;
     apiPostMock.mockReturnValueOnce(
       new Promise((resolve) => {
         resolvePost = resolve;
