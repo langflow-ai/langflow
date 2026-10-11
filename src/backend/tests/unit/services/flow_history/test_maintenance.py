@@ -153,6 +153,28 @@ async def test_compaction_keeps_the_window_and_the_row_that_produced_the_cutoff(
         assert graphs_equal(await _reconstruct(flow_id, revision), _graph(str(revision)))
 
 
+async def test_compaction_keeps_a_retained_checkpoint(client: AsyncClient, logged_in_headers):
+    flow_id = await _flow(client, logged_in_headers)
+    for value in range(1, 4):
+        await _save(client, logged_in_headers, flow_id, str(value))
+        await _run(flow_id)
+    first = (await _system_checkpoints(flow_id))[0]
+    async with session_scope() as session:
+        await session.exec(
+            update(FlowVersion)
+            .where(FlowVersion.flow_id == UUID(flow_id), FlowVersion.operation_revision == first)
+            .values(retained=True)
+        )
+    for value in range(4, 12):
+        await _save(client, logged_in_headers, flow_id, str(value))
+        await _run(flow_id)
+
+    _, cutoff = await _retained(flow_id)
+    assert first < cutoff
+    assert first in await _system_checkpoints(flow_id)
+    assert graphs_equal(await _reconstruct(flow_id, first), _graph(str(first)))
+
+
 async def test_revisions_before_the_cutoff_are_not_retained(client: AsyncClient, logged_in_headers):
     flow_id = await _flow(client, logged_in_headers)
     for value in range(1, 10):
