@@ -31,9 +31,11 @@ from langflow.api.utils.knowledge_base_relocation import (
     KBRelocationResult,
     _metric_change,
     _repoint,
+    _short_on_the_target,
     relocate_knowledge_bases,
     validate_relocation_target_config,
 )
+from langflow.api.utils.migration_copies import copy_command
 from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from langflow.services.database.models.user.model import User
@@ -170,6 +172,29 @@ class TestRelocationWithoutATarget:
 
         assert next(r for r in results if r.kb_id == record.id).status == "skipped"
 
+    @pytest.mark.parametrize("config", [{}, {"note": "kept"}])
+    async def test_kb_already_on_the_target_is_counted_there_first_when_asked(self, active_user, monkeypatch, config):
+        # Both skips: a config equal to the target's, and another config that resolves to the same store.
+        # The count fails here, with no driver for the address or with nothing listening at it. A skip that
+        # makes none does not.
+        monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", "postgresql+psycopg://postgres@127.0.0.1:1/none")
+        recorded = await knowledge_base_service.create_record(
+            user_id=active_user.id, name="kb_pg_recorded", backend_type="postgres", backend_config=config, chunks=3
+        )
+        empty = await knowledge_base_service.create_record(
+            user_id=active_user.id, name="kb_pg_empty", backend_type="postgres", backend_config=config
+        )
+
+        async def outcome(**asked):
+            results = await relocate_knowledge_bases(target_backend_type="postgres", target_backend_config={}, **asked)
+            by_id = {result.kb_id: (result.status, result.code) for result in results}
+            return [by_id[recorded.id], by_id[empty.id]]
+
+        # Unless asked, relocate_knowledge_bases looks at neither.
+        assert await outcome() == [("skipped", None), ("skipped", None)]
+        # Asked to, it counts the one that records chunks. One that records none has nothing to miss.
+        assert await outcome(verify_skipped=True) == [("failed", "kb_target_unreachable"), ("skipped", None)]
+
     async def test_dry_run_checks_the_target_is_reachable(self, active_user, monkeypatch):
         monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
         record, _ = await _seed_sqlite_kb(active_user.id, "kb_dry_unreachable", 2)
@@ -216,6 +241,30 @@ class TestRelocationWithoutATarget:
         assert result.code == "kb_short"
         row = await knowledge_base_service.get_by_id(record.id)
         assert row.backend_type == "sqlite"
+
+    async def test_kb_already_on_the_target_is_short_when_its_store_holds_fewer_chunks(self, active_user):
+        # There is no pgvector server here, so the store that is counted is a SQLite one. The rule reads no type.
+        # That pgvector counts a table that is not there as 0 is checked only by the live tests.
+        short, _ = await _seed_sqlite_kb(active_user.id, "kb_holds_4_of_10", 4, chunks=10)
+        whole, _ = await _seed_sqlite_kb(active_user.id, "kb_holds_4_of_4", 4)
+
+        def result(record):
+            return KBRelocationResult(
+                kb_id=record.id,
+                kb_name=record.name,
+                owner="alice",
+                source_backend="sqlite",
+                target_backend="sqlite",
+                status="failed",
+                source_count=record.chunks,
+            )
+
+        found, passed = result(short), result(whole)
+
+        assert "4 of its 10" in await _short_on_the_target(short, found)
+        assert (found.code, found.target_count) == ("kb_target_short", 4)
+        assert await _short_on_the_target(whole, passed) is None
+        assert (passed.code, passed.target_count) == (None, 4)
 
     @pytest.mark.parametrize(
         ("backend_type", "backend_config", "storage_state", "expected"),
@@ -568,6 +617,62 @@ class TestRelocateKbCommand:
         assert sorted(report["attention"], key=str) == sorted([by_id[str(busy.id)], metric], key=str)
 
     @pytest.mark.usefixtures("quiet_libraries")
+    async def test_json_stream_reports_a_kb_whose_store_cannot_be_counted(self, active_user, capsys, monkeypatch):
+        # With no PGVECTOR_CONNECTION_STRING there is no store to count, and the helper says so when it is asked
+        # to count. Unless asked, it skips the knowledge base. The command asks unless it is told not to.
+        monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+        there = await knowledge_base_service.create_record(
+            user_id=active_user.id, name="kb_json_recorded", backend_type="postgres", chunks=3
+        )
+        capsys.readouterr()
+
+        async def run(**asked):
+            failed = await _relocate_kb(
+                target_backend_type="postgres",
+                target_backend_config={},
+                username=active_user.username,
+                dry_run=True,
+                batch_size=500,
+                as_json=True,
+                **asked,
+            )
+            return failed, *_json_events(capsys.readouterr().out)
+
+        failed, item, report = await run()
+        assert (failed, item["item"]["status"], report["counts"]) == (0, "skipped", {"skipped": 1})
+
+        failed, item, report = await run(verify_skipped=True)
+
+        assert failed == 1
+        assert (item["item"]["kb_id"], item["item"]["status"]) == (str(there.id), "failed")
+        assert item["item"]["code"] == "kb_target_unreachable"
+        assert item["item"]["reason"].startswith("could not count it on the target: ValueError: PostgresBackend needs")
+        assert (report["ok"], report["counts"], report["attention"]) == (False, {"failed": 1}, [item["item"]])
+
+    def test_the_command_takes_the_line_the_migration_page_gives_a_copy_from_sqlite(self):
+        # The page starts the command as a child with this line. An option the command does not have would end
+        # every such copy on a usage error, so the line is read here by the command's own parser.
+        argv = copy_command("copy_knowledge_bases", {"database": {}}, dry_run=True)
+        command = typer.main.get_command(app).commands["relocate-kb"]
+
+        context = command.make_context("relocate-kb", argv[4:])
+
+        asked = (context.params["verify_skipped"], context.params["dry_run"], context.params["as_json"])
+        assert asked == (True, True, True)
+
+    @pytest.mark.parametrize(
+        ("options", "counted"), [([], True), (["--verify-skipped"], True), (["--no-verify-skipped"], False)]
+    )
+    def test_the_command_counts_before_it_skips_unless_it_is_told_not_to(self, options, counted):
+        # Run by hand the command counts, so a knowledge base kept in another store is not passed over in
+        # silence. The migration page gives the option either way.
+        command = typer.main.get_command(app).commands["relocate-kb"]
+
+        context = command.make_context("relocate-kb", ["--to", "postgres", *options])
+
+        assert context.params["verify_skipped"] is counted
+
+    @pytest.mark.usefixtures("quiet_libraries")
     async def test_text_output_is_the_same_without_json(self, active_user, kb_root, capsys, monkeypatch):  # noqa: ARG002
         monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
         await _seed_sqlite_kb(active_user.id, "kb_text", 2, model_selection=None)
@@ -658,6 +763,36 @@ def test_relocation_line_shows_what_was_copied(status, copied, expected):
     )
 
     assert relocation_line(result).endswith(expected)
+
+
+@pytest.mark.parametrize(
+    ("code", "hinted"), [("kb_target_short", True), ("kb_target_unreachable", False), (None, False)]
+)
+def test_a_short_count_says_how_to_get_past_it_when_the_store_is_the_right_one(code, hinted):
+    # The reason names one cause, chunks kept in another store. A row that records too many chunks over the
+    # right store fails the same way, and the way past it is an option only the command line has.
+    from langflow.__main__ import relocation_lines
+
+    result = KBRelocationResult(
+        kb_id=uuid.uuid4(),
+        kb_name="kb",
+        owner="alice",
+        source_backend="postgres",
+        target_backend="postgres",
+        status="failed",
+        source_count=5,
+        target_count=3,
+        code=code,
+        reason="why",
+        warnings=["a warning"],
+    )
+
+    lines = relocation_lines(result)
+
+    assert lines[0].endswith("(why)")
+    assert lines[-1].endswith("warning: a warning")
+    assert [line.split()[0] for line in lines[1:-1]] == (["hint:"] if hinted else [])
+    assert any("--no-verify-skipped" in line for line in lines) is hinted
 
 
 async def test_relocation_rejects_shared_target_collection():
@@ -869,13 +1004,58 @@ class TestRelocationToPostgresLive:
                 assert moved[doc.id].metadata == doc.metadata
                 assert moved[doc.id].embedding == pytest.approx(doc.embedding)
 
-            # The row now names the target, so a second run leaves it alone.
-            rerun = await relocate_knowledge_bases(target_backend_type="postgres", target_backend_config={})
-            assert next(r for r in rerun if r.kb_id == record.id).status == "skipped"
+            # The row now names the target, so a second run leaves it alone, counted or not.
+            for asked in ({}, {"verify_skipped": True}):
+                rerun = await relocate_knowledge_bases(
+                    target_backend_type="postgres", target_backend_config={}, **asked
+                )
+                assert next(r for r in rerun if r.kb_id == record.id).status == "skipped"
         finally:
             with contextlib.suppress(Exception):
                 await target.delete_collection()
             await target.teardown()
+
+    @pytest.mark.usefixtures("quiet_libraries")
+    async def test_kb_recorded_on_the_target_without_its_chunks_there_is_short_when_asked(self, active_user, capsys):
+        # What a knowledge base kept in another pgvector store looks like from here: its row says postgres
+        # and records 36 chunks, and the store this run reads has no table for it.
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id, name=f"kb_elsewhere_{uuid.uuid4().hex[:6]}", backend_type="postgres", chunks=36
+        )
+        store = unfenced_backend(record)
+
+        async def run(**asked):
+            results = await relocate_knowledge_bases(target_backend_type="postgres", target_backend_config={}, **asked)
+            return next(result for result in results if result.kb_id == record.id)
+
+        try:
+            assert (await run()).status == "skipped"
+            for dry_run in (True, False):
+                short = await run(verify_skipped=True, dry_run=dry_run)
+                assert (short.status, short.code, short.copied) == ("failed", "kb_target_short", 0)
+                assert "0 of its 36" in short.reason
+            # Typed by hand, the command says under the knowledge base how to get past it.
+            capsys.readouterr()
+            failed = await _relocate_kb(
+                target_backend_type="postgres",
+                target_backend_config={},
+                username=active_user.username,
+                dry_run=True,
+                batch_size=500,
+                verify_skipped=True,
+            )
+            printed = capsys.readouterr().out.splitlines()
+            at = next(index for index, line in enumerate(printed) if record.name in line)
+            assert failed == 1
+            assert printed[at + 1].split()[:1] == ["hint:"]
+            # Once the store holds what the row records, the knowledge base is there.
+            chunks = [IngestedDocument(id=f"c{i}", content="doc", embedding=[0.5] * DIM) for i in range(36)]
+            await store.add_embedded_documents(chunks)
+            assert (await run(verify_skipped=True)).status == "skipped"
+        finally:
+            with contextlib.suppress(Exception):
+                await store.delete_collection()
+            await store.teardown()
 
     async def test_vectors_that_are_not_unit_length_are_not_moved_to_another_metric(self, active_user):
         # SQLite ranks by l2 unless configured otherwise, and pgvector by cosine. For
