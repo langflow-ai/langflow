@@ -3119,6 +3119,7 @@
   "flowHistory.restore.restoring": "Restaurando…",
   "flowHistory.restore.confirm": "Restaurar o fluxo como estava em {{label}}? O fluxo atual permanece no histórico, então você pode voltar a ele.",
   "flowHistory.restore.onlyAtEntryEnd": "Você pode restaurar no final de uma entrada. Avance até o final desta para restaurá-la.",
+  "flowHistory.restore.withoutBrokenConnections": "Versão restaurada sem as conexões que seus componentes não têm mais",
   "flowHistory.repair.mismatchTitle": "Este fluxo foi alterado fora do Langflow",
   "flowHistory.repair.mismatchBody": "O fluxo salvo não corresponde mais ao seu histórico, então sua alteração não foi salva. O reparo volta o fluxo à última versão registrada e depois salva sua alteração. O que foi alterado fora do Langflow é descartado; exporte o fluxo antes se precisar.",
   "flowHistory.repair.invalidTitle": "Este fluxo tem problemas que o Langflow pode corrigir",

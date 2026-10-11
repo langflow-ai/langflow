@@ -7,6 +7,32 @@ import { getURL } from "@/controllers/API/helpers/constants";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
+import type { FlowOperation } from "@/utils/flow-operations/apply";
+import { fixesForEdges } from "@/utils/flow-operations/edge-fixes";
+
+type GraphViolation = {
+  code: string;
+  message: string;
+  resolution: string;
+  edge_id?: string;
+};
+
+/**
+ * The violations a restore was refused for, when the client fixes every one
+ * of them (an edge naming an output the revision's nodes no longer have), or
+ * null for any other failure.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: axios error shape
+function clientViolations(err: any): GraphViolation[] | null {
+  const detail = err?.response?.data?.detail;
+  if (err?.response?.status !== 422 || detail?.code !== "FLOW_GRAPH_INVALID")
+    return null;
+  const violations: GraphViolation[] = detail.violations ?? [];
+  return violations.length > 0 &&
+    violations.every((violation) => violation.resolution === "client")
+    ? violations
+    : null;
+}
 
 /**
  * Make an earlier point in the flow's history its current state.
@@ -15,6 +41,12 @@ import useVersionPreviewStore from "@/stores/versionPreviewStore";
  * from the editor: what the editor previewed has its secrets removed, and
  * saving that would blank them. The restore is recorded as new history, so
  * the state it replaces stays one step back in the timeline.
+ *
+ * A revision can break the edge rules in ways only the editor can fix, which
+ * the server refuses with violations marked `client`. The restore is then
+ * sent once more with the edge fixes the preview already shows for the edges
+ * the server flagged (see edge-fixes); the server checks and applies them and
+ * keeps the unfixed revision as a view-only version.
  */
 export default function useRestoreRevision(flowId: string) {
   const { t } = useTranslation();
@@ -28,11 +60,26 @@ export default function useRestoreRevision(flowId: string) {
   const restore = useCallback(
     async (revision: number, options?: { onSuccess?: () => void }) => {
       setIsRestoring(true);
+      const send = (fixes?: FlowOperation[]) =>
+        api.post(`${getURL("FLOWS")}/${flowId}/revisions/${revision}/restore`, {
+          request_id: uuidv4(),
+          ...(fixes ? { fixes } : {}),
+        });
+      let fixed: GraphViolation[] | null = null;
       try {
-        const response = await api.post(
-          `${getURL("FLOWS")}/${flowId}/revisions/${revision}/restore`,
-          { request_id: uuidv4() },
-        );
+        let response: Awaited<ReturnType<typeof send>>;
+        try {
+          response = await send();
+        } catch (err) {
+          fixed = clientViolations(err);
+          if (!fixed) throw err;
+          const fixes = fixesForEdges(
+            useVersionPreviewStore.getState().previewFixes,
+            new Set(fixed.map((violation) => violation.edge_id ?? "")),
+          );
+          if (fixes.length === 0) throw err;
+          response = await send(fixes);
+        }
         queryClient.invalidateQueries({ queryKey: ["useGetFlowRevisions"] });
         queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
         applyFlowToCanvas(response.data);
@@ -49,7 +96,14 @@ export default function useRestoreRevision(flowId: string) {
       try {
         useVersionPreviewStore.setState({ didRestore: true });
         clearPreview();
-        setSuccessData({ title: t("success.versionRestored") });
+        setSuccessData(
+          fixed
+            ? {
+                title: t("flowHistory.restore.withoutBrokenConnections"),
+                list: fixed.map((violation) => violation.message),
+              }
+            : { title: t("success.versionRestored") },
+        );
         options?.onSuccess?.();
       } finally {
         setIsRestoring(false);

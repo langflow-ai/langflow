@@ -3119,6 +3119,7 @@
   "flowHistory.restore.restoring": "復元中…",
   "flowHistory.restore.confirm": "フローを {{label}} 時点に復元しますか？現在のフローは履歴に残るため、後で戻すことができます。",
   "flowHistory.restore.onlyAtEntryEnd": "復元はエントリの最後で行えます。このエントリの最後まで進めて復元してください。",
+  "flowHistory.restore.withoutBrokenConnections": "コンポーネントに存在しなくなった接続を除いてバージョンを復元しました",
   "flowHistory.repair.mismatchTitle": "このフローは Langflow の外部で変更されました",
   "flowHistory.repair.mismatchBody": "保存されたフローが履歴と一致しないため、変更は保存されませんでした。修復すると、フローを最新の記録済みバージョンに戻してから変更を保存します。Langflow の外部で行われた変更は破棄されます。必要な場合は先にフローをエクスポートしてください。",
   "flowHistory.repair.invalidTitle": "このフローには Langflow が修正できる問題があります",

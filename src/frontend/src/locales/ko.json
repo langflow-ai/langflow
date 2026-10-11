@@ -3118,6 +3118,7 @@
   "flowHistory.restore.restoring": "복원 중…",
   "flowHistory.restore.confirm": "이 시점의 Flow로 복원할까요? ({{label}}) 현재 Flow는 기록에 남으므로 다시 돌아올 수 있습니다.",
   "flowHistory.restore.onlyAtEntryEnd": "항목의 끝에서만 복원할 수 있습니다. 이 항목의 끝으로 이동한 뒤 복원하세요.",
+  "flowHistory.restore.withoutBrokenConnections": "Component에 더 이상 없는 연결을 제외하고 버전을 복원했습니다",
   "flowHistory.repair.mismatchTitle": "Langflow 밖에서 이 Flow가 변경되었습니다",
   "flowHistory.repair.mismatchBody": "저장된 Flow가 기록과 맞지 않아 변경 사항을 저장하지 못했습니다. 복구하면 Flow를 마지막으로 기록된 버전으로 되돌린 뒤 그 위에 변경 사항을 저장합니다. Langflow 밖에서 바꾼 내용은 사라지니, 필요하면 먼저 Flow를 내보내세요.",
   "flowHistory.repair.invalidTitle": "Langflow가 고칠 수 있는 문제가 있습니다",

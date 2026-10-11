@@ -3118,6 +3118,7 @@
   "flowHistory.restore.restoring": "Restoring…",
   "flowHistory.restore.confirm": "Restore the flow as of {{label}}? The current flow stays in the history, so you can return to it.",
   "flowHistory.restore.onlyAtEntryEnd": "You can restore at the end of an entry. Step to the end of this one to restore it.",
+  "flowHistory.restore.withoutBrokenConnections": "Version restored without the connections its components no longer have",
   "flowHistory.repair.mismatchTitle": "This flow was changed outside Langflow",
   "flowHistory.repair.mismatchBody": "The saved flow no longer matches its history, so your change wasn't saved. Repairing resets the flow to its latest recorded version, then saves your change on top of it. Anything changed outside Langflow is discarded; export the flow first if you need it.",
   "flowHistory.repair.invalidTitle": "This flow has problems Langflow can fix",

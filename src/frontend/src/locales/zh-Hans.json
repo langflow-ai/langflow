@@ -3118,6 +3118,7 @@
   "flowHistory.restore.restoring": "正在恢复…",
   "flowHistory.restore.confirm": "要将流程恢复到 {{label}} 时的状态吗？当前流程会保留在历史中，你可以随时返回。",
   "flowHistory.restore.onlyAtEntryEnd": "只能在一条记录的末尾恢复。请前进到这条记录的末尾再恢复。",
+  "flowHistory.restore.withoutBrokenConnections": "已复原版本，但移除了其组件已不再具有的连接",
   "flowHistory.repair.mismatchTitle": "此流程在 Langflow 之外被修改",
   "flowHistory.repair.mismatchBody": "已保存的流程与其历史不再一致，因此你的更改未被保存。修复会将流程重置为最新记录的版本，然后在其基础上保存你的更改。在 Langflow 之外做出的修改将被丢弃；如有需要，请先导出流程。",
   "flowHistory.repair.invalidTitle": "此流程存在 Langflow 可以修复的问题",

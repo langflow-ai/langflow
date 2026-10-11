@@ -1,9 +1,12 @@
 import { create } from "zustand";
 import type { AllNodeType, EdgeType } from "../types/flow";
+import type { FlowOperation } from "../utils/flow-operations/apply";
 
 interface VersionPreviewState {
   previewNodes: AllNodeType[] | null;
   previewEdges: EdgeType[] | null;
+  /** The edge fixes the preview made to the flow as read (see edge-fixes), which a refused restore sends. */
+  previewFixes: FlowOperation[];
   previewLabel: string | null;
   /** The version entry ID currently being previewed, or null for current draft. */
   previewId: string | null;
@@ -21,6 +24,7 @@ interface VersionPreviewState {
     label: string,
     id?: string | null,
     description?: string | null,
+    fixes?: FlowOperation[],
   ) => void;
   clearPreview: () => void;
 }
@@ -28,16 +32,25 @@ interface VersionPreviewState {
 const useVersionPreviewStore = create<VersionPreviewState>((set) => ({
   previewNodes: null,
   previewEdges: null,
+  previewFixes: [],
   previewLabel: null,
   previewId: null,
   previewDescription: null,
   isPreviewLoading: false,
   didRestore: false,
   setPreviewLoading: (loading) => set({ isPreviewLoading: loading }),
-  setPreview: (nodes, edges, label, id = null, description = null) =>
+  setPreview: (
+    nodes,
+    edges,
+    label,
+    id = null,
+    description = null,
+    fixes = [],
+  ) =>
     set({
       previewNodes: nodes,
       previewEdges: edges,
+      previewFixes: fixes,
       previewLabel: label,
       previewId: id,
       previewDescription: description,
@@ -46,6 +59,7 @@ const useVersionPreviewStore = create<VersionPreviewState>((set) => ({
     set({
       previewNodes: null,
       previewEdges: null,
+      previewFixes: [],
       previewLabel: null,
       previewId: null,
       previewDescription: null,
