@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
@@ -145,6 +147,80 @@ test(
       expect(record.steps.copy_files.report.ok).toBe(true);
     } finally {
       await startOver(page);
+    }
+  },
+);
+
+test(
+  "an admin accepts a file that has nothing to copy",
+  { tag: ["@release", "@workspace", "@api"] },
+  async ({ page }) => {
+    test.skip(Boolean(NO_DESTINATION), NO_DESTINATION);
+    await awaitBootstrapTest(page, { skipModal: true });
+    const instance = await startOver(page);
+    // A file the database lists, with its bytes taken off this server's disk for the walk. The file stays
+    // from one walk to the next: deleted, it would leave the destination with a row this instance no longer has.
+    const listed: { name: string; id: string; path: string }[] = await (
+      await page.request.get("/api/v2/files")
+    ).json();
+    const lost =
+      listed.find((file) => file.name === "walk-gone") ??
+      (await (
+        await page.request.post("/api/v2/files", {
+          multipart: {
+            file: {
+              name: "walk-gone.txt",
+              mimeType: "text/plain",
+              buffer: Buffer.from("gone"),
+            },
+          },
+        })
+      ).json());
+    const bytes = path.join(instance.files.folder, lost.path);
+    fs.rmSync(bytes, { force: true });
+
+    try {
+      await readyToCopy(page, instance);
+      if (instance.database.type === "sqlite")
+        await runCopy(page, "copy_database");
+      if (instance.knowledge_bases.local)
+        await runCopy(page, "copy_knowledge_bases");
+
+      await page.goto("/settings/migration");
+      const files = page.getByTestId("migration-step-copy_files");
+      await files.getByRole("button", { name: "Copy files" }).click();
+
+      // The copy leaves it, says why, and waits for the admin.
+      const accept = files.getByRole("checkbox", {
+        name: "Move without this file, walk-gone.txt",
+      });
+      await expect(accept).toBeVisible({ timeout: 300000 });
+      await expect(files.getByRole("alert")).toContainText(
+        "Some were not copied. Each one below says why.",
+      );
+      await expect(files).toContainText(
+        "Nothing is stored for this name, so there is nothing to copy.",
+      );
+      // The walk accepted the check's finding about this file on its way here. The step says why it asks again.
+      await expect(files).toContainText(
+        "Accepting a finding in 'Check this instance' lets the move go on.",
+      );
+
+      // Accepted, the step is done with nothing run again. Taken back, it waits again.
+      await accept.click();
+      await expect(files).toContainText(/Copied: [\d,]+ of [\d,]+/);
+      await expect(files.getByRole("alert")).toHaveCount(0);
+      await expect(accept).toBeChecked();
+      await expect(files).toContainText(/Accepted by .+ on /);
+      await accept.click();
+      await expect(files.getByRole("alert")).toContainText(
+        "Some were not copied.",
+      );
+      await accept.click();
+      await expect(files.getByRole("alert")).toHaveCount(0);
+    } finally {
+      await startOver(page);
+      fs.writeFileSync(bytes, "gone");
     }
   },
 );
