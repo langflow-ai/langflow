@@ -14,7 +14,7 @@ Anything else is an edit, which takes the save path.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Annotated, Any
 
 from lfx.services.flow_operations import (
     DeleteEdgesOp,
@@ -22,18 +22,41 @@ from lfx.services.flow_operations import (
     GraphViolationCode,
     Resolution,
     SetNodeFieldUpdate,
+    UpdateEdgesOp,
+    apply_flow_operations,
     find_graph_violations,
     resolution_of,
 )
 from lfx.services.flow_operations.edge_rules import HANDLE_KEYS, read_handles
+from pydantic import Field
 
 from langflow.services.flow_history.errors import RestoreFixNotAllowedError
 
-if TYPE_CHECKING:
-    from lfx.services.flow_operations import UpdateEdgesOp
+# One fix a restore takes: an edge delete or a handle rewrite.
+RestoreFix = Annotated[DeleteEdgesOp | UpdateEdgesOp, Field(discriminator="type")]
+RESTORE_FIXES_DESCRIPTION = (
+    "The client's fixes for a restore refused with violations the client fixes: edge deletes and handle rewrites, "
+    "each addressing one of those violations, applied before the restored flow is saved."
+)
 
 _REWRITABLE = frozenset({GraphViolationCode.EDGE_HANDLE_INVALID, GraphViolationCode.EDGE_HANDLE_NOT_FOUND})
 _HANDLE_PATHS = frozenset({(key,) for key in HANDLE_KEYS} | {("data", key) for key in HANDLE_KEYS})
+
+
+def apply_restore_fixes(
+    revision: dict[str, Any], stored: dict[str, Any], fixes: list[DeleteEdgesOp | UpdateEdgesOp]
+) -> dict[str, Any]:
+    """Return ``revision`` with ``fixes`` applied, after checking each one (``check_restore_fixes``).
+
+    Raises ``RestoreFixNotAllowedError`` for a fix that addresses no violation,
+    or that the engine cannot apply, with the engine's code.
+    """
+    check_restore_fixes(revision, stored, fixes)
+    try:
+        return apply_flow_operations(revision, list(fixes)).flow_data
+    except FlowOperationError as exc:
+        msg = f"A fix cannot be applied: {exc}"
+        raise RestoreFixNotAllowedError(msg, code=exc.code) from exc
 
 
 def check_restore_fixes(
