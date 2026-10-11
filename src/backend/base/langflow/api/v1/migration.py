@@ -739,16 +739,25 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
         raise HTTPException(status_code=409, detail={"code": "secrets_missing"}) from exc
     argv = copy_command(step_id, record.get("destinations", {}), record.get("decisions", []), dry_run=dry_run)
 
-    def reserve() -> None:
+    def reserve() -> Callable[[], Any]:
+        check = None
+
         def invalidate(record: dict[str, Any]) -> None:
+            nonlocal check
             if _lets_in(record, step_id) != let_in:
                 raise HTTPException(status_code=409, detail={"code": "state_changed"})
             # A child may write before spawn returns. Close the cutover gate now, under the record's
             # generation check, so either the start wins and no child spawns, or this copy wins and
             # the start waits for another check. Cancelling a child afterwards cannot undo its writes.
-            record["steps"].pop(CHECK_STEP, None)
+            check = record["steps"].pop(CHECK_STEP, None)
+
+        def put_back(record: dict[str, Any]) -> bool:
+            # The command could not run, so the destination is as the check read it. Whether the check
+            # still counts is worked out from the record each time, as for any check.
+            return check is not None and record["steps"].setdefault(CHECK_STEP, check) is check
 
         _save(invalidate)
+        return lambda: _save(put_back)
 
     try:
         run_id = await start_run(step_id, argv, env, started_by=admin.username, before_spawn=reserve)

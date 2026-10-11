@@ -655,7 +655,7 @@ async def test_a_file_the_admin_kept_in_one_bucket_is_asked_about_again_in_anoth
 
 
 async def test_a_copy_start_does_not_put_back_a_pause_that_another_worker_ended_under_it(
-    client, logged_in_headers_super_user, config_dir, monkeypatch
+    client, logged_in_headers_super_user, active_super_user, config_dir, monkeypatch, server_log
 ):
     headers = logged_in_headers_super_user
     _ready_to_copy(config_dir)
@@ -681,6 +681,9 @@ async def test_a_copy_start_does_not_put_back_a_pause_that_another_worker_ended_
     # The command had started, and was stopped.
     [run] = migration_runs.list_runs()
     assert run["status"] == "cancelled"
+    stopped = "after what let it in had changed, so it was stopped"
+    started = f"Migration: user_id={active_super_user.id} started the copy of the database"
+    assert f"{started} {stopped} (run {run['run_id']})" in server_log.getvalue()
     migration = await _migration(client, headers)
     # The other worker's word stands: this request's save did not put the pause back.
     assert "pause" not in migration["record"]

@@ -9,6 +9,7 @@ all that two workers share.
 from __future__ import annotations
 
 import asyncio
+import errno
 import json
 import os
 import signal
@@ -494,9 +495,18 @@ async def test_a_second_run_is_refused_while_one_is_live_and_allowed_after_it_en
         gate,
     )
 
-    # One run at a time, whichever step it belongs to.
+    # One run at a time, whichever step it belongs to. The second is refused before it is admitted, so it
+    # changes nothing that the first one counts on.
+    admitted = []
     with pytest.raises(migration_runs.RunActiveError):
-        await _start('emit(event="report", ok=True)', step="copy_files")
+        await migration_runs.start_run(
+            "copy_files",
+            _child('emit(event="report", ok=True)'),
+            dict(os.environ),
+            started_by="alice",
+            before_spawn=lambda: admitted.append(True),
+        )
+    assert admitted == []
 
     gate.touch()
     await _follow(first)
@@ -524,6 +534,55 @@ async def test_a_command_that_cannot_be_spawned_leaves_no_run_behind():
     assert (await _follow(run_id))[-1]["status"] == "done"
 
 
+async def test_admission_is_taken_back_when_the_command_itself_cannot_be_started():
+    taken_back = []
+
+    def admit():
+        return lambda: taken_back.append(True)
+
+    argv = _child('emit(event="report", ok=True)')
+    run_id = await migration_runs.start_run(
+        "copy_database", argv, dict(os.environ), started_by="alice", before_spawn=admit
+    )
+    assert (await _follow(run_id))[-1]["status"] == "done"
+    # The command ran, so what admission saved for it stands.
+    assert taken_back == []
+
+    with pytest.raises(FileNotFoundError):
+        await migration_runs.start_run(
+            "copy_database", ["/no/such/command"], {}, started_by="alice", before_spawn=admit
+        )
+
+    assert taken_back == [True]
+    assert [run["run_id"] for run in migration_runs.list_runs()] == [run_id]
+
+
+async def test_admission_stands_when_the_spawn_fails_with_an_error_that_names_no_file():
+    """Out of file descriptors. On Linux the same error can come after the child was made, and say nothing of it."""
+    resource = pytest.importorskip("resource")
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    taken_back = []
+
+    def admit():
+        # One descriptor is left. The spawn opens /dev/null with it and has none for a pipe.
+        lowest = os.open(os.devnull, os.O_RDONLY)
+        os.close(lowest)
+        resource.setrlimit(resource.RLIMIT_NOFILE, (lowest + 1, hard))
+        return lambda: taken_back.append(True)
+
+    try:
+        with pytest.raises(OSError) as raised:  # noqa: PT011
+            await migration_runs.start_run(
+                "copy_database", _child("pass"), dict(os.environ), started_by="alice", before_spawn=admit
+            )
+    finally:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
+
+    assert (raised.value.errno, raised.value.filename) == (errno.EMFILE, None)
+    assert taken_back == []
+    assert migration_runs.list_runs() == []
+
+
 async def test_a_run_that_cannot_be_recorded_does_not_leave_its_child_running(config_dir: Path, gate: Path):
     if os.getuid() == 0:
         pytest.skip("Root can write to a folder whatever its permissions say")
@@ -531,15 +590,24 @@ async def test_a_run_that_cannot_be_recorded_does_not_leave_its_child_running(co
     runs.mkdir(parents=True)
     (runs / "start.lock").touch()
     children = set(psutil.Process().children())
+    taken_back = []
     # The lock file can still be opened, but none of the run's files can be created.
     runs.chmod(0o500)
     try:
         with pytest.raises(PermissionError):
-            await _start("wait_for_gate()", gate)
+            await migration_runs.start_run(
+                "copy_database",
+                _child("wait_for_gate()", gate),
+                dict(os.environ),
+                started_by="alice",
+                before_spawn=lambda: lambda: taken_back.append(True),
+            )
     finally:
         runs.chmod(0o700)
 
     await _until(lambda: set(psutil.Process().children()) <= children)
+    # The command ran for a moment, so what admission saved for it stands.
+    assert taken_back == []
 
 
 async def test_a_run_whose_log_can_no_longer_be_written_ends_failed_and_stops_its_child(config_dir: Path, gate: Path):

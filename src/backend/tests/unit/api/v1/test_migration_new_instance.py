@@ -961,6 +961,69 @@ async def test_cutover_is_refused_while_a_copy_is_being_spawned(
         await asyncio.wait_for(copying, _TIMEOUT)
 
 
+async def test_a_copy_whose_command_cannot_be_started_leaves_the_check_of_the_copy_on_record(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _copied(config_dir)
+    _checked_copy(config_dir)
+    _send_to(monkeypatch, NOWHERE)
+    checked = (await _migration(client, headers))["record"]["steps"][CHECK]
+    # The system cannot start this command, so it never runs.
+    missing = [str(config_dir / "no-such-command")]
+    monkeypatch.setattr(migration_module, "copy_command", lambda *_args, **_kwargs: missing)
+
+    with pytest.raises(FileNotFoundError):
+        await client.post(RUNS.format("copy_database"), json={}, headers=headers)
+
+    # Nothing wrote to the destination, so the check still says what it holds, and the start stays offered.
+    migration = await _migration(client, headers)
+    assert migration["record"]["steps"][CHECK] == checked
+    states = _states(migration)
+    assert (states["copy_database"], states[CHECK], states["start_target"]) == (
+        ("done", None),
+        ("done", None),
+        ("current", None),
+    )
+    assert migration_runs.list_runs() == []
+
+
+async def test_a_copy_start_that_is_cancelled_while_its_command_starts_keeps_the_check_off_the_record(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _copied(config_dir)
+    _checked_copy(config_dir)
+    _send_to(monkeypatch, NOWHERE)
+    command = [sys.executable, "-c", "import time; print('ready', flush=True); time.sleep(120)"]
+    monkeypatch.setattr(migration_module, "copy_command", lambda *_args, **_kwargs: command)
+    spawned, children = asyncio.Event(), []
+    spawn = asyncio.create_subprocess_exec
+
+    async def spawn_and_hold(*args, **kwargs):
+        children.append(await spawn(*args, **kwargs))
+        assert await asyncio.wait_for(children[0].stdout.readline(), _TIMEOUT) == b"ready\n"
+        spawned.set()
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(migration_runs.asyncio, "create_subprocess_exec", spawn_and_hold)
+    copying = asyncio.create_task(client.post(RUNS.format("copy_database"), json={}, headers=headers))
+    try:
+        await asyncio.wait_for(spawned.wait(), _TIMEOUT)
+        # The request is cancelled here. Its command is running by now.
+        copying.cancel()
+        await asyncio.wait([copying], timeout=_TIMEOUT)
+
+        # The command may have written to the destination, so the check is not put back and the start waits.
+        migration = await _migration(client, headers)
+        assert CHECK not in migration["record"]["steps"]
+        assert _states(migration)["start_target"] == WAITING
+    finally:
+        for child in children:
+            child.kill()
+            await child.wait()
+
+
 async def test_a_check_at_the_door_is_stopped_when_the_start_is_confirmed_before_its_command_starts(
     client, logged_in_headers_super_user, config_dir, monkeypatch, at_the_door
 ):
