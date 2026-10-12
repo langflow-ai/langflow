@@ -3,13 +3,16 @@
 ``httpx`` is mocked throughout: no test reaches the network or needs a key.
 """
 
+import json
 from unittest.mock import Mock, patch
 
+import httpx
 import pytest
 
 pytest.importorskip("lfx_bundles")
 pytest.importorskip("langchain_openai")
 
+from langchain_openai import ChatOpenAI
 from lfx_bundles.anonrouter.anonrouter import BASE_URL, AnonRouterComponent
 
 # Shaped like ``GET /v1/models`` on the compatibility origin: an OpenAI-style
@@ -70,7 +73,7 @@ class TestFetchModels:
         assert kwargs["headers"]["Authorization"] == "Bearer ar_test-key"
 
     def test_no_key_means_no_request(self):
-        """``/v1/models`` 404s without a credential, so never call it unauthenticated."""
+        """Discovery requires a credential."""
         component = AnonRouterComponent(api_key="")
 
         with patch("httpx.get") as mock_get:
@@ -131,6 +134,15 @@ class TestFetchModels:
         with patch("httpx.get", return_value=_mock_response(payload)):
             assert [m["id"] for m in component.fetch_models()] == ["openai/gpt-oss-120b"]
 
+    @pytest.mark.parametrize("payload", [{}, {"data": None}, {"data": {}}, None, "invalid"])
+    def test_invalid_payload_reports_discovery_failure(self, payload):
+        component = AnonRouterComponent(api_key="ar_test-key")
+
+        with patch("httpx.get", return_value=_mock_response(payload)):
+            assert component.fetch_models() is None
+
+        assert "Expected a model list" in component.status
+
 
 @pytest.mark.unit
 class TestUpdateBuildConfig:
@@ -187,6 +199,17 @@ class TestUpdateBuildConfig:
         assert updated["model_name"]["tooltips"] == {}
         assert updated["model_name"]["value"] == ""
 
+    @pytest.mark.parametrize("payload", [{}, {"data": None}, {"data": {}}, None, "invalid"])
+    def test_invalid_payload_preserves_a_saved_selection(self, payload):
+        component = AnonRouterComponent(api_key="ar_test-key")
+        saved = "meta-llama/llama-3.3-70b"
+        build_config = {"model_name": {"options": [saved], "tooltips": {saved: "Llama"}, "value": saved}}
+
+        with patch("httpx.get", return_value=_mock_response(payload)):
+            updated = component.update_build_config(build_config, "ar_test-key", "api_key")
+
+        assert updated["model_name"] == {"options": [saved], "tooltips": {saved: "Llama"}, "value": saved}
+
     def test_unrelated_fields_do_not_trigger_discovery(self):
         component = AnonRouterComponent(api_key="ar_test-key")
         build_config = {"model_name": {"options": [], "value": ""}}
@@ -199,6 +222,97 @@ class TestUpdateBuildConfig:
 
 @pytest.mark.unit
 class TestBuildModel:
+    def test_chat_completion_uses_the_openai_client(self):
+        component = AnonRouterComponent(api_key="ar_test-key", model_name="meta-llama/llama-3.3-70b")
+        requests = []
+
+        def respond(request):
+            requests.append(request)
+            return httpx.Response(
+                200,
+                json={
+                    "id": "chat-test",
+                    "object": "chat.completion",
+                    "created": 0,
+                    "model": "meta-llama/llama-3.3-70b",
+                    "choices": [{"index": 0, "message": {"role": "assistant", "content": "Hello"}}],
+                    "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                },
+            )
+
+        with (
+            httpx.Client(transport=httpx.MockTransport(respond)) as client,
+            patch(
+                "lfx_bundles.anonrouter.anonrouter.ChatOpenAI",
+                side_effect=lambda **kwargs: ChatOpenAI(**kwargs, http_client=client),
+            ),
+        ):
+            result = component.build_model().invoke("Hi")
+
+        assert result.content == "Hello"
+        assert str(requests[0].url) == f"{BASE_URL}/chat/completions"
+        assert requests[0].headers["Authorization"] == "Bearer ar_test-key"
+        assert json.loads(requests[0].content)["model"] == "meta-llama/llama-3.3-70b"
+
+    def test_streamed_tool_calls_use_the_openai_client(self):
+        component = AnonRouterComponent(api_key="ar_test-key", model_name="meta-llama/llama-3.3-70b")
+        requests = []
+        event = {
+            "id": "chat-test",
+            "object": "chat.completion.chunk",
+            "created": 0,
+            "model": "meta-llama/llama-3.3-70b",
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {
+                        "role": "assistant",
+                        "tool_calls": [
+                            {
+                                "index": 0,
+                                "id": "call-test",
+                                "type": "function",
+                                "function": {"name": "weather", "arguments": '{"city":"Paris"}'},
+                            }
+                        ],
+                    },
+                    "finish_reason": "tool_calls",
+                }
+            ],
+        }
+
+        def respond(request):
+            requests.append(request)
+            return httpx.Response(
+                200,
+                headers={"content-type": "text/event-stream"},
+                content=f"data: {json.dumps(event)}\n\ndata: [DONE]\n\n".encode(),
+            )
+
+        tool = {
+            "type": "function",
+            "function": {
+                "name": "weather",
+                "description": "Look up weather.",
+                "parameters": {"type": "object", "properties": {"city": {"type": "string"}}},
+            },
+        }
+        with (
+            httpx.Client(transport=httpx.MockTransport(respond)) as client,
+            patch(
+                "lfx_bundles.anonrouter.anonrouter.ChatOpenAI",
+                side_effect=lambda **kwargs: ChatOpenAI(**kwargs, http_client=client),
+            ),
+        ):
+            chunks = list(component.build_model().bind_tools([tool]).stream("Weather in Paris?"))
+
+        request_body = json.loads(requests[0].content)
+        assert request_body["model"] == "meta-llama/llama-3.3-70b"
+        assert request_body["stream"] is True
+        assert request_body["tools"] == [tool]
+        assert chunks[0].tool_calls[0]["name"] == "weather"
+        assert chunks[0].tool_calls[0]["args"] == {"city": "Paris"}
+
     def test_model_is_pointed_at_the_anonrouter_base_url(self):
         component = AnonRouterComponent(
             api_key="ar_test-key",  # pragma: allowlist secret

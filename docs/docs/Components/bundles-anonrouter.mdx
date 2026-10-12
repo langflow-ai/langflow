@@ -35,17 +35,6 @@ The key must have OpenAI-compatible access enabled, which AnonRouter calls [comp
 
 The **Model** list is fetched from `https://api.anonrouter.ai/v1/models` with your key. This endpoint requires authentication, so the list stays empty until you enter a key.
 
-### Supported request fields
-
-AnonRouter implements the OpenAI Chat Completions surface, not the full OpenAI API. Within that surface:
-
-* Message content can be a string or an array of content parts. Text and image (`image_url`) parts are supported, so vision inputs work. Image parts are accepted on user messages only. Audio and file parts are not accepted.
-* `response_format`, including `json_object` and `json_schema`, is supported and forwarded to the provider.
-* Tool calling uses `tools` and `tool_choice`. The legacy `functions` and `function_call` fields are dropped, so use `tools` instead.
-* Unknown request fields are accepted and ignored rather than rejected, so standard OpenAI clients work unchanged. Fields such as `n` greater than 1, `logprobs`, and `logit_bias` are among those ignored.
-
-For the full contract, see [Compatibility mode](https://docs.anonrouter.ai/compatibility).
-
 ### AnonRouter text generation parameters
 
 <PartialParams />
