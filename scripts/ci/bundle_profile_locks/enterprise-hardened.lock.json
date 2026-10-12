@@ -118,9 +118,9 @@
       "providers": [
         "lfx-openai"
       ],
-      "requested": ">=0.2.0,<1.0.0",
-      "requirement": "lfx-openai==0.2.0",
-      "resolved_version": "0.2.0"
+      "requested": ">=0.2.1,<1.0.0",
+      "requirement": "lfx-openai==0.2.1",
+      "resolved_version": "0.2.1"
     },
     {
       "distribution": "lfx-openai-compatible",
@@ -163,6 +163,16 @@
       "resolved_version": "0.2.0"
     },
     {
+      "distribution": "lfx-typesafe",
+      "extras": [],
+      "providers": [
+        "lfx-typesafe"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-typesafe==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-vllm",
       "extras": [],
       "providers": [
@@ -180,7 +190,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:ca6f797d9b455fb7",
+  "profile_digest": "sha256:b3bb94e61e29e6a6",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -197,6 +207,7 @@
     "lfx-oracle",
     "lfx-slack",
     "lfx-toolguard",
+    "lfx-typesafe",
     "lfx-vllm"
   ],
   "python": ">=3.10,<3.15",
