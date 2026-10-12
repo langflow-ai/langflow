@@ -108,13 +108,13 @@ async def create_flow_version_entry(
         max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
         # Count a version as "deployed" only when the attachment still points to
         # a live deployment row. This prevents orphaned attachments from
-        # blocking versions from being deleted.
+        # blocking versions from being deleted. The deployment may belong to a
+        # different user than the one snapshotting (a teammate deploying a
+        # shared flow), so this is deliberately not filtered by user_id.
         deployed_version_ids = (
             select(FlowVersionDeploymentAttachment.flow_version_id)
             .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
             .where(
-                FlowVersionDeploymentAttachment.user_id == user_id,
-                Deployment.user_id == user_id,
                 col(FlowVersionDeploymentAttachment.flow_version_id).in_(
                     select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
                 ),

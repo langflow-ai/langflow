@@ -621,6 +621,56 @@ class TestVersionPruningRespectsLiveDeployments:
         assert remaining[0].version_number == 1
         assert remaining[1].version_number == 2
 
+    async def test_other_users_live_attachment_pins_version_when_owner_snapshots(
+        self, db: AsyncSession, flow: Flow, user: User
+    ):
+        """A teammate's deployment of the owner's flow must survive the owner's next snapshot."""
+        deployer = User(username="deployer", password=_TEST_PASSWORD, is_active=True)
+        db.add(deployer)
+        await db.commit()
+        await db.refresh(deployer)
+        deployer_folder = Folder(name="deployer-project", user_id=deployer.id)
+        db.add(deployer_folder)
+        await db.commit()
+        await db.refresh(deployer_folder)
+        deployer_account = DeploymentProviderAccount(
+            user_id=deployer.id,
+            provider_tenant_id="tenant-2",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            name="deployer-provider",
+            provider_url="https://provider.example.com",
+            api_key="encrypted-value",  # pragma: allowlist secret
+        )
+        db.add(deployer_account)
+        await db.commit()
+        await db.refresh(deployer_account)
+        deployer_deployment = Deployment(
+            user_id=deployer.id,
+            project_id=deployer_folder.id,
+            deployment_provider_account_id=deployer_account.id,
+            resource_key="rk-deployer",
+            display_name="deployer-deployment",
+        )
+        db.add(deployer_deployment)
+        await db.commit()
+        await db.refresh(deployer_deployment)
+
+        settings_mock = SimpleNamespace(settings=SimpleNamespace(max_flow_version_entries_per_flow=1))
+        with patch(
+            "langflow.services.database.models.flow_version.crud.get_settings_service",
+            return_value=settings_mock,
+        ):
+            deployed = await create_flow_version_entry(db, flow.id, deployer.id, data={"nodes": []}, prune=False)
+            attachment = await _attach(db, deployer, deployed, deployer_deployment)
+
+            await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+            await db.commit()
+
+        remaining = (await db.exec(select(FlowVersion).where(FlowVersion.flow_id == flow.id))).all()
+        assert {v.version_number for v in remaining} == {1, 2}, "Owner snapshot must not prune the deployed version"
+        stmt = select(FlowVersionDeploymentAttachment).where(FlowVersionDeploymentAttachment.id == attachment.id)
+        assert (await db.exec(stmt)).first() is not None
+
 
 # ===========================================================================
 # Pruning cleans attachment children (no doubly-orphan attachments form)
