@@ -1,6 +1,6 @@
 [project]
 name = "lfx-serply"
-version = "0.1.0"
+version = "0.1.1"
 description = "Serply SERP API web-search component as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.16"

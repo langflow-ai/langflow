@@ -5364,12 +5364,12 @@ name = "flask"
 version = "3.1.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "blinker" },
-    { name = "click" },
-    { name = "itsdangerous" },
-    { name = "jinja2" },
-    { name = "markupsafe" },
-    { name = "werkzeug" },
+    { name = "blinker", marker = "python_full_version < '3.15' or sys_platform == 'win32'" },
+    { name = "click", marker = "python_full_version < '3.15' or sys_platform == 'win32'" },
+    { name = "itsdangerous", marker = "python_full_version < '3.15' or sys_platform == 'win32'" },
+    { name = "jinja2", marker = "python_full_version < '3.15' or sys_platform == 'win32'" },
+    { name = "markupsafe", marker = "python_full_version < '3.15' or sys_platform == 'win32'" },
+    { name = "werkzeug", marker = "python_full_version < '3.15' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/26/00/35d85dcce6c57fdc871f3867d465d780f302a175ea360f62533f12b27e2b/flask-3.1.3.tar.gz", hash = "sha256:0ef0e52b8a9cd932855379197dd8f94047b359ca0a78695144304cb45f87c9eb", size = 759004, upload-time = "2026-02-19T05:00:57.678Z" }
 wheels = [
@@ -5381,9 +5381,9 @@ name = "flask-cors"
 version = "6.0.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "flask" },
+    { name = "flask", marker = "python_full_version < '3.15' or sys_platform == 'win32'" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
-    { name = "werkzeug" },
+    { name = "werkzeug", marker = "python_full_version < '3.15' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/47/03/4e464a50860f9adf08b5c1d3479cb8ea1f12af2aa69535c7042c6e628135/flask_cors-6.0.5.tar.gz", hash = "sha256:30c5031552cd59f620ac0c8211dac45b345d3b2df310e7721879e4f46ef9c601", size = 101386, upload-time = "2026-06-08T20:20:17.765Z" }
 wheels = [
@@ -5395,8 +5395,8 @@ name = "flask-login"
 version = "0.6.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "flask" },
-    { name = "werkzeug" },
+    { name = "flask", marker = "python_full_version < '3.15'" },
+    { name = "werkzeug", marker = "python_full_version < '3.15'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c3/6e/2f4e13e373bb49e68c02c51ceadd22d172715a06716f9299d9df01b6ddb2/Flask-Login-0.6.3.tar.gz", hash = "sha256:5e23d14a607ef12806c699590b89d0f0e0d67baeec599d75947bf9c147330333", size = 48834, upload-time = "2023-10-30T14:53:21.151Z" }
 wheels = [
@@ -5631,10 +5631,10 @@ name = "gevent"
 version = "25.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "platform_python_implementation == 'CPython' and sys_platform == 'win32'" },
-    { name = "greenlet", marker = "platform_python_implementation == 'CPython'" },
-    { name = "zope-event" },
-    { name = "zope-interface" },
+    { name = "cffi", marker = "python_full_version < '3.15' and platform_python_implementation == 'CPython' and sys_platform == 'win32'" },
+    { name = "greenlet", marker = "python_full_version < '3.15' and platform_python_implementation == 'CPython'" },
+    { name = "zope-event", marker = "python_full_version < '3.15'" },
+    { name = "zope-interface", marker = "python_full_version < '3.15'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9e/48/b3ef2673ffb940f980966694e40d6d32560f3ffa284ecaeb5ea3a90a6d3f/gevent-25.9.1.tar.gz", hash = "sha256:adf9cd552de44a4e6754c51ff2e78d9193b7fa6eab123db9578a210e657235dd", size = 5059025, upload-time = "2025-09-17T16:15:34.528Z" }
 wheels = [
@@ -5683,10 +5683,10 @@ name = "geventhttpclient"
 version = "2.3.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "brotli" },
-    { name = "certifi" },
-    { name = "gevent" },
-    { name = "urllib3" },
+    { name = "brotli", marker = "python_full_version < '3.15'" },
+    { name = "certifi", marker = "python_full_version < '3.15'" },
+    { name = "gevent", marker = "python_full_version < '3.15'" },
+    { name = "urllib3", marker = "python_full_version < '3.15'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d7/ff/cb3db11fca4223b2753ae170d1a09c9d32bfbfa3e8d4a6181324db686830/geventhttpclient-2.3.9.tar.gz", hash = "sha256:16807578dc4a175e8d97e6e39d65a10b04b5237a8c55f7a5ef39044e869baeb8", size = 84353, upload-time = "2026-03-03T08:09:03.336Z" }
 wheels = [
@@ -10326,7 +10326,7 @@ integration = [
 
 [[package]]
 name = "lfx-amazon"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/amazon" }
 dependencies = [
     { name = "boto3" },
@@ -10343,7 +10343,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-anthropic"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/anthropic" }
 dependencies = [
     { name = "langchain-anthropic" },
@@ -10360,7 +10360,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-arxiv"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/arxiv" }
 dependencies = [
     { name = "defusedxml" },
@@ -10375,7 +10375,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-azure"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/azure" }
 dependencies = [
     { name = "langchain-azure-ai" },
@@ -10392,7 +10392,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.2.0"
+version = "1.2.1"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -11023,7 +11023,7 @@ provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "b
 
 [[package]]
 name = "lfx-cohere"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/cohere" }
 dependencies = [
     { name = "langchain-cohere" },
@@ -11038,7 +11038,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-confluent"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/confluent" }
 dependencies = [
     { name = "confluent-kafka", extra = ["avro", "json", "schemaregistry"] },
@@ -11059,7 +11059,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-datastax"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
     { name = "astrapy" },
@@ -11086,7 +11086,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-docling"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/docling" }
 dependencies = [
     { name = "docling-core" },
@@ -11163,7 +11163,7 @@ provides-extras = ["local", "chunking", "image-description", "all"]
 
 [[package]]
 name = "lfx-duckduckgo"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/duckduckgo" }
 dependencies = [
     { name = "ddgs" },
@@ -11180,7 +11180,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-empiriolabs"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/empiriolabs" }
 dependencies = [
     { name = "langchain-openai" },
@@ -11197,7 +11197,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-exa"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/exa" }
 dependencies = [
     { name = "exa-py" },
@@ -11214,7 +11214,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-firecrawl"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/firecrawl" }
 dependencies = [
     { name = "firecrawl-py" },
@@ -11229,7 +11229,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-google"
-version = "0.3.1"
+version = "0.3.2"
 source = { editable = "src/bundles/google" }
 dependencies = [
     { name = "google-api-python-client" },
@@ -11264,7 +11264,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ibm"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "src/bundles/ibm" }
 dependencies = [
     { name = "ibm-cloud-sdk-core" },
@@ -11299,7 +11299,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-microsoft"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "src/bundles/microsoft" }
 dependencies = [
     { name = "lfx" },
@@ -11310,7 +11310,7 @@ requires-dist = [{ name = "lfx", editable = "src/lfx" }]
 
 [[package]]
 name = "lfx-nextplaid"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/nextplaid" }
 dependencies = [
     { name = "httpx" },
@@ -11329,7 +11329,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ollama"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/ollama" }
 dependencies = [
     { name = "httpx" },
@@ -11346,7 +11346,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-openai"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/openai" }
 dependencies = [
     { name = "langchain-openai" },
@@ -11363,7 +11363,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-openai-compatible"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/openai-compatible" }
 dependencies = [
     { name = "httpx" },
@@ -11380,7 +11380,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-oracle"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/oracle" }
 dependencies = [
     { name = "langchain-oracledb" },
@@ -11397,7 +11397,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-paddle"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/paddle" }
 dependencies = [
     { name = "httpx" },
@@ -11412,7 +11412,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-serpingapi"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/serpingapi" }
 dependencies = [
     { name = "httpx" },
@@ -11427,7 +11427,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-serply"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/serply" }
 dependencies = [
     { name = "httpx" },
@@ -11442,7 +11442,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-slack"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/slack" }
 dependencies = [
     { name = "aiohttp", version = "3.14.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
@@ -11460,7 +11460,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-toolguard"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/toolguard" }
 dependencies = [
     { name = "lfx" },
@@ -11475,7 +11475,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-valkey"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/valkey" }
 dependencies = [
     { name = "langchain-aws" },
@@ -11498,7 +11498,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-vllm"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/vllm" }
 dependencies = [
     { name = "httpx" },
@@ -11875,23 +11875,23 @@ name = "locust"
 version = "2.43.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "configargparse" },
-    { name = "flask" },
-    { name = "flask-cors" },
-    { name = "flask-login" },
-    { name = "gevent" },
-    { name = "geventhttpclient" },
+    { name = "configargparse", marker = "python_full_version < '3.15'" },
+    { name = "flask", marker = "python_full_version < '3.15'" },
+    { name = "flask-cors", marker = "python_full_version < '3.15'" },
+    { name = "flask-login", marker = "python_full_version < '3.15'" },
+    { name = "gevent", marker = "python_full_version < '3.15'" },
+    { name = "geventhttpclient", marker = "python_full_version < '3.15'" },
     { name = "msgpack", marker = "python_full_version < '3.15'" },
-    { name = "psutil" },
-    { name = "pytest" },
-    { name = "python-engineio" },
-    { name = "python-socketio", extra = ["client"] },
-    { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "pyzmq" },
-    { name = "requests" },
+    { name = "psutil", marker = "python_full_version < '3.15'" },
+    { name = "pytest", marker = "python_full_version < '3.15'" },
+    { name = "python-engineio", marker = "python_full_version < '3.15'" },
+    { name = "python-socketio", extra = ["client"], marker = "python_full_version < '3.15'" },
+    { name = "pywin32", marker = "python_full_version < '3.15' and sys_platform == 'win32'" },
+    { name = "pyzmq", marker = "python_full_version < '3.15'" },
+    { name = "requests", marker = "python_full_version < '3.15'" },
     { name = "tomli", marker = "python_full_version < '3.11'" },
     { name = "typing-extensions", marker = "python_full_version < '3.12'" },
-    { name = "werkzeug" },
+    { name = "werkzeug", marker = "python_full_version < '3.15'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/52/be/6df1c778f673e1e2d785f262d20a4e130fdb8e51242466d7ae434b66a587/locust-2.43.4.tar.gz", hash = "sha256:4ace60f07f5fa9bf08d1b64da25915707befca19a790897eed6372656824deee", size = 1434321, upload-time = "2026-04-01T20:43:04.322Z" }
 wheels = [
@@ -18370,7 +18370,7 @@ name = "python-engineio"
 version = "4.13.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "simple-websocket" },
+    { name = "simple-websocket", marker = "python_full_version < '3.15'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fb/a0/f75491f942184d9960b15e763270f765fe9f239745ca5f9e16289011aed4/python_engineio-4.13.3.tar.gz", hash = "sha256:572b7783e341fed21edbc7cea297ccd378dad79265fdde96aa4664420a7c06c9", size = 79734, upload-time = "2026-06-20T22:53:52.197Z" }
 wheels = [
@@ -18503,8 +18503,8 @@ name = "python-socketio"
 version = "5.16.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "bidict" },
-    { name = "python-engineio" },
+    { name = "bidict", marker = "python_full_version < '3.15'" },
+    { name = "python-engineio", marker = "python_full_version < '3.15'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/32/2d/ffce71017c106b75099fea569df6518c63fee5d6202ce0cfe7b01e6f22c3/python_socketio-5.16.3.tar.gz", hash = "sha256:89b136f677ae65607a84cecda9b4d6c5377b40a97582c504c25df89af16d520e", size = 128095, upload-time = "2026-06-15T22:07:04.003Z" }
 wheels = [
@@ -18513,8 +18513,8 @@ wheels = [
 
 [package.optional-dependencies]
 client = [
-    { name = "requests" },
-    { name = "websocket-client" },
+    { name = "requests", marker = "python_full_version < '3.15'" },
+    { name = "websocket-client", marker = "python_full_version < '3.15'" },
 ]
 
 [[package]]
@@ -21061,7 +21061,7 @@ name = "simple-websocket"
 version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "wsproto" },
+    { name = "wsproto", marker = "python_full_version < '3.15'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b0/d4/bfa032f961103eba93de583b161f0e6a5b63cebb8f2c7d0c6e6efe1e3d2e/simple_websocket-1.1.0.tar.gz", hash = "sha256:7939234e7aa067c534abdab3a9ed933ec9ce4691b0713c78acb195560aa52ae4", size = 17300, upload-time = "2024-10-10T22:39:31.412Z" }
 wheels = [
@@ -23522,7 +23522,7 @@ name = "werkzeug"
 version = "3.1.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "markupsafe" },
+    { name = "markupsafe", marker = "python_full_version < '3.15' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a4/34/4dd12fc8bb7d61c91467ec3efe415ffa7d5456f799954b40c5bbaeae470e/werkzeug-3.1.9.tar.gz", hash = "sha256:55ca7c70a75689be937aa27f8ff4b018f06ff4838fc73045560bf0f5a1291060", size = 940188, upload-time = "2026-09-27T18:33:41.637Z" }
 wheels = [
@@ -23650,7 +23650,7 @@ name = "wsproto"
 version = "1.3.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "h11" },
+    { name = "h11", marker = "python_full_version < '3.15'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c7/79/12135bdf8b9c9367b8701c2c19a14c913c120b882d50b014ca0d38083c2c/wsproto-1.3.2.tar.gz", hash = "sha256:b86885dcf294e15204919950f666e06ffc6c7c114ca900b060d6e16293528294", size = 50116, upload-time = "2025-11-20T18:18:01.871Z" }
 wheels = [
