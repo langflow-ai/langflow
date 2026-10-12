@@ -21,6 +21,16 @@ pip install -e .
 lfx extension validate src/lfx_openai
 ```
 
+## Decisions
+
+`OpenAIDecisionsComponent` calls `POST /v1/decisions` for typed classification
+with models such as `gpt-6-luna`. Questions are a JSON object keyed by name.
+Supported types are `predicate`, `choice`, and `score`.
+
+The published OpenAI SDK helper for this endpoint requires `openai>=3.26`.
+This bundle stays on `openai<3` for the chat and embeddings components, so
+Decisions uses the HTTP API through the shared SSRF-pinned client.
+
 ## Migration
 
 Saved flows referencing the legacy class name(s) or the old import paths

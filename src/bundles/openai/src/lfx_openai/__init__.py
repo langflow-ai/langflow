@@ -8,8 +8,10 @@ registers the bundle's components under the namespaced IDs
 
 from lfx_openai.components.openai.openai import OpenAIEmbeddingsComponent
 from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx_openai.components.openai.openai_decisions import OpenAIDecisionsComponent
 
 __all__ = [
+    "OpenAIDecisionsComponent",
     "OpenAIEmbeddingsComponent",
     "OpenAIModelComponent",
 ]
