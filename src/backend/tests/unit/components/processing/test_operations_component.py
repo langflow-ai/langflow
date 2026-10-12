@@ -737,6 +737,76 @@ class TestReplaceValueTableOperation:
         assert result["score"].iloc[2] == 30.0
 
 
+@pytest.mark.parametrize(
+    ("component_class", "output_method"),
+    [
+        (OperationsComponent, "as_dataframe"),
+        (DataFrameOperationsComponent, "perform_operation"),
+    ],
+)
+class TestNullableIntegerReplaceValue:
+    @pytest.mark.parametrize(
+        ("replacement", "expected_value", "expected_dtype"),
+        [
+            ("2.5", 2.5, "Float64"),
+            ("-2.5", -2.5, "Float64"),
+            ("99", 99, "Int64"),
+            ("99.0", 99, "Int64"),
+            ("N/A", "N/A", "object"),
+            ("", "", "object"),
+        ],
+    )
+    def test_replacement_preserves_missing_cells(
+        self, component_class, output_method, replacement, expected_value, expected_dtype
+    ):
+        original = pd.Series([10, 20, pd.NA], dtype="Int64", name="score")
+        df = DataFrame(pd.DataFrame({"score": original.copy()}))
+        component = component_class(
+            df=df,
+            operation=[{"name": "Replace Value"}],
+            column_name="score",
+            replace_value="20",
+            replacement_value=replacement,
+        )
+
+        result = getattr(component, output_method)()
+
+        expected = pd.Series([10, expected_value, pd.NA], dtype=expected_dtype, name="score")
+        pd.testing.assert_series_equal(result["score"], expected)
+        pd.testing.assert_series_equal(df["score"], original)
+
+    @pytest.mark.parametrize("large_value", [2**53 + 1, 2**63 - 1])
+    def test_fractional_replacement_preserves_large_integers(self, component_class, output_method, large_value):
+        original = pd.Series([large_value, 20, pd.NA], dtype="Int64", name="score")
+        component = component_class(
+            df=DataFrame(pd.DataFrame({"score": original})),
+            operation=[{"name": "Replace Value"}],
+            column_name="score",
+            replace_value="20",
+            replacement_value="2.5",
+        )
+
+        result = getattr(component, output_method)()
+
+        expected = pd.Series([large_value, 2.5, pd.NA], dtype=object, name="score")
+        pd.testing.assert_series_equal(result["score"], expected)
+
+    @pytest.mark.parametrize("replacement", ["2.5", "N/A", ""])
+    def test_no_match_preserves_dtype(self, component_class, output_method, replacement):
+        original = pd.Series([10, 20, pd.NA], dtype="Int64", name="score")
+        component = component_class(
+            df=DataFrame(pd.DataFrame({"score": original.copy()})),
+            operation=[{"name": "Replace Value"}],
+            column_name="score",
+            replace_value="99",
+            replacement_value=replacement,
+        )
+
+        result = getattr(component, output_method)()
+
+        pd.testing.assert_series_equal(result["score"], original)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
 

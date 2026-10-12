@@ -402,9 +402,24 @@ class DataFrameOperationsComponent(Component):
         return DataFrame(df.tail(self.num_rows))
 
     def replace_values(self, df: DataFrame) -> DataFrame:
-        replace_val = self._comparable_filter_value(df[self.column_name], self.replace_value)
-        replacement_val = self._comparable_filter_value(df[self.column_name], self.replacement_value)
-        df[self.column_name] = df[self.column_name].replace(replace_val, replacement_val)
+        column = df[self.column_name]
+        replace_val = self._comparable_filter_value(column, self.replace_value)
+        replacement_val = self._comparable_filter_value(column, self.replacement_value)
+        try:
+            result = column.replace(replace_val, replacement_val)
+        except TypeError:
+            if not (
+                isinstance(column.dtype, pd.api.extensions.ExtensionDtype)
+                and pd.api.types.is_integer_dtype(column.dtype)
+            ):
+                raise
+            # Nullable integers reject fractional/text replacements instead of widening like NumPy columns.
+            widened = column.astype("Float64" if pd.api.types.is_float(replacement_val) else object)
+            # A float cannot represent every Int64 value. Preserve unrelated large integers exactly.
+            if not widened.astype(object).equals(column.astype(object)):
+                widened = column.astype(object)
+            result = widened.mask(column.eq(replace_val).fillna(value=False), replacement_val)
+        df[self.column_name] = result
         return DataFrame(df)
 
     def drop_duplicates(self, df: DataFrame) -> DataFrame:
