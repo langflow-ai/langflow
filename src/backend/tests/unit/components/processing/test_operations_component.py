@@ -722,6 +722,20 @@ class TestReplaceValueTableOperation:
         assert result["score"].tolist() == [10, "N/A", 30]
         assert result["score"].dtype == object
 
+    def test_replace_value_blank_input_does_not_match_missing_cells(self):
+        df = DataFrame(pd.DataFrame({"score": [10.0, None, 30.0]}))
+        component = OperationsComponent(
+            df=df,
+            operation=[{"name": "Replace Value"}],
+            column_name="score",
+            replace_value="",
+            replacement_value="0",
+        )
+        result = component.as_dataframe()
+        assert result["score"].iloc[0] == 10.0
+        assert pd.isna(result["score"].iloc[1])
+        assert result["score"].iloc[2] == 30.0
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

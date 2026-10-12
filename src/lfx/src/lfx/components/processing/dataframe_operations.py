@@ -324,10 +324,13 @@ class DataFrameOperationsComponent(Component):
 
     @staticmethod
     def _comparable_filter_value(column: pd.Series, filter_value: Any) -> Any:
-        """Return the Filter Value as a number when the column is numeric.
+        """Return a text input as a number when the column is numeric.
 
-        The value arrives as text, and ``30 == "30"`` never matches in pandas.
+        Filter and Replace Value inputs arrive as text, and ``30 == "30"`` never matches in pandas.
+        A blank input stays text: ``pd.to_numeric("")`` is NaN, which would match missing cells.
         """
+        if filter_value in (None, ""):
+            return filter_value
         if pd.api.types.is_numeric_dtype(column) and not pd.api.types.is_bool_dtype(column):
             try:
                 return pd.to_numeric(filter_value)
