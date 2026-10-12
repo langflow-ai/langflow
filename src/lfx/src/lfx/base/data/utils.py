@@ -164,15 +164,25 @@ def _detect_encoding_with_fallbacks(raw_data: bytes) -> list[str]:
     result = chardet.detect(raw_data[:_CHARDET_SAMPLE_BYTES])
     detected_encoding = result.get("encoding") if result else None
 
-    if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
-        detected_encoding = "utf-8"
+    # Windows-1252/1254 and MacRoman cover almost the whole byte range, so chardet
+    # reports one of them for UTF-8 text as soon as it holds a couple of accented
+    # characters. Try UTF-8 first rather than trusting that guess, but keep the guess
+    # as a candidate ahead of latin-1: 0x80-0x9F is exactly where a genuine Windows-1252
+    # file keeps its curly quotes, dashes and euro sign, and latin-1 decodes those same
+    # bytes to C1 control characters instead. Inserting it here cannot affect data that
+    # already decoded with utf-8 or gb18030 -- it only takes over from latin-1 for bytes
+    # nothing else accepted.
+    looks_like_utf8 = detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}
 
     encodings: list[str] = []
-    if detected_encoding:
-        encodings.append(detected_encoding)
+    preferred_encoding = "utf-8" if looks_like_utf8 else detected_encoding
+    if preferred_encoding:
+        encodings.append(preferred_encoding)
     for fallback in ("utf-8", "gb18030"):
         if fallback not in encodings:
             encodings.append(fallback)
+    if looks_like_utf8 and detected_encoding not in encodings:
+        encodings.append(detected_encoding)
     encodings.append("latin-1")
     return encodings
 

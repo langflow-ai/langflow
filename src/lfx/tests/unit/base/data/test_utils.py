@@ -1,6 +1,15 @@
-from unittest.mock import Mock, patch
+from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
 
-from lfx.base.data.utils import parse_text_file_to_data, read_text_file
+import pytest
+
+from lfx.base.data.utils import (
+    _detect_encoding_with_fallbacks,
+    parse_text_file_to_data,
+    read_text_file,
+    read_text_file_async,
+)
+from lfx.utils.async_helpers import run_until_complete
 
 
 class TestReadTextFile:
@@ -81,3 +90,81 @@ class TestParseTextFileToDataS3Mode:
         assert result is not None
         assert result.data["text"] == "x = 1\n"
         assert result.data["file_path"] == str(local_file)
+
+
+class TestWindows1252TextDecoding:
+    """Regression coverage for issue #15702.
+
+    Files saved as Windows-1252 whose 0x80-0x9F bytes carry curly quotes, dashes or
+    the euro sign used to come back as control characters: the fallback chain threw
+    the chardet Windows-1252 guess away and let latin-1 decode those bytes instead.
+    """
+
+    # "He said \u201chello\u201d and it costs 5\u20ac \u2013 really." in Windows-1252.
+    # 0x93/0x94 are the curly quotes, 0x80 the euro sign and 0x96 the en dash -- every
+    # one of them a C1 control character in latin-1.
+    _SMART_PUNCTUATION = "He said \u201chello\u201d and it costs 5\u20ac \u2013 really.\n"
+
+    # Longer sample so chardet has more than a handful of bytes to go on.
+    _ACCENTED = "Le caf\u00e9 est tr\u00e8s chaud ; il co\u00fbte 5 \u20ac, n'est-ce pas ? Oui, vraiment.\n"
+
+    @staticmethod
+    def _write(path, text, encoding):
+        Path(path).write_bytes(text.encode(encoding))
+
+    def test_smart_punctuation_is_decoded_as_written(self, tmp_path):
+        """A Windows-1252 file keeps its quotes, euro sign and dashes."""
+        target = tmp_path / "smart.txt"
+        self._write(target, self._SMART_PUNCTUATION, "cp1252")
+
+        assert read_text_file(str(target)) == self._SMART_PUNCTUATION
+
+    def test_accents_and_euro_sign_in_a_longer_windows_1252_file(self, tmp_path):
+        """Accented Windows-1252 text is not mangled by the latin-1 last resort."""
+        target = tmp_path / "accents.txt"
+        self._write(target, self._ACCENTED, "cp1252")
+
+        assert read_text_file(str(target)) == self._ACCENTED
+
+    def test_async_reader_decodes_windows_1252_like_the_sync_one(self):
+        """read_text_file_async shares the fallback chain, so it agrees."""
+        raw = self._SMART_PUNCTUATION.encode("cp1252")
+        # Stub the storage fetch: read_text_file_async is on the other side of the local
+        # file access policy, and the bug is in the decoding step behind it.
+        # read_text_file_async imports read_file_bytes locally, so patch it at its source.
+        with patch("lfx.base.data.storage_utils.read_file_bytes", AsyncMock(return_value=raw)):
+            decoded = run_until_complete(read_text_file_async("ignored.txt"))
+
+        assert decoded == self._SMART_PUNCTUATION
+
+    @pytest.mark.parametrize(
+        ("encoding", "content"),
+        [
+            ("utf-8", "\u4e2d\u6587\u6d4b\u8bd5\u5185\u5bb9\uff0c\u5305\u542b\u6807\u70b9\u7b26\u53f7\u3002\n"),
+            ("utf-8", "\u65e5\u672c\u8a9e\u306e\u30c6\u30b9\u30c8\u30c6\u30ad\u30b9\u30c8\u3067\u3059\u3002\n"),
+            ("gb18030", "\u4e2d\u6587\u6d4b\u8bd5\u5185\u5bb9\uff0c\u5305\u542b\u6807\u70b9\u7b26\u53f7\u3002\n"),
+            ("big5", "\u6e2c\u8a66\u7e41\u9ad4\u4e2d\u6587\u5167\u5bb9\u3002\n"),
+        ],
+    )
+    def test_multibyte_files_are_untouched(self, tmp_path, encoding, content):
+        """Chinese, Japanese and traditional-Chinese files still decode correctly.
+
+        The Windows-1252 candidate is inserted ahead of latin-1 only, so anything that
+        already decoded with utf-8 or gb18030 is unaffected.
+        """
+        target = tmp_path / f"sample.{encoding}"
+        self._write(target, content, encoding)
+
+        assert read_text_file(str(target)) == content
+
+    def test_detected_windows_1252_guess_is_kept_in_the_chain(self, monkeypatch):
+        """The chain still tries utf-8 first, but no longer drops the guess entirely."""
+        monkeypatch.setattr(
+            "lfx.base.data.utils.chardet.detect",
+            lambda _bytes: {"encoding": "Windows-1252", "confidence": 0.07},
+        )
+
+        chain = _detect_encoding_with_fallbacks(self._SMART_PUNCTUATION.encode("cp1252"))
+
+        assert chain[0] == "utf-8"
+        assert chain.index("Windows-1252") < chain.index("latin-1")
