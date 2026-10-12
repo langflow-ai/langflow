@@ -3,7 +3,7 @@ name = "lfx-firecrawl"
 version = "0.2.0"
 description = "Firecrawl components (Scrape, Crawl, Map, and Search APIs) as a standalone Langflow Extension Bundle."
 readme = "README.md"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 license = { text = "MIT" }
 authors = [
     { name = "Langflow", email = "contact@langflow.org" },

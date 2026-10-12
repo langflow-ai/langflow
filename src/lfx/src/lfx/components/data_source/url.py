@@ -7,7 +7,6 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
-from markitdown import MarkItDown
 
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
@@ -250,6 +249,17 @@ class URLComponent(Component):
     @staticmethod
     def _markdown_extractor(x: str) -> str:
         """Convert HTML to Markdown format."""
+        # Imported lazily: markitdown is not installable on Python 3.15+ yet, and only this
+        # output format needs it.
+        try:
+            from markitdown import MarkItDown
+        except ImportError as e:
+            msg = (
+                "The Markdown format requires markitdown, which is not installed (it does not "
+                "support Python 3.15+ yet). Use the Text or HTML format instead."
+            )
+            raise ImportError(msg) from e
+
         stream = io.BytesIO(x.encode("utf-8"))
         result = MarkItDown(enable_plugins=False).convert_stream(stream)
         return result.markdown

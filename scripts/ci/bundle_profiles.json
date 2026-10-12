@@ -17,7 +17,7 @@
       "indexes": [
         "https://pypi.org/simple"
       ],
-      "python": ">=3.10,<3.15",
+      "python": ">=3.10,<3.16",
       "application": {
         "distribution": "langflow",
         "version": ">=1.13.0,<1.14.0",

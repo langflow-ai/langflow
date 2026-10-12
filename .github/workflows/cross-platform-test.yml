@@ -487,6 +487,21 @@ jobs:
             arch: arm64
             runner: macos-latest
             python-version: "3.14"
+          # Python 3.15 - Preview (non-blocking). macOS Intel is omitted for the same
+          # onnxruntime reason as 3.14. Expect failures until upstream packages ship
+          # cp315 wheels (ormsgpack, via langgraph-checkpoint, blocks installation today).
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            python-version: "3.15"
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            python-version: "3.15"
+          - os: macos
+            arch: arm64
+            runner: macos-latest
+            python-version: "3.15"
 
     steps:
       - name: Checkout authentication smoke check
@@ -1031,9 +1046,9 @@ jobs:
             if [ "$experimental_result" = "success" ]; then
               if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
                 if [ -n "$LANGFLOW_VERSION" ]; then
-                  echo "✅ All PyPI installation tests passed (including Python 3.14)"
+                  echo "✅ All PyPI installation tests passed (including Python 3.14 and 3.15)"
                 else
-                  echo "✅ All source build and installation tests passed (including Python 3.14)"
+                  echo "✅ All source build and installation tests passed (including Python 3.14 and 3.15)"
                 fi
               else
                 echo "✅ All cross-platform tests passed - PyPI upload can proceed"
@@ -1041,12 +1056,12 @@ jobs:
             else
               if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
                 if [ -n "$LANGFLOW_VERSION" ]; then
-                  echo "✅ PyPI installation tests passed (Python 3.14 experimental failures are acceptable)"
+                  echo "✅ PyPI installation tests passed (Python 3.14/3.15 experimental failures are acceptable)"
                 else
-                  echo "✅ Source build and installation tests passed (Python 3.14 experimental failures are acceptable)"
+                  echo "✅ Source build and installation tests passed (Python 3.14/3.15 experimental failures are acceptable)"
                 fi
               else
-                echo "✅ Cross-platform tests passed - Python 3.14 experimental failures are acceptable - PyPI upload can proceed"
+                echo "✅ Cross-platform tests passed - Python 3.14/3.15 experimental failures are acceptable - PyPI upload can proceed"
               fi
             fi
           elif [ "$stable_result" = "failure" ]; then

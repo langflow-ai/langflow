@@ -1,5 +1,6 @@
 """Tests for URLComponent input type configuration."""
 
+import importlib.util
 import sys
 from unittest.mock import MagicMock
 
@@ -21,6 +22,31 @@ def url_component(monkeypatch):
     from lfx.components.data_source.url import URLComponent
 
     return URLComponent
+
+
+@pytest.fixture
+def url_module_without_markitdown(monkeypatch):
+    """Load the URL component module as Python 3.15+ sees it: with markitdown not installed.
+
+    The module is executed from source without registering it in ``sys.modules``, so the
+    cached ``lfx.components.data_source.url`` other tests use is left untouched.
+    """
+    monkeypatch.setitem(sys.modules, "markitdown", None)  # makes `import markitdown` raise ImportError
+    spec = importlib.util.find_spec("lfx.components.data_source.url")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class TestURLComponentWithoutMarkitdown:
+    """markitdown is gated off Python 3.15+; only the Markdown output format may depend on it."""
+
+    def test_module_imports_without_markitdown(self, url_module_without_markitdown):
+        assert hasattr(url_module_without_markitdown, "URLComponent")
+
+    def test_markdown_format_reports_missing_markitdown(self, url_module_without_markitdown):
+        with pytest.raises(ImportError, match="Use the Text or HTML format instead"):
+            url_module_without_markitdown.URLComponent._markdown_extractor("<h1>Heading</h1>")
 
 
 class TestURLComponentInputTypes:
