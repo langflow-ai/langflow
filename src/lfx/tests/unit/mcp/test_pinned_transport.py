@@ -26,6 +26,7 @@ from lfx.base.mcp.util import (
     server_info_from_session,
     update_tools,
 )
+from mcp.client.streamable_http import streamable_http_client
 
 CONNECTION_PARAMS = {
     "url": "http://mcp.test.invalid/mcp",
@@ -58,6 +59,13 @@ def _transport_client():
     return client
 
 
+def _http_client():
+    client = MagicMock()
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=None)
+    return client
+
+
 async def _shutdown(manager: MCPSessionManager, task) -> None:
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
@@ -75,7 +83,8 @@ async def test_server_info_is_retained_from_the_streamable_http_handshake(manage
 
     with (
         patch("lfx.base.mcp.util.ClientSession", return_value=session_stub),
-        patch("mcp.client.streamable_http.streamablehttp_client", _transport_client()),
+        patch("lfx.base.mcp.util.create_mcp_http_client_with_ssl_option", return_value=_http_client()),
+        patch("mcp.client.streamable_http.streamable_http_client", _transport_client()),
     ):
         session, task, transport, _ = await manager._create_streamable_http_session("s1", dict(CONNECTION_PARAMS))
         try:
@@ -92,7 +101,8 @@ async def test_server_info_is_none_when_the_server_publishes_none(manager):
 
     with (
         patch("lfx.base.mcp.util.ClientSession", return_value=session_stub),
-        patch("mcp.client.streamable_http.streamablehttp_client", _transport_client()),
+        patch("lfx.base.mcp.util.create_mcp_http_client_with_ssl_option", return_value=_http_client()),
+        patch("mcp.client.streamable_http.streamable_http_client", _transport_client()),
     ):
         session, task, _, _ = await manager._create_streamable_http_session("s2", dict(CONNECTION_PARAMS))
         try:
@@ -119,12 +129,18 @@ async def test_sse_fallback_is_skipped_when_the_transport_is_pinned(manager):
     params = {**CONNECTION_PARAMS, "allow_sse_fallback": False}
     with (
         patch("lfx.base.mcp.util.ClientSession", return_value=_FakeSession(SimpleNamespace(serverInfo=None))),
-        patch("mcp.client.streamable_http.streamablehttp_client", failing),
+        patch("lfx.base.mcp.util.create_mcp_http_client_with_ssl_option", return_value=_http_client()),
+        patch("mcp.client.streamable_http.streamable_http_client", failing),
         patch("mcp.client.sse.sse_client", sse),
         pytest.raises(httpx.HTTPStatusError),
     ):
         await manager._create_streamable_http_session("s3", params)
     assert sse.call_count == 0
+
+
+def test_pinned_mcp_sdk_exposes_streamable_http_transport():
+    """Keep the client import aligned with the MCP SDK version in the lockfile."""
+    assert callable(streamable_http_client)
 
 
 async def test_sse_fallback_still_runs_for_unpinned_servers(manager):
@@ -140,7 +156,8 @@ async def test_sse_fallback_still_runs_for_unpinned_servers(manager):
 
     with (
         patch("lfx.base.mcp.util.ClientSession", return_value=_FakeSession(SimpleNamespace(serverInfo=None))),
-        patch("mcp.client.streamable_http.streamablehttp_client", failing),
+        patch("lfx.base.mcp.util.create_mcp_http_client_with_ssl_option", return_value=_http_client()),
+        patch("mcp.client.streamable_http.streamable_http_client", failing),
         patch("mcp.client.sse.sse_client", sse),
     ):
         _, task, transport, _ = await manager._create_streamable_http_session("s4", dict(CONNECTION_PARAMS))
