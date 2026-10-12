@@ -2,7 +2,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
 from lfx.base.data.utils import (
     _detect_encoding_with_fallbacks,
     parse_text_file_to_data,
