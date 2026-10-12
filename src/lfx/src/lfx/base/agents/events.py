@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from time import perf_counter
 from typing import Any, Protocol
 
+import anyio
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessageChunk
 
@@ -598,4 +599,11 @@ async def process_agent_events(
         raise
     except Exception as e:
         raise ExceptionWithMessageError(agent_message, str(e)) from e
+    finally:
+        # A callback failure/cancellation happens outside __anext__, so async for
+        # leaves the producer suspended. Close it before returning to the graph.
+        aclose = getattr(agent_executor, "aclose", None)
+        if aclose is not None:
+            with anyio.CancelScope(shield=True):
+                await aclose()
     return await Message.create(**agent_message.model_dump())
