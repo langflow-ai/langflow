@@ -1023,7 +1023,7 @@ jobs:
           base_result="${{ needs.test-base-runtime.result }}"
 
           echo "Stable platforms result: $stable_result"
-          echo "Experimental platforms result: $experimental_result"
+          echo "Experimental platforms result (continue-on-error, so failed legs still read success): $experimental_result"
           echo "Base runtime result: $base_result"
 
           if [ "$stable_result" = "skipped" ] && [ "$base_result" = "skipped" ]; then
@@ -1041,29 +1041,20 @@ jobs:
             exit 0
           fi
 
-          # Stable platforms must succeed, experimental can fail
+          # Stable platforms must succeed. The experimental (Python 3.14/3.15) job runs with
+          # continue-on-error, so its result reads "success" even when a leg fails; report it
+          # as non-blocking rather than claiming those versions passed.
           if [ "$stable_result" = "success" ]; then
-            if [ "$experimental_result" = "success" ]; then
-              if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-                if [ -n "$LANGFLOW_VERSION" ]; then
-                  echo "✅ All PyPI installation tests passed (including Python 3.14 and 3.15)"
-                else
-                  echo "✅ All source build and installation tests passed (including Python 3.14 and 3.15)"
-                fi
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              if [ -n "$LANGFLOW_VERSION" ]; then
+                echo "✅ PyPI installation tests passed on the stable platforms"
               else
-                echo "✅ All cross-platform tests passed - PyPI upload can proceed"
+                echo "✅ Source build and installation tests passed on the stable platforms"
               fi
             else
-              if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-                if [ -n "$LANGFLOW_VERSION" ]; then
-                  echo "✅ PyPI installation tests passed (Python 3.14/3.15 experimental failures are acceptable)"
-                else
-                  echo "✅ Source build and installation tests passed (Python 3.14/3.15 experimental failures are acceptable)"
-                fi
-              else
-                echo "✅ Cross-platform tests passed - Python 3.14/3.15 experimental failures are acceptable - PyPI upload can proceed"
-              fi
+              echo "✅ Cross-platform tests passed on the stable platforms - PyPI upload can proceed"
             fi
+            echo "ℹ️ Python 3.14/3.15 experimental results are non-blocking; check the (Experimental) jobs for their outcome"
           elif [ "$stable_result" = "failure" ]; then
             echo "❌ Critical platform tests failed - blocking release"
             echo "Stable platforms (Python 3.10, 3.12, 3.13) must pass for release"

@@ -65,6 +65,23 @@ else:
     USER_AGENT = "lfx"
 
 
+def _load_markitdown():
+    """Import markitdown on demand.
+
+    markitdown is not installable on Python 3.15+ yet, and only the Markdown output format
+    needs it, so the module must import without it.
+    """
+    try:
+        from markitdown import MarkItDown
+    except ImportError as e:
+        msg = (
+            "The Markdown format requires markitdown, which is not installed (it does not "
+            "support Python 3.15+ yet). Use the Text or HTML format instead."
+        )
+        raise ImportError(msg) from e
+    return MarkItDown
+
+
 class URLComponent(Component):
     """A component that loads and parses content from web pages recursively.
 
@@ -249,19 +266,8 @@ class URLComponent(Component):
     @staticmethod
     def _markdown_extractor(x: str) -> str:
         """Convert HTML to Markdown format."""
-        # Imported lazily: markitdown is not installable on Python 3.15+ yet, and only this
-        # output format needs it.
-        try:
-            from markitdown import MarkItDown
-        except ImportError as e:
-            msg = (
-                "The Markdown format requires markitdown, which is not installed (it does not "
-                "support Python 3.15+ yet). Use the Text or HTML format instead."
-            )
-            raise ImportError(msg) from e
-
         stream = io.BytesIO(x.encode("utf-8"))
-        result = MarkItDown(enable_plugins=False).convert_stream(stream)
+        result = _load_markitdown()(enable_plugins=False).convert_stream(stream)
         return result.markdown
 
     @staticmethod
@@ -773,8 +779,12 @@ class URLComponent(Component):
             list[dict]: List of documents with content and metadata
 
         Raises:
+            ImportError: If the Markdown format is selected but markitdown is not installed
             ValueError: If no valid URLs are provided or if there's an error loading documents
         """
+        if self.format == "Markdown":
+            # Fail before crawling, and outside the handler below that wraps errors in ValueError.
+            _load_markitdown()
         self._max_response_bytes, self._max_total_bytes = self._resolve_byte_limits()
         self._bytes_remaining = self._max_total_bytes
         try:
