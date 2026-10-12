@@ -44,6 +44,9 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
                   <SidebarMenuButton
                     asChild
                     size="md"
+                    // Longer translations wrap onto a second line instead of
+                    // being cut off.
+                    className="h-auto min-h-9 py-2"
                     isActive={item.href ? pathname.endsWith(item.href) : false}
                     tooltip={item.title}
                   >
@@ -53,9 +56,11 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
                       data-testid={`sidebar-nav-${item.title}`}
                     >
                       {item.icon}
-                      <span className="block max-w-full truncate">
+                      {/* A div, not a span: the menu button truncates its last
+                          span child, which cut "Chaves de API do Langflow". */}
+                      <div className="min-w-0 break-words leading-tight">
                         {item.title}
-                      </span>
+                      </div>
                     </CustomLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

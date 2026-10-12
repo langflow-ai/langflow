@@ -80,7 +80,7 @@ from langflow.api.utils.execution_principal import (
     stamp_execution_principal,
 )
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
-from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError
+from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError, task_saved
 from langflow.api.v1.a2a_utils import (
     A2A_APIKEY_HEADER,
     build_agent_card,
@@ -91,6 +91,7 @@ from langflow.api.v1.a2a_utils import (
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.context import AuthCredentialContext, set_current_auth_context
+from langflow.services.auth.utils import set_authenticated_telemetry_user
 from langflow.services.authorization import (
     FlowAction,
     ensure_flow_permission,
@@ -174,6 +175,7 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> User | None:
     if api_key_result is None or api_key_result.user.id != flow.user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
     user = api_key_result.user
+    set_authenticated_telemetry_user(user)
     set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
     try:
         await ensure_flow_permission(
@@ -710,6 +712,11 @@ class A2ACheckpointStore(CheckpointStore):
 
 # MessageToDict serializes the enum by name, so a stored blob's state is e.g. "TASK_STATE_CANCELED".
 _TERMINAL_STATE_NAMES = {pb.TaskState.Name(state) for state in TERMINAL_TASK_STATES}
+# The states a run ends with. One that waits for a person or for a sign-in has stopped as well, until it is answered.
+_RUN_OVER_STATE_NAMES = _TERMINAL_STATE_NAMES | {
+    pb.TaskState.Name(pb.TaskState.TASK_STATE_INPUT_REQUIRED),
+    pb.TaskState.Name(pb.TaskState.TASK_STATE_AUTH_REQUIRED),
+}
 
 
 def _task_state(blob: dict[str, Any] | None) -> str | None:
@@ -770,9 +777,13 @@ class DurableTaskStore(TaskStore):
                 # different state must not transition it. Covers both race orders of a cancel against
                 # a completion (a forced CANCELED arriving after COMPLETED persisted, or a late
                 # completion arriving after CANCELED). The state that landed first wins.
-                return
+                pass
             else:
                 row.task = blob  # fresh dict reference flags the JSON column dirty
+        state = _task_state(blob)
+        # Told to the run that holds a place in a migration pause for this task. The run decides whether
+        # this save is the one it ends with.
+        task_saved(task.id, state, run_over=state in _RUN_OVER_STATE_NAMES)
 
     async def get(self, task_id: str, context: ServerCallContext) -> pb.Task | None:
         owner = _task_scope(context)

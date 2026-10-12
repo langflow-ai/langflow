@@ -87,6 +87,7 @@ from langflow.services.auth.context import (
     set_current_auth_context,
 )
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
+from langflow.services.auth.utils import set_authenticated_telemetry_user
 from langflow.services.authorization import ProjectAction, ensure_project_permission
 from langflow.services.authorization.access_ceiling import clear_current_external_access_context
 from langflow.services.database.models import Flow, Folder
@@ -199,6 +200,7 @@ async def verify_project_auth(
         if project_user_id != user.id:
             raise HTTPException(status_code=404, detail="Project not found")
 
+        set_authenticated_telemetry_user(user)
         authenticated_caller_ctx.set(user.id)
         return user
 

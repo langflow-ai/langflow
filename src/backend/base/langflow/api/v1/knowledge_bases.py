@@ -1104,6 +1104,8 @@ async def ingest_files_to_knowledge_base(
             asset_id=asset_id,
             asset_type="knowledge_base",
             user_id=current_user.id,
+            # Live from insert, so no sweep can catch it before the run heartbeats.
+            heartbeat=True,
         )
 
         # Always use async path: fire and forget the ingestion logic wrapped in status updates
@@ -1259,6 +1261,7 @@ async def ingest_folder_to_knowledge_base(
             asset_id=asset_id,
             asset_type="knowledge_base",
             user_id=current_user.id,
+            heartbeat=True,
         )
 
         task_service = get_task_service()
@@ -1348,11 +1351,12 @@ async def list_knowledge_bases(
 
             # Map job statuses back to knowledge bases
             # Normalize to frontend-expected values: ready, ingesting, failed, empty
+            # A cancelled job is absent: cancelling rolls the KB back, so the
+            # row's own status (ready / empty / an earlier failure) still holds.
             job_status_map = {
                 "queued": "ingesting",
                 "in_progress": "ingesting",
                 "failed": "failed",
-                "cancelled": "failed",
                 "timed_out": "failed",
             }
             for kb_info in knowledge_bases:
@@ -1785,6 +1789,7 @@ async def ingest_via_connector(
                 asset_id=asset_id,
                 asset_type="knowledge_base",
                 user_id=current_user.id,
+                heartbeat=True,
                 dedupe_key=dedupe_key,
             )
         except DuplicateJobError as exc:

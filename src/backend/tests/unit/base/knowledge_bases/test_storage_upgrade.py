@@ -9,6 +9,7 @@ import os
 import sqlite3
 import threading
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -22,7 +23,7 @@ from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.memory_base.model import MemoryBase, MemoryBaseSession
 from langflow.services.database.models.user.model import User
-from langflow.services.knowledge_base_storage import coordinator, maintenance, runtime
+from langflow.services.knowledge_base_storage import application_backup, coordinator, maintenance, runtime
 from lfx.base.knowledge_bases.backends.base import IngestedDocument
 from lfx.base.knowledge_bases.migration import ExportHeader, write_export
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -64,6 +65,9 @@ async def database(tmp_path, monkeypatch):
     monkeypatch.setattr(runtime, "get_db_service", lambda: service)
     monkeypatch.setattr(coordinator, "get_db_service", lambda: service)
     monkeypatch.setattr(coordinator, "get_settings_service", lambda: settings)
+    monkeypatch.setattr(application_backup, "session_scope", sessions)
+    monkeypatch.setattr(application_backup, "get_db_service", lambda: service)
+    monkeypatch.setattr(application_backup, "get_settings_service", lambda: settings)
     monkeypatch.setattr(coordinator, "check_local_upgrade", lambda *_args: None)
     monkeypatch.setattr(coordinator, "_inventory_complete", True)
     monkeypatch.setattr(coordinator, "_inventory_scanned", False)
@@ -75,6 +79,11 @@ async def database(tmp_path, monkeypatch):
         await session.commit()
     yield SimpleNamespace(root=root, path=path, sessions=sessions, user=user, settings=settings)
     await engine.dispose()
+
+
+def created_now() -> str:
+    """When a 1.11 sidecar records its base was created: after its owner's account, as the create endpoint did."""
+    return datetime.now(timezone.utc).isoformat()
 
 
 async def make_kb(database, *, backend="chroma", config=None):
@@ -290,7 +299,15 @@ async def test_automatic_adoption_requires_controller_inventory_and_known_owner(
     source, _ = frozen_source(database, monkeypatch)
     identity = uuid4()
     (source / "embedding_metadata.json").write_text(
-        json.dumps({"id": str(identity), "name": "knowledge", "embedding_provider": "test", "embedding_model": "fixed"})
+        json.dumps(
+            {
+                "id": str(identity),
+                "name": "knowledge",
+                "embedding_provider": "test",
+                "embedding_model": "fixed",
+                "created_at": created_now(),
+            }
+        )
     )
     fingerprint = maintenance.tree_fingerprint(source)
     monkeypatch.setattr(
@@ -362,7 +379,8 @@ async def test_missing_source_persists_fence_without_calling_helper(database, ex
     assert (current.backend_type, current.storage_state) == ("chroma", "needs_attention")
     async with database.sessions() as session:
         run = await session.get(KnowledgeBaseStorageMigration, current.active_migration_id)
-    assert run.error_code == "maintenance_required"
+    assert run.error_code == "legacy_source_missing"
+    assert run.source_identity is None
     assert not export_helper
     with pytest.raises(runtime.StorageUnavailableError):
         await runtime.backend_for_record(current)
@@ -639,8 +657,9 @@ async def test_first_start_native_migration_without_receipt_docker_or_embeddings
     backups = database.root / ".migration" / str(row.id) / str(current.active_migration_id)
     assert (backups / "routing-before-upgrade.json").is_file()
     reference = json.loads((backups / "application-backup.json").read_text())
-    with sqlite3.connect(database.root / ".migration" / reference["backup"]) as connection:
-        assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    # The pass that finished the upgrade no longer needs the application backup, so it deleted it.
+    assert reference["backup"].startswith("application-backups/application-before-upgrade-")
+    assert not (database.root / ".migration" / reference["backup"]).exists()
     await coordinator.run_pending()
     assert (await read_kb(database, row.id)).storage_generation == 2
     await backend.teardown()
@@ -728,7 +747,7 @@ async def test_automatic_upgrade_adopts_disk_only_base_with_original_identity(da
     source = native_source(database)
     identity = uuid4()
     (source / "embedding_metadata.json").write_text(
-        json.dumps({"id": str(identity), "name": "fixture-l2", **embedding_metadata})
+        json.dumps({"id": str(identity), "name": "fixture-l2", "created_at": created_now(), **embedding_metadata})
     )
     original = maintenance.tree_fingerprint(source)
     await coordinator.run_pending()
@@ -756,7 +775,15 @@ async def test_disk_only_cloud_base_preserves_remote_routing_and_original_source
     identity = uuid4()
     config = {"mode": "cloud", "collection": "remote-original", "url_variable": "CHROMA_URL"}
     (source / "embedding_metadata.json").write_text(
-        json.dumps({"id": str(identity), "name": "fixture-l2", "backend_type": "chroma", "backend_config": config})
+        json.dumps(
+            {
+                "id": str(identity),
+                "name": "fixture-l2",
+                "backend_type": "chroma",
+                "backend_config": config,
+                "created_at": created_now(),
+            }
+        )
     )
     original = maintenance.tree_fingerprint(source)
 

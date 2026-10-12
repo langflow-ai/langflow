@@ -835,6 +835,10 @@ jobs:
           # Verify the change
           echo "Updated langflow-sdk dependency:"
           grep "langflow-sdk" pyproject.toml
+      - name: Inject production Segment write key
+        env:
+          LANGFLOW_SEGMENT_WRITE_KEY: ${{ secrets.LANGFLOW_SEGMENT_WRITE_KEY }}
+        run: uv run --no-sync python scripts/ci/inject_segment_write_key.py
       - name: Build project for distribution
         run: |
           uv run --no-sync python scripts/ci/release_auth_defaults.py prepare
@@ -842,6 +846,10 @@ jobs:
           rm -rf dist/
           uv build --wheel --out-dir dist
           uv run --no-sync python ../../scripts/ci/release_auth_defaults.py verify dist/*.whl
+      - name: Verify production Segment write key
+        env:
+          LANGFLOW_SEGMENT_WRITE_KEY: ${{ secrets.LANGFLOW_SEGMENT_WRITE_KEY }}
+        run: uv run --no-sync python scripts/ci/inject_segment_write_key.py --verify-wheel src/lfx/dist/*.whl
       - name: Verify built version
         run: |
           EXPECTED_VERSION="${{ needs.determine-lfx-version.outputs.version }}"

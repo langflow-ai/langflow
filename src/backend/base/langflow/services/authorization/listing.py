@@ -273,6 +273,27 @@ def _project_scope_exclusion_clause(
     return or_(col(project_column).is_(None), and_(*allowed)) if allowed else None
 
 
+def _owned_or_granted(
+    stmt: StatementT,
+    *,
+    id_column: InstrumentedAttribute,
+    owner_clause: ColumnElement[bool],
+    grant_clauses: list[ColumnElement[bool]],
+    excluded_resource_ids: Sequence[UUID],
+) -> StatementT:
+    """Admit owned rows plus granted rows, minus per-resource exceptions.
+
+    Exceptions only ever subtract role/scope-derived access, so an owned row
+    stays visible even if it also carries one.
+    """
+    if not grant_clauses:
+        return stmt.where(owner_clause)
+    granted = or_(*grant_clauses)
+    if excluded_resource_ids:
+        granted = and_(granted, col(id_column).not_in(excluded_resource_ids))
+    return stmt.where(or_(owner_clause, granted))
+
+
 def restrict_to_owned_or_visible_scope(
     stmt: StatementT,
     *,
@@ -284,28 +305,41 @@ def restrict_to_owned_or_visible_scope(
     project_column: InstrumentedAttribute | None = None,
 ) -> StatementT:
     """Apply owner, concrete-ID, workspace, and project visibility before pagination."""
+    excluded = visibility.excluded_resource_ids
+
     if visibility.all_resources:
-        if project_column is None:
-            return stmt
-        global_project_allowed = _project_scope_exclusion_clause(
-            project_column=project_column,
-            excluded_project_ids=visibility.excluded_global_project_ids,
-            exclude_personal_projects=visibility.exclude_personal_projects,
+        global_project_allowed = (
+            _project_scope_exclusion_clause(
+                project_column=project_column,
+                excluded_project_ids=visibility.excluded_global_project_ids,
+                exclude_personal_projects=visibility.exclude_personal_projects,
+            )
+            if project_column is not None
+            else None
         )
         if global_project_allowed is None:
-            return stmt
+            if not excluded:
+                return stmt
+            # A global wildcard, minus specific per-resource exceptions.
+            return stmt.where(or_(owner_clause, col(id_column).not_in(excluded)))
         # Ownership, exact grants, and explicit project roles remain additive.
         # Folderless resources remain visible through a global role.
-        global_clauses: list[ColumnElement[bool]] = [owner_clause, global_project_allowed]
+        global_grants: list[ColumnElement[bool]] = [global_project_allowed]
         if visibility.resource_ids:
-            global_clauses.append(col(id_column).in_(visibility.resource_ids))
+            global_grants.append(col(id_column).in_(visibility.resource_ids))
         if visibility.project_ids:
-            global_clauses.append(col(project_column).in_(visibility.project_ids))
-        return stmt.where(or_(*global_clauses))
+            global_grants.append(col(project_column).in_(visibility.project_ids))
+        return _owned_or_granted(
+            stmt,
+            id_column=id_column,
+            owner_clause=owner_clause,
+            grant_clauses=global_grants,
+            excluded_resource_ids=excluded,
+        )
 
-    clauses: list[ColumnElement[bool]] = [owner_clause]
+    grants: list[ColumnElement[bool]] = []
     if visibility.resource_ids:
-        clauses.append(col(id_column).in_(visibility.resource_ids))
+        grants.append(col(id_column).in_(visibility.resource_ids))
     resolved_workspace = workspace_expression
     if resolved_workspace is None and workspace_column is not None:
         resolved_workspace = col(workspace_column)
@@ -322,7 +356,7 @@ def restrict_to_owned_or_visible_scope(
         workspace_clause = resolved_workspace.in_(visibility.workspace_ids)
         if workspace_project_allowed is not None:
             workspace_clause = and_(workspace_clause, workspace_project_allowed)
-        clauses.append(workspace_clause)
+        grants.append(workspace_clause)
     if resolved_workspace is not None and project_column is not None and visibility.include_unassigned_workspace:
         # The logical unassigned workspace contains projects whose stored
         # workspace is NULL; it does not contain folderless/workspace-less
@@ -333,10 +367,16 @@ def restrict_to_owned_or_visible_scope(
         if workspace_project_allowed is not None:
             unassigned_project_allowed = and_(unassigned_project_allowed, workspace_project_allowed)
         workspace_clause = and_(resolved_workspace.is_(None), unassigned_project_allowed)
-        clauses.append(workspace_clause)
+        grants.append(workspace_clause)
     if project_column is not None and visibility.project_ids:
-        clauses.append(col(project_column).in_(visibility.project_ids))
-    return stmt.where(or_(*clauses))
+        grants.append(col(project_column).in_(visibility.project_ids))
+    return _owned_or_granted(
+        stmt,
+        id_column=id_column,
+        owner_clause=owner_clause,
+        grant_clauses=grants,
+        excluded_resource_ids=excluded,
+    )
 
 
 async def apply_owned_or_visible_scope_prefilter(
@@ -372,9 +412,14 @@ def resource_visible_in_scope(
 ) -> bool:
     """Evaluate a scope, requiring project privacy metadata when exclusion is enabled.
 
-    Missing metadata fails closed for broad grants to project-backed resources.
-    Explicit resource and project grants do not require that metadata.
+    Does not consider ownership — callers evaluate that separately.
+    ``excluded_resource_ids`` (a plugin-level per-resource exception) wins over
+    every grant mechanism below. Missing metadata fails closed for broad grants
+    to project-backed resources. Explicit resource and project grants do not
+    require that metadata.
     """
+    if resource_id in visibility.excluded_resource_ids:
+        return False
     personal_project_allowed = (
         not visibility.exclude_personal_projects or project_id is None or project_is_personal is False
     )

@@ -16,6 +16,7 @@ import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
 import {
   appendErrorSuggestion,
   getRequiredFieldError,
+  LOGIN_ERROR_KEYS,
 } from "@/utils/authErrorMessages";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../components/ui/button";
@@ -72,11 +73,13 @@ export default function LoginPage(): JSX.Element {
         queryClient.clear();
       },
       onError: (error) => {
+        const detail = extractApiErrorMessage(
+          error as Parameters<typeof extractApiErrorMessage>[0],
+          t("errors.signin"),
+        );
+        const knownKey = LOGIN_ERROR_KEYS[detail.trim().replace(/\.$/, "")];
         const message = appendErrorSuggestion(
-          extractApiErrorMessage(
-            error as Parameters<typeof extractApiErrorMessage>[0],
-            t("errors.signin"),
-          ),
+          knownKey ? t(knownKey) : detail,
           t("errors.signinSuggestion", {
             defaultValue: "Check your username and password, then try again.",
           }),

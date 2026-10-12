@@ -10,13 +10,20 @@ import {
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import ForwardedIconComponent from "../../components/common/genericIconComponent";
 import PageLayout from "../../components/common/pageLayout";
 export default function SettingsPage(): JSX.Element {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const autoLogin = useAuthStore((state) => state.autoLogin);
+  const isSuperuser = Boolean(
+    useAuthStore((state) => state.userData)?.is_superuser,
+  );
   const hasStore = useStoreStore((state) => state.hasStore);
+  const migrationEnabled = useUtilityStore(
+    (state) => state.featureFlags.instance_migration === true,
+  );
 
   // Hides the General settings if there is nothing to show
   const showGeneralSettings = ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
@@ -124,6 +131,19 @@ export default function SettingsPage(): JSX.Element {
     },
   );
 
+  if (isSuperuser && migrationEnabled) {
+    sidebarNavItems.push({
+      title: t("settings.nav.migration"),
+      href: "/settings/migration",
+      icon: (
+        <ForwardedIconComponent
+          name="ArrowRightLeft"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    });
+  }
+
   // TODO: Remove this on cleanup
   if (!ENABLE_DATASTAX_LANGFLOW) {
     const langflowItems = CustomStoreSidebar(true);
@@ -145,8 +165,9 @@ export default function SettingsPage(): JSX.Element {
     >
       <SidebarProvider width="15rem" defaultOpen={false}>
         <SideBarButtonsComponent items={sidebarNavItems} />
-        <main className="flex flex-1 overflow-hidden">
-          <div className="flex flex-1 flex-col overflow-x-hidden pt-1">
+        {/* Overflow is clipped. Neither box scrolls, and a box that hides its overflow is what a sticky element inside a page sticks to. */}
+        <main className="flex min-w-0 flex-1 overflow-clip">
+          <div className="flex min-w-0 flex-1 flex-col overflow-x-clip pt-1">
             <Outlet />
           </div>
         </main>
