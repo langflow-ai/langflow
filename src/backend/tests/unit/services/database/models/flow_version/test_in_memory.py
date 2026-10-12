@@ -183,6 +183,40 @@ async def _attach(
     return att
 
 
+async def _make_deployer(db: AsyncSession) -> tuple[User, Deployment]:
+    """Create a second user with their own project, provider account and deployment."""
+    deployer = User(username="deployer", password=_TEST_PASSWORD, is_active=True)
+    db.add(deployer)
+    await db.commit()
+    await db.refresh(deployer)
+    folder = Folder(name="deployer-project", user_id=deployer.id)
+    db.add(folder)
+    await db.commit()
+    await db.refresh(folder)
+    account = DeploymentProviderAccount(
+        user_id=deployer.id,
+        provider_tenant_id="tenant-2",
+        provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+        name="deployer-provider",
+        provider_url="https://provider.example.com",
+        api_key="encrypted-value",  # pragma: allowlist secret
+    )
+    db.add(account)
+    await db.commit()
+    await db.refresh(account)
+    deployment = Deployment(
+        user_id=deployer.id,
+        project_id=folder.id,
+        deployment_provider_account_id=account.id,
+        resource_key="rk-deployer",
+        display_name="deployer-deployment",
+    )
+    db.add(deployment)
+    await db.commit()
+    await db.refresh(deployment)
+    return deployer, deployment
+
+
 async def _make_orphan_attachment(
     db: AsyncSession,
     user: User,
@@ -268,6 +302,15 @@ class TestDeleteFlowVersionEntry:
             await delete_flow_version_entry(db, version.id, user.id)
 
         assert (await db.exec(select(FlowVersion.id).where(FlowVersion.id == version.id))).one() == version.id
+
+    async def test_rejects_version_deployed_by_another_user(self, db: AsyncSession, flow: Flow, user: User):
+        deployer, deployer_deployment = await _make_deployer(db)
+        version = await _create_version(db, flow, user)
+        await _attach(db, deployer, version, deployer_deployment)
+
+        with pytest.raises(FlowVersionDeployedError):
+            await delete_flow_version_entry(db, version.id, user.id)
+        assert (await db.exec(select(FlowVersion).where(FlowVersion.id == version.id))).first() is not None
 
     async def test_rejects_another_users_version(self, db: AsyncSession, flow: Flow, user: User):
         version = await _create_version(db, flow, user)
@@ -625,35 +668,7 @@ class TestVersionPruningRespectsLiveDeployments:
         self, db: AsyncSession, flow: Flow, user: User
     ):
         """A teammate's deployment of the owner's flow must survive the owner's next snapshot."""
-        deployer = User(username="deployer", password=_TEST_PASSWORD, is_active=True)
-        db.add(deployer)
-        await db.commit()
-        await db.refresh(deployer)
-        deployer_folder = Folder(name="deployer-project", user_id=deployer.id)
-        db.add(deployer_folder)
-        await db.commit()
-        await db.refresh(deployer_folder)
-        deployer_account = DeploymentProviderAccount(
-            user_id=deployer.id,
-            provider_tenant_id="tenant-2",
-            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            name="deployer-provider",
-            provider_url="https://provider.example.com",
-            api_key="encrypted-value",  # pragma: allowlist secret
-        )
-        db.add(deployer_account)
-        await db.commit()
-        await db.refresh(deployer_account)
-        deployer_deployment = Deployment(
-            user_id=deployer.id,
-            project_id=deployer_folder.id,
-            deployment_provider_account_id=deployer_account.id,
-            resource_key="rk-deployer",
-            display_name="deployer-deployment",
-        )
-        db.add(deployer_deployment)
-        await db.commit()
-        await db.refresh(deployer_deployment)
+        deployer, deployer_deployment = await _make_deployer(db)
 
         settings_mock = SimpleNamespace(settings=SimpleNamespace(max_flow_version_entries_per_flow=1))
         with patch(

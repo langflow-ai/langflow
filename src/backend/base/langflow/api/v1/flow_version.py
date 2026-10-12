@@ -109,9 +109,6 @@ def translate_version_error(exc: FlowVersionError) -> HTTPException:
     return HTTPException(status_code=500, detail=str(exc))
 
 
-_translate_version_error = translate_version_error
-
-
 def _ensure_deployments_enabled_for_provider_id(deployment_provider_id: UUID | None) -> None:
     if deployment_provider_id and not FEATURE_FLAGS.wxo_deployments:
         msg = "Cannot use deployment_provider_id: the wxo_deployments feature flag is disabled"

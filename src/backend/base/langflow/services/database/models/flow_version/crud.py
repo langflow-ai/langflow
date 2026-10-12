@@ -50,6 +50,9 @@ async def create_flow_version_entry(
     """Create a version entry with retry on version number collision.
 
     Pass ``prune=False`` to insert without pruning the flow's oldest versions.
+    A version recorded this way by a user other than the flow owner is not
+    listed or deletable through the OSS version routes, which are owner-scoped;
+    the caller owns its lifecycle until a later prune reaps it.
 
     NOTE: This function does NOT verify that user_id owns the flow.
     Callers are responsible for checking ownership before calling this.
@@ -396,7 +399,8 @@ async def delete_flow_version_entry(
         msg = f"Version entry {version_id} not found"
         raise FlowVersionNotFoundError(msg)
 
-    if await has_deployment_attachments(session, version_id, user_id=user_id):
+    # A deployment owned by another user still protects this version.
+    if await has_deployment_attachments(session, version_id):
         msg = (
             f"Version entry {version_id} is attached to one or more deployments "
             f"and cannot be deleted. Remove its deployment attachment rows first."
