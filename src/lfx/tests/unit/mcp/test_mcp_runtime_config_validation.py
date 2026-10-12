@@ -1,6 +1,7 @@
 """Execution-boundary validation for resolved MCP server configurations."""
 
 import shlex
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -8,6 +9,12 @@ from lfx.base.mcp import util as mcp_util
 from lfx.base.mcp.security import MAX_SHELL_WRAPPER_DEPTH, MCPStdioSecurityError, validate_mcp_stdio_config
 from lfx.base.mcp.util import MCPStdioClient, update_tools
 from lfx.components.deactivated.mcp_stdio import MCPStdio
+
+
+@asynccontextmanager
+async def _session_in_use(session):
+    """Stub the pool boundary; these tests inspect pre-spawn config validation."""
+    yield session
 
 
 @pytest.mark.parametrize(
@@ -255,7 +262,7 @@ async def test_stdio_client_preserves_safe_package_and_provider_credentials():
     client = MCPStdioClient()
     session = MagicMock()
     session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
-    client._get_or_create_session = AsyncMock(return_value=session)  # type: ignore[method-assign]
+    client._session_in_use = lambda: _session_in_use(session)  # type: ignore[method-assign]
 
     await client._connect_to_server(
         "uvx --from lfx lfx-mcp",
@@ -274,7 +281,7 @@ async def test_stdio_client_injects_trusted_agentic_user_only_at_spawn_boundary(
     client = MCPStdioClient()
     session = MagicMock()
     session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
-    client._get_or_create_session = AsyncMock(return_value=session)  # type: ignore[method-assign]
+    client._session_in_use = lambda: _session_in_use(session)  # type: ignore[method-assign]
     user_id = "11111111-1111-1111-1111-111111111111"
 
     await client._connect_to_server(
@@ -310,7 +317,7 @@ async def test_stdio_client_preserves_executable_path_with_spaces():
     client = MCPStdioClient()
     session = MagicMock()
     session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
-    client._get_or_create_session = AsyncMock(return_value=session)  # type: ignore[method-assign]
+    client._session_in_use = lambda: _session_in_use(session)  # type: ignore[method-assign]
     command = "/opt/Node Tools/node"
 
     await client._connect_to_server(shlex.join([command, "server.js"]), None)
@@ -324,7 +331,7 @@ async def test_stdio_client_preserves_sanitized_opaque_header_values():
     client = MCPStdioClient()
     session = MagicMock()
     session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
-    client._get_or_create_session = AsyncMock(return_value=session)  # type: ignore[method-assign]
+    client._session_in_use = lambda: _session_in_use(session)  # type: ignore[method-assign]
 
     await client._connect_to_server(
         "uvx mcp-proxy --transport streamablehttp https://mcp.example.com",
