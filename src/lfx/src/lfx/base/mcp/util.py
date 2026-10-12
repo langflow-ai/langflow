@@ -2157,6 +2157,7 @@ class _PooledSessionClient:
 
     @contextlib.asynccontextmanager
     async def _session_in_use(self) -> AsyncIterator[ClientSession]:
+        """Acquire a pooled session and protect it from idle cleanup during the request."""
         session = await self._get_or_create_session()
         manager = self._get_session_manager()
         async with manager.session_activity(self._server_key(manager), session):
