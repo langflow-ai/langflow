@@ -93,6 +93,8 @@ To remove the Langflow app's access in Microsoft Entra, see [Review permissions 
 
 ## Redirect URIs
 
+In Microsoft Entra, add the redirect URI that matches how you run Langflow. Use the **Web** platform for a hosted or self-managed server, and **Mobile and desktop applications** for Langflow Desktop. A headless run doesn't use a redirect.
+
 | Context | Platform | Redirect URI |
 | --- | --- | --- |
 | Hosted or self-managed server | Web | `https://YOUR_INSTANCE/api/v1/connections/oauth/microsoft/callback` |
@@ -102,6 +104,10 @@ To remove the Langflow app's access in Microsoft Entra, see [Review permissions 
 Replace `YOUR_INSTANCE` with the public hostname of the Langflow instance.
 
 ## Delegated permissions
+
+In Microsoft Entra, add a Microsoft Graph permission for each action your flows use.
+These permissions don't require admin consent.
+For more information, see [Configure how users consent to applications](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent).
 
 | Component | Delegated permission |
 | --- | --- |
@@ -114,10 +120,6 @@ Replace `YOUR_INSTANCE` with the public hostname of the Langflow instance.
 | SharePoint/OneDrive: List Items | `Files.Read` |
 | SharePoint/OneDrive: Fetch Item | `Files.Read` |
 
-**SharePoint/OneDrive: List Items** and **SharePoint/OneDrive: Fetch Item** also need `Files.Read.All` when **Drive ID** is set, and `Sites.Read.All` when **Site ID** is set.
-
-Include `offline_access` in the registration and in `scopes`. Without it, the connection stops working after about an hour. A refresh token that nobody uses for 90 days expires, and the person has to connect again. See [Refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens).
-
-These permissions don't require admin consent unless the tenant restricts user consent. See [Configure how users consent to applications](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent).
-
-
+Include `offline_access` in registration and in `scopes`. Without `offline_access`, Entra doesn't issue a refresh token, so the connection stops working after about an hour.
+A refresh token that isn't used for 90 days expires, and the user has to reconnect Langflow.
+For more information, see [Refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens).
