@@ -96,7 +96,7 @@ async def _get_user_flow(session: AsyncSession, flow_id: UUID, user_id: UUID) ->
     return flow
 
 
-def _translate_version_error(exc: FlowVersionError) -> HTTPException:
+def translate_version_error(exc: FlowVersionError) -> HTTPException:
     """Translate a domain exception into an HTTPException."""
     if isinstance(exc, FlowVersionSerializationError):
         return HTTPException(status_code=422, detail=str(exc))
@@ -248,7 +248,7 @@ async def create_snapshot(
             description=description,
         )
     except FlowVersionError as exc:
-        raise _translate_version_error(exc) from exc
+        raise translate_version_error(exc) from exc
     return _version_to_read(entry)
 
 
@@ -345,7 +345,7 @@ async def activate_version(
                     written_fields=["data"],
                 )
         except FlowVersionError as exc:
-            raise _translate_version_error(exc) from exc
+            raise translate_version_error(exc) from exc
         except IntegrityError as exc:
             raise HTTPException(
                 status_code=409,
@@ -393,5 +393,5 @@ async def delete_version_entry(
         await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
         await delete_flow_version_entry(session, version_id, current_user.id)
     except FlowVersionError as exc:
-        raise _translate_version_error(exc) from exc
+        raise translate_version_error(exc) from exc
     await logger.adebug("Deleted version entry %s for flow %s", version_id, flow_id)
