@@ -1003,6 +1003,21 @@ class TestRetainedVersions:
             numbers = {v.version_number for v in (await db.exec(select(FlowVersion))).all()}
             assert numbers == {4}
 
+    async def test_prune_false_keeps_oldest_unretained_version(self, db: AsyncSession, flow: Flow, user: User):
+        settings_mock = SimpleNamespace(settings=SimpleNamespace(max_flow_version_entries_per_flow=1))
+        with patch(
+            "langflow.services.database.models.flow_version.crud.get_settings_service",
+            return_value=settings_mock,
+        ):
+            await _create_version(db, flow, user, n=1)
+            await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []}, prune=False)
+            numbers = {v.version_number for v in (await db.exec(select(FlowVersion))).all()}
+            assert numbers == {1, 2}
+
+            await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+            numbers = {v.version_number for v in (await db.exec(select(FlowVersion))).all()}
+            assert numbers == {3}
+
     async def test_retained_versions_do_not_count_toward_the_limit(self, db: AsyncSession, flow: Flow, user: User):
         settings_mock = SimpleNamespace(settings=SimpleNamespace(max_flow_version_entries_per_flow=2))
         with patch(

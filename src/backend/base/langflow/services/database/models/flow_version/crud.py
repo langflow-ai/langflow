@@ -44,8 +44,12 @@ async def create_flow_version_entry(
     user_id: UUID,
     data: dict | None,
     description: str | None = None,
+    *,
+    prune: bool = True,
 ) -> FlowVersion:
     """Create a version entry with retry on version number collision.
+
+    Pass ``prune=False`` to insert without pruning the flow's oldest versions.
 
     NOTE: This function does NOT verify that user_id owns the flow.
     Callers are responsible for checking ownership before calling this.
@@ -90,6 +94,9 @@ async def create_flow_version_entry(
             f"{MAX_VERSION_RETRIES} retries due to version number conflicts"
         )
         raise FlowVersionConflictError(msg)
+
+    if not prune:
+        return entry
 
     # Retain versions used by deployments or trigger pins outside the history
     # limit. A new snapshot must never change what a pinned trigger executes.
