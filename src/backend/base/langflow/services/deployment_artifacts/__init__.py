@@ -17,7 +17,10 @@ from .builder import (
     ProjectDeploymentSnapshotFlow,
     build_project_artifact,
     build_project_deployment_snapshot,
+    effective_mcp_config,
     iter_mcp_field_values,
+    load_registered_mcp_servers,
+    mcp_config_url,
 )
 
 __all__ = [
@@ -37,5 +40,8 @@ __all__ = [
     "ProjectDeploymentSnapshotFlow",
     "build_project_artifact",
     "build_project_deployment_snapshot",
+    "effective_mcp_config",
     "iter_mcp_field_values",
+    "load_registered_mcp_servers",
+    "mcp_config_url",
 ]

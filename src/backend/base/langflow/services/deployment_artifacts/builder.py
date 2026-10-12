@@ -647,7 +647,7 @@ def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
     )
 
 
-def _effective_mcp_config(
+def effective_mcp_config(
     server_name: object, inline: object, registered: Mapping[str, dict[str, Any]] | None
 ) -> dict[str, Any]:
     """The config a flow actually reaches this server through.
@@ -666,7 +666,7 @@ def _effective_mcp_config(
     return inline if isinstance(inline, dict) else {}
 
 
-def _mcp_config_url(config: dict[str, Any]) -> object:
+def mcp_config_url(config: dict[str, Any]) -> object:
     """The address this config connects to, whichever shape it is written in.
 
     A streamable-HTTP entry puts it at ``url``. The stdio entry Langflow seeds for a
@@ -708,7 +708,7 @@ def _mcp_config_requirements(
     projects: set[ProjectArtifactRequiredMcpProject] = set()
     if not isinstance(config, dict) or not isinstance(server_name, str) or not server_name:
         return variables, projects
-    url = _mcp_config_url(config)
+    url = mcp_config_url(config)
     url_variables = set(GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.findall(url)) if isinstance(url, str) else set()
     if url_variable := variable_reference_name(url):
         url_variables.add(url_variable)
@@ -812,10 +812,10 @@ def _collect_external_mcp_servers(
     servers: dict[str, ProjectArtifactExternalMcpServer] = {}
     for value in iter_mcp_field_values(flow_data):
         name = value.get("name")
-        config = _effective_mcp_config(name, value.get("config"), registered)
+        config = effective_mcp_config(name, value.get("config"), registered)
         if not isinstance(name, str) or not name or not config:
             continue
-        url = _mcp_config_url(config)
+        url = mcp_config_url(config)
         if project_id_from_mcp_url(url) is not None:
             continue
         if not url or "command" in config or config.get("mode") == "Stdio":
@@ -852,7 +852,7 @@ def _collect_mcp_requirements(
     for value in iter_mcp_field_values(flow_data):
         name = value.get("name")
         field_variables, field_projects = _mcp_config_requirements(
-            name, _effective_mcp_config(name, value.get("config"), registered)
+            name, effective_mcp_config(name, value.get("config"), registered)
         )
         variables.update(field_variables)
         projects.update(field_projects)
@@ -1751,7 +1751,7 @@ async def _verify_project_identity_unchanged(
         raise ProjectArtifactError(msg)
 
 
-async def _registered_mcp_servers(session: AsyncSession, owner_id: UUID | None) -> dict[str, dict[str, Any]]:
+async def load_registered_mcp_servers(session: AsyncSession, owner_id: UUID | None) -> dict[str, dict[str, Any]]:
     """The owner's MCP address book, decrypted, keyed by the name a flow resolves by.
 
     A flow references a server by name and usually carries no config of its own: the
@@ -1974,7 +1974,7 @@ async def build_project_artifact(
 
     # The owner's address book, read once: a flow references a server by name and
     # usually carries no config, so this is where the url and credential names are.
-    registered_mcp_servers = await _registered_mcp_servers(session, prepared.project_user_id)
+    registered_mcp_servers = await load_registered_mcp_servers(session, prepared.project_user_id)
 
     # Archive construction is intentionally non-abandoning. If the HTTP request
     # is cancelled, keep the caller suspended until the worker exits so the
@@ -2147,7 +2147,7 @@ async def build_project_deployment_snapshot(
     if prepared.project_description is not None:
         project_text_bytes += _json_string_size(prepared.project_description)
     known_variable_names = await _known_variable_names(session, prepared.project_user_id)
-    registered_mcp_servers = await _registered_mcp_servers(session, prepared.project_user_id)
+    registered_mcp_servers = await load_registered_mcp_servers(session, prepared.project_user_id)
 
     (
         flows,
