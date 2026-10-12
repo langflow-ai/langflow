@@ -257,11 +257,11 @@ reviews:
     hadolint:
       enabled: true
     swiftlint:
-      enabled: false
+      enabled: true
     phpstan:
-      enabled: false
+      enabled: true
     golangci-lint:
-      enabled: false
+      enabled: true
     yamllint:
       enabled: true
     gitleaks:
@@ -269,41 +269,41 @@ reviews:
     checkov:
       enabled: true
     detekt:
-      enabled: false
+      enabled: true
     eslint:
       enabled: false
     rubocop:
-      enabled: false
+      enabled: true
     buf:
-      enabled: false
+      enabled: true
     regal:
-      enabled: false
+      enabled: true
     actionlint:
       enabled: true
     pmd:
-      enabled: false
+      enabled: true
     cppcheck:
-      enabled: false
+      enabled: true
     semgrep:
       enabled: true
     circleci:
-      enabled: false
+      enabled: true
     clippy:
-      enabled: false
+      enabled: true
     sqlfluff:
-      enabled: false
+      enabled: true
     prismaLint:
-      enabled: false
+      enabled: true
     pylint:
       enabled: false
     oxc:
       enabled: false
     shopifyThemeCheck:
-      enabled: false
+      enabled: true
     luacheck:
-      enabled: false
+      enabled: true
     brakeman:
-      enabled: false
+      enabled: true
     dotenvLint:
       enabled: true
     htmlhint:

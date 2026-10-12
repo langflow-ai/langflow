@@ -5,8 +5,7 @@ name: Component Compatibility Gate
 # scripts/ci/check_component_compat.py for what counts as breaking.
 #
 # Rollout: FAIL_ON_BREAKING is "false", so the gate only annotates the PR and writes a job
-# summary. Set it to "true" to fail PRs; the 'breaking change' label then downgrades
-# failures to warnings.
+# summary. Set it to "true" to fail PRs not labeled 'breaking change'.
 #
 # Keep this workflow separate from ci.yml and out of required status checks. Its paths
 # filter leaves the check pending on PRs that don't touch the index, and it has no
@@ -42,64 +41,31 @@ jobs:
           fetch-depth: 0
           filter: blob:none
 
-      - name: Extract component indexes and base-branch checker
-        id: extract
+      - name: Compare component indexes
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
-        run: |
-          set -euo pipefail
-          INDEX=src/lfx/src/lfx/_assets/component_index.json
-          git fetch --no-tags --filter=blob:none origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
-          if ! MERGE_BASE=$(git merge-base HEAD "origin/${BASE_REF}"); then
-            echo "::error::No merge base between the PR head and ${BASE_REF}."
-            exit 1
-          fi
-          if [ "$(git merge-base --all HEAD "origin/${BASE_REF}" | wc -l)" -gt 1 ]; then
-            echo "::warning::Multiple merge bases with ${BASE_REF}; comparing against ${MERGE_BASE}."
-          fi
-          # Run the base branch's copy of the gate and checker so a PR can't change the
-          # rule it is judged by. ls-tree reads only trees, which a blob-less clone has, so
-          # it reports whether a file exists without fetching it; a failed blob fetch in the
-          # git show calls below is then an error rather than a silent skip.
-          if [ -z "$(git ls-tree "origin/${BASE_REF}" -- scripts/ci/check_component_compat.py)" ]; then
-            echo "::notice::${BASE_REF} does not have the component compatibility gate yet; skipping."
-            echo "skip=true" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-          for required in src/lfx/src/lfx/upgrade/checker.py src/lfx/src/lfx/graph/edge/base.py "${INDEX}"; do
-            if [ -z "$(git ls-tree "origin/${BASE_REF}" -- "${required}")" ]; then
-              echo "::error::${BASE_REF} has the gate but not ${required}; the gate can't run."
-              exit 1
-            fi
-          done
-          git show "origin/${BASE_REF}:scripts/ci/check_component_compat.py" > "${RUNNER_TEMP}/check.py"
-          git show "origin/${BASE_REF}:src/lfx/src/lfx/upgrade/checker.py" > "${RUNNER_TEMP}/checker.py"
-          git show "origin/${BASE_REF}:src/lfx/src/lfx/graph/edge/base.py" > "${RUNNER_TEMP}/edge_base.py"
-          git show "origin/${BASE_REF}:${INDEX}" > "${RUNNER_TEMP}/base.json"
-          git show "${MERGE_BASE}:${INDEX}" > "${RUNNER_TEMP}/merge_base.json"
-          cp "${INDEX}" "${RUNNER_TEMP}/head.json"
-
-      - name: Compare component indexes
-        if: steps.extract.outputs.skip != 'true'
-        env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          ARGS=(
-            --base "${RUNNER_TEMP}/base.json"
-            --merge-base "${RUNNER_TEMP}/merge_base.json"
-            --head "${RUNNER_TEMP}/head.json"
-            --checker "${RUNNER_TEMP}/checker.py"
-            --type-migrations "${RUNNER_TEMP}/edge_base.py"
-            --repo-root .
-          )
-          if [ "${FAIL_ON_BREAKING}" = "true" ]; then
-            ARGS+=(--fail)
-            # Read labels live: the event payload is stale when a failed run is re-run.
-            LABELS=$(gh pr view "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --json labels --jq '.labels[].name')
-            if grep -qx 'breaking change' <<< "${LABELS}"; then
-              ARGS+=(--allow-breaking)
-            fi
+          INDEX=src/lfx/src/lfx/_assets/component_index.json
+          git fetch --no-tags --filter=blob:none origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          MERGE_BASE=$(git merge-base HEAD "origin/${BASE_REF}")
+          # Run the base branch's copy of the gate and checker so a PR can't change the rule it
+          # is judged by. ls-tree reads only trees, so it doesn't fetch a blob to check this.
+          if [ -z "$(git ls-tree "origin/${BASE_REF}" -- scripts/ci/check_component_compat.py)" ]; then
+            echo "::notice::${BASE_REF} does not have the component compatibility gate yet; skipping."
+            exit 0
           fi
-          python3 "${RUNNER_TEMP}/check.py" "${ARGS[@]}"
+          git show "origin/${BASE_REF}:scripts/ci/check_component_compat.py" > "${RUNNER_TEMP}/check.py"
+          git show "origin/${BASE_REF}:src/lfx/src/lfx/upgrade/checker.py" > "${RUNNER_TEMP}/checker.py"
+          git show "origin/${BASE_REF}:src/lfx/src/lfx/graph/edge/base.py" > "${RUNNER_TEMP}/edge_base.py"
+          git show "${MERGE_BASE}:${INDEX}" > "${RUNNER_TEMP}/merge_base.json"
+          ARGS=()
+          # Read labels live: the event payload is stale when a failed run is re-run.
+          if [ "${FAIL_ON_BREAKING}" = "true" ] && ! gh pr view "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
+              --json labels --jq '.labels[].name' | grep -x 'breaking change' >/dev/null; then
+            ARGS+=(--fail)
+          fi
+          python3 "${RUNNER_TEMP}/check.py" --merge-base "${RUNNER_TEMP}/merge_base.json" --head "${INDEX}" \
+            --checker "${RUNNER_TEMP}/checker.py" --type-migrations "${RUNNER_TEMP}/edge_base.py" "${ARGS[@]}"

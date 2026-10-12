@@ -62,24 +62,6 @@ jobs:
                 if (error.status !== 404) throw error;  // already removed by someone else
               }
             }
-            if (currentSizes.includes(label)) {
-              return;
-            }
-            await github.rest.issues.addLabels({ ...context.repo, issue_number: pull_number, labels: [label] });
-
-            const MARKER = '<!-- pr-size-labels:xxl -->';
-            const comments = label === 'size:XXL'
-              ? await github.paginate(github.rest.issues.listComments, { ...context.repo, issue_number: pull_number, per_page: 100 })
-              : [];
-            if (label === 'size:XXL' && !comments.some(c => c.body?.includes(MARKER))) {
-              await github.rest.issues.createComment({
-                ...context.repo,
-                issue_number: pull_number,
-                body: [
-                  MARKER,
-                  `This PR changes ${lines} lines across ${counted.length} files (generated files excluded).`,
-                  'Large PRs are harder to review and can exceed the file limit for automated review.',
-                  'Consider splitting it into smaller PRs if the changes are separable.',
-                ].join(' '),
-              });
+            if (!currentSizes.includes(label)) {
+              await github.rest.issues.addLabels({ ...context.repo, issue_number: pull_number, labels: [label] });
             }
