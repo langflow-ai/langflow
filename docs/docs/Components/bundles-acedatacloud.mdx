@@ -7,13 +7,25 @@ import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-ins
 
 <GraduatedBundleInstall packageName="acedatacloud" />
 
-Until `lfx-acedatacloud` is published on PyPI, install the [public v0.1.1 GitHub wheel](https://github.com/AceDataCloud/LangflowAceDataCloud/releases/tag/v0.1.1) in the same Python environment as Langflow.
+Until `lfx-acedatacloud` is published on PyPI, install the [public v0.1.2 GitHub wheel](https://github.com/AceDataCloud/LangflowAceDataCloud/releases/tag/v0.1.2) in the same Python environment as Langflow.
 
 The **Ace Data Cloud** Extension Bundle adds a named chat model provider and independent image, video, audio, search, and face service components. It uses one `ace_data_cloud` bundle. Installing the package makes the components available under **Components → Ace Data Cloud** after a Langflow restart. It is not part of the default curated installation.
 
+## Get your API key
+
+1. Open [Ace Data Cloud → Applications](https://platform.acedata.cloud/console/applications?utm_source=langflow&utm_medium=referral&utm_campaign=evergreen&utm_content=langflow_bundle_docs_api_key) and register or sign in. If no General application is shown, choose **Initialize General Application**.
+2. Copy the **API Key** from General application, or choose **Keys / Manage Keys → Create** for a separate Langflow key. A general key can use the services your account can access; a service-specific key is limited to that service.
+3. Name the key, review expiration, usage limits and **Allowed APIs**, create it, then copy its token value. Check the intended model/service permissions, price and balance before a paid run.
+4. Copy only the token string, without `Bearer ` or quotes. A `platform-...` account-management token cannot replace this application API key.
+5. In Langflow, open **Settings → Global Variables → Add New**, choose **Credential**, name it `ACEDATACLOUD_API_KEY`, paste the value, and save. Select that variable on each component and its task reader. Keep it out of prompts, shared flow JSON, screenshots and source control.
+
+![Copy an existing key or open Manage Keys](https://raw.githubusercontent.com/AceDataCloud/NanoBananaDify/2522b2f57210597af2db866445319334a1677a23/_assets/tutorial/get-api-key-en.png)
+
+![Create a named key with optional restrictions](https://raw.githubusercontent.com/AceDataCloud/NanoBananaDify/2522b2f57210597af2db866445319334a1677a23/_assets/tutorial/create-api-key-en.png)
+
 ## Model provider
 
-After installation, open **Settings → Model Providers → Ace Data Cloud**. Create an application API key in the [Ace Data Cloud Console](https://platform.acedata.cloud/console/applications), then save it as a Langflow **Credential** global variable named `ACEDATACLOUD_API_KEY`. The provider uses Ace Data Cloud's fixed OpenAI-compatible endpoint and intersects the current public chat catalog with the models visible to your key. New text models can appear without updating the bundle; image-generation variants are excluded. Select a model your account may use; availability and price can change. Agent tool calling is not advertised because the catalog does not declare per-model support.
+After installation, open **Settings → Model Providers → Ace Data Cloud**. Create an application API key in the [Ace Data Cloud Console](https://platform.acedata.cloud/console/applications?utm_source=langflow&utm_medium=referral&utm_campaign=evergreen&utm_content=langflow_bundle_docs_api_key), then save it as a Langflow **Credential** global variable named `ACEDATACLOUD_API_KEY`. The provider uses Ace Data Cloud's fixed OpenAI-compatible endpoint and intersects the current public chat catalog with the models visible to your key. New text models can appear without updating the bundle; image-generation variants are excluded. Select a model your account may use; availability and price can change. Agent tool calling is not advertised because the catalog does not declare per-model support.
 
 The [no-key chat model flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/main/examples/chat_model.json) selects `gpt-4.1-mini` and connects Language Model to Chat Output. Configure the Credential variable before running it.
 
