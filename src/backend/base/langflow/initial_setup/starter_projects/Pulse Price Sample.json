@@ -1,4 +1,5 @@
 {
+  "id": "d55ce25b-5a04-5391-93f7-df5fbc68e8d7",
   "name": "Pulse Price Sample",
   "description": "Read a keyless BTC, ETH or SOL observation with Core MCP Tools. No LLM; receipt verification is a separate step.",
   "icon": "Activity",
