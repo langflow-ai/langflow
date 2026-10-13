@@ -95,6 +95,12 @@ export default function DBProviderInputComponent({
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
   );
+  const defaultVectorStoreBackend = useUtilityStore(
+    (state) => state.defaultVectorStoreBackend,
+  );
+  const vectorStoreConfigLoaded = useUtilityStore(
+    (state) => state.vectorStoreConfigLoaded,
+  );
   const hasInitializedDefaultRef = useRef(false);
 
   const currentValue = useMemo(
@@ -103,8 +109,14 @@ export default function DBProviderInputComponent({
         value,
         globalVariables,
         localVectorStoreAvailable,
+        defaultVectorStoreBackend,
       ),
-    [value, globalVariables, localVectorStoreAvailable],
+    [
+      value,
+      globalVariables,
+      localVectorStoreAvailable,
+      defaultVectorStoreBackend,
+    ],
   );
   const hasProviderValue =
     typeof value === "string" ||
@@ -113,6 +125,7 @@ export default function DBProviderInputComponent({
   useEffect(() => {
     if (hasProviderValue || hasInitializedDefaultRef.current) return;
     if (
+      !vectorStoreConfigLoaded ||
       !currentFlowId ||
       !isSuccess ||
       isFetching ||
@@ -134,6 +147,7 @@ export default function DBProviderInputComponent({
     isFetching,
     isSuccess,
     queryClient,
+    vectorStoreConfigLoaded,
   ]);
 
   return (
@@ -174,12 +188,16 @@ export function DBProviderInput({
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
   );
+  const defaultVectorStoreBackend = useUtilityStore(
+    (state) => state.defaultVectorStoreBackend,
+  );
 
   const selectedProvider = getDBProviderOption(value);
   const selectedIsConfigured = isDBProviderConfigured(
     value,
     globalVariables,
     localVectorStoreAvailable,
+    defaultVectorStoreBackend,
   );
 
   const selectableOptions = useMemo(
@@ -197,10 +215,11 @@ export function DBProviderInput({
                 provider.id as StoredDBProviderId,
                 globalVariables,
                 localVectorStoreAvailable,
+                defaultVectorStoreBackend,
               )
             : false,
       })),
-    [globalVariables, localVectorStoreAvailable],
+    [globalVariables, localVectorStoreAvailable, defaultVectorStoreBackend],
   );
 
   const handleSelect = (provider: DBProviderOption) => {
@@ -212,6 +231,7 @@ export function DBProviderInput({
         backendType,
         globalVariables,
         localVectorStoreAvailable,
+        defaultVectorStoreBackend,
       )
     )
       return;
@@ -396,6 +416,7 @@ function normalizeDBProviderValue(
   value: DBProviderSelection | StoredDBProviderId | null | undefined,
   globalVariables: GlobalVariable[],
   localVectorStoreAvailable = true,
+  defaultVectorStoreBackend?: string,
 ): DBProviderSelection {
   if (typeof value === "string") {
     const backendType = resolveUIBackendType(value, undefined);
@@ -421,6 +442,7 @@ function normalizeDBProviderValue(
   const defaults = getDefaultDBProviderConfig(
     globalVariables,
     localVectorStoreAvailable,
+    defaultVectorStoreBackend,
   );
   return {
     backend_type: defaults.backendType,

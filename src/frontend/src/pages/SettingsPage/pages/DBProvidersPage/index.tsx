@@ -23,6 +23,9 @@ export default function DBProvidersPage() {
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
   );
+  const defaultVectorStoreBackend = useUtilityStore(
+    (state) => state.defaultVectorStoreBackend,
+  );
   // Local SQLite writes to the serving box's disk, which the production profile
   // refuses. Hide it here too — this page sets the global default, so leaving it
   // selectable would let an operator re-enable the exact backend the create
@@ -35,7 +38,11 @@ export default function DBProvidersPage() {
     [localVectorStoreAvailable],
   );
   const [selectedProviderId, setSelectedProviderId] = useState<DBProviderId>(
-    getActiveDBProvider(globalVariables, localVectorStoreAvailable),
+    getActiveDBProvider(
+      globalVariables,
+      localVectorStoreAvailable,
+      defaultVectorStoreBackend,
+    ),
   );
   const [hasManuallySelectedProvider, setHasManuallySelectedProvider] =
     useState(false);
@@ -47,8 +54,13 @@ export default function DBProvidersPage() {
   );
 
   const activeProviderId = useMemo(
-    () => getActiveDBProvider(globalVariables, localVectorStoreAvailable),
-    [globalVariables, localVectorStoreAvailable],
+    () =>
+      getActiveDBProvider(
+        globalVariables,
+        localVectorStoreAvailable,
+        defaultVectorStoreBackend,
+      ),
+    [globalVariables, localVectorStoreAvailable, defaultVectorStoreBackend],
   );
 
   useEffect(() => {
@@ -127,6 +139,7 @@ export default function DBProvidersPage() {
                   provider.id as AvailableDBProviderId,
                   globalVariables,
                   localVectorStoreAvailable,
+                  defaultVectorStoreBackend,
                 )
               }
               onSelect={() => {
