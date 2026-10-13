@@ -23,6 +23,8 @@ import anyio
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessage, HumanMessage
 
+from lfx.log.logger import logger
+
 
 async def adapt_graph_events_to_executor_shape(
     stream: AsyncIterator[dict[str, Any]],
@@ -30,6 +32,7 @@ async def adapt_graph_events_to_executor_shape(
     """Re-shape outermost graph events; pass everything else through unchanged."""
     outer_run_id: str | None = None
     last_model_output: AIMessage | None = None
+    primary_error: BaseException | None = None
     try:
         async for event in stream:
             if outer_run_id is None and event.get("event") == "on_chain_start":
@@ -56,12 +59,21 @@ async def adapt_graph_events_to_executor_shape(
                     yield _reshape_chain_end(event)
                     continue
             yield event
+    except BaseException as e:
+        primary_error = e
+        raise
     finally:
         # Closing this wrapper must also cancel and drain LangChain's run task.
         aclose = getattr(stream, "aclose", None)
         if aclose is not None:
-            with anyio.CancelScope(shield=True):
-                await aclose()
+            try:
+                with anyio.CancelScope(shield=True):
+                    await aclose()
+            except BaseException:
+                # GeneratorExit represents an explicit aclose(), not a failed consumer.
+                if primary_error is None or isinstance(primary_error, GeneratorExit):
+                    raise
+                logger.exception("Failed to close the graph event stream while handling an error")
 
 
 def _model_message_from_graph_update(event: dict[str, Any]) -> AIMessage | None:
