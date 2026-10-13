@@ -255,6 +255,17 @@ describe("dbProviderConstants", () => {
         ).toBe("opensearch");
       });
 
+      it("defaults to OpenSearch even when local storage is available", () => {
+        expect(
+          getDefaultDBProviderConfig([], true, "opensearch"),
+        ).toMatchObject({
+          backendType: "opensearch",
+        });
+        expect(
+          isDBProviderConfigured("opensearch", [], true, "opensearch"),
+        ).toBe(true);
+      });
+
       it("reports the env-provisioned OpenSearch as configured", () => {
         expect(isDBProviderConfigured("opensearch", [], false)).toBe(false);
         expect(

@@ -31,7 +31,7 @@ describe("useGetConfig", () => {
     useUtilityStore.setState({
       catalogGovernanceEnabled: false,
       substituteOutdatedComponentCode: true,
-      ...{ vectorStoreConfigLoaded: false },
+      vectorStoreConfigLoaded: false,
       localVectorStoreAvailable: true,
       defaultVectorStoreBackend: undefined,
     });

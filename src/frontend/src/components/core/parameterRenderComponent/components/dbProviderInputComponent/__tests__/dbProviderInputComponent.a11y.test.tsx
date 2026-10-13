@@ -136,7 +136,7 @@ describe("DBProviderInput", () => {
 describe("DBProviderInputComponent", () => {
   beforeEach(() => {
     useUtilityStore.setState({
-      ...{ vectorStoreConfigLoaded: true },
+      vectorStoreConfigLoaded: true,
       localVectorStoreAvailable: true,
       defaultVectorStoreBackend: undefined,
     });
@@ -158,7 +158,7 @@ describe("DBProviderInputComponent", () => {
   });
 
   it("waits for server config before persisting the initial provider", () => {
-    useUtilityStore.setState({ ...{ vectorStoreConfigLoaded: false } });
+    useUtilityStore.setState({ vectorStoreConfigLoaded: false });
     const handleOnNewValue = jest.fn();
     render(
       <MemoryRouter>
@@ -172,7 +172,7 @@ describe("DBProviderInputComponent", () => {
     expect(handleOnNewValue).not.toHaveBeenCalled();
     act(() => {
       useUtilityStore.setState({
-        ...{ vectorStoreConfigLoaded: true },
+        vectorStoreConfigLoaded: true,
         localVectorStoreAvailable: false,
         defaultVectorStoreBackend: "opensearch",
       });

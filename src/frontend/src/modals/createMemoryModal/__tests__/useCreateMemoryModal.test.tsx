@@ -73,7 +73,7 @@ describe("useCreateMemoryModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useUtilityStore.setState({
-      ...{ vectorStoreConfigLoaded: true },
+      vectorStoreConfigLoaded: true,
       localVectorStoreAvailable: true,
       defaultVectorStoreBackend: undefined,
     });
@@ -109,7 +109,7 @@ describe("useCreateMemoryModal", () => {
   });
 
   it("waits for config before applying an OpenSearch default or allowing creation", () => {
-    useUtilityStore.setState({ ...{ vectorStoreConfigLoaded: false } });
+    useUtilityStore.setState({ vectorStoreConfigLoaded: false });
     const { result } = renderHook(() =>
       useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
     );
@@ -117,7 +117,7 @@ describe("useCreateMemoryModal", () => {
     expect(result.current.backendConfigured).toBe(false);
     act(() => {
       useUtilityStore.setState({
-        ...{ vectorStoreConfigLoaded: true },
+        vectorStoreConfigLoaded: true,
         localVectorStoreAvailable: false,
         defaultVectorStoreBackend: "opensearch",
       });

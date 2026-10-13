@@ -61,7 +61,7 @@ describe("knowledge-base provider defaults", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useUtilityStore.setState({
-      ...{ vectorStoreConfigLoaded: false },
+      vectorStoreConfigLoaded: false,
       localVectorStoreAvailable: true,
       defaultVectorStoreBackend: undefined,
     });
@@ -88,7 +88,7 @@ describe("knowledge-base provider defaults", () => {
 
     act(() => {
       useUtilityStore.setState({
-        ...{ vectorStoreConfigLoaded: true },
+        vectorStoreConfigLoaded: true,
         localVectorStoreAvailable: false,
         defaultVectorStoreBackend: "opensearch",
       });

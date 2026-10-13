@@ -316,6 +316,24 @@ def test_render_summary_prints_warning_remediations(capsys):
     assert "Vector backend: Verify OPENSEARCH_URL." in out
 
 
+def test_render_summary_prints_failure_and_warning_remediations(capsys):
+    """A failed boot must still explain how to repair its degraded checks."""
+    failed = CheckOutcome(
+        PreflightCheck("vector_backend", "Vector backend", "required", probe_vector_backend),
+        CheckResult("fail", "default backend unavailable", "Repair PGVECTOR_CONNECTION_STRING."),
+    )
+    warned = CheckOutcome(
+        PreflightCheck("telemetry", "Telemetry", "degraded", probe_telemetry),
+        CheckResult("warn", "collector unavailable", "Repair the telemetry endpoint."),
+    )
+
+    assert preflight._render_summary([failed, warned]) is False
+    out = capsys.readouterr().out
+    assert "Preflight failed" in out
+    assert "Vector backend: Repair PGVECTOR_CONNECTION_STRING." in out
+    assert "Telemetry: Repair the telemetry endpoint." in out
+
+
 async def test_probe_opensearch_unset_returns_none(monkeypatch):
     monkeypatch.delenv("OPENSEARCH_URL", raising=False)
     assert await preflight.probe_opensearch() is None

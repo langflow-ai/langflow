@@ -272,6 +272,7 @@ function isEnvProvisionedDefault(
   return providerType === "opensearch" && serverDefaultBackend === "opensearch";
 }
 
+/** Resolve the selected provider without treating pgVector provisioning as activation. */
 export function getActiveDBProvider(
   variables: GlobalVariable[],
   localVectorStoreAvailable = true,
@@ -365,6 +366,7 @@ function booleanToggles(
   return toggles;
 }
 
+/** Build provider config while preserving environment-derived OpenSearch TLS defaults. */
 export function getDBProviderConfig(
   providerType: StoredDBProviderId,
   variables: GlobalVariable[],
@@ -427,6 +429,7 @@ export function resolveUIBackendType(
   return "chroma";
 }
 
+/** Check whether deployment policy, saved credentials and activation permit this provider. */
 export function isDBProviderConfigured(
   providerType: StoredDBProviderId,
   variables: GlobalVariable[],
@@ -471,6 +474,7 @@ export function isDBProviderConfigured(
     });
 }
 
+/** Resolve a new base's default provider and variable-backed configuration. */
 export function getDefaultDBProviderConfig(
   variables: GlobalVariable[],
   localVectorStoreAvailable = true,
