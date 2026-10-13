@@ -8,8 +8,9 @@ those URLs must be validated so they cannot reach internal services.
 import ipaddress
 import os
 import socket
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
+import httpx
 from lfx.components.tools.searxng import SearXNGToolComponent
 from lfx.schema.dotdict import dotdict
 
@@ -78,17 +79,21 @@ class TestSearXNGSSRFProtection:
 
         tool = component.build_tool()
 
-        search_response = Mock()
-        search_response.status_code = 200
-        search_response.headers = {}
-        search_response.json = Mock(return_value={"results": [{"title": "a"}, {"title": "b"}]})
+        search_response = httpx.Response(
+            200,
+            json={"results": [{"title": "a"}, {"title": "b"}]},
+            request=httpx.Request("GET", "http://searx.example.com/"),
+        )
 
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
             patch("socket.getaddrinfo", side_effect=_resolve_public),
-            patch("requests.get", return_value=search_response) as mock_get,
+            patch("requests.utils.get_environ_proxies", return_value={}),
+            patch("httpx.Client.get", return_value=search_response) as mock_get,
+            patch("requests.get") as requests_get,
         ):
             result = tool.func(query="news")
 
-        assert mock_get.call_count == 1
+        mock_get.assert_called_once()
+        requests_get.assert_not_called()
         assert len(result) == 2

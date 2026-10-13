@@ -2,231 +2,84 @@ name: Store pytest durations
 
 on:
   workflow_dispatch:
+    inputs:
+      target-ref:
+        description: Branch to measure (defaults to the dispatched branch)
+        type: string
+        default: ''
+      python-versions:
+        description: JSON list of Python versions
+        type: string
+        default: '["3.10", "3.14"]'
+      shards:
+        description: Number of independent runners
+        type: number
+        default: 10
+      workers:
+        description: Pytest workers per runner
+        type: number
+        default: 2
+      distribution:
+        type: choice
+        options: [load, worksteal]
+        default: load
   schedule:
-    # Run job at 6:30 UTC every Monday (10.30pm PST/11.30pm PDT Sunday night)
     - cron: "30 6 * * 1"
 
+permissions:
+  contents: read
+  actions: read
+
 concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: true
+  group: durations-${{ github.ref }}-${{ inputs.target-ref }}-${{ inputs.workers || 2 }}-${{ inputs.shards || 10 }}-${{ inputs.distribution || 'load' }}
+  cancel-in-progress: false
 
 jobs:
-  # The full unit suite no longer fits in the 6h job limit when run serially
-  # in a single process (the runs were cancelled at exactly 6h for months,
-  # silently freezing .test_durations). Instead we measure in the same shape
-  # CI consumes the file: 5 pytest-split groups, each with `-n auto`, running
-  # the same selection as `make unit_tests` (no api_key_required, no template
-  # dir). Each group stores ONLY its own tests' durations (--clean-durations)
-  # and the merge job unions the 5 disjoint group files into a complete,
-  # freshly-measured durations file.
-  measure:
-    name: Measure durations (group ${{ matrix.group }})
+  branches:
     runs-on: ubuntu-latest
-    # The 5 matrix groups run in parallel; this keeps failures visible before
-    # the old single-job 6h cancellation cliff.
-    timeout-minutes: 150
+    outputs:
+      refs: ${{ steps.refs.outputs.refs }}
+    steps:
+      - id: refs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          TARGET_REF: ${{ inputs.target-ref || github.ref_name }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" == schedule ]; then
+            # Scheduled workflows only run on the default branch. Measure the
+            # newest release branch too, where the active release tests live.
+            release=$(gh api "repos/$REPOSITORY/git/matching-refs/heads/release-" --jq               '[.[].ref | select(test("^refs/heads/release-[0-9]+\\.[0-9]+\\.[0-9]+$"))] | sort_by(ltrimstr("refs/heads/release-") | split(".") | map(tonumber)) | last // "" | ltrimstr("refs/heads/")')
+            refs=$(jq -cn --arg main "$DEFAULT_BRANCH" --arg release "$release" '[$main, $release] | map(select(length > 0)) | unique')
+          else
+            refs=$(jq -cn --arg ref "$TARGET_REF" '[$ref]')
+          fi
+          echo "refs=$refs" >> "$GITHUB_OUTPUT"
+
+  measure:
+    needs: branches
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2, 3, 4, 5]
-    env:
+        ref: ${{ fromJSON(needs.branches.outputs.refs) }}
+    uses: ./.github/workflows/backend-unit-tests.yml
+    with:
+      ref: ${{ matrix.ref }}
+      python-versions: ${{ inputs.python-versions || '["3.10", "3.14"]' }}
+      shards: ${{ fromJSON(format('{0}', inputs.shards || 10)) }}
+      workers: ${{ fromJSON(format('{0}', inputs.workers || 2)) }}
+      distribution: ${{ inputs.distribution || 'load' }}
+      publish-coverage: false
+    secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-    steps:
-      - uses: actions/checkout@v7
-      - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v10.0.0
-        with:
-          version: latest-known
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
-          prune-cache: false
-      - name: Install the project
-        run: uv sync
-      - name: Run unit tests and store this group's durations
-        run: |
-          # The durations file is both read (to compute the same 5-way split
-          # CI uses) and written (--store-durations), so run against a copy.
-          # --clean-durations makes the output contain ONLY the tests that ran
-          # in this group, which lets the merge job take a plain union.
-          # No --reruns here: pytest-split sums every TestReport per test, so
-          # rerun-on-failure would inflate the stored durations.
-          cp src/backend/tests/.test_durations /tmp/group_durations.json
-          set +e
-          uv run pytest src/backend/tests/unit \
-            --ignore=src/backend/tests/integration \
-            --ignore=src/backend/tests/unit/template \
-            -n auto -q -ra -m 'not api_key_required' \
-            --durations-path /tmp/group_durations.json \
-            --splitting-algorithm least_duration \
-            --splits 5 --group ${{ matrix.group }} \
-            --store-durations --clean-durations
-          code=$?
-          # Exit code 1 means some tests failed; their durations are still
-          # measured and valid. Anything else (collection error, internal
-          # error, usage error) means the measurement is incomplete: fail.
-          if [ "$code" -ne 0 ] && [ "$code" -ne 1 ]; then
-            echo "pytest exited with fatal code $code"
-            exit "$code"
-          fi
-      - name: Upload group durations
-        uses: actions/upload-artifact@v7
-        with:
-          name: durations-group-${{ matrix.group }}
-          path: /tmp/group_durations.json
-          retention-days: 7
-
-  merge-and-pr:
-    name: Merge durations and open PR
-    needs: measure
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: write
-      pull-requests: write
-      actions: write
-    env:
-      # Optional fine-grained PAT (contents: write, pull-requests: write).
-      # PRs created with the default GITHUB_TOKEN do not trigger pull_request
-      # or pull_request_target workflows, so the required "CI Success" and
-      # "Validate PR" checks never run on them. With a PAT both fire normally.
-      HAS_PR_TOKEN: ${{ secrets.DURATIONS_PR_TOKEN != '' }}
-    steps:
-      - uses: actions/checkout@v7
-      - name: Download group durations
-        uses: actions/download-artifact@v8
-        with:
-          pattern: durations-group-*
-          path: /tmp/durations
-      - name: Merge group durations
-        run: |
-          python3 - <<'EOF'
-          import json
-          import pathlib
-          import sys
-
-          baseline_path = pathlib.Path("src/backend/tests/.test_durations")
-          baseline = json.loads(baseline_path.read_text())
-
-          merged = {}
-          for group in range(1, 6):
-              path = pathlib.Path(f"/tmp/durations/durations-group-{group}/group_durations.json")
-              data = json.loads(path.read_text())
-              if len(data) < 100:
-                  sys.exit(f"Group {group} stored only {len(data)} durations; "
-                           "the run was incomplete. Refusing to update.")
-              overlap = merged.keys() & data.keys()
-              if overlap:
-                  sys.exit(f"Group {group} overlaps previous groups on "
-                           f"{len(overlap)} tests; split was inconsistent.")
-              print(f"group {group}: {len(data)} tests")
-              merged.update(data)
-
-          if len(merged) < 2000 or len(merged) < 0.8 * len(baseline):
-              sys.exit(f"Merged durations cover only {len(merged)} tests "
-                       f"(baseline has {len(baseline)}). Refusing to update.")
-
-          added = merged.keys() - baseline.keys()
-          removed = baseline.keys() - merged.keys()
-          print(f"merged: {len(merged)} tests "
-                f"(+{len(added)} new, -{len(removed)} deleted vs baseline)")
-
-          # Same format pytest-split itself writes.
-          baseline_path.write_text(json.dumps(merged, sort_keys=True, indent=4))
-
-          summary = (f"| Tests measured | {len(merged)} |\n"
-                     f"| New tests | {len(added)} |\n"
-                     f"| Removed tests | {len(removed)} |\n")
-          pathlib.Path("/tmp/durations_summary.md").write_text(
-              "| Metric | Value |\n| --- | --- |\n" + summary)
-          EOF
-          cat /tmp/durations_summary.md >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Close existing PRs
-        uses: actions/github-script@v9
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            // Paginate: the repo has far more open PRs than one page, and a
-            // months-old stale durations PR never appears in the first 30
-            // results (which is how #6225..#8669 piled up unclosed).
-            const pulls = await github.paginate(github.rest.pulls.list, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              per_page: 100
-            });
-
-            for (const pull of pulls) {
-              if (pull.title === "chore: update test durations" &&
-                  pull.head.ref.startsWith("update-test-durations")) {
-                console.log(`Closing stale durations PR #${pull.number}`);
-                await github.rest.pulls.update({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: pull.number,
-                  state: 'closed'
-                });
-              }
-            }
-
-      - name: Create Pull Request
-        id: cpr
-        uses: peter-evans/create-pull-request@v8
-        with:
-          token: ${{ secrets.DURATIONS_PR_TOKEN || secrets.GITHUB_TOKEN }}
-          branch-token: ${{ secrets.DURATIONS_PR_TOKEN || secrets.GITHUB_TOKEN }}
-          add-paths: src/backend/tests/.test_durations
-          commit-message: "chore: update test durations"
-          title: "chore: update test durations"
-          body: |
-            Automated weekly refresh of `src/backend/tests/.test_durations`,
-            used by pytest-split to balance the 5 backend CI test groups.
-            A stale file causes unbalanced groups and group timeouts
-            ("fails at 99%"), so this PR should be merged promptly.
-
-            This PR was automatically created by the store_pytest_durations
-            workflow. Durations were measured per CI group with the same test
-            selection CI uses (`-n auto`, no `api_key_required`, no
-            `unit/template`).
-
-            If the **Validate PR** check is missing, edit the PR title (e.g.
-            re-save it unchanged) or push to the branch to trigger it — PRs
-            created with the default `GITHUB_TOKEN` don't fire
-            `pull_request_target` workflows.
-          branch: update-test-durations
-          branch-suffix: timestamp
-          delete-branch: true
-          maintainer-can-modify: true
-          labels: |
-            skip-nightly-check
-          reviewers: |
-            erichare
-          assignees: |
-            erichare
-            Adam-Aghili
-
-      - name: Trigger CI on the PR branch
-        # PRs created with the default GITHUB_TOKEN don't trigger pull_request
-        # workflows, so the required "CI Success" check would never appear.
-        # workflow_dispatch is exempt from that restriction (and from the
-        # nightly-status gate), and its check runs land on the same head SHA,
-        # which satisfies the required check. Skip when a PAT created the PR,
-        # because then the pull_request event already fired.
-        if: steps.cpr.outputs.pull-request-number != '' && env.HAS_PR_TOKEN != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          branch=$(gh pr view "${{ steps.cpr.outputs.pull-request-number }}" \
-            --repo "${{ github.repository }}" --json headRefName -q .headRefName)
-          gh workflow run ci.yml --repo "${{ github.repository }}" --ref "$branch"
-          echo "Dispatched ci.yml on $branch"
 
   alert-on-failure:
     name: Alert on failure
-    needs: [measure, merge-and-pr]
-    if: always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
+    needs: [branches, measure]
+    if: always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -247,7 +100,7 @@ jobs:
                   \"type\": \"section\",
                   \"text\": {
                     \"type\": \"mrkdwn\",
-                    \"text\": \":warning: *Store pytest durations failed.* The test-duration file used to balance backend CI groups was NOT refreshed this week. Stale durations cause unbalanced CI groups and group timeouts.\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>\"
+                    \"text\": \":warning: *Store pytest durations failed.* A backend timing baseline was not refreshed. See the run for failed tests or incomplete measurements.\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>\"
                   }
                 }
               ]

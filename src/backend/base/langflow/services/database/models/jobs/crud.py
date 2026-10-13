@@ -80,12 +80,17 @@ async def update_job_status(
     if finished_timestamp is not None:
         values["finished_timestamp"] = finished_timestamp
 
+    # RETURNING hands back the updated row in the same round trip, so a status
+    # change does not pay for a second SELECT. populate_existing refreshes a Job
+    # the caller's session already holds.
     result = await db.exec(
-        update(Job).where(Job.job_id == job_id).values(**values).execution_options(synchronize_session=False)
+        update(Job)
+        .where(Job.job_id == job_id)
+        .values(**values)
+        .returning(Job)
+        .execution_options(synchronize_session=False, populate_existing=True)
     )
-    if result.rowcount == 0:
-        return None
-    return await get_job_by_job_id(db, job_id)
+    return result.scalar_one_or_none()
 
 
 async def get_latest_jobs_by_asset_ids(db: AsyncSession, asset_ids: Sequence[UUID]) -> dict[UUID, Job]:

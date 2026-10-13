@@ -12,6 +12,11 @@ from .google_generative_ai_embeddings import GoogleGenerativeAIEmbeddingsCompone
 from .google_oauth_token import GoogleOAuthToken
 from .google_search_api_core import GoogleSearchAPICore
 from .google_serper_api_core import GoogleSerperAPICore
+from .source_triggers import (
+    GoogleOnCalendarTriggerComponent,
+    GoogleOnDriveTriggerComponent,
+    GoogleOnGmailTriggerComponent,
+)
 
 __all__ = [
     "BigQueryExecutorComponent",
@@ -26,6 +31,9 @@ __all__ = [
     "GoogleGenerativeAIComponent",
     "GoogleGenerativeAIEmbeddingsComponent",
     "GoogleOAuthToken",
+    "GoogleOnCalendarTriggerComponent",
+    "GoogleOnDriveTriggerComponent",
+    "GoogleOnGmailTriggerComponent",
     "GoogleSearchAPICore",
     "GoogleSerperAPICore",
 ]

@@ -19,10 +19,11 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         return KnowledgeIngestionComponent
 
     @pytest.fixture(autouse=True)
-    def mock_knowledge_base_path(self, tmp_path, monkeypatch):
+    def mock_knowledge_base_path(self, tmp_path, monkeypatch, active_user):  # noqa: ARG002 - orders app startup
         """Pin the KB root at a fresh tmp dir for every test.
 
-        Local-Chroma path resolution reads ``knowledge_bases_dir`` live via
+        The user fixture starts the app before we patch its settings service.
+        Local storage reads ``knowledge_bases_dir`` live via
         ``KBStorageHelper.get_root_path``, so the setting is what has to move.
         """
         from langflow.services.deps import get_settings_service
@@ -32,7 +33,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
             yield
 
     @pytest.fixture
-    async def default_kwargs(self, tmp_path, active_user):
+    async def default_kwargs(self, tmp_path, active_user, mock_knowledge_base_path):  # noqa: ARG002 - orders storage root
         """Return default kwargs for component instantiation."""
         # Create a sample DataFrame
         data_df = DataFrame(
@@ -46,14 +47,8 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
             {"column_name": "category", "vectorize": False, "identifier": True},
         ]
 
-        # Create knowledge base directory
         kb_name = "test_kb"
-        kb_path = tmp_path / active_user.username / kb_name
-        kb_path.mkdir(parents=True, exist_ok=True)
-
-        # The ``knowledge_base`` row is what makes the KB exist and carries its
-        # embedding config; the directory above is only where local-Chroma
-        # vectors would land.
+        # Creation initializes the UUID-routed SQLite store and its metadata.
         from langflow.api.utils import knowledge_base_service
 
         await knowledge_base_service.create_record(
@@ -120,18 +115,23 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
             component._validate_column_config(data_df)
 
     @pytest.mark.parametrize("knowledge_base", ["../../outside", "../victim/secret_kb"])
-    async def test_kb_path_rejects_paths_outside_the_current_user_directory(
+    async def test_legacy_kb_path_rejects_paths_outside_the_current_user_directory(
         self, component_class, default_kwargs, knowledge_base
     ):
-        from langflow.api.utils import knowledge_base_service
+        from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+        from langflow.services.deps import session_scope
 
-        # Path resolution only runs once the backend resolves, so the traversing
-        # name needs a row for the containment guard to be reachable at all.
-        await knowledge_base_service.create_record(
+        # Seed a historical malformed row directly. Current creation rejects
+        # this name before the legacy containment guard can be reached.
+        record = KnowledgeBaseRecord(
             user_id=default_kwargs["_user_id"],
             name=knowledge_base,
+            backend_type="chroma",
             model_selection={"name": "m", "provider": "HuggingFace"},
         )
+        async with session_scope() as session:
+            session.add(record)
+            await session.commit()
         default_kwargs["knowledge_base"] = knowledge_base
         component = component_class(**default_kwargs)
 
@@ -224,9 +224,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         config_list = component._validate_column_config(data_df)
         metadata = component._build_column_metadata(config_list, data_df)
-        with patch("lfx.components.files_and_knowledge.knowledge.Chroma") as mock_chroma:
-            mock_chroma.return_value.get.return_value = {"metadatas": []}
-            [data_obj] = await component._convert_df_to_data_objects(data_df, config_list)
+        [data_obj] = await component._convert_df_to_data_objects(data_df, config_list)
 
         assert metadata["summary"] == {
             "vectorized_columns": ["question", "answer"],
@@ -257,7 +255,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
             "02_embedding_model": [
                 {"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}
             ],
-            "03_knowledge_backend": {"backend_type": "chroma", "backend_config": {}},
+            "03_knowledge_backend": {"backend_type": "sqlite", "backend_config": {}},
         }
         build_config = {"knowledge_base": {"value": None, "options": [], "dialog_inputs": {}}}
 
@@ -278,13 +276,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         data_df = default_kwargs["input_df"]
         config_list = default_kwargs["column_config"]
 
-        # Mock Chroma to avoid actual vector store operations
-        with patch("lfx.components.files_and_knowledge.knowledge.Chroma") as mock_chroma:
-            mock_chroma_instance = MagicMock()
-            mock_chroma_instance.get.return_value = {"metadatas": []}
-            mock_chroma.return_value = mock_chroma_instance
-
-            data_objects = await component._convert_df_to_data_objects(data_df, config_list)
+        data_objects = await component._convert_df_to_data_objects(data_df, config_list)
 
         assert len(data_objects) == 2
         assert all(isinstance(obj, Data) for obj in data_objects)
@@ -303,24 +295,13 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         data_df = default_kwargs["input_df"]
         config_list = default_kwargs["column_config"]
 
-        # Mock Chroma with existing hash
-        with patch("lfx.components.files_and_knowledge.knowledge.Chroma") as mock_chroma:
-            # Simulate existing document with same hash
-            existing_hash = "some_existing_hash"
-            mock_chroma_instance = MagicMock()
-            mock_chroma_instance.get.return_value = {"metadatas": [{"_id": existing_hash}]}
-            mock_chroma.return_value = mock_chroma_instance
-
-            # Mock hashlib to return the existing hash for first row
-            with patch("lfx.components.files_and_knowledge.knowledge.hashlib.sha256") as mock_hash:
-                mock_hash_obj = MagicMock()
-                mock_hash_obj.hexdigest.side_effect = [existing_hash, "different_hash"]
-                mock_hash.return_value = mock_hash_obj
-
-                data_objects = await component._convert_df_to_data_objects(data_df, config_list)
+        # The storage operation supplies existing identifiers to the converter.
+        existing_hash = hashlib.sha256(b"cat1").hexdigest()
+        data_objects = await component._convert_df_to_data_objects(data_df, config_list, existing_ids={existing_hash})
 
         # Should only return one object (second row) since first is duplicate
         assert len(data_objects) == 1
+        assert data_objects[0].data["category"] == "cat2"
 
     def test_is_valid_collection_name(self, component_class, default_kwargs):
         """Test collection name validation."""
@@ -348,8 +329,11 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_embedding_fn = MagicMock()
         mock_get_embeddings.return_value = mock_embedding_fn
 
-        # Mock vector store creation
-        with patch.object(component, "_create_vector_store"):
+        # Isolate metadata building from storage and its statistics refresh.
+        with (
+            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_refresh_kb_stats"),
+        ):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)
@@ -388,7 +372,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         field_value = {
             "01_new_kb_name": "new_test_kb",
             "02_embedding_model": model_selection,
-            "03_knowledge_backend": {"backend_type": "chroma", "backend_config": {}},
+            "03_knowledge_backend": {"backend_type": "sqlite", "backend_config": {}},
         }
 
         # Mock embedding validation
@@ -406,7 +390,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert result["knowledge_base"]["value"] == "new_test_kb"
         assert "new_test_kb" in result["knowledge_base"]["options"]
         assert "api_key" not in mock_get_embeddings.call_args.kwargs
-        assert mock_create_record.call_args.kwargs["backend_type"] == "chroma"
+        assert mock_create_record.call_args.kwargs["backend_type"] == "sqlite"
         assert mock_create_record.call_args.kwargs["backend_config"] == {}
 
     @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
@@ -493,7 +477,10 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_embedding_fn = MagicMock()
         mock_get_embeddings.return_value = mock_embedding_fn
 
-        with patch.object(component, "_create_vector_store"):
+        with (
+            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_refresh_kb_stats"),
+        ):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)
@@ -506,12 +493,12 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         build_config = {"knowledge_base": {"value": None, "options": []}}
         field_value = {
-            "01_new_kb_name": "invalid@name",  # Invalid character
+            "01_new_kb_name": "../outside",
             "02_embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "03_knowledge_backend": {"backend_type": "chroma", "backend_config": {}},
+            "03_knowledge_backend": {"backend_type": "sqlite", "backend_config": {}},
         }
 
-        with pytest.raises(ValueError, match="Chroma naming rules"):
+        with pytest.raises(ValueError, match="KB name contains a path separator"):
             await component.update_build_config(build_config, field_value, "knowledge_base")
 
     @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
@@ -520,7 +507,10 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         component = component_class(**default_kwargs)
         mock_get_embeddings.return_value = MagicMock()
 
-        with patch.object(component, "_create_vector_store"):
+        with (
+            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_refresh_kb_stats"),
+        ):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)
@@ -541,19 +531,8 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         data_df = default_kwargs["input_df"]
         config_list = default_kwargs["column_config"]
 
-        with patch("lfx.components.files_and_knowledge.knowledge.Chroma") as mock_chroma:
-            mock_chroma_instance = MagicMock()
-            # Simulate all rows as already-existing duplicates in the store
-            mock_chroma_instance.get.return_value = {"metadatas": [{"_id": "hash_1"}, {"_id": "hash_2"}]}
-            mock_chroma.return_value = mock_chroma_instance
-
-            with patch("lfx.components.files_and_knowledge.knowledge.hashlib.sha256") as mock_hash:
-                mock_hash_obj = MagicMock()
-                # Return hashes that match the existing IDs above
-                mock_hash_obj.hexdigest.side_effect = ["hash_1", "hash_2"]
-                mock_hash.return_value = mock_hash_obj
-
-                data_objects = await component._convert_df_to_data_objects(data_df, config_list)
+        existing_ids = {hashlib.sha256(category.encode()).hexdigest() for category in ("cat1", "cat2")}
+        data_objects = await component._convert_df_to_data_objects(data_df, config_list, existing_ids=existing_ids)
 
         # All rows should be included — duplicates are allowed
         assert len(data_objects) == 2
@@ -626,13 +605,8 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         component = component_class(**default_kwargs)
         config_list = default_kwargs["column_config"]
 
-        with patch("lfx.components.files_and_knowledge.knowledge.Chroma") as mock_chroma:
-            mock_chroma_instance = MagicMock()
-            mock_chroma_instance.get.return_value = {"metadatas": []}
-            mock_chroma.return_value = mock_chroma_instance
-
-            # This should NOT raise "truth value of an empty array is ambiguous"
-            data_objects = await component._convert_df_to_data_objects(data_df, config_list)
+        # This should NOT raise "truth value of an empty array is ambiguous"
+        data_objects = await component._convert_df_to_data_objects(data_df, config_list)
 
         assert len(data_objects) == 2
         assert all(isinstance(obj, Data) for obj in data_objects)

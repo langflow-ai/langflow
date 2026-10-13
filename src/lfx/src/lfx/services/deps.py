@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager, suppress
 from typing import TYPE_CHECKING, cast
 
 from fastapi import HTTPException
+from fastapi.exceptions import RequestValidationError, WebSocketRequestValidationError
 
 from lfx.log.logger import logger
 from lfx.services.config_discovery import resolve_config_dir
@@ -381,10 +382,14 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
             await session.commit()
-        except HTTPException:
+        except (HTTPException, RequestValidationError, WebSocketRequestValidationError):
             # HTTPExceptions are control flow in FastAPI (returning 4xx/5xx responses),
             # not actual errors. Don't log them - FastAPI's exception handlers will
             # take care of the HTTP response. Just rollback any uncommitted changes.
+            # A request that fails validation is the same: FastAPI validates after this
+            # dependency is open and throws the error in here on its way to the 422
+            # (or the websocket close). Its text and traceback quote the submitted
+            # values, so logging it would put the request body in the server log.
             if session.is_active:
                 from sqlalchemy.exc import InvalidRequestError
 

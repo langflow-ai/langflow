@@ -20,7 +20,7 @@ describe("TableAutoCellRender", () => {
     value = "",
   }: {
     data?: Record<string, unknown>;
-    value?: string;
+    value?: string | null;
   } = {}) => {
     const setValue = jest.fn();
     const props = {
@@ -58,6 +58,18 @@ describe("TableAutoCellRender", () => {
       value: "AUTH_HEADER",
     });
 
+    expect(inputProps.load_from_db).toBe(true);
+  });
+
+  it("keeps a redacted bound cell in the global-variable input", () => {
+    const { inputProps } = renderGlobalVariableCell({
+      data: {
+        [TABLE_LOAD_FROM_DB_FIELDS]: { value: true },
+      },
+      value: null,
+    });
+
+    expect(inputProps.value).toBeNull();
     expect(inputProps.load_from_db).toBe(true);
   });
 

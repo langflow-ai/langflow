@@ -35,6 +35,16 @@ jest.mock("@/customization/utils/analytics", () => ({
   trackFlowBuild: jest.fn(),
 }));
 
+const mockSetNoticeData = jest.fn();
+const mockCheckFlowVersion = jest.fn(
+  async (_flowId: string, _userId: string | null) => ({ outcome: "current" }),
+);
+
+jest.mock("@/hooks/flows/use-check-flow-version", () => ({
+  checkFlowVersion: (flowId: string, userId: string | null) =>
+    mockCheckFlowVersion(flowId, userId),
+}));
+
 // Mock all store dependencies
 jest.mock("../alertStore", () => ({
   __esModule: true,
@@ -42,6 +52,7 @@ jest.mock("../alertStore", () => ({
     getState: () => ({
       setErrorData: jest.fn(),
       setSuccessData: jest.fn(),
+      setNoticeData: mockSetNoticeData,
     }),
   },
 }));
@@ -1446,6 +1457,19 @@ describe("useFlowStore", () => {
           isBuilding: false,
           componentsToUpdate: [],
         });
+      });
+    });
+
+    it("does not run a flow the server has moved past", async () => {
+      mockCheckFlowVersion.mockResolvedValueOnce({ outcome: "conflict" });
+      mockSetNoticeData.mockClear();
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockCheckFlowVersion).toHaveBeenCalledWith("flow-abc", null);
+      expect(mockedRunFlow).not.toHaveBeenCalled();
+      expect(mockSetNoticeData).toHaveBeenCalledWith({
+        title: "multiEdit.notice.runBlocked",
       });
     });
 

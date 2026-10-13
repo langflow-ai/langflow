@@ -9,6 +9,7 @@ WORKFLOW_PATH = WORKFLOWS_DIR / "release.yml"
 RELEASE_INVENTORY_WORKFLOW_PATH = WORKFLOWS_DIR / "release-inventory-gate.yml"
 BUNDLE_WORKFLOW_PATH = WORKFLOWS_DIR / "release_bundles.yml"
 NIGHTLY_WORKFLOW_PATH = WORKFLOWS_DIR / "release_nightly.yml"
+LFX_WORKFLOW_PATH = WORKFLOWS_DIR / "release-lfx.yml"
 CROSS_PLATFORM_WORKFLOW_PATH = WORKFLOWS_DIR / "cross-platform-test.yml"
 DB_MIGRATION_WORKFLOW_PATH = WORKFLOWS_DIR / "db-migration-validation.yml"
 PYTHON_TEST_WORKFLOW_PATH = WORKFLOWS_DIR / "python_test.yml"
@@ -115,6 +116,16 @@ def test_nightly_publish_order_uses_the_same_dependency_chain() -> None:
     assert "build-nightly-core" not in workflow
     assert "publish-nightly-core" not in workflow
     assert "make sdk_publish" in sdk
+
+
+def test_lfx_docker_build_injects_production_segment_key() -> None:
+    docker_job = _job_block(LFX_WORKFLOW_PATH, "build-docker", "create-release")
+
+    injection = "python3 scripts/ci/inject_segment_write_key.py"
+    build = "uses: docker/build-push-action@v7"
+    assert "LANGFLOW_SEGMENT_WRITE_KEY: ${{ secrets.LANGFLOW_SEGMENT_WRITE_KEY }}" in docker_job
+    assert injection in docker_job
+    assert docker_job.index(injection) < docker_job.index(build)
 
 
 def test_cross_platform_run_has_a_base_runtime_gate() -> None:

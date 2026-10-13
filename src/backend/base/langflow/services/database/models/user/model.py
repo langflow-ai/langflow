@@ -44,6 +44,8 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     create_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login_at: datetime | None = Field(default=None, nullable=True)
+    # Set when AUTO_LOGIN teardown retires the default superuser, so it is retired once.
+    retired_at: datetime | None = Field(default=None, nullable=True)
     api_keys: list["ApiKey"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},

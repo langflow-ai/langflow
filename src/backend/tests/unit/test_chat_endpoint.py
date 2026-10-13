@@ -42,7 +42,7 @@ async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
 
 @pytest.mark.benchmark
-async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, logged_in_headers):
+async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, logged_in_headers, active_user):
     """Test building a flow from request data."""
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
     response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
@@ -58,7 +58,7 @@ async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, 
 
     # Consume and verify the events
     await consume_and_assert_stream(events_response, job_id)
-    await check_messages(flow_id)
+    await check_messages(flow_id, active_user.id)
 
 
 async def test_build_flow_validates_request_data_instead_of_stale_db_flow(
@@ -119,7 +119,7 @@ async def test_build_flow_enforces_current_catalog_policy_and_recovers_when_clea
     assert "job_id" in allowed_response.json()
 
 
-async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
+async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers, active_user):
     """Test building a flow with a frozen path."""
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
@@ -145,13 +145,13 @@ async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, l
 
     # Consume and verify the events
     await consume_and_assert_stream(events_response, job_id)
-    await check_messages(flow_id)
+    await check_messages(flow_id, active_user.id)
 
 
-async def check_messages(flow_id):
+async def check_messages(flow_id, owner_id):
     if isinstance(flow_id, str):
         flow_id = UUID(flow_id)
-    messages = await aget_messages(flow_id=flow_id, order="ASC")
+    messages = await aget_messages(flow_id=flow_id, user_id=owner_id, order="ASC")
     flow_id_str = str(flow_id)
     assert len(messages) == 2
     assert messages[0].session_id == flow_id_str
@@ -1116,6 +1116,44 @@ async def test_cancel_build_cross_user_blocked(client, json_memory_chatbot_no_ll
     assert response.status_code == 404
 
 
+@pytest.mark.security
+async def test_ownerless_queue_cannot_be_read_or_cancelled_through_v1_routes(client, user_two):
+    """A live queue with no registered owner is private even when its id is known."""
+    from langflow.services.deps import get_queue_service
+
+    queue_service = get_queue_service()
+    job_id = str(uuid.uuid4())
+    queue_service.create_queue(job_id)
+
+    async def keep_running():
+        await asyncio.sleep(3600)
+
+    queue_service.start_job(job_id, keep_running())
+    task = queue_service.get_queue_data(job_id)[2]
+    assert task is not None
+
+    try:
+        login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
+        login_response = await client.post("api/v1/login", data=login_data)
+        assert login_response.status_code == codes.OK
+        headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+        events_response = await asyncio.wait_for(
+            client.get(f"api/v1/build/{job_id}/events?event_delivery=polling", headers=headers), timeout=2
+        )
+        cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=headers)
+
+        assert events_response.status_code == codes.NOT_FOUND
+        assert cancel_response.status_code == codes.NOT_FOUND
+        assert not task.done()
+    finally:
+        if not task.done():
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+        await queue_service.cleanup_job(job_id)
+
+
 @pytest.mark.benchmark
 async def test_build_public_tmp_without_data_parameter(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test that build_public_tmp endpoint works without data parameter.
@@ -1204,7 +1242,7 @@ async def test_get_build_events_public_tmp_job_accessible_by_any_auth_user(
 ):
     """A job started via build_public_tmp has no registered owner and is accessible to any authenticated user.
 
-    Verifies that get_build_events skips the ownership check when get_job_owner returns None.
+    Verifies that the public marker permits access when the queue has no owner.
     """
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
     patch_response = await client.patch(
@@ -1247,7 +1285,7 @@ async def test_cancel_build_public_tmp_job_accessible_by_any_auth_user(
 ):
     """A job started via build_public_tmp has no registered owner and can be cancelled by any authenticated user.
 
-    Verifies that cancel_build skips the ownership check when get_job_owner returns None.
+    Verifies that the public marker permits cancellation when the queue has no owner.
     """
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
     patch_response = await client.patch(
@@ -1656,7 +1694,7 @@ async def test_build_public_tmp_authenticated_namespace_uses_user_id(
 @pytest.mark.benchmark
 @pytest.mark.security
 async def test_build_public_tmp_namespacing_blocks_memory_query_collision(
-    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+    client, json_memory_chatbot_no_llm, logged_in_headers, active_user, monkeypatch
 ):
     """End-to-end proof that namespacing prevents Memory query collision.
 
@@ -1681,8 +1719,9 @@ async def test_build_public_tmp_namespacing_blocks_memory_query_collision(
     await aadd_messages(
         Message(text="victim-secret", sender="User", sender_name="User", session_id=victim_session),
         flow_id=flow_id,
+        user_id=active_user.id,
     )
-    seeded = await aget_messages(session_id=victim_session)
+    seeded = await aget_messages(session_id=victim_session, flow_id=flow_id, user_id=active_user.id)
     assert any(m.text == "victim-secret" for m in seeded)
 
     captured: dict = {}
@@ -1699,10 +1738,10 @@ async def test_build_public_tmp_namespacing_blocks_memory_query_collision(
     namespaced_session = captured["inputs"].session
     assert namespaced_session != victim_session
 
-    leaked = await aget_messages(session_id=namespaced_session)
+    leaked = await aget_messages(session_id=namespaced_session, flow_id=flow_id, user_id=active_user.id)
     assert all(m.text != "victim-secret" for m in leaked)
 
-    still_seeded = await aget_messages(session_id=victim_session)
+    still_seeded = await aget_messages(session_id=victim_session, flow_id=flow_id, user_id=active_user.id)
     assert any(m.text == "victim-secret" for m in still_seeded)
 
 
@@ -1776,6 +1815,39 @@ async def test_job_queue_service_cleanup_removes_public_registration():
 
     # Why: if cleanup_job ever drops the discard call, is_public_job still returns True here
     assert svc.is_public_job(job_id) is False
+
+
+@pytest.mark.security
+@pytest.mark.parametrize(
+    ("route", "expected_detail"),
+    [
+        ("events?event_delivery=polling", "Public flow events are unavailable."),
+        ("cancel", "Public flow cancellation failed."),
+    ],
+)
+@pytest.mark.parametrize("failure_kind", ["backend", "unexpected"])
+async def test_public_marker_outage_returns_fixed_503(client, monkeypatch, route, expected_detail, failure_kind):
+    """A Redis marker failure cannot disclose backend connection details to anonymous callers."""
+    from langflow.services.deps import get_queue_service
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    queue_service = get_queue_service()
+    secret_detail = "Redis unavailable at localhost:6379 db=1"  # noqa: S105  # pragma: allowlist secret
+    failure = (
+        JobQueueBackendUnavailableError(secret_detail) if failure_kind == "backend" else RuntimeError(secret_detail)
+    )
+
+    async def fail_marker(_job_id):
+        raise failure
+
+    monkeypatch.setattr(queue_service, "is_public_job_async", fail_marker)
+    job_id = str(uuid.uuid4())
+    url = f"api/v1/build_public_tmp/{job_id}/{route}"
+    response = await (client.get(url) if route.startswith("events") else client.post(url))
+
+    assert response.status_code == codes.SERVICE_UNAVAILABLE
+    assert response.json() == {"detail": expected_detail}
+    assert secret_detail not in response.text
 
 
 @pytest.mark.security

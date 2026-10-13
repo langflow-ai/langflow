@@ -1,0 +1,5161 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "sha256": "0986abd546b0634beb40cdb39a4b978a714620d4f4cd00249b6beb48f513bac3",
+      "module": "lfx.components.altk.altk_agent",
+      "class_name": "ALTKAgentComponent",
+      "sources": [
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.10.0"
+        }
+      ]
+    },
+    {
+      "sha256": "164ac9bbd4486b85aa21e944c834ae712776c7c24139fb197ffe67028a0755cf",
+      "module": "lfx.components.altk.altk_agent",
+      "class_name": "ALTKAgentComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "77b9f4f14ed8ebfcd2f8ec8ea8b98f769663d86d8f823dd3a85566c5467c05ed",
+      "module": "lfx.components.altk.altk_agent",
+      "class_name": "ALTKAgentComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "82c8d7a0c40cf4796c764fa1f747e70a798f9403e7b17575e2edb4814b39fc8f",
+      "module": "lfx.components.altk.altk_agent",
+      "class_name": "ALTKAgentComponent",
+      "sources": [
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "module"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.10.1"
+        },
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.10.2"
+        },
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.10.3"
+        }
+      ]
+    },
+    {
+      "sha256": "8a67d3ee37fbc6da95f68d8dc4d5e454257d68cbad9c247f7adfb5b6320dce3a",
+      "module": "lfx.components.altk.altk_agent",
+      "class_name": "ALTKAgentComponent",
+      "sources": [
+        {
+          "commit": "e26dff25be2a2d933ba70301ddadc026fa075fe0",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.10.0"
+        },
+        {
+          "commit": "8b0f727cf5db81c3cf2124efee9c8ce3d1e64379",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.7.0"
+        },
+        {
+          "commit": "47ce5bf27e688e4cfbc48a745c24a72bac6b62d7",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.7.1"
+        },
+        {
+          "commit": "c353591ffa7fa07b0e9aecc9ecaed170725675dd",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.7.2"
+        },
+        {
+          "commit": "cd2b1b3d0867719b7d8482840746d1b105b1cd0d",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.7.3"
+        },
+        {
+          "commit": "c0736fe4d8ec0a5eb3650cd64c9dfa37b7a48b9b",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.8.0"
+        },
+        {
+          "commit": "a2e166048e4f39b5932f638440f8d82f1e40bd4e",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.8.1"
+        },
+        {
+          "commit": "cacb54d6013d04851e7217f9a9f224f8ba7eaaa7",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.8.2"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.8.3"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.8.4"
+        },
+        {
+          "commit": "1e61ac4ebed4defcfcfd0ef95c503117f31e428e",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.9.0"
+        },
+        {
+          "commit": "7640ce6978005580eea3080325a207f771e11d56",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.9.2"
+        },
+        {
+          "commit": "c556b7ea97ddc4be7d762580c7b404a9383fdcf6",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.9.3"
+        },
+        {
+          "commit": "90289197a725c8b8f326b18c09bec2f02c065741",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.9.4"
+        },
+        {
+          "commit": "30b89779b74b11a1fa4e0f173cc2613841365ca5",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.9.5"
+        },
+        {
+          "commit": "110bea82810f461f923b4dbb2d483fcbdc714612",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "1.9.6"
+        },
+        {
+          "commit": "b6ed2bc4d9d6a00e4bd8363495edfec6f091ccfc",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.7.0"
+        },
+        {
+          "commit": "3e726b42e33d6da4f6a2cc05f9b0de2755f9edb7",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.7.2"
+        },
+        {
+          "commit": "dbe777ecaa51042f84c6f31629d59a6596835fd2",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.7.3"
+        },
+        {
+          "commit": "699e35688f1c6ba5a123f685e2ef6374ba404937",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.8.0"
+        },
+        {
+          "commit": "0a6f7e015bf723d8fd346fe7d2544122b5d613a5",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.8.1"
+        },
+        {
+          "commit": "dd8d47f1a08fd81972fc9bb35a6f8ea24c5d076f",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.8.2"
+        },
+        {
+          "commit": "af8da569414cceb098c4479f5176dbe4269f5100",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.8.3"
+        },
+        {
+          "commit": "6cb87cca4c868cad096fc14139e73157740b7419",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.8.4"
+        },
+        {
+          "commit": "a47f2ad17eb662e940c550cfccb64a87dddd7e0b",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.9.0"
+        },
+        {
+          "commit": "dc26d19c1ed5b2779a3a759f78a747f47089c534",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.9.1"
+        },
+        {
+          "commit": "ea3eae8b9e011ff85d7f92f00cf07916dccf755e",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.9.2"
+        },
+        {
+          "commit": "322e4908b931a3efe2d65c6a7ad5ec373c5a5e1d",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.9.3"
+        },
+        {
+          "commit": "06666736cab94f1edad6658f974a2533b8a30c2c",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.9.4"
+        },
+        {
+          "commit": "b410b5429409014e00e6ef007175aed89c4f31cc",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.9.5"
+        },
+        {
+          "commit": "b11bd1f261b15b35d0bfdb3fc07a94fd0ea0aee6",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "module",
+          "tag": "v1.9.6"
+        }
+      ]
+    },
+    {
+      "sha256": "f474cb4e388aae27f85baceec3c1d267ece5dc348893ef01ad25e673ec1b37e5",
+      "module": "lfx.components.altk.altk_agent",
+      "class_name": "ALTKAgentComponent",
+      "sources": [
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/altk/altk_agent.py",
+          "kind": "class"
+        },
+        {
+          "commit": "e26dff25be2a2d933ba70301ddadc026fa075fe0",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.10.0"
+        },
+        {
+          "commit": "8b0f727cf5db81c3cf2124efee9c8ce3d1e64379",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.7.0"
+        },
+        {
+          "commit": "47ce5bf27e688e4cfbc48a745c24a72bac6b62d7",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.7.1"
+        },
+        {
+          "commit": "c353591ffa7fa07b0e9aecc9ecaed170725675dd",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.7.2"
+        },
+        {
+          "commit": "cd2b1b3d0867719b7d8482840746d1b105b1cd0d",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.7.3"
+        },
+        {
+          "commit": "c0736fe4d8ec0a5eb3650cd64c9dfa37b7a48b9b",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.8.0"
+        },
+        {
+          "commit": "a2e166048e4f39b5932f638440f8d82f1e40bd4e",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.8.1"
+        },
+        {
+          "commit": "cacb54d6013d04851e7217f9a9f224f8ba7eaaa7",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.8.2"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.8.3"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.8.4"
+        },
+        {
+          "commit": "1e61ac4ebed4defcfcfd0ef95c503117f31e428e",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.9.0"
+        },
+        {
+          "commit": "7640ce6978005580eea3080325a207f771e11d56",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.9.2"
+        },
+        {
+          "commit": "c556b7ea97ddc4be7d762580c7b404a9383fdcf6",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.9.3"
+        },
+        {
+          "commit": "90289197a725c8b8f326b18c09bec2f02c065741",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.9.4"
+        },
+        {
+          "commit": "30b89779b74b11a1fa4e0f173cc2613841365ca5",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.9.5"
+        },
+        {
+          "commit": "110bea82810f461f923b4dbb2d483fcbdc714612",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "1.9.6"
+        },
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.10.1"
+        },
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.10.2"
+        },
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.10.3"
+        },
+        {
+          "commit": "b6ed2bc4d9d6a00e4bd8363495edfec6f091ccfc",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.7.0"
+        },
+        {
+          "commit": "3e726b42e33d6da4f6a2cc05f9b0de2755f9edb7",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.7.2"
+        },
+        {
+          "commit": "dbe777ecaa51042f84c6f31629d59a6596835fd2",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.7.3"
+        },
+        {
+          "commit": "699e35688f1c6ba5a123f685e2ef6374ba404937",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.8.0"
+        },
+        {
+          "commit": "0a6f7e015bf723d8fd346fe7d2544122b5d613a5",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.8.1"
+        },
+        {
+          "commit": "dd8d47f1a08fd81972fc9bb35a6f8ea24c5d076f",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.8.2"
+        },
+        {
+          "commit": "af8da569414cceb098c4479f5176dbe4269f5100",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.8.3"
+        },
+        {
+          "commit": "6cb87cca4c868cad096fc14139e73157740b7419",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.8.4"
+        },
+        {
+          "commit": "a47f2ad17eb662e940c550cfccb64a87dddd7e0b",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.9.0"
+        },
+        {
+          "commit": "dc26d19c1ed5b2779a3a759f78a747f47089c534",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.9.1"
+        },
+        {
+          "commit": "ea3eae8b9e011ff85d7f92f00cf07916dccf755e",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.9.2"
+        },
+        {
+          "commit": "322e4908b931a3efe2d65c6a7ad5ec373c5a5e1d",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.9.3"
+        },
+        {
+          "commit": "06666736cab94f1edad6658f974a2533b8a30c2c",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.9.4"
+        },
+        {
+          "commit": "b410b5429409014e00e6ef007175aed89c4f31cc",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.9.5"
+        },
+        {
+          "commit": "b11bd1f261b15b35d0bfdb3fc07a94fd0ea0aee6",
+          "path": "src/lfx/src/lfx/components/altk/altk_agent.py",
+          "kind": "class",
+          "tag": "v1.9.6"
+        }
+      ]
+    },
+    {
+      "sha256": "0c9733bf81aaacc0573c2b935c2ff9c06ffffbc16ecce430ad83a877daf971b7",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "8b0f727cf5db81c3cf2124efee9c8ce3d1e64379",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.7.0"
+        },
+        {
+          "commit": "47ce5bf27e688e4cfbc48a745c24a72bac6b62d7",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.7.1"
+        },
+        {
+          "commit": "c353591ffa7fa07b0e9aecc9ecaed170725675dd",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.7.2"
+        },
+        {
+          "commit": "cd2b1b3d0867719b7d8482840746d1b105b1cd0d",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.7.3"
+        },
+        {
+          "commit": "c0736fe4d8ec0a5eb3650cd64c9dfa37b7a48b9b",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.8.0"
+        },
+        {
+          "commit": "a2e166048e4f39b5932f638440f8d82f1e40bd4e",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.8.1"
+        },
+        {
+          "commit": "cacb54d6013d04851e7217f9a9f224f8ba7eaaa7",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.8.2"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.8.3"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.8.4"
+        },
+        {
+          "commit": "1e61ac4ebed4defcfcfd0ef95c503117f31e428e",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.9.0"
+        },
+        {
+          "commit": "7640ce6978005580eea3080325a207f771e11d56",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.9.2"
+        },
+        {
+          "commit": "c556b7ea97ddc4be7d762580c7b404a9383fdcf6",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.9.3"
+        },
+        {
+          "commit": "90289197a725c8b8f326b18c09bec2f02c065741",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.9.4"
+        },
+        {
+          "commit": "b6ed2bc4d9d6a00e4bd8363495edfec6f091ccfc",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.7.0"
+        },
+        {
+          "commit": "3e726b42e33d6da4f6a2cc05f9b0de2755f9edb7",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.7.2"
+        },
+        {
+          "commit": "dbe777ecaa51042f84c6f31629d59a6596835fd2",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.7.3"
+        },
+        {
+          "commit": "699e35688f1c6ba5a123f685e2ef6374ba404937",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.8.0"
+        },
+        {
+          "commit": "0a6f7e015bf723d8fd346fe7d2544122b5d613a5",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.8.1"
+        },
+        {
+          "commit": "dd8d47f1a08fd81972fc9bb35a6f8ea24c5d076f",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.8.2"
+        },
+        {
+          "commit": "af8da569414cceb098c4479f5176dbe4269f5100",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.8.3"
+        },
+        {
+          "commit": "6cb87cca4c868cad096fc14139e73157740b7419",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.8.4"
+        },
+        {
+          "commit": "a47f2ad17eb662e940c550cfccb64a87dddd7e0b",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.9.0"
+        },
+        {
+          "commit": "dc26d19c1ed5b2779a3a759f78a747f47089c534",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.9.1"
+        },
+        {
+          "commit": "ea3eae8b9e011ff85d7f92f00cf07916dccf755e",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.9.2"
+        },
+        {
+          "commit": "322e4908b931a3efe2d65c6a7ad5ec373c5a5e1d",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.9.3"
+        }
+      ]
+    },
+    {
+      "sha256": "154b11f088f66c9984e2bf77136a624d3d911e3d8eff1d6cc4735c787ab02c60",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "06013ae86a882e5ab3fe547c272adf5a3620c8a5",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.19"
+        }
+      ]
+    },
+    {
+      "sha256": "17d043329a64e906315698e492f0197f31d5f53dd49bca6f8824a2b61cf6d565",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "2220b7116cd5818262543ab6595578b3e064df768ee2a16f19dc0fac34c25ce0",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "cbf84daec643d47ee3ce7bd517b8d9a6eafbc00b",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.6.0"
+        },
+        {
+          "commit": "7efe31756b334c5c114468290963423e36e68932",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.6.1"
+        },
+        {
+          "commit": "48fe15b0f5ee59e819cd974631ef9fb473664838",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.6.10"
+        },
+        {
+          "commit": "bdbeac989f733d6bc757e6db4ea32c70b5d069ff",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.6.2"
+        },
+        {
+          "commit": "b2b717d166702b6f09255a141b4edbc663dded07",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.6.3"
+        },
+        {
+          "commit": "7125c604a9cc7dfc9b905d91744024d2dd78e46f",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.6.4"
+        },
+        {
+          "commit": "4172cdaebcaf78625c96c8dedc25fe201c175c1f",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.6.5"
+        },
+        {
+          "commit": "fb1026105ee5f68de3c47a8644d819577175f4ae",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.6.6"
+        },
+        {
+          "commit": "f94f0f94348e2dfac1b05cc42ec5e2c0415f8650",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.6.7"
+        },
+        {
+          "commit": "64ca6a5cfcf410362f90a14d1201e73d5a45474f",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.6.8"
+        },
+        {
+          "commit": "0f8ff5a3ac713f487c064aa1901522b1a899c5b9",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.6.9"
+        },
+        {
+          "commit": "5b5f727376fb4ed2e678139bff45fd54e7ff32ee",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.6.8"
+        }
+      ]
+    },
+    {
+      "sha256": "22afa0d9b174a6cb456a40a8e3aa319b030e23087329032f6e40f87a1d404664",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "cbf84daec643d47ee3ce7bd517b8d9a6eafbc00b",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.6.0"
+        },
+        {
+          "commit": "7efe31756b334c5c114468290963423e36e68932",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.6.1"
+        },
+        {
+          "commit": "48fe15b0f5ee59e819cd974631ef9fb473664838",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.6.10"
+        },
+        {
+          "commit": "bdbeac989f733d6bc757e6db4ea32c70b5d069ff",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.6.2"
+        },
+        {
+          "commit": "b2b717d166702b6f09255a141b4edbc663dded07",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.6.3"
+        },
+        {
+          "commit": "7125c604a9cc7dfc9b905d91744024d2dd78e46f",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.6.4"
+        },
+        {
+          "commit": "4172cdaebcaf78625c96c8dedc25fe201c175c1f",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.6.5"
+        },
+        {
+          "commit": "fb1026105ee5f68de3c47a8644d819577175f4ae",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.6.6"
+        },
+        {
+          "commit": "f94f0f94348e2dfac1b05cc42ec5e2c0415f8650",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.6.7"
+        },
+        {
+          "commit": "64ca6a5cfcf410362f90a14d1201e73d5a45474f",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.6.8"
+        },
+        {
+          "commit": "0f8ff5a3ac713f487c064aa1901522b1a899c5b9",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.6.9"
+        },
+        {
+          "commit": "8b0f727cf5db81c3cf2124efee9c8ce3d1e64379",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.7.0"
+        },
+        {
+          "commit": "47ce5bf27e688e4cfbc48a745c24a72bac6b62d7",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.7.1"
+        },
+        {
+          "commit": "c353591ffa7fa07b0e9aecc9ecaed170725675dd",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.7.2"
+        },
+        {
+          "commit": "cd2b1b3d0867719b7d8482840746d1b105b1cd0d",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.7.3"
+        },
+        {
+          "commit": "c0736fe4d8ec0a5eb3650cd64c9dfa37b7a48b9b",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.8.0"
+        },
+        {
+          "commit": "a2e166048e4f39b5932f638440f8d82f1e40bd4e",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.8.1"
+        },
+        {
+          "commit": "cacb54d6013d04851e7217f9a9f224f8ba7eaaa7",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.8.2"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.8.3"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.8.4"
+        },
+        {
+          "commit": "1e61ac4ebed4defcfcfd0ef95c503117f31e428e",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.9.0"
+        },
+        {
+          "commit": "7640ce6978005580eea3080325a207f771e11d56",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.9.2"
+        },
+        {
+          "commit": "c556b7ea97ddc4be7d762580c7b404a9383fdcf6",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.9.3"
+        },
+        {
+          "commit": "90289197a725c8b8f326b18c09bec2f02c065741",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.9.4"
+        },
+        {
+          "commit": "5b5f727376fb4ed2e678139bff45fd54e7ff32ee",
+          "path": "src/backend/base/langflow/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.6.8"
+        },
+        {
+          "commit": "b6ed2bc4d9d6a00e4bd8363495edfec6f091ccfc",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.7.0"
+        },
+        {
+          "commit": "3e726b42e33d6da4f6a2cc05f9b0de2755f9edb7",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.7.2"
+        },
+        {
+          "commit": "dbe777ecaa51042f84c6f31629d59a6596835fd2",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.7.3"
+        },
+        {
+          "commit": "699e35688f1c6ba5a123f685e2ef6374ba404937",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.8.0"
+        },
+        {
+          "commit": "0a6f7e015bf723d8fd346fe7d2544122b5d613a5",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.8.1"
+        },
+        {
+          "commit": "dd8d47f1a08fd81972fc9bb35a6f8ea24c5d076f",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.8.2"
+        },
+        {
+          "commit": "af8da569414cceb098c4479f5176dbe4269f5100",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.8.3"
+        },
+        {
+          "commit": "6cb87cca4c868cad096fc14139e73157740b7419",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.8.4"
+        },
+        {
+          "commit": "a47f2ad17eb662e940c550cfccb64a87dddd7e0b",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.9.0"
+        },
+        {
+          "commit": "dc26d19c1ed5b2779a3a759f78a747f47089c534",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.9.1"
+        },
+        {
+          "commit": "ea3eae8b9e011ff85d7f92f00cf07916dccf755e",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.9.2"
+        },
+        {
+          "commit": "322e4908b931a3efe2d65c6a7ad5ec373c5a5e1d",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.9.3"
+        }
+      ]
+    },
+    {
+      "sha256": "22dca25c477ff7927fba296819a25de0076d2d70652c10c1448d2208d39633a9",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "2eca4d9e32367d752fd906449d567ae0433dede5",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.16"
+        }
+      ]
+    },
+    {
+      "sha256": "2a6f8cc5bc93ce94f64f76706a69125877af75bfa59915e8e8f1ac83dad120ec",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "e26dff25be2a2d933ba70301ddadc026fa075fe0",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.10.0"
+        },
+        {
+          "commit": "30b89779b74b11a1fa4e0f173cc2613841365ca5",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.9.5"
+        },
+        {
+          "commit": "110bea82810f461f923b4dbb2d483fcbdc714612",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "1.9.6"
+        },
+        {
+          "commit": "06666736cab94f1edad6658f974a2533b8a30c2c",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.9.4"
+        },
+        {
+          "commit": "b410b5429409014e00e6ef007175aed89c4f31cc",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.9.5"
+        },
+        {
+          "commit": "b11bd1f261b15b35d0bfdb3fc07a94fd0ea0aee6",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.9.6"
+        }
+      ]
+    },
+    {
+      "sha256": "2f311b60a63249027b45a2ae2c7fbcad97cf230012bfe15722d960cd0a5698d1",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.10.3"
+        }
+      ]
+    },
+    {
+      "sha256": "305eb8a2a3ce809cbe49af95f7e1aed6bac02e1c91233bde93b89280939c86b3",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "76a3a2a46122e560af6e90788adc4304857193ea",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.1.2"
+        },
+        {
+          "commit": "9966f887dc16586fcce2d8754c394c30525edd88",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.1.3"
+        },
+        {
+          "commit": "6cb7fa313f5050af5a97afd98213b716fb355a69",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.1.4"
+        },
+        {
+          "commit": "0134485d5d29e384ce6be42b9deef6b64ffe8f89",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.2.0"
+        }
+      ]
+    },
+    {
+      "sha256": "3871e195849dde1ce03a9806980ddf2752595fca3cf53c1d1d6b052645e4405f",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "c92bea64c46e750ee95284b12bb2f096c749dd50",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.17"
+        },
+        {
+          "commit": "f18c4e90795fa34e776461fc4a00d2574400a002",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.18"
+        }
+      ]
+    },
+    {
+      "sha256": "3ce7c29a70b354fb3148feb38ee659e3909637d2c9fd3eb5b03acb96a0f2746b",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "348a7c2b8aeca8a0a13d9f48c2b97206608a60b1",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "v1.1.0"
+        },
+        {
+          "commit": "84981fcd1ec7258ba82371e415c11fa2858a552b",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "v1.1.1"
+        }
+      ]
+    },
+    {
+      "sha256": "46180b5cf549c06e5d27fbc1bde03d82a71be9ead4401d82adb7de85af9ccc9f",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "6d291c88c133245dc8fcf885b15783ee631c48b3",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.10"
+        },
+        {
+          "commit": "f701d86ddec517a87f9c5245e374a09457a4afd6",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.11"
+        },
+        {
+          "commit": "77cc789e62c4e68b4efbdb525f71299efeb87f0e",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.12"
+        },
+        {
+          "commit": "8fffe73050373274405c0bb74459c5ad94f54eba",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.13"
+        },
+        {
+          "commit": "9213b4c07057d356d65e18aef3d36bcb09c696c5",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.14"
+        },
+        {
+          "commit": "dc419d11fdeebb815cf5f583a50b468b93a4af96",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.15"
+        },
+        {
+          "commit": "4c43b4cc82e02dd0dd2d58992618195521bdc865",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.7"
+        },
+        {
+          "commit": "7d7502744e9023f7c1581c898d8a2d9da77edffd",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.8"
+        },
+        {
+          "commit": "844da96bd2761540b8b07b79116f9ea076ec5189",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.9"
+        }
+      ]
+    },
+    {
+      "sha256": "5b0797a8129ec9a0f6cac51cd5eb1e20accb742ef6dd488d46562de4fff4acfd",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "6c2ff92ccf083f038d9a97a749b4e0f30a60247a",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.3.0"
+        },
+        {
+          "commit": "aa49028fae82f75653e1ebbd2b3a63241c4d645f",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.3.1"
+        },
+        {
+          "commit": "8e31fc5a8acf02894b01d13ce8e79126654fe692",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.3.2"
+        },
+        {
+          "commit": "7fb400d99e471e6ef84249b80d0f430ba93d60d5",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.3.3"
+        },
+        {
+          "commit": "89201e459f14b2e11a843f1ab7f259a91a8a79a6",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.3.4"
+        },
+        {
+          "commit": "e0ae3f69c2debc918fb9e690645a21a57db11bf6",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.4.0"
+        },
+        {
+          "commit": "c608a4fd5d5cf402cd34f8f7f79f761fa40a4106",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.4.1"
+        },
+        {
+          "commit": "4b580d15696334e4e9455cd12506732317d6a185",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.4.2"
+        },
+        {
+          "commit": "e14ae00707b5cbb0f491d5444026c65fa3987cfd",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.4.3"
+        },
+        {
+          "commit": "9ad92eaeaa935db67deca300c40ed0dffea39131",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.5.0"
+        },
+        {
+          "commit": "4a7564af4a8e326dc98c798d11c274d4ee65281d",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.5.1"
+        }
+      ]
+    },
+    {
+      "sha256": "5c68e0da7855cf4392c84e988cd5ccd98e71a62966993f606a8ea64acd9d7e94",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "696d5ed10d411136b3013571d020b2b033d0d927f96812f9849c4545fab824d2",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.10.1"
+        }
+      ]
+    },
+    {
+      "sha256": "7174c9bd94bfd8a1c33e8a4ae77bd6d1a894becd3899f87d533a39d9fb4bcc92",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "24d9e86885b877ea3e9d03cbc50b963765489721",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.0"
+        },
+        {
+          "commit": "bc334ca638f930857fc9cb232b10bd8c55fb19be",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.1"
+        },
+        {
+          "commit": "af98504e4afe0b45a53c14203ee760070d072608",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.2"
+        },
+        {
+          "commit": "af98504e4afe0b45a53c14203ee760070d072608",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.3"
+        },
+        {
+          "commit": "8ea95420c74fd53eb5e078b785c11ef3df5a03fe",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.4"
+        },
+        {
+          "commit": "20ceb42504087c712aaee41bfc17a870ae0109d4",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.5"
+        },
+        {
+          "commit": "fe21f90aeca895f4397958db172ce4af4b0c9787",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.6"
+        }
+      ]
+    },
+    {
+      "sha256": "7d82e0b7267fb38d24463a287b8e3891571198d17ca7cd1a7373dc4c92251fc7",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "348a7c2b8aeca8a0a13d9f48c2b97206608a60b1",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "v1.1.0"
+        },
+        {
+          "commit": "84981fcd1ec7258ba82371e415c11fa2858a552b",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "v1.1.1"
+        }
+      ]
+    },
+    {
+      "sha256": "7db8e03fb19ffc1ca706b9e4c6b39dd8bbf58a4700fbf27d19470c3e42700b7c",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "24d9e86885b877ea3e9d03cbc50b963765489721",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.0"
+        },
+        {
+          "commit": "bc334ca638f930857fc9cb232b10bd8c55fb19be",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.1"
+        },
+        {
+          "commit": "af98504e4afe0b45a53c14203ee760070d072608",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.2"
+        },
+        {
+          "commit": "af98504e4afe0b45a53c14203ee760070d072608",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.3"
+        },
+        {
+          "commit": "8ea95420c74fd53eb5e078b785c11ef3df5a03fe",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.4"
+        },
+        {
+          "commit": "20ceb42504087c712aaee41bfc17a870ae0109d4",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.5"
+        },
+        {
+          "commit": "fe21f90aeca895f4397958db172ce4af4b0c9787",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.6"
+        }
+      ]
+    },
+    {
+      "sha256": "850e9d0cf21e356af6c256084bd9ded02916053ef5dded8c135935a8dfe0f656",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.10.2"
+        }
+      ]
+    },
+    {
+      "sha256": "97dde4274e721d7d315ca1613ac8721e821472dd072585632a1e30b9624058f0",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.10.1"
+        }
+      ]
+    },
+    {
+      "sha256": "a49ba6af94a2c36f6e0349f82b0b2f16c732cfbfefe7a089ad9e40c67be91331",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "6d291c88c133245dc8fcf885b15783ee631c48b3",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.10"
+        },
+        {
+          "commit": "f701d86ddec517a87f9c5245e374a09457a4afd6",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.11"
+        },
+        {
+          "commit": "77cc789e62c4e68b4efbdb525f71299efeb87f0e",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.12"
+        },
+        {
+          "commit": "8fffe73050373274405c0bb74459c5ad94f54eba",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.13"
+        },
+        {
+          "commit": "9213b4c07057d356d65e18aef3d36bcb09c696c5",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.14"
+        },
+        {
+          "commit": "dc419d11fdeebb815cf5f583a50b468b93a4af96",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.15"
+        },
+        {
+          "commit": "4c43b4cc82e02dd0dd2d58992618195521bdc865",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.7"
+        },
+        {
+          "commit": "7d7502744e9023f7c1581c898d8a2d9da77edffd",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.8"
+        },
+        {
+          "commit": "844da96bd2761540b8b07b79116f9ea076ec5189",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.9"
+        }
+      ]
+    },
+    {
+      "sha256": "a5ed0f13463a593f90c3c7f4e1eb7d01c75e38daac0250bc8eab54ef54e1b83a",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.10.3"
+        }
+      ]
+    },
+    {
+      "sha256": "a5ff0dc313ba5462e0dc35df234b2e9900358d867c18602fb48282c1d6a25dae",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "6c2ff92ccf083f038d9a97a749b4e0f30a60247a",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.3.0"
+        },
+        {
+          "commit": "aa49028fae82f75653e1ebbd2b3a63241c4d645f",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.3.1"
+        },
+        {
+          "commit": "8e31fc5a8acf02894b01d13ce8e79126654fe692",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.3.2"
+        },
+        {
+          "commit": "7fb400d99e471e6ef84249b80d0f430ba93d60d5",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.3.3"
+        },
+        {
+          "commit": "89201e459f14b2e11a843f1ab7f259a91a8a79a6",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.3.4"
+        },
+        {
+          "commit": "e0ae3f69c2debc918fb9e690645a21a57db11bf6",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.4.0"
+        },
+        {
+          "commit": "c608a4fd5d5cf402cd34f8f7f79f761fa40a4106",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.4.1"
+        },
+        {
+          "commit": "4b580d15696334e4e9455cd12506732317d6a185",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.4.2"
+        },
+        {
+          "commit": "e14ae00707b5cbb0f491d5444026c65fa3987cfd",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.4.3"
+        }
+      ]
+    },
+    {
+      "sha256": "aa6d8903b66e891519ebee2fefbf931c2093aad6207d801d7760854632fa5faa",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "b686dda26d5b028e6260ece857223b9ee554c35f3612fb2e0f0f508e0f589f8d",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "06013ae86a882e5ab3fe547c272adf5a3620c8a5",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "class",
+          "tag": "v1.0.19"
+        }
+      ]
+    },
+    {
+      "sha256": "c9a83e7aac549e03be49ff8a4ff3fb991561ab98c29ddc5919d46036fbbec12a",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/chroma.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "d4849bca18737359fc2f4177c3cfadb4b7a2b1e11c3c3f28ef687e5d521db80f",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "76a3a2a46122e560af6e90788adc4304857193ea",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.1.2"
+        },
+        {
+          "commit": "9966f887dc16586fcce2d8754c394c30525edd88",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.1.3"
+        },
+        {
+          "commit": "6cb7fa313f5050af5a97afd98213b716fb355a69",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.1.4"
+        },
+        {
+          "commit": "0134485d5d29e384ce6be42b9deef6b64ffe8f89",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "class",
+          "tag": "1.2.0"
+        }
+      ]
+    },
+    {
+      "sha256": "d6b44ed1e2b88bf0f2ed47ddf8c77ea0a07e0da0c0dfbbe9d1e59eaed3a57170",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "class",
+          "tag": "v1.10.2"
+        }
+      ]
+    },
+    {
+      "sha256": "dd620235cbbb1daa4ed8fd6070c0bdf7565f71bee44eb136aee6721888b97c95",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "2eca4d9e32367d752fd906449d567ae0433dede5",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.16"
+        }
+      ]
+    },
+    {
+      "sha256": "eb730106f238b969b42be4bb24920eeb39a33deef40c5ebd7136781b3ca15b46",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "c92bea64c46e750ee95284b12bb2f096c749dd50",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.17"
+        },
+        {
+          "commit": "f18c4e90795fa34e776461fc4a00d2574400a002",
+          "path": "src/backend/base/langflow/components/vectorstores/Chroma.py",
+          "kind": "module",
+          "tag": "v1.0.18"
+        }
+      ]
+    },
+    {
+      "sha256": "ebbec1359d2fa74f36831c8b228885777691f06aa478091c8f2b5b87062de334",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "e26dff25be2a2d933ba70301ddadc026fa075fe0",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.10.0"
+        },
+        {
+          "commit": "30b89779b74b11a1fa4e0f173cc2613841365ca5",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.9.5"
+        },
+        {
+          "commit": "110bea82810f461f923b4dbb2d483fcbdc714612",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "1.9.6"
+        },
+        {
+          "commit": "06666736cab94f1edad6658f974a2533b8a30c2c",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.9.4"
+        },
+        {
+          "commit": "b410b5429409014e00e6ef007175aed89c4f31cc",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.9.5"
+        },
+        {
+          "commit": "b11bd1f261b15b35d0bfdb3fc07a94fd0ea0aee6",
+          "path": "src/lfx/src/lfx/components/chroma/chroma.py",
+          "kind": "module",
+          "tag": "v1.9.6"
+        }
+      ]
+    },
+    {
+      "sha256": "efa412edc50f00338a8f9ea92cd7eeeefbc5a1e69f471ccdb8251b0548fef1b4",
+      "module": "lfx.components.chroma.chroma",
+      "class_name": "ChromaVectorStoreComponent",
+      "sources": [
+        {
+          "commit": "9ad92eaeaa935db67deca300c40ed0dffea39131",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.5.0"
+        },
+        {
+          "commit": "4a7564af4a8e326dc98c798d11c274d4ee65281d",
+          "path": "src/backend/base/langflow/components/vectorstores/chroma.py",
+          "kind": "module",
+          "tag": "1.5.1"
+        }
+      ]
+    },
+    {
+      "sha256": "2b2731d9d2b8f3a0415def9cd7c8dfcc5743437d7e4f9936b510beeb86ed18c9",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.10.1"
+        },
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.10.2"
+        },
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.10.3"
+        },
+        {
+          "commit": "562e5f2d6feeb52a28dfa647e63a1a620fcee334",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.0"
+        },
+        {
+          "commit": "999c5abe53e4347385b8ccc4a1e23a04482479c9",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.1"
+        },
+        {
+          "commit": "73629e2df63b4d0852808b8b5019f1be55f1f29d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.2"
+        },
+        {
+          "commit": "14ad03a3f03bc071186286f65c08e847f7f5d88c",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.3"
+        },
+        {
+          "commit": "9c77e5c62aa50f4e8010a9f1a9921c3fb7a8fa59",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.4"
+        },
+        {
+          "commit": "ab52f7f8b911bb42712cefdfe9af3ed02db560a6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.5"
+        },
+        {
+          "commit": "c8a80d6ad92beaf761c45171d330f5ac386fcd8d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.6"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.12.4"
+        }
+      ]
+    },
+    {
+      "sha256": "356f8575b028b64a9c52b27024a94b05076a08cb57ad23910cf927e09b31760f",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "48fe15b0f5ee59e819cd974631ef9fb473664838",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.10"
+        },
+        {
+          "commit": "7125c604a9cc7dfc9b905d91744024d2dd78e46f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.4"
+        },
+        {
+          "commit": "4172cdaebcaf78625c96c8dedc25fe201c175c1f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.5"
+        },
+        {
+          "commit": "fb1026105ee5f68de3c47a8644d819577175f4ae",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.6"
+        },
+        {
+          "commit": "f94f0f94348e2dfac1b05cc42ec5e2c0415f8650",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.7"
+        },
+        {
+          "commit": "64ca6a5cfcf410362f90a14d1201e73d5a45474f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.8"
+        },
+        {
+          "commit": "0f8ff5a3ac713f487c064aa1901522b1a899c5b9",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.9"
+        },
+        {
+          "commit": "5b5f727376fb4ed2e678139bff45fd54e7ff32ee",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "v1.6.8"
+        }
+      ]
+    },
+    {
+      "sha256": "521068a422147326cd02af5b5d334dffd4fe43da3a8eee16de79db4ac0780b1a",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "48fe15b0f5ee59e819cd974631ef9fb473664838",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.10"
+        },
+        {
+          "commit": "7125c604a9cc7dfc9b905d91744024d2dd78e46f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.4"
+        },
+        {
+          "commit": "4172cdaebcaf78625c96c8dedc25fe201c175c1f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.5"
+        },
+        {
+          "commit": "fb1026105ee5f68de3c47a8644d819577175f4ae",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.6"
+        },
+        {
+          "commit": "f94f0f94348e2dfac1b05cc42ec5e2c0415f8650",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.7"
+        },
+        {
+          "commit": "64ca6a5cfcf410362f90a14d1201e73d5a45474f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.8"
+        },
+        {
+          "commit": "0f8ff5a3ac713f487c064aa1901522b1a899c5b9",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.9"
+        },
+        {
+          "commit": "5b5f727376fb4ed2e678139bff45fd54e7ff32ee",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "v1.6.8"
+        }
+      ]
+    },
+    {
+      "sha256": "59ca136d2ae65cda2d4b3dd3df8b61259b22e79b46f99b884bf6876d90831483",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "cbf84daec643d47ee3ce7bd517b8d9a6eafbc00b",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.0"
+        },
+        {
+          "commit": "7efe31756b334c5c114468290963423e36e68932",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.1"
+        },
+        {
+          "commit": "bdbeac989f733d6bc757e6db4ea32c70b5d069ff",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.2"
+        },
+        {
+          "commit": "b2b717d166702b6f09255a141b4edbc663dded07",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "module",
+          "tag": "1.6.3"
+        }
+      ]
+    },
+    {
+      "sha256": "7bf4e86e1d9e3801a398636f543bbe39d798a4718d1c8cce7ae2890efee75278",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "8b0f727cf5db81c3cf2124efee9c8ce3d1e64379",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.7.0"
+        },
+        {
+          "commit": "47ce5bf27e688e4cfbc48a745c24a72bac6b62d7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.7.1"
+        },
+        {
+          "commit": "c353591ffa7fa07b0e9aecc9ecaed170725675dd",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.7.2"
+        },
+        {
+          "commit": "cd2b1b3d0867719b7d8482840746d1b105b1cd0d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.7.3"
+        },
+        {
+          "commit": "c0736fe4d8ec0a5eb3650cd64c9dfa37b7a48b9b",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.8.0"
+        },
+        {
+          "commit": "3e726b42e33d6da4f6a2cc05f9b0de2755f9edb7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.7.2"
+        },
+        {
+          "commit": "dbe777ecaa51042f84c6f31629d59a6596835fd2",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.7.3"
+        }
+      ]
+    },
+    {
+      "sha256": "92be01f65a09329ca23e2380a21b034a26851ccfd9d9497152cc033ac76c2053",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.10.1"
+        },
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.10.2"
+        },
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.10.3"
+        },
+        {
+          "commit": "562e5f2d6feeb52a28dfa647e63a1a620fcee334",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.0"
+        },
+        {
+          "commit": "999c5abe53e4347385b8ccc4a1e23a04482479c9",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.1"
+        },
+        {
+          "commit": "73629e2df63b4d0852808b8b5019f1be55f1f29d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.2"
+        },
+        {
+          "commit": "14ad03a3f03bc071186286f65c08e847f7f5d88c",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.3"
+        },
+        {
+          "commit": "9c77e5c62aa50f4e8010a9f1a9921c3fb7a8fa59",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.4"
+        },
+        {
+          "commit": "ab52f7f8b911bb42712cefdfe9af3ed02db560a6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.5"
+        },
+        {
+          "commit": "c8a80d6ad92beaf761c45171d330f5ac386fcd8d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.6"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.12.4"
+        }
+      ]
+    },
+    {
+      "sha256": "a1542d61a19460b63121df68b8ae25b1b3d1fb4e7d044c5d58e469e771922632",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "b6ed2bc4d9d6a00e4bd8363495edfec6f091ccfc",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.7.0"
+        }
+      ]
+    },
+    {
+      "sha256": "b244a7d6c4e20f11f95ca3ffb656fd1fe1f4de31b8bb6bf2f62152c65c58d6a3",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "a2e166048e4f39b5932f638440f8d82f1e40bd4e",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.8.1"
+        },
+        {
+          "commit": "cacb54d6013d04851e7217f9a9f224f8ba7eaaa7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.8.2"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.8.3"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.8.4"
+        },
+        {
+          "commit": "1e61ac4ebed4defcfcfd0ef95c503117f31e428e",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.9.0"
+        },
+        {
+          "commit": "7640ce6978005580eea3080325a207f771e11d56",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.9.2"
+        },
+        {
+          "commit": "c556b7ea97ddc4be7d762580c7b404a9383fdcf6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.9.3"
+        },
+        {
+          "commit": "90289197a725c8b8f326b18c09bec2f02c065741",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.9.4"
+        },
+        {
+          "commit": "699e35688f1c6ba5a123f685e2ef6374ba404937",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.8.0"
+        },
+        {
+          "commit": "0a6f7e015bf723d8fd346fe7d2544122b5d613a5",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.8.1"
+        },
+        {
+          "commit": "dd8d47f1a08fd81972fc9bb35a6f8ea24c5d076f",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.8.2"
+        },
+        {
+          "commit": "af8da569414cceb098c4479f5176dbe4269f5100",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.8.3"
+        },
+        {
+          "commit": "6cb87cca4c868cad096fc14139e73157740b7419",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.8.4"
+        },
+        {
+          "commit": "a47f2ad17eb662e940c550cfccb64a87dddd7e0b",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.9.0"
+        },
+        {
+          "commit": "dc26d19c1ed5b2779a3a759f78a747f47089c534",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.9.1"
+        },
+        {
+          "commit": "ea3eae8b9e011ff85d7f92f00cf07916dccf755e",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.9.2"
+        },
+        {
+          "commit": "322e4908b931a3efe2d65c6a7ad5ec373c5a5e1d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.9.3"
+        }
+      ]
+    },
+    {
+      "sha256": "bbe68af0451fe65dd43b491d26e4b102a27f904e3d71bdcb5ea08decf4b93145",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "a2e166048e4f39b5932f638440f8d82f1e40bd4e",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.8.1"
+        },
+        {
+          "commit": "cacb54d6013d04851e7217f9a9f224f8ba7eaaa7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.8.2"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.8.3"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.8.4"
+        },
+        {
+          "commit": "1e61ac4ebed4defcfcfd0ef95c503117f31e428e",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.9.0"
+        },
+        {
+          "commit": "7640ce6978005580eea3080325a207f771e11d56",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.9.2"
+        },
+        {
+          "commit": "c556b7ea97ddc4be7d762580c7b404a9383fdcf6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.9.3"
+        },
+        {
+          "commit": "90289197a725c8b8f326b18c09bec2f02c065741",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.9.4"
+        },
+        {
+          "commit": "699e35688f1c6ba5a123f685e2ef6374ba404937",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.8.0"
+        },
+        {
+          "commit": "0a6f7e015bf723d8fd346fe7d2544122b5d613a5",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.8.1"
+        },
+        {
+          "commit": "dd8d47f1a08fd81972fc9bb35a6f8ea24c5d076f",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.8.2"
+        },
+        {
+          "commit": "af8da569414cceb098c4479f5176dbe4269f5100",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.8.3"
+        },
+        {
+          "commit": "6cb87cca4c868cad096fc14139e73157740b7419",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.8.4"
+        },
+        {
+          "commit": "a47f2ad17eb662e940c550cfccb64a87dddd7e0b",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.9.0"
+        },
+        {
+          "commit": "dc26d19c1ed5b2779a3a759f78a747f47089c534",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.9.1"
+        },
+        {
+          "commit": "ea3eae8b9e011ff85d7f92f00cf07916dccf755e",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.9.2"
+        },
+        {
+          "commit": "322e4908b931a3efe2d65c6a7ad5ec373c5a5e1d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.9.3"
+        }
+      ]
+    },
+    {
+      "sha256": "c962bb02fa4e547aa4de175f850d3462f2ed60a0fc71f8e084d41b986ee2b278",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "8b0f727cf5db81c3cf2124efee9c8ce3d1e64379",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.7.0"
+        },
+        {
+          "commit": "47ce5bf27e688e4cfbc48a745c24a72bac6b62d7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.7.1"
+        },
+        {
+          "commit": "c353591ffa7fa07b0e9aecc9ecaed170725675dd",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.7.2"
+        },
+        {
+          "commit": "cd2b1b3d0867719b7d8482840746d1b105b1cd0d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.7.3"
+        },
+        {
+          "commit": "c0736fe4d8ec0a5eb3650cd64c9dfa37b7a48b9b",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.8.0"
+        },
+        {
+          "commit": "3e726b42e33d6da4f6a2cc05f9b0de2755f9edb7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.7.2"
+        },
+        {
+          "commit": "dbe777ecaa51042f84c6f31629d59a6596835fd2",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.7.3"
+        }
+      ]
+    },
+    {
+      "sha256": "cdd9b807d37b8636a39857bd5bc8ec888289d822fc8f1f8997d1caf86f86207c",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "cbf84daec643d47ee3ce7bd517b8d9a6eafbc00b",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.0"
+        },
+        {
+          "commit": "7efe31756b334c5c114468290963423e36e68932",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.1"
+        },
+        {
+          "commit": "bdbeac989f733d6bc757e6db4ea32c70b5d069ff",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.2"
+        },
+        {
+          "commit": "b2b717d166702b6f09255a141b4edbc663dded07",
+          "path": "src/backend/base/langflow/components/knowledge_bases/retrieval.py",
+          "kind": "class",
+          "tag": "1.6.3"
+        }
+      ]
+    },
+    {
+      "sha256": "e91e3daddf738c1f061fe5c11f87e757d4bba348e066a5693e0db6475b283871",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "e26dff25be2a2d933ba70301ddadc026fa075fe0",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.10.0"
+        },
+        {
+          "commit": "30b89779b74b11a1fa4e0f173cc2613841365ca5",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.9.5"
+        },
+        {
+          "commit": "110bea82810f461f923b4dbb2d483fcbdc714612",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "1.9.6"
+        },
+        {
+          "commit": "06666736cab94f1edad6658f974a2533b8a30c2c",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.9.4"
+        },
+        {
+          "commit": "b410b5429409014e00e6ef007175aed89c4f31cc",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.9.5"
+        },
+        {
+          "commit": "b11bd1f261b15b35d0bfdb3fc07a94fd0ea0aee6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "class",
+          "tag": "v1.9.6"
+        }
+      ]
+    },
+    {
+      "sha256": "ed1ab586fdbd408832b79a350ec56e90df838e45c02d5b2f91bd7e787747026a",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "b6ed2bc4d9d6a00e4bd8363495edfec6f091ccfc",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.7.0"
+        }
+      ]
+    },
+    {
+      "sha256": "f89b6a78663dd9d9df8bd27547ff2cbf45b7dab838c2a4d6cc868f83eed49ffa",
+      "module": "lfx.components.files_and_knowledge.retrieval",
+      "class_name": "KnowledgeBaseComponent",
+      "sources": [
+        {
+          "commit": "e26dff25be2a2d933ba70301ddadc026fa075fe0",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.10.0"
+        },
+        {
+          "commit": "30b89779b74b11a1fa4e0f173cc2613841365ca5",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.9.5"
+        },
+        {
+          "commit": "110bea82810f461f923b4dbb2d483fcbdc714612",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "1.9.6"
+        },
+        {
+          "commit": "06666736cab94f1edad6658f974a2533b8a30c2c",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.9.4"
+        },
+        {
+          "commit": "b410b5429409014e00e6ef007175aed89c4f31cc",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.9.5"
+        },
+        {
+          "commit": "b11bd1f261b15b35d0bfdb3fc07a94fd0ea0aee6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/retrieval.py",
+          "kind": "module",
+          "tag": "v1.9.6"
+        }
+      ]
+    },
+    {
+      "sha256": "0e2a7b48dd8e9b19b40102036f542c274805078cfe58a99d86abba284e5275b1",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.12.1"
+        }
+      ]
+    },
+    {
+      "sha256": "17a70babb7277f817fe509b0a1f09f12feec9a576aa7633f6349c7e26fcbc617",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.12.0"
+        }
+      ]
+    },
+    {
+      "sha256": "21781f4006f0aa80002f23c65fa385e626338bfcd732042f7f987ac0c22f7309",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.12.2"
+        }
+      ]
+    },
+    {
+      "sha256": "27e7e65fd0fdbe9cbfbd042a34396803363417f6896353ca224b29da94486b07",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.12.4"
+        }
+      ]
+    },
+    {
+      "sha256": "6bf49cbc2c16353a8e56cabcde9c39d4e5fc6ea90afb146d3427169a586652f5",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "562e5f2d6feeb52a28dfa647e63a1a620fcee334",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.11.0"
+        },
+        {
+          "commit": "999c5abe53e4347385b8ccc4a1e23a04482479c9",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.11.1"
+        },
+        {
+          "commit": "73629e2df63b4d0852808b8b5019f1be55f1f29d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.11.2"
+        },
+        {
+          "commit": "14ad03a3f03bc071186286f65c08e847f7f5d88c",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.11.3"
+        },
+        {
+          "commit": "9c77e5c62aa50f4e8010a9f1a9921c3fb7a8fa59",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.11.4"
+        },
+        {
+          "commit": "ab52f7f8b911bb42712cefdfe9af3ed02db560a6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.11.5"
+        },
+        {
+          "commit": "c8a80d6ad92beaf761c45171d330f5ac386fcd8d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.11.6"
+        }
+      ]
+    },
+    {
+      "sha256": "6f49fbf711e475afe9ddff847a2617e08cbd0e78210e6c59198a9ded7cf44533",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.12.0"
+        }
+      ]
+    },
+    {
+      "sha256": "78fde8c79dbebf888b27a7c5bd8686bfed3910b8b6368a878295cb1cfbf0fa88",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.12.2"
+        }
+      ]
+    },
+    {
+      "sha256": "a3119cbc5f4a195e0fb219e55ba128b44f041fc10bf0cc86348513213bcc4d0e",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.10.3"
+        }
+      ]
+    },
+    {
+      "sha256": "c627d8eb56154cb68427537e88b27996bc7471e0869d4dfe89d8af799891357f",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.12.1"
+        }
+      ]
+    },
+    {
+      "sha256": "d79b5f17520d682023fb115ae0011a46084aa9941e2e50f9fcf266e158321c21",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "562e5f2d6feeb52a28dfa647e63a1a620fcee334",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.11.0"
+        },
+        {
+          "commit": "999c5abe53e4347385b8ccc4a1e23a04482479c9",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.11.1"
+        },
+        {
+          "commit": "73629e2df63b4d0852808b8b5019f1be55f1f29d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.11.2"
+        },
+        {
+          "commit": "14ad03a3f03bc071186286f65c08e847f7f5d88c",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.11.3"
+        },
+        {
+          "commit": "9c77e5c62aa50f4e8010a9f1a9921c3fb7a8fa59",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.11.4"
+        },
+        {
+          "commit": "ab52f7f8b911bb42712cefdfe9af3ed02db560a6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.11.5"
+        },
+        {
+          "commit": "c8a80d6ad92beaf761c45171d330f5ac386fcd8d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.11.6"
+        }
+      ]
+    },
+    {
+      "sha256": "e0c8cf8e6af04c4b924ab1bb507a23675ff7e4adbbb0ff5d06655ef02a9bfbac",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.12.4"
+        }
+      ]
+    },
+    {
+      "sha256": "e7fac9f09c07f84b5bb009548553f3614950e5585ae59eaeaa39642db5725459",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.10.3"
+        }
+      ]
+    },
+    {
+      "sha256": "f95eb2cc3369114bea6c1c0cbdf48a8cca9efa276e2c84f10960080872cbd845",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.10.1"
+        },
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "class",
+          "tag": "v1.10.2"
+        }
+      ]
+    },
+    {
+      "sha256": "fd607666fc9f41dbf1634b6db11275c8b3e3862acec8ac2b2732beddee1542ac",
+      "module": "lfx.components.files_and_knowledge.knowledge",
+      "class_name": "KnowledgeComponent",
+      "sources": [
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.10.1"
+        },
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/knowledge.py",
+          "kind": "module",
+          "tag": "v1.10.2"
+        }
+      ]
+    },
+    {
+      "sha256": "137c0cfebe9b9f3372b4b7268b77b7dfa09de06458dd68f184ca52c8a4c3043c",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.10.1"
+        },
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.10.2"
+        },
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.10.3"
+        },
+        {
+          "commit": "562e5f2d6feeb52a28dfa647e63a1a620fcee334",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.11.0"
+        },
+        {
+          "commit": "999c5abe53e4347385b8ccc4a1e23a04482479c9",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.11.1"
+        },
+        {
+          "commit": "73629e2df63b4d0852808b8b5019f1be55f1f29d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.11.2"
+        },
+        {
+          "commit": "14ad03a3f03bc071186286f65c08e847f7f5d88c",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.11.3"
+        },
+        {
+          "commit": "9c77e5c62aa50f4e8010a9f1a9921c3fb7a8fa59",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.11.4"
+        },
+        {
+          "commit": "ab52f7f8b911bb42712cefdfe9af3ed02db560a6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.11.5"
+        },
+        {
+          "commit": "c8a80d6ad92beaf761c45171d330f5ac386fcd8d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.11.6"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.12.4"
+        }
+      ]
+    },
+    {
+      "sha256": "32ef9bfe71b4e8b3146b06da053f8051e33861a8d15947232970119a56651e75",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "7640ce6978005580eea3080325a207f771e11d56",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "1.9.2"
+        },
+        {
+          "commit": "c556b7ea97ddc4be7d762580c7b404a9383fdcf6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "1.9.3"
+        },
+        {
+          "commit": "90289197a725c8b8f326b18c09bec2f02c065741",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "1.9.4"
+        },
+        {
+          "commit": "a47f2ad17eb662e940c550cfccb64a87dddd7e0b",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.9.0"
+        },
+        {
+          "commit": "dc26d19c1ed5b2779a3a759f78a747f47089c534",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.9.1"
+        },
+        {
+          "commit": "ea3eae8b9e011ff85d7f92f00cf07916dccf755e",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.9.2"
+        },
+        {
+          "commit": "322e4908b931a3efe2d65c6a7ad5ec373c5a5e1d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.9.3"
+        }
+      ]
+    },
+    {
+      "sha256": "3836f3b64e65c5fe6d20e7bdb54051456582307f28494787a746cf7004a8e891",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "699e35688f1c6ba5a123f685e2ef6374ba404937",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "module",
+          "tag": "v1.8.0"
+        },
+        {
+          "commit": "0a6f7e015bf723d8fd346fe7d2544122b5d613a5",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "module",
+          "tag": "v1.8.1"
+        },
+        {
+          "commit": "dd8d47f1a08fd81972fc9bb35a6f8ea24c5d076f",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "module",
+          "tag": "v1.8.2"
+        },
+        {
+          "commit": "af8da569414cceb098c4479f5176dbe4269f5100",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "module",
+          "tag": "v1.8.3"
+        },
+        {
+          "commit": "6cb87cca4c868cad096fc14139e73157740b7419",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "module",
+          "tag": "v1.8.4"
+        }
+      ]
+    },
+    {
+      "sha256": "3fe4d113ecf0acb1c278c4014b959309406be8026624cac5d6cc7f76ce72b553",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "a2e166048e4f39b5932f638440f8d82f1e40bd4e",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "class",
+          "tag": "1.8.1"
+        },
+        {
+          "commit": "cacb54d6013d04851e7217f9a9f224f8ba7eaaa7",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "class",
+          "tag": "1.8.2"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "class",
+          "tag": "1.8.3"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "class",
+          "tag": "1.8.4"
+        },
+        {
+          "commit": "1e61ac4ebed4defcfcfd0ef95c503117f31e428e",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "class",
+          "tag": "1.9.0"
+        }
+      ]
+    },
+    {
+      "sha256": "46fe2d8ce3ecc445b5bc20ecd9bdb87b5224ce08ee39f6adf6fdcebf4d93d7f1",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "8b0f727cf5db81c3cf2124efee9c8ce3d1e64379",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "1.7.0"
+        },
+        {
+          "commit": "47ce5bf27e688e4cfbc48a745c24a72bac6b62d7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "1.7.1"
+        },
+        {
+          "commit": "c353591ffa7fa07b0e9aecc9ecaed170725675dd",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "1.7.2"
+        },
+        {
+          "commit": "cd2b1b3d0867719b7d8482840746d1b105b1cd0d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "1.7.3"
+        },
+        {
+          "commit": "c0736fe4d8ec0a5eb3650cd64c9dfa37b7a48b9b",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "1.8.0"
+        },
+        {
+          "commit": "3e726b42e33d6da4f6a2cc05f9b0de2755f9edb7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.7.2"
+        },
+        {
+          "commit": "dbe777ecaa51042f84c6f31629d59a6596835fd2",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.7.3"
+        }
+      ]
+    },
+    {
+      "sha256": "62c2cb2ac0fab86ecee42dcf554e5a48fea0e0187e6db875c76ffda4e1580e57",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "8b0f727cf5db81c3cf2124efee9c8ce3d1e64379",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "1.7.0"
+        },
+        {
+          "commit": "47ce5bf27e688e4cfbc48a745c24a72bac6b62d7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "1.7.1"
+        },
+        {
+          "commit": "c353591ffa7fa07b0e9aecc9ecaed170725675dd",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "1.7.2"
+        },
+        {
+          "commit": "cd2b1b3d0867719b7d8482840746d1b105b1cd0d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "1.7.3"
+        },
+        {
+          "commit": "c0736fe4d8ec0a5eb3650cd64c9dfa37b7a48b9b",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "1.8.0"
+        },
+        {
+          "commit": "3e726b42e33d6da4f6a2cc05f9b0de2755f9edb7",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.7.2"
+        },
+        {
+          "commit": "dbe777ecaa51042f84c6f31629d59a6596835fd2",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.7.3"
+        }
+      ]
+    },
+    {
+      "sha256": "780d5ce3505e2a6ad825bb020437d2e60c61072adde454d4450bc77cd121788c",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "e26dff25be2a2d933ba70301ddadc026fa075fe0",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "1.10.0"
+        },
+        {
+          "commit": "30b89779b74b11a1fa4e0f173cc2613841365ca5",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "1.9.5"
+        },
+        {
+          "commit": "110bea82810f461f923b4dbb2d483fcbdc714612",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "1.9.6"
+        },
+        {
+          "commit": "06666736cab94f1edad6658f974a2533b8a30c2c",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.9.4"
+        },
+        {
+          "commit": "b410b5429409014e00e6ef007175aed89c4f31cc",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.9.5"
+        },
+        {
+          "commit": "b11bd1f261b15b35d0bfdb3fc07a94fd0ea0aee6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.9.6"
+        }
+      ]
+    },
+    {
+      "sha256": "7f2fbcbe79a6bbf0c230ed1f28e4856e89c10590c90a8e73570179b7b7da107b",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "699e35688f1c6ba5a123f685e2ef6374ba404937",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "class",
+          "tag": "v1.8.0"
+        },
+        {
+          "commit": "0a6f7e015bf723d8fd346fe7d2544122b5d613a5",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "class",
+          "tag": "v1.8.1"
+        },
+        {
+          "commit": "dd8d47f1a08fd81972fc9bb35a6f8ea24c5d076f",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "class",
+          "tag": "v1.8.2"
+        },
+        {
+          "commit": "af8da569414cceb098c4479f5176dbe4269f5100",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "class",
+          "tag": "v1.8.3"
+        },
+        {
+          "commit": "6cb87cca4c868cad096fc14139e73157740b7419",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "class",
+          "tag": "v1.8.4"
+        }
+      ]
+    },
+    {
+      "sha256": "93bde52d349e83a8e6a6532a39c16fb0416664138c761de5754402023725e71e",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.10.1"
+        },
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.10.2"
+        },
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.10.3"
+        },
+        {
+          "commit": "562e5f2d6feeb52a28dfa647e63a1a620fcee334",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.11.0"
+        },
+        {
+          "commit": "999c5abe53e4347385b8ccc4a1e23a04482479c9",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.11.1"
+        },
+        {
+          "commit": "73629e2df63b4d0852808b8b5019f1be55f1f29d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.11.2"
+        },
+        {
+          "commit": "14ad03a3f03bc071186286f65c08e847f7f5d88c",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.11.3"
+        },
+        {
+          "commit": "9c77e5c62aa50f4e8010a9f1a9921c3fb7a8fa59",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.11.4"
+        },
+        {
+          "commit": "ab52f7f8b911bb42712cefdfe9af3ed02db560a6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.11.5"
+        },
+        {
+          "commit": "c8a80d6ad92beaf761c45171d330f5ac386fcd8d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.11.6"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.12.4"
+        }
+      ]
+    },
+    {
+      "sha256": "949923d94597a0b5b6331b53d1ab5b930989bf53a80cfed43de44cf36bebc9c7",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "a2e166048e4f39b5932f638440f8d82f1e40bd4e",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "module",
+          "tag": "1.8.1"
+        },
+        {
+          "commit": "cacb54d6013d04851e7217f9a9f224f8ba7eaaa7",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "module",
+          "tag": "1.8.2"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "module",
+          "tag": "1.8.3"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "module",
+          "tag": "1.8.4"
+        },
+        {
+          "commit": "1e61ac4ebed4defcfcfd0ef95c503117f31e428e",
+          "path": "src/lfx/src/lfx/components/deactivated/ingestion.py",
+          "kind": "module",
+          "tag": "1.9.0"
+        }
+      ]
+    },
+    {
+      "sha256": "987c4444464d4a0c25f6e941ba1159cc4917a3df1d18aeb810ae32b902ae4668",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "b6ed2bc4d9d6a00e4bd8363495edfec6f091ccfc",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.7.0"
+        }
+      ]
+    },
+    {
+      "sha256": "9c73b0113e61e24bbd6efe4a9dfc525c53c2383a6f523514760ba3f1d31ac5d9",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "b6ed2bc4d9d6a00e4bd8363495edfec6f091ccfc",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.7.0"
+        }
+      ]
+    },
+    {
+      "sha256": "a4585607737739d5cc73c434b95015527eee739298dcb5622ea6fed5dc53ee4c",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "48fe15b0f5ee59e819cd974631ef9fb473664838",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "module",
+          "tag": "1.6.10"
+        },
+        {
+          "commit": "7125c604a9cc7dfc9b905d91744024d2dd78e46f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "module",
+          "tag": "1.6.4"
+        },
+        {
+          "commit": "4172cdaebcaf78625c96c8dedc25fe201c175c1f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "module",
+          "tag": "1.6.5"
+        },
+        {
+          "commit": "fb1026105ee5f68de3c47a8644d819577175f4ae",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "module",
+          "tag": "1.6.6"
+        },
+        {
+          "commit": "f94f0f94348e2dfac1b05cc42ec5e2c0415f8650",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "module",
+          "tag": "1.6.7"
+        },
+        {
+          "commit": "64ca6a5cfcf410362f90a14d1201e73d5a45474f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "module",
+          "tag": "1.6.8"
+        },
+        {
+          "commit": "0f8ff5a3ac713f487c064aa1901522b1a899c5b9",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "module",
+          "tag": "1.6.9"
+        },
+        {
+          "commit": "5b5f727376fb4ed2e678139bff45fd54e7ff32ee",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "module",
+          "tag": "v1.6.8"
+        }
+      ]
+    },
+    {
+      "sha256": "a91ed7b577e7d832ee5f5f1758ea57887daf0ed44efacd75b5a15183d649febb",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "e26dff25be2a2d933ba70301ddadc026fa075fe0",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "1.10.0"
+        },
+        {
+          "commit": "30b89779b74b11a1fa4e0f173cc2613841365ca5",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "1.9.5"
+        },
+        {
+          "commit": "110bea82810f461f923b4dbb2d483fcbdc714612",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "1.9.6"
+        },
+        {
+          "commit": "06666736cab94f1edad6658f974a2533b8a30c2c",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.9.4"
+        },
+        {
+          "commit": "b410b5429409014e00e6ef007175aed89c4f31cc",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.9.5"
+        },
+        {
+          "commit": "b11bd1f261b15b35d0bfdb3fc07a94fd0ea0aee6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "module",
+          "tag": "v1.9.6"
+        }
+      ]
+    },
+    {
+      "sha256": "c662903161597edb601355cec52b8375f7f5a630571f48ed4a85ef4ecde61f9b",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "48fe15b0f5ee59e819cd974631ef9fb473664838",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "class",
+          "tag": "1.6.10"
+        },
+        {
+          "commit": "7125c604a9cc7dfc9b905d91744024d2dd78e46f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "class",
+          "tag": "1.6.4"
+        },
+        {
+          "commit": "4172cdaebcaf78625c96c8dedc25fe201c175c1f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "class",
+          "tag": "1.6.5"
+        },
+        {
+          "commit": "fb1026105ee5f68de3c47a8644d819577175f4ae",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "class",
+          "tag": "1.6.6"
+        },
+        {
+          "commit": "f94f0f94348e2dfac1b05cc42ec5e2c0415f8650",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "class",
+          "tag": "1.6.7"
+        },
+        {
+          "commit": "64ca6a5cfcf410362f90a14d1201e73d5a45474f",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "class",
+          "tag": "1.6.8"
+        },
+        {
+          "commit": "0f8ff5a3ac713f487c064aa1901522b1a899c5b9",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "class",
+          "tag": "1.6.9"
+        },
+        {
+          "commit": "5b5f727376fb4ed2e678139bff45fd54e7ff32ee",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "class",
+          "tag": "v1.6.8"
+        }
+      ]
+    },
+    {
+      "sha256": "d27bdc5f98ae6494a0e3c28f4b60b430ff11a2c542dadddf64263d1f14fb8b83",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "cbf84daec643d47ee3ce7bd517b8d9a6eafbc00b",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "class",
+          "tag": "1.6.0"
+        },
+        {
+          "commit": "7efe31756b334c5c114468290963423e36e68932",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "class",
+          "tag": "1.6.1"
+        },
+        {
+          "commit": "bdbeac989f733d6bc757e6db4ea32c70b5d069ff",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "class",
+          "tag": "1.6.2"
+        },
+        {
+          "commit": "b2b717d166702b6f09255a141b4edbc663dded07",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "class",
+          "tag": "1.6.3"
+        }
+      ]
+    },
+    {
+      "sha256": "f3ace04183fe6c9f5d558dc144fea8d311895a571ebf9e03525bc0c72e038946",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "cbf84daec643d47ee3ce7bd517b8d9a6eafbc00b",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "module",
+          "tag": "1.6.0"
+        },
+        {
+          "commit": "7efe31756b334c5c114468290963423e36e68932",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "module",
+          "tag": "1.6.1"
+        },
+        {
+          "commit": "bdbeac989f733d6bc757e6db4ea32c70b5d069ff",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "module",
+          "tag": "1.6.2"
+        },
+        {
+          "commit": "b2b717d166702b6f09255a141b4edbc663dded07",
+          "path": "src/backend/base/langflow/components/knowledge_bases/ingestion.py",
+          "kind": "module",
+          "tag": "1.6.3"
+        }
+      ]
+    },
+    {
+      "sha256": "fe29fcc05439f72d09030a034e6b4c112d1ec9bcadab80671fc23a57717e5b00",
+      "module": "lfx.components.files_and_knowledge.ingestion",
+      "class_name": "KnowledgeIngestionComponent",
+      "sources": [
+        {
+          "commit": "7640ce6978005580eea3080325a207f771e11d56",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "1.9.2"
+        },
+        {
+          "commit": "c556b7ea97ddc4be7d762580c7b404a9383fdcf6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "1.9.3"
+        },
+        {
+          "commit": "90289197a725c8b8f326b18c09bec2f02c065741",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "1.9.4"
+        },
+        {
+          "commit": "a47f2ad17eb662e940c550cfccb64a87dddd7e0b",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.9.0"
+        },
+        {
+          "commit": "dc26d19c1ed5b2779a3a759f78a747f47089c534",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.9.1"
+        },
+        {
+          "commit": "ea3eae8b9e011ff85d7f92f00cf07916dccf755e",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.9.2"
+        },
+        {
+          "commit": "322e4908b931a3efe2d65c6a7ad5ec373c5a5e1d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/ingestion.py",
+          "kind": "class",
+          "tag": "v1.9.3"
+        }
+      ]
+    },
+    {
+      "sha256": "0a3c9cc76b35a09dfbb8f76b4336c63c02ead6940a11d725cf3ddd7ddc48c625",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "cbf84daec643d47ee3ce7bd517b8d9a6eafbc00b",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.6.0"
+        },
+        {
+          "commit": "7efe31756b334c5c114468290963423e36e68932",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.6.1"
+        },
+        {
+          "commit": "48fe15b0f5ee59e819cd974631ef9fb473664838",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.6.10"
+        },
+        {
+          "commit": "bdbeac989f733d6bc757e6db4ea32c70b5d069ff",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.6.2"
+        },
+        {
+          "commit": "b2b717d166702b6f09255a141b4edbc663dded07",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.6.3"
+        },
+        {
+          "commit": "7125c604a9cc7dfc9b905d91744024d2dd78e46f",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.6.4"
+        },
+        {
+          "commit": "4172cdaebcaf78625c96c8dedc25fe201c175c1f",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.6.5"
+        },
+        {
+          "commit": "fb1026105ee5f68de3c47a8644d819577175f4ae",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.6.6"
+        },
+        {
+          "commit": "f94f0f94348e2dfac1b05cc42ec5e2c0415f8650",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.6.7"
+        },
+        {
+          "commit": "64ca6a5cfcf410362f90a14d1201e73d5a45474f",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.6.8"
+        },
+        {
+          "commit": "0f8ff5a3ac713f487c064aa1901522b1a899c5b9",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.6.9"
+        },
+        {
+          "commit": "5b5f727376fb4ed2e678139bff45fd54e7ff32ee",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.6.8"
+        }
+      ]
+    },
+    {
+      "sha256": "208eb0970abbe8c207a1f7e2973553678e3de50a92ecb6feab761078731eb925",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "8b0f727cf5db81c3cf2124efee9c8ce3d1e64379",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.7.0"
+        },
+        {
+          "commit": "47ce5bf27e688e4cfbc48a745c24a72bac6b62d7",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.7.1"
+        },
+        {
+          "commit": "c353591ffa7fa07b0e9aecc9ecaed170725675dd",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.7.2"
+        },
+        {
+          "commit": "cd2b1b3d0867719b7d8482840746d1b105b1cd0d",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.7.3"
+        },
+        {
+          "commit": "c0736fe4d8ec0a5eb3650cd64c9dfa37b7a48b9b",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.8.0"
+        },
+        {
+          "commit": "b6ed2bc4d9d6a00e4bd8363495edfec6f091ccfc",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.7.0"
+        },
+        {
+          "commit": "3e726b42e33d6da4f6a2cc05f9b0de2755f9edb7",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.7.2"
+        },
+        {
+          "commit": "dbe777ecaa51042f84c6f31629d59a6596835fd2",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.7.3"
+        },
+        {
+          "commit": "699e35688f1c6ba5a123f685e2ef6374ba404937",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.8.0"
+        },
+        {
+          "commit": "0a6f7e015bf723d8fd346fe7d2544122b5d613a5",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.8.1"
+        },
+        {
+          "commit": "dd8d47f1a08fd81972fc9bb35a6f8ea24c5d076f",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.8.2"
+        },
+        {
+          "commit": "af8da569414cceb098c4479f5176dbe4269f5100",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.8.3"
+        },
+        {
+          "commit": "6cb87cca4c868cad096fc14139e73157740b7419",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.8.4"
+        }
+      ]
+    },
+    {
+      "sha256": "2f4f8d1585f71d18b28e31ea51f8c09edeee8d29f39e2a886a61703a00e59d3d",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "8b0f727cf5db81c3cf2124efee9c8ce3d1e64379",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.7.0"
+        },
+        {
+          "commit": "47ce5bf27e688e4cfbc48a745c24a72bac6b62d7",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.7.1"
+        },
+        {
+          "commit": "c353591ffa7fa07b0e9aecc9ecaed170725675dd",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.7.2"
+        },
+        {
+          "commit": "cd2b1b3d0867719b7d8482840746d1b105b1cd0d",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.7.3"
+        },
+        {
+          "commit": "c0736fe4d8ec0a5eb3650cd64c9dfa37b7a48b9b",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.8.0"
+        },
+        {
+          "commit": "b6ed2bc4d9d6a00e4bd8363495edfec6f091ccfc",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.7.0"
+        },
+        {
+          "commit": "3e726b42e33d6da4f6a2cc05f9b0de2755f9edb7",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.7.2"
+        },
+        {
+          "commit": "dbe777ecaa51042f84c6f31629d59a6596835fd2",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.7.3"
+        },
+        {
+          "commit": "699e35688f1c6ba5a123f685e2ef6374ba404937",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.8.0"
+        },
+        {
+          "commit": "0a6f7e015bf723d8fd346fe7d2544122b5d613a5",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.8.1"
+        },
+        {
+          "commit": "dd8d47f1a08fd81972fc9bb35a6f8ea24c5d076f",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.8.2"
+        },
+        {
+          "commit": "af8da569414cceb098c4479f5176dbe4269f5100",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.8.3"
+        },
+        {
+          "commit": "6cb87cca4c868cad096fc14139e73157740b7419",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.8.4"
+        }
+      ]
+    },
+    {
+      "sha256": "3fee981ad276198ae0c97a095c577bc97b6b181198e0a1eb41afe730798015d4",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "9ad92eaeaa935db67deca300c40ed0dffea39131",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.5.0"
+        },
+        {
+          "commit": "4a7564af4a8e326dc98c798d11c274d4ee65281d",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.5.1"
+        }
+      ]
+    },
+    {
+      "sha256": "535a112ea505a07e93b512a27ef5e77ff456d45232a657287ba7c16f5dcd0100",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "9ad92eaeaa935db67deca300c40ed0dffea39131",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.5.0"
+        },
+        {
+          "commit": "4a7564af4a8e326dc98c798d11c274d4ee65281d",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.5.1"
+        }
+      ]
+    },
+    {
+      "sha256": "58375b2cdd705c4fd5ec468dd16cabc739ce3caf232873f4f7c0af58502f4471",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "6c2ff92ccf083f038d9a97a749b4e0f30a60247a",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.3.0"
+        },
+        {
+          "commit": "aa49028fae82f75653e1ebbd2b3a63241c4d645f",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.3.1"
+        },
+        {
+          "commit": "8e31fc5a8acf02894b01d13ce8e79126654fe692",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.3.2"
+        },
+        {
+          "commit": "7fb400d99e471e6ef84249b80d0f430ba93d60d5",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.3.3"
+        },
+        {
+          "commit": "89201e459f14b2e11a843f1ab7f259a91a8a79a6",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.3.4"
+        },
+        {
+          "commit": "e0ae3f69c2debc918fb9e690645a21a57db11bf6",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.4.0"
+        },
+        {
+          "commit": "c608a4fd5d5cf402cd34f8f7f79f761fa40a4106",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.4.1"
+        },
+        {
+          "commit": "4b580d15696334e4e9455cd12506732317d6a185",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.4.2"
+        },
+        {
+          "commit": "e14ae00707b5cbb0f491d5444026c65fa3987cfd",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.4.3"
+        }
+      ]
+    },
+    {
+      "sha256": "5890181a086237b77c84779a8b7b61b1debb268fb45147a2982c4e659999b5f7",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "a2e166048e4f39b5932f638440f8d82f1e40bd4e",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.8.1"
+        },
+        {
+          "commit": "cacb54d6013d04851e7217f9a9f224f8ba7eaaa7",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.8.2"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.8.3"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.8.4"
+        },
+        {
+          "commit": "1e61ac4ebed4defcfcfd0ef95c503117f31e428e",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.9.0"
+        },
+        {
+          "commit": "7640ce6978005580eea3080325a207f771e11d56",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.9.2"
+        },
+        {
+          "commit": "c556b7ea97ddc4be7d762580c7b404a9383fdcf6",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.9.3"
+        },
+        {
+          "commit": "90289197a725c8b8f326b18c09bec2f02c065741",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.9.4"
+        },
+        {
+          "commit": "a47f2ad17eb662e940c550cfccb64a87dddd7e0b",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.9.0"
+        },
+        {
+          "commit": "dc26d19c1ed5b2779a3a759f78a747f47089c534",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.9.1"
+        },
+        {
+          "commit": "ea3eae8b9e011ff85d7f92f00cf07916dccf755e",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.9.2"
+        },
+        {
+          "commit": "322e4908b931a3efe2d65c6a7ad5ec373c5a5e1d",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.9.3"
+        }
+      ]
+    },
+    {
+      "sha256": "74e09979e78e173d21a280f619b0ef71f0ce61a3d322bc492a7a9f0c74cdfa72",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "module"
+        }
+      ]
+    },
+    {
+      "sha256": "75a44be48b695fbeb1a242cd0f40c10b7c6896ffa6805d79660e0e90892e8542",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "6c2ff92ccf083f038d9a97a749b4e0f30a60247a",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.3.0"
+        },
+        {
+          "commit": "aa49028fae82f75653e1ebbd2b3a63241c4d645f",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.3.1"
+        },
+        {
+          "commit": "8e31fc5a8acf02894b01d13ce8e79126654fe692",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.3.2"
+        },
+        {
+          "commit": "7fb400d99e471e6ef84249b80d0f430ba93d60d5",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.3.3"
+        },
+        {
+          "commit": "89201e459f14b2e11a843f1ab7f259a91a8a79a6",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.3.4"
+        },
+        {
+          "commit": "e0ae3f69c2debc918fb9e690645a21a57db11bf6",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.4.0"
+        },
+        {
+          "commit": "c608a4fd5d5cf402cd34f8f7f79f761fa40a4106",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.4.1"
+        },
+        {
+          "commit": "4b580d15696334e4e9455cd12506732317d6a185",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.4.2"
+        },
+        {
+          "commit": "e14ae00707b5cbb0f491d5444026c65fa3987cfd",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.4.3"
+        }
+      ]
+    },
+    {
+      "sha256": "8b458634ea36a0858803f0afb3f3440e624d298d71421c067b954bb3946e829c",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "cbf84daec643d47ee3ce7bd517b8d9a6eafbc00b",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.6.0"
+        },
+        {
+          "commit": "7efe31756b334c5c114468290963423e36e68932",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.6.1"
+        },
+        {
+          "commit": "48fe15b0f5ee59e819cd974631ef9fb473664838",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.6.10"
+        },
+        {
+          "commit": "bdbeac989f733d6bc757e6db4ea32c70b5d069ff",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.6.2"
+        },
+        {
+          "commit": "b2b717d166702b6f09255a141b4edbc663dded07",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.6.3"
+        },
+        {
+          "commit": "7125c604a9cc7dfc9b905d91744024d2dd78e46f",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.6.4"
+        },
+        {
+          "commit": "4172cdaebcaf78625c96c8dedc25fe201c175c1f",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.6.5"
+        },
+        {
+          "commit": "fb1026105ee5f68de3c47a8644d819577175f4ae",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.6.6"
+        },
+        {
+          "commit": "f94f0f94348e2dfac1b05cc42ec5e2c0415f8650",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.6.7"
+        },
+        {
+          "commit": "64ca6a5cfcf410362f90a14d1201e73d5a45474f",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.6.8"
+        },
+        {
+          "commit": "0f8ff5a3ac713f487c064aa1901522b1a899c5b9",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.6.9"
+        },
+        {
+          "commit": "5b5f727376fb4ed2e678139bff45fd54e7ff32ee",
+          "path": "src/backend/base/langflow/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.6.8"
+        }
+      ]
+    },
+    {
+      "sha256": "949e15cd8b3db45511e1cb061774e689c47bd0ad95b1415bab88dc72af7da4b1",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "e26dff25be2a2d933ba70301ddadc026fa075fe0",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.10.0"
+        },
+        {
+          "commit": "30b89779b74b11a1fa4e0f173cc2613841365ca5",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.9.5"
+        },
+        {
+          "commit": "110bea82810f461f923b4dbb2d483fcbdc714612",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "1.9.6"
+        },
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.10.1"
+        },
+        {
+          "commit": "06666736cab94f1edad6658f974a2533b8a30c2c",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.9.4"
+        },
+        {
+          "commit": "b410b5429409014e00e6ef007175aed89c4f31cc",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.9.5"
+        },
+        {
+          "commit": "b11bd1f261b15b35d0bfdb3fc07a94fd0ea0aee6",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.9.6"
+        }
+      ]
+    },
+    {
+      "sha256": "9f995bcef4bc29c7a01180dd35690c70e7b444da94d6e8138b6325d8af81391b",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "a2e166048e4f39b5932f638440f8d82f1e40bd4e",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.8.1"
+        },
+        {
+          "commit": "cacb54d6013d04851e7217f9a9f224f8ba7eaaa7",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.8.2"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.8.3"
+        },
+        {
+          "commit": "08bf98404cfd7737fde57a2588785766cdf1b42e",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.8.4"
+        },
+        {
+          "commit": "1e61ac4ebed4defcfcfd0ef95c503117f31e428e",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.9.0"
+        },
+        {
+          "commit": "7640ce6978005580eea3080325a207f771e11d56",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.9.2"
+        },
+        {
+          "commit": "c556b7ea97ddc4be7d762580c7b404a9383fdcf6",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.9.3"
+        },
+        {
+          "commit": "90289197a725c8b8f326b18c09bec2f02c065741",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.9.4"
+        },
+        {
+          "commit": "a47f2ad17eb662e940c550cfccb64a87dddd7e0b",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.9.0"
+        },
+        {
+          "commit": "dc26d19c1ed5b2779a3a759f78a747f47089c534",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.9.1"
+        },
+        {
+          "commit": "ea3eae8b9e011ff85d7f92f00cf07916dccf755e",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.9.2"
+        },
+        {
+          "commit": "322e4908b931a3efe2d65c6a7ad5ec373c5a5e1d",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.9.3"
+        }
+      ]
+    },
+    {
+      "sha256": "a48c011a373b0c4e5a6130d1d5570b1bcc5f32e54cdd9b75e364d3122eee1cdc",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.10.3"
+        }
+      ]
+    },
+    {
+      "sha256": "c243a8db39d36a3e0e7246269e02f3ff1e6bc44ff750d8809d9612990eb4dc71",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/chroma/local_db.py",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sha256": "ca48ceb1d2889e059c8385b552f6f962085a72d7f6b25213d07563fef38f5ee2",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.10.2"
+        }
+      ]
+    },
+    {
+      "sha256": "cad4d6f2513bb1b4a8abbb407959ee277d8ace796cfb5d453c6c6b4c68006130",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.10.3"
+        }
+      ]
+    },
+    {
+      "sha256": "e62bcaf109c4bbaccf051d0e374d44b618c23fc3d6f5e4b22696d30e64652f0e",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "class",
+          "tag": "v1.10.2"
+        }
+      ]
+    },
+    {
+      "sha256": "f1b853bc0477fc05921955a9dc938950b3a3466177fc3a5dfb6c6eb9d974e0d3",
+      "module": "lfx.components.chroma.local_db",
+      "class_name": "LocalDBComponent",
+      "sources": [
+        {
+          "commit": "e26dff25be2a2d933ba70301ddadc026fa075fe0",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.10.0"
+        },
+        {
+          "commit": "30b89779b74b11a1fa4e0f173cc2613841365ca5",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.9.5"
+        },
+        {
+          "commit": "110bea82810f461f923b4dbb2d483fcbdc714612",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "1.9.6"
+        },
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.10.1"
+        },
+        {
+          "commit": "06666736cab94f1edad6658f974a2533b8a30c2c",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.9.4"
+        },
+        {
+          "commit": "b410b5429409014e00e6ef007175aed89c4f31cc",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.9.5"
+        },
+        {
+          "commit": "b11bd1f261b15b35d0bfdb3fc07a94fd0ea0aee6",
+          "path": "src/lfx/src/lfx/components/vectorstores/local_db.py",
+          "kind": "module",
+          "tag": "v1.9.6"
+        }
+      ]
+    },
+    {
+      "sha256": "4ac770ed7dceba82939fcc421ef145a7736bcd012c13075b41716295a160495a",
+      "module": "lfx.components.files_and_knowledge.memory_retrieval",
+      "class_name": "MemoryBaseComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.12.4"
+        }
+      ]
+    },
+    {
+      "sha256": "714c4d8bcb6d2b094c985fc90b1a1699ec75c6fd5cb28dcd894e16ee09bb2cad",
+      "module": "lfx.components.files_and_knowledge.memory_retrieval",
+      "class_name": "MemoryBaseComponent",
+      "sources": [
+        {
+          "commit": "abf94d712df2b9a4a33ad2c7f1c400e67684570d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "1bb142ba5df8278bd35d0206985ecbc7352da053",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module"
+        },
+        {
+          "commit": "435c0c9fbbd5a812982be028e0c5c5886342d482",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "9d896c63ba6d7f5f7cf1b4bad27c03485369123a",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "c979695ce660285b267b3e7c6788e91aade3c0fe",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "6b494eeabcd7c3dc50f6e4f05815f147724c8275",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.12.4"
+        }
+      ]
+    },
+    {
+      "sha256": "d9407d371de1c14ddf9e7a540c893fefe0efbcc4d8f05ee8ca044e1ed21f4f59",
+      "module": "lfx.components.files_and_knowledge.memory_retrieval",
+      "class_name": "MemoryBaseComponent",
+      "sources": [
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.10.1"
+        },
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.10.2"
+        },
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.10.3"
+        },
+        {
+          "commit": "562e5f2d6feeb52a28dfa647e63a1a620fcee334",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.0"
+        },
+        {
+          "commit": "999c5abe53e4347385b8ccc4a1e23a04482479c9",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.1"
+        },
+        {
+          "commit": "73629e2df63b4d0852808b8b5019f1be55f1f29d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.2"
+        },
+        {
+          "commit": "14ad03a3f03bc071186286f65c08e847f7f5d88c",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.3"
+        },
+        {
+          "commit": "9c77e5c62aa50f4e8010a9f1a9921c3fb7a8fa59",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.4"
+        },
+        {
+          "commit": "ab52f7f8b911bb42712cefdfe9af3ed02db560a6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.5"
+        },
+        {
+          "commit": "c8a80d6ad92beaf761c45171d330f5ac386fcd8d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "module",
+          "tag": "v1.11.6"
+        }
+      ]
+    },
+    {
+      "sha256": "f65d63612ebaf221eb2df6aaa74af9ed38272888544a1eb1685884490aff2069",
+      "module": "lfx.components.files_and_knowledge.memory_retrieval",
+      "class_name": "MemoryBaseComponent",
+      "sources": [
+        {
+          "commit": "9690e69e86954ba9856c6ef06db7721d5ffa4bab",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.10.0"
+        },
+        {
+          "commit": "a66b75ac2603b26988fb6be95303fdc61f807190",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.10.1"
+        },
+        {
+          "commit": "a69a47ff1b5c99ce9c50edc4df45de4397151f17",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.10.2"
+        },
+        {
+          "commit": "c462e44d5a211e3b5836214675c08f291865af02",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.10.3"
+        },
+        {
+          "commit": "562e5f2d6feeb52a28dfa647e63a1a620fcee334",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.0"
+        },
+        {
+          "commit": "999c5abe53e4347385b8ccc4a1e23a04482479c9",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.1"
+        },
+        {
+          "commit": "73629e2df63b4d0852808b8b5019f1be55f1f29d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.2"
+        },
+        {
+          "commit": "14ad03a3f03bc071186286f65c08e847f7f5d88c",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.3"
+        },
+        {
+          "commit": "9c77e5c62aa50f4e8010a9f1a9921c3fb7a8fa59",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.4"
+        },
+        {
+          "commit": "ab52f7f8b911bb42712cefdfe9af3ed02db560a6",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.5"
+        },
+        {
+          "commit": "c8a80d6ad92beaf761c45171d330f5ac386fcd8d",
+          "path": "src/lfx/src/lfx/components/files_and_knowledge/memory_retrieval.py",
+          "kind": "class",
+          "tag": "v1.11.6"
+        }
+      ]
+    }
+  ]
+}

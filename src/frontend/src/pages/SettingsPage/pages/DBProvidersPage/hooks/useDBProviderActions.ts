@@ -26,7 +26,7 @@ const getErrorDetail = (error: unknown) =>
   "An unexpected error occurred. Please try again.";
 
 /**
- * Save / Test Connection / Use Chroma flows for the DB Providers page.
+ * Save / Test Connection / Use SQLite flows for the DB Providers page.
  * Pure orchestration over the variable primitives and field resolution
  * owned by the page — no rendering concerns.
  */
@@ -173,8 +173,8 @@ export function useDBProviderActions({
       if (!options?.silent) {
         setSuccessData({
           title:
-            selectedProvider.id === "chroma"
-              ? t("settings.dbProviders.chromaSelected")
+            selectedProvider.id === "sqlite"
+              ? t("settings.dbProviders.sqliteSelected")
               : t("settings.dbProviders.configSaved", {
                   provider: selectedProvider.label,
                 }),
@@ -281,23 +281,23 @@ export function useDBProviderActions({
     }
   };
 
-  const handleUseChroma = async () => {
-    const chromaProvider = DB_PROVIDER_OPTIONS[0];
+  const handleUseSQLite = async () => {
+    const sqliteProvider = DB_PROVIDER_OPTIONS[0];
     try {
-      await activateProvider(chromaProvider);
-      setSelectedProviderId("chroma");
+      await activateProvider(sqliteProvider);
+      setSelectedProviderId("sqlite");
       setHasManuallySelectedProvider(false);
-      setSuccessData({ title: t("settings.dbProviders.chromaSelected") });
+      setSuccessData({ title: t("settings.dbProviders.sqliteSelected") });
     } catch (error: unknown) {
       setErrorData({
-        title: t("settings.dbProviders.errorSelectingChroma"),
+        title: t("settings.dbProviders.errorSelectingSQLite"),
         list: [getErrorDetail(error)],
       });
     }
   };
 
   // pgVector has no UI fields. It becomes explicitly selectable only after the
-  // panel has successfully tested and activated it, exactly like Chroma Local.
+  // panel has successfully tested and activated it, exactly like SQLite Local.
   const handleUsePostgres = async () => {
     const postgresProvider = DB_PROVIDER_OPTIONS.find(
       (provider) => provider.id === "postgres",
@@ -319,7 +319,7 @@ export function useDBProviderActions({
   return {
     handleSave,
     handleTestConnection,
-    handleUseChroma,
+    handleUseSQLite,
     handleUsePostgres,
     isTesting,
     postgresStatus,

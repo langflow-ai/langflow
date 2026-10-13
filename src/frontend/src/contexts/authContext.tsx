@@ -35,9 +35,11 @@ export function AuthProvider({ children }): React.ReactElement {
   const [apiKey, setApiKey] = useState<string | null>(null);
 
   // `useAuthStore.userData` mirrors this state for hooks and stores that live
-  // outside the context (the Connections page, flowStore, use-get-flow-id).
-  // Writing both here keeps every path in sync, including a session restored
-  // after a reload, which never goes through `useGetUserData`.
+  // outside the context (the Connections page, flowStore, use-get-flow-id, and
+  // the multi-edit autosave, conflict and draft paths, which otherwise lose the
+  // draft and misattribute your own edit from another tab). Writing both here
+  // keeps every path in sync, including a session restored after a reload,
+  // which never goes through `useGetUserData`.
   const setUserData = useCallback((user: Users | null) => {
     setUserDataState(user);
     useAuthStore.getState().setUserData(user);

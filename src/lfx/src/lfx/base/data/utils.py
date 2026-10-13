@@ -1,8 +1,9 @@
+import asyncio
 import contextlib
 import logging
 import tempfile
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from concurrent import futures
 from contextvars import copy_context
 from io import BytesIO
@@ -209,9 +210,12 @@ async def read_text_file_async(file_path: str) -> str:
     """
     from .storage_utils import read_file_bytes
 
-    # Use storage-aware read to get bytes
+    # Use storage-aware read to get bytes; encoding detection is CPU-bound, so keep it off the loop.
     raw_data = await read_file_bytes(file_path)
+    return await asyncio.to_thread(_decode_text_bytes, raw_data, file_path)
 
+
+def _decode_text_bytes(raw_data: bytes, file_path: str) -> str:
     for enc in _detect_encoding_with_fallbacks(raw_data):
         try:
             return raw_data.decode(enc)
@@ -252,20 +256,20 @@ async def read_docx_file_async(file_path: str) -> str:
     Returns:
         str: Extracted text from the document
     """
-    from docx import Document
-
     from .storage_utils import read_file_bytes
 
     settings = get_settings_service().settings
 
     if settings.storage_type == "local":
         # Local storage - read directly
-        doc = Document(file_path)
-        return "\n\n".join([p.text for p in doc.paragraphs])
+        return await asyncio.to_thread(read_docx_file, file_path)
 
     # S3 storage - need temp file for python-docx (doesn't support BytesIO)
     content = await read_file_bytes(file_path)
+    return await asyncio.to_thread(_read_docx_bytes_via_temp_file, content, file_path)
 
+
+def _read_docx_bytes_via_temp_file(content: bytes, file_path: str) -> str:
     # Create temp file with .docx extension
     # Extract filename from path for suffix
     suffix = Path(file_path.split("/")[-1]).suffix
@@ -274,8 +278,7 @@ async def read_docx_file_async(file_path: str) -> str:
         temp_path = tmp_file.name
 
     try:
-        doc = Document(temp_path)
-        return "\n\n".join([p.text for p in doc.paragraphs])
+        return read_docx_file(temp_path)
     finally:
         with contextlib.suppress(Exception):
             Path(temp_path).unlink()
@@ -326,6 +329,10 @@ async def parse_pdf_to_text_async(file_path: str) -> str:
         str: Extracted text from all pages
     """
     content = await read_file_bytes(file_path)
+    return await asyncio.to_thread(_parse_pdf_bytes_to_text, content)
+
+
+def _parse_pdf_bytes_to_text(content: bytes) -> str:
     with BytesIO(content) as f, PdfReader(f) as reader:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
@@ -379,7 +386,7 @@ async def parse_text_file_to_data_async(file_path: str, *, silent_errors: bool) 
             text = await read_text_file_async(file_path)
 
         # Parse structured formats (JSON, YAML, XML)
-        text = parse_structured_text(text, file_path)
+        text = await asyncio.to_thread(parse_structured_text, text, file_path)
 
         return Data(data={"file_path": file_path, "text": text})
 
@@ -388,6 +395,19 @@ async def parse_text_file_to_data_async(file_path: str, *, silent_errors: bool) 
             msg = f"Error loading file {file_path}: {e}"
             raise ValueError(msg) from e
         return None
+
+
+async def aparse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
+    """Parse a text file to Data from a coroutine without blocking its event loop.
+
+    Unlike ``parse_text_file_to_data``, this never goes through ``run_until_complete``: under
+    S3 the object read is awaited on the caller's loop, while local reads and all parsing run
+    in a worker thread.
+    """
+    settings = get_settings_service().settings
+    if settings.storage_type == "s3":
+        return await parse_text_file_to_data_async(file_path, silent_errors=silent_errors)
+    return await asyncio.to_thread(parse_text_file_to_data, file_path, silent_errors=silent_errors)
 
 
 # ! Removing unstructured dependency until
@@ -423,3 +443,29 @@ def parallel_load_data(
         loaded_files = executor.map(_run_in_context, file_paths)
     # loaded_files is an iterator, so we need to convert it to a list
     return list(loaded_files)
+
+
+async def aparallel_load_data(
+    file_paths: list[str],
+    *,
+    silent_errors: bool,
+    max_concurrency: int,
+    load_function: Callable[..., Awaitable[Data | None]] = aparse_text_file_to_data,
+) -> list[Data | None]:
+    """Async counterpart of ``parallel_load_data`` with at most ``max_concurrency`` loads in flight.
+
+    Results keep the order of ``file_paths``. Like the executor-backed sync version, every load
+    finishes before the first error (in input order) is raised, so no worker thread started by a
+    load outlives this call.
+    """
+    semaphore = asyncio.Semaphore(max(1, max_concurrency))
+
+    async def _load(file_path: str) -> Data | None:
+        async with semaphore:
+            return await load_function(file_path, silent_errors=silent_errors)
+
+    results = await asyncio.gather(*(_load(file_path) for file_path in file_paths), return_exceptions=True)
+    for result in results:
+        if isinstance(result, BaseException):
+            raise result
+    return list(results)

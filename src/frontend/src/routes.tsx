@@ -39,6 +39,7 @@ import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import McpClientPage from "./pages/SettingsPage/pages/McpClientPage";
+import MigrationPage from "./pages/SettingsPage/pages/MigrationPage";
 import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
@@ -170,6 +171,7 @@ const router = createBrowserRouter(
                   />
                   <Route path="shortcuts" element={<ShortcutsPage />} />
                   <Route path="messages" element={<MessagesPage />} />
+                  <Route path="migration" element={<MigrationPage />} />
                   {CustomRoutesStore()}
                 </Route>
                 {CustomRoutesStorePages()}

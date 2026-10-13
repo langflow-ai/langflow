@@ -9,6 +9,8 @@ from langflow.services.database.models.connection import Connection, ConnectionS
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.deps import session_scope
 
+from tests.unit.erase_helpers import wait_for_erase
+
 CURRENT_CREDENTIAL = "test" + "password"
 REPLACEMENT_CREDENTIAL = "new_" + "password"
 INVALID_CREDENTIAL = "incorrect"
@@ -271,6 +273,13 @@ async def test_read_all_users_exact_role_name_filter(client: AsyncClient, logged
             assert user_response.status_code == status.HTTP_201_CREATED
             users.append(user_response.json())
 
+            activation_response = await client.patch(
+                f"api/v1/users/{users[-1]['id']}",
+                json={"is_active": True},
+                headers=logged_in_headers_super_user,
+            )
+            assert activation_response.status_code == status.HTTP_200_OK
+
             role_response = await client.post(
                 "api/v1/authz/roles/",
                 json={"name": role_name, "permissions": ["flow:read"]},
@@ -300,7 +309,7 @@ async def test_read_all_users_exact_role_name_filter(client: AsyncClient, logged
         assert response.json()["total_count"] == 1
         assert [row["id"] for row in response.json()["users"]] == [users[0]["id"]]
         assert missing_response.status_code == status.HTTP_200_OK
-        assert missing_response.json() == {"total_count": 0, "users": []}
+        assert missing_response.json() == {"total_count": 0, "users": [], "deletion_requests": {}}
     finally:
         for assignment in assignments:
             await client.delete(
@@ -489,9 +498,10 @@ async def test_delete_user(client: AsyncClient, logged_in_headers_super_user):
     response = await client.delete(f"api/v1/users/{id_}", headers=logged_in_headers_super_user)
     result = response.json()
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == status.HTTP_202_ACCEPTED
     assert isinstance(result, dict), "The result must be a dictionary"
     assert "detail" in result, "The result must have an 'detail' key"
+    await wait_for_erase(result["request_id"])
 
 
 async def test_delete_user_removes_their_role_assignments(client: AsyncClient, logged_in_headers_super_user):
@@ -510,6 +520,13 @@ async def test_delete_user_removes_their_role_assignments(client: AsyncClient, l
     assert user_response.status_code == status.HTTP_201_CREATED
     user_id = user_response.json()["id"]
 
+    activation_response = await client.patch(
+        f"api/v1/users/{user_id}",
+        json={"is_active": True},
+        headers=logged_in_headers_super_user,
+    )
+    assert activation_response.status_code == status.HTTP_200_OK
+
     role_response = await client.post(
         "api/v1/authz/roles/",
         json={"name": f"orphan-check-role-{suffix}", "permissions": ["flow:read"]},
@@ -526,7 +543,8 @@ async def test_delete_user_removes_their_role_assignments(client: AsyncClient, l
     assert assignment_response.status_code == status.HTTP_201_CREATED
 
     delete_response = await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
-    assert delete_response.status_code == status.HTTP_200_OK
+    assert delete_response.status_code == status.HTTP_202_ACCEPTED
+    await wait_for_erase(delete_response.json()["request_id"])
 
     remaining = await client.get(
         f"api/v1/authz/role-assignments/?user_id={user_id}",
@@ -579,6 +597,13 @@ async def test_delete_user_clears_assigned_by_on_assignments_they_granted(
     assert grantee_response.status_code == status.HTTP_201_CREATED
     grantee_id = grantee_response.json()["id"]
 
+    activation_response = await client.patch(
+        f"api/v1/users/{grantee_id}",
+        json={"is_active": True},
+        headers=logged_in_headers_super_user,
+    )
+    assert activation_response.status_code == status.HTTP_200_OK
+
     role_response = await client.post(
         "api/v1/authz/roles/",
         json={"name": f"granter-check-role-{suffix}", "permissions": ["flow:read"]},
@@ -596,7 +621,8 @@ async def test_delete_user_clears_assigned_by_on_assignments_they_granted(
     assert assignment_response.json()["assigned_by"] == granter_id
 
     delete_response = await client.delete(f"api/v1/users/{granter_id}", headers=logged_in_headers_super_user)
-    assert delete_response.status_code == status.HTTP_200_OK
+    assert delete_response.status_code == status.HTTP_202_ACCEPTED
+    await wait_for_erase(delete_response.json()["request_id"])
 
     remaining = await client.get(
         f"api/v1/authz/role-assignments/?user_id={grantee_id}",
@@ -669,7 +695,8 @@ async def test_delete_user_removes_their_connections_and_credentials(client: Asy
         )
 
     delete_response = await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
-    assert delete_response.status_code == status.HTTP_200_OK
+    assert delete_response.status_code == status.HTTP_202_ACCEPTED
+    await wait_for_erase(delete_response.json()["request_id"])
 
     try:
         async with session_scope() as session:

@@ -164,6 +164,9 @@ class Graph:
         self.description = description
         self.user_id = user_id
         self.execution_principal = ExecutionPrincipal.unknown()
+        # Runtime provenance, never read from flow JSON or caller-supplied IDs.
+        # Standalone LFX's synthetic identity must not select a new file tree each run.
+        self._headless_filesystem_user_id: str | None = None
         # Warm-registry templates need the parsed graph structure without
         # executing component constructors at preload/reconcile time. Normal
         # graphs keep the historical eager-instantiation behavior.
@@ -383,6 +386,29 @@ class Graph:
         self._cycle_vertices = None
         self._is_cyclic = None
         self._graph_data = process_flow(self.raw_graph_data)
+
+        # Group proxies may replace child template fields while process_flow expands the graph.
+        # Re-check the effective anonymous graph before initialize instantiates those children.
+        from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+
+        if str(self.user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID):
+            from lfx.utils.flow_validation import revalidate_public_executable_flow
+
+            revalidate_public_executable_flow(self._graph_data)
+
+        # Group proxies can replace a child's type-specific input or code after the payload
+        # checks in from_payload. Apply the active restricted policies to the executable view
+        # before initialize constructs any child component.
+        from lfx.services.deps import get_settings_service
+
+        settings_service = get_settings_service()
+        if settings_service is not None and (
+            not getattr(settings_service.settings, "allow_custom_components", True)
+            or getattr(settings_service.settings, "block_code_interpreter_components", False)
+        ):
+            from lfx.utils.flow_validation import validate_flow_for_current_settings
+
+            validate_flow_for_current_settings(self._graph_data)
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
@@ -1618,6 +1644,7 @@ class Graph:
             "flow_name": self.flow_name,
             "description": self.description,
             "user_id": self.user_id,
+            "_headless_filesystem_user_id": self._headless_filesystem_user_id,
             "raw_graph_data": self.raw_graph_data,
             "top_level_vertices": self.top_level_vertices,
             "inactivated_vertices": self.inactivated_vertices,
@@ -1721,6 +1748,8 @@ class Graph:
 
         new_graph.requires_extension_event_replay = self.requires_extension_event_replay
         new_graph.execution_principal = self.execution_principal
+        if user_id == self.user_id:
+            new_graph._headless_filesystem_user_id = self._headless_filesystem_user_id  # noqa: SLF001
 
         # Store the newly created object in memo
         memo[id(self)] = new_graph
@@ -1766,6 +1795,7 @@ class Graph:
         # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
         state.setdefault("execution_principal", ExecutionPrincipal.unknown())
+        state.setdefault("_headless_filesystem_user_id", None)
         state.setdefault("branch_inactivation_sources", {})
         # __getstate__ omits end_user_id, so graphs restored from cache/checkpoint
         # payloads need the default for _vertex_result_cache_key to read it safely.
@@ -3239,6 +3269,7 @@ class Graph:
         subgraph._run_id = self._run_id
         subgraph.session_id = self.session_id
         subgraph.execution_principal = self.execution_principal
+        subgraph._headless_filesystem_user_id = self._headless_filesystem_user_id
         # A subgraph extends the parent's run, so it inherits the ephemeral
         # (no-persist) decision too.
         subgraph.persist_messages = self.persist_messages

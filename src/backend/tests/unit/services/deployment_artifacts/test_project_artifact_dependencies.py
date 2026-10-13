@@ -24,6 +24,7 @@ from langflow.services.deployment_artifacts.builder import (
     _FlowSnapshot,
     _resolve_dependencies,
     _scrub_backend_config,
+    _validated_backend_config,
 )
 
 # Fake, non-functional fixture values (not real credentials): one variable-NAME pointer
@@ -90,6 +91,27 @@ def test_scrub_backend_config_drops_unknown_nested_values():
     assert _RAW_SECRET not in json.dumps(scrubbed)
 
 
+@pytest.mark.parametrize("backend", ["sqlite", "chroma"])
+def test_local_backend_cannot_be_packaged_for_remote_deployment(backend):
+    with pytest.raises(ProjectArtifactError, match=r"cannot be provisioned|retired Chroma"):
+        _validated_backend_config(backend, {}, resource_kind="Knowledge Base")
+
+
+def test_unknown_backend_cannot_be_packaged_as_remote():
+    with pytest.raises(ProjectArtifactError, match="unknown vector-store backend"):
+        _validated_backend_config("unknown", {}, resource_kind="Knowledge Base")
+
+
+def test_strict_backend_config_refuses_values_ordinary_scrubbing_would_drop():
+    with pytest.raises(ProjectArtifactError, match="unsupported or unsafe backend configuration"):
+        _validated_backend_config(
+            "postgres",
+            {"host": "db.example", "password": _RAW_SECRET},
+            resource_kind="Knowledge Base",
+            strict=True,
+        )
+
+
 # --- reference collection -----------------------------------------------------
 
 
@@ -147,9 +169,9 @@ async def test_resolve_dependencies_shapes_specs_and_strips_secret():
         id=uuid4(),
         user_id=owner_id,
         name="testKb",
-        backend_type="chroma",
+        backend_type="opensearch",
         # a raw api_key inlined next to the legitimate variable-name pointer
-        backend_config={"mode": "cloud", "api_key_variable": _KEY_VAR_NAME, "api_key": _RAW_SECRET},
+        backend_config={"index_name": "docs", "api_key_variable": _KEY_VAR_NAME, "api_key": _RAW_SECRET},
         model_selection={"provider": "Ollama", "name": "nomic-embed-text"},
         column_config=[{"column_name": "text", "vectorize": True, "identifier": True}],
     )
@@ -192,10 +214,10 @@ async def test_resolve_dependencies_shapes_specs_and_strips_secret():
     assert [k["name"] for k in deps["knowledgeBases"]] == ["testKb"]
 
     kb_item = deps["knowledgeBases"][0]
-    assert kb_item["backendType"] == "chroma"
+    assert kb_item["backendType"] == "opensearch"
     assert kb_item["embeddingProvider"] == "Ollama"
     # C1: raw secret stripped; routing + variable-name pointer preserved
-    assert kb_item["backendConfig"] == {"mode": "cloud", "api_key_variable": _KEY_VAR_NAME}
+    assert kb_item["backendConfig"] == {"index_name": "docs", "api_key_variable": _KEY_VAR_NAME}
     assert _RAW_SECRET not in json.dumps(deps)
     assert authorize.await_count == 2
     authorized_ids = {call.kwargs["kb_id"] for call in authorize.await_args_list}
@@ -210,8 +232,8 @@ async def test_resolve_dependencies_reads_typed_column_config_flags():
         id=uuid4(),
         user_id=owner_id,
         name="typedKb",
-        backend_type="chroma",
-        backend_config={"mode": "cloud", "api_key_variable": _KEY_VAR_NAME},
+        backend_type="opensearch",
+        backend_config={"index_name": "docs", "api_key_variable": _KEY_VAR_NAME},
         model_selection={"provider": "Ollama", "name": "nomic-embed-text"},
         column_config=[
             {"column_name": "question", "vectorize": True, "identifier": "true"},
@@ -287,6 +309,32 @@ async def test_resolve_dependencies_fails_when_a_reference_is_missing(dependency
             workspace_id=uuid4(),
             project_id=uuid4(),
             snapshots=(snapshot,),
+        )
+
+
+@pytest.mark.asyncio
+async def test_strict_resolve_dependencies_refuses_missing_reference_without_empty_fallback():
+    owner_id = uuid4()
+    snapshot = SimpleNamespace(
+        owner_id=owner_id,
+        payload={
+            "data": {
+                "nodes": [{"data": {"node": {"template": {"knowledge_base": {"value": "missing"}}}}}],
+            }
+        },
+    )
+    session = AsyncMock()
+    session.exec.return_value = _exec_result([])
+
+    with pytest.raises(ProjectArtifactError, match="referenced Knowledge Base"):
+        await _resolve_dependencies(
+            session,
+            user=SimpleNamespace(id=owner_id),
+            owner_id=owner_id,
+            workspace_id=uuid4(),
+            project_id=uuid4(),
+            snapshots=(snapshot,),
+            strict=True,
         )
 
 
@@ -372,7 +420,7 @@ async def test_resolve_dependencies_rejects_local_chroma(dependency_type):
             "langflow.services.deployment_artifacts.builder.ensure_knowledge_base_permission",
             new_callable=AsyncMock,
         ),
-        pytest.raises(ProjectArtifactError, match="local Chroma"),
+        pytest.raises(ProjectArtifactError, match="retired Chroma"),
     ):
         await _resolve_dependencies(
             session,
@@ -515,3 +563,9 @@ def test_build_archive_emits_dependencies_in_a_v3_manifest():
     assert manifest["schema_version"] == 3
     assert manifest["dependencies"] == dependencies
     assert artifact.dependencies == dependencies
+
+
+@pytest.mark.parametrize("mode", ["local", "cloud"])
+def test_retired_chroma_is_rejected_in_every_mode(mode):
+    with pytest.raises(ProjectArtifactError, match="retired Chroma"):
+        _validated_backend_config("chroma", {"mode": mode}, resource_kind="Knowledge Base")

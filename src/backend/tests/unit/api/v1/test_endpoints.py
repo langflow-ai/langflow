@@ -1098,8 +1098,8 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
     # the frontend constant, which only covers the moments before this response
     # lands. Every save is a full-graph overwrite, so this number is the window
     # in which two people editing one flow can diverge unnoticed.
-    assert result["auto_saving_interval"] == 2000, (
-        "The autosave debounce must stay at 2000ms; the frontend's AUTOSAVE_DEBOUNCE_TIME fallback has to match it"
+    assert result["auto_saving_interval"] == 5000, (
+        "The autosave debounce must stay at 5000ms; the frontend's AUTOSAVE_DEBOUNCE_TIME fallback has to match it"
     )
 
 

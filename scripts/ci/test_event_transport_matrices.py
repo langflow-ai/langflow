@@ -23,6 +23,7 @@ from test_capability_matrices import _github_path_matches, _workflow_pull_reques
 
 SCHEMA_PATH = TRIGGERS_DESIGN_ROOT / "schema" / SCHEMA_NAME
 MATRIX_DIR = TRIGGERS_DESIGN_ROOT / "matrices"
+pytestmark = pytest.mark.usefixtures("capability_reference_date")
 
 
 def _copy_design(tmp_path: Path) -> Path:
