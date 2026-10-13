@@ -143,7 +143,7 @@ class ParserComponent(Component):
         """Convert input data to string with proper error handling."""
         clean_data = getattr(self, "clean_data", False)
         if isinstance(self.input_data, list):
-            result = "\n".join(safe_convert(item, clean_data=clean_data) for item in self.input_data)
+            result = self.sep.join(safe_convert(item, clean_data=clean_data) for item in self.input_data)
         else:
             result = safe_convert(self.input_data, clean_data=clean_data)
         self.log(f"Converted to string with length: {len(result)}")

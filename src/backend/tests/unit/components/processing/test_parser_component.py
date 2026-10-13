@@ -159,6 +159,46 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         assert result.text == "First\nSecond"
 
+    @pytest.mark.parametrize("sep", ["\n", " | ", ""])
+    @pytest.mark.parametrize("clean_data", [False, True])
+    def test_stringify_list_uses_separator(self, component_class, sep, clean_data):
+        component = component_class(
+            input_data=[Message(text="First"), Message(text="Second")],
+            mode="Stringify",
+            sep=sep,
+            clean_data=clean_data,
+        )
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == f"First{sep}Second"
+
+    @pytest.mark.parametrize(("texts", "expected"), [([], ""), (["First"], "First")])
+    def test_stringify_list_boundaries(self, component_class, texts, expected):
+        component = component_class(
+            input_data=[Message(text=text) for text in texts],
+            mode="Stringify",
+            sep=" | ",
+        )
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == expected
+
+    def test_stringify_data_list_preserves_serialization(self, component_class):
+        component = component_class(
+            input_data=[Data(data={"name": "John", "age": 30}), Message(text="Second")],
+            mode="Stringify",
+            sep=" | ",
+        )
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == '```json\n{\n  "name": "John",\n  "age": 30\n}\n``` | Second'
+
     @pytest.mark.parametrize(("input_data", "expected"), [("", ""), (0, "0")])
     def test_stringify_preserves_falsy_scalar_input(self, component_class, input_data, expected):
         component = component_class(input_data=input_data, mode="Stringify")
