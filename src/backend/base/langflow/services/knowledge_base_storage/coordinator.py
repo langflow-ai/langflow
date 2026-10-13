@@ -26,7 +26,7 @@ from langflow.services.database.models.knowledge_base_storage_migration import K
 from langflow.services.database.models.user.model import User
 from langflow.services.database.service import get_sqlite_database_file_path
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
-from langflow.services.knowledge_base_storage import application_backup, helper
+from langflow.services.knowledge_base_storage import application_backup
 from langflow.services.knowledge_base_storage.automatic import (
     AutomaticUpgradeUnavailableError,
     check_local_upgrade,
@@ -48,6 +48,8 @@ from langflow.services.knowledge_base_storage.maintenance import (
     tree_stat_fingerprint,
     validate_receipt,
 )
+from langflow.services.knowledge_base_storage.migration_io import read_regular_file
+from langflow.services.knowledge_base_storage.migration_io import run_worker as _worker
 from langflow.services.knowledge_base_storage.retained import retained_source
 from langflow.services.knowledge_base_storage.runtime import (
     StorageUnavailableError,
@@ -66,24 +68,6 @@ _MAX_BINDING_BYTES = 4096
 _SOURCE_PATH_PARTS = 2
 # Set for the migrations of one upgrade pass, which share one attribution of the legacy directories.
 _pass_attribution: ContextVar[list[Attribution] | None] = ContextVar("_pass_attribution", default=None)
-
-
-async def _worker(function, *args, **kwargs):
-    """Cancellation never releases the fence while snapshot/import work is live."""
-    task = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
-    cancelled = False
-    while not task.done():
-        try:
-            await asyncio.shield(task)
-        except asyncio.CancelledError:
-            cancelled = True
-        except Exception:
-            if not cancelled:
-                raise
-    if cancelled:
-        task.exception()
-        raise asyncio.CancelledError
-    return task.result()
 
 
 def _model_fingerprint(record: KnowledgeBaseRecord) -> str:
@@ -203,7 +187,7 @@ async def _complete(row: KnowledgeBaseRecord, run: KnowledgeBaseStorageMigration
 
 
 def _qualify(path, header, directory):
-    """Validate a helper export into a private replayable staging ledger."""
+    """Validate a legacy export into a private replayable staging ledger."""
     with path.open("rb") as stream:
         return qualify_export(stream, expected_header=header, scratch_directory=directory)
 
@@ -444,8 +428,7 @@ async def migrate_one(kb_id: UUID) -> None:
                 "model_fingerprint": _model_fingerprint(row),
             }
             if (
-                receipt is None
-                and row.chunks == 0
+                row.chunks == 0
                 and not (snapshot / "chroma.sqlite3").exists()
                 and not any(path.name != "embedding_metadata.json" for path in snapshot.iterdir())
             ):
@@ -454,8 +437,6 @@ async def migrate_one(kb_id: UUID) -> None:
                 header = ExportHeader(str(row.id), fingerprint, "chroma-empty", 0, None, "l2", _model_fingerprint(row))
                 with output.open("wb") as stream:
                     write_export(stream, header, [])
-            elif receipt is not None:
-                header = await helper.export_snapshot(snapshot, output, **arguments)
             else:
                 header = await _worker(export_local_snapshot, snapshot, output, **arguments)
             await _phase(
@@ -478,7 +459,7 @@ async def migrate_one(kb_id: UUID) -> None:
                 msg = "The legacy source changed before activation"
                 raise MaintenanceRequiredError(msg)
             # Target completion is durable before this compare-and-swap. Backend
-            # routing and ownership never depend on a path supplied by the helper.
+            # routing and ownership never depend on a path supplied by the reader.
             async with session_scope() as session:
                 result = await session.execute(
                     update(KnowledgeBaseRecord)
@@ -813,7 +794,7 @@ async def published_inventory_status() -> dict:
     if not path.exists():
         return inventory_status()
     try:
-        value = json.loads(await _worker(helper._verification_file, path, limit=4096))  # noqa: SLF001 -- reuse bounded no-follow reads
+        value = json.loads(await _worker(read_regular_file, path, limit=4096))
         if (
             type(value) is not dict
             or set(value) != {"complete", "issues"}
@@ -822,7 +803,7 @@ async def published_inventory_status() -> dict:
             or value["issues"] < 0
         ):
             raise ValueError
-    except (ValueError, helper.MigrationHelperError):
+    except (ValueError, MaintenanceRequiredError):
         return {"complete": False, "issues": 1}
     else:
         return value
@@ -883,13 +864,6 @@ async def _resume_pending() -> None:
                         raise
     finally:
         _pass_attribution.reset(shared)
-        # Image cleanup is separate from data success and must not revert an
-        # activated generation. The helper protects images used by other runs.
-        if os.environ.get("LANGFLOW_KB_MIGRATION_HELPER_IMAGE"):
-            try:
-                await helper.cleanup_helper_artifact()
-            except Exception:  # noqa: BLE001
-                logger.warning("Temporary knowledge base migration helper requires cleanup")
 
 
 def schedule_upgrade(*, retry: bool = False) -> asyncio.Task:

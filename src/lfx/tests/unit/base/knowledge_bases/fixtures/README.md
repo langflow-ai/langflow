@@ -1,7 +1,7 @@
 # Local Chroma reader fixtures
 
 `chroma-1.5.9-local.tar.gz` was produced by the real Chroma 1.5.9 SDK using
-`tools/chroma_migration_helper/create_fixture.py`. It contains synthetic SQLite
+`generate_chroma_fixture.py`. It contains synthetic SQLite
 metadata, persistent HNSW indexes, pending additions, updates and deletes, and
 SDK-exported expectations for L2, cosine, inner product and an empty collection.
 The embedding function is disabled. No models, credentials or user data are

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { BrowserRouter } from "react-router-dom";
 import type { EnabledModelsResponse } from "@/controllers/API/queries/models/use-get-enabled-models";
+import { useUtilityStore } from "@/stores/utilityStore";
 
 // ── Mocks (must precede component imports) ──────────────────────────────────
 
@@ -207,6 +208,10 @@ const fillRequiredFields = async (
 describe("KnowledgeBaseUploadModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useUtilityStore.getState().setVectorStoreConfig({
+      localVectorStoreAvailable: true,
+      defaultVectorStoreBackend: undefined,
+    });
     mockModelProvidersResult = {
       data: MODEL_PROVIDERS,
       isLoading: false,

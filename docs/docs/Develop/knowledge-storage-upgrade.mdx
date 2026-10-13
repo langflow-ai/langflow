@@ -68,8 +68,8 @@ For stores that must serve across hosts, export or re-ingest into a supported re
 The notice explains the required recovery action, and ordinary users see instructions to contact their administrator.
 
 The [managed controller](https://github.com/langflow-ai/langflow/blob/release-1.13.0/docs/development/sqlite-kb-controller.md) remains available for operators who want a supervised stop, backup, launch and readiness check.
-That optional path uses the [signed helper](https://github.com/langflow-ai/langflow/blob/release-1.13.0/tools/chroma_migration_helper/README.md) and its own POSIX/Docker/SQLite prerequisites.
-Those prerequisites do not apply to the built-in automatic reader.
+That optional path runs on POSIX with a SQLite application database and uses the same bundled reader and resource limits.
+It requires no Docker, cosign or separate helper release.
 
 Chroma Cloud stores require migration to a supported provider. They are never replaced silently.
 Existing OpenSearch and pgvector stores continue to work with their configured providers.
