@@ -104,6 +104,33 @@ def check_authentication(port: int, username: str, password: str) -> None:
         raise RuntimeError(msg)
 
 
+def stop_server(process: subprocess.Popen) -> None:
+    """Release server resources before removing the disposable config directory."""
+    if process.poll() is not None:
+        return
+    if sys.platform == "win32":
+        # A Windows venv launcher can outlive or leave behind the actual Python
+        # server. Kill the tree while the launcher still exists so descendants
+        # cannot keep SQLite or log files locked after we reap the launcher.
+        result = subprocess.run(  # noqa: S603
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],  # noqa: S607
+            capture_output=True,
+            timeout=15,
+            check=False,
+        )
+        # The process may have exited between poll() and taskkill.
+        if result.returncode and process.poll() is None:
+            result.check_returncode()
+        process.wait(timeout=5)
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+
+
 def check_installed_wheel(port: int, timeout: float, username: str, password: str) -> None:
     """Start installed code outside the checkout, with no auto-login override."""
     with tempfile.TemporaryDirectory(prefix="langflow-auth-smoke-") as directory:
@@ -153,12 +180,7 @@ def check_installed_wheel(port: int, timeout: float, username: str, password: st
                 print(f"Langflow authentication smoke server log:\n{diagnostic}", file=sys.stderr)
                 raise
             finally:
-                process.terminate()
-                try:
-                    process.wait(timeout=15)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=5)
+                stop_server(process)
 
 
 def main() -> None:
