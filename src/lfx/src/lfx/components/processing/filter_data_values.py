@@ -65,8 +65,8 @@ class DataFilterComponent(Component):
     def filter_data(self) -> list[Data]:
         # Extract inputs
         input_data: list[Data] = self.input_data
-        filter_key: str = self.filter_key.text
-        filter_value: str = self.filter_value.text
+        filter_key: str = self.filter_key.get_text() if isinstance(self.filter_key, Data) else self.filter_key
+        filter_value: str = self.filter_value.get_text() if isinstance(self.filter_value, Data) else self.filter_value
         operator: str = self.operator
 
         # Validate inputs
