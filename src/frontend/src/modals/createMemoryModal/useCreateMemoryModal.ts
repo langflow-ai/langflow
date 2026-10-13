@@ -93,6 +93,9 @@ export function useCreateMemoryModal({
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
   );
+  const defaultVectorStoreBackend = useUtilityStore(
+    (state) => state.defaultVectorStoreBackend,
+  );
 
   // Default to the platform's active DB provider (OpenSearch / Postgres when
   // configured), falling back to local SQLite — identical to Knowledge Bases.
@@ -100,8 +103,12 @@ export function useCreateMemoryModal({
   // pgVector instead so we never seed a local store the create endpoint rejects.
   const defaultBackendSelection = useMemo(
     () =>
-      getDefaultDBProviderConfig(globalVariables, localVectorStoreAvailable),
-    [globalVariables, localVectorStoreAvailable],
+      getDefaultDBProviderConfig(
+        globalVariables,
+        localVectorStoreAvailable,
+        defaultVectorStoreBackend,
+      ),
+    [globalVariables, localVectorStoreAvailable, defaultVectorStoreBackend],
   );
 
   // Seed the selector from the active provider once global variables load.
@@ -133,6 +140,7 @@ export function useCreateMemoryModal({
       backendType,
       globalVariables,
       localVectorStoreAvailable,
+      defaultVectorStoreBackend,
     );
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
     setErrorData: state.setErrorData,

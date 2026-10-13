@@ -229,9 +229,10 @@ async def test_vector_backend_opensearch_only_healthy_passes(monkeypatch):
     assert "OpenSearch" in result.detail
 
 
-async def test_vector_backend_healthy_alternative_warns_on_broken_sibling(monkeypatch):
-    # pgVector unreachable but OpenSearch healthy -> warn (boot continues on the
-    # working backend, broken sibling surfaced).
+async def test_vector_backend_default_unreachable_fails_despite_healthy_sibling(monkeypatch):
+    # pgVector is the default for new KBs whenever it is configured, so an
+    # unreachable pgVector must fail the gate even when OpenSearch is healthy:
+    # every KB/MB created without an explicit backend would target the broken one.
     monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", _UNREACHABLE_PGVECTOR)
     monkeypatch.setenv("OPENSEARCH_URL", "https://opensearch.internal:9200")
 
@@ -240,9 +241,79 @@ async def test_vector_backend_healthy_alternative_warns_on_broken_sibling(monkey
 
     monkeypatch.setattr(preflight, "probe_opensearch", _healthy_opensearch)
     result = await probe_vector_backend(_StubService())
+    assert result.status == "fail"
+    assert "default vector backend pgVector is unreachable" in result.detail
+    assert "OpenSearch is reachable" in result.detail
+    assert "unset PGVECTOR_CONNECTION_STRING" in result.remediation
+
+
+async def test_vector_backend_non_default_unreachable_warns(monkeypatch):
+    # The default (pgVector) is healthy; only the non-default sibling is broken,
+    # so the boot proceeds and the broken sibling is surfaced.
+    monkeypatch.setenv("PGVECTOR_CONNECTION_STRING", "postgresql://u:{}@db/lf".format("pw"))
+    monkeypatch.setenv("OPENSEARCH_URL", _UNREACHABLE_OPENSEARCH)
+
+    async def _healthy_pgvector(_settings_service):
+        return CheckResult("ok", "reachable, 'vector' extension present")
+
+    async def _broken_opensearch():
+        return CheckResult("fail", "could not reach OpenSearch (refused)", "Verify OPENSEARCH_URL.")
+
+    monkeypatch.setattr(preflight, "probe_pgvector", _healthy_pgvector)
+    monkeypatch.setattr(preflight, "probe_opensearch", _broken_opensearch)
+    result = await probe_vector_backend(_StubService())
     assert result.status == "warn"
-    assert "OpenSearch reachable" in result.detail
-    assert "pgVector unhealthy" in result.detail
+    assert "pgVector reachable" in result.detail
+    assert "OpenSearch unhealthy" in result.detail
+    assert "Verify OPENSEARCH_URL" in result.remediation
+
+
+async def test_opensearch_private_ip_blocked_by_ssrf_policy(monkeypatch):
+    # The runtime refuses a private-IP cluster URL on every KB/MB operation, so
+    # the preflight must not report that URL healthy.
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+    monkeypatch.delenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", raising=False)
+    monkeypatch.setenv("OPENSEARCH_URL", "http://192.168.0.105:9200")
+    result = await preflight.probe_opensearch()
+    assert result is not None
+    assert result.status == "fail"
+    assert "SSRF" in result.detail
+    assert "LANGFLOW_SSRF_ALLOWED_HOSTS" in result.remediation
+
+
+async def test_opensearch_allow_listed_private_ip_passes_destination_gate(monkeypatch):
+    # An operator-allowed host clears the SSRF gate and reaches the dial, which
+    # then fails — a reachability error, not an SSRF block. The client is stubbed
+    # so the test never touches the network.
+    opensearchpy = pytest.importorskip("opensearchpy")
+    dialed: list[str] = []
+
+    def _refusing_client(*, hosts, **_kwargs):
+        dialed.extend(hosts)
+        msg = "connection refused"
+        raise ConnectionError(msg)
+
+    monkeypatch.setattr(opensearchpy, "OpenSearch", _refusing_client)
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "192.168.0.105")
+    monkeypatch.setenv("OPENSEARCH_URL", "http://192.168.0.105:9200")
+    result = await preflight.probe_opensearch()
+    assert dialed == ["http://192.168.0.105:9200"]
+    assert result is not None
+    assert result.status == "fail"
+    assert "could not reach OpenSearch" in result.detail
+
+
+def test_render_summary_prints_warning_remediations(capsys):
+    check = PreflightCheck("vector_backend", "Vector backend", "required", probe_vector_backend)
+    warned = CheckOutcome(
+        check, CheckResult("warn", "pgVector reachable; OpenSearch unhealthy", "Verify OPENSEARCH_URL.")
+    )
+    assert preflight._render_summary([warned]) is True
+    out = capsys.readouterr().out
+    assert "Preflight passed" in out
+    assert "Vector backend: Verify OPENSEARCH_URL." in out
 
 
 async def test_probe_opensearch_unset_returns_none(monkeypatch):

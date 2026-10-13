@@ -123,6 +123,9 @@ export function useKnowledgeBaseForm({
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
   );
+  const defaultVectorStoreBackend = useUtilityStore(
+    (state) => state.defaultVectorStoreBackend,
+  );
   const hasAppliedBackendDefaults = useRef(false);
 
   // Transform provider data into ModelOption[] for embedding models only
@@ -208,8 +211,12 @@ export function useKnowledgeBaseForm({
 
   const defaultBackendSelection = useMemo(
     () =>
-      getDefaultDBProviderConfig(globalVariables, localVectorStoreAvailable),
-    [globalVariables, localVectorStoreAvailable],
+      getDefaultDBProviderConfig(
+        globalVariables,
+        localVectorStoreAvailable,
+        defaultVectorStoreBackend,
+      ),
+    [globalVariables, localVectorStoreAvailable, defaultVectorStoreBackend],
   );
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
 
@@ -481,6 +488,7 @@ export function useKnowledgeBaseForm({
           backendType,
           globalVariables,
           localVectorStoreAvailable,
+          defaultVectorStoreBackend,
         )
       ) {
         errors.backend = `${selectedProvider.label} must be configured in DB Providers settings before it can be used.`;
@@ -520,6 +528,7 @@ export function useKnowledgeBaseForm({
     globalVariables,
     globalVariablesReady,
     localVectorStoreAvailable,
+    defaultVectorStoreBackend,
     files,
     existingKnowledgeBaseNames,
     metadataPairs,

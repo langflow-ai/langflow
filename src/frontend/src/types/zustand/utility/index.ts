@@ -58,6 +58,12 @@ export type UtilityStoreType = {
   // False on the production deployment profile, where local SQLite is refused.
   localVectorStoreAvailable: boolean;
   setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) => void;
+  // Backend the server picks for a new KB/MB that names none (env-driven:
+  // postgres, else opensearch, else sqlite). Undefined until config loads.
+  defaultVectorStoreBackend: string | undefined;
+  setDefaultVectorStoreBackend: (
+    defaultVectorStoreBackend: string | undefined,
+  ) => void;
   mcpBaseUrl: string;
   setMcpBaseUrl: (mcpBaseUrl: string) => void;
   /**

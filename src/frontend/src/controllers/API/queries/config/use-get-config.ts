@@ -53,6 +53,8 @@ export interface ConfigResponse extends BaseConfig {
   agentic_experience: boolean;
   assistant_max_message_length: number;
   local_vector_store_available: boolean;
+  /** Backend a new KB/MB lands on when none is named: postgres | opensearch | sqlite. */
+  default_vector_store_backend?: string;
   /** Component types an administrator blocked. Authenticated callers only:
    *  the public response deliberately withholds the policy contents. */
   blocked_component_types?: string[];
@@ -144,6 +146,9 @@ export const useGetConfig: useQueryFunctionType<
   const setLocalVectorStoreAvailable = useUtilityStore(
     (state) => state.setLocalVectorStoreAvailable,
   );
+  const setDefaultVectorStoreBackend = useUtilityStore(
+    (state) => state.setDefaultVectorStoreBackend,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -212,6 +217,7 @@ export const useGetConfig: useQueryFunctionType<
             DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
         );
         setLocalVectorStoreAvailable(data.local_vector_store_available ?? true);
+        setDefaultVectorStoreBackend(data.default_vector_store_backend);
       }
     }
     return data;
