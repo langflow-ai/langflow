@@ -6,6 +6,14 @@ import { TEXTS } from "../../utils/constants/texts";
 import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test.describe("Bulk Delete Sessions", () => {
+  // ponytail: one after another, in one worker. Every flow names the sessions
+  // a user adds "New Session 0", "New Session 1", ... and a session delete goes
+  // by user and session name, so a test here that deletes sessions also deletes
+  // the same-named sessions of a test running beside it. A test of another file
+  // that deletes sessions can still do that to these tests. Take this out once
+  // a delete is held to its flow.
+  test.describe.configure({ mode: "default" });
+
   test.beforeEach(async ({ page }) => {
     await seedLoopbackProvider(page);
     await page.route(/\/api\/v1\/store\/tags(\?.*)?$/, async (route) => {
