@@ -168,51 +168,91 @@ jest.mock("@/stores/utilityStore", () => ({
     selector(utilityState),
 }));
 
+function renderModal(playgroundPage: boolean) {
+  return render(
+    <TooltipProvider>
+      <IOModal
+        open
+        setOpen={jest.fn()}
+        isPlayground
+        playgroundPage={playgroundPage}
+        canvasOpen={false}
+      >
+        <div />
+      </IOModal>
+    </TooltipProvider>,
+  );
+}
+
+// The backend's `scope_session_to_namespace`: prefix unless already scoped.
+const scopeToNamespace = (sessionId: string, namespace: string) =>
+  sessionId === namespace || sessionId.startsWith(`${namespace}:`)
+    ? sessionId
+    : `${namespace}:${sessionId}`;
+
+// A message arrives in the store under `sessionId`, as the server stored it.
+function receiveMessage(sessionId: string) {
+  flowState.newChatOnPlayground = true;
+  act(() => {
+    useMessagesStore.getState().setMessages([
+      {
+        id: `message-${sessionId}`,
+        flow_id: "test-flow-id",
+        session_id: sessionId,
+        text: "hello",
+        sender: "User",
+        sender_name: "User",
+        timestamp: new Date().toISOString(),
+        files: [],
+        edit: false,
+        background_color: "",
+        text_color: "",
+      } satisfies Message,
+    ]);
+  });
+}
+
 describe("IOModal (playground) new chat", () => {
-  it("selects the session the new chat was sent under", async () => {
-    render(
-      <TooltipProvider>
-        <IOModal
-          open
-          setOpen={jest.fn()}
-          isPlayground
-          playgroundPage
-          canvasOpen={false}
-        >
-          <div />
-        </IOModal>
-      </TooltipProvider>,
-    );
+  afterEach(() => {
+    flowState.newChatOnPlayground = false;
+    act(() => useMessagesStore.getState().setMessages([]));
+    sessionsQueryResult.data = refetchedSessions;
+    sessionsQueryResult.refetch.mockClear();
+  });
+
+  it("selects the new chat under the id the server stores it as", async () => {
+    renderModal(true);
 
     fireEvent.click(screen.getByRole("button", { name: "new chat" }));
-    const newSessionId = screen.getByTestId("send-session").textContent;
-    expect(refetchedSessions).not.toContain(newSessionId);
+    const sentSessionId = screen.getByTestId("send-session").textContent ?? "";
+    const storedSessionId = scopeToNamespace(sentSessionId, "test-flow-id");
+    expect(storedSessionId).toMatch(/^test-flow-id:Session /);
+    expect(sentSessionId).toBe(storedSessionId);
 
-    // The first message of the new chat arrives.
-    flowState.newChatOnPlayground = true;
-    act(() => {
-      useMessagesStore.getState().setMessages([
-        {
-          id: "message-1",
-          flow_id: "test-flow-id",
-          session_id: newSessionId ?? "",
-          text: "hello",
-          sender: "User",
-          sender_name: "User",
-          timestamp: new Date().toISOString(),
-          files: [],
-          edit: false,
-          background_color: "",
-          text_color: "",
-        } satisfies Message,
-      ]);
-    });
+    // Opening the new chat loads history first; that must not select it yet.
+    receiveMessage("test-flow-id");
+    expect(sessionsQueryResult.refetch).not.toHaveBeenCalled();
+    expect(screen.getByTestId("visible-session")).toBeEmptyDOMElement();
+
+    // Newest first, as the server lists them after the send.
+    sessionsQueryResult.data = [
+      "test-flow-id",
+      storedSessionId,
+      ...refetchedSessions.slice(1),
+    ];
+    receiveMessage(storedSessionId);
 
     await waitFor(() =>
       expect(screen.getByTestId("visible-session")).toHaveTextContent(
-        newSessionId ?? "",
+        storedSessionId,
       ),
     );
     expect(sessionsQueryResult.refetch).toHaveBeenCalled();
+  });
+
+  it("keeps the new session unprefixed outside the playground page", () => {
+    renderModal(false);
+    fireEvent.click(screen.getByRole("button", { name: "new chat" }));
+    expect(screen.getByTestId("send-session")).toHaveTextContent(/^Session /);
   });
 });
