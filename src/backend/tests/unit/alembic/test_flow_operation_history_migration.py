@@ -65,7 +65,7 @@ def _flow_with_history(engine: sa.Engine):
             flow_id=flow.id,
             start_revision=1,
             end_revision=1,
-            ops={"version": 1, "operations": []},
+            ops={"version": 1, "batches": []},
             actor_user_ids=[str(user.id)],
             request_ids=[str(uuid4())],
         )

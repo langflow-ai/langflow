@@ -3,8 +3,8 @@
 Each row stores a contiguous, inclusive range of revisions: one revision per
 accepted operation, numbered by the server in commit order. Revision ``N`` is
 the flow's graph right after operation ``N``. The ordered operations live in
-``ops``, a versioned envelope that carries each operation's revision, actor and
-request; ``actor_user_ids`` and ``request_ids`` are lookup lists derived from it.
+``ops``, a versioned envelope with one batch per request, each naming its actor;
+``actor_user_ids`` and ``request_ids`` are lookup lists derived from it.
 
 Rows are append-only (see ``append_only``). A flow's rows never overlap and
 leave no gaps; the service enforces that, since portable SQL constraints cannot.

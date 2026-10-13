@@ -4,23 +4,29 @@
 
     {
       "version": 1,
-      "operations": [
+      "batches": [
         {
-          "revision": 42,
-          "actor_user_id": "<uuid>",
           "request_id": "<uuid>",
-          "cause": "upgrade_component",
-          "operation": {...}
+          "actor_user_id": "<uuid>",
+          "operations": [
+            {"revision": 42, "cause": "upgrade_component", "operation": {...}},
+            {"revision": 43, "operation": {...}}
+          ]
         }
       ]
     }
 
-The array order is canonical: element ``i`` of a row starting at revision ``s``
-carries revision ``s + i``. Every element names the authenticated actor and the
-request that produced it, so a row never implies a single author. ``cause``
-is optional: what made the write (an upgrade, a code edit, a restore, a file
-sync, the assistant), a display hint the history uses to group a write's
-operations. Nothing checks it.
+A row holds one batch per request, in revision order. Each batch names the
+authenticated actor and the request that produced its operations, so a row
+never implies a single author. Today each write fills its own rows, so a row
+holds one request; a queued multiplayer write can put several requests from
+several users in one row. A request that spans rows has one batch in each.
+
+The operation order is canonical: operation ``i`` of a row starting at revision
+``s`` carries revision ``s + i``, counted across the row's batches. ``cause`` is
+optional: what made the write (an upgrade, a code edit, a restore, a file sync,
+the assistant), a display hint the history uses to group a write's operations.
+Nothing checks it.
 
 Decoding validates all of it; a row that does not match is corruption.
 """
@@ -50,7 +56,8 @@ UNSUPPORTED_ENVELOPE = "unsupported operation envelope"
 COUNT_MISMATCH = "operation count does not match the row's revision range"
 REVISION_OUT_OF_ORDER = "operation revision out of order"
 MALFORMED_OPERATION = "malformed operation"
-REQUEST_NOT_CONTIGUOUS = "a request's operations are not contiguous"
+MALFORMED_BATCH = "malformed request batch"
+REQUEST_REPEATED = "a request has more than one batch in the row"
 
 
 @dataclass(frozen=True)
@@ -64,19 +71,30 @@ class RecordedOperation:
     cause: str | None = None
 
     def to_json(self) -> dict[str, Any]:
-        element: dict[str, Any] = {
-            "revision": self.revision,
-            "actor_user_id": str(self.actor_user_id),
-            "request_id": str(self.request_id),
-        }
+        """Return the operation's element inside its request's batch."""
+        element: dict[str, Any] = {"revision": self.revision}
         if self.cause is not None:
             element["cause"] = self.cause
         element["operation"] = dump_flow_operation(self.operation)
         return element
 
 
+def batch_header(request_id: UUID, actor_user_id: UUID) -> dict[str, Any]:
+    """Return an empty batch for one request."""
+    return {"request_id": str(request_id), "actor_user_id": str(actor_user_id), "operations": []}
+
+
 def encode_envelope(operations: list[RecordedOperation]) -> dict[str, Any]:
-    return {"version": ENVELOPE_VERSION, "operations": [operation.to_json() for operation in operations]}
+    """Group a row's operations into one batch per request, in revision order."""
+    batches: list[dict[str, Any]] = []
+    for operation in operations:
+        if not batches or batches[-1]["request_id"] != str(operation.request_id):
+            batches.append(batch_header(operation.request_id, operation.actor_user_id))
+        elif batches[-1]["actor_user_id"] != str(operation.actor_user_id):
+            msg = f"request {operation.request_id} has operations from two actors"
+            raise ValueError(msg)
+        batches[-1]["operations"].append(operation.to_json())
+    return {"version": ENVELOPE_VERSION, "batches": batches}
 
 
 def distinct_actor_ids(operations: list[RecordedOperation]) -> list[str]:
@@ -103,40 +121,47 @@ def decode_row(row: FlowOperationRow) -> list[RecordedOperation]:
     envelope = row.ops
     if not isinstance(envelope, dict) or envelope.get("version") != ENVELOPE_VERSION:
         raise corrupt(UNSUPPORTED_ENVELOPE, row.start_revision)
-    elements = envelope.get("operations")
-    if not isinstance(elements, list) or len(elements) != row.end_revision - row.start_revision + 1:
-        raise corrupt(COUNT_MISMATCH, row.start_revision)
+    batches = envelope.get("batches")
+    if not isinstance(batches, list):
+        raise corrupt(UNSUPPORTED_ENVELOPE, row.start_revision)
 
     decoded: list[RecordedOperation] = []
-    finished_requests: set[UUID] = set()
-    for index, element in enumerate(elements):
-        expected_revision = row.start_revision + index
-        if not isinstance(element, dict) or element.get("revision") != expected_revision:
-            raise corrupt(REVISION_OUT_OF_ORDER, expected_revision)
+    seen_requests: set[UUID] = set()
+    for batch in batches:
+        first_revision = row.start_revision + len(decoded)
+        if not isinstance(batch, dict) or not isinstance(batch.get("operations"), list) or not batch["operations"]:
+            raise corrupt(MALFORMED_BATCH, first_revision)
         try:
-            actor_user_id = UUID(str(element["actor_user_id"]))
-            request_id = UUID(str(element["request_id"]))
-            operation = parse_flow_operation(element["operation"])
-        except (KeyError, ValueError, FlowOperationError) as exc:
-            raise corrupt(MALFORMED_OPERATION, expected_revision) from exc
-        cause = element.get("cause")
-        if cause is not None and not isinstance(cause, str):
-            raise corrupt(MALFORMED_OPERATION, expected_revision)
+            request_id = UUID(str(batch["request_id"]))
+            actor_user_id = UUID(str(batch["actor_user_id"]))
+        except (KeyError, ValueError) as exc:
+            raise corrupt(MALFORMED_BATCH, first_revision) from exc
+        # A request's operations are contiguous, so a row holds one batch per request.
+        if request_id in seen_requests:
+            raise corrupt(REQUEST_REPEATED, first_revision)
+        seen_requests.add(request_id)
 
-        # A request's operations are contiguous: once another request starts,
-        # an earlier one cannot resume.
-        if decoded and decoded[-1].request_id != request_id:
-            finished_requests.add(decoded[-1].request_id)
-        if request_id in finished_requests:
-            raise corrupt(REQUEST_NOT_CONTIGUOUS, expected_revision)
-
-        decoded.append(
-            RecordedOperation(
-                revision=expected_revision,
-                actor_user_id=actor_user_id,
-                request_id=request_id,
-                operation=operation,
-                cause=cause,
+        for element in batch["operations"]:
+            expected_revision = row.start_revision + len(decoded)
+            if not isinstance(element, dict) or element.get("revision") != expected_revision:
+                raise corrupt(REVISION_OUT_OF_ORDER, expected_revision)
+            try:
+                operation = parse_flow_operation(element["operation"])
+            except (KeyError, FlowOperationError) as exc:
+                raise corrupt(MALFORMED_OPERATION, expected_revision) from exc
+            cause = element.get("cause")
+            if cause is not None and not isinstance(cause, str):
+                raise corrupt(MALFORMED_OPERATION, expected_revision)
+            decoded.append(
+                RecordedOperation(
+                    revision=expected_revision,
+                    actor_user_id=actor_user_id,
+                    request_id=request_id,
+                    operation=operation,
+                    cause=cause,
+                )
             )
-        )
+
+    if len(decoded) != row.end_revision - row.start_revision + 1:
+        raise corrupt(COUNT_MISMATCH, row.start_revision)
     return decoded

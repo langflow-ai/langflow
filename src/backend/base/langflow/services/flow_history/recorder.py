@@ -66,6 +66,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_flow_operation_service, get_settings_service
 from langflow.services.flow_history.envelope import (
     RecordedOperation,
+    batch_header,
     decode_row,
     distinct_actor_ids,
     encode_envelope,
@@ -352,6 +353,8 @@ def _json_size(value: Any) -> int:
 
 
 _ENVELOPE_OVERHEAD = _json_size(encode_envelope([]))
+# Request and actor ids are UUIDs, so every batch header has the same size.
+_BATCH_OVERHEAD = _json_size(batch_header(UUID(int=0), UUID(int=0))) + 1
 
 
 def _sequence(
@@ -368,7 +371,7 @@ def _sequence(
     recorded: list[RecordedOperation] = []
     revision = flow.latest_revision
     for operation in operations:
-        for part in _split_to_fit(operation, bytes_limit - _ENVELOPE_OVERHEAD):
+        for part in _split_to_fit(operation, bytes_limit - _ENVELOPE_OVERHEAD - _BATCH_OVERHEAD):
             revision += 1
             recorded.append(
                 RecordedOperation(
@@ -385,7 +388,9 @@ def _sequence(
 def _pack_rows(operations: list[RecordedOperation]) -> list[list[RecordedOperation]]:
     """Group consecutive operations into rows within both configured limits.
 
-    A partly filled row is never reopened; each write starts new rows.
+    A partly filled row is never reopened; each write starts new rows. An
+    operation that starts a request's batch in the row also pays for the
+    batch header.
     """
     settings = get_settings_service().settings
     ops_limit = settings.flow_op_log_row_ops_limit
@@ -396,11 +401,14 @@ def _pack_rows(operations: list[RecordedOperation]) -> list[list[RecordedOperati
     size = _ENVELOPE_OVERHEAD
     for operation in operations:
         element_size = _json_size(operation.to_json()) + 1
-        if current and (len(current) >= ops_limit or size + element_size > bytes_limit):
+        starts_batch = not current or current[-1].request_id != operation.request_id
+        added = element_size + (_BATCH_OVERHEAD if starts_batch else 0)
+        if current and (len(current) >= ops_limit or size + added > bytes_limit):
             rows.append(current)
             current, size = [], _ENVELOPE_OVERHEAD
+            added = element_size + _BATCH_OVERHEAD
         current.append(operation)
-        size += element_size
+        size += added
     if current:
         rows.append(current)
     return rows
