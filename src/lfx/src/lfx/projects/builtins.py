@@ -20,6 +20,8 @@ DEFAULT_PROJECT_TYPE = "flows"
 
 @register_project_type
 class FlowsType(ProjectTypeDefinition):
+    archive_format = "flows"
+
     name = DEFAULT_PROJECT_TYPE
     display_name = "Flows"
     icon = "Folders"
@@ -31,6 +33,24 @@ FLOWS = FlowsType()
 
 @register_project_type
 class AgentHarnessType(ProjectTypeDefinition):
+    def validate_archive(self, config, ctx):
+        from lfx.projects.builtin_archives import validate_config
+
+        validate_config(self.name, config, ctx)
+
+    def export_config(self, config, mapping):
+        from lfx.projects.builtin_archives import remap_config
+
+        return remap_config(self.name, config, mapping)
+
+    def import_config(self, config, mapping):
+        return self.export_config(config, mapping)
+
+    def archive_sources(self, config):
+        from lfx.projects.builtin_archives import harness_sources
+
+        return harness_sources(config)
+
     async def save_config(self, request, ctx):
         from lfx.projects.harness_lifecycle import prepare_harness
 
@@ -189,6 +209,19 @@ AGENT_HARNESS = AgentHarnessType()
 
 @register_project_type
 class ToolPackType(ProjectTypeDefinition):
+    def validate_archive(self, config, ctx):
+        from lfx.projects.builtin_archives import validate_config
+
+        validate_config(self.name, config, ctx)
+
+    def export_config(self, config, mapping):
+        from lfx.projects.builtin_archives import remap_config
+
+        return remap_config(self.name, config, mapping)
+
+    def import_config(self, config, mapping):
+        return self.export_config(config, mapping)
+
     async def save_config(self, request, ctx):
         from lfx.projects.source_resolution import prepare_tool_pack
 
@@ -221,6 +254,24 @@ TOOL_PACK = ToolPackType()
 
 @register_project_type
 class SkillPackType(ProjectTypeDefinition):
+    def validate_archive(self, config, ctx):
+        from lfx.projects.builtin_archives import validate_config
+
+        validate_config(self.name, config, ctx)
+
+    def export_config(self, config, mapping):
+        from lfx.projects.builtin_archives import remap_config
+
+        return remap_config(self.name, config, mapping)
+
+    def import_config(self, config, mapping):
+        return self.export_config(config, mapping)
+
+    def archive_references(self, config):
+        from lfx.projects.builtin_archives import skill_references
+
+        return skill_references(config)
+
     async def save_config(self, request, ctx):
         from lfx.projects.source_resolution import prepare_skill_pack
 

@@ -2946,11 +2946,8 @@ async def test_project_type_survives_zip_round_trip(client: AsyncClient, logged_
     assert "project" not in flow_names, f"the metadata member leaked in as a flow: {flow_names}"
 
 
-async def test_zip_import_falls_back_on_unknown_project_type(client: AsyncClient, logged_in_headers, json_flow):
-    """An archive naming a project type this deployment does not have still imports.
-
-    Refusing the whole upload would lose the flows too, so the type degrades to the default.
-    """
+async def test_zip_import_rejects_unknown_project_type(client: AsyncClient, logged_in_headers, json_flow):
+    """Missing plugin must not silently turn a typed project into ordinary flows."""
     flow_payload = json.loads(json_flow)
     zip_stream = io.BytesIO()
     with zipfile.ZipFile(zip_stream, "w") as zf:
@@ -2963,15 +2960,16 @@ async def test_zip_import_falls_back_on_unknown_project_type(client: AsyncClient
         files={"file": ("future.zip", zip_stream.getvalue(), "application/zip")},
         headers=logged_in_headers,
     )
-    assert upload_response.status_code == status.HTTP_201_CREATED, upload_response.text
-
+    assert upload_response.status_code == 422, upload_response.text
+    assert "Install its plugin" in upload_response.text
     projects = (await client.get("api/v1/projects/", headers=logged_in_headers)).json()
-    imported = [p for p in projects if p["name"].startswith("future")]
-    assert imported, f"no imported project found in {[p['name'] for p in projects]}"
-    assert imported[0]["project_type"] == "flows"
+    assert not any(p["name"].startswith("future") for p in projects)
 
 
-async def test_flow_named_project_survives_the_round_trip(client: AsyncClient, logged_in_headers, json_flow):
+@pytest.mark.parametrize("project_type", ["flows", "agent-harness"])
+async def test_flow_named_project_survives_the_round_trip(
+    client: AsyncClient, logged_in_headers, json_flow, project_type
+):
     """A flow called "project" must not be eaten by the reserved metadata member.
 
     Flows export as ``{name}.json``, so a metadata member named ``project.json`` collides with
@@ -2979,7 +2977,7 @@ async def test_flow_named_project_survives_the_round_trip(client: AsyncClient, l
     """
     create_response = await client.post(
         "api/v1/projects/",
-        json={"name": "collide_src", "description": "", "project_type": "agent-harness"},
+        json={"name": "collide_src", "description": "", "project_type": project_type},
         headers=logged_in_headers,
     )
     assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
@@ -2999,7 +2997,12 @@ async def test_flow_named_project_survives_the_round_trip(client: AsyncClient, l
     assert download_response.status_code == status.HTTP_200_OK, download_response.text
 
     names = zipfile.ZipFile(io.BytesIO(download_response.content)).namelist()
-    assert sorted(names) == ["keeper.json", "project.json", "project.meta"], names
+    assert "project.meta" in names
+    if project_type == "flows":
+        assert sorted(names) == ["keeper.json", "project.json", "project.meta"], names
+    else:
+        assert "composition.meta" in names
+        assert len([name for name in names if name.endswith(".json")]) == 2
 
     delete_response = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert delete_response.status_code in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT), delete_response.text
@@ -3014,7 +3017,7 @@ async def test_flow_named_project_survives_the_round_trip(client: AsyncClient, l
     projects = (await client.get("api/v1/projects/", headers=logged_in_headers)).json()
     imported = [p for p in projects if p["name"].startswith("collide")]
     assert imported, f"no imported project in {[p['name'] for p in projects]}"
-    assert imported[0]["project_type"] == "agent-harness"
+    assert imported[0]["project_type"] == project_type
 
     detail = (await client.get(f"api/v1/projects/{imported[0]['id']}", headers=logged_in_headers)).json()
     assert sorted(f["name"] for f in detail.get("flows", [])) == ["keeper", "project"]

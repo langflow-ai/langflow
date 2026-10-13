@@ -1,8 +1,4 @@
-"""Closed project compositions: validate references, then relocate definitions children first.
-
-This layer has no storage access. A missing reference is an error; an import must never
-resolve an old ID or a coincidentally matching name against the receiving installation.
-"""
+"""Project archive lifecycle with closed references and type-owned configuration hooks."""
 
 from __future__ import annotations
 
@@ -13,29 +9,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
-from lfx.projects.dependencies import binding_dependencies, validate_binding_dependencies
-from lfx.projects.flow_slots import (
-    ProjectFlowBindings,
-    flow_runtime_bindings,
-    runtime_binding_fields,
-    validate_project_binding,
-)
-from lfx.projects.local_tools import (
-    LocalToolBinding,
-    local_tool_bindings,
-    local_tool_definition,
-    validate_local_tool_source,
-)
-from lfx.projects.skills import (
-    SKILLS_ORIGIN,
-    HarnessSkills,
-    parse_harness_skills,
-    skill_pack_manifest,
-    skill_pack_references,
-)
-from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_manifest, tool_pack_references
-from lfx.projects.tools import TOOL_ORIGIN, tool_node_revision
+from lfx.projects.archive_context import ArchiveContext, ArchiveMapping
+from lfx.projects.archive_graphs import FlowArchiveGraph
+from lfx.projects.bindings import flow_revision
+from lfx.projects.references import field_references
+from lfx.projects.registry import get_project_type
 
 MAX_COMPOSITION_PROJECTS = 100
 MAX_COMPOSITION_FLOWS = 500
@@ -47,7 +25,7 @@ class ArchivedProject(BaseModel):
     id: UUID
     name: str = Field(min_length=1)
     description: str | None = None
-    project_type: Literal["flows", "agent-harness", "tool-pack", "skill-pack"]
+    project_type: str = Field(min_length=1)
     project_config: dict | None = None
     flows: list[dict]
 
@@ -61,190 +39,40 @@ class ProjectComposition(BaseModel):
     projects: list[ArchivedProject] = Field(min_length=1, max_length=MAX_COMPOSITION_PROJECTS)
 
 
-class CompositionGraph:
-    """Index only included resources and retain source identities while relocating them."""
+class CompositionGraph(FlowArchiveGraph):
+    """Validate types and graph contracts before relocating any included resource."""
 
-    def __init__(self, composition: ProjectComposition):
-        self.composition = composition
-        self.projects = {str(project.id): project for project in composition.projects}
-        self.flows: dict[str, dict] = {}
-        self.owners: dict[str, str] = {}
-        if len(self.projects) != len(composition.projects) or str(composition.root_project_id) not in self.projects:
-            msg = "An archive needs unique project IDs and an included root project."
-            raise ValueError(msg)
-        for project in composition.projects:
-            for flow in project.flows:
-                flow_id = str(UUID(str(flow["id"])))
-                if flow_id in self.flows:
-                    msg = "An archive must contain unique flow IDs."
-                    raise ValueError(msg)
-                if not isinstance(flow.get("data"), dict) or not isinstance(flow.get("name"), str):
-                    msg = "Every archived flow needs a name and a graph definition."
-                    raise TypeError(msg)
-                self.flows[flow_id] = flow
-                self.owners[flow_id] = str(project.id)
-        if len(self.flows) > MAX_COMPOSITION_FLOWS:
-            msg = "A composition archive cannot contain more than 500 flows."
-            raise ValueError(msg)
-
-    def source(self, flow_id: str) -> dict:
-        if flow_id not in self.flows:
-            msg = "A referenced flow is missing from the composition archive."
-            raise ValueError(msg)
-        return self.flows[flow_id]
-
-    def local_source(self, project_id: str, flow_id: str) -> dict:
-        flow = self.source(flow_id)
-        if self.owners[flow_id] != project_id:
-            msg = "A project binding or local tool must belong to its archived project."
-            raise ValueError(msg)
-        return flow
-
-    def manifest(self, project_id: str):
-        project = self.projects.get(project_id)
-        if project is None or project.project_type != "tool-pack":
-            msg = "A referenced Tool Pack is missing from the composition archive."
-            raise ValueError(msg)
-        return tool_pack_manifest(
-            project_id=project.id,
-            name=project.name,
-            config=project.project_config,
-            flows=project.flows,
-            dependency_flows=list(self.flows.values()),
+    def _context(self, project_id: str, **kwargs) -> ArchiveContext:
+        return ArchiveContext(
+            project_id=project_id,
+            projects={key: value.model_dump(mode="json") for key, value in self.projects.items()},
+            flows=deepcopy(self.flows),
+            owners=dict(self.owners),
+            **kwargs,
         )
 
-    def selected_flow(self, node: dict) -> str | None:
-        data = node.get("data", {})
-        if data.get("type") not in {"RunFlow", "SubFlow"}:
-            return None
-        template = data.get("node", {}).get("template", {})
-        selected = template.get("flow_id_selected", {}).get("value")
-        if selected:
-            self.source(selected)
-            return selected
-        name = template.get("flow_name_selected", template.get("flow_name", {})).get("value")
-        if not name:
-            return None
-        candidates = [flow_id for flow_id, flow in self.flows.items() if flow["name"] == name]
-        if len(candidates) != 1:
-            msg = "A named Run Flow dependency is missing or ambiguous in the archive."
-            raise ValueError(msg)
-        return candidates[0]
-
-    def skill_manifest(self, project_id: str):
-        project = self.projects.get(project_id)
-        if project is None or project.project_type != "skill-pack":
-            msg = "A referenced Skill Pack is missing from the composition archive."
-            raise ValueError(msg)
-        manifest = skill_pack_manifest(project.id, project.name, project.project_config)
-        for skill in manifest.skills:
-            for reference in skill.tool_packs:
-                if reference != self.manifest(str(reference.project_id)).reference:
-                    msg = "A skill's Tool Pack changed. Review it before exporting."
-                    raise ValueError(msg)
-        return manifest
-
     def validate(self, *, allow_missing_secrets: bool = False) -> None:
-        """Check reviewed definitions before any credential stripping or ID changes."""
-
-        def validate_binding(field_name, data, binding):
-            validate_binding_dependencies(binding, list(self.flows.values()))
-            if not allow_missing_secrets:
-                validate_project_binding(field_name, data, binding)
-                return
-            if flow_revision(data) != binding.revision:
-                msg = "A bound flow changed from its archived revision."
-                raise ValueError(msg)
-            # Export intentionally removes credentials. Import validates the contract but
-            # leaves its original required widgets intact for the recipient to configure.
-            probe = deepcopy(data)
-            for node in probe.get("nodes", []):
-                for field in node.get("data", {}).get("node", {}).get("template", {}).values():
-                    if isinstance(field, dict) and field.get("password") and field.get("value") in (None, "", []):
-                        field["required"] = False
-            validate_project_binding(field_name, probe, binding.model_copy(update={"revision": flow_revision(probe)}))
-
         for project_id, project in self.projects.items():
-            config = project.project_config or {}
-            if project.project_type == "tool-pack":
-                self.manifest(project_id)
-            if project.project_type == "skill-pack":
-                self.skill_manifest(project_id)
-            if project.project_type != "agent-harness":
-                continue
-            if config.get("agent_flow_id"):
-                self.local_source(project_id, config["agent_flow_id"])
-            tools = config.get("tools", [])
-            if not isinstance(tools, list) or any(not isinstance(item, str) for item in tools):
-                msg = "Tools must be a list of flow IDs."
+            definition = get_project_type(project.project_type)
+            if not definition.exportable:
+                msg = "An archived project type does not support import or export."
                 raise ValueError(msg)
-            for flow_id in tools:
-                self.local_source(project_id, flow_id)
-            for binding in local_tool_bindings(config.get("tool_bindings", {})).values():
-                if binding.flow_id not in tools:
-                    msg = "An archived local tool binding is not selected by its harness."
+            ctx = self._context(project_id, allow_missing_secrets=allow_missing_secrets)
+            # Reference integrity is host-owned, even if a plugin overrides validation.
+            declared = tuple(
+                ref
+                for field in definition.fields
+                if field.references
+                for ref in field_references(field, (project.project_config or {}).get(field.name))
+            )
+            for reference in (*declared, *definition.archive_references(deepcopy(project.project_config))):
+                ctx.project(str(reference.project_id), expected_type=reference.expected_type)
+            for reference in definition.archive_sources(deepcopy(project.project_config)):
+                if flow_revision(ctx.source(str(reference.flow_id))["data"]) != reference.revision:
+                    msg = "A reviewed archive source changed. Review and save it before exporting."
                     raise ValueError(msg)
-                validate_local_tool_source(self.local_source(project_id, binding.flow_id), binding)
-                validate_binding_dependencies(binding, list(self.flows.values()))
-            for reference in tool_pack_references(config.get("tool_packs", [])):
-                if reference != self.manifest(str(reference.project_id)).reference:
-                    msg = "A Tool Pack changed. Review and save its reference before exporting."
-                    raise ValueError(msg)
-            for reference in skill_pack_references(config.get("skill_packs", [])):
-                if reference != self.skill_manifest(str(reference.project_id)).reference:
-                    msg = "A Skill Pack changed. Review it before exporting."
-                    raise ValueError(msg)
-            for field_name, binding in ProjectFlowBindings.model_validate(config.get("flow_bindings", {})).entries():
-                validate_binding(field_name, self.local_source(project_id, binding.flow_id)["data"], binding)
-        for flow_id, flow in self.flows.items():
-            for field_name, binding in flow_runtime_bindings(flow["data"]):
-                validate_binding(field_name, self.source(binding.flow_id)["data"], binding)
-            for node in flow["data"].get("nodes", []):
-                target = self.selected_flow(node)
-                data = node.get("data", {})
-                if data.get("type") == "Agent":
-                    skills = parse_harness_skills(
-                        data.get("node", {}).get("template", {}).get("skill_bindings", {}).get("value") or ""
-                    )
-                    for pack in skills.packs:
-                        if pack != self.skill_manifest(str(pack.reference.project_id)):
-                            msg = "An archived skill snapshot differs from its included Skill Pack."
-                            raise ValueError(msg)
-                for origin_name in (BINDING_ORIGIN, TOOL_ORIGIN):
-                    origin = data.get(origin_name)
-                    if not isinstance(origin, dict):
-                        continue
-                    if origin.get("project_id") != self.owners[flow_id] or origin.get("flow_id") != target:
-                        msg = "An archived harness node has inconsistent project or flow references."
-                        raise ValueError(msg)
-                    if origin_name == BINDING_ORIGIN:
-                        binding = ProjectFlowBindings.model_validate(
-                            {
-                                "system_prompt": {
-                                    key: value
-                                    for key, value in origin.items()
-                                    if key not in {"project_id", "field_name"}
-                                }
-                            }
-                        ).system_prompt
-                        validate_binding("system_prompt", self.source(target)["data"], binding)
-                    elif origin.get("tool_pack"):
-                        binding = ToolPackToolBinding.model_validate(origin["tool_pack"])
-                        binding.dependency_snapshots()
-                        manifest = self.manifest(str(binding.reference.project_id))
-                        if binding.reference != manifest.reference or binding.tool not in manifest.tools:
-                            msg = "An archived tool has an unreviewed Tool Pack definition."
-                            raise ValueError(msg)
-                        if str(binding.tool.flow_id) != target:
-                            msg = "An archived tool targets a different flow from its reviewed export."
-                            raise ValueError(msg)
-                    elif origin.get("local_tool"):
-                        binding = LocalToolBinding.model_validate(origin["local_tool"])
-                        if binding.flow_id != target:
-                            msg = "An archived local tool targets a different reviewed flow."
-                            raise ValueError(msg)
-                        validate_local_tool_source(self.source(target), binding)
-                        validate_binding_dependencies(binding, list(self.flows.values()))
+            definition.validate_archive(deepcopy(project.project_config), ctx)
+        self.validate_flows(allow_missing_secrets=allow_missing_secrets)
 
     def relocate(
         self,
@@ -254,203 +82,45 @@ class CompositionGraph:
         version_ids: dict[str, str],
         flow_names: dict[str, str] | None = None,
         project_names: dict[str, str] | None = None,
+        operation: Literal["export", "import"] = "import",
     ) -> ProjectComposition:
-        """Rewrite known references, keeping canvas edits, baselines and all node/edge IDs.
-
-        The caller validates the original composition first. Versions are allocated by
-        the receiving server, never resolved from archive-supplied version IDs.
-        """
-        result = self.composition.model_copy(deep=True)
-        target = CompositionGraph(result)
-        for project_id, name in (project_names or {}).items():
-            target.projects[project_id].name = name
-        visited: set[str] = set()
-        active: set[str] = set()
-        pack_manifests = {}
-        skill_manifests = {}
-        original_flow_ids = {new_id: old_id for old_id, new_id in flow_ids.items()}
-        names = flow_names or {flow_id: flow["name"] for flow_id, flow in self.flows.items()}
-
-        def pack(project_id):
-            if project_id not in pack_manifests:
-                original = self.projects[project_id]
-                for flow in original.flows:
-                    visit(str(flow["id"]))
-                project = target.projects[project_id]
-                config = deepcopy(project.project_config or {})
-                config["tools"] = [flow_ids[item] for item in config.get("tools", [])]
-                pack_manifests[project_id] = tool_pack_manifest(
-                    project_id=UUID(project_ids[project_id]),
-                    name=project.name,
-                    config=config,
-                    flows=project.flows,
-                    dependency_flows=list(target.flows.values()),
-                )
-            return pack_manifests[project_id]
-
-        def binding_value(field_name, value):
-            bindings = ProjectFlowBindings.model_validate({field_name: value}).entries()
-            updated = []
-            for _, binding in bindings:
-                original_id = binding.flow_id
-                visit(original_id)
-                binding.flow_id = flow_ids[original_id]
-                binding.revision = flow_revision(target.flows[original_id]["data"])
-                binding.version_id = version_ids[original_id]
-                binding.dependencies = binding_dependencies(binding.flow_id, list(target.flows.values()))
-                for dependency in binding.dependencies:
-                    dependency.version_id = version_ids[original_flow_ids[dependency.flow_id]]
-                updated.append(binding.model_dump())
-            return updated if isinstance(value, list) else updated[0] if updated else None
-
-        def skill_pack(project_id):
-            if project_id not in skill_manifests:
-                original = self.skill_manifest(project_id)
-                definitions = []
-                for skill in original.skills:
-                    definition = skill.model_dump(mode="json")
-                    definition["tool_packs"] = [
-                        pack(str(ref.project_id)).reference.model_dump(mode="json") for ref in skill.tool_packs
-                    ]
-                    definitions.append(definition)
-                skill_manifests[project_id] = skill_pack_manifest(
-                    UUID(project_ids[project_id]), target.projects[project_id].name, {"skills": definitions}
-                )
-            return skill_manifests[project_id]
-
-        def skill_value(value):
-            current = HarnessSkills.model_validate(value)
-            return HarnessSkills(
-                packs=tuple(skill_pack(str(item.reference.project_id)) for item in current.packs),
-                global_tool_pack_ids=tuple(UUID(project_ids[str(item)]) for item in current.global_tool_pack_ids),
-            ).model_dump(mode="json")
-
-        def local_binding(value):
-            original_id = LocalToolBinding.model_validate(value).flow_id
-            visit(original_id)
-            binding = local_tool_definition(target.flows[original_id], list(target.flows.values()))
-            binding.version_id = version_ids[original_id]
-            for dependency in binding.dependencies:
-                dependency.version_id = version_ids[original_flow_ids[dependency.flow_id]]
-            return binding.model_dump(mode="json")
-
-        def visit(flow_id):
-            if flow_id in active:
-                msg = "The composition contains recursive flow or Tool Pack dependencies."
+        if operation not in {"export", "import"}:
+            msg = "Unknown archive operation."
+            raise ValueError(msg)
+        result = self.relocate_flows(
+            project_ids=project_ids,
+            flow_ids=flow_ids,
+            version_ids=version_ids,
+            flow_names=flow_names,
+            project_names=project_names,
+        )
+        original_ids = {new_id: old_id for old_id, new_id in flow_ids.items()}
+        relocated_flows = {original_ids[str(flow["id"])]: flow for project in result.projects for flow in project.flows}
+        projects = {str(project.id): project.model_dump(mode="json") for project in result.projects}
+        for project in result.projects:
+            project_id = str(project.id)
+            definition = get_project_type(project.project_type)
+            mapping = ArchiveMapping(
+                project_id=project_id,
+                projects=deepcopy(projects),
+                flows=deepcopy(relocated_flows),
+                owners=dict(self.owners),
+                project_ids=dict(project_ids),
+                flow_ids=dict(flow_ids),
+                version_ids=dict(version_ids),
+            )
+            config = deepcopy(project.project_config)
+            applied = config.pop("_applied", None) if config is not None else None
+            hook = definition.export_config if operation == "export" else definition.import_config
+            config = hook(config, mapping)
+            if config is not None and (not isinstance(config, dict) or "_applied" in config):
+                msg = "An archive hook must return a configuration object without host bookkeeping."
                 raise ValueError(msg)
-            if flow_id in visited:
-                return
-            self.source(flow_id)
-            active.add(flow_id)
-            flow = target.flows[flow_id]
-            project_id = project_ids[self.owners[flow_id]]
-            for node in flow["data"].get("nodes", []):
-                data = node.get("data", {})
-                template = data.get("node", {}).get("template", {})
-                origin = data.get(TOOL_ORIGIN)
-                unchanged_tool = isinstance(origin, dict) and origin.get("applied_revision") == tool_node_revision(node)
-                selected = self.selected_flow(node)
-                if selected:
-                    visit(selected)
-                    metadata = {"id": flow_ids[selected]}
-                    if "flow_id_selected" in template:
-                        template["flow_id_selected"]["value"] = flow_ids[selected]
-                    if "flow_name_selected" in template:
-                        template["flow_name_selected"].update(
-                            value=names[selected],
-                            options=[names[selected]],
-                            options_metadata=[metadata],
-                            selected_metadata=metadata,
-                        )
-                    elif "flow_name" in template:
-                        template["flow_name"]["value"] = names[selected]
-                if data.get("type") == "Agent":
-                    raw_skills = template.get("skill_bindings", {}).get("value")
-                    if raw_skills and raw_skills.strip() not in {"null", "{}"}:
-                        template["skill_bindings"]["value"] = json.dumps(skill_value(json.loads(raw_skills)))
-                    if isinstance(data.get(SKILLS_ORIGIN), dict):
-                        data[SKILLS_ORIGIN]["project_id"] = project_id
-                        data[SKILLS_ORIGIN]["binding"] = skill_value(data[SKILLS_ORIGIN]["binding"])
-                    for field_name, (input_name, origin_name, origin_key, _) in runtime_binding_fields().items():
-                        raw = template.get(input_name, {}).get("value")
-                        if raw and raw.strip() not in {"null", "{}", "[]"}:
-                            template[input_name]["value"] = json.dumps(binding_value(field_name, json.loads(raw)))
-                        runtime_origin = data.get(origin_name)
-                        if isinstance(runtime_origin, dict):
-                            runtime_origin["project_id"] = project_id
-                            runtime_origin[origin_key] = binding_value(field_name, runtime_origin[origin_key])
-                instruction = data.get(BINDING_ORIGIN)
-                if isinstance(instruction, dict):
-                    value = binding_value(
-                        "system_prompt",
-                        {key: value for key, value in instruction.items() if key not in {"project_id", "field_name"}},
-                    )
-                    instruction.update(project_id=project_id, **value)
-                if isinstance(origin, dict):
-                    origin.update(project_id=project_id, flow_id=flow_ids[selected])
-                    if origin.get("local_tool"):
-                        origin["local_tool"] = local_binding(origin["local_tool"])
-                    if origin.get("tool_pack"):
-                        original_binding = ToolPackToolBinding.model_validate(origin["tool_pack"])
-                        manifest = pack(str(original_binding.reference.project_id))
-                        export = next(item for item in manifest.tools if str(item.flow_id) == flow_ids[selected])
-                        origin["tool_pack"] = ToolPackToolBinding(
-                            reference=manifest.reference,
-                            tool=export,
-                            version_id=UUID(version_ids[selected]),
-                            dependency_versions=tuple(
-                                FlowDependencyVersion(
-                                    flow=dependency,
-                                    version_id=UUID(version_ids[original_flow_ids[str(dependency.flow_id)]]),
-                                )
-                                for dependency in export.dependencies
-                            ),
-                        ).model_dump(mode="json")
-                    if unchanged_tool:
-                        origin["applied_revision"] = tool_node_revision(node)
-            flow.update(id=flow_ids[flow_id], name=names[flow_id])
-            visited.add(flow_id)
-            active.remove(flow_id)
-
-        for flow_id in self.flows:
-            visit(flow_id)
-        for project_id, project in self.projects.items():
-            if project.project_type == "tool-pack":
-                pack(project_id)
-            if project.project_type == "skill-pack":
-                skill_pack(project_id)
-        for project_id, project in target.projects.items():
-            config = project.project_config
-            if config is not None:
-                if config.get("agent_flow_id"):
-                    config["agent_flow_id"] = flow_ids[config["agent_flow_id"]]
-                if "tools" in config:
-                    config["tools"] = [flow_ids[item] for item in config["tools"]]
-                if project.project_type == "skill-pack":
-                    config["skills"] = [skill.model_dump(mode="json") for skill in skill_pack(project_id).skills]
-                if "skill_packs" in config:
-                    config["skill_packs"] = [
-                        skill_pack(str(ref.project_id)).reference.model_dump(mode="json")
-                        for ref in skill_pack_references(config["skill_packs"])
-                    ]
-                if "tool_packs" in config:
-                    config["tool_packs"] = [
-                        pack(str(reference.project_id)).reference.model_dump(mode="json")
-                        for reference in tool_pack_references(config["tool_packs"])
-                    ]
-                if "flow_bindings" in config:
-                    config["flow_bindings"] = {
-                        field_name: binding_value(field_name, value)
-                        for field_name, value in config["flow_bindings"].items()
-                    }
-                if "tool_bindings" in config:
-                    config["tool_bindings"] = {
-                        flow_ids[key]: local_binding(value) for key, value in config["tool_bindings"].items()
-                    }
-                if isinstance(config.get("_applied"), dict):
-                    config["_applied"] = {
-                        flow_ids[key]: value for key, value in config["_applied"].items() if key in flow_ids
-                    }
+            json.dumps(config, allow_nan=False)
+            if isinstance(applied, dict) and config is not None:
+                config["_applied"] = {flow_ids[key]: value for key, value in applied.items() if key in flow_ids}
+            project.project_config = deepcopy(config)
             project.id = UUID(project_ids[project_id])
         result.root_project_id = UUID(project_ids[str(result.root_project_id)])
+        CompositionGraph(result).validate(allow_missing_secrets=True)
         return result

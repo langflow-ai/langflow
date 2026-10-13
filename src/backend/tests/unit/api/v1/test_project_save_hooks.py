@@ -511,3 +511,55 @@ async def test_configured_type_conversion_requires_clear(client, logged_in_heade
         f"/api/v1/projects/{project}", headers=logged_in_headers, json={"project_type": "flows"}
     )
     assert response.status_code == 200
+
+
+async def test_installed_plugin_archive_round_trip(client, logged_in_headers, plugin_project):
+    project, target, source = plugin_project
+    saved = await save_config(
+        client, logged_in_headers, project, {"instructions": "Help with evidence", "source_id": source}
+    )
+    exported = await client.get(f"/api/v1/projects/download/{project}", headers=logged_in_headers)
+    assert exported.status_code == 200, exported.text
+    imported = await client.post(
+        "/api/v1/projects/upload/",
+        headers=logged_in_headers,
+        files={"file": ("support.zip", exported.content, "application/zip")},
+    )
+    assert imported.status_code == 201, imported.text
+    flows = imported.json()
+    assert len(flows) == 2
+    imported_project = flows[0]["folder_id"]
+    assert imported_project != project
+    detail = (await client.get(f"/api/v1/projects/{imported_project}", headers=logged_in_headers)).json()
+    assert detail["project_type"] == "support-desk"
+    config = detail["project_config"]
+    assert config["source_id"] not in {source, target}
+    assert config["source_id"] in {flow["id"] for flow in flows}
+    assert config["source_version"] != saved["project_config"]["source_version"]
+    assert set(config["_applied"]).issubset({flow["id"] for flow in flows})
+    snapshot = (await versions(config["source_id"]))[0]
+    assert str(snapshot.id) == config["source_version"]
+    again = await save_config(client, logged_in_headers, imported_project, config)
+    assert again["flows_updated"] == 0
+    assert again["fields_skipped"] == 0
+
+
+async def test_plugin_archive_rejects_missing_source_and_rolls_back(client, logged_in_headers, plugin_project):
+    import json
+
+    project, target, source = plugin_project
+    saved = await save_config(client, logged_in_headers, project, {"instructions": "Help", "source_id": source})
+    payload = {
+        "folder_name": "Broken support archive",
+        "folder_project_type": "support-desk",
+        "folder_project_config": saved["project_config"],
+        "flows": [{"id": target, "name": "Agent", "data": (await stored_flow(target)).data}],
+    }
+    response = await client.post(
+        "/api/v1/projects/upload/",
+        headers=logged_in_headers,
+        files={"file": ("support.json", json.dumps(payload).encode(), "application/json")},
+    )
+    assert response.status_code == 422, response.text
+    listing = (await client.get("/api/v1/projects/", headers=logged_in_headers)).json()
+    assert not any(item["name"] == "Broken support archive" for item in listing)

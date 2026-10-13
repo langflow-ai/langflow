@@ -7,8 +7,8 @@ accepts their registered names without a database migration.
 This delivery supports declarations, discovery, slot contracts, capabilities, project references,
 and transactional save hooks with pure graph composition. Tool Pack, Skill Pack, Eval Suite and
 custom types use these hooks. Agent Harness uses the same preparation, pure composition and host
-persistence path. Its former compatibility dispatcher has been removed. Archive and starter
-hooks are separate follow-up work.
+persistence path. Its former compatibility dispatcher has been removed. Archive validation,
+export and import also dispatch through the type. Starter hooks are the remaining follow-up.
 Custom React pages and widgets are not part of the Python plugin contract.
 
 ## Declare a type
@@ -144,7 +144,7 @@ remain 404s. A rejected save leaves the previous configuration intact.
 The generic check validates reference identity, type and access. It does not establish that a
 plugin's revision is current or authorize executing its flows. Built-in Tool Pack and Skill Pack
 validators retain their revision, dependency and execution checks. Custom revision handling and
-composition belong in the save hooks below. Reference remapping still needs the archive slice. The existing reference
+composition belong in the save hooks below. Archive hooks own revision-sensitive remapping. The existing reference
 pickers read the target from the field; their review UI currently supports Tool Packs and Skill
 Packs. Other targets can use the configuration API, with no custom reviewer implied.
 
@@ -301,3 +301,37 @@ foreign and duplicate targets, locked targets, fields-empty types, missing plugi
 empty versus omitted config, and rollback after a source version or a target graph is staged.
 Pack/eval tests retain transitive review and workflow execution coverage. These checks use
 SQLite and provider replacements; they do not establish live-provider or deployed-topology acceptance.
+
+
+## Export and import
+
+Types use composition archives by default. `export_config(config, mapping)` and
+`import_config(config, mapping)` are synchronous, pure hooks. They return a JSON object or
+`None`. The host owns `_applied`; a hook cannot return that key. Default hooks copy config
+and remap project IDs in declared reference fields. Override them for custom flow IDs,
+source version IDs, digests, or embedded contracts. Unknown plugin types are rejected on
+import, including older ZIP and JSON project payloads. Nothing is silently downgraded.
+
+`ArchiveContext` and `ArchiveMapping` live in `lfx.projects.archive_context`. They contain
+copied archive data only. `source(id, local=True)` can enforce project ownership;
+`project(id, expected_type=...)` checks an included project's type. Missing resources fail.
+No lookup may fall back to a receiving database or to external services. Mappings are
+keyed by original IDs. Source graphs have already been relocated; project configs still
+have original references. `project_ids`, `flow_ids`, and `version_ids` contain receiving IDs.
+Export uses identity resource maps and portable version placeholders. Import allocates
+fresh resources and source snapshots in the request transaction.
+
+`archive_references(config)` declares the project closure, defaulting to fields with
+`references`. Override it for nested references. The host authorizes their projects and
+filters their flows before collecting the archive. `archive_sources(config)` returns saved
+source references with `flow_id`, `version_id`, and `revision`; the host checks each retained
+snapshot and includes its source project. `validate_archive(config, context)` validates any
+additional plugin contract before and after relocation. Revision semantics for custom project
+references remain the plugin's responsibility. The host always checks declared reference types,
+included sources, graph contracts and JSON results.
+
+Credentials are stripped before export hooks run. Import may have missing required credentials;
+users configure them on the destination. These hooks must not run provider code or perform
+side effects. An ordinary Flows project retains its legacy ZIP format (`archive_format="flows"`).
+Typed plugins should keep the default composition format to participate in these hooks.
+The installed example package includes source validation and remapping through these APIs.

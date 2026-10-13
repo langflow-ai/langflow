@@ -5,7 +5,6 @@ Extracted from projects.py to reduce file size and separate file I/O concerns.
 
 import io
 import zipfile
-from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID, uuid4
@@ -15,15 +14,6 @@ from fastapi import File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
 from lfx.projects import get_project_type
-from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
-from lfx.projects.flow_slots import (
-    BINDING_LABELS,
-    ProjectFlowBindings,
-    flow_runtime_bindings,
-    remap_runtime_bindings,
-    validate_project_binding,
-)
-from lfx.projects.tools import TOOL_ORIGIN
 from sqlmodel import select
 
 from langflow.api.utils import (
@@ -52,7 +42,6 @@ from langflow.services.creation_hooks import (
 )
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
-from langflow.services.database.models.folder.config_writer import config_from_request, write_project_config_to_flows
 from langflow.services.database.models.folder.model import (
     Folder,
     FolderCreate,
@@ -100,7 +89,7 @@ async def download_project_flows(
         if not flows and not definition.allows_empty_project:
             raise HTTPException(status_code=404, detail="No flows found in project")
 
-        if project.project_type in {"agent-harness", "tool-pack", "skill-pack"}:
+        if definition.archive_format == "composition":
             try:
                 composition = await export_composition(session, current_user, project, visible_flows)
                 zip_stream = composition_zip(composition)
@@ -162,9 +151,8 @@ def _imported_project_config(value: object) -> dict | None:
     """Resolve the project config from an uploaded payload.
 
     ``FolderCreate.project_config`` is a ``dict | None``, so a scalar or a list reaches pydantic
-    as a validation error that no handler catches and the whole upload answers 500. An uploaded
-    archive is untrusted input, so a wrong shape degrades to no config, matching how an unknown
-    project type degrades to the default.
+    as a validation error that no handler catches. Legacy ordinary-flow archives retain
+    their historical no-config fallback; typed composition archives validate their schema.
     """
     if value is None:
         return None
@@ -177,19 +165,11 @@ def _imported_project_config(value: object) -> dict | None:
 
 
 def _imported_project_type(value: object) -> str:
-    """Resolve the project type from an uploaded payload.
-
-    Unlike the create and update paths, an import does not reject an unknown type. The archive
-    may come from a deployment that has a project type this one does not, and refusing the whole
-    import over it would lose the flows too. Fall back to the default and say so in the log.
-    """
+    """Refuse unavailable plugins; never silently change an archive's project type."""
     if value is None:
         return DEFAULT_PROJECT_TYPE
     if not isinstance(value, str) or value not in registered_project_types():
-        logger.warning(
-            "Ignoring unknown project_type %r in uploaded project; importing as %s", value, DEFAULT_PROJECT_TYPE
-        )
-        return DEFAULT_PROJECT_TYPE
+        raise HTTPException(422, "This project type is unavailable. Install its plugin before importing.")
     definition = get_project_type(value)
     if not definition.exportable:
         raise HTTPException(422, f"{definition.display_name} import is not supported.")
@@ -276,6 +256,38 @@ async def upload_project_flows(
         project_config=_imported_project_config(data.get("folder_project_config")),
     )
 
+    if get_project_type(project.project_type).archive_format == "composition":
+        from lfx.projects.archives import ArchivedProject, ProjectComposition
+
+        try:
+            flows = [FlowCreate(**normalize_code_for_import(flow)).model_dump(mode="json") for flow in data["flows"]]
+            original_projects = {str(flow["folder_id"]) for flow in flows if flow.get("folder_id")}
+            if len(original_projects) > 1:
+                msg = "Use a composition archive for flows from multiple projects."
+                raise ValueError(msg)
+            project_id = UUID(next(iter(original_projects))) if original_projects else uuid4()
+            for flow in flows:
+                flow["id"] = flow.get("id") or str(uuid4())
+            return await import_composition(
+                session,
+                current_user,
+                ProjectComposition(
+                    root_project_id=project_id,
+                    projects=[
+                        ArchivedProject(
+                            id=project_id,
+                            name=project.name,
+                            description=project.description,
+                            project_type=project.project_type,
+                            project_config=project.project_config,
+                            flows=flows,
+                        )
+                    ],
+                ),
+            )
+        except (ValueError, KeyError, TypeError) as exc:
+            raise composition_error(exc) from exc
+
     # The one project-creation route that does not go through ``projects._new_project``: it
     # builds the Folder itself, so it runs the same hooks through the same helper. Without
     # this call a project limit would be bypassable by uploading a project export.
@@ -319,7 +331,6 @@ async def upload_project_flows(
     # Generate unique names, tracking names already assigned within this batch
     # to avoid collisions when multiple flows would get the same generated name
     used_names_in_batch: set[str] = set()
-    original_names = {str(flow.id): flow.name for flow in flow_list.flows}
     for flow in flow_list.flows:
         flow_name = await generate_unique_flow_name(flow.name, current_user.id, session)
         # Ensure the name is also unique within the current batch;
@@ -336,146 +347,4 @@ async def upload_project_flows(
         flow.folder_id = new_project.id
         flow.workspace_id = new_project.workspace_id
 
-    # A harness binding refers to both project and flow identities. Import it as a new
-    # composition, including when the original project still exists in this account.
-    bindings = (new_project.project_config or {}).get("flow_bindings", {})
-    if new_project.project_type == "agent-harness":
-        try:
-            parsed_bindings = ProjectFlowBindings.model_validate(bindings)
-        except ValueError as exc:
-            raise HTTPException(
-                422, "Imported flow bindings must contain Instructions, Context, Compaction, or Hook selections."
-            ) from exc
-    local_bindings_value = (new_project.project_config or {}).get("tool_bindings", {})
-    has_bindings = new_project.project_type == "agent-harness" and bool(bindings or local_bindings_value)
-    if has_bindings:
-        from lfx.projects.dependencies import binding_dependencies, validate_binding_dependencies
-        from lfx.projects.local_tools import (
-            LocalToolBinding,
-            local_tool_bindings,
-            local_tool_definition,
-            validate_local_tool_source,
-        )
-
-        id_map = {str(flow.id): str(uuid4()) for flow in flow_list.flows if flow.id is not None}
-        by_original_id = {str(flow.id): flow for flow in flow_list.flows}
-        if len(id_map) != len(flow_list.flows):
-            raise HTTPException(422, "Every bound project flow must have a unique ID in the archive.")
-        by_original_name = {name: flow_id for flow_id, name in original_names.items()}
-        config = config_from_request(new_project.project_config) or {}
-        original_definitions = [
-            {"id": key, "name": original_names[key], "description": flow.description or "", "data": flow.data or {}}
-            for key, flow in by_original_id.items()
-        ]
-        try:
-            local_bindings = local_tool_bindings(local_bindings_value)
-            for binding in local_bindings.values():
-                source = next(flow for flow in original_definitions if flow["id"] == binding.flow_id)
-                validate_local_tool_source(source, binding)
-                validate_binding_dependencies(binding, original_definitions)
-            for flow in original_definitions:
-                for node in flow["data"].get("nodes", []):
-                    local = (node.get("data", {}).get(TOOL_ORIGIN) or {}).get("local_tool")
-                    if local:
-                        binding = LocalToolBinding.model_validate(local)
-                        source = next(flow for flow in original_definitions if flow["id"] == binding.flow_id)
-                        validate_local_tool_source(source, binding)
-                        validate_binding_dependencies(binding, original_definitions)
-        except (ValueError, KeyError, TypeError, StopIteration) as exc:
-            raise HTTPException(
-                422, "An imported local tool has an invalid or unavailable reviewed definition."
-            ) from exc
-        for field_name, reviewed in parsed_bindings.entries():
-            try:
-                source = by_original_id[reviewed.flow_id]
-                validate_project_binding(field_name, source.data or {}, reviewed)
-                validate_binding_dependencies(reviewed, original_definitions)
-            except (ValueError, KeyError, TypeError) as exc:
-                raise HTTPException(
-                    422, f"The imported {BINDING_LABELS[field_name]} binding is invalid: {exc}"
-                ) from exc
-        try:
-            for flow in flow_list.flows:
-                for field_name, binding in flow_runtime_bindings(flow.data or {}):
-                    validate_project_binding(field_name, by_original_id[binding.flow_id].data or {}, binding)
-                    validate_binding_dependencies(binding, original_definitions)
-        except (ValueError, KeyError, TypeError) as exc:
-            raise HTTPException(422, "An imported Agent has an invalid or unavailable runtime binding.") from exc
-        if config.get("agent_flow_id") in id_map:
-            config["agent_flow_id"] = id_map[config["agent_flow_id"]]
-        if isinstance(config.get("tools"), list):
-            config["tools"] = [id_map.get(value, value) for value in config["tools"]]
-        for flow in flow_list.flows:
-            if str(flow.id) in id_map:
-                flow.id = UUID(id_map[str(flow.id)])
-            for node in (flow.data or {}).get("nodes", []):
-                node_data = node.get("data", {})
-                template = node_data.get("node", {}).get("template", {})
-                target = template.get("flow_id_selected", {}).get("value")
-                if node_data.get("type") in {"RunFlow", "SubFlow"} and not target:
-                    name_field = template.get("flow_name_selected", template.get("flow_name", {}))
-                    target = by_original_name.get(name_field.get("value"))
-                if target in id_map:
-                    if "flow_id_selected" in template:
-                        template["flow_id_selected"]["value"] = id_map[target]
-                    if "flow_name_selected" in template:
-                        template["flow_name_selected"].update(
-                            value=by_original_id[target].name,
-                            options=[by_original_id[target].name],
-                            options_metadata=[{"id": id_map[target], "name": by_original_id[target].name}],
-                        )
-                    elif "flow_name" in template:
-                        template["flow_name"]["value"] = by_original_id[target].name
-                for key in (BINDING_ORIGIN, TOOL_ORIGIN):
-                    origin = node_data.get(key)
-                    if isinstance(origin, dict):
-                        origin["project_id"] = str(new_project.id)
-                        origin["flow_id"] = id_map.get(origin.get("flow_id"), origin.get("flow_id"))
-                        if key == BINDING_ORIGIN:
-                            origin.pop("version_id", None)
-        try:
-            remap_runtime_bindings(
-                {flow_id: flow.data or {} for flow_id, flow in by_original_id.items()},
-                id_map,
-                str(new_project.id),
-                flow_names={key: flow.name for key, flow in by_original_id.items()},
-            )
-        except (ValueError, KeyError, TypeError) as exc:
-            raise HTTPException(422, "Could not remap the imported harness bindings.") from exc
-        for _, binding in parsed_bindings.entries():
-            source = by_original_id[binding.flow_id]
-            binding.flow_id = id_map[binding.flow_id]
-            binding.revision = flow_revision(source.data or {})
-            binding.version_id = None
-            binding.dependencies = binding_dependencies(
-                binding.flow_id,
-                [
-                    {
-                        "id": str(flow.id),
-                        "name": flow.name,
-                        "description": flow.description or "",
-                        "data": flow.data or {},
-                    }
-                    for flow in flow_list.flows
-                ],
-            )
-        config["flow_bindings"] = parsed_bindings.model_dump(exclude_unset=True, exclude_none=True)
-        if local_bindings_value:
-            relocated = [
-                {"id": str(flow.id), "name": flow.name, "description": flow.description or "", "data": flow.data or {}}
-                for flow in flow_list.flows
-            ]
-            config["tool_bindings"] = {
-                id_map[key]: local_tool_definition(
-                    next(flow for flow in relocated if flow["id"] == id_map[key]), relocated
-                ).model_dump(mode="json")
-                for key in local_bindings
-            }
-        new_project.project_config = config
-    created = await create_flows(session=session, flow_list=flow_list, current_user=current_user)
-    if has_bindings:
-        await write_project_config_to_flows(
-            session, new_project, current_user=current_user, previous_config=deepcopy(new_project.project_config)
-        )
-        created = [FlowRead.model_validate(await session.get(Flow, flow.id), from_attributes=True) for flow in created]
-    return created
+    return await create_flows(session=session, flow_list=flow_list, current_user=current_user)
