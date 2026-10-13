@@ -297,7 +297,9 @@ async def test_a_write_cause_is_recorded_on_every_operation_of_that_write(client
     assert {op.cause for op in by_write["caused"]} == {"upgrade_component"}
     assert by_write["plain"]
     assert {op.cause for op in by_write["plain"]} == {None}
-    stored = [element for row in await _rows(flow["id"]) for element in row.ops["operations"]]
+    stored = [
+        element for row in await _rows(flow["id"]) for batch in row.ops["batches"] for element in batch["operations"]
+    ]
     assert all("cause" not in element for element in stored if element["revision"] > first["end_revision"])
 
 
