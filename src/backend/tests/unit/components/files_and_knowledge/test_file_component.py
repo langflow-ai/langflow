@@ -64,14 +64,14 @@ class TestFileComponentFrontendMetadata:
             "force_ocr": {"show": False, "value": False},
         }
 
-        component.update_build_config(config, True, "advanced_mode")
+        component.update_build_config(config, field_value=True, field_name="advanced_mode")
         assert config["force_ocr"]["show"] is True
 
         component.update_build_config(config, "vlm", "pipeline")
         assert config["force_ocr"] == {"show": False, "value": False}
 
         config["pipeline"]["value"] = "vlm"
-        component.update_build_config(config, True, "advanced_mode")
+        component.update_build_config(config, field_value=True, field_name="advanced_mode")
         assert config["force_ocr"]["show"] is False
 
 

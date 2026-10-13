@@ -27,7 +27,8 @@ def _worker_script(source: Path, variable_name: str) -> str:
             continue
         if variable_name in names:
             return textwrap.dedent(node.value.args[0].value)
-    raise AssertionError(f"Worker script {variable_name} not found in {source}")
+    msg = f"Worker script {variable_name} not found in {source}"
+    raise AssertionError(msg)
 
 
 def _fake_docling_modules() -> dict[str, types.ModuleType]:
@@ -111,16 +112,16 @@ class TestDoclingForceOcrWorkers(unittest.TestCase):
         for force_ocr in (False, True):
             with self.subTest(force_ocr=force_ocr):
                 result = _run_worker(script, {**config, "force_ocr": force_ocr})
-                self.assertTrue(result["ok"])
-                self.assertEqual(result["results"][0]["document"]["texts"][0]["text"], f"force={force_ocr}")
+                assert result["ok"]
+                assert result["results"][0]["document"]["texts"][0]["text"] == f"force={force_ocr}"
 
         result = _run_worker(script, {**config, "force_ocr": True, "ocr_engine": "None"})
-        self.assertFalse(result["ok"])
-        self.assertIn("requires the standard pipeline and an OCR engine", result["error"])
+        assert not result["ok"]
+        assert "requires the standard pipeline and an OCR engine" in result["error"]
 
         result = _run_worker(script, {**config, "force_ocr": True, "pipeline": "vlm"})
-        self.assertFalse(result["ok"])
-        self.assertIn("requires the standard pipeline and an OCR engine", result["error"])
+        assert not result["ok"]
+        assert "requires the standard pipeline and an OCR engine" in result["error"]
 
     def test_file_worker_passes_full_page_setting_to_docling(self):
         script = _worker_script(FILE_SOURCE, "child_script")
@@ -136,13 +137,13 @@ class TestDoclingForceOcrWorkers(unittest.TestCase):
         for force_ocr in (False, True):
             with self.subTest(force_ocr=force_ocr):
                 result = _run_worker(script, {**config, "force_ocr": force_ocr})
-                self.assertTrue(result["ok"])
-                self.assertEqual(result["doc"][0]["text"], f"force={force_ocr}")
+                assert result["ok"]
+                assert result["doc"][0]["text"] == f"force={force_ocr}"
 
         result = _run_worker(script, {**config, "force_ocr": True, "pipeline": "vlm"})
-        self.assertFalse(result["ok"])
-        self.assertIn("requires the standard pipeline and an OCR engine", result["error"])
+        assert not result["ok"]
+        assert "requires the standard pipeline and an OCR engine" in result["error"]
 
         result = _run_worker(script, {**config, "force_ocr": True, "ocr_engine": None})
-        self.assertFalse(result["ok"])
-        self.assertIn("requires the standard pipeline and an OCR engine", result["error"])
+        assert not result["ok"]
+        assert "requires the standard pipeline and an OCR engine" in result["error"]
