@@ -53,8 +53,8 @@ _GUIDANCE = {
     "remote_source_requires_migration": "Migrate the remote collection to a configured pgVector or OpenSearch store.",
     "validation_failed": "The copy failed validation. Preserve the original source and inspect the upgrade logs.",
     "automatic_reader_limit": (
-        "This store exceeds the automatic reader's resource limits. Preserve the source and use the "
-        "managed controller with a qualified signed helper, or export it from an isolated old-release environment."
+        "This store exceeds the automatic reader's resource limits. Preserve the source and "
+        "export it from an isolated old-release environment."
     ),
     "storage_changed": "Routing changed during upgrade. Inspect the authoritative KB record before retrying.",
     "interrupted": "The upgrade was interrupted. Retry resumes the unpublished generation safely.",
