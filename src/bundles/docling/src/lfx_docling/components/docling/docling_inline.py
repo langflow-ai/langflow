@@ -68,6 +68,16 @@ class DoclingInlineComponent(BaseFileComponent):
             value="None",
         ),
         BoolInput(
+            name="force_ocr",
+            display_name="Force Full Page OCR",
+            info=(
+                "Run OCR on every page, including pages with extractable text. "
+                "Requires the standard pipeline and an OCR engine."
+            ),
+            value=False,
+            advanced=True,
+        ),
+        BoolInput(
             name="do_picture_classification",
             display_name="Picture classification",
             info="If enabled, the Docling pipeline will classify the pictures type.",
@@ -114,6 +124,7 @@ class DoclingInlineComponent(BaseFileComponent):
             file_paths      = cfg["file_paths"]
             pipeline        = cfg["pipeline"]
             ocr_engine      = cfg["ocr_engine"]
+            force_ocr       = cfg.get("force_ocr", False)
             do_picture_cls  = cfg["do_picture_classification"]
             pic_desc_config = cfg.get("pic_desc_config")
             pic_desc_prompt = cfg.get("pic_desc_prompt", "")
@@ -128,6 +139,8 @@ class DoclingInlineComponent(BaseFileComponent):
 
             # --- build converter ------------------------------------------------
             try:
+                if force_ocr and (pipeline != "standard" or ocr_engine in ("", "None")):
+                    raise ValueError("Force Full Page OCR requires the standard pipeline and an OCR engine")
                 pipe = PdfPipelineOptions()
                 pipe.do_ocr = ocr_engine not in ("", "None")
                 if pipe.do_ocr:
@@ -136,7 +149,11 @@ class DoclingInlineComponent(BaseFileComponent):
                         fac = get_ocr_factory(allow_external_plugins=False)
                         pipe.ocr_options = fac.create_options(kind=ocr_engine)
                     except Exception:
+                        if force_ocr:
+                            raise
                         pipe.do_ocr = False
+                    else:
+                        pipe.ocr_options.force_full_page_ocr = force_ocr
 
                 pipe.do_picture_classification = do_picture_cls
 
@@ -267,6 +284,7 @@ class DoclingInlineComponent(BaseFileComponent):
             "file_paths": file_paths,
             "pipeline": self.pipeline,
             "ocr_engine": self.ocr_engine,
+            "force_ocr": bool(self.force_ocr),
             "do_picture_classification": self.do_picture_classification,
             "pic_desc_config": pic_desc_config,
             "pic_desc_prompt": self.pic_desc_prompt,
