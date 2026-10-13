@@ -124,7 +124,7 @@ def test_validate_raises_with_every_violation():
         "code": "NODE_ID_DUPLICATE",
         "path": ["nodes", 2, "id"],
         "message": "duplicate node id",
-        "resolution": "repair",
+        "resolution": "auto",
     }
 
 
@@ -161,7 +161,7 @@ def test_an_added_edge_is_checked_and_its_violation_is_for_the_client():
 
     assert [violation.to_dict()["code"] for violation in violations] == ["EDGE_HANDLE_NOT_FOUND"]
     assert violations[0].path == ("edges", 0)
-    assert violations[0].to_dict()["resolution"] == "client"
+    assert violations[0].to_dict()["resolution"] == "manual"
 
 
 def test_a_second_edge_into_a_single_input_is_refused():

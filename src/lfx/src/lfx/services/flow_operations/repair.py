@@ -32,7 +32,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from lfx.services.flow_operations.canonical import canonical_json, is_row_position
-from lfx.services.flow_operations.codes import CLIENT_FIXED_CODES, GraphViolationCode
+from lfx.services.flow_operations.codes import MANUAL_CODES, GraphViolationCode
 from lfx.services.flow_operations.edge_rules import derive_missing_handle_forms
 from lfx.services.flow_operations.ids import new_edge_id
 from lfx.services.flow_operations.schema import load_node_schema
@@ -210,7 +210,7 @@ def _repair_changed_edges(graph: dict[str, Any], base: Any, fix) -> None:
     """Fix the direct edge rules broken by the edges ``graph`` adds or rewires relative to ``base``."""
     dropped: set[int] = set()
     for violation in find_edge_violations(base, graph):
-        if violation.code in CLIENT_FIXED_CODES:
+        if violation.code in MANUAL_CODES:
             continue
         index = violation.path[1]
         fix(violation.code, violation.path)

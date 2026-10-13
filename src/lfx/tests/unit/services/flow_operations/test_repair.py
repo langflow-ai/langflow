@@ -1,4 +1,4 @@
-"""Repair: every direct rule has a fix, the result follows the rules, and client-fixed rules are left alone."""
+"""Repair: every direct rule has a fix, the result follows the rules, and manual rules are left alone."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import re
 
 import pytest
 from lfx.services.flow_operations import (
-    CLIENT_FIXED_CODES,
+    MANUAL_CODES,
     REPAIRS,
     FlowDataValidationError,
     GraphViolationCode,
@@ -33,8 +33,8 @@ def _codes(result) -> list[GraphViolationCode]:
 def test_every_rule_is_repaired_or_left_to_the_client():
     # A new rule cannot ship until someone has decided which kind it is: a direct
     # rule needs a fix, and a rule only the client can fix must have none.
-    assert set(REPAIRS) | CLIENT_FIXED_CODES == set(GraphViolationCode)
-    assert not set(REPAIRS) & CLIENT_FIXED_CODES
+    assert set(REPAIRS) | MANUAL_CODES == set(GraphViolationCode)
+    assert not set(REPAIRS) & MANUAL_CODES
 
 
 # --- Edges a write adds or rewires ---------------------------------------------------
@@ -101,7 +101,7 @@ def test_a_rule_only_the_client_can_fix_is_left_and_refused():
     with pytest.raises(FlowDataValidationError) as exc_info:
         repair_flow_data(graph, base=EMPTY)
 
-    assert [violation.to_dict()["resolution"] for violation in exc_info.value.violations] == ["client"]
+    assert [violation.to_dict()["resolution"] for violation in exc_info.value.violations] == ["manual"]
     assert exc_info.value.violations[0].code == GraphViolationCode.EDGE_HANDLE_NOT_FOUND
     assert graph == original
 
