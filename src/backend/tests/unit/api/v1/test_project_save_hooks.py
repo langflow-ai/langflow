@@ -119,6 +119,22 @@ async def test_installed_hook_normalizes_pins_and_preserves_canvas(client, logge
     assert (await stored_template(target))["system_prompt"]["value"] == "Canvas wins"
 
 
+async def test_plugin_flow_added_after_config_gets_its_first_write(
+    client,
+    logged_in_headers,
+    active_user,
+    installed_save_plugin,  # noqa: ARG001
+):
+    project = await create_project(client, logged_in_headers, name="Configured first", project_type="support-desk")
+    first = await save_config(client, logged_in_headers, project, {"instructions": "Help clearly"})
+    assert first["project_config"]["_applied"] == {}
+    target = await create_flow(active_user, folder_id=project, name="Added later", data=agent_flow_data())
+    second = await save_config(client, logged_in_headers, project, {"instructions": "Help clearly"})
+    assert second["flows_updated"] == 1
+    assert second["fields_skipped"] == 0
+    assert (await stored_template(target))["system_prompt"]["value"] == "Help clearly"
+
+
 async def test_failure_after_pinning_rolls_back_config_and_new_versions(
     client, logged_in_headers, plugin_project, installed_save_plugin, monkeypatch
 ):

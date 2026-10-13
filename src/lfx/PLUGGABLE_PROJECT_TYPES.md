@@ -6,9 +6,9 @@ accepts their registered names without a database migration.
 
 This delivery supports declarations, discovery, slot contracts, capabilities, project references,
 and transactional save hooks with pure graph composition. Tool Pack, Skill Pack, Eval Suite and
-custom types use these hooks. Agent Harness also prepares its configuration through the shared
-context; its existing composition/apply path remains until E06. Archive and starter hooks are
-separate follow-up work.
+custom types use these hooks. Agent Harness uses the same preparation, pure composition and host
+persistence path. Its former compatibility dispatcher has been removed. Archive and starter
+hooks are separate follow-up work.
 Custom React pages and widgets are not part of the Python plugin contract.
 
 ## Declare a type

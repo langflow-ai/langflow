@@ -7,7 +7,13 @@ from uuid import uuid4
 import pytest
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.projects import get_project_type
-from lfx.projects.lifecycle import ProjectConfigError, ProjectResourceUnavailableError, ProjectView, SaveRequest
+from lfx.projects.lifecycle import (
+    CompositionContext,
+    ProjectConfigError,
+    ProjectResourceUnavailableError,
+    ProjectView,
+    SaveRequest,
+)
 
 from tests.unit.projects.test_lifecycle import MemoryContext, view
 from tests.unit.projects.test_tool_packs import tool  # noqa: F401
@@ -92,3 +98,26 @@ async def test_execute_denial_keeps_its_resource_error(tool):  # noqa: F811
             SaveRequest(project, "replace", {"tools": [str(source.id)]}, None, (agent, source)), ctx
         )
     assert ctx.snapshots == {}
+
+
+async def test_composition_is_pure_and_preserves_independent_canvas_edits():
+    project, agent = harness()
+    definition = get_project_type("agent-harness")
+    prepared = await definition.save_config(
+        SaveRequest(project, "replace", {"system_prompt": "From the form"}, None, (agent,)), MemoryContext()
+    )
+    before = deepcopy(agent)
+    (first,) = definition.compose(prepared, CompositionContext(project, (agent,)))
+    assert agent == before
+    assert first.data["nodes"][0]["data"]["node"]["template"]["system_prompt"]["value"] == "From the form"
+    first.data["nodes"][0]["data"]["node"]["template"]["system_prompt"]["value"] = "From the canvas"
+    changed = replace(agent, data=first.data)
+    next_save = await definition.save_config(
+        SaveRequest(project, "replace", {"system_prompt": "Updated form"}, prepared.config, (changed,)), MemoryContext()
+    )
+    (second,) = definition.compose(
+        next_save, CompositionContext(project, (changed,), {str(agent.id): first.applied_values})
+    )
+    assert second.fields_skipped == 1
+    assert second.data["nodes"][0]["data"]["node"]["template"]["system_prompt"]["value"] == "From the canvas"
+    assert second.applied_values == first.applied_values
