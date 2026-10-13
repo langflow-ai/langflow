@@ -55,7 +55,9 @@ def instantiate_class(
         code,
         public_execution=str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID),
     )
-    class_object: type[CustomComponent | Component] = eval_custom_component_code(code)
+    class_object: type[CustomComponent | Component] = eval_custom_component_code(
+        code, class_name=_component_class_name(vertex)
+    )
     custom_component: CustomComponent | Component = class_object(
         _user_id=user_id,
         _parameters=custom_params,
@@ -66,6 +68,17 @@ def instantiate_class(
     if hasattr(custom_component, "set_event_manager"):
         custom_component.set_event_manager(event_manager)
     return custom_component, custom_params
+
+
+def _component_class_name(vertex: Vertex) -> str:
+    """Class name a node refers to; extension types are addressed as ``ext:<bundle>:<Class>@<slot>``.
+
+    The node's own ``type`` comes first because tool mode swaps ``vertex_type`` for the template's base type.
+    """
+    node_type = (getattr(vertex, "data", None) or {}).get("type") or vertex.vertex_type
+    if node_type.startswith("ext:"):
+        return node_type.rpartition(":")[2].partition("@")[0]
+    return node_type
 
 
 async def get_instance_results(
