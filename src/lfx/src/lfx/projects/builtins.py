@@ -31,6 +31,11 @@ FLOWS = FlowsType()
 
 @register_project_type
 class AgentHarnessType(ProjectTypeDefinition):
+    async def save_config(self, request, ctx):
+        from lfx.projects.harness_lifecycle import prepare_harness
+
+        return await prepare_harness(request, ctx)
+
     name = "agent-harness"
     display_name = "Agent Harness"
     icon = "Bot"

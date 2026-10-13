@@ -6,35 +6,26 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from fastapi import HTTPException
-from lfx.base.agents.harness import HarnessRuntimeConfig
 from lfx.log.logger import logger
 from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type
 from lfx.projects.bindings import (
     compose_instructions,
-    reject_recursive_binding,
 )
 from lfx.projects.compaction import compose_compaction
 from lfx.projects.context import compose_context
-from lfx.projects.flow_slots import BINDING_LABELS, ProjectFlowBindings, validate_project_binding
 from lfx.projects.hooks import compose_hooks
-from lfx.projects.local_tools import local_tool_bindings, local_tool_definition
 from lfx.projects.permissions import compose_permission
-from lfx.projects.skills import HarnessSkills, compose_skills, skill_pack_references
-from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_references
+from lfx.projects.skills import compose_skills
 from lfx.projects.tools import agent_node_ids, compose_tools
 from sqlmodel import col, select
 
-from langflow.services.authorization import FlowAction
 from langflow.services.database.models.flow.guards import LockedFlowError, ensure_flow_unlocked
-from langflow.services.database.models.flow.model import Flow, FlowType
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.references import validate_project_references
-from langflow.services.database.models.folder.skill_packs import resolve_skill_pack
-from langflow.services.database.models.folder.tool_packs import resolve_tool_pack
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -60,64 +51,6 @@ def config_from_request(incoming: dict | None, previous: dict | None = None) -> 
     if previous and isinstance(previous.get("_applied"), dict):
         config["_applied"] = deepcopy(previous["_applied"])
     return config
-
-
-def select_agent_flow(flows: list[Flow], config: dict) -> Flow | None:
-    """Prefer an explicit selection, then a unique marked agent, then a unique graph candidate.
-
-    A2A owns ``flow_type``. Harness selection is saved in the existing project config, so
-    choosing an entry flow never reclassifies another flow or changes A2A publication.
-    """
-    candidates = [flow for flow in flows if len(agent_node_ids(flow.data)) == 1 and not flow.is_component]
-    selected = config.get("agent_flow_id")
-    if selected is not None:
-        for flow in candidates:
-            if str(flow.id) == selected:
-                return flow
-        raise HTTPException(422, "Choose an agent flow in this project containing exactly one Agent component.")
-    marked = [flow for flow in candidates if flow.flow_type == FlowType.AGENT]
-    choices = marked or candidates
-    if len(choices) > 1 or (not choices and any(agent_node_ids(flow.data) for flow in flows)):
-        raise HTTPException(422, "Choose which flow is the agent before saving the harness.")
-    return choices[0] if choices else None
-
-
-def selected_tools(flows: list[Flow], agent: Flow | None, value: object) -> list[Flow]:
-    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
-        raise HTTPException(422, "Tools must be a list of flow IDs from this project.")
-    available = {str(flow.id): flow for flow in flows if not flow.is_component}
-    picked = []
-    for flow_id in dict.fromkeys(value):
-        if flow_id not in available:
-            raise HTTPException(422, "A selected tool is no longer available in this project.")
-        if agent is None:
-            raise HTTPException(422, "Choose an agent flow before adding tools.")
-        if flow_id == str(agent.id):
-            raise HTTPException(422, "The agent flow cannot call itself as a tool.")
-        picked.append(available[flow_id])
-
-    # Refuse a tool that calls back into this agent through other local Run Flow nodes.
-    by_name = {flow.name: str(flow.id) for flow in flows}
-    pending = [str(flow.id) for flow in picked]
-    seen = set()
-    while pending:
-        current = pending.pop()
-        if agent is not None and current == str(agent.id):
-            raise HTTPException(422, "A selected tool calls back into the agent flow.")
-        if current in seen or current not in available:
-            continue
-        seen.add(current)
-        for node in (available[current].data or {}).get("nodes", []):
-            data = node.get("data", {})
-            if data.get("type") != "RunFlow":
-                continue
-            template = data.get("node", {}).get("template", {})
-            target = template.get("flow_id_selected", {}).get("value") or by_name.get(
-                template.get("flow_name_selected", {}).get("value")
-            )
-            if isinstance(target, str):
-                pending.append(target)
-    return picked
 
 
 async def _restore_point(session: AsyncSession, flow: Flow) -> str | None:
@@ -149,27 +82,6 @@ async def _restore_point(session: AsyncSession, flow: Flow) -> str | None:
         return None
 
 
-async def _binding_version(session: AsyncSession, source: Flow, field_name: str) -> str:
-    """A required source snapshot; request-supplied version IDs are never trusted."""
-    version = (
-        await session.exec(
-            select(FlowVersion)
-            .where(FlowVersion.flow_id == source.id, FlowVersion.user_id == source.user_id)
-            .order_by(col(FlowVersion.version_number).desc())
-            .limit(1)
-        )
-    ).first()
-    if version is None or version.data != source.data:
-        version = await create_flow_version_entry(
-            session,
-            source.id,
-            source.user_id,
-            data=deepcopy(source.data),
-            description=f"Harness {BINDING_LABELS.get(field_name, field_name)} binding",
-        )
-    return str(version.id)
-
-
 async def write_project_config_to_flows(
     session: AsyncSession,
     project: Folder,
@@ -197,217 +109,51 @@ async def write_project_config_to_flows(
 async def _write_harness_config(
     session: AsyncSession, project: Folder, *, current_user: User, previous_config: dict | None = None
 ) -> ProjectConfigWrite:
+    from lfx.projects.lifecycle import FlowSelector, ProjectConfigError, SaveRequest
+
+    from langflow.services.database.models.folder.save_context import (
+        LangflowProjectSaveContext,
+        project_error_http,
+        public_config,
+    )
+
     result = ProjectConfigWrite()
     clearing_config = project.project_config is None
-    if not project.project_config and not any(
-        (previous_config or {}).get(key) for key in ("flow_bindings", "tool_packs", "tools", "skill_packs")
-    ):
-        return result
-    try:
-        project_type = get_project_type(project.project_type or DEFAULT_PROJECT_TYPE)
-    except ValueError:
-        await logger.awarning(
-            "Project %s has unknown project_type %r; not writing through.", project.id, project.project_type
-        )
-        return result
-    if not project_type.fields:
-        return result
-
+    project_type = get_project_type(project.project_type or DEFAULT_PROJECT_TYPE)
+    ctx = LangflowProjectSaveContext(session, current_user)
+    identity = await ctx.start_save(project)
     flows = list(
         (
             await session.exec(
-                select(Flow).where(Flow.folder_id == project.id, Flow.user_id == project.user_id).with_for_update()
+                select(Flow).where(Flow.folder_id == project.id, Flow.user_id == project.user_id).order_by(Flow.id)
             )
         ).all()
     )
-    config = deepcopy(project.project_config or {})
-    await validate_project_references(session, current_user, project_type, config)
-    if not project.project_config and previous_config:
-        # Clearing configuration still removes its generated Instructions connection.
-        config["agent_flow_id"] = previous_config.get("agent_flow_id")
-    targets = flows
-    tools = []
-    pack_targets = []
-    local_targets = []
-    instruction_target = None
-    instruction_binding = None
-    bindings = ProjectFlowBindings()
-    skills = HarnessSkills()
-    if project_type.name == "agent-harness":
-        try:
-            runtime = HarnessRuntimeConfig.model_validate(config)
-        except ValueError as exc:
-            raise HTTPException(
-                422, "Invalid harness runtime settings. Check context, compaction, and model-call limits."
-            ) from exc
-        agent = select_agent_flow(flows, config)
-        targets = [agent] if agent else []
-        if agent is not None:
-            node = next(node for node in agent.data["nodes"] if node["data"].get("type") == "Agent")
-            template = node["data"]["node"]["template"]
-            unsupported = [
-                name
-                for name, field in HarnessRuntimeConfig.model_fields.items()
-                if name in config and name not in template and getattr(runtime, name) != field.default
-            ]
-            if unsupported:
-                raise HTTPException(
-                    422, "Update the Agent component on its canvas before configuring context or compaction."
-                )
-        if "tools" not in config and not clearing_config and (previous_config or {}).get("tools"):
-            config["tools"] = deepcopy(previous_config["tools"])
-        if "tools" in config:
-            tools = selected_tools(flows, agent, config["tools"])
-        from langflow.services.database.models.folder.flow_bindings import flow_definitions, resolve_binding_flows
-
-        try:
-            requested = local_tool_bindings(config.get("tool_bindings", {}))
-            previous = local_tool_bindings((previous_config or {}).get("tool_bindings", {}))
-            local_sources = {}
-            local_bindings = {}
-            for tool in tools:
-                tool_id = str(tool.id)
-                resolved_sources = await resolve_binding_flows(session, current_user, tool, action=FlowAction.EXECUTE)
-                if str(agent.id) in resolved_sources:
-                    msg = "A selected tool calls back into the agent flow."
-                    raise ValueError(msg)
-                definitions = flow_definitions(resolved_sources.values())
-                current = local_tool_definition(flow_definitions([tool])[0], definitions)
-                reviewed = requested.get(tool_id) or previous.get(tool_id)
-                if reviewed is not None and reviewed.definition() != current.definition():
-                    msg = "The local tool changed. Review its definition before saving the harness."
-                    raise ValueError(msg)
-                local_sources[tool_id] = resolved_sources
-                local_bindings[tool_id] = current
-            for tool in tools:
-                binding = local_bindings[str(tool.id)]
-                binding.version_id = await _binding_version(session, tool, "Local tool")
-                for dependency in binding.dependencies:
-                    dependency.version_id = await _binding_version(
-                        session, local_sources[str(tool.id)][dependency.flow_id], "Local tool dependency"
-                    )
-                local_targets.append({**flow_definitions([tool])[0], "local_tool": binding.model_dump(mode="json")})
-            if tools or "tool_bindings" in config or previous:
-                config["tool_bindings"] = {key: value.model_dump(mode="json") for key, value in local_bindings.items()}
-        except (ValueError, KeyError, TypeError) as exc:
-            raise HTTPException(422, f"Could not configure the selected tools: {exc}") from exc
-        try:
-            references = tool_pack_references(config.get("tool_packs", []))
-            skill_references = skill_pack_references(config.get("skill_packs", []))
-        except (ValueError, TypeError) as exc:
-            raise HTTPException(422, str(exc)) from exc
-        if (references or skill_references) and agent is None:
-            raise HTTPException(422, "Choose an agent flow before adding capability packs.")
-        skill_manifests = []
-        for reference in skill_references:
-            manifest = await resolve_skill_pack(session, current_user, reference.project_id, action=FlowAction.EXECUTE)
-            if manifest.reference != reference:
-                raise HTTPException(422, "The Skill Pack changed. Review it before saving the harness.")
-            skill_manifests.append(manifest)
-        skills = HarnessSkills(
-            packs=tuple(skill_manifests), global_tool_pack_ids=tuple(r.project_id for r in references)
+    try:
+        views = tuple([await ctx.read_flow(FlowSelector(id=flow.id), access="read") for flow in flows])
+        await validate_project_references(session, current_user, project_type, project.project_config or {})
+        prepared = await project_type.save_config(
+            SaveRequest(
+                identity,
+                "clear" if clearing_config else "replace",
+                public_config(project.project_config),
+                public_config(previous_config),
+                views,
+            ),
+            ctx,
         )
-        all_references = {ref.project_id: ref for ref in references}
-        for manifest in skill_manifests:
-            for skill in manifest.skills:
-                for ref in skill.tool_packs:
-                    if ref.project_id in all_references and all_references[ref.project_id] != ref:
-                        raise HTTPException(422, "The selected skills require different revisions of one Tool Pack.")
-                    all_references[ref.project_id] = ref
-        resolved = []
-        for reference in all_references.values():
-            manifest, exports = await resolve_tool_pack(
-                session, current_user, reference.project_id, action=FlowAction.EXECUTE
-            )
-            if manifest.reference != reference:
-                raise HTTPException(422, "The tool pack changed. Review its exports before saving the harness.")
-            resolved.append((manifest, {export.id: export for export in exports}))
-        for manifest, exports in resolved:
-            for export in manifest.tools:
-                source = exports[export.flow_id]
-                try:
-                    reject_recursive_binding(
-                        [
-                            {"id": str(item.id), "name": item.name, "data": item.data}
-                            for item in [*flows, *exports.values()]
-                        ],
-                        str(source.id),
-                        str(agent.id),
-                    )
-                except ValueError as exc:
-                    raise HTTPException(422, str(exc)) from exc
-                version_id = await _binding_version(session, source, "Tool Pack")
-                dependency_versions = tuple(
-                    [
-                        FlowDependencyVersion(
-                            flow=dependency,
-                            version_id=UUID(
-                                await _binding_version(session, exports[dependency.flow_id], "Tool Pack dependency")
-                            ),
-                        )
-                        for dependency in export.dependencies
-                    ]
-                )
-                binding = ToolPackToolBinding(
-                    reference=manifest.reference,
-                    tool=export,
-                    version_id=UUID(version_id),
-                    dependency_versions=dependency_versions,
-                )
-                pack_targets.append(
-                    {
-                        "id": str(source.id),
-                        "name": source.name,
-                        "data": source.data,
-                        "tool_pack": binding.model_dump(mode="json"),
-                    }
-                )
-        if "tool_packs" in config:
-            config["tool_packs"] = [reference.model_dump(mode="json") for reference in references]
-        if "skill_packs" in config:
-            config["skill_packs"] = [reference.model_dump(mode="json") for reference in skill_references]
-        if agent is not None:
-            config["agent_flow_id"] = str(agent.id)
-        try:
-            bindings = ProjectFlowBindings.model_validate(config.get("flow_bindings", {}))
-        except ValueError as exc:
-            raise HTTPException(
-                422,
-                "Invalid flow bindings. Choose compatible harness outputs and valid binding settings.",
-            ) from exc
-        sources = {str(flow.id): flow for flow in flows if not flow.is_component}
-        from lfx.projects.dependencies import validate_binding_dependencies
-
-        binding_sources = {}
-        for field_name, binding in bindings.entries():
-            try:
-                source = sources.get(binding.flow_id)
-                if source is None or agent is None:
-                    msg = "Choose an agent and a compatible flow in this project."
-                    raise ValueError(msg)
-                reject_recursive_binding(
-                    [{"id": str(flow.id), "name": flow.name, "data": flow.data} for flow in flows],
-                    str(source.id),
-                    str(agent.id),
-                )
-                validate_project_binding(field_name, source.data, binding)
-                resolved_sources = await resolve_binding_flows(session, current_user, source, action=FlowAction.EXECUTE)
-                validate_binding_dependencies(binding, flow_definitions(resolved_sources.values()))
-                binding_sources[binding.flow_id] = resolved_sources
-            except (ValueError, KeyError, TypeError) as exc:
-                raise HTTPException(422, f"Could not bind {BINDING_LABELS[field_name]}: {exc}") from exc
-        # Validate the entire set before creating any required source snapshots.
-        for field_name, binding in bindings.entries():
-            binding.version_id = await _binding_version(session, sources[binding.flow_id], field_name)
-            for dependency in binding.dependencies:
-                dependency.version_id = await _binding_version(
-                    session, binding_sources[binding.flow_id][dependency.flow_id], field_name
-                )
-        if "flow_bindings" in config:
-            config["flow_bindings"] = bindings.model_dump(exclude_unset=True, exclude_none=True)
-        instruction_binding = bindings.system_prompt
-        instruction_target = sources.get(instruction_binding.flow_id) if instruction_binding else None
-
+        await ctx.verify_unchanged()
+        targets = [await ctx.writable_target(flow_id, project) for flow_id in prepared.target_flow_ids]
+    except ProjectConfigError as exc:
+        raise project_error_http(exc) from exc
+    if prepared.state is None:
+        return result
+    state = prepared.state
+    config = deepcopy(state.config)
+    config["_applied"] = deepcopy((previous_config or {}).get("_applied", {}))
+    bindings, skills = state.bindings, state.skills
+    instruction_binding, instruction_target = bindings.system_prompt, state.instruction_target
+    local_targets, pack_targets = list(state.tool_targets), []
     applied = config.get("_applied", {})
     applied = deepcopy(applied) if isinstance(applied, dict) else {}
     if previous_config and "_applied" not in previous_config:

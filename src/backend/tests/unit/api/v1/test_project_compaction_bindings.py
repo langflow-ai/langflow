@@ -343,18 +343,18 @@ async def test_compaction_source_changes_require_review_before_save_or_import(cl
 async def test_required_compaction_snapshot_failure_rolls_back_every_write(
     client, logged_in_headers, active_user, monkeypatch
 ):
-    from langflow.services.database.models.folder import config_writer
+    from langflow.services.database.models.folder import save_context
 
     project, agent, source, config = await setup_compaction(client, logged_in_headers, active_user)
     before = deepcopy((await stored_flow(agent)).data)
-    original = config_writer.create_flow_version_entry
+    original = save_context.create_flow_version_entry
 
     async def fail_after_snapshot(*args, **kwargs):
         await original(*args, **kwargs)
         msg = "Snapshot storage failed"
         raise RuntimeError(msg)
 
-    monkeypatch.setattr(config_writer, "create_flow_version_entry", fail_after_snapshot)
+    monkeypatch.setattr(save_context, "create_flow_version_entry", fail_after_snapshot)
     response = await client.patch(
         f"api/v1/projects/{project}", json={"project_config": config}, headers=logged_in_headers
     )

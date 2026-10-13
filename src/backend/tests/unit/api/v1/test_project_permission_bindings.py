@@ -253,10 +253,10 @@ async def test_permission_archive_remaps_and_executes_five_contracts(client, log
 async def test_permission_snapshot_failure_rolls_back_mixed_sources(
     client, logged_in_headers, active_user, monkeypatch
 ):
-    from langflow.services.database.models.folder import config_writer
+    from langflow.services.database.models.folder import save_context
 
     project, agent, source, config = await setup_permission(client, logged_in_headers, active_user)
-    original = config_writer.create_flow_version_entry
+    original = save_context.create_flow_version_entry
 
     async def fail_permission(session, flow_id, *args, **kwargs):
         result = await original(session, flow_id, *args, **kwargs)
@@ -265,7 +265,7 @@ async def test_permission_snapshot_failure_rolls_back_mixed_sources(
             raise RuntimeError(msg)
         return result
 
-    monkeypatch.setattr(config_writer, "create_flow_version_entry", fail_permission)
+    monkeypatch.setattr(save_context, "create_flow_version_entry", fail_permission)
     before = deepcopy((await stored_flow(agent)).data)
     response = await client.patch(
         f"api/v1/projects/{project}", headers=logged_in_headers, json={"project_config": config}
