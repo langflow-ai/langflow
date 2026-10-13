@@ -23,7 +23,7 @@ from lfx.services.flow_operations.canonical import (
     parse_handle,
     values_equal,
 )
-from lfx.services.flow_operations.codes import CLIENT_FIXED_CODES, GraphViolationCode, Resolution, resolution_of
+from lfx.services.flow_operations.codes import MANUAL_CODES, GraphViolationCode, Resolution, resolution_of
 from lfx.services.flow_operations.diff import DerivedFlowOperations, derive_flow_operations, diff_flow_data
 from lfx.services.flow_operations.exceptions import (
     FlowDataValidationError,
@@ -81,7 +81,7 @@ from lfx.services.flow_operations.validation import (
 )
 
 __all__ = [
-    "CLIENT_FIXED_CODES",
+    "MANUAL_CODES",
     "REPAIRS",
     "ROW_ID_KEY",
     "ROW_POSITION_KEY",
