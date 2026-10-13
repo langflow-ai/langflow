@@ -31,6 +31,7 @@ from langflow.api.v1.mappers.deployments.sync import (
     retry_project_operation_on_deployment_guard,
 )
 from langflow.api.v1.mcp_projects import register_project_with_composer
+from langflow.api.v1.project_harness import router as harness_router
 from langflow.api.v1.projects_files import download_project_flows, upload_project_flows
 from langflow.api.v1.projects_mcp_helpers import (
     cleanup_mcp_on_delete,
@@ -91,6 +92,7 @@ from langflow.services.deps import get_service, get_settings_service, get_storag
 from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
+router.include_router(harness_router)
 
 PROJECT_READ_FAILED = "Could not read the project."
 PROJECT_CREATE_FAILED = "Could not create the project."
@@ -374,17 +376,21 @@ class ProjectTypeRead(BaseModel):
 async def create_project_starter(*, session: DbSession, current_user: CurrentActiveUser, starter_name: str):
     """Create an editable starter composition with fresh project/flow/snapshot identities."""
     from fastapi.concurrency import run_in_threadpool
-    from lfx.projects.starters import build_research_starter
+    from lfx.projects.starters import build_project_starter, get_project_starter
 
-    from langflow.api.v1.project_compositions import composition_error, import_composition
+    from langflow.api.v1.project_compositions import composition_error, import_project_composition
 
-    if starter_name != "research":
-        raise HTTPException(404, "Project starter not found.")
+    try:
+        definition, starter = get_project_starter(starter_name)
+    except LookupError as exc:
+        raise HTTPException(404, "Project starter not found.") from exc
+    except (ValueError, TypeError) as exc:
+        raise composition_error(exc) from exc
     await ensure_project_permission(current_user, ProjectAction.CREATE)
     try:
-        composition = await run_in_threadpool(build_research_starter)
-        flows = await import_composition(session, current_user, composition)
-        return await session.get(Folder, flows[0].folder_id)
+        composition = await run_in_threadpool(build_project_starter, definition, starter)
+        imported = await import_project_composition(session, current_user, composition)
+        return await session.get(Folder, imported.root_project_id)
     except (ValueError, KeyError, TypeError) as exc:
         raise composition_error(exc) from exc
 
@@ -400,7 +406,9 @@ async def read_project_types(
     Read straight out of the lfx registry. There is no database and no component cache behind
     this, so it answers before the component index is built.
     """
-    from lfx.projects.starters import PROJECT_STARTERS
+    from lfx.projects.starters import project_starters
+
+    starters = project_starters()
 
     return [
         ProjectTypeRead(
@@ -413,9 +421,9 @@ async def read_project_types(
             panels=project_type.panels,
             template=project_type.to_template(),
             starters=tuple(
-                ProjectStarterRead(**starter)
-                for starter in PROJECT_STARTERS
-                if starter["project_type"] == project_type.name
+                ProjectStarterRead(**starter.to_dict())
+                for declaration, starter in starters
+                if declaration.name == project_type.name
             ),
         )
         for project_type in all_project_types()
@@ -438,13 +446,6 @@ async def _owned_project(session: DbSession, current_user: User, project_id: UUI
     return project
 
 
-async def _harness_project(session: DbSession, current_user: User, project_id: UUID) -> Folder:
-    project = await _owned_project(session, current_user, project_id)
-    if project.project_type != "agent-harness":
-        raise HTTPException(422, "Choose an Agent Harness project.")
-    return project
-
-
 async def _binding_project(
     session: DbSession, current_user: User, project_id: UUID, field_name: str
 ) -> tuple[Folder, SlotDefinition]:
@@ -456,28 +457,6 @@ async def _binding_project(
     except ValueError as exc:
         raise HTTPException(422, "Choose a supported project field for this flow binding.") from exc
     return project, slot
-
-
-@router.get("/{project_id}/tool-definitions")
-async def read_local_tool_definitions(*, session: DbSession, project_id: UUID, current_user: CurrentActiveUser):
-    """Return authorized, statically validated local tool definitions for explicit review."""
-    from lfx.projects.local_tools import local_tool_definition
-
-    from langflow.services.database.models.folder.flow_bindings import flow_definitions, resolve_binding_flows
-
-    await _harness_project(session, current_user, project_id)
-    flows = (
-        await session.exec(select(Flow).where(Flow.folder_id == project_id, col(Flow.is_component).is_(False)))
-    ).all()
-    definitions = []
-    for flow in flows:
-        try:
-            sources = await resolve_binding_flows(session, current_user, flow)
-            definition = local_tool_definition(flow_definitions([flow])[0], flow_definitions(sources.values()))
-        except (ValueError, KeyError, TypeError, AttributeError, HTTPException):
-            continue
-        definitions.append(definition.model_dump(mode="json"))
-    return sorted(definitions, key=lambda item: (item["name"], item["flow_id"]))
 
 
 class FlowBaselineRequest(BaseModel):

@@ -17,7 +17,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import session_scope
 from lfx.graph.graph.base import Graph
 from lfx.projects.artifacts import SourcedReport
-from lfx.projects.starters import RESEARCH_INSTRUCTIONS
+from lfx.projects.research_starter import RESEARCH_INSTRUCTIONS
 from pydantic import Field
 from sqlmodel import select
 

@@ -33,6 +33,19 @@ FLOWS = FlowsType()
 
 @register_project_type
 class AgentHarnessType(ProjectTypeDefinition):
+    def starters(self):
+        from lfx.projects.research_starter import build_research_starter
+        from lfx.projects.starters import ProjectStarter
+
+        return (
+            ProjectStarter(
+                name="research",
+                display_name="Research agent",
+                description="A research harness with a separate Tool Pack for web search and captured source reading.",
+                build=build_research_starter,
+            ),
+        )
+
     def validate_archive(self, config, ctx):
         from lfx.projects.builtin_archives import validate_config
 

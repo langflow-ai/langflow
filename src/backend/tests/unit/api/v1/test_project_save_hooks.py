@@ -563,3 +563,94 @@ async def test_plugin_archive_rejects_missing_source_and_rolls_back(client, logg
     assert response.status_code == 422, response.text
     listing = (await client.get("/api/v1/projects/", headers=logged_in_headers)).json()
     assert not any(item["name"] == "Broken support archive" for item in listing)
+
+
+async def test_installed_plugin_starter_creates_fresh_empty_project(
+    client,
+    logged_in_headers,
+    active_user,
+    installed_save_plugin,  # noqa: ARG001
+):
+    types = (await client.get("/api/v1/projects/types", headers=logged_in_headers)).json()
+    declaration = next(item for item in types if item["name"] == "support-desk")
+    assert declaration["starters"][0]["name"] == "support-inbox"
+    created = []
+    for _ in range(2):
+        response = await client.post("/api/v1/projects/starters/support-inbox", headers=logged_in_headers)
+        assert response.status_code == 201, response.text
+        created.append(response.json())
+    assert created[0]["id"] != created[1]["id"]
+    assert created[0]["name"] != created[1]["name"]
+    assert created[0]["project_type"] == "support-desk"
+    target = await create_flow(active_user, folder_id=created[0]["id"], name="Added agent", data=agent_flow_data())
+    saved = await save_config(client, logged_in_headers, created[0]["id"], created[0]["project_config"])
+    assert saved["flows_updated"] == 1
+    assert saved["fields_skipped"] == 0
+    assert (await stored_template(target))["system_prompt"]["value"] == "Help the customer."
+
+
+async def test_plugin_starter_wrong_root_has_no_side_effects(
+    client,
+    logged_in_headers,
+    installed_save_plugin,
+    monkeypatch,
+):
+    from lfx.projects.archives import ArchivedProject, ProjectComposition
+    from lfx.projects.starters import ProjectStarter
+
+    project_id = uuid4()
+    wrong = ProjectComposition(
+        root_project_id=project_id,
+        projects=[
+            ArchivedProject(
+                id=project_id,
+                name="Wrong starter root",
+                project_type="skill-pack",
+                flows=[],
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        installed_save_plugin,
+        "starters",
+        lambda _: (ProjectStarter("wrong-support", "Wrong", "Wrong root", lambda: wrong),),
+    )
+    response = await client.post("/api/v1/projects/starters/wrong-support", headers=logged_in_headers)
+    assert response.status_code == 422, response.text
+    assert "declaring project type" in response.text
+    listing = (await client.get("/api/v1/projects/", headers=logged_in_headers)).json()
+    assert not any(item["name"] == "Wrong starter root" for item in listing)
+
+
+async def test_shared_type_guard_authorizes_before_revealing_type(
+    client,
+    logged_in_headers,
+    active_user,
+    installed_save_plugin,
+    monkeypatch,
+):
+    from fastapi import HTTPException
+    from langflow.api.v1 import project_type_guards
+    from langflow.api.v1.project_type_guards import require_project_type
+    from langflow.services.authorization import ProjectAction
+
+    project = await create_project(client, logged_in_headers, name="Guard plugin", project_type="support-desk")
+    calls = []
+
+    async def deny(_user, action, **_kwargs):
+        calls.append(action)
+        raise HTTPException(403, "Denied")
+
+    async with session_scope() as session:
+        guard = require_project_type(installed_save_plugin.name)
+        row = await guard(session=session, current_user=active_user, project_id=UUID(project))
+        assert str(row.id) == project
+        monkeypatch.setattr(project_type_guards, "ensure_project_permission", deny)
+        with pytest.raises(HTTPException) as caught:
+            await require_project_type("eval-suite", action=ProjectAction.WRITE)(
+                session=session,
+                current_user=active_user,
+                project_id=UUID(project),
+            )
+        assert caught.value.status_code == 404
+        assert calls == [ProjectAction.WRITE]

@@ -8,7 +8,7 @@ This delivery supports declarations, discovery, slot contracts, capabilities, pr
 and transactional save hooks with pure graph composition. Tool Pack, Skill Pack, Eval Suite and
 custom types use these hooks. Agent Harness uses the same preparation, pure composition and host
 persistence path. Its former compatibility dispatcher has been removed. Archive validation,
-export and import also dispatch through the type. Starter hooks are the remaining follow-up.
+export, import and starter factories also dispatch through the type.
 Custom React pages and widgets are not part of the Python plugin contract.
 
 ## Declare a type
@@ -340,3 +340,26 @@ The form's `renders` lookup supports `long_text`, `project_flows`, `project_refs
 `skill_pack_refs`, `skill_definitions`, and `hook_flows`. Each entry reuses the existing
 control. Unknown widget names fall back to the ordinary field renderer (or declared choice
 labels). This lookup is fixed in core; installed Python packages cannot register React code.
+
+
+## Starters and routes
+
+Override `starters()` to return a tuple of `ProjectStarter` records from
+`lfx.projects.starters`. Each record has a globally unique lowercase `name`, a display
+name, a description and a synchronous `build` callable. Catalog discovery reads metadata
+without calling `build`. Names must be unique across installed types; collisions fail explicitly.
+The callable builds a portable `ProjectComposition` whose root uses its declaring type.
+
+The existing `POST /api/v1/projects/starters/{name}` route authorizes project creation and
+imports the whole composition atomically. It uses fresh IDs and unique names, runs creation
+policies for every included project, and returns the root even when it has no flows. Archive
+contracts still apply, including exportability and empty-root policy. Factories must be pure:
+no provider calls, database reads, credentials or external effects. The shipped Research agent
+and installed Support inbox example use the same route.
+
+For type-specific host routes, `langflow.api.v1.project_type_guards.require_project_type(name)`
+returns a FastAPI dependency. It fetches and authorizes the project before checking its type.
+`action=ProjectAction.WRITE` protects mutations. `owner_only=True` retains owner-only routes;
+the default honors the host's shared-resource fetch policy. A denied or absent project stays a
+404. Use the existing `langflow.plugins` entry point to install host routes. A type declaration
+alone does not install a router, and LFX plugins must not import Langflow.

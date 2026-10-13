@@ -1,6 +1,7 @@
 """Export authorized project dependencies and import an isolated, atomic composition."""
 
 from copy import deepcopy
+from dataclasses import dataclass
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from fastapi import HTTPException
@@ -248,7 +249,19 @@ async def export_composition(
     )
 
 
+@dataclass(frozen=True)
+class ImportedComposition:
+    root_project_id: UUID
+    flows: list[FlowRead]
+
+
 async def import_composition(session: AsyncSession, user: User, composition: ProjectComposition) -> list[FlowRead]:
+    return (await import_project_composition(session, user, composition)).flows
+
+
+async def import_project_composition(
+    session: AsyncSession, user: User, composition: ProjectComposition
+) -> ImportedComposition:
     """Create every project/flow/version in the request transaction, returning root flows."""
     graph = CompositionGraph(composition)
     graph.validate(allow_missing_secrets=True)
@@ -294,6 +307,13 @@ async def import_composition(session: AsyncSession, user: User, composition: Pro
     )
     folders = {}
     for project in relocated.projects:
+        definition = get_project_type(project.project_type)
+        if (
+            not project.flows
+            and project.project_config is not None
+            and any(field.writes_to for field in definition.fields)
+        ):
+            project.project_config["_applied"] = {}
         payload = FolderCreate(
             name=project.name,
             description=project.description,
@@ -347,7 +367,9 @@ async def import_composition(session: AsyncSession, user: User, composition: Pro
             )
         )
     await session.flush()
-    return [flow for flow in created if flow.folder_id == relocated.root_project_id]
+    return ImportedComposition(
+        relocated.root_project_id, [flow for flow in created if flow.folder_id == relocated.root_project_id]
+    )
 
 
 def composition_error(exc: Exception) -> HTTPException:

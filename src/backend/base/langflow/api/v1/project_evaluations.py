@@ -9,11 +9,10 @@ from sqlmodel import col, select
 from starlette.concurrency import run_in_threadpool
 
 from langflow.api.utils import CurrentActiveUser
-from langflow.services.authorization import FlowAction, ProjectAction, ensure_project_permission
-from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
+from langflow.api.v1.project_type_guards import require_project_type
+from langflow.services.authorization import FlowAction, ProjectAction
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.flow_bindings import _authorize
-from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.jobs.model import Job, JobType
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.evaluations.configuration import scorer_choices
@@ -23,24 +22,8 @@ router = APIRouter(prefix="/projects/{project_id}/evaluations", tags=["Projects"
 
 
 async def eval_project(session, caller, project_id, *, write=False):
-    project = await authorized_or_owner_scoped(
-        session, Folder, id_column=Folder.id, resource_id=project_id, owner_column=Folder.user_id, owner_id=caller.id
-    )
-    if project is None:
-        raise HTTPException(404, "Evaluation project not found.")
-    try:
-        await ensure_project_permission(
-            caller,
-            ProjectAction.WRITE if write else ProjectAction.READ,
-            project_id=project.id,
-            project_user_id=project.user_id,
-            workspace_id=project.workspace_id,
-        )
-    except HTTPException as exc:
-        raise deny_to_404(exc, "Evaluation project not found.") from exc
-    if project.project_type != "eval-suite":
-        raise HTTPException(422, "Choose an Eval Suite project.")
-    return project
+    guard = require_project_type("eval-suite", action=ProjectAction.WRITE if write else ProjectAction.READ)
+    return await guard(session=session, current_user=caller, project_id=project_id)
 
 
 @router.get("")

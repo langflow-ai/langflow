@@ -37,6 +37,7 @@ def _validate_project_type(key: str, project_type: type[ProjectTypeDefinition]) 
         raise TypeError(msg)
     for hook in (
         "compose",
+        "starters",
         "validate_archive",
         "export_config",
         "import_config",
