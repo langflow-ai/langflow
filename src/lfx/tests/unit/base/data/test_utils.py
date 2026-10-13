@@ -21,9 +21,7 @@ class TestReadTextFile:
         content = "café résumé naïve"
         f = tmp_path / "latin.txt"
         f.write_bytes(content.encode("latin-1"))
-        # chardet may detect as latin-1 or fall through; either way should not raise
-        result = read_text_file(str(f))
-        assert "caf" in result
+        assert read_text_file(str(f), encoding="latin-1") == content
 
     def test_cp1252_file_with_smart_quotes(self, tmp_path):
         """A Windows-1252 file must not come back as latin-1 control characters.

@@ -276,10 +276,9 @@ The [Microsoft 365 bundle](./bundles-microsoft) resolves its connections through
 `provider: "microsoft"` registration configured above. Its components hold a
 portable handle such as `microsoft/work`, never a token.
 
-[Register a Microsoft Entra application](./entra-app-registration) is the operator
-runbook for that registration: the per-action delegated permission table, the
-redirect URIs per deployment context, the consent and admin-consent rules, and
-the troubleshooting table. Two constraints are worth repeating here.
+[Configure Langflow for Microsoft Entra](./entra-app-registration) walks through
+the server registration and the **Settings** connection. Create the application
+itself in Microsoft Entra. Two constraints are worth repeating here.
 
 Use Microsoft's **short** scope names, such as `Mail.Read`, consistently in the
 registration and consent request. For execution checks, the resolver normalizes
@@ -450,7 +449,7 @@ test consent in a sandbox tenant, does not establish consent in the production t
 - **Microsoft:** Tenant user-consent settings can restrict consent to verified
   publishers and low-impact permissions, or disable it entirely, in which case each
   connection needs administrator approval. See the consent guidance in
-  [Add delegated permissions](./entra-app-registration#add-delegated-permissions).
+  [Delegated permissions](./entra-app-registration#delegated-permissions).
 - **Slack:** A workspace can require administrator approval before an app is installed
   or before new scopes are added to it. Install the app in the target workspace and
   confirm its approval before users connect accounts.
