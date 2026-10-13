@@ -136,7 +136,7 @@ describe("useRestoreVersion", () => {
                   edge_id: "e",
                   message:
                     "edge 'e': sourceHandle must be an escaped JSON object",
-                  resolution: "client",
+                  resolution: "manual",
                 },
               ],
             },

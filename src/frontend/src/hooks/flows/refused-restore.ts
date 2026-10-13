@@ -6,23 +6,23 @@ import { fixesForEdges } from "@/utils/flow-operations/edge-fixes";
 export type GraphViolation = {
   code: string;
   message: string;
-  resolution: string;
+  resolution: "auto" | "manual";
   edge_id?: string;
 };
 
 /**
- * The violations a restore was refused for, when the client fixes every one
- * of them (an edge naming an output the flow's nodes no longer have), or null
- * for any other failure.
+ * The violations a restore was refused for, when every one of them is manual
+ * (an edge naming an output the flow's nodes no longer have), or null for any
+ * other failure.
  */
 // biome-ignore lint/suspicious/noExplicitAny: axios error shape
-export function clientViolations(err: any): GraphViolation[] | null {
+export function manualViolations(err: any): GraphViolation[] | null {
   const detail = err?.response?.data?.detail;
   if (err?.response?.status !== 422 || detail?.code !== "FLOW_GRAPH_INVALID")
     return null;
   const violations: GraphViolation[] = detail.violations ?? [];
   return violations.length > 0 &&
-    violations.every((violation) => violation.resolution === "client")
+    violations.every((violation) => violation.resolution === "manual")
     ? violations
     : null;
 }

@@ -109,7 +109,7 @@ describe("useRestoreRevision", () => {
   it("resends a restore the client must fix with the preview's fixes for the flagged edges", async () => {
     apiPostMock
       .mockRejectedValueOnce(
-        refused([{ resolution: "client", message: "edge e: no output gone" }]),
+        refused([{ resolution: "manual", message: "edge e: no output gone" }]),
       )
       .mockResolvedValueOnce({ data: { id: "flow-1" } });
 
@@ -131,9 +131,9 @@ describe("useRestoreRevision", () => {
   it("does not resend when a violation is not the client's to fix", async () => {
     apiPostMock.mockRejectedValueOnce(
       refused([
-        { resolution: "client", message: "edge e: no output gone" },
+        { resolution: "manual", message: "edge e: no output gone" },
         {
-          resolution: "repair",
+          resolution: "auto",
           message: "edge f: data.sourceHandle is missing",
         },
       ]),
@@ -152,7 +152,7 @@ describe("useRestoreRevision", () => {
   it("does not resend when the preview fixed nothing", async () => {
     previewFixes = [];
     apiPostMock.mockRejectedValueOnce(
-      refused([{ resolution: "client", message: "edge e: no output gone" }]),
+      refused([{ resolution: "manual", message: "edge e: no output gone" }]),
     );
 
     await restore();
@@ -164,10 +164,10 @@ describe("useRestoreRevision", () => {
   it("reports a resend that is refused again", async () => {
     apiPostMock
       .mockRejectedValueOnce(
-        refused([{ resolution: "client", message: "edge e: no output gone" }]),
+        refused([{ resolution: "manual", message: "edge e: no output gone" }]),
       )
       .mockRejectedValueOnce(
-        refused([{ resolution: "client", message: "edge g: target taken" }]),
+        refused([{ resolution: "manual", message: "edge g: target taken" }]),
       );
 
     await restore();

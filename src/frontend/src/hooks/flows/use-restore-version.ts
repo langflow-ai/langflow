@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
-  clientViolations,
   type GraphViolation,
+  manualViolations,
   previewFixesFor,
 } from "@/hooks/flows/refused-restore";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
@@ -62,7 +62,7 @@ export default function useRestoreVersion(flowId: string) {
         try {
           response = await send();
         } catch (err) {
-          fixed = clientViolations(err);
+          fixed = manualViolations(err);
           if (!fixed) throw err;
           const fixes = previewFixesFor(fixed);
           if (fixes.length === 0) throw err;
