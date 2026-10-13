@@ -148,6 +148,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "45974e6b1909",
+              "component_class_name": "ChatInput",
               "dependencies": {
                 "dependencies": [
                   {
@@ -427,6 +428,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "14306d4a9373",
+              "component_class_name": "AgentComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1172,6 +1174,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "523dd690abca",
+              "component_class_name": "WebSearchComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1578,6 +1581,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "0aab1c78e1dc",
+              "component_class_name": "ChatOutput",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1904,6 +1908,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "14306d4a9373",
+              "component_class_name": "AgentComponent",
               "dependencies": {
                 "dependencies": [
                   {

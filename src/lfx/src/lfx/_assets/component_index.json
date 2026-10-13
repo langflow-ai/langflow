@@ -31,6 +31,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "a2812abd6d1f",
+            "component_class_name": "AMapComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -424,6 +425,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "b95d356ae7f7",
+            "component_class_name": "AgenerateComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -791,6 +793,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "58f52a19e59b",
+            "component_class_name": "AreduceComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -1167,6 +1170,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "f1178a31b72f",
+            "component_class_name": "CrewAIAgentComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -1494,6 +1498,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "f57bd699ff15",
+            "component_class_name": "HierarchicalCrewComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -1796,6 +1801,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "763996b81031",
+            "component_class_name": "HierarchicalTaskComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -1961,6 +1967,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "614c75cb340f",
+            "component_class_name": "SequentialCrewComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -2205,6 +2212,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "8b5367ff000b",
+            "component_class_name": "SequentialTaskAgentComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -2635,6 +2643,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "33e33fd0c845",
+            "component_class_name": "SequentialTaskComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -2866,6 +2875,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "d50a68a6fa57",
+            "component_class_name": "CustomComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -2980,6 +2990,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "8cfe47ab342b",
+            "component_class_name": "APIRequestComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -3381,6 +3392,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "a6544e4bec14",
+            "component_class_name": "CSVToDataComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -3567,6 +3579,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "c5afc275ae02",
+            "component_class_name": "JSONToDataComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -3729,6 +3742,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "d21dce7b329b",
+            "component_class_name": "MockDataGeneratorComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -3840,6 +3854,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "d0cca767aa5c",
+            "component_class_name": "NewsSearchComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -4096,6 +4111,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "a649b7380ae0",
+            "component_class_name": "RSSReaderComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -4234,6 +4250,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "f26e89c1d1ca",
+            "component_class_name": "SQLComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -4432,6 +4449,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "a6429c7f9670",
+            "component_class_name": "URLComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -4843,6 +4861,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "523dd690abca",
+            "component_class_name": "WebSearchComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -5176,6 +5195,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "d94c7d791f69",
+            "component_class_name": "EmbeddingSimilarityComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -5312,6 +5332,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "5427db2bfc97",
+            "component_class_name": "TextEmbedderComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -5449,6 +5470,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "ba7aa7c4c975",
+            "component_class_name": "DirectoryComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -5745,6 +5767,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "6d53589f01c8",
+            "component_class_name": "FileComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -6479,6 +6502,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "8f044f059a1e",
+            "component_class_name": "FileSystemToolComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -6639,6 +6663,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "b41636ff3a48",
+            "component_class_name": "KnowledgeComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -7187,6 +7212,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "ffe12d6bb75f",
+            "component_class_name": "KnowledgeBaseComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -7708,6 +7734,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "75a6e1a45797",
+            "component_class_name": "KnowledgeIngestionComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -8221,6 +8248,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "fddf83963c66",
+            "component_class_name": "MemoryBaseComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -8436,6 +8464,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "6fb7a6da11ce",
+            "component_class_name": "SaveToFileComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -8930,6 +8959,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "e97a162201da",
+            "component_class_name": "FileContentRetrieverComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -9099,6 +9129,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "f76426ea1646",
+            "component_class_name": "FileDescriptionGeneratorComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -9306,6 +9337,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "6b54a6b6dcdd",
+            "component_class_name": "MergeFlowsComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -9419,6 +9451,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "1d14fd882a0a",
+            "component_class_name": "ConditionalRouterComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -9720,6 +9753,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "ed3630f6c587",
+            "component_class_name": "DataConditionalRouterComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -9923,6 +9957,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "feba73abd106",
+            "component_class_name": "FlowToolComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -10097,6 +10132,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "63cbbf99823f",
+            "component_class_name": "HumanInput",
             "dependencies": {
               "dependencies": [
                 {
@@ -10296,6 +10332,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "7f4e3f36b7e2",
+            "component_class_name": "ListenComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -10397,6 +10434,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "2712a1de7210",
+            "component_class_name": "LoopComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -10517,6 +10555,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "a22284d4b01e",
+            "component_class_name": "NotifyComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -10661,6 +10700,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "8326afba35fd",
+            "component_class_name": "PassMessageComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -10791,6 +10831,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "ea901208037d",
+            "component_class_name": "RunFlowComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -10943,6 +10984,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "9b2959e99faa",
+            "component_class_name": "SubFlowComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -11057,6 +11099,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "45974e6b1909",
+            "component_class_name": "ChatInput",
             "dependencies": {
               "dependencies": [
                 {
@@ -11340,6 +11383,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "0aab1c78e1dc",
+            "component_class_name": "ChatOutput",
             "dependencies": {
               "dependencies": [
                 {
@@ -11623,6 +11667,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "2811c0e0496f",
+            "component_class_name": "TextInputComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -11751,6 +11796,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "3ececc60ddaf",
+            "component_class_name": "TextOutputComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -11858,6 +11904,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "e99e2452d56e",
+            "component_class_name": "WebhookComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -12035,6 +12082,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "01d5f714d2de",
+            "component_class_name": "CSVAgentComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -12434,6 +12482,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "ea7c81772b05",
+            "component_class_name": "CharacterTextSplitterComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -12608,6 +12657,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "65092d15af00",
+            "component_class_name": "ConversationChainComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -12763,6 +12813,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "7acefd9ece13",
+            "component_class_name": "HtmlLinkExtractorComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -12919,6 +12970,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "99afdb8d000d",
+            "component_class_name": "JsonAgentComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -13159,6 +13211,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "c1a266d9c00b",
+            "component_class_name": "LLMCheckerChainComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -13290,6 +13343,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "56566b670677",
+            "component_class_name": "LLMMathChainComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -13421,6 +13475,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "9f59bf236231",
+            "component_class_name": "LangChainHubPromptComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -13545,6 +13600,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "21b18445da36",
+            "component_class_name": "FakeEmbeddingsComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -13647,6 +13703,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "ee28cc4c2001",
+            "component_class_name": "LanguageRecursiveTextSplitterComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -13851,6 +13908,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "6483da1155b8",
+            "component_class_name": "NaturalLanguageTextSplitterComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -14061,6 +14119,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "16c817a84728",
+            "component_class_name": "OpenAIToolsAgentComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -14478,6 +14537,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "51a57b813752",
+            "component_class_name": "OpenAPIAgentComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -14832,6 +14892,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "1cad6dd9957a",
+            "component_class_name": "RecursiveCharacterTextSplitterComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -15009,6 +15070,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "af87f17d5b17",
+            "component_class_name": "RetrievalQAComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -15240,6 +15302,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "4bd833706499",
+            "component_class_name": "RunnableExecComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -15452,6 +15515,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "d70373a4c9d0",
+            "component_class_name": "SQLAgentComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -15799,6 +15863,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "af891cad7972",
+            "component_class_name": "SQLDatabaseComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -15906,6 +15971,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "e4bef68d3704",
+            "component_class_name": "SQLGeneratorComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -16118,6 +16184,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "a3cfdab2f8f9",
+            "component_class_name": "SelfQueryRetrieverComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -16320,6 +16387,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "5d61a0c12bbb",
+            "component_class_name": "SemanticTextSplitterComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -16577,6 +16645,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "5afbd30b7d58",
+            "component_class_name": "ToolCallingAgentComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -16952,6 +17021,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "e6cb937c21a1",
+            "component_class_name": "VectorStoreInfoComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -17113,6 +17183,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "b85860c29b3e",
+            "component_class_name": "VectorStoreRouterAgentComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -17351,6 +17422,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "21307f4ef446",
+            "component_class_name": "XMLAgentComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -17771,6 +17843,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "1b10e577e096",
+            "component_class_name": "BatchRunComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -18099,6 +18172,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "8c5252dd5341",
+            "component_class_name": "GuardrailsComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -18443,6 +18517,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "1442b70e8eaa",
+            "component_class_name": "GuardrailsV2Component",
             "dependencies": {
               "dependencies": [
                 {
@@ -19365,6 +19440,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "56307ee9abac",
+            "component_class_name": "LLMSelectorComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -19647,6 +19723,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "e2c588ba9f54",
+            "component_class_name": "LambdaFilterComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -19912,6 +19989,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "27437c3b6527",
+            "component_class_name": "SmartRouterComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -20204,6 +20282,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "c87c265c9032",
+            "component_class_name": "StructuredOutputComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -20531,6 +20610,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "53bf218eda58",
+            "component_class_name": "A2AAgentComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -20801,6 +20881,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "14306d4a9373",
+            "component_class_name": "AgentComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -21396,6 +21477,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "9382e1eceb6c",
+            "component_class_name": "EmbeddingModelComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -21861,6 +21943,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "1bfa98a19c39",
+            "component_class_name": "LanguageModelComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -22279,6 +22362,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "9c81bfe8e4e5",
+            "component_class_name": "MCPToolsComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -22538,6 +22622,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "c1e8d1b5f1ea",
+            "component_class_name": "MemoryComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -22912,6 +22997,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "e3714ffe5d15",
+            "component_class_name": "PromptComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -23063,6 +23149,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "630b9f0c3a01",
+            "component_class_name": "AlterMetadataComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -23254,6 +23341,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "6cc244d8ad0c",
+            "component_class_name": "CombineTextComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -23410,6 +23498,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "4e93500836df",
+            "component_class_name": "CreateDataComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -23562,6 +23651,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "565738357961",
+            "component_class_name": "CreateListComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -23686,6 +23776,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "975216446d69",
+            "component_class_name": "DataFrameOperationsComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -24238,6 +24329,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "0c5bf5e34dc4",
+            "component_class_name": "DataOperationsComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -24609,6 +24701,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "5980400af2b6",
+            "component_class_name": "DataToDataFrameComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -24714,6 +24807,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "8af479187c18",
+            "component_class_name": "DynamicCreateDataComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -24874,6 +24968,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "79211a2546bb",
+            "component_class_name": "ExtractDataKeyComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -24999,6 +25094,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "c57f21409ff8",
+            "component_class_name": "FilterDataComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -25130,6 +25226,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "03e628ac1e82",
+            "component_class_name": "DataFilterComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -25318,6 +25415,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "5c150997aec4",
+            "component_class_name": "JSONCleaner",
             "dependencies": {
               "dependencies": [
                 {
@@ -25488,6 +25586,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "03d2134d37f9",
+            "component_class_name": "MergeDataComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -25620,6 +25719,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "cc86df1d6415",
+            "component_class_name": "MessageToDataComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -25766,6 +25866,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "d8c50ec53ab7",
+            "component_class_name": "OperationsComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -27038,6 +27139,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "a2ccb9fab4eb",
+            "component_class_name": "OutputParserComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -27163,6 +27265,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "dbe2c66f1728",
+            "component_class_name": "ParseDataComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -27335,6 +27438,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "30b0db87433a",
+            "component_class_name": "ParseDataFrameComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -27491,6 +27595,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "66042257e948",
+            "component_class_name": "ParseJSONDataComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -27629,6 +27734,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "7ab5fd0e0a10",
+            "component_class_name": "ParserComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -27810,6 +27916,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "6e5d844f29b3",
+            "component_class_name": "RegexExtractorComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -27953,6 +28060,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "bd0a385dfd03",
+            "component_class_name": "SelectDataComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -28088,6 +28196,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "3a5005b9e7e7",
+            "component_class_name": "SplitTextComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -28341,6 +28450,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "7c633ea3a38f",
+            "component_class_name": "MessageStoreComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -28563,6 +28673,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "71eaf7b885df",
+            "component_class_name": "TextOperations",
             "dependencies": {
               "dependencies": [
                 {
@@ -29169,6 +29280,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "60cbfe96d7eb",
+            "component_class_name": "TypeConverterComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -29350,6 +29462,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "9078050b9f0d",
+            "component_class_name": "UpdateDataComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -29534,6 +29647,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "d1fbbdc1ff53",
+            "component_class_name": "PythonFunctionComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -29662,6 +29776,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "7390a0ddc9fb",
+            "component_class_name": "CalculatorToolComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -29790,6 +29905,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "5f47bcd2163c",
+            "component_class_name": "GoogleSearchAPIComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -29981,6 +30097,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "1e549f2c5530",
+            "component_class_name": "GoogleSerperAPIComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -30207,6 +30324,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "8b2c39e9860e",
+            "component_class_name": "PythonREPLToolComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -30399,6 +30517,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "f6d7b669bd5e",
+            "component_class_name": "SearXNGToolComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -30587,6 +30706,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "6d59a95b738c",
+            "component_class_name": "SearchAPIComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -30833,6 +30953,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "98e7102c5b0a",
+            "component_class_name": "SerpAPIComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -31049,6 +31170,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "4752066f8971",
+            "component_class_name": "WikidataAPIComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -31186,6 +31308,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "d7ae953444c9",
+            "component_class_name": "WikipediaAPIComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -31402,6 +31525,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "a6131300c905",
+            "component_class_name": "YfinanceToolComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -31609,6 +31733,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "11804740f56b",
+            "component_class_name": "InboundWebhookTriggerComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -31764,6 +31889,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "1fe70b7bf60c",
+            "component_class_name": "ScheduleTriggerComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -31968,6 +32094,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "d0b2936e74fa",
+            "component_class_name": "CalculatorComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -32067,6 +32194,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "4a93d7b489e6",
+            "component_class_name": "CurrentDateComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -32166,6 +32294,7 @@
           "legacy": true,
           "metadata": {
             "code_hash": "cddb8b4edbc3",
+            "component_class_name": "IDGeneratorComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -32271,6 +32400,7 @@
           "legacy": false,
           "metadata": {
             "code_hash": "c707124d0b04",
+            "component_class_name": "PythonREPLComponent",
             "dependencies": {
               "dependencies": [
                 {
@@ -32388,6 +32518,6 @@
     "num_components": 130,
     "num_modules": 17
   },
-  "sha256": "df585afcce1a977d793dabe5bf13f55b55f288345fada800fde7cbab39883841",
+  "sha256": "3dd712f299d34eaecc81ae6592fbf7e58aa1b2ee6cd902e2e9e4284aa2547452",
   "version": "1.13.0"
 }

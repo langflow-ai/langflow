@@ -211,6 +211,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "45974e6b1909",
+              "component_class_name": "ChatInput",
               "dependencies": {
                 "dependencies": [
                   {
@@ -478,6 +479,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "e3714ffe5d15",
+              "component_class_name": "PromptComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -694,6 +696,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "b41636ff3a48",
+              "component_class_name": "KnowledgeComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1139,6 +1142,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "7ab5fd0e0a10",
+              "component_class_name": "ParserComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1350,6 +1354,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "14306d4a9373",
+              "component_class_name": "AgentComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2126,6 +2131,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "0aab1c78e1dc",
+              "component_class_name": "ChatOutput",
               "dependencies": {
                 "dependencies": [
                   {

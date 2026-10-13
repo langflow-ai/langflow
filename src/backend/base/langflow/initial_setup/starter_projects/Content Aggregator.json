@@ -214,6 +214,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "45974e6b1909",
+              "component_class_name": "ChatInput",
               "dependencies": {
                 "dependencies": [
                   {
@@ -498,6 +499,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "523dd690abca",
+              "component_class_name": "WebSearchComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -850,6 +852,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "1b10e577e096",
+              "component_class_name": "BatchRunComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1307,6 +1310,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "7ab5fd0e0a10",
+              "component_class_name": "ParserComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1515,6 +1519,7 @@
             "lf_version": "1.10.0",
             "metadata": {
               "code_hash": "14306d4a9373",
+              "component_class_name": "AgentComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2245,6 +2250,7 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "0aab1c78e1dc",
+              "component_class_name": "ChatOutput",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2540,6 +2546,7 @@
             "legacy": false,
             "metadata": {
               "code_hash": "6fb7a6da11ce",
+              "component_class_name": "SaveToFileComponent",
               "dependencies": {
                 "dependencies": [
                   {
