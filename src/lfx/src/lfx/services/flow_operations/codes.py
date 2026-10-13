@@ -1,10 +1,11 @@
 """The stable codes of the rules a flow graph follows, and who fixes each one.
 
 Every rule has one code, shared by strict validation's 422, the engine's
-errors and ``repair_flow_data``'s list of fixes. A violation is either direct,
-with exactly one fix that ``repair_flow_data`` applies, or intent-dependent:
-fixing it means choosing what the person meant, such as which output an edge
-should connect, so only the client can fix it.
+errors and ``repair_flow_data``'s list of fixes. A violation is either
+``auto``, with exactly one fix that ``repair_flow_data`` applies, or
+``manual``: fixing it means choosing what the person meant, such as which of
+two edges into an input that takes one connection stays, so the person fixes
+it in the client.
 """
 
 from __future__ import annotations
@@ -41,13 +42,13 @@ class GraphViolationCode(str, Enum):
 
 
 class Resolution(str, Enum):
-    """Who fixes a violation: ``repair_flow_data``, or the client that wrote the graph."""
+    """How a violation is fixed: by ``repair_flow_data``, or by the person in the client."""
 
-    REPAIR = "repair"
-    CLIENT = "client"
+    AUTO = "auto"
+    MANUAL = "manual"
 
 
-CLIENT_FIXED_CODES = frozenset(
+MANUAL_CODES = frozenset(
     {
         GraphViolationCode.EDGE_HANDLE_INVALID,
         GraphViolationCode.EDGE_HANDLE_NOT_FOUND,
@@ -57,4 +58,4 @@ CLIENT_FIXED_CODES = frozenset(
 
 
 def resolution_of(code: GraphViolationCode) -> Resolution:
-    return Resolution.CLIENT if code in CLIENT_FIXED_CODES else Resolution.REPAIR
+    return Resolution.MANUAL if code in MANUAL_CODES else Resolution.AUTO
