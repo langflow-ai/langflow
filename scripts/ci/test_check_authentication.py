@@ -1,6 +1,9 @@
 """The release gate must fail on an open, missing or broken auth boundary."""
 
 import json
+import socket
+import subprocess
+import sys
 import threading
 from collections import deque
 from contextlib import contextmanager
@@ -9,7 +12,7 @@ from secrets import token_urlsafe
 
 import pytest
 
-from scripts.ci.check_authentication import check_authentication
+from scripts.ci.check_authentication import check_authentication, check_installed_wheel
 
 
 @contextmanager
@@ -100,3 +103,35 @@ def test_password_sign_in_must_resolve_the_configured_administrator(user):
     responses[-1] = (200, user)
     with local_server(responses) as (port, _), pytest.raises(RuntimeError, match="configured administrator"):
         check_authentication(port, "smoke-admin", token_urlsafe(32))
+
+
+def test_failed_startup_reports_server_log_without_password_and_reaps_process(monkeypatch, capsys):
+    original_popen = subprocess.Popen
+    processes = []
+
+    def exited_server(_command, **kwargs):
+        # A real child models startup failure, including a diagnostic quoting its environment.
+        process = original_popen(
+            [
+                sys.executable,
+                "-c",
+                "import os, sys; print('startup failure: ' + os.environ['LANGFLOW_SUPERUSER_PASSWORD'], "
+                "flush=True); sys.exit(7)",
+            ],
+            **kwargs,
+        )
+        processes.append(process)
+        return process
+
+    monkeypatch.setattr(subprocess, "Popen", exited_server)
+    password = token_urlsafe(32)
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        port = listener.getsockname()[1]
+    with pytest.raises(RuntimeError, match="exit 7"):
+        check_installed_wheel(port, 5, "smoke-admin", password)
+
+    diagnostic = capsys.readouterr().err
+    assert "startup failure: [redacted]" in diagnostic
+    assert password not in diagnostic
+    assert processes[0].poll() == 7
