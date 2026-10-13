@@ -57,15 +57,17 @@ on:
     # opened as a draft and later marked ready has no run where that gate was ever true.
     types: [opened, synchronize, labeled, ready_for_review]
   merge_group:
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
+# Cancellation is per job. A workflow-wide group also stops an ARM image export
+# when a newer commit starts this workflow. The Docker job opts out below.
 permissions:
   contents: read
 
 jobs:
   echo-inputs:
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-echo-inputs
+      cancel-in-progress: true
     name: Echo Inputs
     runs-on: ubuntu-latest
     steps:
@@ -80,6 +82,9 @@ jobs:
           echo "  runs-on: ${{ inputs.runs-on }}"
 
   validate-pr-title:
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-validate-pr-title
+      cancel-in-progress: true
     name: Validate PR Title
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
@@ -96,6 +101,9 @@ jobs:
           echo "✅ PR title is complete."
 
   check-nightly-status:
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-check-nightly-status
+      cancel-in-progress: true
     name: Check PyPI Version Update
     runs-on: ubuntu-latest
     outputs:
@@ -164,6 +172,9 @@ jobs:
           rm -f response.json
 
   set-ci-condition:
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-set-ci-condition
+      cancel-in-progress: true
     name: Should Run CI
     runs-on: ubuntu-latest
     outputs:
@@ -181,6 +192,9 @@ jobs:
   path-filter:
     needs: set-ci-condition
     if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' && !inputs.run-all-tests }}
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-path-filter
+      cancel-in-progress: true
     name: Filter Paths
     runs-on: ubuntu-latest
     outputs:
@@ -244,6 +258,9 @@ jobs:
 
   test-backend:
     needs: [path-filter, set-ci-condition]
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-test-backend
+      cancel-in-progress: true
     name: Run Backend Tests
     if: |
       always() &&
@@ -267,6 +284,9 @@ jobs:
 
   lint-frontend:
     needs: [path-filter, set-ci-condition]
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-lint-frontend
+      cancel-in-progress: true
     name: Lint Frontend
     if: |
       always() &&
@@ -283,6 +303,9 @@ jobs:
 
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-test-frontend-unit
+      cancel-in-progress: true
     name: Run Frontend Unit Tests
     # The called workflow publishes a check run and, for PR events, a coverage
     # comment. Keep these writes scoped to this reporting job; every other CI
@@ -308,6 +331,9 @@ jobs:
 
   test-frontend:
     needs: [path-filter, set-ci-condition]
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-test-frontend
+      cancel-in-progress: true
     name: Run Frontend Tests
     if: |
       always() &&
@@ -330,11 +356,17 @@ jobs:
       always() &&
       !cancelled() &&
       (inputs.run-all-tests || needs.path-filter.outputs.docs == 'true')
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-test-docs-build
+      cancel-in-progress: true
     name: Test Docs Build
     uses: ./.github/workflows/docs_test.yml
 
   test-templates:
     needs: [path-filter, set-ci-condition]
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-test-templates
+      cancel-in-progress: true
     name: Test Starter Templates
     if: |
       always() &&
@@ -369,11 +401,18 @@ jobs:
   test-docker:
     needs: [path-filter, set-ci-condition]
     name: Test Docker Images
+    # A newer push must not kill an image export that is already unpacking.
+    concurrency:
+      group: docker-images-${{ github.ref }}
+      cancel-in-progress: false
     if: ${{ needs.path-filter.outputs.docker == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
     uses: ./.github/workflows/docker_test.yml
 
   test-object-storage:
     needs: [path-filter, set-ci-condition]
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-test-object-storage
+      cancel-in-progress: true
     name: Object Storage Tests (S3)
     if: |
       always() &&
@@ -428,6 +467,9 @@ jobs:
 
   lint-design-md:
     needs: path-filter
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-lint-design-md
+      cancel-in-progress: true
     name: Lint DESIGN.md
     if: ${{ inputs.run-all-tests || needs.path-filter.outputs.design-md == 'true' }}
     runs-on: ubuntu-latest
@@ -448,6 +490,9 @@ jobs:
         run: npx --yes @google/design.md@${{ env.DESIGN_MD_CLI_VERSION }} lint DESIGN.md
 
   merge-frontend-coverage:
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-merge-frontend-coverage
+      cancel-in-progress: true
     name: Merge Frontend Jest + Playwright Coverage Reports
     needs: [path-filter, set-ci-condition, test-frontend-unit, test-frontend]
     if: |
@@ -507,6 +552,9 @@ jobs:
 
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}-ci-success
+      cancel-in-progress: true
     name: "CI Success"
     # Note: `lint-frontend` is intentionally NOT in this list — the Biome
     # check runs on every PR and shows up in the checks list, but its failure

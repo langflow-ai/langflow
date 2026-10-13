@@ -41,6 +41,8 @@ docker:
   - ".dockerignore"
   - ".github/workflows/docker-build-v2.yml"
   - ".github/workflows/docker_test.yml"
+  - "scripts/ci/test_docker_images.sh"
+  - "scripts/ci/retry_docker_image_tests.sh"
 
 # Test categories and their associated paths
 starter-projects:
