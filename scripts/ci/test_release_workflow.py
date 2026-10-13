@@ -250,9 +250,9 @@ def test_publication_requires_application_evidence_without_a_separate_migration_
     reservation = _job_block(WORKFLOW_PATH, "reserve-final-release", "publish-base")
     assert "migration_helper_release" not in workflow
     assert "validate-migration-helper" not in workflow
-    assert "release-inventory" in reservation
-    assert "test-cross-platform" in reservation
-    assert "ci" in reservation
+    needs = next(line for line in reservation.splitlines() if line.strip().startswith("needs:"))
+    jobs = {item.strip() for item in needs.split("[", 1)[1].rstrip("]").split(",")}
+    assert {"release-inventory", "test-cross-platform", "ci"} <= jobs
 
 
 def test_sqlite_runtime_workflow_references_existing_tests() -> None:
