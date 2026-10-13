@@ -245,7 +245,7 @@ async def _refused_legacy_flow(client: AsyncClient, headers: dict) -> tuple[dict
     url = f"api/v1/flows/{flow['id']}/revisions/0"
     refused = await client.post(f"{url}/restore", json={}, headers=headers)
     assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, refused.text
-    assert {violation["resolution"] for violation in refused.json()["detail"]["violations"]} == {"client"}
+    assert {violation["resolution"] for violation in refused.json()["detail"]["violations"]} == {"manual"}
     return flow, url
 
 
