@@ -96,6 +96,9 @@ export function useCreateMemoryModal({
   const defaultVectorStoreBackend = useUtilityStore(
     (state) => state.defaultVectorStoreBackend,
   );
+  const vectorStoreConfigLoaded = useUtilityStore(
+    (state) => state.vectorStoreConfigLoaded,
+  );
 
   // Default to the platform's active DB provider (OpenSearch / Postgres when
   // configured), falling back to local SQLite — identical to Knowledge Bases.
@@ -111,15 +114,19 @@ export function useCreateMemoryModal({
     [globalVariables, localVectorStoreAvailable, defaultVectorStoreBackend],
   );
 
-  // Seed the selector from the active provider once global variables load.
+  // Both requests must settle before committing the one-shot default.
   useEffect(() => {
-    if (hasAppliedBackendDefaults.current || !globalVariablesReady) {
+    if (
+      hasAppliedBackendDefaults.current ||
+      !globalVariablesReady ||
+      !vectorStoreConfigLoaded
+    ) {
       return;
     }
     hasAppliedBackendDefaults.current = true;
     setBackendType(defaultBackendSelection.backendType);
     setBackendConfig(defaultBackendSelection.backendConfig);
-  }, [defaultBackendSelection, globalVariablesReady]);
+  }, [defaultBackendSelection, globalVariablesReady, vectorStoreConfigLoaded]);
 
   const handleBackendProviderChange = useCallback(
     (
@@ -135,6 +142,7 @@ export function useCreateMemoryModal({
   );
 
   const backendConfigured =
+    vectorStoreConfigLoaded &&
     globalVariablesReady &&
     isDBProviderConfigured(
       backendType,

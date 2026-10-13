@@ -98,6 +98,9 @@ export default function DBProviderInputComponent({
   const defaultVectorStoreBackend = useUtilityStore(
     (state) => state.defaultVectorStoreBackend,
   );
+  const vectorStoreConfigLoaded = useUtilityStore(
+    (state) => state.vectorStoreConfigLoaded,
+  );
   const hasInitializedDefaultRef = useRef(false);
 
   const currentValue = useMemo(
@@ -122,6 +125,7 @@ export default function DBProviderInputComponent({
   useEffect(() => {
     if (hasProviderValue || hasInitializedDefaultRef.current) return;
     if (
+      !vectorStoreConfigLoaded ||
       !currentFlowId ||
       !isSuccess ||
       isFetching ||
@@ -143,6 +147,7 @@ export default function DBProviderInputComponent({
     isFetching,
     isSuccess,
     queryClient,
+    vectorStoreConfigLoaded,
   ]);
 
   return (

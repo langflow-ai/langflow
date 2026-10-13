@@ -299,8 +299,11 @@ export function getActiveDBProvider(
   // resolves for a create request that names none, so the UI never offers a
   // store the deployment did not provision (e.g. pgVector on an OpenSearch-only
   // deployment).
-  if (isEnvProvisionedDefault("opensearch", serverDefaultBackend))
-    return "opensearch";
+  if (
+    serverDefaultBackend === "postgres" ||
+    serverDefaultBackend === "opensearch"
+  )
+    return serverDefaultBackend;
   // SQLite writes vectors to the serving box's own disk, which the
   // production profile refuses. When it's unavailable, fall back to the
   // environment-driven pgVector rather than a local store the create endpoint would

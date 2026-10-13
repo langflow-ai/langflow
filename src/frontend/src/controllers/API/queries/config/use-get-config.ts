@@ -143,11 +143,8 @@ export const useGetConfig: useQueryFunctionType<
   const setAssistantMaxMessageLength = useUtilityStore(
     (state) => state.setAssistantMaxMessageLength,
   );
-  const setLocalVectorStoreAvailable = useUtilityStore(
-    (state) => state.setLocalVectorStoreAvailable,
-  );
-  const setDefaultVectorStoreBackend = useUtilityStore(
-    (state) => state.setDefaultVectorStoreBackend,
+  const setVectorStoreConfig = useUtilityStore(
+    (state) => state.setVectorStoreConfig,
   );
 
   const { query } = UseRequestProcessor();
@@ -216,8 +213,10 @@ export const useGetConfig: useQueryFunctionType<
           data.assistant_max_message_length ??
             DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
         );
-        setLocalVectorStoreAvailable(data.local_vector_store_available ?? true);
-        setDefaultVectorStoreBackend(data.default_vector_store_backend);
+        setVectorStoreConfig({
+          localVectorStoreAvailable: data.local_vector_store_available ?? true,
+          defaultVectorStoreBackend: data.default_vector_store_backend,
+        });
       }
     }
     return data;

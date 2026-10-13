@@ -64,6 +64,13 @@ export type UtilityStoreType = {
   setDefaultVectorStoreBackend: (
     defaultVectorStoreBackend: string | undefined,
   ) => void;
+  // Readiness is independent of the optional default-backend field so older
+  // authenticated config responses still enable provider initialization.
+  vectorStoreConfigLoaded: boolean;
+  setVectorStoreConfig: (config: {
+    localVectorStoreAvailable: boolean;
+    defaultVectorStoreBackend: string | undefined;
+  }) => void;
   mcpBaseUrl: string;
   setMcpBaseUrl: (mcpBaseUrl: string) => void;
   /**
