@@ -282,7 +282,7 @@ def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -
     return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
 
 
-def _validate_catalog_policy_for_write(
+def validate_catalog_policy_for_write(
     flow_data: dict | None,
     *,
     snapshot: CatalogPolicySnapshot,
@@ -294,6 +294,9 @@ def _validate_catalog_policy_for_write(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except CatalogPolicyIdentityUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+_validate_catalog_policy_for_write = validate_catalog_policy_for_write
 
 
 # build router

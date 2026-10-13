@@ -1319,6 +1319,12 @@ def relocate_kb(
         default=False,
         help="Move knowledge bases whose search rankings would change because the target ranks by another metric.",
     ),
+    verify_skipped: bool = typer.Option(  # noqa: FBT001
+        default=True,
+        help="Before skipping a knowledge base whose row already names the target, count its chunks there, and "
+        "fail it when the store cannot be read or holds fewer than the row records. With --no-verify-skipped it "
+        "is skipped without a look at the store.",
+    ),
     as_json: bool = typer.Option(  # noqa: FBT001
         False,  # noqa: FBT003
         "--json",
@@ -1341,7 +1347,15 @@ def relocate_kb(
 
     Safe to re-run: chunks keep their ids, so a second run upserts, and knowledge
     bases already on the target are skipped. Nothing is deleted from the source.
-    Exits non-zero if any knowledge base could not be moved.
+    Exits non-zero if any knowledge base failed.
+
+    A knowledge base whose row already names the target is not moved. Its chunks
+    are counted there first, if the row records any and its storage is ready,
+    and it fails when the store cannot be read or holds fewer chunks than the
+    row records, as it does when PGVECTOR_CONNECTION_STRING names another
+    database than the one the chunks were written to. Pass --no-verify-skipped
+    to skip it without a look at the store, for a knowledge base that is in
+    place and whose row records too many chunks.
 
     With --json, stdout carries one JSON object per line and logs go to stderr:
     "progress" as a knowledge base's chunks are copied, an "item" as each one
@@ -1375,6 +1389,7 @@ def relocate_kb(
             dry_run=dry_run,
             batch_size=batch_size,
             allow_metric_change=allow_metric_change,
+            verify_skipped=verify_skipped,
             as_json=as_json,
         )
     )
@@ -1490,6 +1505,20 @@ def relocation_line(result) -> str:
     return f"{line}  chunks {counts}"
 
 
+def relocation_lines(result) -> list[str]:
+    """Everything the command prints for one knowledge base: its line, a hint, its warnings."""
+    lines = [relocation_line(result) + (f"  ({result.reason})" if result.reason else "")]
+    if result.code == "kb_target_short":
+        # Only in this output. The reason and the flag go to the migration page as well, and nobody there
+        # runs the command.
+        lines.append(
+            f"{'':15} hint: if this is the right store and its row records too many chunks, "
+            "re-run with --no-verify-skipped, which skips every knowledge base already on the target "
+            "without a count"
+        )
+    return [*lines, *(f"{'':15} warning: {warning}" for warning in result.warnings)]
+
+
 async def _schema_mismatch() -> str | None:
     """Say why the database is not at this Langflow's schema, or None when it is."""
     from alembic.config import Config
@@ -1520,6 +1549,7 @@ async def _relocate_kb(
     dry_run: bool,
     batch_size: int,
     allow_metric_change: bool = False,
+    verify_skipped: bool = False,
     as_json: bool = False,
 ) -> int:
     from langflow.api.utils.knowledge_base_relocation import relocate_knowledge_bases
@@ -1540,6 +1570,7 @@ async def _relocate_kb(
         dry_run=dry_run,
         batch_size=batch_size,
         allow_metric_change=allow_metric_change,
+        verify_skipped=verify_skipped,
         on_result=events.item if as_json else None,
         on_progress=events.progress if as_json else None,
     )
@@ -1551,9 +1582,8 @@ async def _relocate_kb(
         events.report(results, by_status, dry_run=dry_run)
         return failed
     for result in results:
-        typer.echo(relocation_line(result) + (f"  ({result.reason})" if result.reason else ""))
-        for warning in result.warnings:
-            typer.echo(f"{'':15} warning: {warning}")
+        for line in relocation_lines(result):
+            typer.echo(line)
     summary = ", ".join(f"{count} {status}" for status, count in sorted(by_status.items())) or "no knowledge bases"
     typer.echo(f"Knowledge base relocation {'dry run ' if dry_run else ''}complete: {summary}.")
     return failed

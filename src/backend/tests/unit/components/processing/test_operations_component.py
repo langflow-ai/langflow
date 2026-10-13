@@ -142,6 +142,30 @@ class TestJsonOperations:
         assert result.data["key1"] == "value1"
         assert result.data["key2"] == "value2"
 
+    @pytest.mark.parametrize("component_class", [OperationsComponent, DataOperationsComponent])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"data": {"id": 1}},
+            {"data": 42},
+            {"text_key": "body", "default_value": "fallback", "body": "content"},
+            {"text_key": ["literal"], "default_value": {"missing": True}},
+        ],
+    )
+    def test_combine_preserves_payload_keys(self, component_class, payload):
+        """Business keys must not be interpreted as Data constructor fields."""
+        original = Data(data=payload)
+        operation_field = "operation" if component_class is OperationsComponent else "operations"
+        component = component_class(
+            data=[original, Data(data={"source": "memo"})],
+            **{operation_field: [{"name": "Combine"}]},
+        )
+        result = component.as_data()
+        assert result.data == {**payload, "source": "memo"}
+        assert result.text_key == "text"
+        assert result.default_value == ""
+        assert original.data == payload
+
     def test_append_update(self):
         component = OperationsComponent(
             data=Data(data={"existing_key": "existing_value"}),
@@ -661,6 +685,150 @@ class TestDynamicOutputs:
         }
         result = component.update_outputs(frontend_node, "mapped_json_display", "{}")
         assert [o.name for o in result["outputs"]] == ["data_output"]
+
+
+class TestReplaceValueTableOperation:
+    """Test Replace Value table operation in unified OperationsComponent."""
+
+    def test_replace_value_integer_column(self):
+        """Test replacing integer values where input arrives as text strings."""
+        df = DataFrame(pd.DataFrame({"id": [1, 2, 3], "score": [20, 50, 20]}))
+        component = OperationsComponent(
+            df=df,
+            operation=[{"name": "Replace Value"}],
+            column_name="score",
+            replace_value="20",
+            replacement_value="99",
+        )
+        result = component.as_dataframe()
+        assert result["score"].tolist() == [99, 50, 99]
+        assert pd.api.types.is_integer_dtype(result["score"])
+
+    def test_replace_value_float_column(self):
+        """Test replacing float values where input arrives as text strings."""
+        df = DataFrame(pd.DataFrame({"ratio": [1.25, 2.5, 3.75]}))
+        component = OperationsComponent(
+            df=df,
+            operation=[{"name": "Replace Value"}],
+            column_name="ratio",
+            replace_value="2.5",
+            replacement_value="8.5",
+        )
+        result = component.as_dataframe()
+        assert result["ratio"].tolist() == [1.25, 8.5, 3.75]
+        assert pd.api.types.is_float_dtype(result["ratio"])
+
+    def test_replace_value_string_column(self):
+        """Test string/object column replacement remains unchanged."""
+        df = DataFrame(pd.DataFrame({"city": ["Paris", "London", "Paris"]}))
+        component = OperationsComponent(
+            df=df,
+            operation=[{"name": "Replace Value"}],
+            column_name="city",
+            replace_value="Paris",
+            replacement_value="Tokyo",
+        )
+        result = component.as_dataframe()
+        assert result["city"].tolist() == ["Tokyo", "London", "Tokyo"]
+        assert pd.api.types.is_object_dtype(result["city"]) or pd.api.types.is_string_dtype(result["city"])
+
+    def test_replace_value_non_numeric_fallback(self):
+        """Test replacing a number with a non-numeric string gracefully casts column."""
+        df = DataFrame(pd.DataFrame({"score": [10, 20, 30]}))
+        component = OperationsComponent(
+            df=df,
+            operation=[{"name": "Replace Value"}],
+            column_name="score",
+            replace_value="20",
+            replacement_value="N/A",
+        )
+        result = component.as_dataframe()
+        assert result["score"].tolist() == [10, "N/A", 30]
+        assert result["score"].dtype == object
+
+    def test_replace_value_blank_input_does_not_match_missing_cells(self):
+        df = DataFrame(pd.DataFrame({"score": [10.0, None, 30.0]}))
+        component = OperationsComponent(
+            df=df,
+            operation=[{"name": "Replace Value"}],
+            column_name="score",
+            replace_value="",
+            replacement_value="0",
+        )
+        result = component.as_dataframe()
+        assert result["score"].iloc[0] == 10.0
+        assert pd.isna(result["score"].iloc[1])
+        assert result["score"].iloc[2] == 30.0
+
+
+@pytest.mark.parametrize(
+    ("component_class", "output_method"),
+    [
+        (OperationsComponent, "as_dataframe"),
+        (DataFrameOperationsComponent, "perform_operation"),
+    ],
+)
+class TestNullableIntegerReplaceValue:
+    @pytest.mark.parametrize(
+        ("replacement", "expected_value", "expected_dtype"),
+        [
+            ("2.5", 2.5, "Float64"),
+            ("-2.5", -2.5, "Float64"),
+            ("99", 99, "Int64"),
+            ("99.0", 99, "Int64"),
+            ("N/A", "N/A", "object"),
+            ("", "", "object"),
+        ],
+    )
+    def test_replacement_preserves_missing_cells(
+        self, component_class, output_method, replacement, expected_value, expected_dtype
+    ):
+        original = pd.Series([10, 20, pd.NA], dtype="Int64", name="score")
+        df = DataFrame(pd.DataFrame({"score": original.copy()}))
+        component = component_class(
+            df=df,
+            operation=[{"name": "Replace Value"}],
+            column_name="score",
+            replace_value="20",
+            replacement_value=replacement,
+        )
+
+        result = getattr(component, output_method)()
+
+        expected = pd.Series([10, expected_value, pd.NA], dtype=expected_dtype, name="score")
+        pd.testing.assert_series_equal(result["score"], expected)
+        pd.testing.assert_series_equal(df["score"], original)
+
+    @pytest.mark.parametrize("large_value", [2**53 + 1, 2**63 - 1])
+    def test_fractional_replacement_preserves_large_integers(self, component_class, output_method, large_value):
+        original = pd.Series([large_value, 20, pd.NA], dtype="Int64", name="score")
+        component = component_class(
+            df=DataFrame(pd.DataFrame({"score": original})),
+            operation=[{"name": "Replace Value"}],
+            column_name="score",
+            replace_value="20",
+            replacement_value="2.5",
+        )
+
+        result = getattr(component, output_method)()
+
+        expected = pd.Series([large_value, 2.5, pd.NA], dtype=object, name="score")
+        pd.testing.assert_series_equal(result["score"], expected)
+
+    @pytest.mark.parametrize("replacement", ["2.5", "N/A", ""])
+    def test_no_match_preserves_dtype(self, component_class, output_method, replacement):
+        original = pd.Series([10, 20, pd.NA], dtype="Int64", name="score")
+        component = component_class(
+            df=DataFrame(pd.DataFrame({"score": original.copy()})),
+            operation=[{"name": "Replace Value"}],
+            column_name="score",
+            replace_value="99",
+            replacement_value=replacement,
+        )
+
+        result = getattr(component, output_method)()
+
+        pd.testing.assert_series_equal(result["score"], original)
 
 
 if __name__ == "__main__":
