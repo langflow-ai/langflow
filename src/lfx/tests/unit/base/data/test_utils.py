@@ -1,6 +1,8 @@
 from unittest.mock import Mock, patch
 
-from lfx.base.data.utils import parse_text_file_to_data, read_text_file
+import pytest
+from lfx.base.data.utils import parse_text_file_to_data, read_text_file, read_text_file_async
+from lfx.services.deps import get_settings_service
 
 
 class TestReadTextFile:
@@ -51,6 +53,69 @@ class TestReadTextFile:
 
         chain = _detect_encoding_with_fallbacks("中文测试文件内容\n".encode("gb18030"))
         assert chain.index("gb18030") < chain.index("cp1252")
+
+    @pytest.mark.parametrize("reader", ["sync", "async"])
+    @pytest.mark.parametrize(
+        ("content", "encoding"),
+        [
+            ("😀", "gb18030"),
+            ("Hello 😀\n", "gb18030"),
+            ("He said “hello” and it costs 5€ – really.\n", "cp1252"),  # noqa: RUF001
+            ("It’s fine\n", "cp1252"),  # noqa: RUF001
+            ("Hello 😀\n", "utf-8"),
+        ],
+    )
+    async def test_text_encoding_round_trip(self, tmp_path, monkeypatch, reader, content, encoding):
+        """Both readers preserve GB18030 four-byte characters and Windows punctuation."""
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "storage_type", "local")
+        monkeypatch.setattr(settings, "restrict_local_file_access", False)
+        f = tmp_path / "encoded.txt"
+        f.write_bytes(content.encode(encoding))
+
+        result = await read_text_file_async(str(f)) if reader == "async" else read_text_file(str(f))
+
+        assert result == content
+
+    @pytest.mark.parametrize("reader", ["sync", "async"])
+    @pytest.mark.parametrize("detected_encoding", ["Windows-1252", "Windows-1254", "MacRoman"])
+    @pytest.mark.parametrize(
+        ("content", "encoding"),
+        [("Hello 😀\n", "gb18030"), ("It’s fine: „9„9\n", "cp1252")],  # noqa: RUF001
+    )
+    async def test_four_byte_encoding_with_ambiguous_detection(
+        self, tmp_path, monkeypatch, reader, detected_encoding, content, encoding
+    ):
+        """Invalid GB18030 patterns still fall back to Windows-1252 punctuation."""
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "storage_type", "local")
+        monkeypatch.setattr(settings, "restrict_local_file_access", False)
+        f = tmp_path / "ambiguous.txt"
+        f.write_bytes(content.encode(encoding))
+
+        with patch(
+            "lfx.base.data.utils.chardet.detect", return_value={"encoding": detected_encoding, "confidence": 0.1}
+        ):
+            result = await read_text_file_async(str(f)) if reader == "async" else read_text_file(str(f))
+
+        assert result == content
+
+    @pytest.mark.parametrize("reader", ["sync", "async"])
+    async def test_gb18030_sequence_at_sample_boundary(self, tmp_path, monkeypatch, reader):
+        """Detection must not truncate a four-byte sequence into a cp1252 guess."""
+        from lfx.base.data.utils import _CHARDET_SAMPLE_BYTES
+
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "storage_type", "local")
+        monkeypatch.setattr(settings, "restrict_local_file_access", False)
+        content = "a" * (_CHARDET_SAMPLE_BYTES - 1) + "😀"
+        f = tmp_path / "boundary.txt"
+        f.write_bytes(content.encode("gb18030"))
+
+        with patch("lfx.base.data.utils.chardet.detect", return_value={"encoding": "Windows-1252", "confidence": 0.1}):
+            result = await read_text_file_async(str(f)) if reader == "async" else read_text_file(str(f))
+
+        assert result == content
 
     def test_chardet_returns_none(self, tmp_path):
         """read_text_file should not crash when chardet returns None encoding."""
