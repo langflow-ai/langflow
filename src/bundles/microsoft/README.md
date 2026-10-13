@@ -32,7 +32,7 @@ required scopes.
 Every component takes a portable connection handle (`microsoft/<name>`) and resolves it
 through the host's connection resolver. See
 [Configure connection OAuth](https://docs.langflow.org/connection-oauth) and
-[Register a Microsoft Entra application](https://docs.langflow.org/entra-app-registration).
+[Configure Langflow for Microsoft Entra](https://docs.langflow.org/entra-app-registration).
 
 ## Listing and download limits
 
