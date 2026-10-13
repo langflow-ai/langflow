@@ -120,6 +120,8 @@ For more information, see [Configure how users consent to applications](https://
 | SharePoint/OneDrive: List Items | `Files.Read` |
 | SharePoint/OneDrive: Fetch Item | `Files.Read` |
 
+The Fetch Item action also requires `Files.Read.All` when you supply a **Drive ID**, and `Sites.Read.All` when you supply a **Site ID**.
+
 Include `offline_access` in registration and in `scopes`. Without `offline_access`, Entra doesn't issue a refresh token, so the connection stops working after about an hour.
 A refresh token that isn't used for 90 days expires, and the user has to reconnect Langflow.
 For more information, see [Refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens).
