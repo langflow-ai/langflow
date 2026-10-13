@@ -55,6 +55,25 @@ class TestFileComponentFrontendMetadata:
         assert path_template["fileTypes"][:3] == ["csv", "json", "pdf"]
         assert "zip" in path_template["fileTypes"]
 
+    def test_force_ocr_is_only_shown_for_standard_advanced_parser(self):
+        component = FileComponent()
+        config = {
+            "advanced_mode": {"show": True, "value": False},
+            "pipeline": {"show": False, "value": "standard"},
+            "ocr_engine": {"show": False, "value": "easyocr"},
+            "force_ocr": {"show": False, "value": False},
+        }
+
+        component.update_build_config(config, field_value=True, field_name="advanced_mode")
+        assert config["force_ocr"]["show"] is True
+
+        component.update_build_config(config, "vlm", "pipeline")
+        assert config["force_ocr"] == {"show": False, "value": False}
+
+        config["pipeline"]["value"] = "vlm"
+        component.update_build_config(config, field_value=True, field_name="advanced_mode")
+        assert config["force_ocr"]["show"] is False
+
 
 class TestFileComponentDynamicOutputs:
     def test_update_outputs_single_csv_file(self):
