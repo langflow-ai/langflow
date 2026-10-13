@@ -22,6 +22,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from lfx.log import logger
 from lfx.observability import execution_protocol
 from lfx.schema.schema import InputValueRequest
+from lfx.services.deps import session_scope_readonly
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
@@ -32,7 +33,7 @@ from sqlmodel import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 from websockets.asyncio.client import ClientConnection
 
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession, release_db_transaction
 from langflow.api.v1.chat import build_flow_and_stream
 from langflow.api.v1.flows_helpers import _read_flow
 from langflow.memory import aadd_messagetables
@@ -560,7 +561,7 @@ async def _get_authorized_voice_flow(flow_id: str, current_user: CurrentActiveUs
     return flow
 
 
-async def get_or_create_elevenlabs_client(user_id=None, session=None):
+async def get_or_create_elevenlabs_client(user_id=None):
     """Build an ElevenLabs client scoped to the requesting user.
 
     Security: this previously delegated to a process-global singleton
@@ -572,16 +573,19 @@ async def get_or_create_elevenlabs_client(user_id=None, session=None):
     Build a fresh client from the requesting user's own key on each call and never
     cache it on a class/module global.
     """
-    if not (user_id and session):
+    if not user_id:
         return None
     variable_service = get_variable_service()
     try:
-        api_key = await variable_service.get_variable(
-            user_id=user_id,
-            name="ELEVENLABS_API_KEY",
-            field="elevenlabs_api_key",
-            session=session,
-        )
+        # A websocket's session lives for the whole audio stream. Close this
+        # credential read's transaction before starting provider work.
+        async with session_scope_readonly() as session:
+            api_key = await variable_service.get_variable(
+                user_id=user_id,
+                name="ELEVENLABS_API_KEY",
+                field="elevenlabs_api_key",
+                session=session,
+            )
         api_key = secret_value_to_str(api_key)
     except (InvalidToken, ValueError) as e:
         await logger.aerror(f"Error with ElevenLabs API key: {e}")
@@ -820,6 +824,9 @@ async def flow_as_tool_websocket(
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
         if current_user is None or openai_key is None:
             return
+        # Release authentication reads before the long-lived audio stream.
+        # Later credential reads manage their own short session scopes.
+        await release_db_transaction(session)
 
         # Resolve voice config only after authentication and flow authorization,
         # scoped to this user.
@@ -943,7 +950,7 @@ async def flow_as_tool_websocket(
                 then run the ElevenLabs TTS call (which expects a sync generator) in a separate thread.
                 """
                 try:
-                    elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
+                    elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id)
                     if elevenlabs_client is None:
                         return
 
@@ -1293,6 +1300,9 @@ async def flow_tts_websocket(
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
         if current_user is None or openai_key is None:
             return
+        # Release authentication reads before the long-lived audio stream.
+        # Later credential reads manage their own short session scopes.
+        await release_db_transaction(session)
         url = "wss://api.openai.com/v1/realtime?intent=transcription"
         headers = {
             "Authorization": f"Bearer {openai_key}",
@@ -1371,9 +1381,7 @@ async def flow_tts_websocket(
                                             result = text
                                 if result != "":
                                     if tts_config.use_elevenlabs:
-                                        elevenlabs_client = await get_or_create_elevenlabs_client(
-                                            current_user.id, session
-                                        )
+                                        elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id)
                                         if elevenlabs_client is None:
                                             return
                                         audio_stream = elevenlabs_client.generate(
@@ -1449,7 +1457,8 @@ async def get_elevenlabs_voice_ids(
             voice_user_id=current_user.id,
         )
         # Get or create the ElevenLabs client
-        elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
+        await release_db_transaction(session)
+        elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id)
         if elevenlabs_client is None:
             return {"error": "ElevenLabs API key not found or invalid"}
 

@@ -28,6 +28,16 @@ router = APIRouter(prefix="/knowledge-base-storage", tags=["Knowledge Base Upgra
 
 _GUIDANCE = {
     "maintenance_required": "Check storage access and free disk space, then retry. Your original data is preserved.",
+    "legacy_source_missing": (
+        "No directory from the previous version could be tied to this base. If its owner was renamed, "
+        "move its directory to <owner's current username>/<base name> in the knowledge base directory, then retry."
+    ),
+    "legacy_source_ambiguous": (
+        "More than one directory from the previous version could hold this base, or another base may hold its "
+        "directory. Leave only its own directory at <owner's current username>/<base name>, move any other copy "
+        "out of the knowledge base directory, detach a base of the same name whose data is gone, then retry. "
+        "Your original data is preserved."
+    ),
     "automatic_upgrade_disabled": (
         "Enable LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE and restart Langflow to upgrade local data."
     ),

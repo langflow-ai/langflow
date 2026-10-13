@@ -115,9 +115,9 @@ jest.mock("@/controllers/API/queries/messages/use-delete-sessions", () => ({
 // an old conversation.
 const refetchedSessions = ["test-flow-id", "older-session", "oldest-session"];
 const sessionsQueryResult = {
-  data: { sessions: refetchedSessions },
+  data: refetchedSessions,
   isLoading: false,
-  refetch: jest.fn(async () => ({ data: { sessions: refetchedSessions } })),
+  refetch: jest.fn(async () => ({ data: refetchedSessions })),
 };
 jest.mock(
   "@/controllers/API/queries/messages/use-get-sessions-from-flow",

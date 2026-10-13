@@ -174,6 +174,50 @@ async def test_get_shared_sessions_returns_user_sessions(client: AsyncClient, lo
 
 
 @pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize(
+    ("params", "expected_range"),
+    [
+        ({}, range(249, 149, -1)),
+        ({"limit": 1000}, range(249, 49, -1)),
+        ({"limit": 10, "offset": 100}, range(149, 139, -1)),
+    ],
+    ids=["default_cap", "clamped_to_max", "offset"],
+)
+async def test_get_shared_sessions_is_bounded_and_newest_first(
+    client: AsyncClient, logged_in_headers, active_user, params, expected_range
+):
+    """Shared session lists are capped, ordered by latest message and pageable (issue #15463)."""
+    source_flow_id = uuid.uuid4()
+    virtual_flow_id = compute_virtual_flow_id(active_user.id, source_flow_id, principal_type="user")
+    base_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    async with session_scope() as session:
+        session.add_all(
+            MessageTable(
+                text="m",
+                sender="User",
+                sender_name="User",
+                session_id=f"s-{i:03d}",
+                flow_id=virtual_flow_id,
+                category="message",
+                files=[],
+                properties={},
+                content_blocks=[],
+                timestamp=base_timestamp + timedelta(minutes=i),
+            )
+            for i in range(250)
+        )
+
+    response = await client.get(
+        "api/v1/monitor/messages/shared/sessions",
+        headers=logged_in_headers,
+        params={"source_flow_id": str(source_flow_id), **params},
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json() == [f"s-{i:03d}" for i in expected_range]
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_get_shared_messages_returns_messages(client: AsyncClient, logged_in_headers, shared_messages_setup):
     source_flow_id = shared_messages_setup["source_flow_id"]
     response = await client.get(

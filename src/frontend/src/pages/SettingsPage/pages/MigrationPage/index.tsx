@@ -1,5 +1,5 @@
 import type { AxiosError } from "axios";
-import { Fragment, type ReactNode, useEffect, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -18,8 +18,15 @@ import { downloadJson } from "@/pages/FlowPage/components/TraceComponent/traceVi
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
+import { BackupStep } from "./BackupStep";
 import { CheckStep } from "./CheckStep";
-import { formatTime, PARTS } from "./catalog";
+import { CheckTargetStep } from "./CheckTargetStep";
+import { CopyStep } from "./CopyStep";
+import { copyCounts, formatTime, isCopy, PARTS, targetCheck } from "./catalog";
+import { DestinationsStep } from "./DestinationsStep";
+import { PausedBanner, PauseStep, Recovery } from "./PauseStep";
+import { SecretKeyStep } from "./SecretKeyStep";
+import { MoveComplete, StartStep } from "./StartStep";
 
 const MARKER_ICONS: Partial<Record<MigrationStepState["state"], string>> = {
   locked: "Lock",
@@ -96,7 +103,9 @@ export default function MigrationPage() {
   }
 
   return (
-    <div className="flex w-full flex-col gap-6 pb-8">
+    // Positioned, so what only a screen reader hears stays inside the settings scroll area.
+    // Left to place itself against the document, it made the document taller than the window.
+    <div className="relative flex w-full flex-col gap-6 pb-8">
       <div className="flex flex-col">
         <h2
           className="flex items-center text-lg font-semibold tracking-tight"
@@ -122,7 +131,8 @@ function Migration({ migration }: { migration: MigrationState }) {
   const { instance } = migration;
   const stateOf = (id: MigrationStepState["id"]) =>
     migration.steps?.find((step) => step.id === id) ?? { id, ...NOT_LISTED };
-  const run = migration.record.steps.check_source;
+  const { record } = migration;
+  const run = record.steps.check_source;
 
   const facts = [
     {
@@ -155,9 +165,20 @@ function Migration({ migration }: { migration: MigrationState }) {
     },
   ];
 
+  // What has to be ready elsewhere, each thing only when this instance's move calls for it.
+  const needs = [
+    instance.database.type === "sqlite" && "database",
+    instance.knowledge_bases.local && "vectors",
+    instance.files.local && "bucket",
+    "access",
+    "backup",
+    "window",
+  ].filter(Boolean);
+
   let number = 0;
   return (
     <>
+      <PausedBanner migration={migration} />
       <section className="overflow-hidden rounded-lg border">
         <div className="flex flex-col gap-3 p-4">
           <h3 className="text-sm font-medium">
@@ -192,6 +213,24 @@ function Migration({ migration }: { migration: MigrationState }) {
         </p>
       </section>
 
+      <details
+        // Read before the first step. Once the check is done it closes, and stays one click away.
+        open={stateOf("check_source").state !== "done"}
+        className="rounded-lg border p-4 text-sm"
+      >
+        <summary className="cursor-pointer font-medium">
+          {t("settings.migration.need.title")}
+        </summary>
+        <ul
+          className="mt-2 list-disc pl-5 text-muted-foreground"
+          data-testid="migration-needs"
+        >
+          {needs.map((need) => (
+            <li key={String(need)}>{t(`settings.migration.need.${need}`)}</li>
+          ))}
+        </ul>
+      </details>
+
       {PARTS.map((part, index) => (
         <Fragment key={part.slug}>
           {index === PARTS.length - 1 ? (
@@ -220,6 +259,9 @@ function Migration({ migration }: { migration: MigrationState }) {
                 number += 1;
                 const state = stateOf(step.id);
                 const isCheck = step.id === "check_source";
+                const copy = isCopy(step.id)
+                  ? record.steps[step.id]
+                  : undefined;
                 let summary: ReactNode = t(
                   `settings.migration.step.${step.slug}.purpose`,
                 );
@@ -233,6 +275,167 @@ function Migration({ migration }: { migration: MigrationState }) {
                   summary = t("settings.migration.check.doneSummary", {
                     time: formatTime(run?.finished_at, i18n.language),
                   });
+                } else if (
+                  step.id === "connect_target" &&
+                  state.state === "done"
+                ) {
+                  const saved = record.destinations;
+                  summary = [
+                    saved?.database &&
+                      t("settings.migration.dest.done.db", {
+                        location: saved.database.location,
+                      }),
+                    saved?.vectors?.kind === "pgvector" &&
+                      t("settings.migration.dest.done.kb.pgvector"),
+                    saved?.files &&
+                      t("settings.migration.dest.done.files", {
+                        bucket: saved.files.bucket,
+                      }),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ");
+                } else if (step.id === "secret_key" && state.state === "done") {
+                  summary = t("settings.migration.key.done", {
+                    time: formatTime(
+                      record.secret_key?.verified_at,
+                      i18n.language,
+                    ),
+                    user: record.secret_key?.verified_by,
+                  });
+                } else if (step.id === "pause" && state.state === "done") {
+                  summary = t("settings.migration.pause.done", {
+                    time: formatTime(record.pause?.frozen_at, i18n.language),
+                    user: record.pause?.frozen_by,
+                  });
+                } else if (step.id === "backup" && state.state === "done") {
+                  summary = t("settings.migration.backup.done", {
+                    time: formatTime(
+                      record.backup?.confirmed_at,
+                      i18n.language,
+                    ),
+                    location: record.backup?.location,
+                  });
+                } else if (
+                  step.id === "start_target" &&
+                  state.state === "done"
+                ) {
+                  summary = t("settings.migration.start.done", {
+                    time: formatTime(
+                      record.steps.start_target?.confirmed_at,
+                      i18n.language,
+                    ),
+                    user: record.steps.start_target?.confirmed_by,
+                  });
+                } else if (
+                  step.id === "check_target" &&
+                  state.state === "done"
+                ) {
+                  const differed =
+                    record.steps.check_target?.accepted_differences ?? [];
+                  summary = t(
+                    differed.length
+                      ? "settings.migration.checkTarget.doneAccepted"
+                      : "settings.migration.checkTarget.done",
+                    {
+                      time: formatTime(
+                        record.steps.check_target?.finished_at ?? undefined,
+                        i18n.language,
+                      ),
+                      user: record.steps.check_target?.confirmed_by,
+                      names: differed
+                        .map((name) => {
+                          const known = targetCheck(name);
+                          return known
+                            ? t(`settings.migration.check.${known.slug}.title`)
+                            : name;
+                        })
+                        .join(", "),
+                    },
+                  );
+                } else if (
+                  step.id === "copy_database" &&
+                  state.state === "done"
+                ) {
+                  // Only CASCADE rows are left out. SET NULL rows are copied with the key cleared.
+                  const left = (copy?.report?.orphans ?? [])
+                    .filter((orphan) => orphan.ondelete === "CASCADE")
+                    .reduce((total, orphan) => total + orphan.rows, 0);
+                  summary = t("settings.migration.copyDb.done", {
+                    tables: copy?.report?.tables_copied?.toLocaleString(
+                      i18n.language,
+                    ),
+                    rows: copy?.report?.rows_copied?.toLocaleString(
+                      i18n.language,
+                    ),
+                  });
+                  if (left)
+                    summary += ` ${t("settings.migration.copyDb.left", { count: left.toLocaleString(i18n.language) })}`;
+                } else if (copy?.report?.counts && state.state === "done") {
+                  const { copied, skipped, failed } = copyCounts(
+                    copy.report.counts,
+                  );
+                  summary = t("settings.migration.copy.done", {
+                    done: (copied + skipped).toLocaleString(i18n.language),
+                    total: (copied + skipped + failed).toLocaleString(
+                      i18n.language,
+                    ),
+                  });
+                }
+                // A step the admin has reached, and that this server can do.
+                const live =
+                  state.reason !== "not_available" &&
+                  ["current", "blocked", "done"].includes(state.state);
+                // Once done, a step with nothing left to change says all there is to say in its row.
+                const unfinished = live && state.state !== "done";
+                let body: ReactNode = null;
+                if (isCheck) {
+                  body = <CheckStep migration={migration} />;
+                } else if (live && step.id === "connect_target") {
+                  body = (
+                    <DestinationsStep migration={migration} state={state} />
+                  );
+                } else if (unfinished && step.id === "secret_key") {
+                  body = <SecretKeyStep migration={migration} state={state} />;
+                } else if (unfinished && step.id === "pause") {
+                  body = <PauseStep migration={migration} state={state} />;
+                } else if (unfinished && step.id === "backup") {
+                  body = <BackupStep migration={migration} />;
+                } else if (
+                  unfinished &&
+                  (step.id === "start_target" || step.id === "check_target") &&
+                  // The check of the copy, while it runs, is still followed and can be stopped.
+                  !(
+                    step.id === "check_target" &&
+                    record.steps.check_target?.status === "running"
+                  ) &&
+                  // A step above opened again, for example after the destination changed. The server takes
+                  // neither of the last two steps until it is finished, so the page offers neither.
+                  !migration.steps
+                    .slice(
+                      0,
+                      migration.steps.findIndex(({ id }) => id === step.id),
+                    )
+                    .every((earlier) =>
+                      ["done", "skipped"].includes(earlier.state),
+                    )
+                ) {
+                  body = (
+                    <p className="text-sm text-muted-foreground">
+                      {t("settings.migration.notStarted")}
+                    </p>
+                  );
+                } else if (unfinished && step.id === "start_target") {
+                  body = <StartStep migration={migration} />;
+                } else if (unfinished && step.id === "check_target") {
+                  body = <CheckTargetStep migration={migration} />;
+                } else if (live && isCopy(step.id)) {
+                  body = (
+                    <CopyStep
+                      migration={migration}
+                      state={state}
+                      step={step.id}
+                    />
+                  );
                 }
                 return (
                   <StepItem
@@ -241,10 +444,17 @@ function Migration({ migration }: { migration: MigrationState }) {
                     title={t(`settings.migration.step.${step.slug}.title`)}
                     summary={summary}
                     state={state}
-                    running={isCheck && run?.status === "running"}
-                    expandable={isCheck && state.state === "done"}
+                    // The pause waits on the same run while it is checked again.
+                    running={
+                      copy?.status === "running" ||
+                      (step.id === "check_target" &&
+                        record.steps.check_target?.status === "running") ||
+                      (run?.status === "running" &&
+                        (isCheck || state.reason === "recheck_pending"))
+                    }
+                    expandable={Boolean(body) && state.state === "done"}
                   >
-                    {isCheck && <CheckStep migration={migration} />}
+                    {body}
                   </StepItem>
                 );
               })}
@@ -253,6 +463,10 @@ function Migration({ migration }: { migration: MigrationState }) {
         </Fragment>
       ))}
 
+      <MoveComplete migration={migration} />
+      {stateOf("pause").reason !== "not_available" && (
+        <Recovery migration={migration} />
+      )}
       <Button
         variant="link"
         className="h-auto w-fit whitespace-normal px-0 text-left"
@@ -292,8 +506,16 @@ function StepItem({
   }, [frontier]);
   const locked = state.state === "locked";
   const bodyId = `migration-step-${state.id}-body`;
-  // The admin has reached this step, and either the server or this page can't do it yet.
-  const comingSoon = frontier && !children;
+  // The server can't do this step yet, or the admin has reached one this page has no form for.
+  const comingSoon =
+    state.reason === "not_available" || (frontier && !children);
+  // When the step before this one finishes, keyboard and screen reader users land on what to do next.
+  const heading = useRef<HTMLHeadingElement>(null);
+  const wasLocked = useRef(locked);
+  useEffect(() => {
+    if (wasLocked.current && frontier && !comingSoon) heading.current?.focus();
+    wasLocked.current = locked;
+  }, [locked, frontier, comingSoon]);
   return (
     <li
       aria-current={frontier ? "step" : undefined}
@@ -304,6 +526,8 @@ function StepItem({
         <Marker number={number} state={state.state} running={running} />
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h4
+            ref={heading}
+            tabIndex={-1}
             className={cn(
               "text-sm font-medium",
               locked && "text-muted-foreground",
@@ -328,9 +552,10 @@ function StepItem({
               title
             )}
           </h4>
-          <span className="flex items-center gap-2 text-sm text-muted-foreground">
+          {/* A summary can hold an address with nowhere to break, which has to fit a phone. */}
+          <span className="flex items-center gap-2 text-sm text-muted-foreground [overflow-wrap:anywhere]">
             {summary}
-            {locked && (
+            {locked && !comingSoon && (
               <span className="sr-only">
                 {t("settings.migration.notStarted")}
               </span>
@@ -378,7 +603,9 @@ function Marker({
         state === "current" && !running
           ? "bg-primary text-primary-foreground"
           : "border text-muted-foreground",
-        state === "blocked" && "border-destructive text-destructive",
+        state === "blocked" &&
+          !running &&
+          "border-destructive text-destructive",
         state === "done" && "text-accent-emerald-foreground",
       )}
     >

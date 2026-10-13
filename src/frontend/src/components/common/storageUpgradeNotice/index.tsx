@@ -35,6 +35,8 @@ const GUIDANCE_KEYS: Record<string, string> = {
   validation_failed: "storageUpgrade.validationFailed",
   interrupted: "storageUpgrade.interrupted",
   automatic_reader_limit: "storageUpgrade.readerLimit",
+  legacy_source_missing: "storageUpgrade.sourceMissing",
+  legacy_source_ambiguous: "storageUpgrade.sourceAmbiguous",
 };
 
 function UpgradeCard({
