@@ -384,7 +384,7 @@ These settings control background runs of the v2 workflows API. For details, see
 | `LANGFLOW_BACKGROUND_HEARTBEAT_INTERVAL_S` | `15` | How often in seconds a running job refreshes its heartbeat. |
 | `LANGFLOW_BACKGROUND_WATCHDOG_INTERVAL_S` | `15` | With the scaled backend, how often in seconds each worker checks for jobs whose worker has died. |
 | `LANGFLOW_BACKGROUND_CLAIM_CANDIDATES` | `5` | With the scaled backend, how many of the oldest queued jobs a worker considers on each claim attempt. If workers sit idle while jobs are queued, raise it to roughly your worker count. |
-| `LANGFLOW_BACKGROUND_RETENTION_DAYS` | `0` | Days to keep finished runs, with their events, signals, and checkpoints, before deleting them. `0` keeps every row forever. This covers every finished run in the job store, not only background runs. Live runs are never deleted at any age. See [`LANGFLOW_BACKGROUND_RETENTION_DAYS`](../Develop/environment-variables). |
+| `LANGFLOW_BACKGROUND_RETENTION_DAYS` | `0` | Days to keep finished runs, with their events, signals, and checkpoints, before deleting them. `0` keeps every row forever. This covers every finished run in the job store, not only background runs. Live runs are never deleted at any age. See [`LANGFLOW_BACKGROUND_RETENTION_DAYS`](../Develop/environment-variables.mdx). |
 
 ## Monitor the job queue
 

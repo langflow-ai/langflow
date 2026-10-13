@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -20,12 +21,42 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 
+# Env vars named like the header they become. ``lfx-mcp`` is a stdio server, so a
+# client config can only reach it through ``env`` -- there is no ``headers`` field for
+# a subprocess -- and this is the only channel for per-request global variables.
+GLOBAL_VAR_ENV_PREFIX = "X-LANGFLOW-GLOBAL-VAR-"
+_HEADER_NAME = re.compile(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+")
+_HEADER_VALUE = re.compile(r"[\x21-\x7e](?:[\x20-\x7e\t]*[\x21-\x7e])?")
+
+
+def _global_var_headers() -> dict[str, str]:
+    """Read ``X-LANGFLOW-GLOBAL-VAR-*`` entries out of the process environment."""
+    headers = {}
+    for name, value in os.environ.items():
+        if not name.upper().startswith(GLOBAL_VAR_ENV_PREFIX) or not value:
+            continue
+        # Validate before HTTPX/h11 serialize these values: protocol errors can
+        # otherwise include the entire header value, which may be a credential.
+        if len(name) == len(GLOBAL_VAR_ENV_PREFIX) or not _HEADER_NAME.fullmatch(name):
+            msg = "Global variable override names must include a variable name and form valid HTTP headers"
+            raise ValueError(msg)
+        if not _HEADER_VALUE.fullmatch(value):
+            msg = "Global variable override values must be valid ASCII HTTP header values"
+            raise ValueError(msg)
+        headers[name] = value
+    return headers
+
+
 class LangflowClient:
     """Async HTTP client for Langflow's REST API.
 
     Auth sends both headers on every request:
     - Authorization: Bearer <access_token or api_key>
     - x-api-key: <api_key> (when available)
+
+    Any ``X-LANGFLOW-GLOBAL-VAR-*`` environment variable is forwarded as the header of
+    the same name, so a flow run through ``lfx-mcp`` resolves per-request global
+    variables exactly as a direct ``POST /api/v1/run`` carrying those headers would.
 
     Uses a persistent httpx.AsyncClient for connection pooling.
     """
@@ -35,18 +66,39 @@ class LangflowClient:
         server_url: str | None = None,
         api_key: str | None = None,
         access_token: str | None = None,
+        *,
+        use_env_api_key: bool = True,
     ):
         self.server_url = (server_url or os.environ.get("LANGFLOW_SERVER_URL", "http://localhost:7860")).rstrip("/")
-        self.api_key = api_key or os.environ.get("LANGFLOW_API_KEY")
+        # HTTP mounts must not substitute process credentials for their caller.
+        self.api_key = api_key or (os.environ.get("LANGFLOW_API_KEY") if use_env_api_key else None)
         self.access_token = access_token
+        # Keep environment-based configuration consistent for this client's lifetime.
+        self.global_var_headers = _global_var_headers()
         self._http: httpx.AsyncClient | None = None
         self._lock = asyncio.Lock()
 
     async def _client(self) -> httpx.AsyncClient:
         async with self._lock:
             if self._http is None or self._http.is_closed:
-                self._http = httpx.AsyncClient(follow_redirects=True)
+                self._http = httpx.AsyncClient(
+                    follow_redirects=True, event_hooks={"request": [self._check_request_origin]}
+                )
             return self._http
+
+    async def _check_request_origin(self, request: httpx.Request) -> None:
+        """Keep environment overrides on the configured server's origin."""
+        if not self.global_var_headers:
+            return
+        server = httpx.URL(self.server_url)
+        defaults = {"http": 80, "https": 443}
+        server_origin = (server.scheme, server.host, server.port or defaults.get(server.scheme))
+        request_origin = (request.url.scheme, request.url.host, request.url.port or defaults.get(request.url.scheme))
+        if request_origin != server_origin:
+            # HTTPX strips Authorization across origins, but retains custom
+            # headers, including global variables containing provider keys.
+            msg = "Refusing to forward global variable overrides outside the Langflow server origin"
+            raise RuntimeError(msg)
 
     async def close(self) -> None:
         """Close the underlying HTTP client."""
@@ -60,6 +112,9 @@ class LangflowClient:
             headers["Authorization"] = f"Bearer {self.access_token}"
         if self.api_key:
             headers["x-api-key"] = self.api_key
+        # The prefix is the whole allowlist, so this cannot collide with the auth
+        # headers above or leak anything else out of the environment.
+        headers.update(self.global_var_headers)
         return headers
 
     def _url(self, path: str) -> str:

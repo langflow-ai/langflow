@@ -122,3 +122,20 @@ async def test_anonymous_public_policy_error_stream_hides_policy_key_and_traceba
     assert policy_key not in events.text
     assert "Traceback" not in events.text
     assert "/lfx/" not in events.text
+
+
+def test_shared_vertex_event_hides_restored_credential_params() -> None:
+    """The raw V1 end_vertex payload must not echo the owner key used at runtime."""
+    from langflow.api.build import _vertex_build_data_for_event
+
+    response = SimpleNamespace(
+        model_dump_json=lambda: json.dumps(
+            {"params": {"api_key": "owner-secret"}, "data": {"results": "visible-output"}}  # pragma: allowlist secret
+        )
+    )
+
+    shared_event = _vertex_build_data_for_event(response, redact_build_params=True)
+    owner_event = _vertex_build_data_for_event(response, redact_build_params=False)
+
+    assert shared_event == {"params": None, "data": {"results": "visible-output"}}
+    assert owner_event["params"]["api_key"] == "owner-secret"  # pragma: allowlist secret

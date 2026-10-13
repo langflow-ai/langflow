@@ -229,6 +229,76 @@ async def test_build_flow_write_holder_may_override_someone_elses_flow(patch_bui
 
 
 @pytest.mark.asyncio
+async def test_build_flow_restores_private_shared_canvas_without_echoing_params(patch_build_flow, monkeypatch):
+    """A shared writer's V1 graph runs with stored keys and hides raw vertex params."""
+    from langflow.api.v1 import chat as chat_module
+    from langflow.api.v1.schemas import FlowDataRequest
+    from langflow.services.authorization import flow_data_override
+    from langflow.utils.flow_secrets import strip_secret_field_values
+
+    async def _allow_write(*_args, **_kwargs):
+        return None
+
+    async def _allow_inline(_data, *, is_superuser):
+        assert is_superuser is False
+
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", _allow_write)
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", _allow_inline)
+    stored = {
+        "nodes": [
+            {
+                "id": "model-node",
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {"name": "api_key", "password": True, "value": "owner-secret"},
+                            "model_name": {"name": "model_name", "value": "original"},
+                            "bing_search_url": {
+                                "name": "bing_search_url",
+                                "value": "https://provider.example/search",
+                            },
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
+    user = _make_user()
+    flow = _make_flow(owner_id=uuid4(), data=stored)
+    patch_build_flow["read_flow"] = flow
+    submitted = strip_secret_field_values(stored)
+    submitted["nodes"][0]["position"] = {"x": 20, "y": 30}
+
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=user,
+        queue_service=_make_queue_service(),
+        data=FlowDataRequest.model_validate(submitted),
+    )
+
+    assert result == {"job_id": "fake-job-id"}
+    dispatched = patch_build_flow["start_kwargs"]
+    template = dispatched["data"].nodes[0]["data"]["node"]["template"]
+    assert template["api_key"]["value"] == "owner-secret"
+    assert dispatched["data"].nodes[0]["position"] == {"x": 20, "y": 30}
+    assert submitted["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] is None
+    assert dispatched["redact_build_params"] is True
+
+    submitted["nodes"][0]["data"]["node"]["template"]["bing_search_url"]["value"] = "https://attacker.example/collect"
+    with pytest.raises(HTTPException) as error:
+        await chat_module.build_flow(
+            flow_id=flow.id,
+            background_tasks=None,
+            current_user=user,
+            queue_service=_make_queue_service(),
+            data=FlowDataRequest.model_validate(submitted),
+        )
+    assert error.value.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_build_flow_owner_can_override_flow_data(patch_build_flow, monkeypatch):
     """Owner may still pass flow data overrides in the build request."""
     from langflow.api.v1 import chat as chat_module

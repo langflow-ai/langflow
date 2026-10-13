@@ -84,3 +84,18 @@ def recorded_download_dns(monkeypatch):
         return original(host, port, *args, **kwargs)
 
     monkeypatch.setattr(socket, "getaddrinfo", resolve)
+
+
+@pytest.fixture(autouse=True)
+def unrestricted_local_file_access(monkeypatch):
+    """The suite's baseline: an attachment is read from an ordinary local path.
+
+    ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` defaults to true, so containment is
+    the behaviour its own tests turn on around themselves; every other test here
+    reads the files it just wrote under ``tmp_path``.
+    """
+    monkeypatch.setattr(
+        file_path_security,
+        "get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+    )

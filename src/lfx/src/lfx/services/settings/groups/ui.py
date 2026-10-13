@@ -8,7 +8,7 @@ class UiSettings(BaseModel):
 
     auto_saving: bool = True
     """If set to True, Langflow will auto save flows."""
-    auto_saving_interval: int = 2000
+    auto_saving_interval: int = 5000
     """The interval in ms at which Langflow will auto save flows.
 
     Every save rewrites the whole graph, so this is the window in which two

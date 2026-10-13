@@ -50,6 +50,24 @@ df -h / || true
 main_version=$(python3 -c 'import pathlib, tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')
 base_version=$(python3 -c 'import pathlib, tomllib; print(tomllib.loads(pathlib.Path("src/backend/base/pyproject.toml").read_text())["project"]["version"])')
 
+check_image_authentication() {
+  local image=$1 container_id
+  # Retain the image's AUTO_LOGIN default. Never override it in this test.
+  container_id=$("$runtime" run -d \
+    -e LANGFLOW_SUPERUSER_PASSWORD=ContainerAuthSmoke-2026! \
+    -e DO_NOT_TRACK=true \
+    -e LANGFLOW_SKIP_MCP_AUTO_INIT=true \
+    -e LANGFLOW_MODELS_DEV_REFRESH=false \
+    "$image")
+  "$runtime" cp scripts/ci/check_authentication.py "$container_id:/tmp/check_authentication.py"
+  if ! "$runtime" exec "$container_id" python /tmp/check_authentication.py; then
+    echo "Authentication smoke check failed for $image" >&2
+    "$runtime" logs "$container_id" || true
+    return 1
+  fi
+  "$runtime" rm -f "$container_id" >/dev/null
+}
+
 "$runtime" build -t langflowai/langflow:latest-dev \
   -f docker/build_and_push.Dockerfile .
 actual_main_version=$("$runtime" run --rm --entrypoint python langflowai/langflow:latest-dev \
@@ -58,6 +76,7 @@ actual_main_version=$("$runtime" run --rm --entrypoint python langflowai/langflo
   echo "Expected main version $main_version; got $actual_main_version" >&2
   exit 1
 }
+check_image_authentication langflowai/langflow:latest-dev
 
 "$runtime" build -t langflowai/langflow-backend:latest-dev \
   --build-arg LANGFLOW_IMAGE=langflowai/langflow:latest-dev \
@@ -68,6 +87,7 @@ actual_backend_version=$("$runtime" run --rm --entrypoint python langflowai/lang
   echo "Expected backend version $base_version; got $actual_backend_version" >&2
   exit 1
 }
+check_image_authentication langflowai/langflow-backend:latest-dev
 
 # The backend build must consume the just-built main image. Once both are
 # verified, release their layers before building the standalone base image.
@@ -97,26 +117,7 @@ assert not forbidden, f"extension distributions installed: {forbidden}"
 "$runtime" run --rm --entrypoint bash langflowai/langflow:base-latest-dev -c \
   'command -v langflow >/dev/null && ! command -v langflow-base >/dev/null'
 
-base_container=$("$runtime" run -d \
-  -e LANGFLOW_SUPERUSER_PASSWORD=BaseImageTest-2026! \
-  langflowai/langflow:base-latest-dev)
-base_healthy=false
-for _ in $(seq 1 60); do
-  if "$runtime" exec "$base_container" curl -fsS http://127.0.0.1:7860/health_check >/dev/null; then
-    base_healthy=true
-    break
-  fi
-  if [[ $("$runtime" inspect -f '{{.State.Running}}' "$base_container" 2>/dev/null) != true ]]; then
-    break
-  fi
-  sleep 2
-done
-if [[ "$base_healthy" != true ]]; then
-  echo "Base image did not become healthy." >&2
-  "$runtime" logs "$base_container" || true
-  exit 1
-fi
-"$runtime" rm -f "$base_container" >/dev/null
+check_image_authentication langflowai/langflow:base-latest-dev
 
 # Keep peak disk usage bounded on the 40 GB ARM runner.
 cleanup

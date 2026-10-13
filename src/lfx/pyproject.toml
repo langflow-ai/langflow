@@ -42,7 +42,7 @@ dependencies = [
     "emoji>=2.14.1,<3.0.0",
     "chardet>=7.3.0",
     "defusedxml>=0.7.1,<1.0.0",
-    "passlib>=1.7.4,<2.0.0",
+    "bcrypt>=4.3.0,<6.0.0",
     "pydantic-settings>=2.10.1,<3.0.0",
     "toml>=0.10.2,<1.0.0",
     "tomli>=2.2.1,<3.0.0",
@@ -53,11 +53,12 @@ dependencies = [
     "loguru>=0.7.3,<1.0.0",
     "langchain~=1.3.0",
     "langchain-classic~=1.0.7",
+    "sqlalchemy>=2.0.38,<2.1.0",
     "validators>=0.34.0,<1.0.0",
     "filelock>=3.20.1,<4.0.0",
     "pypdf>=6.16.1,<7.0.0",
     "cryptography>=50.0.0",
-    "pyjwt>=2.10.0,<3.0.0",
+    "pyjwt>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
     "ag-ui-protocol>=0.1.10",
     "langflow-sdk>=0.4.0",
     "markitdown>=0.1.4,<2.0.0",
@@ -75,6 +76,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Local vector storage uses a private, pinned SQLite runtime. Keep this extra
+# independent from the provider bundle collection and the application SQL driver.
+sqlite = ["apsw==3.53.4.0", "sqlite-vec==0.1.9"]
 # Opt-in hardware-isolated execution backend for the code-execution components
 # (LANGFLOW_SANDBOX_BACKEND=exec-sandbox, issue #12029). exec-sandbox requires
 # Python >= 3.12, so on 3.10/3.11 this extra installs nothing and the backend
@@ -111,7 +115,7 @@ otel = [
 #
 # Documented as a headless/serverless deployment footnote, not a
 # getting-started headline.  There is intentionally NO ``lfx[all]``.
-bundles = ["lfx-bundles[all]>=1.1.27,<2.0"]
+bundles = ["lfx-bundles[all]>=1.1.32,<2.0"]
 
 [project.scripts]
 lfx = "lfx.__main__:main"

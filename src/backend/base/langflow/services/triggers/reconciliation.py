@@ -31,16 +31,20 @@ from __future__ import annotations
 
 import json
 import re
+import secrets
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
+from sqlalchemy.exc import DBAPIError
 
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerSessionPolicy, TriggerState
 from langflow.services.triggers.constants import (
+    GOOGLE_SOURCE_KINDS,
     KIND_INBOUND_WEBHOOK,
     KIND_SLACK_MESSAGE,
     KIND_SLACK_REACTION,
+    MICROSOFT_SOURCE_KINDS,
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
 )
@@ -68,6 +72,12 @@ TRIGGER_COMPONENT_KINDS: dict[str, str] = {
 BUNDLE_TRIGGER_COMPONENT_KINDS: dict[tuple[str, str], str] = {
     ("slack", "SlackOnMessageTriggerComponent"): KIND_SLACK_MESSAGE,
     ("slack", "SlackOnReactionTriggerComponent"): KIND_SLACK_REACTION,
+    ("microsoft", "MicrosoftOnMailTriggerComponent"): "microsoft.mail",
+    ("microsoft", "MicrosoftOnCalendarTriggerComponent"): "microsoft.calendar",
+    ("microsoft", "MicrosoftOnFileTriggerComponent"): "microsoft.file",
+    ("google", "GoogleOnCalendarTriggerComponent"): "google.calendar",
+    ("google", "GoogleOnDriveTriggerComponent"): "google.drive",
+    ("google", "GoogleOnGmailTriggerComponent"): "google.gmail",
 }
 
 _BUNDLE_NODE_TYPE = re.compile(
@@ -76,6 +86,16 @@ _BUNDLE_NODE_TYPE = re.compile(
 
 #: Display names for provider kinds; core kinds derive theirs from the kind.
 _KIND_DISPLAY_NAMES = {KIND_SLACK_MESSAGE: "Slack: On Message", KIND_SLACK_REACTION: "Slack: On Reaction"}
+_KIND_DISPLAY_NAMES.update(
+    {
+        "microsoft.mail": "Outlook: On Message",
+        "microsoft.calendar": "Outlook: On Calendar Event",
+        "microsoft.file": "OneDrive or SharePoint: On File",
+        "google.calendar": "Google Calendar: On Event",
+        "google.drive": "Google Drive: On File",
+        "google.gmail": "Gmail: On Message",
+    }
+)
 
 _SLACK_MESSAGE_FIELDS = (
     "connection",
@@ -107,6 +127,20 @@ _CONFIG_FIELDS: dict[str, tuple[tuple[str, str, Any], ...]] = {
     # Defaults are ``None`` so the Slack normalizer, not this table, owns them.
     KIND_SLACK_MESSAGE: tuple((field, field, None) for field in _SLACK_MESSAGE_FIELDS),
     KIND_SLACK_REACTION: tuple((field, field, None) for field in _SLACK_REACTION_FIELDS),
+    **{
+        kind: tuple(
+            (field, field, None)
+            for field in (
+                "connection",
+                "calendar_id",
+                "site_id",
+                "pubsub_topic",
+                "pubsub_service_account",
+                "delivery_mode",
+            )
+        )
+        for kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS
+    },
 }
 
 
@@ -339,6 +373,17 @@ async def reconcile_flow_triggers(
         if kind in SLACK_TRIGGER_KINDS:
             provider = PROVIDER_SLACK
             config, connection_id, error = await _reconcile_slack(session, kind=kind, owner_id=owner_id, raw=raw_config)
+        elif kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS:
+            from langflow.services.triggers.source_arming import normalize_source_config, resolve_arming
+
+            provider = kind.split(".", 1)[0]
+            try:
+                config = normalize_source_config(kind, raw_config)
+                arming = await resolve_arming(session, kind=kind, owner_id=owner_id, config=config)
+                connection_id = arming.connection_id
+                config["mechanism_id"] = arming.mechanism_id
+            except ValueError as exc:
+                error = str(exc)
         elif kind == "schedule":
             try:
                 config = validate_schedule_config(config)
@@ -364,6 +409,9 @@ async def reconcile_flow_triggers(
                     provider=provider,
                     node_id=node_id,
                     connection_id=connection_id,
+                    public_id=secrets.token_urlsafe(24)
+                    if kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS
+                    else None,
                     config=config,
                     provider_state={},
                     state=TriggerState.PENDING.value,
@@ -375,6 +423,10 @@ async def reconcile_flow_triggers(
             )
             touched += 1
             continue
+        if kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS and not row.public_id:
+            row.public_id = secrets.token_urlsafe(24)
+            session.add(row)
+            touched += 1
         config_changed = row.config != config
         changed = config_changed or row.session_policy != session_policy
         if changed:
@@ -384,12 +436,18 @@ async def reconcile_flow_triggers(
             row.session_policy = session_policy
         moved = False
         if provider is not None:
-            from langflow.services.triggers.providers.slack.arming import bind_connection
-
             if row.provider != provider:
                 row.provider = provider
                 changed = True
-            moved = bind_connection(row, connection_id)
+            if kind in SLACK_TRIGGER_KINDS:
+                from langflow.services.triggers.providers.slack.arming import bind_connection
+
+                moved = bind_connection(row, connection_id)
+            else:
+                moved = row.connection_id != connection_id
+                if moved:
+                    row.connection_id = connection_id
+                    row.provider_state = {}
             changed = changed or moved
         # Evaluated on every save, not only when the config changed, so a row an
         # earlier save left in ``error`` with an already-valid config heals.
@@ -398,6 +456,18 @@ async def reconcile_flow_triggers(
         elif kind in SLACK_TRIGGER_KINDS:
             verdict = await _apply_slack_verdict(session, row, error=error, moved=moved, filters_changed=config_changed)
             changed = verdict or changed
+        elif kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS:
+            if row.state == TriggerState.ACTIVE.value and (error or config_changed or moved):
+                from langflow.services.triggers.subscriptions import revoke_for_trigger
+
+                await revoke_for_trigger(session, trigger_id=row.id)
+                row.state = TriggerState.PAUSED.value
+                row.last_error = error or "Source settings changed. Enable the trigger again to resubscribe."
+                row.provider_state = {}
+                changed = True
+            elif row.last_error != error and row.state != TriggerState.ACTIVE.value:
+                row.last_error = error
+                changed = True
         if changed:
             session.add(row)
             touched += 1
@@ -431,6 +501,7 @@ async def reconcile_flow_triggers_safely(
     flow_id: UUID,
     owner_id: UUID | None,
     flow_data: dict[str, Any] | None,
+    reraise_database_errors: bool = False,
 ) -> None:
     """Reconcile without ever failing the save that called it.
 
@@ -447,11 +518,24 @@ async def reconcile_flow_triggers_safely(
     (an autosave PATCH racing a PUT) can both see no row for a newly added
     trigger node and both insert ``(flow_id, node_id)``; the loser violates
     ``uq_trigger_flow_node``.
+
+    ``reraise_database_errors`` opts a caller that already retries its whole
+    transaction on database errors (atomic project replacement) into
+    propagating a ``DBAPIError`` — a lock timeout or deadlock — instead of
+    swallowing it. Swallowing one here would let the save commit with stale
+    trigger rows: the caller's whole-transaction retry never runs, so the
+    deadlock is reported as success and a client retry of the same operation
+    id is a no-op that returns the already-committed, now-stale receipt. Every
+    other exception, and every other caller, stays best-effort and unchanged.
     """
     if owner_id is None:
         return
     try:
         async with session.begin_nested():
             await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=flow_data)
+    except DBAPIError:
+        if reraise_database_errors:
+            raise
+        await logger.awarning("Trigger reconciliation failed for flow %s", flow_id, exc_info=True)
     except Exception:  # noqa: BLE001 — a flow save must never fail on trigger bookkeeping
         await logger.awarning("Trigger reconciliation failed for flow %s", flow_id, exc_info=True)

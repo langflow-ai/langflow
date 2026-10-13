@@ -292,6 +292,79 @@ class TestCreateInputSchemaFromJsonSchema:
         assert instance.second.b == 1
 
 
+class TestUnderscorePropertyNames:
+    """JSON Schema allows names such as Glean's ``_user_goal``; Pydantic reserves leading underscores."""
+
+    @pytest.mark.parametrize("nested", [False, True])
+    @pytest.mark.parametrize(("snake_name", "camel_key"), [("_foo_bar", "_fooBar"), ("foo_bar", "fooBar")])
+    def test_camel_alias_cannot_supply_a_different_wire_property(self, nested, snake_name, camel_key):
+        schema = {
+            "type": "object",
+            "properties": {snake_name: {"type": "string"}, "_fooBar": {"type": "string"}},
+            "required": [snake_name, "_fooBar"],
+        }
+        values = {camel_key: "only the camel-named property"}
+        if nested:
+            schema = {"type": "object", "properties": {"opts": schema}}
+            values = {"opts": values}
+
+        model = create_input_schema_from_json_schema(schema)
+
+        with pytest.raises(ValidationError) as exc_info:
+            model.model_validate(values)
+
+        assert exc_info.value.errors()[0]["type"] == "missing"
+        assert exc_info.value.errors()[0]["loc"] == (("opts", "foo_bar") if nested else ("foo_bar",))
+
+        payload = values["opts"] if nested else values
+        payload[snake_name] = "the snake-named property"
+        expected = {snake_name: "the snake-named property", "_fooBar": "only the camel-named property"}
+        assert model.model_validate(values).model_dump(by_alias=True) == ({"opts": expected} if nested else expected)
+
+    def test_underscore_property_builds_and_accepts_field_or_wire_name(self):
+        schema = {
+            "type": "object",
+            "properties": {"query": {"type": "string"}, "_user_goal": {"type": "string"}},
+            "required": ["query", "_user_goal"],
+        }
+
+        model = create_input_schema_from_json_schema(schema)
+
+        assert list(model.model_fields) == ["query", "user_goal"]
+        assert model.model_validate({"query": "q", "user_goal": "g"}).user_goal == "g"
+        assert model.model_validate({"query": "q", "_user_goal": "g"}).user_goal == "g"
+
+    def test_underscore_property_dumps_under_its_wire_name(self):
+        schema = {
+            "type": "object",
+            "properties": {
+                "_user_goal": {"type": "string"},
+                "opts": {"type": "object", "properties": {"_trace_id": {"type": "string"}}},
+            },
+        }
+        model = create_input_schema_from_json_schema(schema)
+
+        dumped = model.model_validate({"user_goal": "g", "opts": {"trace_id": "t"}}).model_dump(by_alias=True)
+
+        assert dumped == {"_user_goal": "g", "opts": {"_trace_id": "t"}}
+
+    def test_sanitized_name_next_to_its_unprefixed_sibling_keeps_both_values(self):
+        schema = {
+            "type": "object",
+            "properties": {"_foo": {"type": "string"}, "foo": {"type": "string"}},
+            "required": ["_foo", "foo"],
+        }
+        model = create_input_schema_from_json_schema(schema)
+
+        by_field = model.model_validate({"foo_1": "private", "foo": "public"})
+        by_wire = model.model_validate({"_foo": "private", "foo": "public"})
+
+        assert list(model.model_fields) == ["foo_1", "foo"]
+        assert list(model.model_json_schema()["properties"]) == ["foo_1", "foo"]
+        assert by_field.model_dump(by_alias=True) == {"_foo": "private", "foo": "public"}
+        assert by_wire.model_dump(by_alias=True) == {"_foo": "private", "foo": "public"}
+
+
 class TestFlattenSchema:
     """Tests for flatten_schema self-referential handling."""
 

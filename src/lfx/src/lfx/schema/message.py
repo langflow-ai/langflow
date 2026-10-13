@@ -40,6 +40,7 @@ from lfx.schema.legacy_render import legacy_text, render_v1_content_blocks
 from lfx.schema.properties import Properties, Source
 from lfx.schema.validators import str_to_timestamp_validator, timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
+from lfx.utils.file_path_security import enforce_current_file_access, enforce_current_storage_key_scope
 from lfx.utils.image import create_image_content_dict
 from lfx.utils.mustache_security import safe_mustache_render
 from lfx.utils.secrets import is_secret_value
@@ -518,7 +519,12 @@ class Message(Data):
 
     # Keep this async method for backwards compatibility
     def get_file_content_dicts(self, model_name: str | None = None):
+        """Convert accessible attachments to model content, skipping unsafe or unavailable files."""
+        from lfx.base.data.storage_utils import StorageServiceUnavailableError, require_storage_service, to_storage_path
+        from lfx.services.deps import get_settings_service, get_storage_service
+
         def _safe_attachment_name(value: Any) -> str | None:
+            """Return only the basename used to label an attachment in model input."""
             if isinstance(value, Image):
                 if not value.path:
                     return None
@@ -533,8 +539,13 @@ class Message(Data):
 
         content_dicts = []
         try:
+            storage_type = get_settings_service().settings.storage_type
+            if storage_type == "s3":
+                # Image encoding otherwise falls back to opening the path locally.
+                # An unavailable object store must never select that fallback.
+                require_storage_service(get_storage_service())
             files = get_file_paths(self.files)
-        except (OSError, TypeError, ValueError) as exc:
+        except (OSError, TypeError, ValueError, StorageServiceUnavailableError) as exc:
             logger.error(
                 "Error getting file paths",
                 error_type=type(exc).__name__,
@@ -542,12 +553,23 @@ class Message(Data):
             )
             return content_dicts
 
-        for file in files:
-            if isinstance(file, Image):
-                content_dicts.append(file.to_content_dict(flow_id=self.flow_id))
-                continue
-
+        for attachment in files:
+            file = attachment
             try:
+                if storage_type == "s3":
+                    file = to_storage_path(file.path if isinstance(file, Image) else file)
+                    enforce_current_storage_key_scope(file)
+                else:
+                    # Validate before image detection, which also opens the path, and
+                    # before any text parser or image encoder consumes stored history.
+                    path = file.path if isinstance(file, Image) else file
+                    path = str(enforce_current_file_access(path))
+                    file = Image(path=path) if isinstance(file, Image) else path
+
+                if isinstance(file, Image):
+                    content_dicts.append(file.to_content_dict(flow_id=self.flow_id))
+                    continue
+
                 if _is_image_attachment(file):
                     content_dicts.append(create_image_content_dict(file, None, model_name))
                     continue
@@ -565,7 +587,7 @@ class Message(Data):
                     )
                     continue
 
-                from lfx.base.data.storage_utils import get_file_size, to_storage_path
+                from lfx.base.data.storage_utils import get_file_size
                 from lfx.base.data.utils import parse_text_file_to_data
 
                 storage_path = to_storage_path(file)

@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Column, DateTime, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, Column, DateTime, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
@@ -92,12 +92,41 @@ class JobBase(SQLModel):
 
 class Job(JobBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "job"
+    # The background metrics collector filters on status every tick, takes a MIN over
+    # created_timestamp for the oldest queued job, and ranges over finished_timestamp for the
+    # duration window. Without these each tick's cost grows
+    # with the whole job history rather than with the work in flight. The all-time
+    # outcome aggregate still scans history and is collected less frequently.
     # The scaled backend's claim poll (claim_next_queued_lease) filters on
-    # status + type and sorts by created_timestamp on every worker poll; the
-    # watchdog scans status + type on its interval. The job table has no
-    # retention, so without this composite the hottest query degrades into an
-    # ever-growing scan+sort over terminal rows.
-    __table_args__ = (Index("ix_job_claim_scan", "status", "type", "created_timestamp"),)
+    # status + type and sorts by created_timestamp on every worker poll, and the
+    # watchdog scans status + type on its interval. ix_job_status_created cannot
+    # serve those: the type filter sits between the two sorted columns, so
+    # without the composite below the hottest query in the fleet degrades into a
+    # scan+sort over every row retention has not yet removed.
+    __table_args__ = (
+        Index("ix_job_status_created", "status", "created_timestamp"),
+        Index("ix_job_finished_timestamp", "finished_timestamp"),
+        Index("ix_job_claim_scan", "status", "type", "created_timestamp"),
+    )
+
+
+class JobMetricTotals(SQLModel, table=True):  # type: ignore[call-arg]
+    """Constant-size archive of background outcomes removed by job retention.
+
+    Row 1 is updated atomically with deletion. It contains no job/user identifiers
+    or payloads and survives retention and process restarts.
+    """
+
+    __tablename__ = "background_job_metric_totals"
+
+    id: int = Field(default=1, primary_key=True)
+    started: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
+    completed: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
+    failed_error: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
+    failed_worker_lost: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
+    failed_input_timeout: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
+    timed_out: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
+    cancelled: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default=text("0")))
 
 
 class JobEvent(SQLModel, table=True):  # type: ignore[call-arg]

@@ -47,6 +47,7 @@ from __future__ import annotations
 
 import hashlib
 from typing import Annotated
+from uuid import uuid4
 
 from fastapi import APIRouter, Path, Request, Response, status
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -70,6 +71,7 @@ from langflow.services.triggers.ingress.verifiers import (
     IngressSecrets,
     validation_token,
     verify,
+    verify_gmail_pubsub,
 )
 from langflow.services.triggers.providers.slack import ingress as slack_ingress
 from langflow.services.triggers.providers.slack.events import SlackControl, normalize
@@ -264,15 +266,13 @@ async def receive_provider_delivery(
         return _reject()
 
     try:
-        verified = verify(
-            IngressRequest(
-                provider=provider,
-                body=body,
-                headers=request.headers,
-                query=request.query_params,
-            ),
-            target.secrets,
-            tolerance_s=settings.trigger_ingress_signature_tolerance_s,
+        ingress_request = IngressRequest(
+            provider=provider, body=body, headers=request.headers, query=request.query_params
+        )
+        verified = (
+            await verify_gmail_pubsub(ingress_request, target.secrets)
+            if target.kind == "google.gmail"
+            else verify(ingress_request, target.secrets, tolerance_s=settings.trigger_ingress_signature_tolerance_s)
         )
     except IngressRejected as rejection:
         await intake.audit_ingress(
@@ -292,9 +292,21 @@ async def receive_provider_delivery(
             await subscriptions.apply_lifecycle(
                 session, trigger_id=target.trigger_id, subscription_id=subscription_id, event=event
             )
-        await session.commit()
-        await intake.audit_ingress(accepted=True, provider=provider, public_id=public_id, target=target)
-        return Response(status_code=status.HTTP_202_ACCEPTED)
+            if event in {subscriptions.LIFECYCLE_MISSED, subscriptions.LIFECYCLE_SUBSCRIPTION_REMOVED}:
+                await intake.record_event(
+                    session,
+                    target=target,
+                    provider=provider,
+                    payload={"lifecycleEvent": event, "subscriptionId": subscription_id},
+                    # A later missed notification for this subscription must
+                    # still wake a resync, even when Graph repeats its body.
+                    suffix=f"lifecycle:{event}:{subscription_id}:{uuid4()}",
+                    fallback=hashlib.sha256(body).hexdigest()[:32],
+                )
+        if not verified.payload:
+            await session.commit()
+            await intake.audit_ingress(accepted=True, provider=provider, public_id=public_id, target=target)
+            return Response(status_code=status.HTTP_202_ACCEPTED)
 
     if verified.handshake is not None:
         # A subscription-lifecycle exchange, not an event: Graph's

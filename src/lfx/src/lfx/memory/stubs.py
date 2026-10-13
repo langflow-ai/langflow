@@ -179,6 +179,11 @@ async def delete_message(id_: str) -> None:
     Args:
         id_ (str): The ID of the message to delete.
     """
+    from lfx.memory.flow_context import should_persist_messages
+
+    if not should_persist_messages():
+        return
+
     async with session_scope() as session:
         try:
             # In a real implementation, this would delete from database

@@ -24,7 +24,7 @@ pytest.importorskip("traceloop.sdk", reason="requires the traceloop extra")
 # Two loopback collectors standing in for the operator's APM and api.traceloop.com, plus the
 # harness that reports which span names reached which one.
 _HARNESS = """
-import json, os, threading, time, uuid
+import json, os, threading, uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 bodies = {"apm": [], "traceloop": []}
@@ -46,7 +46,10 @@ os.environ["TRACELOOP_BASE_URL"] = f"http://127.0.0.1:{traceloop_port}"
 os.environ["TRACELOOP_API_KEY"] = "test-key"  # pragma: allowlist secret
 
 def report(**extra):
-    time.sleep(1)
+    from opentelemetry import trace
+    flush = getattr(trace.get_tracer_provider(), "force_flush", None)
+    if flush is not None:
+        assert flush(5000), "span export did not finish"
     seen = {}
     for target in ("apm", "traceloop"):
         seen[target] = sorted(

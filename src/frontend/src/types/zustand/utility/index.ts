@@ -55,7 +55,7 @@ export type UtilityStoreType = {
   // server's cap instead of a UI-local constant that can drift below it.
   assistantMaxMessageLength: number;
   setAssistantMaxMessageLength: (assistantMaxMessageLength: number) => void;
-  // False on the production deployment profile, where local Chroma is refused.
+  // False on the production deployment profile, where local SQLite is refused.
   localVectorStoreAvailable: boolean;
   setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) => void;
   mcpBaseUrl: string;

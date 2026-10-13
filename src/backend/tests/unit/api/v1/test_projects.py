@@ -19,7 +19,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
-from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.model import Folder, FolderCreate
 from langflow.services.deps import session_scope
 from lfx.services.adapters.deployment.schema import DeploymentType
 from sqlmodel import select
@@ -132,6 +132,71 @@ async def test_create_project(client: AsyncClient, logged_in_headers, basic_case
     assert "description" in result, "The dictionary must contain a key called 'description'"
     assert "id" in result, "The dictionary must contain a key called 'id'"
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
+
+
+async def test_new_project_in_caller_transaction_rolls_back_with_mcp_registration(active_user):
+    """A caller that owns the transaction can roll back the project and its MCP server together."""
+    from langflow.api.v1.projects import _new_project
+    from langflow.services.database.models.mcp_server import MCPServer
+    from langflow.services.database.models.user.model import User
+
+    async with session_scope() as session:
+        user = await session.get(User, active_user.id)
+        project = await _new_project(
+            session=session,
+            project=FolderCreate(name="caller_owned_project"),
+            current_user=user,
+            owns_transaction=False,
+        )
+        assert (await session.exec(select(MCPServer).where(MCPServer.user_id == user.id))).all()
+        await session.rollback()
+
+    async with session_scope() as session:
+        assert await session.get(Folder, project.id) is None
+        assert not (await session.exec(select(MCPServer).where(MCPServer.user_id == active_user.id))).all()
+
+
+async def test_a_lost_mcp_name_race_leaves_the_caller_transaction_usable(active_user):
+    """A duplicate server name must not poison the transaction the project is created in.
+
+    On a borrowed transaction ``update_server`` re-raises the duplicate-name
+    ``IntegrityError`` instead of rolling back, and the registration treats the
+    failure as best effort. The failed flush leaves the session needing a rollback,
+    so without a savepoint to unwind into the next statement of the create raises
+    ``PendingRollbackError`` and the client gets a 500 instead of its project.
+    """
+    import langflow.api.v2.mcp as mcp_v2
+    from langflow.api.v1.projects import _new_project
+    from langflow.services.database.models.mcp_server import MCPServer
+    from langflow.services.database.models.user.model import User
+
+    real_persist = mcp_v2._persist
+    raced = []
+
+    async def lose_the_name(session, *, owns_transaction):
+        pending = next((obj for obj in session.new if isinstance(obj, MCPServer)), None)
+        if pending is not None and not raced:
+            # Stands in for the concurrent request that took the same server name
+            # between this one's lookup and its insert.
+            raced.append(pending.name)
+            session.add(MCPServer(user_id=pending.user_id, name=pending.name, config={}))
+        return await real_persist(session, owns_transaction=owns_transaction)
+
+    async with session_scope() as session:
+        user = await session.get(User, active_user.id)
+        with patch.object(mcp_v2, "_persist", lose_the_name):
+            project = await _new_project(
+                session=session,
+                project=FolderCreate(name="raced_project"),
+                current_user=user,
+                owns_transaction=False,
+            )
+        assert raced, "the registration never reached its insert"
+        assert (await session.exec(select(Folder).where(Folder.id == project.id))).first() is not None
+
+    async with session_scope() as session:
+        assert await session.get(Folder, project.id) is not None
+        assert not (await session.exec(select(MCPServer).where(MCPServer.name == raced[0]))).all()
 
 
 async def test_create_project_duplicate_name_escapes_like_wildcards(client: AsyncClient, logged_in_headers):
@@ -609,6 +674,91 @@ async def test_delete_project_does_not_leak_sql_on_database_error(
     assert "DELETE FROM folder" not in detail
     assert "sqlalche.me" not in detail
     assert str(project_id) not in detail
+
+
+async def test_lock_project_for_delete_issues_row_lock_on_postgresql():
+    """On PostgreSQL, the Folder row must be locked with FOR UPDATE before any flow is touched.
+
+    Replacement locks the Folder row before its flow rows (see
+    ``_lock_replacement_operation`` and the ``with_for_update()`` load in
+    ``_replace_project_operation_once``). Delete must lock the same row, the same
+    way, so the two operations never take these locks in opposite orders.
+    """
+    from langflow.api.v1 import projects as projects_module
+
+    project_id = uuid4()
+    session = AsyncMock()
+    bind = MagicMock()
+    bind.dialect.name = "postgresql"
+    session.get_bind = MagicMock(return_value=bind)
+
+    await projects_module._lock_project_for_delete(session, project_id)
+
+    session.exec.assert_awaited_once()
+    (statement,), _kwargs = session.exec.call_args
+    compiled = str(statement.compile(compile_kwargs={"literal_binds": True}))
+    assert "FOR UPDATE" in compiled
+    assert "folder" in compiled.lower()
+    assert project_id.hex in compiled.replace("-", "")
+
+
+async def test_lock_project_for_delete_is_a_noop_on_sqlite():
+    """SQLite already serializes writers database-wide, so no explicit lock is issued."""
+    from langflow.api.v1 import projects as projects_module
+
+    session = AsyncMock()
+    bind = MagicMock()
+    bind.dialect.name = "sqlite"
+    session.get_bind = MagicMock(return_value=bind)
+
+    await projects_module._lock_project_for_delete(session, uuid4())
+
+    session.exec.assert_not_awaited()
+
+
+async def test_delete_project_locks_folder_before_flows_are_cascade_deleted(
+    client: AsyncClient, logged_in_headers, basic_case, monkeypatch
+):
+    """The Folder row lock (PostgreSQL deadlock fix) must run before any flow cascade delete.
+
+    Regression for a lock-order deadlock against replacement: replacement locks the
+    Folder row before its flow rows; delete used to remove flows first and the
+    Folder last — the opposite order, which can deadlock (40P01) on PostgreSQL.
+    ``_lock_project_for_delete`` must run first inside the delete operation; this
+    pins that ordering regardless of which dialect the test database uses.
+    """
+    from langflow.api.v1 import projects as projects_module
+
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert create_resp.status_code == status.HTTP_201_CREATED
+    project_id = create_resp.json()["id"]
+
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "lock-order-flow", "folder_id": project_id, "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+
+    call_order: list[str] = []
+    original_lock = projects_module._lock_project_for_delete
+    original_cascade = projects_module.cascade_delete_flow
+
+    async def recording_lock(session, project_id):
+        call_order.append("lock")
+        return await original_lock(session, project_id)
+
+    async def recording_cascade(session, flow_id, *, memory_base_cleanups):
+        call_order.append("cascade")
+        return await original_cascade(session, flow_id, memory_base_cleanups=memory_base_cleanups)
+
+    monkeypatch.setattr(projects_module, "_lock_project_for_delete", recording_lock)
+    monkeypatch.setattr(projects_module, "cascade_delete_flow", recording_cascade)
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert delete_resp.status_code == status.HTTP_204_NO_CONTENT
+
+    assert call_order == ["lock", "cascade"]
 
 
 async def test_read_project_invalid_id_format(client: AsyncClient, logged_in_headers):

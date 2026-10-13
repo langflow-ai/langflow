@@ -11,8 +11,11 @@ import zipfile
 from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import partial
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from lfx.base.knowledge_bases.backends import is_local_backend
+from lfx.base.models.provider_registry import model_component_provider_id, resolve_provider_id
 from lfx.helpers.base_model import coalesce_bool
 from lfx.integrations.models import ConnectionRef
 from sqlmodel import col, select
@@ -26,14 +29,16 @@ from langflow.services.authorization import (
     ensure_project_permission,
 )
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow, FlowRead, FlowType
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.database.models.memory_base.model import MemoryBase
+from langflow.services.deps import get_variable_service
+from langflow.utils.canonical_json import canonical_json_bytes
 from langflow.utils.flow_secrets import strip_secret_field_values_in_place
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Sequence
+    from collections.abc import Callable, Collection, Iterable, Iterator, Sequence
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -55,7 +60,7 @@ _UTF8_THREE_BYTE_MAX = 0xFFFF
 _UNICODE_SURROGATE_MIN = 0xD800
 _UNICODE_SURROGATE_MAX = 0xDFFF
 _VOLATILE_TOP_LEVEL_FIELDS = frozenset(
-    {"updated_at", "created_at", "user_id", "folder_id", "workspace_id", "access_type", "gradient"}
+    {"updated_at", "created_at", "user_id", "folder_id", "workspace_id", "access_type", "gradient", "version_token"}
 )
 _VOLATILE_NODE_FIELDS = frozenset({"positionAbsolute", "dragging", "selected"})
 
@@ -105,6 +110,11 @@ class ProjectArtifactFlow:
     size: int
     required_variables: tuple[str, ...]
     required_connections: tuple[ProjectArtifactRequiredConnection, ...]
+    required_providers: tuple[str, ...] = ()
+    required_models: tuple[ProjectArtifactRequiredModel, ...] = ()
+    # Model fields that name no resolvable provider: a selection left to run
+    # time cannot be read here, and a count is the honest way to say so.
+    unresolved_model_fields: int = 0
 
 
 @dataclass(frozen=True, order=True, slots=True)
@@ -114,6 +124,25 @@ class ProjectArtifactRequiredConnection:
     provider: str
     name: str
     scopes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, order=True, slots=True)
+class ProjectArtifactRequiredModel:
+    """One model a flow selects, in the shape the policy blocks models by.
+
+    ``ModelProviderPolicyDecision.allows_model`` matches a blocked key by bare
+    name, by ``provider::name``, or by ``provider::type::name``, so a provider
+    identity alone cannot answer whether the selected model is usable. Carrying
+    the name and type is what lets a deploy target check the second question.
+
+    ``model_type`` is the catalog's own value (``llm`` or ``embeddings``) and is
+    absent when the saved selection did not carry it; the policy then tries
+    every type segment, so an absent type never widens what is allowed.
+    """
+
+    provider: str
+    name: str
+    model_type: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,11 +158,71 @@ class ProjectArtifact:
     # MB/KB the packaged flows reference, shaped for the Control Plane's SyncRequest.
     # Empty when no flow references a Memory Base or Knowledge Base.
     dependencies: dict[str, Any] = field(default_factory=dict)
+    project_description: str | None = None
 
     @property
     def flow_count(self) -> int:
         """Return the number of flow payloads in the package."""
         return len(self.flows)
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectDeploymentSnapshotFlow:
+    """One safe, replacement-compatible flow in a deployment snapshot."""
+
+    flow_id: UUID
+    name: str
+    endpoint_name: str | None
+    description: str | None
+    data: dict[str, Any]
+    # Exposure/presentation FlowCreate fields, carried end-to-end so a
+    # rollback (PUT /replacement-operations only applies fields the caller
+    # sends) or a restore-after-delete does not silently reset them to
+    # FlowCreate's defaults. workspace_id/user_id/folder_id are deliberately
+    # excluded pending a decision on how a deploy target should treat them.
+    # Same types and defaults as FlowBase.
+    is_component: bool | None = False
+    locked: bool | None = False
+    mcp_enabled: bool | None = False
+    action_name: str | None = None
+    action_description: str | None = None
+    access_type: AccessTypeEnum = AccessTypeEnum.PRIVATE
+    flow_type: FlowType = FlowType.WORKFLOW
+    a2a_enabled: bool | None = False
+    a2a_card_overrides: dict[str, Any] | None = None
+    tags: list[str] | None = None
+    icon: str | None = None
+    icon_bg_color: str | None = None
+    gradient: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.name or not self.name.strip():
+            msg = f"flow file {self.flow_id} has an empty name"
+            raise ProjectArtifactError(msg)
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectDeploymentSnapshot:
+    """A read-only serving snapshot detached from the database session."""
+
+    project_id: UUID
+    project_name: str
+    project_description: str | None
+    flows: tuple[ProjectDeploymentSnapshotFlow, ...]
+    dependencies: dict[str, Any]
+    required_variables: tuple[str, ...]
+    required_connections: tuple[ProjectArtifactRequiredConnection, ...] = ()
+    # Same two facts the packaged manifest carries. A snapshot deploy and a
+    # zip deploy must present the same provider requirements, or the deploy
+    # precheck's answer would depend on which path the caller took.
+    required_providers: tuple[str, ...] = ()
+    required_models: tuple[ProjectArtifactRequiredModel, ...] = ()
+    unresolved_model_fields: int = 0
+
+    def __post_init__(self) -> None:
+        if not self.project_name or not self.project_name.strip():
+            msg = "project snapshot has an empty project name"
+            raise ProjectArtifactError(msg)
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,10 +240,6 @@ class _SnapshotBatch:
     item_count: int
 
 
-def _canonical_json_bytes(value: object) -> bytes:
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
-
-
 def _zip_info(path: str) -> zipfile.ZipInfo:
     info = zipfile.ZipInfo(filename=path, date_time=_FIXED_ZIP_TIMESTAMP)
     info.compress_type = zipfile.ZIP_STORED
@@ -164,6 +249,315 @@ def _zip_info(path: str) -> zipfile.ZipInfo:
     info.extra = b""
     info.comment = b""
     return info
+
+
+@dataclass(frozen=True, slots=True)
+class _ModelRequirements:
+    """What one flow's model fields ask of a deploy target.
+
+    Kept as one value rather than three loose returns because every caller
+    needs all three together: the two lists are only trustworthy when read
+    alongside the count of fields neither list could describe.
+    """
+
+    providers: tuple[str, ...] = ()
+    models: tuple[ProjectArtifactRequiredModel, ...] = ()
+    unresolved_fields: int = 0
+
+    @staticmethod
+    def merged(parts: Iterable[_ModelRequirements]) -> _ModelRequirements:
+        """Union several flows' requirements, deduplicating and summing the count."""
+        providers: set[str] = set()
+        models: set[ProjectArtifactRequiredModel] = set()
+        unresolved = 0
+        for part in parts:
+            providers.update(part.providers)
+            models.update(part.models)
+            unresolved += part.unresolved_fields
+        return _ModelRequirements(
+            providers=tuple(sorted(providers)),
+            models=tuple(sorted(models, key=_model_sort_key)),
+            unresolved_fields=unresolved,
+        )
+
+
+def _model_sort_key(model: ProjectArtifactRequiredModel) -> tuple[str, str, str]:
+    """Order models deterministically even when only some carry a type.
+
+    The dataclass ordering compares ``model_type`` directly, and ``None``
+    cannot be ordered against a string: one flow can type a model the other
+    leaves untyped, and the merged set holds both.
+    """
+    return (model.provider, model.name, model.model_type or "")
+
+
+_MODEL_BASE_CLASSES = frozenset({"LanguageModel", "Embeddings"})
+# ``ModelInput`` keeps this literal as the value when the builder wires the
+# model in over an edge instead of picking one. The provider then belongs to
+# the connected component, which this walk reaches on its own, so the field
+# itself requires nothing and must not be counted as unresolved.
+_MODEL_CONNECTED_SENTINEL = "connect_other_models"
+
+
+def _model_entry_selection(entry: object) -> tuple[str, str | None, str | None] | None:
+    """The provider, model name and model type one model-field entry selects.
+
+    ``None`` when the entry names no provider. A bare model name is
+    deliberately not treated as a provider: the runtime resolves those through
+    the catalog, so deriving an identity from the model string would invent a
+    provider that policy would then refuse.
+
+    The model name can be absent even when the provider is not, so the two are
+    reported separately rather than as one key.
+    """
+    if not isinstance(entry, dict):
+        return None
+    provider = entry.get("provider")
+    name = entry.get("name")
+    if isinstance(provider, str) and provider.strip() and provider.strip().casefold() != "unknown":
+        metadata = entry.get("metadata")
+        raw_type = metadata.get("model_type") if isinstance(metadata, dict) else None
+        model_type = raw_type.strip() if isinstance(raw_type, str) and raw_type.strip() else None
+        model_name = name.strip() if isinstance(name, str) and name.strip() else None
+        return provider.strip(), model_name, model_type
+    # Observed shape: the real spec serialized into ``name`` with the outer
+    # provider left as a placeholder. Unwrap once rather than lose the identity.
+    if isinstance(name, str) and name.strip().startswith(("[", "{")):
+        try:
+            parsed = json.loads(name)
+        except (ValueError, RecursionError):
+            # RecursionError: JSON nested inside a string escapes the flow's own
+            # depth preflight, so a deeply nested value must not crash packaging.
+            return None
+        if isinstance(parsed, list):
+            # Only a single wrapped spec is unwrapped. Reading the first of
+            # several would report a partial list as the whole answer; as
+            # unreadable, the field is counted as unresolved instead.
+            if len(parsed) != 1:
+                return None
+            parsed = parsed[0]
+        return _model_entry_selection(parsed)
+    return None
+
+
+def _model_field_selections(value: object) -> tuple[list[tuple[str, str | None, str | None]], bool] | None:
+    """Every selection one model-field value carries, and whether any entry was unreadable.
+
+    ``None`` means the field states no requirement at all. Otherwise the flag
+    is true when the field states a requirement this code cannot fully read:
+    no entries, or one entry among readable ones that names no provider. Either
+    way the selections listed are not the field's whole answer, so the field
+    counts as unresolved even though its readable providers are still listed.
+    """
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return [], True
+        if text == _MODEL_CONNECTED_SENTINEL:
+            return None
+        try:
+            parsed = json.loads(text)
+        except (ValueError, RecursionError):
+            # A bare name. The catalog decides the provider, so nothing to read.
+            return [], True
+        entries = parsed if isinstance(parsed, list) else [parsed]
+    elif isinstance(value, dict):
+        entries = [value]
+    elif isinstance(value, list):
+        entries = list(value)
+    else:
+        return [], True
+    selections = [_model_entry_selection(entry) for entry in entries]
+    readable = [selection for selection in selections if selection is not None]
+    return readable, not entries or len(readable) < len(selections)
+
+
+def _connected_model_overrides(flow_data: dict) -> dict[str, set[str]]:
+    """Index runtime override inputs by node, within this graph's edge scope."""
+    connected: dict[str, set[str]] = {}
+    edges = flow_data.get("edges")
+    if not isinstance(edges, list):
+        return connected
+    for edge in edges:
+        if not isinstance(edge, dict) or not isinstance(target := edge.get("target"), str):
+            continue
+        data = edge.get("data")
+        if isinstance(data, dict) and data:
+            handle = data.get("targetHandle")
+            field_name = handle.get("fieldName") if isinstance(handle, dict) else None
+        else:
+            # Legacy edges encode the input as ``types|field|node``.
+            handle = edge.get("targetHandle")
+            parts = handle.split("|") if isinstance(handle, str) else []
+            field_name = parts[1] if len(parts) > 1 else None
+        if field_name in ("provider", "model_name"):
+            connected.setdefault(target, set()).add(field_name)
+    return connected
+
+
+def _apply_model_requirement_overrides(
+    selections: tuple[list[tuple[str, str | None, str | None]], bool] | None,
+    template: dict,
+    connected_fields: Collection[str],
+) -> tuple[list[tuple[str, str | None, str | None]], bool] | None:
+    """Apply the canonical model selector's scalar overlays without resolving variables.
+
+    Runtime ``apply_model_overrides`` uses the first selection when an overlay
+    is active. Variable- or edge-backed values are unknown at packaging time:
+    retain only identities still known and mark the field as incomplete.
+    """
+    overrides: dict[str, str] = {}
+    dynamic: set[str] = set()
+    for name in ("provider", "model_name"):
+        field_value = template.get(name)
+        if not isinstance(field_value, dict):
+            continue
+        if name in connected_fields or coalesce_bool(field_value.get("load_from_db")):
+            dynamic.add(name)
+        elif isinstance(value := field_value.get("value"), str):
+            overrides[name] = value.strip()
+        elif value is not None:
+            dynamic.add(name)
+    if not any(overrides.values()) and not dynamic:
+        return selections
+    if "provider" in dynamic or selections is None:
+        return [], True
+    readable, incomplete = selections
+    provider_override = overrides.get("provider")
+    name_override = overrides.get("model_name")
+    if readable:
+        provider, model_name, model_type = readable[0]
+        # A different provider clears the old selection's metadata at runtime.
+        if provider_override and provider_override != provider:
+            model_type = None
+        provider = provider_override or provider
+        model_name = None if "model_name" in dynamic else (name_override or model_name)
+        return [(provider, model_name, model_type)], incomplete or bool(dynamic)
+    if provider_override:
+        model_name = None if "model_name" in dynamic else (name_override or None)
+        return [(provider_override, model_name, None)], True
+    return [], True
+
+
+def _standalone_provider(node_inner: dict) -> str | None:
+    """The provider of a component that is itself a model, not one that holds a field."""
+    base_classes = node_inner.get("base_classes")
+    if not isinstance(base_classes, list) or not _MODEL_BASE_CLASSES.intersection(base_classes):
+        return None
+    metadata = node_inner.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    # Local utilities and delegating wrappers have no provider of their own.
+    if metadata.get("model_provider_policy_mode") in ("none", "delegate"):
+        return None
+    component = SimpleNamespace(
+        display_name=node_inner.get("display_name"),
+        model_provider_id=metadata.get("model_provider_id"),
+    )
+    module_name = metadata.get("module")
+    return model_component_provider_id(component, module_name=module_name if isinstance(module_name, str) else None)
+
+
+#: A model field declares what kind of model it holds (``ModelInput.model_type``),
+#: in the input's vocabulary. The policy keys models by the catalog's vocabulary.
+#: A declaration outside this map yields no type, and an untyped model makes the
+#: policy try every type segment, so an unknown declaration never widens access.
+_FIELD_MODEL_TYPES = {"language": "llm", "embedding": "embeddings"}
+
+
+def _collect_model_requirements(flow_data: object) -> _ModelRequirements:
+    """Collect model providers and selected models from regular and grouped nodes.
+
+    Two shapes, because a flow names a provider in two ways: a model-typed
+    field whose value carries the selection, and a component that is itself a
+    model and implies one. Walked without recursion, like the connection refs.
+
+    Providers and models are collected together but reported separately,
+    because a deploy target asks two questions of them: whether the provider is
+    approved at all, and whether the specific model it selects is blocked. A
+    standalone model component answers only the first - it implies a provider
+    but names no model - so the model list is never a complete mirror of the
+    provider list.
+
+    ``unresolved_fields`` counts model fields whose effective requirements
+    cannot be fully read, including runtime overrides. A caller that treats
+    the lists as the whole answer would pass a project the target cannot serve.
+    """
+    if not isinstance(flow_data, dict):
+        return _ModelRequirements()
+    nodes = flow_data.get("nodes")
+    if not isinstance(nodes, list):
+        return _ModelRequirements()
+    providers: set[str] = set()
+    models: set[ProjectArtifactRequiredModel] = set()
+    unresolved = 0
+    node_frames = [(iter(nodes), _connected_model_overrides(flow_data))]
+    while node_frames:
+        node_iterator, connected_overrides = node_frames[-1]
+        try:
+            node = next(node_iterator)
+        except StopIteration:
+            node_frames.pop()
+            continue
+        if not isinstance(node, dict):
+            continue
+        node_inner = node.get("data", {}).get("node") if isinstance(node.get("data"), dict) else None
+        if not isinstance(node_inner, dict):
+            continue
+        template = node_inner.get("template")
+        base_classes = node_inner.get("base_classes")
+        has_model_output = isinstance(base_classes, list) and any(
+            isinstance(base_class, str) and base_class in _MODEL_BASE_CLASSES for base_class in base_classes
+        )
+        saw_model_field = False
+        if isinstance(template, dict):
+            for field_name, field_value in template.items():
+                if not isinstance(field_value, dict) or field_value.get("type") != "model":
+                    continue
+                saw_model_field = True
+                # A selection saved from the model picker carries no type of its
+                # own, but the runtime still checks one -- a language model as
+                # ``llm`` -- so a typeless model reported here would be refused by
+                # a typed allowlist the runtime satisfies. The field says which.
+                declared_type = field_value.get("model_type")
+                field_type = _FIELD_MODEL_TYPES.get(declared_type) if isinstance(declared_type, str) else None
+                field_selections = _model_field_selections(field_value.get("value"))
+                # Model consumers may have unrelated scalar fields with these
+                # names. The overlays belong to the model selector components.
+                if field_name == "model" and has_model_output:
+                    node_id = node.get("id")
+                    connected_fields = connected_overrides.get(node_id, set()) if isinstance(node_id, str) else set()
+                    field_selections = _apply_model_requirement_overrides(field_selections, template, connected_fields)
+                if field_selections is None:
+                    continue
+                selections, incomplete = field_selections
+                if incomplete:
+                    unresolved += 1
+                for provider, model_name, model_type in selections:
+                    provider_id = resolve_provider_id(provider)
+                    providers.add(provider_id)
+                    if model_name is not None:
+                        models.add(
+                            ProjectArtifactRequiredModel(
+                                provider=provider_id,
+                                name=model_name,
+                                model_type=model_type or field_type,
+                            )
+                        )
+        # A component holding a model field delegates the choice to that field;
+        # only one with no such field speaks for its own provider.
+        if not saw_model_field and (standalone := _standalone_provider(node_inner)) is not None:
+            providers.add(standalone)
+        nested_flow = node_inner.get("flow")
+        if isinstance(nested_flow, dict):
+            nested_data = nested_flow.get("data")
+            nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
+            if isinstance(nested_nodes, list):
+                node_frames.append((iter(nested_nodes), _connected_model_overrides(nested_data)))
+    return _ModelRequirements(
+        providers=tuple(sorted(providers)),
+        models=tuple(sorted(models, key=_model_sort_key)),
+        unresolved_fields=unresolved,
+    )
 
 
 def _collect_required_connections(flow_data: object) -> tuple[ProjectArtifactRequiredConnection, ...]:
@@ -224,9 +618,50 @@ def _collect_required_connections(flow_data: object) -> tuple[ProjectArtifactReq
     )
 
 
-def _normalized_flow_bytes(
+async def _known_variable_names(session: AsyncSession, owner_id: UUID | None) -> frozenset[str]:
+    """Return the global-variable names the project owner's snapshot may keep as bindings.
+
+    Mirrors ``langflow.api.v1.flows_helpers._export_variable_names`` (kept as its
+    own copy here rather than imported, so this services-layer module does not
+    reach up into api.v1). A snapshot keeps a ``load_from_db`` value only when
+    it names one of the owner's existing global variables, so a name-shaped
+    literal secret behind a stale ``load_from_db`` flag is never captured.
+    """
+    if owner_id is None:
+        return frozenset()
+    names = await get_variable_service().list_variables(user_id=owner_id, session=session)
+    return frozenset(name for name in names if name)
+
+
+def _normalized_flow_data(
     snapshot: _FlowSnapshot,
-) -> tuple[bytes, tuple[str, ...], tuple[ProjectArtifactRequiredConnection, ...]]:
+    *,
+    strict_secret_safety: bool = False,
+    keep_mcp_config: bool = False,
+    known_variable_names: Collection[str] | None = None,
+) -> tuple[dict[str, Any], tuple[str, ...], tuple[ProjectArtifactRequiredConnection, ...], _ModelRequirements]:
+    """Return the scrubbed flow envelope and the requirements read off it.
+
+    The requirements are the flow's required variables, its connection refs,
+    the model providers it selects, and a count of model fields that selected
+    none.
+
+    Kept separate from byte serialization so a caller that needs the
+    structured envelope itself - a deployment snapshot flow, for instance -
+    is not forced to serialize it to JSON and parse it back.
+
+    ``keep_mcp_config`` is only ever passed by the deployment-snapshot caller:
+    the zip/.lfpkg export path always gets a name-only MCP field, matching
+    every other secret export. See ``strip_secret_field_values_in_place`` for
+    what "provably clean" means and why an unclean config is nulled rather
+    than dropped, which is what makes the strict equality check below fail
+    closed on it.
+
+    ``known_variable_names``, when given, narrows preserved ``load_from_db``
+    values to ones naming a variable the project owner actually has - see
+    ``strip_secret_field_values_in_place`` for why that closes the
+    stale-flag/name-shaped-secret gap a shape check alone cannot.
+    """
     # Scrubbing and volatile-field removal mutate nested values in place. Copy
     # first so aliases held by the snapshot or persisted Flow data stay intact.
     scrubbed = deepcopy(snapshot.payload)
@@ -235,22 +670,45 @@ def _normalized_flow_bytes(
     # collected names feed the manifest's required-variables listing.
     variable_references: set[str] = set()
     required_connections = _collect_required_connections(scrubbed.get("data"))
-    scrubbed["data"] = strip_secret_field_values_in_place(scrubbed.get("data"), variable_references=variable_references)
-    # Deployment packages retain runtime-native code strings. The normal git
+    model_requirements = _collect_model_requirements(scrubbed.get("data"))
+    scrubbed["data"] = strip_secret_field_values_in_place(
+        scrubbed.get("data"),
+        variable_references=variable_references,
+        known_variable_names=known_variable_names,
+        keep_mcp_config=keep_mcp_config,
+    )
+    if strict_secret_safety and scrubbed.get("data") != snapshot.payload.get("data"):
+        msg = f"flow file {snapshot.flow_id} contains values that cannot be safely captured"
+        raise ProjectArtifactError(msg)
+    # Deployment packages retain runtime-native code strings. Strict snapshots
+    # also retain every graph field after the scrub equality check so a serving
+    # baseline can be replayed without false drift from editor-only metadata.
+    # The normal git
     # export path splits code into one list element per line, which is useful
     # for diffs but can amplify a newline-heavy value into millions of Python
     # objects before serialization.
     for key in _VOLATILE_TOP_LEVEL_FIELDS:
         scrubbed.pop(key, None)
     data = scrubbed.get("data")
-    if isinstance(data, dict):
+    if not strict_secret_safety and isinstance(data, dict):
         nodes = data.get("nodes")
         if isinstance(nodes, list):
             for node in nodes:
                 if isinstance(node, dict):
                     for key in _VOLATILE_NODE_FIELDS:
                         node.pop(key, None)
-    return _canonical_json_bytes(scrubbed), tuple(sorted(variable_references)), required_connections
+    return scrubbed, tuple(sorted(variable_references)), required_connections, model_requirements
+
+
+def _normalized_flow_bytes(
+    snapshot: _FlowSnapshot,
+    *,
+    strict_secret_safety: bool = False,
+) -> tuple[bytes, tuple[str, ...], tuple[ProjectArtifactRequiredConnection, ...], _ModelRequirements]:
+    scrubbed, variable_references, required_connections, model_requirements = _normalized_flow_data(
+        snapshot, strict_secret_safety=strict_secret_safety
+    )
+    return canonical_json_bytes(scrubbed), variable_references, required_connections, model_requirements
 
 
 def _json_string_size(value: str) -> int:
@@ -371,13 +829,23 @@ def _snapshot_rows(
     return _SnapshotBatch(tuple(snapshots), estimated_bytes, item_count)
 
 
+def _model_entry(model: ProjectArtifactRequiredModel) -> dict[str, str]:
+    """One required model as manifest JSON, omitting a type the flow did not carry."""
+    entry = {"provider": model.provider, "name": model.name}
+    if model.model_type is not None:
+        entry["model_type"] = model.model_type
+    return entry
+
+
 def _build_archive(
     *,
     project_id: UUID,
     project_name: str,
+    project_description: str | None = None,
     snapshots: tuple[_FlowSnapshot, ...],
     limits: ProjectArtifactLimits,
     dependencies: dict[str, list[dict[str, Any]]] | None = None,
+    strict_secret_safety: bool = False,
 ) -> ProjectArtifact:
     flow_entries: list[ProjectArtifactFlow] = []
     files: list[tuple[str, bytes]] = []
@@ -390,7 +858,10 @@ def _build_archive(
 
     for snapshot in snapshots:
         path = f"flows/{snapshot.flow_id}.json"
-        content, required_variables, required_connections = _normalized_flow_bytes(snapshot)
+        content, required_variables, required_connections, model_requirements = _normalized_flow_bytes(
+            snapshot,
+            strict_secret_safety=strict_secret_safety,
+        )
         size = len(content)
         if size > limits.max_flow_bytes:
             msg = f"flow file {snapshot.flow_id} is {size} bytes, exceeding the {limits.max_flow_bytes}-byte limit"
@@ -409,6 +880,9 @@ def _build_archive(
                 size=size,
                 required_variables=required_variables,
                 required_connections=required_connections,
+                required_providers=model_requirements.providers,
+                required_models=model_requirements.models,
+                unresolved_model_fields=model_requirements.unresolved_fields,
             )
         )
 
@@ -422,15 +896,43 @@ def _build_archive(
         {"provider": provider, "name": name, "scopes": sorted(scopes)}
         for (provider, name), scopes in sorted(required_connections_by_handle.items())
     ]
+    manifest_models = _ModelRequirements.merged(
+        _ModelRequirements(
+            providers=flow.required_providers,
+            models=flow.required_models,
+            unresolved_fields=flow.unresolved_model_fields,
+        )
+        for flow in flow_entries
+    )
     manifest: dict[str, Any] = {
         # v2 is already assigned to flows[].version_id. Dependencies use v3,
-        # and connection requirements use v4, so an older reader refuses an
-        # artifact instead of deploying without provisioning required resources.
-        "schema_version": 4 if manifest_required_connections else (3 if dependencies else 1),
+        # connection requirements use v4, and model providers use v5, so an
+        # older reader refuses an artifact instead of deploying without
+        # provisioning required resources. Each level is claimed only when its
+        # field is populated, so a project that needs no provider still
+        # packages as a version older readers already accept. An unresolved
+        # count alone does not claim v5: it names nothing a target could
+        # provision or approve, so an older reader loses nothing by ignoring it.
+        "schema_version": (
+            5 if manifest_models.providers else (4 if manifest_required_connections else (3 if dependencies else 1))
+        ),
         "project": {"id": str(project_id), "name": project_name},
         # Names of every load_from_db-bound global variable the packaged flows
         # reference; the deploy target must provision each name before serving.
         "required_variables": sorted({name for flow in flow_entries for name in flow.required_variables}),
+        # Model provider identities the packaged flows select, and the number
+        # of model fields that selected none. A choice deferred to run time
+        # cannot be read from the flow, so the count is what stops the list
+        # from reading as the complete set of requirements.
+        **(
+            {
+                "required_providers": list(manifest_models.providers),
+                "required_models": [_model_entry(item) for item in manifest_models.models],
+                "unresolved_model_fields": manifest_models.unresolved_fields,
+            }
+            if manifest_models.providers or manifest_models.unresolved_fields
+            else {}
+        ),
         "flows": [
             {
                 "id": str(flow.flow_id),
@@ -439,6 +941,13 @@ def _build_archive(
                 "sha256": flow.sha256,
                 "size": flow.size,
                 "required_variables": list(flow.required_variables),
+                **({"required_providers": list(flow.required_providers)} if flow.required_providers else {}),
+                **(
+                    {"required_models": [_model_entry(item) for item in flow.required_models]}
+                    if flow.required_models
+                    else {}
+                ),
+                **({"unresolved_model_fields": flow.unresolved_model_fields} if flow.unresolved_model_fields else {}),
                 **(
                     {
                         "required_connections": [
@@ -457,7 +966,7 @@ def _build_archive(
         manifest["required_connections"] = manifest_required_connections
     if dependencies:
         manifest["dependencies"] = dependencies
-    manifest_bytes = _canonical_json_bytes(manifest)
+    manifest_bytes = canonical_json_bytes(manifest)
     if len(manifest_bytes) > limits.max_flow_bytes:
         msg = f"manifest file is {len(manifest_bytes)} bytes, exceeding the {limits.max_flow_bytes}-byte limit"
         raise ProjectArtifactLimitError(msg)
@@ -480,6 +989,7 @@ def _build_archive(
         project_name=project_name,
         flows=tuple(flow_entries),
         dependencies=dependencies or {},
+        project_description=project_description,
     )
 
 
@@ -507,9 +1017,11 @@ async def _build_archive_non_abandoning(
     *,
     project_id: UUID,
     project_name: str,
+    project_description: str | None = None,
     snapshots: tuple[_FlowSnapshot, ...],
     limits: ProjectArtifactLimits,
     dependencies: dict[str, list[dict[str, Any]]] | None = None,
+    strict_secret_safety: bool = False,
 ) -> ProjectArtifact:
     """Build an archive without outliving its caller's capacity lease."""
     return await _run_sync_non_abandoning(
@@ -517,9 +1029,11 @@ async def _build_archive_non_abandoning(
             _build_archive,
             project_id=project_id,
             project_name=project_name,
+            project_description=project_description,
             snapshots=snapshots,
             limits=limits,
             dependencies=dependencies,
+            strict_secret_safety=strict_secret_safety,
         )
     )
 
@@ -597,16 +1111,33 @@ def _validated_backend_config(
     backend_config: object,
     *,
     resource_kind: str,
+    strict: bool = False,
 ) -> tuple[str, dict[str, Any]]:
+    """Validate the deployment's storage provider and portable configuration."""
     if not isinstance(backend_type, str) or not backend_type.strip():
         msg = f"referenced {resource_kind} has no deployable backend type"
         raise ProjectArtifactError(msg)
     config = backend_config if isinstance(backend_config, dict) else {}
     resolved_backend_type = backend_type.strip()
-    if resolved_backend_type.lower() == "chroma" and str(config.get("mode", "local")).lower() != "cloud":
-        msg = f"referenced {resource_kind} uses local Chroma, which cannot be provisioned on the deployment target"
+    if resolved_backend_type.lower() == "chroma":
+        msg = f"referenced {resource_kind} uses retired Chroma storage. Migrate it to a supported remote provider"
         raise ProjectArtifactError(msg)
-    return resolved_backend_type, _scrub_backend_config(config)
+    try:
+        local = is_local_backend(resolved_backend_type.lower(), config)
+    except ValueError as exc:
+        msg = f"referenced {resource_kind} uses an unknown vector-store backend"
+        raise ProjectArtifactError(msg) from exc
+    if local:
+        label = "Chroma" if resolved_backend_type.lower() == "chroma" else "SQLite"
+        msg = f"referenced {resource_kind} uses local {label}, which cannot be provisioned on the deployment target"
+        raise ProjectArtifactError(msg)
+    scrubbed = _scrub_backend_config(config)
+    if strict:
+        dropped = [key for key, value in config.items() if key not in scrubbed and value not in (None, "", [], {})]
+        if dropped:
+            msg = f"referenced {resource_kind} contains unsupported or unsafe backend configuration"
+            raise ProjectArtifactError(msg)
+    return resolved_backend_type, scrubbed
 
 
 def _required_dependency_string(value: object, *, field_name: str, resource_kind: str) -> str:
@@ -638,6 +1169,7 @@ async def _resolve_dependencies(
     workspace_id: UUID | None,
     project_id: UUID,
     snapshots: tuple[_FlowSnapshot, ...],
+    strict: bool = False,
 ) -> dict[str, list[dict[str, Any]]]:
     """Resolve the MB/KB names the packaged flows reference to their provisioning specs.
 
@@ -715,6 +1247,7 @@ async def _resolve_dependencies(
                 backing_kb.backend_type,
                 backing_kb.backend_config,
                 resource_kind="Memory Base",
+                strict=strict,
             )
             embedding_model = _required_dependency_string(
                 mb.embedding_model,
@@ -776,6 +1309,7 @@ async def _resolve_dependencies(
                 kb.backend_type,
                 kb.backend_config,
                 resource_kind="Knowledge Base",
+                strict=strict,
             )
             model_selection = kb.model_selection if isinstance(kb.model_selection, dict) else {}
             embedding_provider = _required_dependency_string(
@@ -816,23 +1350,57 @@ async def _resolve_dependencies(
     return dependencies
 
 
-async def build_project_artifact(
+@dataclass(frozen=True, slots=True)
+class _ProjectSnapshotData:
+    """Authorized, revision-consistent flow data staged before encoding."""
+
+    project_id: UUID
+    project_name: str
+    project_description: str | None
+    project_user_id: UUID | None
+    snapshots: tuple[_FlowSnapshot, ...]
+    dependencies: dict[str, list[dict[str, Any]]]
+
+
+async def _verify_project_identity_unchanged(
+    session: AsyncSession,
+    *,
+    project_id: UUID,
+    project_name: str,
+    project_description: str | None,
+) -> None:
+    """Fail a strict capture if the project's own name or description moved mid-packaging."""
+    current_project = (
+        await session.exec(select(Folder.id, Folder.name, Folder.description).where(Folder.id == project_id))
+    ).first()
+    if current_project is None or (current_project[1], current_project[2]) != (project_name, project_description):
+        msg = "project changed during packaging"
+        raise ProjectArtifactError(msg)
+
+
+async def _prepare_project_snapshot_data(
     session: AsyncSession,
     user: User | UserRead,
     project_id: UUID,
     *,
-    flow_ids: Sequence[UUID] | None = None,
-    limits: ProjectArtifactLimits | None = None,
-) -> ProjectArtifact:
-    """Package selected readable flows, or every flow assigned to the project.
+    flow_ids: Sequence[UUID] | None,
+    limits: ProjectArtifactLimits,
+    strict_snapshot: bool,
+) -> _ProjectSnapshotData:
+    """Authorize, load, and bound every flow a package or snapshot needs.
+
+    Shared by ``build_project_artifact`` and ``build_project_deployment_snapshot``
+    so both run identical authorization, revision-consistency, and
+    dependency-resolution logic; only how the resulting flows are encoded (a
+    zip archive vs. a JSON-native snapshot) differs downstream.
 
     The project lookup widens beyond the caller's owner namespace only when the
     registered authorization service explicitly supports cross-user fetch. Flow
     membership is determined by project folder regardless of author. Read checks
     are split into an actor-owned batch and a non-owned batch so the owner override
     is never applied to another author's flow, and every check must pass before
-    any archive is constructed. Flow authorship and revision are revalidated
-    while packaging so either kind of concurrent change fails consistently.
+    any flow is packaged. Flow authorship and revision are revalidated while
+    packaging so either kind of concurrent change fails consistently.
     """
     selected_flow_ids: tuple[UUID, ...] | None = None
     if flow_ids is not None:
@@ -855,6 +1423,7 @@ async def build_project_artifact(
     if project is None:
         msg = "Project not found"
         raise ProjectArtifactNotFoundError(msg)
+    project_description = getattr(project, "description", None)
 
     await ensure_project_permission(
         user,
@@ -864,15 +1433,14 @@ async def build_project_artifact(
         workspace_id=project.workspace_id,
     )
 
-    effective_limits = limits or ProjectArtifactLimits()
-    if selected_flow_ids is not None and len(selected_flow_ids) > effective_limits.max_flow_count:
-        msg = f"selected flow count {len(selected_flow_ids)} exceeds the {effective_limits.max_flow_count}-flow limit"
+    if selected_flow_ids is not None and len(selected_flow_ids) > limits.max_flow_count:
+        msg = f"selected flow count {len(selected_flow_ids)} exceeds the {limits.max_flow_count}-flow limit"
         raise ProjectArtifactLimitError(msg)
     revision_statement = select(Flow.id, Flow.user_id, Flow.updated_at).where(Flow.folder_id == project_id)
     if selected_flow_ids is not None:
         revision_statement = revision_statement.where(col(Flow.id).in_(selected_flow_ids))
     revision_rows = list(
-        (await session.exec(revision_statement.order_by(col(Flow.id)).limit(effective_limits.max_flow_count + 1))).all()
+        (await session.exec(revision_statement.order_by(col(Flow.id)).limit(limits.max_flow_count + 1))).all()
     )
     if selected_flow_ids is not None and len(revision_rows) != len(selected_flow_ids):
         msg = "one or more selected flows were not found in the project"
@@ -880,8 +1448,8 @@ async def build_project_artifact(
     if not revision_rows:
         msg = "project has no flows to package"
         raise EmptyProjectArtifactError(msg)
-    if len(revision_rows) > effective_limits.max_flow_count:
-        msg = f"project flow count {len(revision_rows)} exceeds the {effective_limits.max_flow_count}-flow limit"
+    if len(revision_rows) > limits.max_flow_count:
+        msg = f"project flow count {len(revision_rows)} exceeds the {limits.max_flow_count}-flow limit"
         raise ProjectArtifactLimitError(msg)
 
     ordered_revisions = tuple(sorted(revision_rows, key=lambda revision: str(revision[0])))
@@ -925,15 +1493,18 @@ async def build_project_artifact(
             ).all()
         )
         ordered_rows = tuple(sorted(rows, key=lambda flow: str(flow.id)))
+        if strict_snapshot and any(flow.fs_path for flow in ordered_rows):
+            msg = "filesystem-backed flows cannot be safely captured"
+            raise ProjectArtifactError(msg)
         expected_page_revisions = tuple((flow_id, *initial_revisions[flow_id]) for flow_id in page_ids)
         if tuple((flow.id, flow.user_id, flow.updated_at) for flow in ordered_rows) != expected_page_revisions:
             msg = "project flows changed during packaging"
             raise ProjectArtifactError(msg)
 
-        remaining_expanded_bytes = effective_limits.max_expanded_bytes - estimated_bytes
+        remaining_expanded_bytes = limits.max_expanded_bytes - estimated_bytes
         remaining_items = _MAX_ARTIFACT_JSON_ITEMS - item_count
         if remaining_expanded_bytes <= 0:
-            msg = f"artifact expanded size exceeds the {effective_limits.max_expanded_bytes}-byte limit"
+            msg = f"artifact expanded size exceeds the {limits.max_expanded_bytes}-byte limit"
             raise ProjectArtifactLimitError(msg)
         if remaining_items <= 0:
             msg = f"artifact exceeds the {_MAX_ARTIFACT_JSON_ITEMS}-item structural limit"
@@ -942,7 +1513,7 @@ async def build_project_artifact(
             partial(
                 _snapshot_rows,
                 ordered_rows,
-                limits=effective_limits,
+                limits=limits,
                 remaining_expanded_bytes=remaining_expanded_bytes,
                 remaining_items=remaining_items,
             )
@@ -955,19 +1526,12 @@ async def build_project_artifact(
     if selected_flow_ids is not None:
         final_revision_statement = final_revision_statement.where(col(Flow.id).in_(selected_flow_ids))
     final_revisions = tuple(
-        (
-            await session.exec(
-                final_revision_statement.order_by(col(Flow.id)).limit(effective_limits.max_flow_count + 1)
-            )
-        ).all()
+        (await session.exec(final_revision_statement.order_by(col(Flow.id)).limit(limits.max_flow_count + 1))).all()
     )
     if final_revisions != ordered_revisions:
         msg = "project flows changed during packaging"
         raise ProjectArtifactError(msg)
 
-    # Archive construction is intentionally non-abandoning. If the HTTP request
-    # is cancelled, keep the caller suspended until the worker exits so the
-    # Enterprise package semaphore continues to account for its memory use.
     dependencies = await _resolve_dependencies(
         session,
         user=user,
@@ -975,11 +1539,227 @@ async def build_project_artifact(
         workspace_id=project.workspace_id,
         project_id=project_id,
         snapshots=tuple(snapshots),
+        strict=strict_snapshot,
     )
-    return await _build_archive_non_abandoning(
+    return _ProjectSnapshotData(
         project_id=project_id,
         project_name=project.name,
+        project_description=project_description,
+        project_user_id=project.user_id,
         snapshots=tuple(snapshots),
-        limits=effective_limits,
         dependencies=dependencies,
+    )
+
+
+async def build_project_artifact(
+    session: AsyncSession,
+    user: User | UserRead,
+    project_id: UUID,
+    *,
+    flow_ids: Sequence[UUID] | None = None,
+    limits: ProjectArtifactLimits | None = None,
+    strict_snapshot: bool = False,
+) -> ProjectArtifact:
+    """Package selected readable flows, or every flow assigned to the project, into a zip.
+
+    See ``_prepare_project_snapshot_data`` for the shared authorization,
+    revision-consistency, and dependency-resolution behavior.
+    """
+    effective_limits = limits or ProjectArtifactLimits()
+    prepared = await _prepare_project_snapshot_data(
+        session,
+        user,
+        project_id,
+        flow_ids=flow_ids,
+        limits=effective_limits,
+        strict_snapshot=strict_snapshot,
+    )
+
+    # Archive construction is intentionally non-abandoning. If the HTTP request
+    # is cancelled, keep the caller suspended until the worker exits so the
+    # Enterprise package semaphore continues to account for its memory use.
+    artifact = await _build_archive_non_abandoning(
+        project_id=prepared.project_id,
+        project_name=prepared.project_name,
+        project_description=prepared.project_description,
+        snapshots=prepared.snapshots,
+        limits=effective_limits,
+        dependencies=prepared.dependencies,
+        strict_secret_safety=strict_snapshot,
+    )
+    if strict_snapshot:
+        await _verify_project_identity_unchanged(
+            session,
+            project_id=prepared.project_id,
+            project_name=prepared.project_name,
+            project_description=prepared.project_description,
+        )
+    return artifact
+
+
+def _build_deployment_snapshot_flows(
+    snapshots: tuple[_FlowSnapshot, ...],
+    *,
+    limits: ProjectArtifactLimits,
+    known_variable_names: Collection[str] | None = None,
+    initial_expanded_bytes: int = 0,
+) -> tuple[
+    list[ProjectDeploymentSnapshotFlow],
+    tuple[str, ...],
+    tuple[ProjectArtifactRequiredConnection, ...],
+    _ModelRequirements,
+]:
+    """Scrub and bound each flow for a snapshot without ever encoding or reading back a zip.
+
+    ``known_variable_names`` is the project owner's real global-variable names,
+    fetched once by the caller (this runs off the event loop via
+    ``_run_sync_non_abandoning`` and cannot make its own DB call) - see
+    ``_normalized_flow_data``.
+
+    ``initial_expanded_bytes`` seeds the aggregate size bound with the
+    project's own name and description - text that is not a flow but is still
+    part of the captured snapshot - so a large enough project name/description
+    cannot evade ``max_expanded_bytes`` entirely.
+
+    Applies the same per-flow and aggregate byte bounds ``_build_archive`` applies
+    to its zip entries - computed from the same canonical JSON encoding - so a
+    snapshot cannot exceed the limits a packaged artifact would enforce.
+    """
+    flows: list[ProjectDeploymentSnapshotFlow] = []
+    required_variables: set[str] = set()
+    required_connections_by_handle: dict[tuple[str, str], set[str]] = {}
+    model_requirements: list[_ModelRequirements] = []
+    expanded_size = initial_expanded_bytes
+    for snapshot in snapshots:
+        _json_string_size(snapshot.name)
+        scrubbed, variable_references, required_connections, flow_model_requirements = _normalized_flow_data(
+            snapshot,
+            strict_secret_safety=True,
+            keep_mcp_config=True,
+            known_variable_names=known_variable_names,
+        )
+        content_size = len(canonical_json_bytes(scrubbed))
+        if content_size > limits.max_flow_bytes:
+            msg = (
+                f"flow file {snapshot.flow_id} is {content_size} bytes, "
+                f"exceeding the {limits.max_flow_bytes}-byte limit"
+            )
+            raise ProjectArtifactLimitError(msg)
+        expanded_size += content_size
+        if expanded_size > limits.max_expanded_bytes:
+            msg = f"artifact expanded size exceeds the {limits.max_expanded_bytes}-byte limit"
+            raise ProjectArtifactLimitError(msg)
+
+        data = scrubbed.get("data")
+        if not isinstance(data, dict):
+            msg = f"flow file {snapshot.flow_id} has no graph data"
+            raise ProjectArtifactError(msg)
+        flows.append(
+            ProjectDeploymentSnapshotFlow(
+                flow_id=snapshot.flow_id,
+                name=snapshot.name,
+                endpoint_name=scrubbed.get("endpoint_name"),
+                description=scrubbed.get("description"),
+                data=data,
+                is_component=scrubbed.get("is_component", False),
+                locked=scrubbed.get("locked", False),
+                mcp_enabled=scrubbed.get("mcp_enabled", False),
+                action_name=scrubbed.get("action_name"),
+                action_description=scrubbed.get("action_description"),
+                # Package-volatile presentation fields, read from the unscrubbed
+                # source so the snapshot still round-trips them.
+                access_type=AccessTypeEnum(snapshot.payload.get("access_type") or AccessTypeEnum.PRIVATE),
+                # Not volatile - untouched by the scrub - but read the same way for
+                # consistency with the other exposure fields on this line.
+                flow_type=FlowType(scrubbed.get("flow_type") or FlowType.WORKFLOW),
+                a2a_enabled=scrubbed.get("a2a_enabled", False),
+                a2a_card_overrides=scrubbed.get("a2a_card_overrides"),
+                tags=scrubbed.get("tags"),
+                icon=scrubbed.get("icon"),
+                icon_bg_color=scrubbed.get("icon_bg_color"),
+                gradient=snapshot.payload.get("gradient"),
+            )
+        )
+        required_variables.update(variable_references)
+        model_requirements.append(flow_model_requirements)
+        for connection in required_connections:
+            required_connections_by_handle.setdefault((connection.provider, connection.name), set()).update(
+                connection.scopes
+            )
+
+    required_connections_out = tuple(
+        ProjectArtifactRequiredConnection(provider=provider, name=name, scopes=tuple(sorted(scopes)))
+        for (provider, name), scopes in sorted(required_connections_by_handle.items())
+    )
+    return (
+        flows,
+        tuple(sorted(required_variables)),
+        required_connections_out,
+        _ModelRequirements.merged(model_requirements),
+    )
+
+
+async def build_project_deployment_snapshot(
+    session: AsyncSession,
+    user: User | UserRead,
+    project_id: UUID,
+    *,
+    limits: ProjectArtifactLimits | None = None,
+) -> ProjectDeploymentSnapshot:
+    """Capture one bounded, secret-safe, read-only serving snapshot.
+
+    Shares authorization, revision-consistency, and dependency resolution with
+    ``build_project_artifact`` via ``_prepare_project_snapshot_data``, but never
+    encodes a zip archive: the snapshot endpoint needs JSON, not an archive, so
+    each flow is scrubbed and bounded directly from its structured form instead
+    of being packaged, then unpacked again. Strict capture makes any graph or
+    dependency information lost by scrubbing fail closed instead of creating an
+    incomplete rollback baseline.
+    """
+    effective_limits = limits or ProjectArtifactLimits()
+    prepared = await _prepare_project_snapshot_data(
+        session,
+        user,
+        project_id,
+        flow_ids=None,
+        limits=effective_limits,
+        strict_snapshot=True,
+    )
+    # Both the project name and description are captured verbatim in the
+    # snapshot; check both for the same invalid-surrogate failure mode
+    # (see _json_string_size) and count both toward max_expanded_bytes so
+    # neither can evade the aggregate size bound every flow is held to.
+    project_text_bytes = _json_string_size(prepared.project_name)
+    if prepared.project_description is not None:
+        project_text_bytes += _json_string_size(prepared.project_description)
+    known_variable_names = await _known_variable_names(session, prepared.project_user_id)
+
+    flows, required_variables, required_connections, model_requirements = await _run_sync_non_abandoning(
+        partial(
+            _build_deployment_snapshot_flows,
+            prepared.snapshots,
+            limits=effective_limits,
+            known_variable_names=known_variable_names,
+            initial_expanded_bytes=project_text_bytes,
+        )
+    )
+
+    await _verify_project_identity_unchanged(
+        session,
+        project_id=prepared.project_id,
+        project_name=prepared.project_name,
+        project_description=prepared.project_description,
+    )
+
+    return ProjectDeploymentSnapshot(
+        project_id=prepared.project_id,
+        project_name=prepared.project_name,
+        project_description=prepared.project_description,
+        flows=tuple(flows),
+        dependencies=dict(prepared.dependencies),
+        required_variables=required_variables,
+        required_connections=required_connections,
+        required_providers=model_requirements.providers,
+        required_models=model_requirements.models,
+        unresolved_model_fields=model_requirements.unresolved_fields,
     )

@@ -106,6 +106,15 @@ Effective monitoring ensures Langflow operates reliably and performs well under 
     The default port for the Prometheus metrics is 9090.
     To change the port, set `LANGFLOW_PROMETHEUS_PORT`.
 
+    With Prometheus enabled, Langflow also exports background job metrics prefixed with `langflow_bg_`: counts of queued, running, and suspended jobs, the age of the oldest queued job, cumulative started, completed, and failed totals, and p50 and p95 submission-to-finish times for jobs finished over the last five minutes.
+    These durations include queue wait and time suspended on human input. The percentile gauges use a fixed window and cannot be combined into a percentile over a different window or across independent databases.
+    Only the process that serves the Prometheus port collects them. Gauges refresh every 15 seconds by default; to change that interval, set `LANGFLOW_BACKGROUND_METRICS_INTERVAL` to a number of seconds greater than zero.
+    All-time totals refresh on the first tick and then on the first tick at least five minutes after the previous successful refresh, reducing full-history scans. Use rate windows longer than this refresh cadence.
+    Retention archives background outcome counts in the database in the same transaction that deletes the jobs. Totals include both retained jobs and that archive, so retention does not hide new completions or lower the baseline after a restart. Archiving also runs when Prometheus is disabled.
+    Counters preserve the largest count observed per label set during the process lifetime, so terminal-state corrections do not appear as counter resets. They remain sampled job outcomes rather than an exact event ledger, and terminal-state corrections can change the baseline on restart. Jobs deleted before this version cannot be recovered. During a rolling upgrade, keep retention disabled until all processes that run the sweep use this version.
+    Failed totals distinguish `error`, `worker_lost`, `input_timeout` (an expired human-input deadline), `timeout` (an execution timeout), and `cancelled`.
+    With multiple replicas sharing a database, each replica exports the same database-wide snapshot and adds collection load. Scrape one replica for these metrics or deduplicate with `max` while retaining the `backend`, `status`, and `reason` labels where present; summing replicas multiplies the counts.
+
 * **API performance**: Monitor response times, error rates, and request throughput. Set alerts for high latency or error spikes.
 * **Observability tools**: Integrate with [LangWatch](/integrations-langwatch) or [Opik](/integrations-opik) for detailed flow tracing and metrics. Use these tools to debug flow performance and optimize execution.
 
@@ -182,10 +191,12 @@ If this plane does not serve MCP, set `LANGFLOW_MCP_SERVER_ENABLED=false`. Other
 | `LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES` | Set to an allowlist (empty string blocks all package runners) | Unset |
 | `LANGFLOW_MCP_SERVER_ENV_ALLOWLIST` | Set to an allowlist (empty string blocks all tenant-supplied environment variables) | Unset |
 
-### Local Chroma in `prod`
+### Knowledge and Memory storage
 
-The `prod` profile blocks new knowledge bases and memory bases that use local Chroma.
-For local storage, use a shared pgVector, OpenSearch, or Chroma Cloud store, or run Langflow with `LANGFLOW_DEPLOYMENT_PROFILE=dev` 
+Langflow 1.13 uses local SQLite storage by default. Local storage is intended for a single host with one worker.
+With `LANGFLOW_DEPLOYMENT_PROFILE=prod`, Langflow refuses to create knowledge bases and memory bases on local SQLite.
+For deployments with multiple workers or replicas, configure a shared pgVector or OpenSearch store.
+Chroma local storage and Chroma Cloud are retired. For existing stores, see [Upgrade Knowledge and Memory storage](../Develop/knowledge-storage-upgrade.mdx).
 
 ## See also
 

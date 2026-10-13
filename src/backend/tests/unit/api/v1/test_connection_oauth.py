@@ -10,6 +10,7 @@ from uuid import UUID
 
 import pytest
 from cryptography.fernet import Fernet
+from httpx import AsyncClient
 from langflow.services.auth import utils as auth_utils
 from langflow.services.connection.oauth import providers
 from langflow.services.connection.oauth.config import OAuthError
@@ -47,7 +48,7 @@ def oauth_config(monkeypatch):
     monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", json.dumps({"google-work": registration()}))
 
 
-async def begin(client, headers, *, allow_non_interactive=True):
+async def begin(client, headers, *, allow_non_interactive=True, handoff=False):
     created = await client.post(
         "/api/v1/connections",
         headers=headers,
@@ -67,12 +68,162 @@ async def begin(client, headers, *, allow_non_interactive=True):
         json={"registration_id": "google-work", "scopes": ["calendar.readonly"]},
     )
     assert started.status_code == 200, started.text
-    assert "HttpOnly" in started.headers["set-cookie"]
-    assert "SameSite=lax" in started.headers["set-cookie"]
-    query = parse_qs(urlsplit(started.json()["authorization_url"]).query)
+    if handoff:
+        return row, started
+    query = await consent_query(client, started)
     assert query["code_challenge_method"] == ["S256"]
     assert "client_secret" not in query
     return row, query
+
+
+async def consent_query(client, started):
+    url = started.json()["authorization_url"]
+    if urlsplit(url).path.endswith("/browser"):
+        uri = urlsplit(url)
+        started = await client.get(f"{uri.path}?{uri.query}", follow_redirects=False)
+        assert started.status_code == 303, started.text
+        url = started.headers["location"]
+    assert "HttpOnly" in started.headers["set-cookie"]
+    assert "SameSite=lax" in started.headers["set-cookie"]
+    return parse_qs(urlsplit(url).query)
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+async def test_desktop_handoff_binds_a_separate_browser(client, logged_in_headers, monkeypatch):
+    row, started = await begin(client, logged_in_headers, handoff=True)
+    assert "set-cookie" not in started.headers
+    handoff_url = started.json()["authorization_url"]
+    handoff_query = parse_qs(urlsplit(handoff_url).query)
+    assert urlsplit(handoff_url).hostname == "localhost"
+    assert urlsplit(handoff_url).path == "/api/v1/connections/oauth/google/browser"
+    async with session_scope() as session:
+        binding = await session.get(ConnectionOAuth, UUID(row["id"]))
+        assert handoff_query["handoff"][0] not in binding.model_dump_json()
+
+    # The system browser shares the API transport, but no WebView cookies or login.
+    async with AsyncClient(transport=client._transport, base_url="http://localhost") as system_browser:
+        query = await consent_query(system_browser, started)
+        assert query["code_challenge_method"] == ["S256"]
+        calls = provider_double(monkeypatch, query)
+        assert (await callback(client, query)).status_code == 400
+        assert (await callback(system_browser, query)).status_code == 200
+        assert len(calls) == 1
+        replay = await system_browser.get(handoff_url, follow_redirects=False)
+        assert replay.status_code == 400
+        assert "set-cookie" not in replay.headers
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+async def test_desktop_handoff_is_single_use_before_callback(client, logged_in_headers):
+    _row, started = await begin(client, logged_in_headers, handoff=True)
+    url = started.json()["authorization_url"]
+    results = await asyncio.gather(*(client.get(url, follow_redirects=False) for _ in range(2)))
+    assert sorted(result.status_code for result in results) == [303, 400]
+    for result in results:
+        assert result.headers["cache-control"] == "no-store"
+        assert result.headers["referrer-policy"] == "no-referrer"
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+async def test_desktop_handoff_nonce_cannot_replace_the_callback_cookie(client, logged_in_headers):
+    from langflow.services.connection.oauth.broker import digest
+
+    _row, started = await begin(client, logged_in_headers, handoff=True)
+    query = parse_qs(urlsplit(started.json()["authorization_url"]).query)
+    client.cookies.set("lf_connection_oauth_" + digest(query["state"][0])[:24], query["handoff"][0])
+    assert (await callback(client, query)).status_code == 400
+    client.cookies.clear()
+    query = await consent_query(client, started)
+    assert (await callback(client, query, error="access_denied")).status_code == 400
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+async def test_desktop_handoff_rechecks_permission(client, logged_in_headers, monkeypatch):
+    from fastapi import HTTPException
+    from langflow.services.connection.oauth import broker
+
+    _row, started = await begin(client, logged_in_headers, handoff=True)
+
+    async def deny(*_args, **_kwargs):
+        raise HTTPException(status_code=403, detail="Connection access revoked")
+
+    monkeypatch.setattr(broker, "ensure_connection_permission", deny)
+    result = await client.get(started.json()["authorization_url"], follow_redirects=False)
+    assert result.status_code == 403
+    assert "set-cookie" not in result.headers
+    assert "location" not in result.headers
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+@pytest.mark.parametrize("failure", ["expired", "revoked", "deleted", "superseded", "inactive", "config_changed"])
+async def test_desktop_handoff_rejects_invalidated_attempts(client, logged_in_headers, monkeypatch, failure):
+    row, started = await begin(client, logged_in_headers, handoff=True)
+    if failure == "expired":
+        async with session_scope() as session:
+            binding = await session.get(ConnectionOAuth, UUID(row["id"]))
+            binding.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+            session.add(binding)
+    elif failure == "revoked":
+        assert (
+            await client.post(f"/api/v1/connections/{row['id']}/revoke", headers=logged_in_headers)
+        ).status_code == 200
+    elif failure == "deleted":
+        assert (await client.delete(f"/api/v1/connections/{row['id']}", headers=logged_in_headers)).status_code == 204
+    elif failure == "superseded":
+        assert (
+            await client.post(
+                f"/api/v1/connections/{row['id']}/oauth/start",
+                headers=logged_in_headers,
+                json={"registration_id": "google-work", "scopes": ["calendar.readonly"]},
+            )
+        ).status_code == 200
+    elif failure == "inactive":
+        from langflow.services.database.models.user.model import User
+
+        async with session_scope() as session:
+            user = await session.get(User, UUID(row["owner_id"]))
+            user.is_active = False
+            session.add(user)
+    else:
+        monkeypatch.setenv(
+            "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", json.dumps({"google-work": registration(client_id="changed")})
+        )
+    result = await client.get(started.json()["authorization_url"], follow_redirects=False)
+    assert result.status_code == 400
+    assert "set-cookie" not in result.headers
+    assert "location" not in result.headers
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+@pytest.mark.parametrize("failure", ["wrong_provider", "wrong_nonce", "duplicate_state", "duplicate_handoff"])
+async def test_desktop_handoff_rejects_malformed_requests(client, logged_in_headers, failure):
+    _row, started = await begin(client, logged_in_headers, handoff=True)
+    url = started.json()["authorization_url"]
+    if failure == "wrong_provider":
+        url = url.replace("/google/browser", "/microsoft/browser")
+    elif failure == "wrong_nonce":
+        query = parse_qs(urlsplit(url).query)
+        url = url.replace(query["handoff"][0], "x" * 43)
+    else:
+        field = "state" if failure == "duplicate_state" else "handoff"
+        url += f"&{field}=duplicate"
+    result = await client.get(url, follow_redirects=False)
+    assert result.status_code == 400
+    assert "set-cookie" not in result.headers
+    assert "location" not in result.headers
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+async def test_web_oauth_keeps_its_original_cookie_flow(client, logged_in_headers, monkeypatch):
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "self_managed")
+    monkeypatch.setenv(
+        "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", json.dumps({"google-work": registration(context="self_managed")})
+    )
+    _row, started = await begin(client, logged_in_headers, handoff=True)
+    assert urlsplit(started.json()["authorization_url"]).hostname == "accounts.google.com"
+    query = await consent_query(client, started)
+    provider_double(monkeypatch, query)
+    assert (await callback(client, query)).status_code == 200
 
 
 def resolution(row):
@@ -179,7 +330,7 @@ async def test_reauthorization_clears_an_undecryptable_error(
         json={"registration_id": "google-work", "scopes": ["calendar.readonly"]},
     )
     assert restarted.status_code == 200, restarted.text
-    requery = parse_qs(urlsplit(restarted.json()["authorization_url"]).query)
+    requery = await consent_query(client, restarted)
     provider_double(monkeypatch, requery)
     assert (await callback(client, requery)).status_code == 200
 
@@ -340,7 +491,7 @@ async def test_denied_reauthorization_preserves_existing_credential(client, logg
         json={"registration_id": "google-work", "scopes": ["calendar.readonly"]},
     )
     assert started.status_code == 200, started.text
-    second_query = parse_qs(urlsplit(started.json()["authorization_url"]).query)
+    second_query = await consent_query(client, started)
     assert (await callback(client, second_query, error="access_denied")).status_code == 400
 
     visible = await client.get("/api/v1/connections", headers=logged_in_headers)
