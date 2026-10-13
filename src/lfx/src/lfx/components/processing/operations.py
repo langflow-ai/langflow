@@ -988,7 +988,7 @@ class OperationsComponent(Component):
                         [combined_data[key], value] if not isinstance(value, list) else [combined_data[key], *value]
                     )
 
-        return Data(**combined_data)
+        return Data(data=combined_data)
 
     def append_update(self) -> Data:
         """Append or update the data with new key-value pairs."""
