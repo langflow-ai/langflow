@@ -2456,6 +2456,7 @@ class TestCancelIngestion:
     ):
         from unittest.mock import patch as mock_patch
 
+        from langflow.services.database.models.jobs.model import JobStatus
         from langflow.services.deps import get_service
         from langflow.services.schema import ServiceType
 
@@ -2500,7 +2501,12 @@ class TestCancelIngestion:
             data = response.json()
             assert "cancelled successfully" in data["message"]
             mock_task_service_inst.revoke_task.assert_called_once_with(job_id)
-            mock_job_service_inst.update_job_status.assert_called_once()
+            # The finish time is stamped with the status: retention dates an
+            # unstamped terminal row from its creation, so a long-running
+            # ingestion would be purged on the next sweep once cancelled.
+            mock_job_service_inst.update_job_status.assert_called_once_with(
+                job_id, JobStatus.CANCELLED, finished_timestamp=True
+            )
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     @patch("langflow.api.v1.knowledge_bases.get_job_service")
