@@ -335,41 +335,6 @@ Flow-authoring tools other than `run_assistant` are available when Langflow Assi
 <Tabs groupId="">
   <TabItem value="Call Langflow Assistant with `lfx-mcp`" label="Call Langflow Assistant with `lfx-mcp`" default>
 
-
-
-  </TabItem>
-  <TabItem value="Connect Cursor with HTTP" label="Connect Cursor with HTTP">
-
-Cursor can call the same tools as Claude without a local `lfx-mcp` process.
-Langflow serves them over [streamable HTTP](https://modelcontextprotocol.io/docs/concepts/transports) at `/api/v1/agentic/mcp`.
-
-1. [Create a Langflow API key](/api-keys-and-authentication).
-2. In Cursor, open **Cursor Settings**, select **MCP**, and then click **Add New Global MCP Server**.
-3. Add the server to `mcp.json`.
-Replace the URL if Langflow is not on `localhost:7860`, and replace the key with your Langflow API key:
-
-    ```json
-    {
-      "mcpServers": {
-        "langflow-assistant": {
-          "url": "http://localhost:7860/api/v1/agentic/mcp",
-          "headers": {
-            "x-api-key": "YOUR_LANGFLOW_API_KEY"
-          }
-        }
-      }
-    }
-    ```
-
-4. Save the file.
-Cursor lists **langflow-assistant** and its tools, including `run_assistant`.
-5. Ask Cursor to use the Assistant with the same kind of prompt as in [Call Langflow Assistant with `lfx-mcp`](#call-langflow-assistant-with-lfx-mcp).
-
-  </TabItem>
-</Tabs>
-
-### Call Langflow Assistant with `lfx-mcp` {#call-langflow-assistant-with-lfx-mcp}
-
 [`lfx-mcp`](/lfx-mcp) is a local MCP server a coding agent starts on your machine.
 It connects to your Langflow instance with `LANGFLOW_SERVER_URL` and `LANGFLOW_API_KEY`, and it includes `run_assistant`.
 
@@ -416,9 +381,41 @@ For example, to add `lfx-mcp` in Claude Code, run:
     Langflow Assistant chooses the components, connects them into a flow, and saves it.
 
 5. Open Langflow.
-The new flow is available in your project.
+    The new flow is available in your project.
 
-In the Assistant pane, a new flow is shown as a diagram until you click **Add to canvas**, but a `run_assistant` call saves the flow as soon as Langflow Assistant completes its run.
+  </TabItem>
+  <TabItem value="Call Langflow Assistant with Cursor" label="Call Langflow Assistant with Cursor">
+
+Cursor can call the same tools as Claude without a local `lfx-mcp` process.
+Langflow serves them over [streamable HTTP](https://modelcontextprotocol.io/docs/concepts/transports) at `/api/v1/agentic/mcp`.
+
+1. [Create a Langflow API key](/api-keys-and-authentication).
+2. In Cursor, open **Cursor Settings**, select **MCP**, and then click **Add New Global MCP Server**.
+3. Add the server to `mcp.json`:
+
+    ```json
+    {
+      "mcpServers": {
+        "langflow-assistant": {
+          "url": "http://localhost:7860/api/v1/agentic/mcp",
+          "headers": {
+            "x-api-key": "YOUR_LANGFLOW_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+    Replace `LANGFLOW_SERVER_URL` with your Langflow server URL, and replace `LANGFLOW_API_KEY` with your Langflow API key.
+
+4. Save the file.
+Cursor lists **langflow-assistant** and its tools, including `run_assistant`.
+5. Ask Cursor to use the Assistant with the same kind of prompt as in [Call Langflow Assistant with `lfx-mcp`](#call-langflow-assistant-with-lfx-mcp).
+
+  </TabItem>
+</Tabs>
+
+In the **Langflow Assistant** pane, a new flow is displayed as a diagram until you click **Add to canvas**, but a `run_assistant` call saves the flow as soon as Langflow Assistant completes its run.
 
 The client can pass these arguments:
 
