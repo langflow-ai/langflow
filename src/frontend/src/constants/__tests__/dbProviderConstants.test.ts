@@ -318,6 +318,23 @@ describe("dbProviderConstants", () => {
       );
     });
 
+    it("follows the pgVector server default when local storage is allowed", () => {
+      expect(getDefaultDBProviderConfig([], true, "postgres")).toEqual({
+        backendType: "postgres",
+        backendConfig: {},
+      });
+      expect(isDBProviderConfigured("postgres", [], true, "postgres")).toBe(
+        false,
+      );
+      expect(
+        getActiveDBProvider(
+          [variable(ACTIVE_DB_PROVIDER_VARIABLE, "sqlite")],
+          true,
+          "postgres",
+        ),
+      ).toBe("sqlite");
+    });
+
     it("falls back to Postgres even when the active variable pins SQLite", () => {
       // An explicit ``LANGFLOW_KNOWLEDGE_BACKEND=chroma`` must not resurrect a
       // SQLite the create endpoint rejects on the production profile.
