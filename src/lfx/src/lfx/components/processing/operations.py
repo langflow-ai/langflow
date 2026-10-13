@@ -996,7 +996,7 @@ class OperationsComponent(Component):
         data_filtered = self.get_normalized_data()
         for key, value in self.append_update_data.items():
             data_filtered[key] = value
-        return Data(**data_filtered)
+        return Data(data=data_filtered)
 
     def json_path(self) -> Data:
         """Extract a value from the data using the selected JQ path."""
