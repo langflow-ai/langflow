@@ -708,6 +708,6 @@ async def test_a_repaired_save_that_needs_the_clients_fix_writes_nothing(client:
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
     violations = response.json()["detail"]["violations"]
     assert [(violation["code"], violation["resolution"]) for violation in violations] == [
-        ("EDGE_HANDLE_NOT_FOUND", "client")
+        ("EDGE_HANDLE_NOT_FOUND", "manual")
     ]
     assert await _rows(flow["id"]) == rows_before

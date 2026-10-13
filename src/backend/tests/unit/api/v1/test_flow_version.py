@@ -1612,4 +1612,4 @@ async def test_activating_a_version_whose_edges_break_the_rules_is_left_to_the_c
     assert activate_resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, activate_resp.text
     violations = activate_resp.json()["detail"]["violations"]
     assert violations
-    assert {violation["resolution"] for violation in violations} == {"client"}
+    assert {violation["resolution"] for violation in violations} == {"manual"}
