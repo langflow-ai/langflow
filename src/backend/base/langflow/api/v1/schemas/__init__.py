@@ -195,6 +195,12 @@ class CustomComponentRequest(BaseModel):
     code: str
     frontend_node: dict | None = None
 
+    def get_class_name(self) -> str | None:
+        """Read an optional class identity from the saved frontend template."""
+        metadata = (self.frontend_node or {}).get("metadata")
+        class_name = metadata.get("component_class_name") if isinstance(metadata, dict) else None
+        return class_name if isinstance(class_name, str) and class_name else None
+
 
 class CustomComponentResponse(BaseModel):
     data: dict

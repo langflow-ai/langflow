@@ -11,9 +11,12 @@ from textwrap import dedent
 from types import SimpleNamespace
 
 import pytest
+from lfx.custom.custom_component.component import Component
 from lfx.custom.eval import eval_custom_component_code
-from lfx.custom.utils import create_component_template
+from lfx.custom.utils import build_custom_component_template, create_component_template
 from lfx.custom.validate import extract_class_name
+from lfx.graph import Graph
+from lfx.graph.flow_builder.component import add_component
 from lfx.interface.initialize import loading
 
 MULTI_COMPONENT_SOURCE = dedent(
@@ -107,6 +110,41 @@ def test_should_build_palette_template_from_the_loaded_class_not_the_first_in_fi
 
     assert template["display_name"] == "Second"
     assert [output["name"] for output in template["outputs"]] == ["out2"]
+    assert template["metadata"]["component_class_name"] == "Second"
+
+
+@pytest.mark.parametrize(("class_name", "expected"), [("Second", "Second"), (None, "First"), ("Missing", "First")])
+def test_should_preserve_class_when_rebuilding_template_from_code(class_name, expected):
+    template, instance = build_custom_component_template(Component(_code=MULTI_COMPONENT_SOURCE), class_name=class_name)
+
+    assert type(instance).__name__ == expected
+    assert template["display_name"] == expected
+    assert template["metadata"]["component_class_name"] == expected
+
+
+@pytest.mark.parametrize(
+    ("registry_type", "saved_class"),
+    [("Second", None), ("ext:my_bundle:Second@extra", None), (None, "Second"), ("First", "Second")],
+)
+async def test_should_restore_flow_builder_custom_component_identity(
+    multi_component_module, registry_type, saved_class
+):
+    template, _ = create_component_template(component_extractor=multi_component_module.Second())
+    if saved_class is None:
+        template["metadata"].pop("component_class_name")
+    flow = {"data": {"nodes": [], "edges": []}}
+    add_component(flow, "Second", {"Second": {**template, "custom": True}}, component_id="Second-abc12")
+    if registry_type is None:
+        flow["data"]["nodes"][0]["data"].pop("_flow_builder_registry_type")
+    else:
+        flow["data"]["nodes"][0]["data"]["_flow_builder_registry_type"] = registry_type
+
+    assert flow["data"]["nodes"][0]["data"]["type"] == "CustomComponent"
+    graph = Graph.from_payload(flow)
+    results = [result async for result in graph.async_start()]
+
+    assert type(graph.get_vertex("Second-abc12").custom_component).__name__ == "Second"
+    assert results[0].result_dict.artifacts["out2"]["raw"] == {"which": "Second"}
 
 
 @pytest.mark.parametrize("vertex_type", ["ext:my_bundle:Second@extra", "Second"])

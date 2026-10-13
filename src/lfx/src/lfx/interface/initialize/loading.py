@@ -75,7 +75,18 @@ def _component_class_name(vertex: Vertex) -> str:
 
     The node's own ``type`` comes first because tool mode swaps ``vertex_type`` for the template's base type.
     """
-    node_type = (getattr(vertex, "data", None) or {}).get("type") or vertex.vertex_type
+    data = getattr(vertex, "data", None) or {}
+    node_type = data.get("type") or vertex.vertex_type
+    if node_type == "CustomComponent":
+        from lfx.graph.flow_builder.component import FLOW_BUILDER_REGISTRY_TYPE_KEY
+
+        registry_type = data.get(FLOW_BUILDER_REGISTRY_TYPE_KEY)
+        metadata = (data.get("node") or {}).get("metadata")
+        class_name = metadata.get("component_class_name") if isinstance(metadata, dict) else None
+        if isinstance(class_name, str) and class_name:
+            node_type = class_name
+        elif isinstance(registry_type, str) and registry_type:
+            node_type = registry_type
     if node_type.startswith("ext:"):
         return node_type.rpartition(":")[2].partition("@")[0]
     return node_type
