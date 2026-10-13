@@ -11,7 +11,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-
 ROOT = Path(__file__).resolve().parents[6]
 INLINE_SOURCE = ROOT / "src/bundles/docling/src/lfx_docling/components/docling/docling_inline.py"
 FILE_SOURCE = ROOT / "src/lfx/src/lfx/components/files_and_knowledge/file.py"
