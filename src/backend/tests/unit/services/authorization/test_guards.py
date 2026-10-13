@@ -625,6 +625,52 @@ async def test_ensure_flows_permission_owner_override_skips_batch(monkeypatch, f
     assert service.calls == []
 
 
+@pytest.mark.anyio
+async def test_ensure_flows_permission_forwards_same_context_as_single_flow_check(monkeypatch, fake_user):
+    """The batched check must forward the same extra context as the single-flow check.
+
+    ``ensure_flow_permission`` -> ``_ensure_typed`` builds ``extra_context`` from
+    ``workspace_id`` / ``folder_id`` / ``flow_user_id`` / ``folder_user_id`` for the
+    "flow" resource spec. The batched path used to forward only the caller's auth
+    context, silently dropping the fields a plugin needs to scope its policy the
+    same way it would for a single-flow check.
+    """
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    flow_user_id = uuid4()
+    workspace_id = uuid4()
+    folder_id = uuid4()
+
+    await authz_guards.ensure_flow_permission(
+        fake_user,
+        FlowAction.WRITE,
+        flow_id=uuid4(),
+        flow_user_id=flow_user_id,
+        workspace_id=workspace_id,
+        folder_id=folder_id,
+    )
+    single_flow_context = service.calls[0]["context"]
+
+    await authz_guards.ensure_flows_permission(
+        fake_user,
+        FlowAction.WRITE,
+        flow_ids=[uuid4(), uuid4()],
+        flow_user_id=flow_user_id,
+        workspace_id=workspace_id,
+        folder_id=folder_id,
+    )
+    batch_context = service.batch_calls[0]["context"]
+
+    assert batch_context == single_flow_context
+    assert batch_context["flow_user_id"] == flow_user_id
+    assert batch_context["workspace_id"] == workspace_id
+    assert batch_context["folder_id"] == folder_id
+    assert batch_context["folder_user_id"] is None
+
+
 # ----------------------------------------------------------------------------- #
 # ensure_project_permission
 # ----------------------------------------------------------------------------- #

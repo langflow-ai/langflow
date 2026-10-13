@@ -76,10 +76,33 @@ This reverses only the timestamp change. Before starting an older release, follo
 Changing `LANGFLOW_DATABASE_URL` from SQLite to PostgreSQL does **not** copy existing SQLite data into PostgreSQL.
 Langflow initializes and migrates the new database schema, and your previous SQLite file remains where it was.
 
-There is no built-in SQLite-to-PostgreSQL data migrator.
-Langflow creates a new PostgreSQL schema, and then you can restore application data you saved.
+To copy everything from SQLite into PostgreSQL, stop Langflow and run `langflow convert-sqlite-to-postgres`:
 
-To migrate your flows while switching from SQLite to PostgreSQL, do the following:
+```bash
+langflow convert-sqlite-to-postgres \
+  --source sqlite:////path/to/langflow.db \
+  --target postgresql://user:password@host:5432/langflow
+```
+
+A command line is visible to other users of the machine, so to keep the PostgreSQL password out of it, set `LANGFLOW_MIGRATION_SOURCE_URL` and `LANGFLOW_MIGRATION_TARGET_URL` instead of passing `--source` and `--target`.
+If both are given, the options win.
+
+The SQLite database must already be on the schema of the Langflow version you run the command with, so start that version against it once first.
+If you copy the SQLite file before converting, use `sqlite3 langflow.db ".backup copy.db"` or `VACUUM INTO`. Langflow runs SQLite in WAL mode, so a plain file copy can come out empty.
+
+The command creates the PostgreSQL schema, copies every row in one transaction, and checks each table's row count before committing.
+If anything is refused, such as a value PostgreSQL does not accept or a target database that already belongs to another instance, nothing is written and the command lists the problems.
+
+SQLite never enforced Langflow's foreign keys, so deleting a user or clearing a flow's traces can leave rows that point at a deleted row.
+PostgreSQL rejects those rows, so the command refuses them by default and lists each table, column, and row count.
+To copy without them, rerun with `--drop-orphans`. Rows that PostgreSQL would have deleted along with their parent (`ON DELETE CASCADE`) are left out, keys it would have cleared (`ON DELETE SET NULL`) are set to `NULL`, and the command reports how many rows it handled for each.
+Keep the same `LANGFLOW_SECRET_KEY` when you point Langflow at the new database, or stored credentials can't be decrypted.
+
+To run the command from another program, add `--json`.
+It then writes one JSON object per line to standard output: `progress` as it checks the source, prepares the target, and copies rows, `item` for each copied table, `error` or `decision_needed` for anything it refuses, and a final `report`.
+Each problem carries a stable `code`, logs go to standard error, and the exit code is non-zero if anything was refused or failed.
+
+To move only your flows instead, do the following:
 
 1. [Export flows](/concepts-flows-import), and note any [global variables](/configuration-global-variables) or credentials.
 2. Provision PostgreSQL 15+ and set `LANGFLOW_DATABASE_URL` as described in [Configure an external PostgreSQL database](/configuration-custom-database).

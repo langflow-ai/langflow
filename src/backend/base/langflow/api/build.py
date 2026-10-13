@@ -1001,6 +1001,10 @@ async def _generate_flow_events(
                     flow_id=flow_id,
                     user_id=current_user.id,
                     job_type=JobType.WORKFLOW,
+                    # Live from insert, then kept alive by execute_with_status, so an orphan
+                    # sweep cannot fail it mid-run. The pause path writes job_metadata only
+                    # for a runner-owned job, never for this one.
+                    heartbeat=True,
                 )
     except Exception:  # noqa: BLE001
         await logger.awarning(
@@ -1070,7 +1074,7 @@ async def _generate_flow_events(
         # still covers them, so the operator sees the request, just not a unit of work.
         with graph.flow_execution_span() as flow_span:
             if _build_job_svc and _build_run_id and not runner_owns_status:
-                await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
+                await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build, keep_alive=True)
             else:
                 await _run_vertex_build()
             if build_error_type is not None:

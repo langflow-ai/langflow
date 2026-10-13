@@ -4,13 +4,13 @@ import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import {
   ACTIVE_DB_PROVIDER_VARIABLE,
-  type AvailableDBProviderId,
   type DBProviderConfigValue,
   getDBProviderOption,
   getDefaultDBProviderConfig,
   getGlobalVariableValue,
   isDBProviderConfigured,
   resolveUIBackendType,
+  type StoredDBProviderId,
   toAPIBackendType,
 } from "@/constants/dbProviderConstants";
 import { api } from "@/controllers/API/api";
@@ -58,12 +58,11 @@ import { formatFileSize } from "../utils";
  * server schema validator.
  */
 function validateBackendConfig(
-  backendType: AvailableDBProviderId,
+  backendType: StoredDBProviderId,
   _config: Record<string, DBProviderConfigValue>,
 ): string | null {
-  if (backendType === "chroma_cloud") {
-    // API key is validated by isDBProviderConfigured; no literal fields here.
-    return null;
+  if (backendType === "chroma" || backendType === "chroma_cloud") {
+    return "This Chroma store requires migration before it can be used.";
   }
   // OpenSearch no longer requires an ``index_name``: the backend derives a
   // unique index per Knowledge Base from its owner and name when one isn't
@@ -193,19 +192,16 @@ export function useKnowledgeBaseForm({
       )
     );
   }, [embeddingModelOptions, modelCatalogReady, selectedEmbeddingModel]);
-  // Defaults keep existing KBs on the local Chroma store. Backend is immutable
+  // Defaults keep existing KBs on the local SQLite store. Backend is immutable
   // after create, so add-sources mode displays the existing backend read-only.
-  const [backendType, setBackendType] =
-    useState<AvailableDBProviderId>("chroma");
+  const [backendType, setBackendType] = useState<StoredDBProviderId>("sqlite");
   const [backendConfig, setBackendConfig] = useState<
     Record<string, DBProviderConfigValue>
   >({});
   // Persists per-provider configs across provider switches within the modal
   // so that switching away and back restores the config seen on first entry.
   const perProviderConfigsRef = useRef<
-    Partial<
-      Record<AvailableDBProviderId, Record<string, DBProviderConfigValue>>
-    >
+    Partial<Record<StoredDBProviderId, Record<string, DBProviderConfigValue>>>
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(!hideAdvanced);
@@ -223,7 +219,7 @@ export function useKnowledgeBaseForm({
   // dropdown when no prior selection exists.
   const handleBackendProviderChange = useCallback(
     (
-      newType: AvailableDBProviderId,
+      newType: StoredDBProviderId,
       freshConfig: Record<string, DBProviderConfigValue>,
     ) => {
       perProviderConfigsRef.current[backendType] = backendConfig;
@@ -371,7 +367,7 @@ export function useKnowledgeBaseForm({
       { column_name: "text", vectorize: true, identifier: true },
     ]);
     setSelectedEmbeddingModel([]);
-    setBackendType("chroma");
+    setBackendType("sqlite");
     setBackendConfig({});
     perProviderConfigsRef.current = {};
     setMetadataPairs([]);
@@ -549,16 +545,16 @@ export function useKnowledgeBaseForm({
       // Create the knowledge base (skip if adding to existing)
       if (!isAddSourcesMode) {
         // When the user hasn't explicitly chosen a provider (no active-provider
-        // variable set, still on the Chroma default), send ``undefined`` so the
+        // variable set, still on the SQLite default), send ``undefined`` so the
         // server resolves the deployment default — this is what lets an
-        // env-configured pgVector auto-become the backend instead of Chroma.
-        // An explicit selection (active variable set, or any non-Chroma pick)
+        // env-configured pgVector auto-become the backend instead of SQLite.
+        // An explicit selection (active variable set, or any non-SQLite pick)
         // is always sent through and honored.
         const hasExplicitActiveProvider = Boolean(
           getGlobalVariableValue(globalVariables, ACTIVE_DB_PROVIDER_VARIABLE),
         );
         const resolvedBackendType =
-          !hasExplicitActiveProvider && backendType === "chroma"
+          !hasExplicitActiveProvider && backendType === "sqlite"
             ? undefined
             : toAPIBackendType(backendType);
         await createKnowledgeBase.mutateAsync({

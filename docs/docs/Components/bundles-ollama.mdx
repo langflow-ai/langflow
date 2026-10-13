@@ -68,6 +68,7 @@ Available parameters depend on the selected model.
 5. Connect the **Ollama Embeddings** component to other components in the flow.
 For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
 
-    This example connects the **Ollama Embeddings** component to generate embeddings for text chunks extracted from a PDF file, and then stores the embeddings and chunks in a Chroma DB vector store.
+    This example connects the **Ollama Embeddings** component to generate embeddings for text chunks extracted from a PDF file, and then stores the embeddings and chunks in a vector store.
+    The screenshot uses the legacy Chroma component, which is retired in Langflow 1.13. Use a supported provider such as [Astra DB](/bundles-datastax) or [pgVector](/bundles-pgvector), configured with the matching embedding dimensions.
 
     ![Ollama Embeddings component in an embedding generation flow](/img/component-ollama-embeddings-chromadb.png)

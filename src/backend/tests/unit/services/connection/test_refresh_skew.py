@@ -103,7 +103,10 @@ async def authorized_connection(client, logged_in_headers, oauth_config, monkeyp
         json={"registration_id": "google-work", "scopes": ["calendar.readonly"]},
     )
     assert started.status_code == 200, started.text
-    query = parse_qs(urlsplit(started.json()["authorization_url"]).query)
+    handoff = urlsplit(started.json()["authorization_url"])
+    browser = await client.get(f"{handoff.path}?{handoff.query}", follow_redirects=False)
+    assert browser.status_code == 303, browser.text
+    query = parse_qs(urlsplit(browser.headers["location"]).query)
 
     async def initial_exchange(_url, data, **_kwargs):
         assert data["grant_type"] == "authorization_code"

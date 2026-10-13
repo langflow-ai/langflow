@@ -20,7 +20,7 @@ Each component has a **Microsoft Connection** field that holds a portable connec
 Before a component can run:
 
 1. An operator registers a Microsoft Entra application with Langflow. See [Register a Microsoft Entra application](../Develop/entra-app-registration.mdx) and [Configure connection OAuth](../Develop/connection-oauth.mdx).
-2. A user connects their Microsoft account through that registration, granting the delegated permissions the selected actions need.
+2. A user connects their Microsoft account in **Settings**, granting the delegated permissions the selected actions need. See [Connections](./connections).
 3. The user selects that connection in the component's **Microsoft Connection** field.
 
 The connection must grant the permissions listed for the action. Missing permissions fail the run with a `scope-missing` error before any request reaches Microsoft, so a component never sends a call it knows will be refused.
@@ -36,6 +36,20 @@ export LF_CONNECTION__MICROSOFT__WORK='{"access_token":"<delegated access token>
 Use **short** permission names such as `Mail.Read`; execution checks also accept the equivalent fully qualified Microsoft Graph names. Do not include `offline_access`: Entra never echoes it, and it belongs to the OAuth registration rather than to an action.
 
 The JSON form accepts only `access_token`, `token_type`, `expires_at`, `scopes`, and `account`. Refresh tokens and client secrets are rejected. A bare token lacks verified scope metadata and cannot run these permission-scoped actions. Use the JSON form with the token's granted permissions.
+
+## Microsoft 365 source triggers
+
+Add **Outlook: On Message**, **Outlook: On Calendar Event**, or **OneDrive or SharePoint: On File** at the start of a Flow. Save the Flow, then enable its trigger through the Triggers API. The connection must belong to the Flow owner and have **Allow background runs** enabled. The trigger uses the owner's delegated credential; a shared or instance connection cannot arm it.
+
+| Trigger | Delegated scopes | Changes observed |
+|---|---|---|
+| Outlook: On Message | `Mail.Read` | Messages in the owner's Inbox |
+| Outlook: On Calendar Event | `Calendars.Read` | Events in a rolling calendar window |
+| OneDrive or SharePoint: On File | `Files.Read`; add `Files.Read.All` and `Sites.Read.All` when **SharePoint Site ID** is set | Files in the owner's drive or selected site's default drive |
+
+In advanced **Delivery Mode**, `auto` chooses a Graph notification subscription when ingress is enabled and the OAuth registration advertises a public HTTPS callback; otherwise it uses Graph delta polling. Select `poll` to use a listener even when ingress is enabled, or `push` to require push configuration. Hosted deployments require push. Notifications only wake a delta scan; the Flow receives the changed item. Langflow stores the item version and delta cursor together, renews subscriptions, and schedules backup scans after five minutes to recover missed notifications. Backlog and provider delays can extend this interval. Enabling starts from the current state, so existing items do not fire the Flow.
+
+The Graph subscription callback uses the public origin of the connection's OAuth registration. That registration must have an HTTPS redirect URI reachable by Graph. `GET /api/v1/triggers/{trigger_id}/ingress` shows the exact callback after saving a configured push source, before enabling it. If Graph expires a delta cursor, Langflow compares a fresh snapshot with stored item versions before resuming.
 
 ## Components
 

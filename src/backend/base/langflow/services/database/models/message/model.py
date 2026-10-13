@@ -190,6 +190,9 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         # planner sort the matched rows instead of walking the index in order.
         Index("ix_message_flow_id_timestamp_id", "flow_id", "timestamp", "id"),
         Index("ix_message_session_id_timestamp_id", "session_id", "timestamp", "id"),
+        # Session lists group a flow's messages by session_id and take MAX(timestamp);
+        # with all three columns in the index that is an index-only scan.
+        Index("ix_message_flow_id_session_id_timestamp", "flow_id", "session_id", "timestamp"),
         Index(
             "ix_message_session_metadata_tenant",
             text("(session_metadata->>'tenant_id')"),

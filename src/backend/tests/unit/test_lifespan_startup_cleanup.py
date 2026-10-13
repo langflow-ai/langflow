@@ -14,10 +14,12 @@ asserts the cleanup path no longer raises.
 Issue: https://github.com/langflow-ai/langflow/issues/13634
 """
 
+import logging
 from unittest.mock import AsyncMock, MagicMock
 
 import langflow.main as main_module
 import pytest
+import structlog
 
 
 async def test_startup_failure_does_not_mask_error_with_unbound_temp_dirs(monkeypatch):
@@ -85,3 +87,39 @@ async def test_environment_import_failure_does_not_abort_worker_startup(monkeypa
     assert exc.value is reached_next_step
     sweep.assert_awaited_once()
     assert _STATE.environment_variables_initialized is False
+
+
+@pytest.mark.parametrize("failure", ["migration", "pools"])
+async def test_storage_shutdown_failure_does_not_skip_later_cleanup(monkeypatch, failure):
+    """Drive the real lifespan's finally block with a failing storage shutdown step."""
+    from langflow.services.knowledge_base_storage import coordinator, runtime
+
+    warning_logger = structlog.make_filtering_bound_logger(logging.WARNING)(structlog.ReturnLogger(), [], {})
+    monkeypatch.setattr(main_module, "logger", warning_logger)
+    sentinel = RuntimeError("startup failed before bundle loading")
+    monkeypatch.setattr(main_module, "initialize_services", AsyncMock(side_effect=sentinel))
+    monkeypatch.setattr(main_module, "log_exception_to_telemetry", AsyncMock())
+    monkeypatch.setattr(main_module, "cleanup_mcp_sessions", AsyncMock())
+    teardown = AsyncMock()
+    lag_monitor = AsyncMock()
+    sandbox = MagicMock()
+    progress = MagicMock()
+    monkeypatch.setattr(main_module, "teardown_services", teardown)
+    monkeypatch.setattr(main_module, "stop_event_loop_lag_monitor", lag_monitor)
+    monkeypatch.setattr("lfx.utils.sandbox.shutdown_sandbox", sandbox)
+    monkeypatch.setattr("langflow.cli.progress.create_langflow_shutdown_progress", lambda **_kwargs: progress)
+    stop_upgrade = AsyncMock(side_effect=RuntimeError("stop failed") if failure == "migration" else None)
+    close_pools = AsyncMock(side_effect=RuntimeError("dispose failed") if failure == "pools" else None)
+    monkeypatch.setattr(coordinator, "stop_upgrade", stop_upgrade)
+    monkeypatch.setattr(runtime, "close_coordination_pools", close_pools)
+
+    with pytest.raises(RuntimeError) as exc:
+        async with main_module.get_lifespan()(object()):
+            pass
+    assert exc.value is sentinel
+    stop_upgrade.assert_awaited_once()
+    close_pools.assert_awaited_once()
+    lag_monitor.assert_awaited_once()
+    teardown.assert_awaited_once()
+    sandbox.assert_called_once()
+    assert [call.args[0] for call in progress.step.call_args_list] == list(range(5))

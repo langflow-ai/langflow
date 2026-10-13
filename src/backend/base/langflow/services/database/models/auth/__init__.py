@@ -1,4 +1,5 @@
 from .authz import (
+    AuthzAccessException,
     AuthzAuditLog,
     AuthzEditLock,
     AuthzRole,
@@ -21,6 +22,7 @@ from .sso_secret import (
 )
 
 __all__ = [
+    "AuthzAccessException",
     "AuthzAuditLog",
     "AuthzEditLock",
     "AuthzRole",

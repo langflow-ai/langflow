@@ -20,10 +20,8 @@ Everything runs against the OSS package only — no EE Casbin enforcer required.
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
-from langflow.api.v1.knowledge_bases import KBStorageHelper
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
@@ -818,7 +816,7 @@ def _knowledge_base_payload(name: str) -> dict[str, object]:
         "name": name,
         "embedding_provider": "OpenAI",
         "embedding_model": "text-embedding-3-small",
-        "backend_type": "chroma",
+        "backend_type": "sqlite",
         "backend_config": {},
     }
 
@@ -828,9 +826,7 @@ async def test_roleless_user_cannot_create_files_or_knowledge_bases(client, monk
     await _make_user(username)
     headers = await _login(client, username)
 
-    monkeypatch.setattr(KBStorageHelper, "get_root_path", lambda: tmp_path)
-    monkeypatch.setattr(KBStorageHelper, "get_fresh_chroma_client", lambda _path: MagicMock())
-    monkeypatch.setattr(KBStorageHelper, "release_chroma_resources", lambda _path: None)
+    monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(tmp_path))
 
     with install_policy_authz(get_settings_service()):
         upload = await client.post(
@@ -841,7 +837,7 @@ async def test_roleless_user_cannot_create_files_or_knowledge_bases(client, monk
         test_connection = await client.post(
             "api/v1/knowledge_bases/test-connection",
             headers=headers,
-            json={"backend_type": "chroma", "backend_config": {}},
+            json={"backend_type": "sqlite", "backend_config": {}},
         )
         create = await client.post(
             "api/v1/knowledge_bases",
@@ -868,13 +864,14 @@ async def test_roleless_user_cannot_create_files_or_knowledge_bases(client, monk
 
 
 async def test_developer_can_create_files_and_knowledge_bases(client, monkeypatch, tmp_path):
+    from anyio import Path
+    from langflow.services.deps import get_storage_service
+
     role_ids = await _seed_roles()
     _developer_id, headers = await _role_user(client, "developer", role_ids)
 
-    monkeypatch.setattr(KBStorageHelper, "get_root_path", lambda: tmp_path)
-    chroma_client = MagicMock()
-    monkeypatch.setattr(KBStorageHelper, "get_fresh_chroma_client", lambda _path: chroma_client)
-    monkeypatch.setattr(KBStorageHelper, "release_chroma_resources", lambda _path: None)
+    monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(tmp_path))
+    monkeypatch.setattr(get_storage_service(), "data_dir", Path(tmp_path / "files"))
 
     with install_policy_authz(get_settings_service()):
         upload = await client.post(
@@ -887,7 +884,7 @@ async def test_developer_can_create_files_and_knowledge_bases(client, monkeypatc
         test_connection = await client.post(
             "api/v1/knowledge_bases/test-connection",
             headers=headers,
-            json={"backend_type": "chroma", "backend_config": {}},
+            json={"backend_type": "sqlite", "backend_config": {}},
         )
         assert test_connection.status_code == 200, test_connection.text
 

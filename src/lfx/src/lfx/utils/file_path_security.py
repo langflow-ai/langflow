@@ -25,6 +25,7 @@ would disclose every tenant's stored credentials.
 from __future__ import annotations
 
 import contextlib
+import contextvars
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -32,7 +33,49 @@ from lfx.logging import logger
 from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
+
+
+_current_file_access_scopes: contextvars.ContextVar[tuple[str, ...] | None] = contextvars.ContextVar(
+    "lfx_current_file_access_scopes", default=None
+)
+
+
+@contextlib.contextmanager
+def file_access_scope(scope_ids: Iterable[object]) -> Iterator[None]:
+    """Bind trusted graph storage scopes while components read message attachments."""
+    token = _current_file_access_scopes.set(tuple(str(scope) for scope in scope_ids))
+    try:
+        yield
+    finally:
+        _current_file_access_scopes.reset(token)
+
+
+def enforce_current_file_access(file_path: str | Path) -> Path:
+    """Confine a local read to the executing graph, or the storage-root floor outside a run.
+
+    Message payloads cannot establish their own access scope. Component execution binds
+    trusted user/flow scopes, including public source-flow provenance, for these reads.
+    Trusted callers outside a graph still cannot read server-managed secrets or escape
+    storage unless the operator explicitly disables local-file restriction.
+    """
+    scope_ids = _current_file_access_scopes.get()
+    return enforce_local_file_access(file_path, scope_ids=scope_ids, allow_storage_root=scope_ids is None)
+
+
+def enforce_current_storage_key_scope(path: str) -> None:
+    """Check a normalized object-storage key against the executing graph's trusted scopes.
+
+    Trusted standalone callers have no tenant scope to enforce. A graph with missing
+    scopes must fail closed instead of being mistaken for a standalone caller.
+    """
+    scope_ids = _current_file_access_scopes.get()
+    if scope_ids is None:
+        return
+    if not scope_ids:
+        msg = "Object-storage access requires an authenticated user or flow scope."
+        raise StorageNamespaceError(msg)
+    enforce_storage_key_scope(path, scope_ids)
 
 
 class LocalFileAccessError(ValueError):

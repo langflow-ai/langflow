@@ -322,6 +322,44 @@ async def test_prepare_flow_build_for_user_keeps_code_interpreter_policy_cumulat
         await fv.prepare_flow_build_for_user(_code_interpreter_raw_graph(), is_superuser=False)
 
 
+@pytest.mark.parametrize("component_type", ["PythonREPLComponent", "PythonFunction", "PythonREPLTool"])
+@pytest.mark.parametrize("shape", ["direct", "grouped", "relabelled"])
+@pytest.mark.parametrize("from_cache", [False, True])
+async def test_admin_only_blocks_trusted_code_execution_components(monkeypatch, component_type, shape, from_cache):
+    """Shipped source must not let non-admins execute arbitrary input-field code."""
+    from lfx.utils import flow_validation as fv
+
+    source = "# trusted interpreter component"
+    hashes = {component_type: {fv._compute_code_hash(source)}}
+    settings = SimpleNamespace(
+        allow_custom_components=True,
+        custom_component_admin_only=True,
+        block_code_interpreter_components=False,
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: SimpleNamespace(settings=settings))
+    monkeypatch.setattr(
+        "lfx.services.deps.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
+    )
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: hashes)
+    monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value=hashes))
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: source)
+    node = _node("interpreter", "ChatInput" if shape == "relabelled" else component_type, source)
+    payload = (
+        _group_with_proxy(node, "input_value", "local-canary") if shape == "grouped" else {"nodes": [node], "edges": []}
+    )
+
+    if from_cache:
+        with pytest.raises(CustomComponentValidationError, match="components are not allowed"):
+            fv.prepare_flow_build_for_user_from_cache(payload, is_superuser=False)
+    else:
+        with pytest.raises(CustomComponentValidationError, match="components are not allowed"):
+            await fv.prepare_flow_build_for_user(payload, is_superuser=False)
+
+    # The same server setting permits administrators to execute these components.
+    assert fv.prepare_flow_build_for_user_from_cache(payload, is_superuser=True) is None
+
+
 def _malformed_inline_graphs() -> list[dict]:
     return [
         {"nodes": [["not-a-node"]], "edges": []},
@@ -1542,11 +1580,7 @@ def test_public_flow_blocks_reported_code_execution_agents(component_type):
 
 def test_public_flow_blocks_structured_data_analysis_starter_template():
     """The bundled data-analysis starter contains OpenDsStarAgent and must be rejected publicly."""
-    repo_root = Path(__file__).resolve().parents[5]
-    starter_path = (
-        repo_root
-        / "src/bundles/lfx-bundles/src/lfx_bundles/codeagents/starter_projects/Structured Data Analysis Agent.json"
-    )
+    starter_path = Path(__file__).with_name("fixtures") / "structured_data_analysis_agent.json"
     starter_flow = json.loads(starter_path.read_text())
 
     with pytest.raises(PublicFlowValidationError) as exc_info:

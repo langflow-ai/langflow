@@ -3,6 +3,7 @@ from .exceptions import (
     FlowVersionDeployedError,
     FlowVersionError,
     FlowVersionNotFoundError,
+    FlowVersionRetainedError,
     FlowVersionSerializationError,
 )
 from .model import FlowVersion, FlowVersionCreate, FlowVersionListResponse, FlowVersionRead, FlowVersionReadWithData
@@ -17,5 +18,6 @@ __all__ = [
     "FlowVersionNotFoundError",
     "FlowVersionRead",
     "FlowVersionReadWithData",
+    "FlowVersionRetainedError",
     "FlowVersionSerializationError",
 ]

@@ -29,6 +29,8 @@ from langflow.api.utils import (
     strip_flow_secrets,
 )
 from langflow.api.v1.flow_conflict import claim_version_token
+from langflow.services.audit import vocabulary as audit_vocab
+from langflow.services.audit.operations import stage_flow_succeeded
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
@@ -51,6 +53,8 @@ from langflow.services.storage.service import StorageService
 from langflow.utils.flow_secrets import HiddenFieldMetadataError, restore_redacted_flow_values
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from langflow.services.database.models.user.model import User
 
 
@@ -162,10 +166,15 @@ def _endpoint_name_was_explicitly_cleared(flow: FlowCreate | FlowUpdate) -> bool
     return "endpoint_name" in flow.model_fields_set and flow.endpoint_name in (None, "")
 
 
-def _ensure_api_flow_update_allowed(db_flow: Flow, update_data: dict[str, Any]) -> None:
+def _ensure_api_flow_update_allowed(
+    db_flow: Flow,
+    update_data: dict[str, Any],
+    *,
+    persisted_values: Mapping[str, Any] | None = None,
+) -> None:
     """Translate the domain lock guard into the API's 423 response."""
     try:
-        ensure_flow_update_allowed(db_flow, update_data)
+        ensure_flow_update_allowed(db_flow, update_data, persisted_values=persisted_values)
     except LockedFlowError as exc:
         raise HTTPException(status_code=423, detail=str(exc)) from exc
 
@@ -199,10 +208,19 @@ async def _save_flow_to_fs(flow: Flow, user_id: UUID, storage_service: StorageSe
         raise HTTPException(status_code=500, detail=f"Failed to write flow to filesystem: {e}") from e
 
 
-async def _deduplicate_flow_name(session: AsyncSession, name: str, user_id: UUID) -> str:
+async def _deduplicate_flow_name(
+    session: AsyncSession,
+    name: str,
+    user_id: UUID,
+    *,
+    fail_on_conflict: bool = False,
+) -> str:
     """Return a unique flow name for *user_id*, appending ``(N)`` if needed."""
     if not (await session.exec(select(Flow).where(Flow.name == name).where(Flow.user_id == user_id))).first():
         return name
+
+    if fail_on_conflict:
+        raise HTTPException(status_code=409, detail="Name must be unique")
 
     flows = (
         await session.exec(
@@ -440,9 +458,13 @@ async def _new_flow(
     storage_service: StorageService,
     flow_id: UUID | None = None,
     fail_on_endpoint_conflict: bool = False,
+    fail_on_name_conflict: bool = False,
     validate_folder: bool = False,
     widen_for_authz: bool = False,
     propagate_unhandled_errors: bool = False,
+    save_to_fs: bool = True,
+    reconcile_triggers: bool = True,
+    update_webhook: bool = False,
 ):
     """Create or upsert a flow.
 
@@ -455,9 +477,13 @@ async def _new_flow(
         storage_service: Service for filesystem operations.
         flow_id: Allows PUT upsert to create flows with a specific ID for syncing between instances.
         fail_on_endpoint_conflict: PUT should fail predictably on conflicts rather than silently renaming.
+        fail_on_name_conflict: Fail when a flow name already belongs to the destination owner.
         validate_folder: Validates folder_id under the active authorization fetch mode for external upserts.
         widen_for_authz: Preserve a cross-user destination that the route already authorized.
         propagate_unhandled_errors: Let the caller own retry and sanitization of unexpected failures.
+        save_to_fs: Write flow JSON to the owner-scoped filesystem after saving.
+        reconcile_triggers: Reconcile trigger rows after saving the flow.
+        update_webhook: Recompute the webhook flag from the saved flow data.
     """
     try:
         # Ownership follows the destination project, so it has to be resolved
@@ -486,7 +512,12 @@ async def _new_flow(
 
         # Set user_id (ignore any user_id from body for security)
         flow.user_id = owner_id
-        flow.name = await _deduplicate_flow_name(session, flow.name, owner_id)
+        flow.name = await _deduplicate_flow_name(
+            session,
+            flow.name,
+            owner_id,
+            fail_on_conflict=fail_on_name_conflict,
+        )
 
         if flow.endpoint_name:
             flow.endpoint_name = await _deduplicate_endpoint_name(
@@ -513,8 +544,28 @@ async def _new_flow(
         session.add(db_flow)
         await session.flush()
         await session.refresh(db_flow)
-        await _reconcile_flow_triggers(session, flow_id=db_flow.id, owner_id=db_flow.user_id, flow_data=db_flow.data)
-        await _save_flow_to_fs(db_flow, owner_id, storage_service)
+        await stage_flow_succeeded(
+            session,
+            action=audit_vocab.FLOW_CREATE,
+            operation=audit_vocab.AuditOperation.CREATE,
+            flow_id=db_flow.id,
+            flow_name=db_flow.name,
+            written_fields=flow.model_fields_set,
+            project_after=db_flow.folder_id,
+        )
+        if update_webhook:
+            db_flow.webhook = get_webhook_component_in_flow(db_flow.data or {}) is not None
+            session.add(db_flow)
+            await session.flush()
+        if reconcile_triggers:
+            await _reconcile_flow_triggers(
+                session,
+                flow_id=db_flow.id,
+                owner_id=db_flow.user_id,
+                flow_data=db_flow.data,
+            )
+        if save_to_fs:
+            await _save_flow_to_fs(db_flow, owner_id, storage_service)
 
         return FlowRead.model_validate(db_flow, from_attributes=True)
     except ValidationError as exc:
@@ -581,6 +632,10 @@ async def _update_existing_flow(
     flow: FlowCreate,
     current_user: User,
     storage_service: StorageService,
+    save_to_fs: bool = True,
+    reconcile_triggers: bool = True,
+    preserve_explicit_nulls: bool = False,
+    locked_flow_persisted_values: Mapping[str, Any] | None = None,
     expected_version_token: UUID | None = None,
 ) -> FlowRead:
     """Update an existing flow (PUT update path).
@@ -596,6 +651,13 @@ async def _update_existing_flow(
     otherwise the write silently retargets folders/storage that belong to the
     actor. This mirrors the cross-user semantics already enforced by
     ``_patch_flow``.
+
+    ``locked_flow_persisted_values`` overrides ``existing_flow``'s in-memory
+    fields for the locked-flow diff only (see ``ensure_flow_update_allowed``).
+    Atomic project replacement passes the flow's pre-rename name/endpoint_name
+    here: it temporarily renames the row before calling this function, and
+    without the override a locked flow's own (unchanged) name would look
+    changed against that interim value.
     """
     await lock_flow_for_update(session, existing_flow)
 
@@ -688,8 +750,9 @@ async def _update_existing_flow(
         if endpoint_conflict:
             raise HTTPException(status_code=409, detail="Endpoint name must be unique")
 
-    # None-valued inputs are treated as omitted by default for updates.
-    update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
+    # Ordinary PUT retains its legacy null-as-omitted behavior. Atomic
+    # replacement must apply explicit nulls so a rollback can clear old values.
+    update_data = flow.model_dump(exclude_unset=True, exclude_none=not preserve_explicit_nulls)
     if not is_owner_edit and isinstance(update_data.get("data"), dict):
         try:
             update_data["data"] = restore_redacted_flow_values(update_data["data"], existing_flow.data)
@@ -717,7 +780,7 @@ async def _update_existing_flow(
             new_folder_id=update_data["folder_id"],
         )
 
-    _ensure_api_flow_update_allowed(existing_flow, update_data)
+    _ensure_api_flow_update_allowed(existing_flow, update_data, persisted_values=locked_flow_persisted_values)
 
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
@@ -748,11 +811,23 @@ async def _update_existing_flow(
     session.add(existing_flow)
     await session.flush()
     await session.refresh(existing_flow)
-    await _reconcile_flow_triggers(
-        session, flow_id=existing_flow.id, owner_id=existing_flow.user_id, flow_data=existing_flow.data
+    await stage_flow_succeeded(
+        session,
+        action=audit_vocab.FLOW_WRITE,
+        operation=audit_vocab.AuditOperation.REPLACE,
+        flow_id=existing_flow.id,
+        flow_name=existing_flow.name,
+        written_fields=update_data.keys() & _UPDATABLE_FLOW_FIELDS,
+        project_before=existing_folder_id,
+        project_after=existing_flow.folder_id,
     )
-    # Writes happen under the owner's storage namespace, not the actor's.
-    await _save_flow_to_fs(existing_flow, owner_user_id, storage_service)
+    if reconcile_triggers:
+        await _reconcile_flow_triggers(
+            session, flow_id=existing_flow.id, owner_id=existing_flow.user_id, flow_data=existing_flow.data
+        )
+    if save_to_fs:
+        # Writes happen under the owner's storage namespace, not the actor's.
+        await _save_flow_to_fs(existing_flow, owner_user_id, storage_service)
 
     return FlowRead.model_validate(existing_flow, from_attributes=True)
 
@@ -881,6 +956,16 @@ async def _patch_flow(
     session.add(db_flow)
     await session.flush()
     await session.refresh(db_flow)
+    await stage_flow_succeeded(
+        session,
+        action=audit_vocab.FLOW_WRITE,
+        operation=audit_vocab.AuditOperation.PATCH,
+        flow_id=db_flow.id,
+        flow_name=db_flow.name,
+        written_fields=update_data.keys() & _UPDATABLE_FLOW_FIELDS,
+        project_before=existing_folder_id,
+        project_after=db_flow.folder_id,
+    )
     await _reconcile_flow_triggers(session, flow_id=db_flow.id, owner_id=db_flow.user_id, flow_data=db_flow.data)
     # Writes happen under the owner's storage namespace, not the actor's.
     await _save_flow_to_fs(db_flow, owner_user_id, storage_service)

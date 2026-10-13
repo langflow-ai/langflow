@@ -5,10 +5,10 @@ holder for a *connection*. The row is keyed by ``connection_id``, so the number
 of leases follows the number of connections users have armed, not the number of
 replicas an operator runs.
 
-Every mutation is one conditional UPDATE guarded on the exact value the caller
-read, the same primitive ``langflow.services.triggers.leases`` uses, so two
-replicas racing an expired lease see exactly one ``rowcount == 1`` on both
-SQLite and PostgreSQL.
+SQLite claims use one conditional UPSERT, avoiding competing read transactions
+that both try to become writers. PostgreSQL uses conditional UPDATEs guarded on
+the exact value the caller read. Both paths elect exactly one holder when
+replicas race to claim an empty or expired lease.
 
 Expiry is a Langflow recovery bound and nothing more. It says the previous
 holder stopped heartbeating; it does not prove that its socket closed, so an
@@ -21,7 +21,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
-from sqlalchemy import exists, false
+from sqlalchemy import case, exists, false, or_
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select, update
 
@@ -52,6 +53,38 @@ def _is_live(row: TriggerListenerLease, *, ttl_s: float, now: datetime) -> bool:
     return heartbeat + timedelta(seconds=ttl_s) > now
 
 
+async def _claim_sqlite(
+    session: AsyncSession, *, connection_id: UUID, holder: str, ttl_s: float, now: datetime
+) -> datetime | None:
+    """Claim or renew with one write so competing read transactions cannot deadlock."""
+    statement = (
+        sqlite_insert(TriggerListenerLease)
+        .values(connection_id=connection_id, holder=holder, acquired_at=now, heartbeat_at=now)
+        .on_conflict_do_update(
+            index_elements=["connection_id"],
+            set_={
+                "holder": holder,
+                "acquired_at": case(
+                    (TriggerListenerLease.holder == holder, TriggerListenerLease.acquired_at), else_=now
+                ),
+                "heartbeat_at": now,
+            },
+            where=or_(
+                TriggerListenerLease.holder == holder,
+                TriggerListenerLease.heartbeat_at <= now - timedelta(seconds=ttl_s),
+            ),
+        )
+        .returning(TriggerListenerLease.acquired_at)
+    )
+    try:
+        result = await session.exec(statement)  # type: ignore[call-overload]
+    except IntegrityError:
+        # A connection deleted during election cannot acquire a listener.
+        # SQLite aborts only this statement, leaving the caller's transaction usable.
+        return None
+    return _as_aware(result.scalar_one_or_none())
+
+
 async def claim_generation(session: AsyncSession, *, connection_id: UUID, holder: str, ttl_s: float) -> datetime | None:
     """Take or renew the lease, returning the *generation* this holder now owns.
 
@@ -77,6 +110,8 @@ async def claim_generation(session: AsyncSession, *, connection_id: UUID, holder
     on another.
     """
     now = _now()
+    if session.get_bind().dialect.name == "sqlite":
+        return await _claim_sqlite(session, connection_id=connection_id, holder=holder, ttl_s=ttl_s, now=now)
     row = (
         await session.exec(select(TriggerListenerLease).where(TriggerListenerLease.connection_id == connection_id))
     ).first()

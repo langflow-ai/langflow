@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select, update
+from sqlmodel import delete, select, update
 
 from langflow.services.database.models.trigger.model import TriggerLease
 
@@ -115,3 +115,19 @@ async def holder(session: AsyncSession, *, name: str) -> str | None:
     if expires_at is not None and expires_at <= _now():
         return None
     return row.owner
+
+
+async def forget(session: AsyncSession, *, name: str, owner: str) -> None:
+    """Remove a completed one-shot lease without disturbing a replacement owner."""
+    await session.exec(delete(TriggerLease).where(TriggerLease.name == name, TriggerLease.owner == owner))
+
+
+async def fence(session: AsyncSession, *, name: str, owner: str) -> bool:
+    """Fence a short final transaction without reviving an expired lease."""
+    result = await session.exec(
+        update(TriggerLease)
+        .where(TriggerLease.name == name, TriggerLease.owner == owner, TriggerLease.expires_at > _now())
+        .values(heartbeat_at=TriggerLease.heartbeat_at)
+        .execution_options(synchronize_session=False)
+    )
+    return result.rowcount == 1

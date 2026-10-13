@@ -3,21 +3,26 @@ import subprocess
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from uuid import UUID
 
 import pytest
+from langflow.services.telemetry.context import reset_current_telemetry_user, set_current_telemetry_user
 from langflow.services.telemetry.opentelemetry import (
     MetricType,
     OpenTelemetry,
     ThreadSafeSingletonMetaUsingWeakref,
 )
-from langflow.services.telemetry.schema import DeploymentPayload, IntegrationActionPayload
+from langflow.services.telemetry.schema import DeploymentPayload, IntegrationActionPayload, RunPayload, ShutdownPayload
 from langflow.services.telemetry.service import TelemetryService
+from lfx.services.telemetry.identity import get_installation_user_id
 
 
 @pytest.fixture
-def mock_settings_service(mocker):
+def mock_settings_service(mocker, tmp_path):
     settings = mocker.MagicMock()
-    settings.settings.telemetry_base_url = "http://test.telemetry"
+    settings.settings.config_dir = str(tmp_path)
+    settings.settings.segment_api_url = "https://api.segment.test/v1/track"
+    settings.settings.segment_write_key = "segment-test-key"
     settings.settings.prometheus_enabled = False
     settings.settings.do_not_track = False
     return settings
@@ -26,6 +31,30 @@ def mock_settings_service(mocker):
 @pytest.fixture
 def telemetry_service(mock_settings_service):
     return TelemetryService(mock_settings_service)
+
+
+def test_disabled_telemetry_does_not_create_identity(mock_settings_service, tmp_path):
+    mock_settings_service.settings.segment_write_key = None
+
+    service = TelemetryService(mock_settings_service)
+
+    assert service.anonymous_id == ""
+    assert not (tmp_path / "telemetry_id").exists()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("do_not_track", [False, True])
+async def test_run_completion_is_recorded_before_tracking_consent(telemetry_service, do_not_track):
+    from langflow.services.telemetry.run_event_store import pop_all
+
+    pop_all()
+    telemetry_service.do_not_track = do_not_track
+    payload = RunPayload(run_seconds=1, run_success=True)
+    await telemetry_service.log_package_run(payload)
+    events = pop_all()
+    assert len(events) == 1
+    assert events[0].run_completed_at is not None
+    assert telemetry_service.telemetry_queue.empty() is do_not_track
 
 
 @pytest.mark.asyncio
@@ -37,10 +66,29 @@ async def test_log_package_deployment(telemetry_service):
         deployment_success=True,
     )
     await telemetry_service.log_package_deployment(payload)
-    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
+    func, queued_payload, path, user_id = await telemetry_service.telemetry_queue.get()
     assert func == telemetry_service.send_telemetry_data
     assert queued_payload == payload
     assert path == "deployment"
+    assert user_id is None
+
+
+@pytest.mark.asyncio
+async def test_queue_captures_request_user_id(telemetry_service):
+    payload = DeploymentPayload(
+        deployment_action="deployment.create",
+        deployment_provider="test_provider",
+        deployment_seconds=1.0,
+        deployment_success=True,
+    )
+    token = set_current_telemetry_user(UUID(int=1), telemetry_service.anonymous_id)
+    try:
+        await telemetry_service.log_package_deployment(payload)
+    finally:
+        reset_current_telemetry_user(token)
+
+    _func, _queued_payload, _path, user_id = telemetry_service.telemetry_queue.get_nowait()
+    assert user_id == get_installation_user_id(UUID(int=1), telemetry_service.anonymous_id)
 
 
 @pytest.mark.asyncio
@@ -59,12 +107,12 @@ async def test_integration_action_uses_telemetry_queue(telemetry_service, do_not
     if do_not_track:
         assert telemetry_service.telemetry_queue.empty()
     else:
-        send, queued, path = telemetry_service.telemetry_queue.get_nowait()
+        send, queued, path, user_id = telemetry_service.telemetry_queue.get_nowait()
         assert send == telemetry_service.send_telemetry_data
         assert queued == payload
         assert path == "integration_action"
+        assert user_id is None
         telemetry_service.telemetry_queue.task_done()
-    await telemetry_service.client.aclose()
 
 
 @pytest.mark.asyncio
@@ -76,10 +124,11 @@ async def test_log_package_deployment_provider(telemetry_service):
         deployment_success=True,
     )
     await telemetry_service.log_package_deployment_provider(payload)
-    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
+    func, queued_payload, path, user_id = await telemetry_service.telemetry_queue.get()
     assert func == telemetry_service.send_telemetry_data
     assert queued_payload == payload
     assert path == "deployment_provider"
+    assert user_id is None
 
 
 @pytest.mark.asyncio
@@ -91,10 +140,11 @@ async def test_log_package_deployment_run(telemetry_service):
         deployment_success=True,
     )
     await telemetry_service.log_package_deployment_run(payload)
-    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
+    func, queued_payload, path, user_id = await telemetry_service.telemetry_queue.get()
     assert func == telemetry_service.send_telemetry_data
     assert queued_payload == payload
     assert path == "deployment_run"
+    assert user_id is None
 
 
 @pytest.mark.asyncio
@@ -110,6 +160,32 @@ async def test_log_package_deployment_do_not_track(telemetry_service):
     await telemetry_service.log_package_deployment_provider(payload)
     await telemetry_service.log_package_deployment_run(payload)
     assert telemetry_service.telemetry_queue.empty()
+
+
+@pytest.mark.asyncio
+async def test_log_package_deployment_without_segment_key(telemetry_service):
+    telemetry_service.segment_write_key = None
+    payload = DeploymentPayload(
+        deployment_action="deployment.create",
+        deployment_provider="test_provider",
+        deployment_seconds=1.0,
+        deployment_success=True,
+    )
+
+    await telemetry_service.log_package_deployment(payload)
+
+    assert telemetry_service.telemetry_queue.empty()
+
+
+@pytest.mark.asyncio
+async def test_log_package_shutdown_uses_telemetry_queue(telemetry_service):
+    await telemetry_service.log_package_shutdown()
+
+    send, payload, path, user_id = telemetry_service.telemetry_queue.get_nowait()
+    assert send == telemetry_service.send_telemetry_data
+    assert isinstance(payload, ShutdownPayload)
+    assert path == "shutdown"
+    assert user_id is None
 
 
 fixed_labels = {"flow_id": "this_flow_id", "service": "this", "user": "that"}
@@ -134,11 +210,24 @@ def cleanup_telemetry():
 
 
 def test_init(opentelemetry_instance):
+    # The background job metrics, keyed by the type they must be registered as. Observable
+    # counters have to stay counters: the collector feeds cumulative values, and a gauge would
+    # make rate() read them as a level.
+    expected_bg_metrics = {
+        "langflow_bg_jobs": MetricType.OBSERVABLE_GAUGE,
+        "langflow_bg_oldest_queued_seconds": MetricType.OBSERVABLE_GAUGE,
+        "langflow_bg_jobs_started_total": MetricType.OBSERVABLE_COUNTER,
+        "langflow_bg_jobs_completed_total": MetricType.OBSERVABLE_COUNTER,
+        "langflow_bg_jobs_failed_total": MetricType.OBSERVABLE_COUNTER,
+        "langflow_bg_job_duration_p50_seconds": MetricType.OBSERVABLE_GAUGE,
+        "langflow_bg_job_duration_p95_seconds": MetricType.OBSERVABLE_GAUGE,
+    }
     expected_metrics = {
         "file_uploads",
         "num_files_uploaded",
         "langflow_job_queue_cancel_events_total",
         "langflow_job_queue_active_jobs",
+        *expected_bg_metrics,
     }
 
     assert isinstance(opentelemetry_instance, OpenTelemetry)
@@ -150,21 +239,59 @@ def test_init(opentelemetry_instance):
     active_jobs = opentelemetry_instance._metrics_registry["langflow_job_queue_active_jobs"]
     assert active_jobs.type is MetricType.UP_DOWN_COUNTER
     assert active_jobs.labels == {"backend": True}
+    for name, metric_type in expected_bg_metrics.items():
+        registered = opentelemetry_instance._metrics_registry[name]
+        assert registered.type is metric_type, f"{name} is registered as {registered.type}"
+        # Every background metric is per-backend, so a deployment running more than one can
+        # tell them apart rather than reading one summed series.
+        assert registered.labels.get("backend") is True, f"{name} must carry a mandatory backend label"
 
 
 def test_prometheus_exports_job_queue_metrics():
     script = """
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from prometheus_client import generate_latest
+from prometheus_client.parser import text_string_to_metric_families
 
 otel = OpenTelemetry(prometheus_enabled=True)
 otel.increment_counter("langflow_job_queue_cancel_events_total", {"event_type": "published"})
 otel.up_down_counter("langflow_job_queue_active_jobs", 1, {"backend": "redis"})
+gauges = {
+    "langflow_bg_jobs": ({"backend": "default", "status": "suspended"}, 2),
+    "langflow_bg_oldest_queued_seconds": ({"backend": "default"}, 3),
+    "langflow_bg_job_duration_p50_seconds": ({"backend": "default"}, 10),
+    "langflow_bg_job_duration_p95_seconds": ({"backend": "default"}, 20),
+}
+counters = {
+    "langflow_bg_jobs_started_total": ({"backend": "default"}, 10),
+    "langflow_bg_jobs_completed_total": ({"backend": "default"}, 8),
+    "langflow_bg_jobs_failed_total": ({"backend": "default", "reason": "input_timeout"}, 2),
+}
+for name, (labels, value) in gauges.items():
+    otel.update_gauge(name, value, labels)
+for name, (labels, value) in counters.items():
+    otel.set_observable_counter(name, value, labels)
 metrics = generate_latest().decode()
 assert "langflow_job_queue_cancel_events_total" in metrics
 assert 'event_type="published"' in metrics
 assert "langflow_job_queue_active_jobs" in metrics
 assert 'backend="redis"' in metrics
+for _ in range(2):
+    snapshot = generate_latest().decode()
+    samples = {
+        sample.name: sample
+        for family in text_string_to_metric_families(snapshot)
+        for sample in family.samples
+        if sample.name.startswith("langflow_bg_")
+    }
+    assert set(samples) == gauges.keys() | counters.keys(), samples
+    for name, (labels, value) in (gauges | counters).items():
+        assert labels.items() <= samples[name].labels.items(), samples[name]
+        assert samples[name].value == value, samples[name]
+    # Corrections between scrapes must not export a counter decrease.
+    for name, (labels, value) in counters.items():
+        otel.set_observable_counter(name, value - 1, labels)
+
 """
     result = subprocess.run(  # noqa: S603
         [sys.executable, "-c", script],
@@ -296,3 +423,31 @@ def test_multithreaded_singleton_race_condition():
     first_instance = instances[0]
     for instance in instances[1:]:
         assert instance is first_instance
+
+
+@pytest.mark.parametrize("metric_name", ["langflow_bg_jobs_started_total", "langflow_bg_jobs_completed_total"])
+def test_observable_counter_preserves_max_per_labels(opentelemetry_instance, metric_name):
+    """Reclassification cannot export a decrease, and backend series are independent."""
+    from opentelemetry.metrics import CallbackOptions
+
+    ot = opentelemetry_instance
+    for value in (10, 7, 11, 0):
+        ot.set_observable_counter(metric_name, value, {"backend": "default"})
+    ot.set_observable_counter(metric_name, 2, {"backend": "scaled"})
+    observations = ot._metrics[metric_name]._callback(CallbackOptions())
+    assert {o.attributes["backend"]: o.value for o in observations} == {"default": 11, "scaled": 2}
+
+
+@pytest.mark.parametrize(
+    ("name", "labels", "error", "message"),
+    [
+        ("missing", {}, ValueError, "not registered"),
+        ("langflow_bg_jobs_started_total", {}, ValueError, "Labels must be provided"),
+        ("langflow_bg_jobs_started_total", {"reason": "error"}, ValueError, "backend"),
+        ("langflow_bg_jobs", {"backend": "default", "status": "queued"}, TypeError, "not an observable counter"),
+    ],
+)
+def test_observable_counter_validates_metric_and_labels(opentelemetry_instance, name, labels, error, message):
+    """The observable setter preserves registry, label, and instrument type validation."""
+    with pytest.raises(error, match=message):
+        opentelemetry_instance.set_observable_counter(name, 1, labels)

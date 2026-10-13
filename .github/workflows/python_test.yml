@@ -56,74 +56,15 @@ env:
 
 jobs:
   build:
-    name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
-    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
-    env:
-      # Do not let a matching runner-system Python (notably Ubuntu's 3.12.3)
-      # bypass the current patch release supplied by uv.
-      UV_MANAGED_PYTHON: "true"
-    strategy:
-      matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]') }}
-        splitCount: [5]
-        group: [1, 2, 3, 4, 5]
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.ref || github.ref }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        id: setup-node
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v10.0.0
-        with:
-          version: latest-known
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: ${{ matrix.python-version }}
-          prune-cache: false
-
-      - name: Install the project
-        run: uv sync
-
-      - name: Run unit tests
-        uses: nick-fields/retry@v4
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        with:
-          timeout_minutes: 50
-          max_attempts: 2
-          # Only Python 3.10 publishes coverage below. Avoid tracing the same
-          # suite on every compatibility job, which exhausts the nightly time limit.
-          command: >-
-            make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --durations=20
-            ${{ matrix.python-version == '3.10' && '--cov --cov-config=pyproject.toml --cov-report=xml --cov-report=html' || '--no-cov' }}"
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7
-        if: matrix.python-version == '3.10'
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.xml
-          flags: backend
-          name: backend-coverage-group-${{ matrix.group }}
-          fail_ci_if_error: false
-          directory: ./
-
-      - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v7
-        if: matrix.python-version == '3.10'
-        with:
-          name: backend-coverage-report-group-${{ matrix.group }}
-          path: |
-            coverage.xml
-            htmlcov/
-          retention-days: 30
+    uses: ./.github/workflows/backend-unit-tests.yml
+    with:
+      python-versions: ${{ inputs.python-versions || '["3.10", "3.14"]' }}
+      ref: ${{ inputs.ref || github.ref }}
+      runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   bundle-guarded-tests:
     permissions:
