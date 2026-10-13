@@ -274,8 +274,11 @@ or accept Python package names from a project's saved configuration.
 An unavailable type raises an explicit lookup error. It never resolves to a different type.
 Existing database project reads and unrelated metadata edits retain the stored type and config.
 Explicit config saves or clears return 422. Export refuses an unavailable type because its
-archive policy cannot be checked. Missing-plugin archive import and execution still need the
-later lifecycle work; the legacy import fallback is not changed here.
+archive policy cannot be checked. Composition and legacy typed imports also refuse an
+unavailable type. A composed flow made entirely of installed components still executes without
+its original project-type plugin: execution consumes the saved graph. This does not promise
+execution when the graph itself needs an uninstalled component or runtime adapter. The normal
+Workflows API acceptance covers the former case.
 
 ## Verification
 
@@ -363,3 +366,32 @@ returns a FastAPI dependency. It fetches and authorizes the project before check
 the default honors the host's shared-resource fetch policy. A denied or absent project stays a
 404. Use the existing `langflow.plugins` entry point to install host routes. A type declaration
 alone does not install a router, and LFX plugins must not import Langflow.
+
+
+## Complete lifecycle acceptance and boundaries
+
+The installed example now goes through the form API, normal config save, source pinning,
+archive export/import with new IDs, and a no-change save after import. Its composed Agent
+executes through `/api/v2/workflows` in sync, stream, AG-UI and local background modes. Only
+the provider model is replaced with deterministic test responses. Graphs, authorization,
+snapshots, composition and execution routes remain real. A separate case removes the type
+from discovery before executing the imported graph and verifies archive refusal.
+
+`tests/data/project_type_plugin/verify_install.py` verifies ordinary wheel discovery, form,
+save, composition, archives and starters in standalone LFX. Build the fixture wheel, install
+it into an isolated LFX environment, and run that script there. It asserts that Langflow was
+never imported. The API fixture uses real package entry-point metadata as well.
+
+Run `uv run python scripts/check_project_type_boundaries.py` from the repository root. The
+same check is installed as a commit hook and covered by LFX tests. Its 19-file scope includes
+the declaration, registry, lifecycle, writer, archives, starters, save host, generic API,
+form widget lookup and header. It rejects specialized type-name literals and direct ordinary
+Flows type selectors. The ordinary `flows` graph key and archive mode are allowed. Tests
+inject forbidden branches and allowed data keys to verify the check itself.
+
+Built-in declarations, research graph builders, graph codecs, type-specific route modules,
+deployment packaging and evaluation coordination retain their domain vocabulary. The check
+is deliberately scoped; it does not claim that all application code is type-neutral. Python
+plugins remain trusted server code, and new deployment/evaluation extension protocols are
+outside this delivery. Live-provider and deployed PostgreSQL/topology acceptance remain
+separate production gates. Database/filesystem atomicity remains the limit described above.

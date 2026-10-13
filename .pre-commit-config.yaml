@@ -27,6 +27,12 @@ repos:
         types_or: [python, pyi]
         args: [--config, pyproject.toml]
         exclude: ^docs/.*/API-Reference/python-examples/
+      - id: project-type-boundaries
+        name: Project type infrastructure boundaries
+        entry: uv run python scripts/check_project_type_boundaries.py
+        language: system
+        pass_filenames: false
+        files: ^(src/lfx/src/lfx/projects/|src/backend/base/langflow/(api/v1/(projects|project_compositions|projects_files|project_type_guards)\.py|services/database/models/folder/)|src/frontend/src/pages/MainPage/|scripts/check_project_type_boundaries\.py)
       - id: validate-migrations
         name: Validate Alembic Migrations (Expand-Contract)
         entry: python src/backend/base/langflow/alembic/migration_validator.py

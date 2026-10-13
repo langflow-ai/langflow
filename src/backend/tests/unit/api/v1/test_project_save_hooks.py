@@ -654,3 +654,29 @@ async def test_shared_type_guard_authorizes_before_revealing_type(
             )
         assert caught.value.status_code == 404
         assert calls == [ProjectAction.WRITE]
+
+
+@pytest.mark.parametrize("config", [[], "invalid", 123])
+async def test_typed_legacy_import_does_not_discard_malformed_configuration(
+    client,
+    logged_in_headers,
+    installed_save_plugin,  # noqa: ARG001
+    config,
+):
+    import json
+
+    payload = {
+        "folder_name": "Malformed plugin config",
+        "folder_project_type": "support-desk",
+        "folder_project_config": config,
+        "flows": [],
+    }
+    response = await client.post(
+        "/api/v1/projects/upload/",
+        headers=logged_in_headers,
+        files={"file": ("support.json", json.dumps(payload).encode(), "application/json")},
+    )
+    assert response.status_code == 422
+    assert "object or null" in response.text
+    projects = (await client.get("/api/v1/projects/", headers=logged_in_headers)).json()
+    assert not any(project["name"] == payload["folder_name"] for project in projects)
