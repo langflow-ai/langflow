@@ -257,9 +257,26 @@ export function parseBooleanGlobalVariable(
   return defaultValue;
 }
 
+/**
+ * True when ``providerType`` is the backend the server itself defaults new
+ * knowledge/memory bases to *because the deployment provisioned it through the
+ * environment* (``OPENSEARCH_URL``). Such a provider has no Langflow variables
+ * for the UI to find, yet is fully usable — the backend resolves its URL and
+ * credentials from the same env names. pgVector is excluded: it has its own
+ * test-and-activate flow in DB Providers.
+ */
+function isEnvProvisionedDefault(
+  providerType: StoredDBProviderId,
+  serverDefaultBackend: string | undefined,
+): boolean {
+  return providerType === "opensearch" && serverDefaultBackend === "opensearch";
+}
+
+/** Resolve the selected provider without treating pgVector provisioning as activation. */
 export function getActiveDBProvider(
   variables: GlobalVariable[],
   localVectorStoreAvailable = true,
+  serverDefaultBackend?: string,
 ): AvailableDBProviderId {
   const configuredProvider = getGlobalVariableValue(
     variables,
@@ -272,9 +289,22 @@ export function getActiveDBProvider(
       configuredProvider,
       variables,
       localVectorStoreAvailable,
+      serverDefaultBackend,
     )
   )
     return configuredProvider;
+  // An operator who pinned local SQLite on a deployment that allows it keeps it.
+  if (configuredProvider === "sqlite" && localVectorStoreAvailable)
+    return "sqlite";
+  // Nothing usable was activated in DB Providers: follow the backend the server
+  // resolves for a create request that names none, so the UI never offers a
+  // store the deployment did not provision (e.g. pgVector on an OpenSearch-only
+  // deployment).
+  if (
+    serverDefaultBackend === "postgres" ||
+    serverDefaultBackend === "opensearch"
+  )
+    return serverDefaultBackend;
   // SQLite writes vectors to the serving box's own disk, which the
   // production profile refuses. When it's unavailable, fall back to the
   // environment-driven pgVector rather than a local store the create endpoint would
@@ -308,6 +338,35 @@ export function getDBProviderOption(
 
 export type DBProviderConfigValue = string | boolean;
 
+/**
+ * OpenSearch TLS toggles for ``backend_config``. A toggle the operator saved
+ * always wins. Otherwise it defaults to ``true`` for a URL stored as a Langflow
+ * variable, but is *omitted* when the URL is not a variable (it comes from the
+ * ``OPENSEARCH_URL`` environment variable): the UI cannot see that scheme, and
+ * the backend derives SSL from it, whereas a hard-coded ``true`` would force
+ * HTTPS onto an ``http://`` cluster.
+ */
+function booleanToggles(
+  variables: GlobalVariable[],
+): Record<string, DBProviderConfigValue> {
+  const urlFromVariable =
+    getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.URL) !== undefined;
+  const toggles: Record<string, DBProviderConfigValue> = {};
+  for (const [key, variableName] of [
+    ["use_ssl", OPENSEARCH_VARIABLES.USE_SSL],
+    ["verify_certs", OPENSEARCH_VARIABLES.VERIFY_CERTS],
+  ] as const) {
+    if (
+      urlFromVariable ||
+      getGlobalVariableValue(variables, variableName) !== undefined
+    ) {
+      toggles[key] = parseBooleanGlobalVariable(variables, variableName, true);
+    }
+  }
+  return toggles;
+}
+
+/** Build provider config while preserving environment-derived OpenSearch TLS defaults. */
 export function getDBProviderConfig(
   providerType: StoredDBProviderId,
   variables: GlobalVariable[],
@@ -336,16 +395,7 @@ export function getDBProviderConfig(
     // Resolve booleans on the client so the backend always sees real
     // ``bool`` values; otherwise ``bool("false")`` evaluates to ``True``
     // in Python and silently flips the toggle.
-    use_ssl: parseBooleanGlobalVariable(
-      variables,
-      OPENSEARCH_VARIABLES.USE_SSL,
-      true,
-    ),
-    verify_certs: parseBooleanGlobalVariable(
-      variables,
-      OPENSEARCH_VARIABLES.VERIFY_CERTS,
-      true,
-    ),
+    ...booleanToggles(variables),
   };
 }
 
@@ -379,10 +429,12 @@ export function resolveUIBackendType(
   return "chroma";
 }
 
+/** Check whether deployment policy, saved credentials and activation permit this provider. */
 export function isDBProviderConfigured(
   providerType: StoredDBProviderId,
   variables: GlobalVariable[],
   localVectorStoreAvailable = true,
+  serverDefaultBackend?: string,
 ): boolean {
   if (providerType === "chroma" || providerType === "chroma_cloud")
     return false;
@@ -404,6 +456,8 @@ export function isDBProviderConfigured(
     );
   }
 
+  if (isEnvProvisionedDefault(providerType, serverDefaultBackend)) return true;
+
   const provider = getDBProviderOption(providerType);
   // Boolean fields always have a defined default, so they don't gate
   // "configured" status — only required text fields do.
@@ -420,14 +474,20 @@ export function isDBProviderConfigured(
     });
 }
 
+/** Resolve a new base's default provider and variable-backed configuration. */
 export function getDefaultDBProviderConfig(
   variables: GlobalVariable[],
   localVectorStoreAvailable = true,
+  serverDefaultBackend?: string,
 ): {
   backendType: AvailableDBProviderId;
   backendConfig: Record<string, DBProviderConfigValue>;
 } {
-  const backendType = getActiveDBProvider(variables, localVectorStoreAvailable);
+  const backendType = getActiveDBProvider(
+    variables,
+    localVectorStoreAvailable,
+    serverDefaultBackend,
+  );
   return {
     backendType,
     backendConfig: getDBProviderConfig(backendType, variables),

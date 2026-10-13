@@ -88,6 +88,13 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   localVectorStoreAvailable: true,
   setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) =>
     set({ localVectorStoreAvailable }),
+  defaultVectorStoreBackend: undefined,
+  setDefaultVectorStoreBackend: (
+    defaultVectorStoreBackend: string | undefined,
+  ) => set({ defaultVectorStoreBackend }),
+  vectorStoreConfigLoaded: false,
+  setVectorStoreConfig: (config) =>
+    set({ ...config, vectorStoreConfigLoaded: true }),
   mcpBaseUrl: "",
   setMcpBaseUrl: (mcpBaseUrl: string) => set({ mcpBaseUrl }),
   // Default false to match the backend's "reload disabled" default until the
