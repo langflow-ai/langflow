@@ -1675,7 +1675,7 @@
                   },
                   {
                     "name": "langgraph",
-                    "version": "1.2.9"
+                    "version": "1.2.14"
                   },
                   {
                     "name": "lfx",
@@ -2430,7 +2430,7 @@
                   },
                   {
                     "name": "langgraph",
-                    "version": "1.2.9"
+                    "version": "1.2.14"
                   },
                   {
                     "name": "lfx",
@@ -3185,7 +3185,7 @@
                   },
                   {
                     "name": "langgraph",
-                    "version": "1.2.9"
+                    "version": "1.2.14"
                   },
                   {
                     "name": "lfx",
