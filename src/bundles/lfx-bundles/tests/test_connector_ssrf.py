@@ -215,7 +215,7 @@ def test_sambanova_build_model_blocks_metadata_url_before_sdk():
     component.temperature = 0.1
     with (
         ssrf_enabled(),
-        patch("lfx_bundles.sambanova.sambanova.ChatSambaNovaCloud") as mock_chat,
+        patch("lfx_bundles.sambanova.sambanova.ChatSambaNova") as mock_chat,
         pytest.raises(SSRFProtectionError),
     ):
         component.build_model()

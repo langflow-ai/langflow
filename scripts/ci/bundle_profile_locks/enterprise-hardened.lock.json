@@ -2,14 +2,14 @@
   "application": {
     "distribution": "langflow",
     "requested": ">=1.12.0,<1.13.0",
-    "requirement": "langflow==1.12.5",
-    "resolved_version": "1.12.5"
+    "requirement": "langflow==1.12.6",
+    "resolved_version": "1.12.6"
   },
   "bundle_api": {
     "distribution": "lfx",
     "requested": ">=1.12.0.dev0,<1.13.0",
-    "requirement": "lfx==1.12.5",
-    "resolved_version": "1.12.5"
+    "requirement": "lfx==1.12.6",
+    "resolved_version": "1.12.6"
   },
   "bundles": [
     {
@@ -28,9 +28,9 @@
       "providers": [
         "lfx-anthropic"
       ],
-      "requested": ">=0.1.7,<1.0.0",
-      "requirement": "lfx-anthropic==0.1.7",
-      "resolved_version": "0.1.7"
+      "requested": ">=0.1.9,<1.0.0",
+      "requirement": "lfx-anthropic==0.1.9",
+      "resolved_version": "0.1.9"
     },
     {
       "distribution": "lfx-azure",
@@ -38,9 +38,9 @@
       "providers": [
         "lfx-azure"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-azure==0.1.0",
-      "resolved_version": "0.1.0"
+      "requested": ">=0.1.2,<1.0.0",
+      "requirement": "lfx-azure==0.1.2",
+      "resolved_version": "0.1.2"
     },
     {
       "distribution": "lfx-cohere",
@@ -68,9 +68,9 @@
       "providers": [
         "lfx-docling"
       ],
-      "requested": ">=0.1.7,<1.0.0",
-      "requirement": "lfx-docling==0.1.7",
-      "resolved_version": "0.1.7"
+      "requested": ">=0.1.8,<1.0.0",
+      "requirement": "lfx-docling==0.1.8",
+      "resolved_version": "0.1.8"
     },
     {
       "distribution": "lfx-google",
@@ -88,9 +88,9 @@
       "providers": [
         "lfx-ibm"
       ],
-      "requested": ">=0.2.5,<1.0.0",
-      "requirement": "lfx-ibm==0.2.5",
-      "resolved_version": "0.2.5"
+      "requested": ">=0.2.7,<1.0.0",
+      "requirement": "lfx-ibm==0.2.7",
+      "resolved_version": "0.2.7"
     },
     {
       "distribution": "lfx-ollama",
@@ -160,7 +160,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:a64407eeef9db275",
+  "profile_digest": "sha256:cca6ffb26ffea088",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",

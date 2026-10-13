@@ -124,6 +124,28 @@ async def test_get_agent_card_returns_valid_card(client: AsyncClient, active_use
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
+async def test_agent_card_does_not_execute_stored_component_code(client: AsyncClient, active_user, flow_data, tmp_path):
+    """The card is served to anonymous callers, so building its schema must not run stored source.
+
+    A module-level assignment in a node's stored code runs whenever that component is
+    instantiated; the marker exists only if the card request executed it.
+    """
+    marker = tmp_path / "stored-code-executed"
+    payload = f"_SCHEMA_PROBE = __import__('pathlib').Path({str(marker)!r}).write_text('executed')\n"
+    for node in flow_data["nodes"]:
+        code_field = node.get("data", {}).get("node", {}).get("template", {}).get("code")
+        if isinstance(code_field, dict) and isinstance(code_field.get("value"), str):
+            code_field["value"] = payload + code_field["value"]
+    flow_id = await _create_flow(active_user.id, data=flow_data)
+
+    response = await client.get(_card_url(flow_id))
+
+    assert response.status_code == 200
+    assert not marker.exists()
+    assert "input_value" in response.json()["skills"][0]["inputSchema"]["properties"]
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
 async def test_capabilities_advertises_streaming(client: AsyncClient, active_user, flow_data):
     """Streaming and push notifications are both advertised."""
     flow_id = await _create_flow(active_user.id, data=flow_data)
