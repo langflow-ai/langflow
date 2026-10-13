@@ -290,7 +290,7 @@ class DataOperationsComponent(Component):
         filter_criteria: list[str] = self.select_keys_input
 
         # Filter the data
-        if len(filter_criteria) == 1 and filter_criteria[0] == "data":
+        if filter_criteria == ["data"] and isinstance(data_dict.get("data"), dict):
             filtered = data_dict["data"]
         else:
             if not all(key in data_dict for key in filter_criteria):
