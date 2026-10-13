@@ -8,6 +8,7 @@ internally — those code paths still exist for legacy components but are bypass
 import json
 import os
 from collections.abc import AsyncIterator
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -58,6 +59,26 @@ def _build_component():
         }
     )
     return component
+
+
+def test_current_date_placeholder_is_stable_within_a_day() -> None:
+    component = _build_component()
+    prompt = "Today's date: {current_date}"
+    moments = [
+        datetime(2026, 10, 10, 12, 3, 41, tzinfo=timezone.utc),
+        datetime(2026, 10, 10, 12, 4, 17, tzinfo=timezone.utc),
+        datetime(2026, 10, 11, 0, 0, 1, tzinfo=timezone.utc),
+    ]
+
+    with patch("lfx.components.models_and_agents.agent.datetime") as mock_datetime:
+        mock_datetime.now.side_effect = moments
+        first_prompt = component._inject_dynamic_prompt_values(prompt)
+        second_prompt = component._inject_dynamic_prompt_values(prompt)
+        next_day_prompt = component._inject_dynamic_prompt_values(prompt)
+
+    assert first_prompt == "Today's date: 2026-10-10"
+    assert second_prompt == first_prompt
+    assert next_day_prompt == "Today's date: 2026-10-11"
 
 
 @pytest.mark.asyncio
