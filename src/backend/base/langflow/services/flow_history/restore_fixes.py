@@ -1,6 +1,6 @@
 """Checking the fixes a client sends with a restore.
 
-A restore whose revision breaks edge rules that only the client can fix is
+A restore whose revision breaks edge rules marked ``manual`` is
 resent with fixes (see ops-history, "Repair"). The fixes are operations, and
 each one must address a violation the restore would hit, in the way that
 violation's client action allows:
@@ -35,7 +35,7 @@ from langflow.services.flow_history.errors import RestoreFixNotAllowedError
 # One fix a restore takes: an edge delete or a handle rewrite.
 RestoreFix = Annotated[DeleteEdgesOp | UpdateEdgesOp, Field(discriminator="type")]
 RESTORE_FIXES_DESCRIPTION = (
-    "The client's fixes for a restore refused with violations the client fixes: edge deletes and handle rewrites, "
+    "The client's fixes for a restore refused with manual violations: edge deletes and handle rewrites, "
     "each addressing one of those violations, applied before the restored flow is saved."
 )
 
@@ -72,7 +72,7 @@ def check_restore_fixes(
     deletable: set[str] = set()
     rewritable: set[str] = set()
     for violation in find_graph_violations(revision, base=stored):
-        if violation.edge_id is None or resolution_of(violation.code) is not Resolution.CLIENT:
+        if violation.edge_id is None or resolution_of(violation.code) is not Resolution.MANUAL:
             continue
         deletable.add(violation.edge_id)
         if violation.code in _REWRITABLE:
