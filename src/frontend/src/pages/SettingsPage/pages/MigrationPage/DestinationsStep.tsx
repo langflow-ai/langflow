@@ -9,7 +9,7 @@ import {
   type ProbeResult,
   useSaveDestinationsMutation,
 } from "@/controllers/API/queries/migration";
-import { destinationsRequest, formatTime, PROBES } from "./catalog";
+import { destinationsRequest, formatTime, hasStarted, PROBES } from "./catalog";
 
 /** The body of "Where your data goes": one section for each kind of data this instance keeps on its own server. */
 export function DestinationsStep({
@@ -31,7 +31,8 @@ export function DestinationsStep({
     save.data?.results ??
     (state.state === "blocked" && !save.isError ? saved?.results : undefined);
 
-  if (state.state === "done" && !editing) {
+  // A form that was open when the new instance started closes with it: the server saves no other destination.
+  if (state.state === "done" && !(editing && !hasStarted(migration))) {
     return (
       <div className="flex flex-col items-start gap-3">
         <p className="text-sm">
@@ -43,18 +44,21 @@ export function DestinationsStep({
         <p className="text-sm text-muted-foreground">
           {t("settings.migration.dest.memoryNote")}
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            // The last test was of what is saved, and says nothing about what the admin enters next.
-            save.reset();
-            setEditing(true);
-          }}
-          ignoreTitleCase
-        >
-          {t("settings.migration.dest.change")}
-        </Button>
+        {/* Once the new instance runs on this destination, the server saves no other one. */}
+        {!hasStarted(migration) && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              // The last test was of what is saved, and says nothing about what the admin enters next.
+              save.reset();
+              setEditing(true);
+            }}
+            ignoreTitleCase
+          >
+            {t("settings.migration.dest.change")}
+          </Button>
+        )}
       </div>
     );
   }
@@ -98,7 +102,10 @@ export function DestinationsStep({
       {instance.knowledge_bases.local && (
         <Section title={t("settings.migration.dest.kb.title")}>
           <p className="text-sm text-muted-foreground">
-            {t("settings.migration.dest.kb.pgvector")}
+            {/* An instance on PostgreSQL copies them to the store its own server reads, which is no database of the new instance's. */}
+            {instance.database.type === "sqlite"
+              ? t("settings.migration.dest.kb.pgvector")
+              : t("settings.migration.dest.kb.pgvectorOwn")}
           </p>
           <Probe id="migration-probe-vectors" result={results?.vectors} />
         </Section>

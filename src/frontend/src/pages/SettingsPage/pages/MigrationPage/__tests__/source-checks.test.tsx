@@ -132,3 +132,58 @@ it("says what to do about the 'langflow' account and names no later step", async
     screen.getByTestId("migration-check-role assignments"),
   ).toHaveTextContent("Handled in: Start the new instance");
 });
+
+it("offers no other check and no other word about one once the new instance has started", async () => {
+  const withdrawn = jest.spyOn(api, "delete").mockResolvedValue({ data: {} });
+  const accepted = jest.spyOn(api, "post").mockResolvedValue({ data: {} });
+  const failing = {
+    name: "source: files",
+    status: "fail" as const,
+    summary: "1 of 2 file rows point at bytes storage does not hold",
+    problems: [],
+  };
+  const started: MigrationState = {
+    ...migration,
+    record: {
+      ...migration.record,
+      steps: {
+        check_source: {
+          ...migration.record.steps.check_source,
+          report: { ok: false, checks: [failing] },
+        } as MigrationState["record"]["steps"]["check_source"],
+      },
+      accepted_findings: [
+        {
+          name: failing.name,
+          summary: failing.summary,
+          accepted_by: "alice",
+          accepted_at: "2026-10-06T12:02:00Z",
+        },
+      ],
+    },
+    steps: [
+      { id: "check_source", state: "done" },
+      { id: "start_target", state: "done" },
+    ],
+    acceptable_checks: [failing.name],
+  };
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <CheckStep migration={started} />
+    </QueryClientProvider>,
+  );
+
+  // What the last check found stays to read, with who accepted it.
+  expect(screen.getByText(/^Accepted by alice on /)).toBeInTheDocument();
+  // The server takes no other check from here on, so the page has no version field and no button for one.
+  expect(screen.queryByTestId("migration-run-checks")).toBeNull();
+  expect(screen.queryByRole("textbox")).toBeNull();
+  // The new instance runs on what was accepted, so the acceptance stays as it was given.
+  const box = screen.getByRole("checkbox");
+  expect(box).toBeChecked();
+  expect(box).toHaveAttribute("aria-disabled", "true");
+  fireEvent.click(box);
+  await waitFor(() => expect(box).toBeChecked());
+  expect(withdrawn).not.toHaveBeenCalled();
+  expect(accepted).not.toHaveBeenCalled();
+});

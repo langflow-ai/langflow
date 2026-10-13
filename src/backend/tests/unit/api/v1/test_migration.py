@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 import langflow.api.router as api_router_module
+import psutil
 import pytest
 import sqlalchemy as sa
 import structlog
@@ -309,8 +310,8 @@ async def test_the_page_describes_this_instance_and_its_steps(client, logged_in_
         {"id": "copy_database", "state": "locked", "reason": "earlier_step"},
         {"id": "copy_knowledge_bases", "state": "skipped", "reason": "no_local_knowledge_bases"},
         {"id": "copy_files", "state": "skipped", "reason": "no_local_files"},
-        {"id": "start_target", "state": "locked", "reason": "earlier_step"},
         {"id": "check_target", "state": "locked", "reason": "earlier_step"},
+        {"id": "start_target", "state": "locked", "reason": "earlier_step"},
     ]
 
 
@@ -345,8 +346,8 @@ async def test_after_the_check_the_next_needed_step_is_current_and_the_rest_wait
         ("copy_database", "locked", "earlier_step"),
         ("copy_knowledge_bases", "skipped", "no_local_knowledge_bases"),
         ("copy_files", "skipped", "no_local_files"),
-        ("start_target", "locked", "earlier_step"),
         ("check_target", "locked", "earlier_step"),
+        ("start_target", "locked", "earlier_step"),
     ]
 
 
@@ -579,6 +580,74 @@ async def test_a_client_that_disconnects_cancels_the_run(client, logged_in_heade
     step = (await _migration(client, logged_in_headers_super_user))["record"]["steps"]["check_source"]
     assert step["status"] == "cancelled"
     assert step["finished_at"] is not None
+
+
+async def test_a_client_that_disconnects_while_an_event_waits_to_be_sent_cancels_the_run(active_super_user, config_dir):
+    """The hang-up as the response itself meets it, with no middleware to take the event first.
+
+    Through the whole app a hang-up finds the run waiting for its child or waiting to send, as timing
+    has it. Only the second left the run going, so this test holds it there.
+    """
+    response = await migration_module.run_checks(
+        migration_module.CheckRequest(target_version=VERSION), active_super_user
+    )
+    gone = asyncio.Event()
+
+    async def receive():
+        await gone.wait()
+        return {"type": "http.disconnect"}
+
+    async def send(message):
+        if message["type"] == "http.response.body":
+            # Never taken: the client goes away with the first event on its way.
+            gone.set()
+            await asyncio.Event().wait()
+
+    await response({"type": "http", "asgi": {"version": "3.0"}}, receive, send)
+
+    # Read from the file, with nothing awaited since the response ended: no later task has had a turn.
+    step = json.loads((config_dir / "migrations" / "migration.json").read_text())["steps"]["check_source"]
+    assert step["status"] == "cancelled"
+    assert step["finished_at"] is not None
+    assert not psutil.pid_exists(step["pid"])
+
+
+async def test_a_run_that_ends_after_a_newer_run_took_the_record_leaves_it_alone(active_super_user, config_dir):
+    """The late cancel from a client that stalled, then went away after another run was let in and finished.
+
+    A client that stops reading without closing keeps this run's request open after its child has
+    exited, so the next POST /checks is let in. When the stalled client finally goes away, this run's
+    cancel must not be written over the newer run's step.
+    """
+    record_path = config_dir / "migrations" / "migration.json"
+    response = await migration_module.run_checks(
+        migration_module.CheckRequest(target_version=VERSION), active_super_user
+    )
+    gone = asyncio.Event()
+    first: dict = {}
+    newer: dict = {}
+
+    async def receive():
+        await gone.wait()
+        return {"type": "http.disconnect"}
+
+    def take_over(record):
+        record["steps"]["check_source"] = newer
+
+    async def send(message):
+        if message["type"] == "http.response.body":
+            # Another worker's run, let in and finished while this client sat on its first event.
+            first.update(json.loads(record_path.read_text())["steps"]["check_source"])
+            now = migration_module._now()
+            newer.update(first, started_at=now, finished_at=now, status="done", pid=None, report={"checks": []})
+            migration_module._save(take_over)
+            gone.set()
+            await asyncio.Event().wait()
+
+    await response({"type": "http", "asgi": {"version": "3.0"}}, receive, send)
+
+    assert json.loads(record_path.read_text())["steps"]["check_source"] == newer
+    assert not psutil.pid_exists(first["pid"])
 
 
 async def test_a_run_reads_as_live_only_while_its_child_exists(client, logged_in_headers_super_user, config_dir):
@@ -3114,7 +3183,7 @@ async def test_a_confirmed_backup_counts_only_for_the_pause_it_was_made_in(
     assert (backup["location"], backup["confirmed_by"]) == ("s3://backups/langflow", "activeuser")
     steps = {step["id"]: (step["state"], step["reason"]) for step in confirmed.json()["steps"]}
     assert steps["backup"] == ("done", None)
-    assert steps["copy_database"] == ("current", "not_available")
+    assert steps["copy_database"] == ("current", None)
 
     # Whatever changes between the two pauses is in neither the copy nor the backup made during the first.
     await client.delete(PAUSE, headers=headers)

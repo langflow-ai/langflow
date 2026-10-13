@@ -32,3 +32,10 @@ class DatabaseTemplate:
             closing(sqlite3.connect(destination)) as writer,
         ):
             reader.backup(writer)
+            # The copy inherits the source's WAL flag but no -wal/-shm files, and
+            # SQLite 3.54.0 cannot open such a file with mode=ro. Langflow enables
+            # WAL again through its sqlite_pragmas when it connects to the copy.
+            # Exclusive locking keeps the WAL index in memory during the switch,
+            # so it leaves no -shm file behind.
+            writer.execute("PRAGMA locking_mode=EXCLUSIVE")
+            writer.execute("PRAGMA journal_mode=DELETE")

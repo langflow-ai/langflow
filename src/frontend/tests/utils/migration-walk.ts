@@ -25,16 +25,22 @@ export const NO_DESTINATION =
 /**
  * Starts the move over and answers with this instance's facts. The migration record is a file next
  * to the instance's data, and a walk runs on the machine the server runs on, so it removes the file.
- * That also ends a pause an earlier walk left on.
+ * That also ends a pause an earlier walk left on. A copy an earlier walk left running is stopped first,
+ * because the server runs one at a time.
  */
 export async function startOver(page: Page) {
-  const read = async () =>
-    (await (await page.request.get("/api/v1/migration")).json()).instance;
-  const { files } = await read();
-  fs.rmSync(path.join(files.folder, "migrations", "migration.json"), {
+  const read = async () => (await page.request.get("/api/v1/migration")).json();
+  const { instance, record } = await read();
+  for (const [step, run] of Object.entries<{ run_id?: string }>(record.steps)) {
+    if (run.run_id)
+      await page.request.delete(
+        `/api/v1/migration/steps/${step}/runs/${run.run_id}`,
+      );
+  }
+  fs.rmSync(path.join(instance.files.folder, "migrations", "migration.json"), {
     force: true,
   });
-  return read();
+  return (await read()).instance;
 }
 
 /** What the admin reads where the new instance's key is set: the first 12 characters of the key's SHA-256. */
@@ -55,6 +61,14 @@ export async function prepare(
     timeout: 120000,
   });
   await check.body();
+  // What the check found that an admin may accept is accepted, as on the page.
+  const { blocking_findings } = await (
+    await page.request.get("/api/v1/migration")
+  ).json();
+  for (const name of blocking_findings)
+    await page.request.post("/api/v1/migration/accepted-findings", {
+      data: { name },
+    });
   await page.request.put("/api/v1/migration/destinations", {
     data: {
       ...(instance.database.type === "sqlite" && {
@@ -75,4 +89,39 @@ export async function prepare(
   await page.request.post("/api/v1/migration/secret-key/verify", {
     data: { fingerprint: fingerprint(instance.secret_key.path) },
   });
+}
+
+/** Does every step before the copies through the API: the ones before the pause, the pause with its second check, and the backup. */
+export async function readyToCopy(
+  page: Page,
+  instance: Awaited<ReturnType<typeof startOver>>,
+) {
+  await prepare(page, instance);
+  await page.request.post("/api/v1/migration/pause");
+  const check = await page.request.post("/api/v1/migration/checks", {
+    data: { target_version: instance.version },
+    timeout: 120000,
+  });
+  await check.body();
+  // On SQLite the backup of the database is the copy the server hands out.
+  if (instance.database.type === "sqlite")
+    await page.request.post("/api/v1/migration/backup/database");
+  await page.request.post("/api/v1/migration/steps/backup/confirm", {
+    data: { location: "a browser walk" },
+  });
+}
+
+/** Makes a copy through the API, or a test run of one, and waits for its end. */
+export async function runCopy(page: Page, step: string, dryRun = false) {
+  const started = await page.request.post(
+    `/api/v1/migration/steps/${step}/runs`,
+    { data: { dry_run: dryRun } },
+  );
+  const { run_id } = await started.json();
+  // The events answer as a stream that ends when the run does.
+  const events = await page.request.get(
+    `/api/v1/migration/steps/${step}/runs/${run_id}/events`,
+    { timeout: 300000 },
+  );
+  await events.body();
 }
