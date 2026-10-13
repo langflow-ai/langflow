@@ -335,3 +335,8 @@ users configure them on the destination. These hooks must not run provider code 
 side effects. An ordinary Flows project retains its legacy ZIP format (`archive_format="flows"`).
 Typed plugins should keep the default composition format to participate in these hooks.
 The installed example package includes source validation and remapping through these APIs.
+
+The form's `renders` lookup supports `long_text`, `project_flows`, `project_refs`,
+`skill_pack_refs`, `skill_definitions`, and `hook_flows`. Each entry reuses the existing
+control. Unknown widget names fall back to the ordinary field renderer (or declared choice
+labels). This lookup is fixed in core; installed Python packages cannot register React code.

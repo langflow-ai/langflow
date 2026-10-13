@@ -1513,3 +1513,58 @@ it("keeps local tools, bindings, and a reviewed pack through the project navigat
     tool_packs: [packReference],
   });
 });
+
+it.each(["future-widget", "constructor"])(
+  "uses the ordinary field renderer for unknown widget %s",
+  (renders) => {
+    projectTypes = [
+      {
+        ...FLOWS,
+        name: "support-desk",
+        template: {
+          team: {
+            name: "team",
+            display_name: "Team",
+            type: "str",
+            value: "Support",
+            renders,
+          },
+        },
+      },
+    ];
+    renderPage({ projectType: "support-desk" });
+    fireEvent.change(screen.getByTestId("input-team"), {
+      target: { value: "Triage" },
+    });
+    fireEvent.click(screen.getByTestId("harness-save-btn"));
+    expect(mockPatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ project_config: { team: "Triage" } }),
+      }),
+      expect.anything(),
+    );
+  },
+);
+
+it("uses the declared text widget for a plugin's renamed field", () => {
+  projectTypes = [
+    {
+      ...FLOWS,
+      name: "support-desk",
+      template: {
+        briefing: {
+          name: "briefing",
+          display_name: "Briefing",
+          type: "str",
+          value: "Help clearly",
+          renders: "long_text",
+        },
+      },
+    },
+  ];
+  renderPage({ projectType: "support-desk" });
+  expect(screen.getByRole("textbox", { name: "Briefing" })).toHaveValue(
+    "Help clearly",
+  );
+  expect(screen.queryByTestId("input-briefing")).not.toBeInTheDocument();
+});

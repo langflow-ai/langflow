@@ -2,7 +2,6 @@ import "./harness-form.css";
 import { lazy, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetProjectFlowsQuery } from "@/controllers/API/queries/folders/use-get-project-flows";
@@ -10,9 +9,8 @@ import { useGetProjectTypesQuery } from "@/controllers/API/queries/folders/use-g
 import { usePatchFolders } from "@/controllers/API/queries/folders/use-patch-folders";
 import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
 import useAlertStore from "@/stores/alertStore";
-import type { APIClassType, InputFieldType } from "@/types/api";
+import type { APIClassType } from "@/types/api";
 import type {
-  LocalToolBinding,
   ProjectConfig,
   ProjectFlowBindings,
   ProjectSaveResult,
@@ -23,28 +21,18 @@ import {
   agentCandidates,
   defaultAgent,
 } from "./components/agent-flow-picker";
-import {
-  CapabilityPackPicker,
-  capabilityKind,
-} from "./components/capability-pack-picker";
 import { HarnessReports } from "./components/harness-reports";
 import { HarnessSummary } from "./components/harness-summary";
-import { HookFlowPicker } from "./components/hook-flow-picker";
-import { HarnessFlowPicker } from "./components/instructions-flow-picker";
-import { LocalToolReview } from "./components/local-tool-review";
-import { LongTextField } from "./components/long-text-field";
-import { ProjectChoiceField } from "./components/project-choice-field";
-import { ProjectFlowPicker } from "./components/project-flow-picker";
-import { SkillDefinitionsEditor } from "./components/skill-definitions-editor";
-import { HarnessReturn, ToolPackPicker } from "./components/tool-pack-picker";
+import { HarnessReturn } from "./components/tool-pack-picker";
 import { editorDraft } from "./editor-draft";
 import { isProjectFieldVisible } from "./field-visibility";
 import { validProjectBindings } from "./flow-binding";
 import {
-  type SkillDefinition,
-  type SkillPackReference,
-  validSkills,
-} from "./skills";
+  asStringList,
+  PROJECT_FLOWS_WIDGET,
+  renderProjectField,
+} from "./project-field-widgets";
+import { type SkillDefinition, validSkills } from "./skills";
 import { selectedToolPacks } from "./tool-packs";
 
 interface HarnessPageProps {
@@ -52,13 +40,6 @@ interface HarnessPageProps {
   projectType: string;
   projectConfig?: ProjectConfig | null;
 }
-
-/** Widgets this page supplies, for fields the canvas renderer cannot serve well. */
-const PROJECT_FLOWS_WIDGET = "project_flows";
-const LONG_TEXT_WIDGET = "long_text";
-
-const asStringList = (value: unknown): string[] =>
-  Array.isArray(value) ? value.filter((item): item is string => !!item) : [];
 
 /**
  * The form a typed project renders: the harness builder.
@@ -481,222 +462,25 @@ const HarnessPage = ({
                     </div>
                   )}
 
-                  {(field as { renders?: string })?.renders ===
-                  LONG_TEXT_WIDGET ? (
-                    <>
-                      {!bindings[fieldName] && (
-                        <LongTextField
-                          name={fieldName}
-                          label={field?.display_name ?? fieldName}
-                          disabled={isPending}
-                          value={String(values[fieldName] ?? "")}
-                          placeholder={field?.placeholder ?? ""}
-                          onChange={(next) =>
-                            setEdits((current) => ({
-                              ...current,
-                              [fieldName]: next,
-                            }))
-                          }
-                        />
-                      )}
-                      {(field as { supports_flow_binding?: boolean })
-                        .supports_flow_binding && (
-                        <HarnessFlowPicker
-                          key={`${projectId}:${selectedAgentId}:${fieldName}`}
-                          projectId={projectId}
-                          fieldName={fieldName}
-                          contract={field.flow_contract}
-                          agentId={selectedAgentId}
-                          value={
-                            Array.isArray(bindings[fieldName])
-                              ? undefined
-                              : bindings[fieldName]
-                          }
-                          initialValue={String(values[fieldName] ?? "")}
-                          onOpen={() => editorDraft.keep(projectId, edits)}
-                          disabled={isPending}
-                          onChange={(binding) =>
-                            updateBinding(fieldName, binding)
-                          }
-                        />
-                      )}
-                    </>
-                  ) : field.renders === "skill_definitions" ? (
-                    <SkillDefinitionsEditor
-                      projectId={projectId}
-                      value={(values[fieldName] ?? []) as SkillDefinition[]}
-                      disabled={isPending}
-                      onOpen={() => editorDraft.keep(projectId, edits)}
-                      onChange={(next) =>
-                        setEdits((current) => ({
-                          ...current,
-                          [fieldName]: next,
-                        }))
-                      }
-                    />
-                  ) : field.renders === "skill_pack_refs" ? (
-                    <CapabilityPackPicker
-                      kind={capabilityKind(field.references)}
-                      projectId={projectId}
-                      value={(values[fieldName] ?? []) as SkillPackReference[]}
-                      disabled={isPending || (hasAgentPanel && !selectedAgent)}
-                      onOpen={() => editorDraft.keep(projectId, edits)}
-                      onChange={(next) =>
-                        setEdits((current) => ({
-                          ...current,
-                          [fieldName]: next,
-                        }))
-                      }
-                    />
-                  ) : field.renders === "project_refs" ? (
-                    <ToolPackPicker
-                      projectId={projectId}
-                      references={field.references}
-                      agent={selectedAgent}
-                      value={selectedToolPacks(values[fieldName])}
-                      saved={selectedToolPacks(savedValues[fieldName])}
-                      disabled={isPending}
-                      onOpen={() => editorDraft.keep(projectId, edits)}
-                      onChange={(next) =>
-                        setEdits((current) => ({
-                          ...current,
-                          [fieldName]: next,
-                        }))
-                      }
-                    />
-                  ) : (field as { renders?: string })?.renders ===
-                    "hook_flows" ? (
-                    <HookFlowPicker
-                      key={`${projectId}:${selectedAgentId}`}
-                      projectId={projectId}
-                      fieldName={fieldName}
-                      contract={field.flow_contract}
-                      agentId={selectedAgentId}
-                      value={
-                        Array.isArray(bindings[fieldName])
-                          ? bindings[fieldName]
-                          : []
-                      }
-                      disabled={isPending}
-                      onChange={(next) => updateBinding(fieldName, next)}
-                      onOpen={() => editorDraft.keep(projectId, edits)}
-                    />
-                  ) : (field as { renders?: string })?.renders ===
-                    PROJECT_FLOWS_WIDGET ? (
-                    <>
-                      <ProjectFlowPicker
-                        helpText={!hasAgentPanel ? field.info : undefined}
-                        flows={flows.filter(
-                          (flow) => flow.id !== selectedAgentId,
-                        )}
-                        isLoading={isLoadingFlows}
-                        disabled={
-                          isPending || (hasAgentPanel && !selectedAgent)
-                        }
-                        value={asStringList(values[fieldName])}
-                        onChange={(picked) =>
-                          setEdits((current) => ({
-                            ...current,
-                            [fieldName]: picked,
-                          }))
-                        }
-                      />
-                      {type.panels?.includes("local-tool-review") && (
-                        <LocalToolReview
-                          projectId={projectId}
-                          selected={asStringList(values[fieldName])}
-                          value={
-                            values.tool_bindings as
-                              | Record<string, LocalToolBinding>
-                              | undefined
-                          }
-                          saved={
-                            savedValues.tool_bindings as
-                              | Record<string, LocalToolBinding>
-                              | undefined
-                          }
-                          disabled={isPending}
-                          onOpen={() => editorDraft.keep(projectId, edits)}
-                          onChange={(next) =>
-                            setEdits((current) => ({
-                              ...current,
-                              tool_bindings: next,
-                            }))
-                          }
-                        />
-                      )}
-                    </>
-                  ) : field.option_labels ? (
-                    <>
-                      {!bindings[fieldName] && (
-                        <ProjectChoiceField
-                          name={fieldName}
-                          label={field.display_name ?? fieldName}
-                          options={field.option_labels}
-                          value={String(values[fieldName] ?? "")}
-                          disabled={isPending}
-                          onChange={(value) =>
-                            setEdits((current) => ({
-                              ...current,
-                              [fieldName]: value,
-                            }))
-                          }
-                        />
-                      )}
-                      {field.supports_flow_binding && (
-                        <HarnessFlowPicker
-                          key={`${projectId}:${selectedAgentId}:${fieldName}`}
-                          projectId={projectId}
-                          fieldName={fieldName}
-                          contract={field.flow_contract}
-                          agentId={selectedAgentId}
-                          value={
-                            Array.isArray(bindings[fieldName])
-                              ? undefined
-                              : bindings[fieldName]
-                          }
-                          initialConfig={Object.fromEntries(
-                            (
-                              field.flow_contract?.binding
-                                ?.initial_config_fields ?? []
-                            ).map((name) => [name, values[name]]),
-                          )}
-                          disabled={isPending}
-                          onChange={(binding) =>
-                            updateBinding(fieldName, binding)
-                          }
-                          onOpen={() => editorDraft.keep(projectId, edits)}
-                        />
-                      )}
-                    </>
-                  ) : (
-                    <ParameterRenderComponent
-                      handleOnNewValue={(changes) =>
-                        setEdits((current) => ({
-                          ...current,
-                          [fieldName]: (changes as { value: unknown })?.value,
-                        }))
-                      }
-                      name={fieldName}
-                      // The widgets that write to the flow store check for a node id first, and
-                      // an empty one makes them skip that and report the value here instead.
-                      nodeId=""
-                      templateData={field as Partial<InputFieldType>}
-                      templateValue={values[fieldName] ?? ""}
-                      editNode={false}
-                      showParameter={true}
-                      inspectionPanel={false}
-                      handleNodeClass={() => {}}
-                      nodeClass={syntheticNodeClass}
-                      // Canvas widgets use `disabled` for a connected input and may clear
-                      // its value. The fieldset handles temporary form save restrictions.
-                      disabled={false}
-                      placeholder={field?.placeholder ?? ""}
-                      isToolMode={false}
-                      // No flow is open here, so provider credentials scope to the project.
-                      providerScope={{ projectId }}
-                    />
-                  )}
+                  {renderProjectField({
+                    fieldName,
+                    field,
+                    type,
+                    projectId,
+                    values,
+                    savedValues,
+                    edits,
+                    bindings,
+                    flows,
+                    selectedAgent,
+                    selectedAgentId,
+                    hasAgentPanel,
+                    isLoadingFlows,
+                    isPending,
+                    setEdits,
+                    updateBinding,
+                    syntheticNodeClass,
+                  })}
                   {field.info &&
                     !bindings[fieldName] &&
                     !(field as { renders?: string }).renders && (
