@@ -123,14 +123,16 @@ async def test_status_rejects_cross_user(active_user, user_two):
     # ``active_super_user`` shares ``active_user``'s username (and thus DB row),
     # so a genuinely distinct second user (``user_two``) is needed to exercise
     # the ownership check.
+    from langflow.services.deps import get_job_service
+
+    # Ownership depends on the durable row. Starting a runner here adds unrelated
+    # cancellation and database writes that can race user-fixture teardown.
+    job_id = uuid4()
+    await get_job_service().create_job(job_id=job_id, flow_id=uuid4(), user_id=active_user.id)
     svc = _make_service()
-    await svc.start()
-    try:
-        job_id = await svc.submit(flow_id=uuid4(), request={"stream_protocol": "langflow"}, user=active_user)
-        with pytest.raises(PermissionError):
-            await svc.status(job_id, user_two)
-    finally:
-        await svc.stop()
+    assert (await svc.status(job_id, active_user))["status"] == JobStatus.QUEUED
+    with pytest.raises(PermissionError):
+        await svc.status(job_id, user_two)
 
 
 async def test_submit_runs_in_process_when_job_queue_type_redis(active_user, monkeypatch):

@@ -9883,7 +9883,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-docling"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/docling" }
 dependencies = [
     { name = "docling-core" },
@@ -10024,7 +10024,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-google"
-version = "0.3.1"
+version = "0.3.2"
 source = { editable = "src/bundles/google" }
 dependencies = [
     { name = "google-api-python-client" },
