@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import logging
+import re
 import tempfile
 import unicodedata
 from collections.abc import Awaitable, Callable
@@ -165,12 +166,20 @@ def _detect_encoding_with_fallbacks(raw_data: bytes) -> list[str]:
     detected_encoding = result.get("encoding") if result else None
 
     if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
-        detected_encoding = "utf-8"
+        # chardet reports one of these for many files that are utf-8 in reality, so
+        # try utf-8 first. Its guesses also miss GB18030 four-byte characters,
+        # which cp1252 would silently mangle. Include three trailing bytes so
+        # a four-byte pattern can straddle the detection sample boundary.
+        encodings: list[str] = ["utf-8"]
+        if re.search(rb"[\x81-\xfe][0-9][\x81-\xfe][0-9]", raw_data[: _CHARDET_SAMPLE_BYTES + 3]):
+            encodings.append("gb18030")
+        # Otherwise cp1252 must precede gb18030, which accepts some Windows
+        # punctuation as CJK characters. Both readers validate each candidate.
+        encodings.append("cp1252")
+    else:
+        encodings = [detected_encoding] if detected_encoding else []
 
-    encodings: list[str] = []
-    if detected_encoding:
-        encodings.append(detected_encoding)
-    for fallback in ("utf-8", "gb18030"):
+    for fallback in ("utf-8", "gb18030", "cp1252"):
         if fallback not in encodings:
             encodings.append(fallback)
     encodings.append("latin-1")
