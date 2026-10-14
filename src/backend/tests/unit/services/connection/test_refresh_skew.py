@@ -26,7 +26,7 @@ from langflow.services.connection.oauth.broker import digest
 from langflow.services.connection.service import _decrypt_credential_payload, _encrypt_credential_payload
 from langflow.services.database.models.connection import ConnectionSecret
 from langflow.services.deps import get_connection_resolver_service, session_scope
-from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError
+from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError, ProviderUnavailableError
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.services.authorization.base import ExecutionPrincipal
 
@@ -150,6 +150,7 @@ def _recording_refresh(monkeypatch, *, omit_refresh_token: bool = False) -> list
 
 
 async def _visible_connection(client, headers, connection_id):
+    """Read the persisted connection state through the credential-free list API."""
     response = await client.get("/api/v1/connections", headers=headers)
     assert response.status_code == 200, response.text
     return next(row for row in response.json() if row["id"] == connection_id)
@@ -197,6 +198,56 @@ async def test_rejected_refresh_persists_expired_health_before_raising(
     # A later successful refresh can recover the connection and replace its tokens.
     _recording_refresh(monkeypatch)
     await resolver.resolve(request)
+    recovered = await _visible_connection(client, logged_in_headers, row["id"])
+    assert (recovered["status"], recovered["health"]) == ("ready", "healthy")
+
+
+@pytest.mark.parametrize("refresh_mode", ["proactive", "reactive"])
+@pytest.mark.parametrize("failure", ["timeout", "http_500", "rate_limit", "invalid_json"])
+async def test_transient_refresh_failure_preserves_connection_and_can_recover(
+    authorized_connection, client, logged_in_headers, monkeypatch, respx_mock, refresh_mode, failure
+):
+    """An unavailable token endpoint must not turn a valid grant into a reconnect requirement."""
+    row = authorized_connection
+    if refresh_mode == "proactive":
+        await _rewrite_stored_payload(
+            row["id"], expires_at=(datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
+        )
+    request = _resolution(
+        row["owner_id"],
+        rejected_token_digest=digest(STORED_ACCESS_TOKEN) if refresh_mode == "reactive" else None,
+    )
+    before = await _visible_connection(client, logged_in_headers, row["id"])
+    stored = await _read_stored_payload(row["id"])
+    endpoint = respx_mock.post("https://oauth2.googleapis.com/token")
+    if failure == "timeout":
+        endpoint.mock(side_effect=httpx.ReadTimeout(STORED_ACCESS_TOKEN))
+    elif failure == "invalid_json":
+        endpoint.mock(return_value=httpx.Response(200, text=STORED_ACCESS_TOKEN))
+    else:
+        endpoint.mock(return_value=httpx.Response(500 if failure == "http_500" else 429, text=STORED_ACCESS_TOKEN))
+
+    resolver = get_connection_resolver_service()
+    with pytest.raises(ProviderUnavailableError) as caught:
+        await resolver.resolve(request)
+
+    assert caught.value.retryable is True
+    assert STORED_ACCESS_TOKEN not in str(caught.value)
+    assert endpoint.call_count == 1
+    after = await _visible_connection(client, logged_in_headers, row["id"])
+    for field in ("status", "status_reason", "health", "health_checked_at", "updated_at"):
+        assert after[field] == before[field]
+    assert await _read_stored_payload(row["id"]) == stored
+
+    # A manual check can report the outage without invalidating the credential.
+    await _rewrite_stored_payload(row["id"], expires_at=(datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat())
+    checked = await client.post(f"/api/v1/connections/{row['id']}/health", headers=logged_in_headers)
+    assert checked.status_code == 200, checked.text
+    assert (checked.json()["status"], checked.json()["health"]) == ("ready", "unhealthy")
+
+    _recording_refresh(monkeypatch)
+    credential = await resolver.resolve(request)
+    assert credential.access_token.get_secret_value() == "rotated-1"
     recovered = await _visible_connection(client, logged_in_headers, row["id"])
     assert (recovered["status"], recovered["health"]) == ("ready", "healthy")
 

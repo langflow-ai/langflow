@@ -15,6 +15,7 @@ from lfx.integrations.errors import (
     ConnectionUnresolvedError,
     IntegrationError,
     IntegrationPolicyBlockedError,
+    ProviderUnavailableError,
     ScopeMissingError,
 )
 from lfx.integrations.models import (
@@ -829,6 +830,8 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         try:
             payload = await broker.refresh_if_needed(session, row, payload, rejected_token_digest=rejected_token_digest)
         except OAuthError as exc:
+            if exc.reason == "provider-unavailable":
+                raise ProviderUnavailableError(provider=row.provider_key) from None
             if getattr(exc, "reason", None) == "registration-unavailable":
                 # The credential is fine and reconnecting would not help: this
                 # process cannot see the registration the connection was
