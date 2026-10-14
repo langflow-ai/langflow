@@ -3159,9 +3159,9 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import list_memory_base_messages
 
         mock_db = AsyncMock()
-        result_mock = MagicMock()
-        result_mock.first = MagicMock(return_value=None)
-        mock_db.exec = AsyncMock(return_value=result_mock)
+        memory_base_id = uuid.uuid4()
+        service = MagicMock(get=AsyncMock(return_value=None))
+        authz = MagicMock(is_enabled=AsyncMock(return_value=False))
 
         class FakeCtx:
             async def __aenter__(self):
@@ -3172,16 +3172,20 @@ class TestMemoriesAPIHandlers:
 
         with (
             patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=service),
+            patch("langflow.api.v1.memories.get_authorization_service", return_value=authz),
             pytest.raises(HTTPException) as exc_info,
         ):
             await list_memory_base_messages(
-                memory_base_id=uuid.uuid4(),
+                memory_base_id=memory_base_id,
                 session_id="s1",
                 current_user=mock_user,
                 params=Params(),
             )
 
         assert exc_info.value.status_code == 404
+        service.get.assert_awaited_once_with(memory_base_id, user_id=mock_user.id)
+        mock_db.get.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_list_memory_base_messages_without_session_id_not_found_raises_404(self, mock_user):
@@ -3190,9 +3194,9 @@ class TestMemoriesAPIHandlers:
         from langflow.api.v1.memories import list_memory_base_messages
 
         mock_db = AsyncMock()
-        result_mock = MagicMock()
-        result_mock.first = MagicMock(return_value=None)
-        mock_db.exec = AsyncMock(return_value=result_mock)
+        memory_base_id = uuid.uuid4()
+        service = MagicMock(get=AsyncMock(return_value=None))
+        authz = MagicMock(is_enabled=AsyncMock(return_value=False))
 
         class FakeCtx:
             async def __aenter__(self):
@@ -3203,15 +3207,19 @@ class TestMemoriesAPIHandlers:
 
         with (
             patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=service),
+            patch("langflow.api.v1.memories.get_authorization_service", return_value=authz),
             pytest.raises(HTTPException) as exc_info,
         ):
             await list_memory_base_messages(
-                memory_base_id=uuid.uuid4(),
+                memory_base_id=memory_base_id,
                 current_user=mock_user,
                 params=Params(),
             )
 
         assert exc_info.value.status_code == 404
+        service.get.assert_awaited_once_with(memory_base_id, user_id=mock_user.id)
+        mock_db.get.assert_not_awaited()
 
     def test_session_raw_messages_stmt_omits_session_filter_when_none(self):
         from langflow.services.memory_base.service import MemoryBaseService
