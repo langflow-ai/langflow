@@ -158,6 +158,25 @@ def _unique_conflict_code(exc: BaseException, *, is_flow: bool) -> AuditErrorCod
 
 def classify_failure(exc: BaseException, resource_type: AuditResourceType) -> AuditErrorCode:
     """A safe, bounded code for a failure; the exception text is never stored."""
+    if isinstance(exc, HTTPException):
+        replacement_code = (exc.headers or {}).get("X-Langflow-Error-Code", "")
+        if replacement_code.startswith("replacement_"):
+            # Replacement reports Project and Flow conflicts through one route.
+            # Its machine code is more precise than treating every 409 as a name collision.
+            codes = {
+                "replacement_project_name_conflict": AuditErrorCode.PROJECT_NAME_CONFLICT,
+                "replacement_flow_name_conflict": AuditErrorCode.FLOW_NAME_CONFLICT,
+                "replacement_duplicate_flow_names": AuditErrorCode.FLOW_NAME_CONFLICT,
+                "replacement_endpoint_name_conflict": AuditErrorCode.FLOW_NAME_CONFLICT,
+                "replacement_duplicate_flow_ids": AuditErrorCode.FLOW_ID_CONFLICT,
+                "replacement_flow_belongs_to_another_project": AuditErrorCode.FLOW_ID_CONFLICT,
+                "replacement_flow_not_found": AuditErrorCode.FLOW_NOT_FOUND,
+                "replacement_receipt_expired": AuditErrorCode.CONSTRAINT_VIOLATION,
+            }
+            if replacement_code in codes:
+                return codes[replacement_code]
+            if exc.status_code == HTTPStatus.CONFLICT:
+                return AuditErrorCode.CONSTRAINT_VIOLATION
     detail = str(getattr(exc, "detail", "")).lower()
     is_flow = resource_type is AuditResourceType.FLOW
     conflict = _unique_conflict_code(exc, is_flow=is_flow)
@@ -228,7 +247,7 @@ def describe_project_body(param: str) -> Callable[[dict[str, Any]], dict[str, An
         # FolderCreate names them *_list, FolderUpdate names them flows/components.
         requested = [value for name in _PROJECT_MEMBERSHIP_FIELDS for value in (getattr(body, name, None) or [])]
         return {
-            "resource_name": getattr(body, "name", None),
+            "resource_name": getattr(body, "name", None) or getattr(body, "project_name", None),
             "attempted_fields": {("flows" if name in _PROJECT_MEMBERSHIP_FIELDS else name) for name in fields},
             "requested_flow_count": len(requested) if fields & _PROJECT_MEMBERSHIP_FIELDS else None,
         }
