@@ -83,6 +83,7 @@ from langflow.services.audit.operations import (
     stage_flow_succeeded,
     stage_project_succeeded,
 )
+from langflow.services.audit.represented import bind_represented_identity
 from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
     AUTH_METHOD_AUTO_LOGIN,
@@ -266,12 +267,14 @@ async def verify_project_auth_conditional(
 
     # The composer path performs its own short project-policy read before auth.
     if get_settings_service().settings.mcp_composer_enabled:
-        return await verify_project_auth(
+        user = await verify_project_auth(
             project_id,
             api_key_query_value,
             api_key_header_value,
             composer_backend_token,
         )
+        bind_represented_identity(request)
+        return user
 
     # Preserve the existing not-found-before-auth behavior, but close this read
     # scope before API-key authentication opens its owned transaction.

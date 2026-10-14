@@ -4,15 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from langflow.services.audit.represented import ISSUER_HEADER, SUBJECT_HEADER
 from langflow.services.database.models.api_key.crud import create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
 from sqlmodel import select
+from starlette.requests import Request
 
 from .audit_helpers import enabled_audit, events_for, login, make_user, record_event
 
@@ -224,3 +226,104 @@ async def test_both_identity_pairs_remain_distinct_in_filters_and_responses(clie
     [resource_item] = [item for item in combined.json()["items"] if item["id"] == str(row.id)]
     assert resource_item["actor"]["acting_subject"] == "actor"
     assert resource_item["actor"]["represented_subject"] == "end-user"
+
+
+@pytest.mark.parametrize("composer_enabled", [False, True])
+@pytest.mark.parametrize("assertion", ["trusted", "untrusted", "malformed"])
+async def test_mcp_mutations_bind_identity_before_updating_settings(
+    client, active_user, trusted_key, monkeypatch, composer_enabled, assertion
+):
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "mcp_composer_enabled", composer_enabled)
+    plain_headers = {"x-api-key": trusted_key.api_key}
+    created = await client.post("api/v1/projects/", json={"name": f"mcp-{uuid4().hex}"}, headers=plain_headers)
+    assert created.status_code == 201, created.text
+    project_id = created.json()["id"]
+    flow = await client.post(
+        "api/v1/flows/",
+        json={"name": f"mcp-flow-{uuid4().hex}", "folder_id": project_id, "data": {"nodes": [], "edges": []}},
+        headers=plain_headers,
+    )
+    assert flow.status_code == 201, flow.text
+    flow_id = flow.json()["id"]
+    headers = _headers(trusted_key)
+    if assertion == "untrusted":
+        other = await _key(active_user)
+        headers["x-api-key"] = other.api_key
+    elif assertion == "malformed":
+        del headers[SUBJECT_HEADER]
+    response = await client.patch(
+        f"api/v1/mcp/project/{project_id}",
+        json={
+            "settings": [
+                {"id": flow_id, "action_name": "audited", "action_description": "MCP audit test", "mcp_enabled": True}
+            ],
+            "auth_settings": {"auth_type": "apikey"},
+        },
+        headers=headers,
+    )
+    expected = {"trusted": 200, "untrusted": 403, "malformed": 400}[assertion]
+    assert response.status_code == expected, response.text
+    project_events, flow_events = await events_for(project_id), await events_for(flow_id)
+    if assertion == "trusted":
+        assert len(project_events) == len(flow_events) == 2
+        for event in (project_events[-1], flow_events[-1]):
+            assert event.operation == "patch"
+            assert event.actor_id == trusted_key.id
+            assert event.represented_subject == "用户-Ålice"
+            assert event.acting_subject is None
+    else:
+        assert len(project_events) == len(flow_events) == 1
+        assert response.headers["X-Langflow-Error-Code"] == (
+            "INVALID_AUDIT_CONTEXT" if assertion == "malformed" else "REPRESENTED_IDENTITY_NOT_ALLOWED"
+        )
+        async with session_scope() as session:
+            stored = await session.get(Flow, UUID(flow_id))
+            assert stored.action_name != "audited"
+
+
+@pytest.mark.parametrize("assertion", ["trusted", "untrusted", "malformed"])
+async def test_composer_transport_auth_also_binds_represented_identity(
+    client, active_user, trusted_key, monkeypatch, assertion
+):
+    from langflow.api.v1.mcp_projects import verify_project_auth_conditional
+    from langflow.api.v1.mcp_utils import authenticated_caller_ctx
+    from langflow.services.audit.represented import current_represented_identity
+    from langflow.services.auth.context import clear_current_auth_context
+
+    created = await client.post(
+        "api/v1/projects/", json={"name": f"composer-{uuid4().hex}"}, headers={"x-api-key": trusted_key.api_key}
+    )
+    assert created.status_code == 201, created.text
+    project_id = UUID(created.json()["id"])
+    monkeypatch.setattr(get_settings_service().settings, "mcp_composer_enabled", True)
+    headers = _headers(trusted_key)
+    if assertion == "untrusted":
+        headers["x-api-key"] = (await _key(active_user)).api_key
+    elif assertion == "malformed":
+        del headers[ISSUER_HEADER]
+    request = Request(
+        {
+            "type": "http",
+            "query_string": b"",
+            "headers": [(name.lower().encode(), value.encode()) for name, value in headers.items()],
+        }
+    )
+    token = current_represented_identity.set(None)
+    caller_token = authenticated_caller_ctx.set(None)
+    try:
+        if assertion == "trusted":
+            user = await verify_project_auth_conditional(project_id, request)
+            assert user.id == active_user.id
+            assert current_represented_identity.get().subject == "用户-Ålice"
+        else:
+            from fastapi import HTTPException
+
+            with pytest.raises(HTTPException) as raised:
+                await verify_project_auth_conditional(project_id, request)
+            assert raised.value.status_code == (400 if assertion == "malformed" else 403)
+            assert current_represented_identity.get() is None
+    finally:
+        current_represented_identity.reset(token)
+        authenticated_caller_ctx.reset(caller_token)
+        clear_current_auth_context()

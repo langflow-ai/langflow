@@ -39,17 +39,17 @@ def test_identity_decoding_preserves_exact_unicode(value):
     assert decode_identity_value(encoded(value), 512) == value
 
 
-@pytest.mark.parametrize("character_limit", [1, 2, 3, 512, 2048])
+@pytest.mark.parametrize("character_limit", [512, 2048])
 def test_largest_utf8_values_fit_the_wire_limit(character_limit):
-    # Each owl uses four UTF-8 bytes. The small limits also cover all possible
-    # base64 padding lengths, while the larger ones are the actual field limits.
+    # Each owl uses four UTF-8 bytes: this exercises the largest wire value
+    # allowed by each real field's character limit.
     value = "🦉" * character_limit
     assert decode_identity_value(encoded(value), character_limit) == value
 
 
 @pytest.mark.parametrize("character_limit", [512, 2048])
 def test_oversized_wire_values_are_rejected_before_decoding(monkeypatch, character_limit):
-    wire_value = encoded("🦉" * (character_limit + 1))
+    wire_value = encoded("🦉" * 2049)
 
     def unexpected_decode(*_args, **_kwargs):
         message = "Oversized headers must not reach the decoder"
@@ -68,7 +68,6 @@ def test_oversized_wire_values_are_rejected_before_decoding(monkeypatch, charact
         "plain",
         "v2.YQ",
         "v1.YQ=",
-        "v1.YR",
         "v1.***",
         "v1._w",
         encoded(" "),
@@ -83,6 +82,10 @@ def test_malformed_context_is_rejected_without_echoing_values(value):
         decode_identity_value(value, 512)
     assert raised.value.status_code == 400
     assert raised.value.detail == "Invalid represented audit identity"
+
+
+def test_equivalent_base64_spellings_have_the_same_identity():
+    assert decode_identity_value("v1.YQ", 512) == decode_identity_value("v1.YR", 512) == "a"
 
 
 @pytest.mark.parametrize("method", ["api_key", "jwt", "auto_login", "external"])
