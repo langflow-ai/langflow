@@ -8,6 +8,7 @@ import re
 import unicodedata
 from contextvars import ContextVar
 from dataclasses import dataclass
+from functools import cache
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
@@ -23,7 +24,10 @@ if TYPE_CHECKING:
 
 ISSUER_HEADER = "Langflow-Audit-Represented-Issuer"
 SUBJECT_HEADER = "Langflow-Audit-Represented-Subject"
-_ENCODED = re.compile(r"v1\.[A-Za-z0-9_-]+\Z")
+_ENCODING_PREFIX = "v1."
+_MAX_UTF8_BYTES_PER_CHARACTER = 4
+_BASE64_BLOCK_CHARACTERS = 4
+_ENCODED = re.compile(rf"{re.escape(_ENCODING_PREFIX)}[A-Za-z0-9_-]+\Z")
 
 
 @dataclass(frozen=True)
@@ -45,19 +49,31 @@ def _invalid() -> HTTPException:
     )
 
 
-def decode_identity_value(encoded: str, limit: int) -> str:
+@cache
+def _max_encoded_length(character_limit: int) -> int:
+    """Bound the wire value before processing it; cache only server-defined limits."""
+    # A Unicode character needs at most four UTF-8 bytes. Ask the standard
+    # encoder for the unpadded base64 length instead of duplicating its sizing
+    # arithmetic. This runs once for each fixed issuer/subject character limit.
+    max_utf8_bytes = character_limit * _MAX_UTF8_BYTES_PER_CHARACTER
+    max_base64_length = len(base64.urlsafe_b64encode(bytes(max_utf8_bytes)).rstrip(b"="))
+    return len(_ENCODING_PREFIX) + max_base64_length
+
+
+def decode_identity_value(encoded: str, character_limit: int) -> str:
     """Decode canonical v1 base64url UTF-8 without normalizing identity values."""
-    if len(encoded) > 3 + 4 * ((4 * limit + 2) // 3) or not _ENCODED.fullmatch(encoded):
+    if len(encoded) > _max_encoded_length(character_limit) or not _ENCODED.fullmatch(encoded):
         raise _invalid()
-    payload = encoded[3:]
+    payload = encoded[len(_ENCODING_PREFIX) :]
     try:
-        raw = base64.b64decode(payload + "=" * (-len(payload) % 4), altchars=b"-_", validate=True)
+        padded_payload = payload + "=" * (-len(payload) % _BASE64_BLOCK_CHARACTERS)
+        raw = base64.b64decode(padded_payload, altchars=b"-_", validate=True)
         value = raw.decode("utf-8")
     except (binascii.Error, UnicodeDecodeError, ValueError) as exc:
         raise _invalid() from exc
     if base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=") != payload:
         raise _invalid()
-    if not value.strip() or len(value) > limit:
+    if not value.strip() or len(value) > character_limit:
         raise _invalid()
     if any(unicodedata.category(char) in {"Cc", "Zl", "Zp"} for char in value):
         raise _invalid()
