@@ -234,7 +234,7 @@ async def test_google_revoke_accepts_empty_success_response(monkeypatch):
         "AsyncClient",
         lambda transport=transport, **kwargs: original_client(transport=transport, **kwargs),
     )
-    assert await providers.revoke(config(), {"access_token": "test-only-access"}) is True
+    assert await providers.revoke("google", {"access_token": "test-only-access"}) is True
 
 
 def test_microsoft_certificate_assertion_is_short_lived_and_audience_bound():

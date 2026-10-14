@@ -297,12 +297,16 @@ async def revoke(
     try:
         payload = _decrypt_credential_payload(secret.encrypted_payload)
         oauth = payload.get("oauth")
+        if not oauth and row.provider_key == "slack":
+            # Pasted Slack tokens have no registration binding. auth.revoke
+            # needs only the token, including for Desktop bot connections.
+            return "revoked" if await providers.revoke("slack", payload) else "unsupported"
         if not oauth:
             return "not_applicable"
         registration = get_oauth_settings().registration(oauth["registration_id"])
         if registration.fingerprint() != oauth["config_digest"]:
             return "failed"
-        return "revoked" if await providers.revoke(registration, payload) else "unsupported"
+        return "revoked" if await providers.revoke(registration.provider, payload) else "unsupported"
     except (OAuthError, ValueError, KeyError, TypeError, RuntimeError):
         # Local revocation must commit even if a provider is unavailable, a
         # registration was removed, or the old envelope cannot be decrypted.
