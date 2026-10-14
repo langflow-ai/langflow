@@ -553,15 +553,21 @@ async def create_user_longterm_token(db: AsyncSession) -> tuple:
 
 
 async def get_current_user_mcp(
+    request: Request,
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User:
     try:
-        return await _auth_service().get_current_user_mcp(token, query_param, header_param, db)
+        user = await _auth_service().get_current_user_mcp(token, query_param, header_param, db)
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
+    else:
+        from langflow.services.audit.represented import bind_represented_identity
+
+        bind_represented_identity(request)
+        return user
 
 
 async def get_current_active_user_mcp(user: User = Depends(get_current_user_mcp)) -> User:
