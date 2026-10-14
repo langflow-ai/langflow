@@ -113,6 +113,12 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
     ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
+    ("torch.package", "PackageImporter", "torch.package.PackageImporter is forbidden — external code loading"),
+    (
+        "torch.package.package_importer",
+        "PackageImporter",
+        "torch.package.package_importer.PackageImporter is forbidden — external code loading",
+    ),
     # PyYAML loaders that resolve ``!!python/object*`` tags — arbitrary
     # constructor invocation (deserialization RCE) on untrusted text. Blocking
     # the Loader attribute also blocks ``yaml.load(..., Loader=...)`` variants;
@@ -188,6 +194,8 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("os", "posix_spawnp", "os.posix_spawnp() is forbidden"),
     ("os", "fork", "os.fork() is forbidden"),
     ("os", "forkpty", "os.forkpty() is forbidden"),
+    ("os", "kill", "os.kill() is forbidden — process signaling"),
+    ("os", "killpg", "os.killpg() is forbidden — process group signaling"),
     ("os", "startfile", "os.startfile() is forbidden"),
     ("os", "open", "os.open() is forbidden in components — use Langflow's File components"),
     ("os", "write", "os.write() is forbidden in components — use Langflow's File components"),
@@ -396,6 +404,8 @@ RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
         "posix_spawnp",
         "fork",
         "forkpty",
+        "kill",
+        "killpg",
         "startfile",
         "open",
         "write",

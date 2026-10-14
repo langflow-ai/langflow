@@ -59,6 +59,36 @@ def test_rejects_indirect_process_and_code_loading_apis(code: str) -> None:
     assert not scan_code_security(code).is_safe
 
 
+@pytest.mark.parametrize("method", ["kill", "killpg"])
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import os, signal\nos.{method}(os.getpid(), signal.SIGTERM)",
+        "import os as process\nprocess.{method}(123, 15)",
+        "from os import {method} as send_signal\nsend_signal(123, 15)",
+        "import os\nsend_signal = os.{method}\nsend_signal(123, 15)",
+        "import os\ngetattr(os, '{method}')(123, 15)",
+    ],
+)
+def test_rejects_process_signaling(method: str, code: str) -> None:
+    assert not scan_code_security(code.format(method=method)).is_safe
+
+
+@pytest.mark.parametrize("module", ["torch.package", "torch.package.package_importer"])
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import {module}\n{module}.PackageImporter('synthetic.pt').load_pickle('model', 'data.pkl')",
+        "import {module} as package\npackage.PackageImporter('synthetic.pt').import_module('model')",
+        "from {module} import PackageImporter as Loader\nLoader('synthetic.pt')",
+        "import {module} as package\nloader = getattr(package, 'PackageImporter')\nloader('synthetic.pt')",
+        "import {module} as package\nloaders = [package.PackageImporter]\nloaders[0]('synthetic.pt')",
+    ],
+)
+def test_rejects_pytorch_package_loading(module: str, code: str) -> None:
+    assert not scan_code_security(code.format(module=module)).is_safe
+
+
 @pytest.mark.parametrize(
     "code",
     [
