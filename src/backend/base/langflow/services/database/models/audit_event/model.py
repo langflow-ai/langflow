@@ -23,9 +23,8 @@ RESOURCE_NAME_MAX_LENGTH = 255
 ACTOR_TYPE_MAX_LENGTH = 32
 REPRESENTED_ISSUER_MAX_LENGTH = 2048
 REPRESENTED_SUBJECT_MAX_LENGTH = 512
-# Deprecated aliases retained for integrations using the original contract.
-ACTING_ISSUER_MAX_LENGTH = REPRESENTED_ISSUER_MAX_LENGTH
-ACTING_SUBJECT_MAX_LENGTH = REPRESENTED_SUBJECT_MAX_LENGTH
+ACTING_ISSUER_MAX_LENGTH = 2048
+ACTING_SUBJECT_MAX_LENGTH = 512
 ACTION_MAX_LENGTH = 128
 OPERATION_MAX_LENGTH = 64
 EVENT_TYPE_MAX_LENGTH = 16
@@ -113,14 +112,6 @@ class AuditEvent(SQLModel, table=True):  # type: ignore[call-arg]
     represented_subject: str | None = Field(
         default=None, sa_column=Column(sa.String(REPRESENTED_SUBJECT_MAX_LENGTH), nullable=True)
     )
-
-    @property
-    def effective_represented_issuer(self) -> str | None:
-        return self.represented_issuer if self.represented_issuer is not None else self.acting_issuer
-
-    @property
-    def effective_represented_subject(self) -> str | None:
-        return self.represented_subject if self.represented_subject is not None else self.acting_subject
 
     action: str = Field(sa_column=Column(sa.String(ACTION_MAX_LENGTH), nullable=False))
     operation: str = Field(sa_column=Column(sa.String(OPERATION_MAX_LENGTH), nullable=False))
