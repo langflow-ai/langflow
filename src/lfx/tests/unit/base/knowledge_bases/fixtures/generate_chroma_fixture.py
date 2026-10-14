@@ -1,4 +1,6 @@
-"""Trusted synthetic fixture generator, used only by helper qualification CI."""
+"""Synthetic legacy-reader fixture generator for an isolated Chroma 1.5.9 test environment."""
+
+# ruff: noqa: INP001 -- standalone fixture generator, never imported by the application
 
 import json
 import sqlite3
@@ -53,9 +55,9 @@ empty.delete(ids=["dimension-probe"])
 (root / "expected.json").write_text(json.dumps(expected), encoding="utf-8")
 
 # Persist a dangerous Python embedding-function configuration without ever
-# instantiating it. The fixed native reader must export these existing vectors
+# instantiating it. The bundled reader must export these existing vectors
 # successfully while Python Chroma imports and networking are unavailable.
-client._system.stop()  # noqa: SLF001 -- release the synthetic native store before editing stored configuration
+client._system.stop()
 with sqlite3.connect(root / "source" / "chroma.sqlite3") as connection:
     config_text = connection.execute(
         "SELECT config_json_str FROM collections WHERE name = ?", ("fixture-l2",)

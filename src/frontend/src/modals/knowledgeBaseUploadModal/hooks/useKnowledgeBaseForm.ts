@@ -123,6 +123,12 @@ export function useKnowledgeBaseForm({
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
   );
+  const defaultVectorStoreBackend = useUtilityStore(
+    (state) => state.defaultVectorStoreBackend,
+  );
+  const vectorStoreConfigLoaded = useUtilityStore(
+    (state) => state.vectorStoreConfigLoaded,
+  );
   const hasAppliedBackendDefaults = useRef(false);
 
   // Transform provider data into ModelOption[] for embedding models only
@@ -208,8 +214,12 @@ export function useKnowledgeBaseForm({
 
   const defaultBackendSelection = useMemo(
     () =>
-      getDefaultDBProviderConfig(globalVariables, localVectorStoreAvailable),
-    [globalVariables, localVectorStoreAvailable],
+      getDefaultDBProviderConfig(
+        globalVariables,
+        localVectorStoreAvailable,
+        defaultVectorStoreBackend,
+      ),
+    [globalVariables, localVectorStoreAvailable, defaultVectorStoreBackend],
   );
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
 
@@ -342,7 +352,8 @@ export function useKnowledgeBaseForm({
     if (
       existingKnowledgeBase ||
       hasAppliedBackendDefaults.current ||
-      !globalVariablesReady
+      !globalVariablesReady ||
+      !vectorStoreConfigLoaded
     ) {
       return;
     }
@@ -355,6 +366,7 @@ export function useKnowledgeBaseForm({
     existingKnowledgeBase,
     globalVariablesReady,
     open,
+    vectorStoreConfigLoaded,
   ]);
 
   const resetForm = useCallback(() => {
@@ -472,7 +484,10 @@ export function useKnowledgeBaseForm({
     } else if (!selectedEmbeddingModelAuthorized) {
       errors.embeddingModel = t("knowledge.validationEmbeddingRequired");
     }
-    if (!globalVariablesReady) {
+    if (
+      !globalVariablesReady ||
+      (!isAddSourcesMode && !vectorStoreConfigLoaded)
+    ) {
       errors.backend = t("modelProviders.errorUnexpected");
     } else if (!isAddSourcesMode) {
       const selectedProvider = getDBProviderOption(backendType);
@@ -481,6 +496,7 @@ export function useKnowledgeBaseForm({
           backendType,
           globalVariables,
           localVectorStoreAvailable,
+          defaultVectorStoreBackend,
         )
       ) {
         errors.backend = `${selectedProvider.label} must be configured in DB Providers settings before it can be used.`;
@@ -520,6 +536,8 @@ export function useKnowledgeBaseForm({
     globalVariables,
     globalVariablesReady,
     localVectorStoreAvailable,
+    defaultVectorStoreBackend,
+    vectorStoreConfigLoaded,
     files,
     existingKnowledgeBaseNames,
     metadataPairs,

@@ -243,3 +243,21 @@ def test_main_wheel_gate_derives_bundle_requirements_from_project_metadata() -> 
     assert 'root_metadata["project"]["optional-dependencies"]["bundles"]' in main_gate
     assert "opt_in_standalone" not in main_gate
     assert "bundle_requirement_names == expected_bundle_names" in main_gate
+
+
+def test_publication_requires_application_evidence_without_a_separate_migration_helper() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    reservation = _job_block(WORKFLOW_PATH, "reserve-final-release", "publish-base")
+    assert "migration_helper_release" not in workflow
+    assert "validate-migration-helper" not in workflow
+    needs = next(line for line in reservation.splitlines() if line.strip().startswith("needs:"))
+    jobs = {item.strip() for item in needs.split("[", 1)[1].rstrip("]").split(",")}
+    assert {"release-inventory", "test-cross-platform", "ci"} <= jobs
+
+
+def test_sqlite_runtime_workflow_references_existing_tests() -> None:
+    import re
+
+    workflow = (WORKFLOWS_DIR / "sqlite-runtime.yml").read_text(encoding="utf-8")
+    for path in re.findall(r"(?:src|scripts)/[\w/]+test_[\w]+\.py", workflow):
+        assert (WORKFLOWS_DIR.parents[1] / path).is_file(), path

@@ -988,7 +988,7 @@ class OperationsComponent(Component):
                         [combined_data[key], value] if not isinstance(value, list) else [combined_data[key], *value]
                     )
 
-        return Data(**combined_data)
+        return Data(data=combined_data)
 
     def append_update(self) -> Data:
         """Append or update the data with new key-value pairs."""
@@ -1094,10 +1094,13 @@ class OperationsComponent(Component):
 
     @staticmethod
     def _comparable_filter_value(column: pd.Series, filter_value: Any) -> Any:
-        """Return the Filter Value as a number when the column is numeric.
+        """Return a text input as a number when the column is numeric.
 
-        The value arrives as text, and ``30 == "30"`` never matches in pandas.
+        Filter and Replace Value inputs arrive as text, and ``30 == "30"`` never matches in pandas.
+        A blank input stays text: ``pd.to_numeric("")`` is NaN, which would match missing cells.
         """
+        if filter_value in (None, ""):
+            return filter_value
         if pd.api.types.is_numeric_dtype(column) and not pd.api.types.is_bool_dtype(column):
             try:
                 return pd.to_numeric(filter_value)
@@ -1163,7 +1166,24 @@ class OperationsComponent(Component):
         return DataFrame(df.tail(self.num_rows))
 
     def replace_values(self, df: DataFrame) -> DataFrame:
-        df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
+        column = df[self.column_name]
+        replace_val = self._comparable_filter_value(column, self.replace_value)
+        replacement_val = self._comparable_filter_value(column, self.replacement_value)
+        try:
+            result = column.replace(replace_val, replacement_val)
+        except TypeError:
+            if not (
+                isinstance(column.dtype, pd.api.extensions.ExtensionDtype)
+                and pd.api.types.is_integer_dtype(column.dtype)
+            ):
+                raise
+            # Nullable integers reject fractional/text replacements instead of widening like NumPy columns.
+            widened = column.astype("Float64" if pd.api.types.is_float(replacement_val) else object)
+            # A float cannot represent every Int64 value. Preserve unrelated large integers exactly.
+            if not widened.astype(object).equals(column.astype(object)):
+                widened = column.astype(object)
+            result = widened.mask(column.eq(replace_val).fillna(value=False), replacement_val)
+        df[self.column_name] = result
         return DataFrame(df)
 
     def drop_duplicates(self, df: DataFrame) -> DataFrame:

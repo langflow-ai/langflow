@@ -1925,7 +1925,9 @@ async def custom_component(
     try:
         component = Component(_code=effective_code)
 
-        built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
+        built_frontend_node, component_instance = build_custom_component_template(
+            component, user_id=user.id, class_name=raw_code.get_class_name()
+        )
         type_ = get_instance_name(component_instance)
         enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
         # Posting the source of a blocked integration component must not
@@ -2030,6 +2032,7 @@ async def custom_component_update(
         component_node, cc_instance = build_custom_component_template(
             component,
             user_id=user.id,
+            class_name=code_request.get_class_name(),
         )
         component_type = get_instance_name(cc_instance)
         enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
