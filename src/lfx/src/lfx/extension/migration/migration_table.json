@@ -5260,6 +5260,106 @@
       "legacy_slot": "ext:slack:SlackListChannelMembersComponent@official-pre-a",
       "target": "ext:slack:SlackListChannelMembersComponent@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "LoootSearchCatalogComponent",
+      "target": "ext:looot:LoootSearchCatalogComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.looot.search_catalog.LoootSearchCatalogComponent",
+      "target": "ext:looot:LoootSearchCatalogComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.looot.LoootSearchCatalogComponent",
+      "target": "ext:looot:LoootSearchCatalogComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:looot:LoootSearchCatalogComponent@official-pre-a",
+      "target": "ext:looot:LoootSearchCatalogComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "LoootInspectEndpointComponent",
+      "target": "ext:looot:LoootInspectEndpointComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.looot.inspect_endpoint.LoootInspectEndpointComponent",
+      "target": "ext:looot:LoootInspectEndpointComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.looot.LoootInspectEndpointComponent",
+      "target": "ext:looot:LoootInspectEndpointComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:looot:LoootInspectEndpointComponent@official-pre-a",
+      "target": "ext:looot:LoootInspectEndpointComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "LoootRunEndpointComponent",
+      "target": "ext:looot:LoootRunEndpointComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.looot.run_endpoint.LoootRunEndpointComponent",
+      "target": "ext:looot:LoootRunEndpointComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.looot.LoootRunEndpointComponent",
+      "target": "ext:looot:LoootRunEndpointComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:looot:LoootRunEndpointComponent@official-pre-a",
+      "target": "ext:looot:LoootRunEndpointComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "LoootGetRunComponent",
+      "target": "ext:looot:LoootGetRunComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.looot.get_run.LoootGetRunComponent",
+      "target": "ext:looot:LoootGetRunComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.looot.LoootGetRunComponent",
+      "target": "ext:looot:LoootGetRunComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:looot:LoootGetRunComponent@official-pre-a",
+      "target": "ext:looot:LoootGetRunComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "LoootGetBalanceComponent",
+      "target": "ext:looot:LoootGetBalanceComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.looot.get_balance.LoootGetBalanceComponent",
+      "target": "ext:looot:LoootGetBalanceComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.looot.LoootGetBalanceComponent",
+      "target": "ext:looot:LoootGetBalanceComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:looot:LoootGetBalanceComponent@official-pre-a",
+      "target": "ext:looot:LoootGetBalanceComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [

@@ -61,6 +61,7 @@ import { LangChainIcon } from "@/icons/LangChain";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { LiteLLMIcon } from "@/icons/LiteLLM";
 import { LMStudioIcon } from "@/icons/LMStudio";
+import { LoootIcon } from "@/icons/Looot";
 import { MaritalkIcon } from "@/icons/Maritalk";
 import { Mem0 } from "@/icons/Mem0";
 import { MetaIcon } from "@/icons/Meta";
@@ -187,6 +188,7 @@ export const eagerIconsMapping = {
   Langwatch: LangwatchIcon,
   LiteLLM: LiteLLMIcon,
   LMStudio: LMStudioIcon,
+  Looot: LoootIcon,
   Maritalk: MaritalkIcon,
   Mem0: Mem0,
   Meta: MetaIcon,

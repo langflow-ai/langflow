@@ -339,6 +339,8 @@ export const lazyIconsMapping = {
     import("@/icons/LiteLLM").then((mod) => ({ default: mod.LiteLLMIcon })),
   LMStudio: () =>
     import("@/icons/LMStudio").then((mod) => ({ default: mod.LMStudioIcon })),
+  Looot: () =>
+    import("@/icons/Looot").then((mod) => ({ default: mod.LoootIcon })),
   Listennotes: () =>
     import("@/icons/Listennotes").then((mod) => ({
       default: mod.ListennotesIcon,
