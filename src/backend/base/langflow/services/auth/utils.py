@@ -577,9 +577,14 @@ async def get_current_user_mcp(
         if supports_external_token:
             external_kwargs["external_token"] = external_token
     try:
-        return await service.get_current_user_mcp(token, query_param, header_param, db, **external_kwargs)
+        user = await service.get_current_user_mcp(token, query_param, header_param, db, **external_kwargs)
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
+    else:
+        from langflow.services.audit.represented import bind_represented_identity
+
+        bind_represented_identity(request)
+        return user
 
 
 async def get_current_active_user_mcp(user: User = Depends(get_current_user_mcp)) -> User:

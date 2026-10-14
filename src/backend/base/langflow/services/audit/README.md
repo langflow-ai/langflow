@@ -27,11 +27,16 @@ Each value is `v1.` followed by unpadded base64url of the exact UTF-8 identity.
 The issuer limit is 2048 Unicode characters. The subject limit is 512. No
 normalization, case folding, or UUID conversion applies. Both fields must be
 present exactly once or both absent. Empty values, control characters, invalid
-UTF-8, noncanonical encoding, and oversized values produce HTTP 400 with
+UTF-8, invalid base64, and oversized values produce HTTP 400 with
 `X-Langflow-Error-Code: INVALID_AUDIT_CONTEXT`. A credential outside the exact
 allowlist produces HTTP 403 with `REPRESENTED_IDENTITY_NOT_ALLOWED`. Validation
 runs after authentication and before the mutation, even when auditing is off.
 Use TLS for the service connection. The original bearer token is not forwarded.
+
+`v1.` is this protocol's label, not a standard base64 feature. Base64url carries
+UTF-8 bytes as ASCII text using `-` and `_` instead of `+` and `/`, without `=`
+padding. It provides no encryption or identity verification. The credential
+allowlist establishes trust; decoding only recovers the asserted identity.
 
 Audit rows retain the authenticated account and credential in `user_id`,
 `actor_type`, and `actor_id`. `acting_issuer` and `acting_subject` describe the
