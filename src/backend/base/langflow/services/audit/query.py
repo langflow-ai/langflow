@@ -70,17 +70,6 @@ class AuditEventFilters:
     since: datetime | None = None
     until: datetime | None = None
 
-    def __post_init__(self) -> None:
-        for suffix in ("issuer", "subject"):
-            legacy = getattr(self, f"acting_{suffix}")
-            represented = getattr(self, f"represented_{suffix}")
-            if legacy is not None and represented is not None and legacy != represented:
-                msg = "Conflicting represented identity filters"
-                raise ValueError(msg)
-            value = represented if represented is not None else legacy
-            object.__setattr__(self, f"represented_{suffix}", value)
-            object.__setattr__(self, f"acting_{suffix}", value)
-
     def fingerprint(self) -> str:
         canonical: dict[str, Any] = {
             "resource_type": self.resource_type.value,
@@ -97,6 +86,9 @@ class AuditEventFilters:
             "since": to_utc(self.since).isoformat() if self.since else None,
             "until": to_utc(self.until).isoformat() if self.until else None,
         }
+        # Preserve existing cursor fingerprints for queries without represented filters.
+        if self.represented_issuer is not None or self.represented_subject is not None:
+            canonical.update(represented_issuer=self.represented_issuer, represented_subject=self.represented_subject)
         encoded = json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
 
@@ -106,15 +98,13 @@ class AuditEventFilters:
             AuditEvent.resource_id: self.resource_id,
             AuditEvent.user_id: self.user_id,
             AuditEvent.actor_id: self.actor_id,
+            AuditEvent.acting_issuer: self.acting_issuer,
+            AuditEvent.acting_subject: self.acting_subject,
+            AuditEvent.represented_issuer: self.represented_issuer,
+            AuditEvent.represented_subject: self.represented_subject,
             AuditEvent.request_id: self.request_id,
         }
         clauses.extend(col(column) == value for column, value in exact.items() if value is not None)
-        for represented, legacy, value in (
-            (AuditEvent.represented_issuer, AuditEvent.acting_issuer, self.represented_issuer),
-            (AuditEvent.represented_subject, AuditEvent.acting_subject, self.represented_subject),
-        ):
-            if value is not None:
-                clauses.append(or_(col(represented) == value, and_(col(represented).is_(None), col(legacy) == value)))
         any_of = {
             AuditEvent.operation: self.operations,
             AuditEvent.event_type: self.event_types,

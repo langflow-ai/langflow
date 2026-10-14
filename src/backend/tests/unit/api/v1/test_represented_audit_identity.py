@@ -14,7 +14,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
 from sqlmodel import select
 
-from .audit_helpers import enabled_audit, events_for, record_event
+from .audit_helpers import enabled_audit, events_for, login, make_user, record_event
 
 pytestmark = pytest.mark.usefixtures("audit_on")
 
@@ -66,12 +66,13 @@ async def test_service_account_and_represented_user_survive_project_and_flow_lif
     for row in project_events + flow_events:
         assert (row.user_id, row.actor_type, row.actor_id) == (active_user.id, "api_key", trusted_key.id)
         assert (row.represented_issuer, row.represented_subject) == ("https://idp.example", "用户-Ålice")
-        assert (row.acting_issuer, row.acting_subject) == (row.represented_issuer, row.represented_subject)
+        assert (row.acting_issuer, row.acting_subject) == (None, None)
     feed = await client.get(
         f"api/v1/projects/audits?project_id={project_id}", headers={"x-api-key": trusted_key.api_key}
     )
     assert feed.status_code == 200, feed.text
     assert all(item["actor"]["represented_subject"] == "用户-Ålice" for item in feed.json()["items"])
+    assert all(item["actor"]["acting_subject"] is None for item in feed.json()["items"])
 
 
 async def test_another_key_on_the_same_account_and_a_user_token_cannot_assert_identity(
@@ -165,7 +166,7 @@ async def test_concurrent_requests_and_direct_calls_do_not_share_identity(client
     assert await create(None) is None
 
 
-async def test_canonical_and_legacy_filters_return_old_writer_rows(client, trusted_key):
+async def test_acting_history_is_not_projected_as_represented_identity(client, trusted_key):
     row = await record_event(
         resource_type="project",
         resource_id=uuid4(),
@@ -176,22 +177,50 @@ async def test_canonical_and_legacy_filters_return_old_writer_rows(client, trust
         action="project:write",
         operation="patch",
         acting_issuer="https://idp.example",
-        acting_subject="legacy-user",
+        acting_subject="authenticated-user",
     )
-    results = []
     for prefix in ("acting", "represented"):
         response = await client.get(
-            f"api/v1/projects/audits?{prefix}_issuer=https%3A%2F%2Fidp.example&{prefix}_subject=legacy-user",
+            f"api/v1/projects/audits?{prefix}_issuer=https%3A%2F%2Fidp.example&{prefix}_subject=authenticated-user",
             headers={"x-api-key": trusted_key.api_key},
         )
         assert response.status_code == 200, response.text
-        results.append(response.json())
+        if prefix == "represented":
+            assert response.json()["items"] == []
+            continue
         [item] = response.json()["items"]
         assert item["id"] == str(row.id)
-        assert item["actor"]["represented_subject"] == item["actor"]["acting_subject"] == "legacy-user"
-    assert results[0] == results[1]
-    conflict = await client.get(
-        "api/v1/projects/audits?represented_subject=alice&acting_subject=bob",
+        assert item["actor"]["acting_subject"] == "authenticated-user"
+        assert item["actor"]["represented_subject"] is None
+
+
+async def test_both_identity_pairs_remain_distinct_in_filters_and_responses(client, trusted_key):
+    row = await record_event(
+        resource_type="project",
+        resource_id=uuid4(),
+        user_id=trusted_key.user_id,
+        actor_type="api_key",
+        actor_id=trusted_key.id,
+        action="project:write",
+        operation="patch",
+        acting_issuer="actor-issuer",
+        acting_subject="actor",
+        represented_issuer="end-user-issuer",
+        represented_subject="end-user",
+    )
+    response = await client.get(
+        "api/v1/projects/audits?acting_subject=actor&represented_subject=end-user",
         headers={"x-api-key": trusted_key.api_key},
     )
-    assert conflict.status_code == 400
+    assert response.status_code == 200, response.text
+    [item] = response.json()["items"]
+    assert item["id"] == str(row.id)
+    assert item["actor"]["acting_issuer"] == "actor-issuer"
+    assert item["actor"]["represented_issuer"] == "end-user-issuer"
+    _admin_id, admin_name = await make_user("identityadmin", superuser=True)
+    admin_headers = await login(client, admin_name)
+    combined = await client.get(f"api/v1/audits?resource_id={row.resource_id}", headers=admin_headers)
+    assert combined.status_code == 200, combined.text
+    [resource_item] = [item for item in combined.json()["items"] if item["id"] == str(row.id)]
+    assert resource_item["actor"]["acting_subject"] == "actor"
+    assert resource_item["actor"]["represented_subject"] == "end-user"
