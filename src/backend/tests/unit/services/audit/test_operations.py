@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from langflow.api.v1.schemas.replacement_operations import ProjectReplacementRequest
 from langflow.services.audit import operations
 from langflow.services.audit.details import AuditContractError
 from langflow.services.audit.operations import (
@@ -114,6 +115,40 @@ def test_a_project_body_describes_its_attempted_shape_without_values():
     assert described["attempted_fields"] == {"name", "description", "flows"}
     assert described["requested_flow_count"] == 2
     assert described["resource_name"] == "secret-name"
+
+
+def test_a_replacement_body_describes_the_project_name_and_requested_flow_count():
+    body = ProjectReplacementRequest(project_name="deployment", description=None, flows=[])
+    described = describe_project_body("request_body")({"request_body": body})
+    assert described == {
+        "resource_name": "deployment",
+        "attempted_fields": {"project_name", "description", "flows"},
+        "requested_flow_count": 0,
+    }
+
+
+@pytest.mark.parametrize(
+    ("code", "status", "expected"),
+    [
+        ("replacement_operation_id_conflict", 409, AuditErrorCode.CONSTRAINT_VIOLATION),
+        ("replacement_project_already_exists", 409, AuditErrorCode.CONSTRAINT_VIOLATION),
+        ("replacement_flow_folder_mismatch", 409, AuditErrorCode.CONSTRAINT_VIOLATION),
+        ("replacement_flows_span_multiple_workspaces", 409, AuditErrorCode.CONSTRAINT_VIOLATION),
+        ("replacement_project_name_conflict", 409, AuditErrorCode.PROJECT_NAME_CONFLICT),
+        ("replacement_duplicate_flow_names", 409, AuditErrorCode.FLOW_NAME_CONFLICT),
+        ("replacement_flow_name_conflict", 409, AuditErrorCode.FLOW_NAME_CONFLICT),
+        ("replacement_endpoint_name_conflict", 409, AuditErrorCode.FLOW_NAME_CONFLICT),
+        ("replacement_duplicate_flow_ids", 422, AuditErrorCode.FLOW_ID_CONFLICT),
+        ("replacement_flow_belongs_to_another_project", 409, AuditErrorCode.FLOW_ID_CONFLICT),
+        ("replacement_flow_not_found", 404, AuditErrorCode.FLOW_NOT_FOUND),
+        ("replacement_receipt_expired", 410, AuditErrorCode.CONSTRAINT_VIOLATION),
+        ("replacement_invalid_project_name", 422, AuditErrorCode.INVALID_CONTENT),
+        ("replacement_retry_exhausted", 503, AuditErrorCode.SERVICE_UNAVAILABLE),
+    ],
+)
+def test_replacement_failure_codes_do_not_misclassify_project_conflicts(code, status, expected):
+    exc = HTTPException(status, "private error text", headers={"X-Langflow-Error-Code": code})
+    assert classify_failure(exc, PROJECT) is expected
 
 
 def test_a_flow_patch_prefers_the_known_name_over_the_attempted_one():
