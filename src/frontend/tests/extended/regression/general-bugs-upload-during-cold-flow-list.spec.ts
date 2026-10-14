@@ -8,7 +8,7 @@ const PROJECT_PAGE_PATTERN = /\/api\/v1\/projects\/[^/?]+\?/;
 
 test(
   "uploaded flow must appear when the project list is still loading its first page",
-  { tag: ["@release"] },
+  { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
     /* Reproduces the Windows-CI failure of outdated-actions.spec.ts.
      *
