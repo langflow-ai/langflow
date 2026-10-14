@@ -66,7 +66,7 @@ class PerplexityComponent(LCModelComponent):
 
         return ChatPerplexity(
             model=model,
-            temperature=temperature or 0.75,
+            temperature=0.75 if temperature is None else temperature,
             pplx_api_key=api_key,
             top_p=top_p or None,
             n=n or 1,
