@@ -16,13 +16,16 @@ from lfx.utils.lazy_import import import_mod
 if TYPE_CHECKING:
     from .openai import OpenAIEmbeddingsComponent
     from .openai_chat_model import OpenAIModelComponent
+    from .openai_decisions import OpenAIDecisionsComponent
 
 _dynamic_imports = {
+    "OpenAIDecisionsComponent": "openai_decisions",
     "OpenAIEmbeddingsComponent": "openai",
     "OpenAIModelComponent": "openai_chat_model",
 }
 
 __all__ = [
+    "OpenAIDecisionsComponent",
     "OpenAIEmbeddingsComponent",
     "OpenAIModelComponent",
 ]

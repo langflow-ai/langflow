@@ -78,6 +78,7 @@
         "lfx-oracle",
         "lfx-slack",
         "lfx-toolguard",
+        "lfx-typesafe",
         "lfx-vllm"
       ],
       "forbidden_distributions_add": [
@@ -114,6 +115,7 @@
           "lfx-oracle",
           "lfx-slack",
           "lfx-toolguard",
+          "lfx-typesafe",
           "lfx-vllm"
         ],
         "lfx.bundles": []
@@ -158,6 +160,10 @@
         "lfx-toolguard": [
           "lfx_toolguard/extension.json",
           "lfx_toolguard/components/models_and_agents/policies_component.py"
+        ],
+        "lfx-typesafe": [
+          "lfx_typesafe/extension.json",
+          "lfx_typesafe/components/typesafe/typesafe_system_one.py"
         ]
       },
       "module_checks": [
@@ -255,6 +261,7 @@
           "lfx-serply",
           "lfx-slack",
           "lfx-toolguard",
+          "lfx-typesafe",
           "lfx-valkey",
           "lfx-vllm"
         ],

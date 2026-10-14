@@ -11,6 +11,71 @@ jobs:
   test-docker-first:
     name: Test Docker images (first attempt)
     runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
+    # A later job reports the result. This one must not fail the workflow when
+    # the runner shuts down before the attempts finish.
+    continue-on-error: true
+    outputs:
+      succeeded: ${{ steps.success.outputs.succeeded }}
+      finished: ${{ steps.finished.outputs.finished }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build and test Docker images
+        id: build
+        # A completed image test takes about 20 minutes. Each of the three
+        # attempts is limited to 30 minutes; the step budget covers all three.
+        timeout-minutes: 95
+        run: bash scripts/ci/retry_docker_image_tests.sh
+
+      - name: Record a completed attempt
+        id: finished
+        if: always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure')
+        run: echo "finished=true" >> "$GITHUB_OUTPUT"
+
+      - name: Mark first attempt successful
+        id: success
+        if: steps.build.outcome == 'success'
+        run: echo "succeeded=true" >> "$GITHUB_OUTPUT"
+
+  test-docker-retry:
+    name: Test Docker images (verify or retry)
+    needs: test-docker-first
+    # "The runner has received a shutdown signal" cancels the step. The retry
+    # loop never resumes on that machine, so start again on a new runner.
+    # A loop that already ran to completion is not built again.
+    if: ${{ always() && !cancelled() && needs.test-docker-first.outputs.succeeded != 'true' && needs.test-docker-first.outputs.finished != 'true' }}
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
+    continue-on-error: true
+    outputs:
+      succeeded: ${{ steps.success.outputs.succeeded }}
+      finished: ${{ steps.finished.outputs.finished }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build and test Docker images
+        id: build
+        timeout-minutes: 95
+        run: bash scripts/ci/retry_docker_image_tests.sh
+
+      - name: Record a completed attempt
+        id: finished
+        if: always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure')
+        run: echo "finished=true" >> "$GITHUB_OUTPUT"
+
+      - name: Mark retry successful
+        id: success
+        if: steps.build.outcome == 'success'
+        run: echo "succeeded=true" >> "$GITHUB_OUTPUT"
+
+  test-docker-final:
+    name: Test Docker images (second retry)
+    needs: [test-docker-first, test-docker-retry]
+    if: ${{ always() && !cancelled() && needs.test-docker-first.outputs.succeeded != 'true' && needs.test-docker-retry.result != 'skipped' && needs.test-docker-retry.outputs.succeeded != 'true' && needs.test-docker-retry.outputs.finished != 'true' }}
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
     continue-on-error: true
     outputs:
       succeeded: ${{ steps.success.outputs.succeeded }}
@@ -20,22 +85,30 @@ jobs:
           persist-credentials: false
 
       - name: Build and test Docker images
-        run: bash scripts/ci/test_docker_images.sh
+        id: build
+        timeout-minutes: 95
+        run: bash scripts/ci/retry_docker_image_tests.sh
 
-      - name: Mark first attempt successful
+      - name: Mark second retry successful
         id: success
-        run: |
-          echo "succeeded=true" >> "$GITHUB_OUTPUT"
+        if: steps.build.outcome == 'success'
+        run: echo "succeeded=true" >> "$GITHUB_OUTPUT"
 
-  test-docker-retry:
-    name: Test Docker images (verify or retry)
-    needs: test-docker-first
-    if: ${{ always() && !cancelled() && needs.test-docker-first.outputs.succeeded != 'true' }}
-    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
+  test-docker-result:
+    name: Test Docker images result
+    needs: [test-docker-first, test-docker-retry, test-docker-final]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Build and test Docker images
-        run: bash scripts/ci/test_docker_images.sh
+      - name: Require one successful image test
+        env:
+          FIRST_SUCCEEDED: ${{ needs.test-docker-first.outputs.succeeded }}
+          RETRY_SUCCEEDED: ${{ needs.test-docker-retry.outputs.succeeded }}
+          FINAL_SUCCEEDED: ${{ needs.test-docker-final.outputs.succeeded }}
+        run: |
+          if [[ "$FIRST_SUCCEEDED" == "true" || "$RETRY_SUCCEEDED" == "true" || "$FINAL_SUCCEEDED" == "true" ]]; then
+            echo "Docker image tests passed."
+            exit 0
+          fi
+          echo "Docker image tests did not pass."
+          exit 1
