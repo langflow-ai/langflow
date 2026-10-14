@@ -291,6 +291,32 @@ class TestCreateInputSchemaFromJsonSchema:
         assert instance.first.a == "x"
         assert instance.second.b == 1
 
+    @pytest.mark.parametrize(
+        "tags_schema",
+        [
+            {"anyOf": [{"type": "array", "items": {"type": "string"}}, {"type": "null"}], "default": None},
+            {"type": ["array", "null"], "items": {"type": "string"}},
+        ],
+        ids=["anyOf-null", "type-list-null"],
+    )
+    def test_nullable_array_keeps_item_type(self, tags_schema):
+        """A nullable array (list[str] | None) must keep its item type in the generated schema.
+
+        Regression: the nullable shortcut mapped "array" to a bare ``list``, so the
+        generated JSON schema had ``"items": {}``. Gemini rejects that for the whole
+        request with ``items: missing field``.
+        """
+        schema = {"type": "object", "properties": {"tags": tags_schema}}
+        model = create_input_schema_from_json_schema(schema)
+
+        prop = model.model_json_schema()["properties"]["tags"]
+        variants = prop.get("anyOf", [prop])
+        arr = next(v for v in variants if v.get("type") == "array")
+        assert arr["items"] == {"type": "string"}
+
+        assert model.model_validate({"tags": ["a", "b"]}).tags == ["a", "b"]
+        assert model.model_validate({}).tags is None
+
 
 class TestUnderscorePropertyNames:
     """JSON Schema allows names such as Glean's ``_user_goal``; Pydantic reserves leading underscores."""
