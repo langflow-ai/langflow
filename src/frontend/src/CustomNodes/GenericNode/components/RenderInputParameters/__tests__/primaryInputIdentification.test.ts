@@ -1,12 +1,12 @@
 import type { Edge } from "@xyflow/react";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
-import { findPrimaryInput } from "../utils";
+import { type FindPrimaryInputTemplate, findPrimaryInput } from "../utils";
 
 // Helper to create a mock edge for testing
 const createMockEdge = (
   nodeId: string,
   fieldName: string,
-  template: { type?: string; input_types?: string[]; proxy?: any },
+  template: Pick<FindPrimaryInputTemplate, "type" | "input_types" | "proxy">,
 ): Edge => {
   const handleId = scapedJSONStringfy(
     template.proxy
