@@ -21,7 +21,7 @@ import asyncio
 import contextlib
 import json
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from copy import deepcopy
 from typing import Final
 from uuid import UUID, uuid4
@@ -79,6 +79,11 @@ from langflow.utils.flow_secrets import (
 
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution, used as a fallback
+
+# Keep idle HTTP streams below common proxy timeouts. Comments belong at the
+# response boundary so background jobs never persist or publish them as events.
+_STREAM_KEEPALIVE_INTERVAL_SECONDS = 15.0
+_STREAM_KEEPALIVE_FRAME = b": keepalive\n\n"
 
 
 def _resolve_execution_timeout() -> int:
@@ -270,7 +275,7 @@ async def _stream_event_frames(
     emit_output_capture: bool = False,
     expose_error_details: bool = False,
     execution_timeout: float | None | _CeilingFromSettings = _CEILING_FROM_SETTINGS,
-) -> AsyncIterator[tuple[bytes, str]]:
+) -> AsyncGenerator[tuple[bytes, str], None]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
     Yields ``(sse_frame_bytes, event_type_str)`` pairs. The consumer
@@ -610,7 +615,7 @@ def _execute_streaming_workflow(
     """
 
     async def _frames_only() -> AsyncIterator[bytes]:
-        async for frame, _event_type in _stream_event_frames(
+        frames = _stream_event_frames(
             adapter=adapter,
             flow_id=flow.id,
             flow_name=flow.name,
@@ -625,8 +630,34 @@ def _execute_streaming_workflow(
             protocol="v2",
             execution_family=FAMILY_WORKFLOW_V2,
             expose_error_details=caller_owns_flow(flow, current_user),
-        ):
-            yield frame
+        )
+
+        next_frame: asyncio.Task[tuple[bytes, str]] | None = asyncio.create_task(anext(frames))
+        try:
+            while next_frame is not None:
+                # Keep the same source read pending across idle deadlines. Cancelling
+                # anext() on each timeout would cancel the workflow itself.
+                done, _pending = await asyncio.wait({next_frame}, timeout=_STREAM_KEEPALIVE_INTERVAL_SECONDS)
+                if not done:
+                    yield _STREAM_KEEPALIVE_FRAME
+                    continue
+                ready = next_frame
+                next_frame = None
+                try:
+                    frame, _event_type = ready.result()
+                except StopAsyncIteration:
+                    return
+                next_frame = asyncio.create_task(anext(frames))
+                yield frame
+        finally:
+            try:
+                if next_frame is not None:
+                    # The source already bounds run cleanup. Shield this read's
+                    # teardown from the response's level-triggered cancellation.
+                    with contextlib.suppress(StopAsyncIteration):
+                        await cancel_and_wait(next_frame, grace_seconds=None)
+            finally:
+                await frames.aclose()
 
     return EventSourceResponse(
         _frames_only(),
