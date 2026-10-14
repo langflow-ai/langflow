@@ -1,7 +1,7 @@
 # Knowledge base migration interchange
 
 This package qualifies inert legacy exports and imports them into an unpublished
-SQLite generation. It does not launch a helper, snapshot an active source,
+SQLite generation. It does not snapshot an active source,
 change application routing, or make legacy stores available in the new runtime.
 
 The upgrade coordinator must hold exclusive access to the destination generation
@@ -34,7 +34,7 @@ whitespace, and no NaN/Infinity. Embeddings round-trip through little-endian
 float32 before hashing. Metadata retains its JSON types and object order because
 existing Python-string source filters observe that order. Verification detects
 changes to it. Physical IDs are distinct from metadata `_id`.
-These checksums establish consistency, not helper authenticity.
+These checksums establish consistency, not source authenticity.
 
 `ExportLimits` caps record size, total input bytes, count, dimensions, ID size and
 metadata depth. A private temporary SQLite ledger bounds process memory, detects
@@ -66,17 +66,21 @@ routing pointer. It is not activation. On any failure the coordinator keeps the
 generation unpublished and the original source fenced. Source snapshots remain
 untouched. Recovery must reacquire exclusive generation access before replay.
 
-## Helper qualification boundary
+## Bundled reader qualification boundary
 
-The helper belongs to a separately built, scanned, signed and isolated artifact.
-This package adds no Chroma requirement. Do not install Chroma in the application
-environment to use these primitives.
+Automatic and managed upgrades use the bundled legacy reader against a private,
+consistent source snapshot. It reads SQLite metadata and bounded inert HNSW data
+without a Chroma SDK, native Chroma parser or Python pickle execution. Stored
+embedding functions are never instantiated. No separate container artifact,
+signature verifier or helper publication is required.
 
-A local experiment on generated Chroma 1.5.9 data established that raw
-`chromadb_rust_bindings` can read a disposable source clone without importing the
-Python Chroma SDK or invoking Python pickle deserialization. It covered a
-persisted HNSW index, purged operation logs, pending operations, updates and
-deletions. That is a feasible reader direction, not release qualification.
-Native parsers, older Python-store formats, malicious input, supported operating
-systems, enforced network/filesystem isolation, helper signing and packaging,
-and end-to-end stopped-worker upgrade recovery remain separate required gates.
+Real Chroma 0.5.23 and 1.5.9 fixtures cover persisted indexes, purged logs,
+pending operations, updates, deletions and known-dimension empty stores. Reader
+and application tests compare the preserved IDs, text, metadata and vectors.
+Unsupported formats or resource limits require an operator export from an
+isolated compatible old-release environment. A managed receipt proves the
+stopped-worker barrier and backup. It does not bypass reader limits.
+
+Application artifact inventories, native-runtime CI, final security scans and
+deployment-specific shutdown/backup/recovery rehearsals remain separate release
+checks.

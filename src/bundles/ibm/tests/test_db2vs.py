@@ -281,7 +281,13 @@ class TestDB2VSClass:
     @patch("lfx_ibm.components.ibm.db2vs._create_table")
     @patch("lfx_ibm.components.ibm.db2vs.DB2VS.get_embedding_dimension")
     def test_delete_uses_ids_verbatim_as_stored_by_add_texts(
-        self, mock_get_dim, mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
+        self,
+        mock_get_dim,
+        mock_create_table,  # noqa: ARG002
+        mock_get_columns,
+        mock_table_exists,
+        mock_client,
+        mock_embedding,
     ):
         """delete() must query with the exact ids add_texts() stored.
 
@@ -320,7 +326,13 @@ class TestDB2VSClass:
     @patch("lfx_ibm.components.ibm.db2vs._create_table")
     @patch("lfx_ibm.components.ibm.db2vs.DB2VS.get_embedding_dimension")
     def test_delete_round_trips_auto_generated_ids(
-        self, mock_get_dim, mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
+        self,
+        mock_get_dim,
+        mock_create_table,  # noqa: ARG002
+        mock_get_columns,
+        mock_table_exists,
+        mock_client,
+        mock_embedding,
     ):
         """Auto-generated ids stay uppercase 16-char hashes, so they keep working."""
         from lfx_ibm.components.ibm.db2vs import DB2VS, DistanceStrategy

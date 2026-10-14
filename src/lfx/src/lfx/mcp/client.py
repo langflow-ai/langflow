@@ -66,9 +66,12 @@ class LangflowClient:
         server_url: str | None = None,
         api_key: str | None = None,
         access_token: str | None = None,
+        *,
+        use_env_api_key: bool = True,
     ):
         self.server_url = (server_url or os.environ.get("LANGFLOW_SERVER_URL", "http://localhost:7860")).rstrip("/")
-        self.api_key = api_key or os.environ.get("LANGFLOW_API_KEY")
+        # HTTP mounts must not substitute process credentials for their caller.
+        self.api_key = api_key or (os.environ.get("LANGFLOW_API_KEY") if use_env_api_key else None)
         self.access_token = access_token
         # Keep environment-based configuration consistent for this client's lifetime.
         self.global_var_headers = _global_var_headers()

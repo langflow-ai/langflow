@@ -57,6 +57,9 @@ jobs:
           uv pip install -e .
 
       - name: Run starter projects update
+        env:
+          # This offline generator needs a bootstrap user in its temporary database.
+          LANGFLOW_AUTO_LOGIN: "true"
         run: uv run python scripts/ci/update_starter_projects.py
 
       - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a

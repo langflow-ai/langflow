@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Any, Literal
 from uuid import UUID
 
+from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 from lfx.graph.schema import RunOutputs
 from lfx.services.settings.base import Settings
 from lfx.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
@@ -194,6 +195,12 @@ class CustomComponentRequest(BaseModel):
     code: str
     frontend_node: dict | None = None
 
+    def get_class_name(self) -> str | None:
+        """Read an optional class identity from the saved frontend template."""
+        metadata = (self.frontend_node or {}).get("metadata")
+        class_name = metadata.get("component_class_name") if isinstance(metadata, dict) else None
+        return class_name if isinstance(class_name, str) and class_name else None
+
 
 class CustomComponentResponse(BaseModel):
     data: dict
@@ -226,6 +233,10 @@ class ComponentListRead(BaseModel):
 class UsersResponse(BaseModel):
     total_count: int
     users: list[UserRead]
+    deletion_requests: dict[str, str] = Field(
+        default_factory=dict,
+        description="Status of each listed user's open account deletion request, keyed by user id.",
+    )
 
 
 class PasswordResetRequest(BaseModel):
@@ -488,6 +499,12 @@ class ConfigResponse(BaseConfigResponse):
     # replicas), so the vector-store picker hides the option rather than offering
     # a choice the create endpoint always rejects with 422.
     local_vector_store_available: bool = True
+    # The backend a new knowledge base or memory base lands on when the client
+    # names none (``resolve_default_kb_backend``): ``postgres`` when pgVector is
+    # provisioned via env, else ``opensearch`` when it is, else ``sqlite``. The UI
+    # defaults its provider picker to this instead of assuming pgVector, so an
+    # OpenSearch-only deployment never offers a backend that is not configured.
+    default_vector_store_backend: str = "sqlite"
     # The component types an administrator blocked, for authenticated callers
     # only. ``catalog_governance_enabled`` says a policy exists somewhere; it
     # cannot say which component in front of you it applies to, and a missing
@@ -554,6 +571,7 @@ class ConfigResponse(BaseConfigResponse):
             agentic_experience=settings.agentic_experience,
             assistant_max_message_length=settings.assistant_max_message_length,
             local_vector_store_available=settings.deployment_profile != "prod",
+            default_vector_store_backend=resolve_default_kb_backend(),
         )
 
 

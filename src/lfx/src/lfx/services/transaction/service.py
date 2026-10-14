@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from lfx.services.interfaces import TransactionServiceProtocol
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 
 class NoopTransactionService(TransactionServiceProtocol):
@@ -24,6 +27,9 @@ class NoopTransactionService(TransactionServiceProtocol):
         status: str,
         target_id: str | None = None,
         error: str | None = None,
+        *,
+        user_id: UUID | None = None,
+        session_id: str | None = None,
     ) -> None:
         """No-op implementation of transaction logging.
 

@@ -20,6 +20,7 @@ if __name__ == "__main__":
         _os.execv(_sys.executable, [_sys.executable, "-m", "langflow.__main__", *_sys.argv[1:]])  # noqa: S606
 
 import asyncio
+import dataclasses
 import inspect
 import json
 import os
@@ -1318,6 +1319,17 @@ def relocate_kb(
         default=False,
         help="Move knowledge bases whose search rankings would change because the target ranks by another metric.",
     ),
+    verify_skipped: bool = typer.Option(  # noqa: FBT001
+        default=True,
+        help="Before skipping a knowledge base whose row already names the target, count its chunks there, and "
+        "fail it when the store cannot be read or holds fewer than the row records. With --no-verify-skipped it "
+        "is skipped without a look at the store.",
+    ),
+    as_json: bool = typer.Option(  # noqa: FBT001
+        False,  # noqa: FBT003
+        "--json",
+        help="Write progress and results to stdout as one JSON object per line, and logs to stderr.",
+    ),
     log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
 ) -> None:
     """Move knowledge base vectors to another backend without re-embedding.
@@ -1335,24 +1347,40 @@ def relocate_kb(
 
     Safe to re-run: chunks keep their ids, so a second run upserts, and knowledge
     bases already on the target are skipped. Nothing is deleted from the source.
-    Exits non-zero if any knowledge base could not be moved.
+    Exits non-zero if any knowledge base failed.
+
+    A knowledge base whose row already names the target is not moved. Its chunks
+    are counted there first, if the row records any and its storage is ready,
+    and it fails when the store cannot be read or holds fewer chunks than the
+    row records, as it does when PGVECTOR_CONNECTION_STRING names another
+    database than the one the chunks were written to. Pass --no-verify-skipped
+    to skip it without a look at the store, for a knowledge base that is in
+    place and whose row records too many chunks.
+
+    With --json, stdout carries one JSON object per line and logs go to stderr:
+    "progress" as a knowledge base's chunks are copied, an "item" as each one
+    finishes, and a closing "report" with the counts and the knowledge bases
+    that need attention. A run refused before it starts writes one "error"
+    instead. Failed items and errors carry a stable "code".
     """
+    from langflow.cli import relocate_kb_events as events
+
     try:
         config = json.loads(target_config)
     except json.JSONDecodeError as exc:
-        typer.echo(f"--target-config is not valid JSON: {exc}", err=True)
+        events.refuse(f"--target-config is not valid JSON: {exc}", "bad_target_config", as_json=as_json)
         raise typer.Exit(2) from exc
     if not isinstance(config, dict):
-        typer.echo("--target-config must be a JSON object", err=True)
+        events.refuse("--target-config must be a JSON object", "bad_target_config", as_json=as_json)
         raise typer.Exit(2)
     from langflow.api.utils.knowledge_base_relocation import validate_relocation_target_config
 
     try:
         validate_relocation_target_config(to, config)
     except ValueError as exc:
-        typer.echo(str(exc), err=True)
+        events.refuse(str(exc), "bad_target_config", as_json=as_json)
         raise typer.Exit(2) from exc
-    configure(log_level=log_level)
+    configure(log_level=log_level, output_file=sys.stderr if as_json else None)
     failed = asyncio.run(
         _relocate_kb(
             target_backend_type=to,
@@ -1361,6 +1389,8 @@ def relocate_kb(
             dry_run=dry_run,
             batch_size=batch_size,
             allow_metric_change=allow_metric_change,
+            verify_skipped=verify_skipped,
+            as_json=as_json,
         )
     )
     if failed:
@@ -1475,6 +1505,20 @@ def relocation_line(result) -> str:
     return f"{line}  chunks {counts}"
 
 
+def relocation_lines(result) -> list[str]:
+    """Everything the command prints for one knowledge base: its line, a hint, its warnings."""
+    lines = [relocation_line(result) + (f"  ({result.reason})" if result.reason else "")]
+    if result.code == "kb_target_short":
+        # Only in this output. The reason and the flag go to the migration page as well, and nobody there
+        # runs the command.
+        lines.append(
+            f"{'':15} hint: if this is the right store and its row records too many chunks, "
+            "re-run with --no-verify-skipped, which skips every knowledge base already on the target "
+            "without a count"
+        )
+    return [*lines, *(f"{'':15} warning: {warning}" for warning in result.warnings)]
+
+
 async def _schema_mismatch() -> str | None:
     """Say why the database is not at this Langflow's schema, or None when it is."""
     from alembic.config import Config
@@ -1505,8 +1549,11 @@ async def _relocate_kb(
     dry_run: bool,
     batch_size: int,
     allow_metric_change: bool = False,
+    verify_skipped: bool = False,
+    as_json: bool = False,
 ) -> int:
     from langflow.api.utils.knowledge_base_relocation import relocate_knowledge_bases
+    from langflow.cli import relocate_kb_events as events
     from langflow.services.utils import register_all_service_factories
 
     # Not initialize_services(): that is the server's startup, and it migrates the
@@ -1514,7 +1561,7 @@ async def _relocate_kb(
     # dry run or not. Each service is built on first use, which writes nothing.
     register_all_service_factories()
     if mismatch := await _schema_mismatch():
-        typer.echo(mismatch, err=True)
+        events.refuse(mismatch, "schema_mismatch", as_json=as_json)
         raise typer.Exit(1)
     results = await relocate_knowledge_bases(
         target_backend_type=target_backend_type,
@@ -1523,22 +1570,32 @@ async def _relocate_kb(
         dry_run=dry_run,
         batch_size=batch_size,
         allow_metric_change=allow_metric_change,
+        verify_skipped=verify_skipped,
+        on_result=events.item if as_json else None,
+        on_progress=events.progress if as_json else None,
     )
-    for result in results:
-        typer.echo(relocation_line(result) + (f"  ({result.reason})" if result.reason else ""))
-        for warning in result.warnings:
-            typer.echo(f"{'':15} warning: {warning}")
     by_status: dict[str, int] = {}
     for result in results:
         by_status[result.status] = by_status.get(result.status, 0) + 1
+    failed = by_status.get("failed", 0)
+    if as_json:
+        events.report(results, by_status, dry_run=dry_run)
+        return failed
+    for result in results:
+        for line in relocation_lines(result):
+            typer.echo(line)
     summary = ", ".join(f"{count} {status}" for status, count in sorted(by_status.items())) or "no knowledge bases"
     typer.echo(f"Knowledge base relocation {'dry run ' if dry_run else ''}complete: {summary}.")
-    return by_status.get("failed", 0)
+    return failed
+
+
+_JSON_HELP = "Print one JSON object per line: each check as it finishes, then the report. Logs go to stderr."
 
 
 @app.command(name="check-integrity")
 def check_integrity(
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),  # noqa: FBT001, FBT003
 ) -> None:
     """Report where this instance's database disagrees with what lives outside it.
 
@@ -1551,21 +1608,33 @@ def check_integrity(
     Read-only: it reports and never repairs, so it is safe to run on production.
     Exits non-zero if any check fails.
     """
-    configure(log_level=log_level)
-    if not asyncio.run(_check_integrity()):
+    configure(log_level=log_level, output_file=sys.stderr if as_json else None)
+    if not asyncio.run(_check_integrity(as_json=as_json)):
         raise typer.Exit(1)
 
 
-async def _check_integrity() -> bool:
+async def _check_integrity(*, as_json: bool = False) -> bool:
     from langflow.cli.integrity import check_instance, open_instance
 
     open_instance()
-    report = await check_instance()
-    for check in report.checks:
-        typer.echo(f"{check.status:5} {check.name:16} {check.summary}")
-        for problem in check.problems:
-            typer.echo(f"        - {problem}")
+    report = await check_instance(on_check=partial(_echo_check, width=16, as_json=as_json))
+    if as_json:
+        _echo_json_report(report)
     return report.ok
+
+
+def _echo_check(check, *, width: int, as_json: bool) -> None:
+    if as_json:
+        typer.echo(json.dumps({"event": "check", "check": dataclasses.asdict(check)}))
+        return
+    typer.echo(f"{check.status:5} {check.name:{width}} {check.summary}")
+    for problem in check.problems:
+        typer.echo(f"        - {problem}")
+
+
+def _echo_json_report(report) -> None:
+    checks = [dataclasses.asdict(check) for check in report.checks]
+    typer.echo(json.dumps({"event": "report", "ok": report.ok, "checks": checks}))
 
 
 @app.command(name="migration-preflight")
@@ -1574,6 +1643,11 @@ def migration_preflight(
     target_revision: str = typer.Option(
         "", help="Alembic revision the target image runs. Refuses a target older than this database."
     ),
+    target_version: str = typer.Option(
+        "",
+        help="Langflow version the target image runs, such as 1.13.0. Refuses a target older than this Langflow. "
+        "--target-revision is exact and wins when both are given.",
+    ),
     target_secret_key_file: Path | None = typer.Option(
         None,
         help="File holding the LANGFLOW_SECRET_KEY the target will run with.",
@@ -1581,6 +1655,7 @@ def migration_preflight(
         exists=True,
         dir_okay=False,
     ),
+    as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),  # noqa: FBT001, FBT003
 ) -> None:
     """Refuse a migration from this instance that cannot succeed, before anything moves.
 
@@ -1590,24 +1665,38 @@ def migration_preflight(
     their vectors need. Then runs check-integrity against this instance.
 
     Read-only. Exits non-zero if any check fails.
+
+    Run it with the environment the server runs with: the database, the secret
+    key and AUTO_LOGIN are read from it.
     """
-    configure(log_level=log_level)
+    configure(log_level=log_level, output_file=sys.stderr if as_json else None)
     # Not stripped: a Secret made from this file with --from-file carries its whitespace, so the key is tested with it.
     key = target_secret_key_file.read_text() if target_secret_key_file else None
-    if not asyncio.run(_migration_preflight(target_revision or None, key)):
+    if not asyncio.run(
+        _migration_preflight(target_revision or None, key, target_version=target_version or None, as_json=as_json)
+    ):
         raise typer.Exit(1)
 
 
-async def _migration_preflight(target_revision: str | None, target_secret_key: str | None) -> bool:
+async def _migration_preflight(
+    target_revision: str | None,
+    target_secret_key: str | None,
+    *,
+    target_version: str | None = None,
+    as_json: bool = False,
+) -> bool:
     from langflow.cli.integrity import open_instance
     from langflow.cli.migration_preflight import run_preflight
 
     open_instance()
-    report = await run_preflight(target_revision=target_revision, target_secret_key=target_secret_key)
-    for check in report.checks:
-        typer.echo(f"{check.status:5} {check.name:24} {check.summary}")
-        for problem in check.problems:
-            typer.echo(f"        - {problem}")
+    report = await run_preflight(
+        target_revision=target_revision,
+        target_version=target_version,
+        target_secret_key=target_secret_key,
+        on_check=partial(_echo_check, width=24, as_json=as_json),
+    )
+    if as_json:
+        _echo_json_report(report)
     return report.ok
 
 

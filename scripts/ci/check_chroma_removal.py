@@ -1,7 +1,7 @@
 """Fail if the application lock or universal Mend export reintroduces Chroma.
 
-The separately built migration helper is outside the application workspace and
-has its own dependency inventory and security disposition.
+Automatic and managed migration use the bundled legacy reader. Neither path
+requires a separately published Chroma-bearing artifact.
 """
 
 from __future__ import annotations
