@@ -3,6 +3,8 @@
 from unittest.mock import patch
 
 import pytest
+from langchain_core.tools import StructuredTool
+from langchain_core.utils.function_calling import convert_to_openai_tool
 from lfx.io.schema import flatten_schema
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from pydantic import BaseModel, ValidationError
@@ -316,6 +318,68 @@ class TestCreateInputSchemaFromJsonSchema:
 
         assert model.model_validate({"tags": ["a", "b"]}).tags == ["a", "b"]
         assert model.model_validate({}).tags is None
+
+    @pytest.mark.parametrize(
+        "tags_schema",
+        [
+            {"anyOf": [{"type": "array", "items": {"type": "string"}}, {"type": "null"}]},
+            {"type": ["array", "null"], "items": {"type": "string"}},
+        ],
+        ids=["anyOf-null", "type-list-null"],
+    )
+    def test_required_nullable_array_accepts_null_but_not_omission(self, tags_schema):
+        """A required nullable array keeps its item type, accepts an explicit null and rejects omission."""
+        schema = {"type": "object", "properties": {"tags": tags_schema}, "required": ["tags"]}
+        model = create_input_schema_from_json_schema(schema)
+
+        assert model.model_validate({"tags": None}).tags is None
+        assert model.model_validate({"tags": ["a"]}).tags == ["a"]
+        with pytest.raises(ValidationError):
+            model.model_validate({})
+        with pytest.raises(ValidationError):
+            model.model_validate({"tags": [1]})
+
+    @pytest.mark.parametrize(
+        "items_schema",
+        [
+            {"type": "object", "properties": {"a": {"type": "integer"}}, "required": ["a"]},
+            {"$ref": "#/$defs/Row"},
+        ],
+        ids=["inline-object", "ref"],
+    )
+    def test_nullable_array_of_objects_keeps_item_model(self, items_schema):
+        """Item models of a nullable array are built, not collapsed to a bare ``list`` of untyped values."""
+        schema = {
+            "type": "object",
+            "properties": {"rows": {"anyOf": [{"type": "array", "items": items_schema}, {"type": "null"}]}},
+            "$defs": {"Row": {"type": "object", "properties": {"a": {"type": "integer"}}, "required": ["a"]}},
+        }
+        model = create_input_schema_from_json_schema(schema)
+
+        assert model.model_validate({"rows": [{"a": 1}]}).rows[0].a == 1
+        with pytest.raises(ValidationError):
+            model.model_validate({"rows": [{"a": "not-an-int"}]})
+
+    def test_nullable_array_item_type_survives_tool_schema_conversion(self):
+        """The tool schema handed to the model provider must carry ``items`` for a nullable array param."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "tags": {"anyOf": [{"type": "array", "items": {"type": "string"}}, {"type": "null"}], "default": None},
+            },
+            "required": ["query"],
+        }
+        tool = StructuredTool.from_function(
+            func=lambda **_: "",
+            name="search",
+            description="Search.",
+            args_schema=create_input_schema_from_json_schema(schema),
+        )
+
+        tags = convert_to_openai_tool(tool)["function"]["parameters"]["properties"]["tags"]
+        arr = next(v for v in tags.get("anyOf", [tags]) if v.get("type") == "array")
+        assert arr["items"] == {"type": "string"}
 
 
 class TestUnderscorePropertyNames:
