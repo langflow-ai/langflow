@@ -115,7 +115,6 @@ export function AddConnectionDialog({
   );
   const slackToken = useSlackTokenConnection({
     providerId,
-    provider,
     deploymentContext,
     reauthorizing: !!reauthorize,
     create: create.mutateAsync,
@@ -358,7 +357,7 @@ export function AddConnectionDialog({
     displayName.trim().length > 0 &&
     (usesToken ? slackToken.tokenKind !== null : !noRegistration);
 
-  /** A pasted token is stored as-is: no consent window, nothing to wait for. */
+  /** The server validates pasted tokens before returning the connection. */
   const onCreateWithToken = async () => {
     try {
       const row = await slackToken.createWithToken({
@@ -548,9 +547,6 @@ export function AddConnectionDialog({
                   onAllowBackgroundRunsChange={
                     slackToken.setAllowBackgroundRuns
                   }
-                  botTokenScopes={slackToken.botTokenScopes}
-                  tokenScopes={slackToken.tokenScopes}
-                  onToggleTokenScope={slackToken.toggleTokenScope}
                 />
               )}
 
