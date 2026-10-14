@@ -243,6 +243,7 @@ opensearch = [
 
 [tool.uv]
 constraint-dependencies = [
+    "datamodel-code-generator>=0.81.0",  # CVE-2026-107377
     "fsspec>=2026.6.0",  # CVE-2026-104851
     "langgraph>=1.2.14",  # GHSA-3fx2-cqw9-xr3c
     "langgraph-sdk>=0.4.6",  # GHSA-fvww-7h3r-vfhp / CVE-2026-104873, GHSA-3fx2-cqw9-xr3c
