@@ -30,6 +30,7 @@ from langflow.services.database.lock_retry import is_database_lock_error
 from langflow.services.database.models import MCPServer
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
+from langflow.utils.flow_secrets import iter_mcp_header_cells, mcp_header_scope
 from langflow.utils.mcp_config_secrets import (
     HEADER_ARG_FLAG,
     NON_SECRET_HEADERS,
@@ -71,7 +72,11 @@ class MCPSecretTarget:
 
 
 def _iter_mcp_server_fields(flow_data: dict[str, Any] | None):
-    """Yield every ``mcp_server`` template field of a flow, nested subflows included."""
+    """Yield every ``mcp_server`` template field with its template, subflows included.
+
+    The template comes too because the component's own Headers box lives beside the
+    server field and holds credentials for the same server.
+    """
     if not isinstance(flow_data, dict):
         return
     frames = [iter(flow_data.get("nodes") or [])]
@@ -94,13 +99,38 @@ def _iter_mcp_server_fields(flow_data: dict[str, Any] | None):
         if isinstance(template, dict):
             field = template.get("mcp_server")
             if isinstance(field, dict):
-                yield field
+                yield field, template
 
         nested = inner.get("flow")
         if isinstance(nested, dict):
             nested_data = nested.get("data")
             if isinstance(nested_data, dict) and isinstance(nested_data.get("nodes"), list):
                 frames.append(iter(nested_data["nodes"]))
+
+
+def _strip_component_headers(template: dict[str, Any], server_name: str, variables: dict[str, str]) -> None:
+    """Move a literal credential out of the component's own Headers box.
+
+    That box overrides the server's headers, so it is a real place to put auth, and
+    packaging nulls a secret-named entry in it -- silently, because nothing declared a
+    variable to put back. It is the same shape as a config's ``headers`` map, so the
+    config scrubber names it: one header spelled one way wherever it is set.
+    """
+    field = template.get("headers")
+    if not isinstance(field, dict) or not isinstance(field.get("value"), (dict, list)):
+        return
+    # The box is a list of rows as often as a mapping, and the component reads both.
+    cells = list(iter_mcp_header_cells(field["value"]))
+    stripped, header_variables, found = strip_config_secrets(
+        {"headers": {str(name): value for _, name, value in cells}}, mcp_header_scope(server_name)
+    )
+    if not found:
+        return
+    rewritten = stripped["headers"]
+    for set_value, name, _ in cells:
+        if str(name) in rewritten:
+            set_value(rewritten[str(name)])
+    variables.update(header_variables)
 
 
 def extract_and_strip_mcp_secrets(
@@ -116,16 +146,18 @@ def extract_and_strip_mcp_secrets(
     carried: list[tuple[str, dict[str, Any]]] = []
     variables: dict[str, str] = {}
 
-    for field in _iter_mcp_server_fields(flow_data):
+    for field, template in _iter_mcp_server_fields(flow_data):
         value = field.get("value")
         if not isinstance(value, dict):
             continue
+        name = value.get("name")
+        server_name = name if isinstance(name, str) and name else "server"
+        # Before the config guard: selecting a registered server stores a name and no
+        # config at all, and the Headers box still needs stripping in that case.
+        _strip_component_headers(template, server_name, variables)
         config = value.get("config")
         if not isinstance(config, dict):
             continue
-
-        name = value.get("name")
-        server_name = name if isinstance(name, str) and name else "server"
 
         stripped, config_variables, found = strip_config_secrets(config, server_name)
         masked_fields = [
@@ -155,7 +187,7 @@ def extract_and_strip_mcp_secrets(
 def mcp_server_names(flow_data: dict[str, Any] | None) -> set[str]:
     """Names of the MCP servers a flow already references."""
     names: set[str] = set()
-    for field in _iter_mcp_server_fields(flow_data):
+    for field, _template in _iter_mcp_server_fields(flow_data):
         value = field.get("value")
         if isinstance(value, dict):
             name = value.get("name")

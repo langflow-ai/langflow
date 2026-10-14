@@ -11,6 +11,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.api.utils.mcp.flow_secrets import strip_config_secrets, variable_name_for
+from langflow.utils.flow_secrets import mcp_header_scope
 
 AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"  # pragma: allowlist secret
 UPPERCASE_HEX_TOKEN = "A3F5C9D2E1B8074F"  # noqa: S105  # pragma: allowlist secret
@@ -426,3 +427,216 @@ class TestServerNamesAFlowIsBoundTo:
         from langflow.api.utils.mcp.flow_secrets import mcp_server_names
 
         assert mcp_server_names({"nodes": [{"data": {"node": {"template": {}}}}]}) == set()
+
+
+class TestTheComponentsOwnHeadersBox:
+    """The Headers input beside the server field, which overrides the server's headers.
+
+    It is a real place to put auth, and packaging nulls a secret-named entry in it. The
+    value was being dropped with no variable declared to put it back, so the deployed
+    flow sent no header and nothing said so.
+    """
+
+    @staticmethod
+    def _rows(headers: dict) -> list:
+        """The other shape the canvas stores this box in, which the component also reads."""
+        return [{"key": key, "value": value} for key, value in headers.items()]
+
+    @staticmethod
+    def _flow(headers, *, server: dict | None = None) -> dict:
+        return {
+            "nodes": [
+                {
+                    "data": {
+                        "node": {
+                            "template": {
+                                "mcp_server": {"value": server if server is not None else {"name": "ui_svc"}},
+                                "headers": {
+                                    "name": "headers",
+                                    "value": list(headers) if isinstance(headers, list) else dict(headers),
+                                },
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+
+    @staticmethod
+    def _headers(flow_data: dict) -> dict:
+        return flow_data["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
+
+    def test_should_move_a_literal_into_the_same_variable_the_config_would_use(self):
+        from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets
+
+        flow_data = self._flow({"Authorization": "Bearer ui-token", "Accept": "application/json"})
+
+        _, variables = extract_and_strip_mcp_secrets(flow_data)
+
+        expected = variable_name_for(mcp_header_scope("ui_svc"), "Authorization")
+        assert self._headers(flow_data) == {"Authorization": expected, "Accept": "application/json"}
+        assert variables == {expected: "Bearer ui-token"}
+
+    def test_should_strip_a_server_selected_by_name_with_no_config(self):
+        """Selecting a registered server stores a name and nothing else, which is the usual shape."""
+        from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets
+
+        flow_data = self._flow({"Authorization": "Bearer ui-token"}, server={"name": "ui_svc"})
+
+        _, variables = extract_and_strip_mcp_secrets(flow_data)
+
+        assert variables == {variable_name_for(mcp_header_scope("ui_svc"), "Authorization"): "Bearer ui-token"}
+
+    def test_should_keep_that_variable_name_through_packaging(self):
+        """Without this the name is nulled again and the deploy declares nothing."""
+        from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets
+        from langflow.utils.flow_secrets import strip_secret_field_values_in_place
+
+        flow_data = self._flow({"Authorization": "Bearer ui-token"})
+        extract_and_strip_mcp_secrets(flow_data)
+        references: set[str] = set()
+
+        strip_secret_field_values_in_place(flow_data, variable_references=references)
+
+        expected = variable_name_for(mcp_header_scope("ui_svc"), "Authorization")
+        assert self._headers(flow_data) == {"Authorization": expected}
+        assert references == {expected}
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "Bearer never-stripped",
+            "SOME_NAME_NOBODY_GENERATED",
+            variable_name_for(mcp_header_scope("other_server"), "Authorization"),
+        ],
+    )
+    def test_should_null_anything_it_did_not_generate(self, value):
+        """Only the name this server and field produce survives, so a literal cannot pass as one."""
+        from langflow.utils.flow_secrets import strip_secret_field_values_in_place
+
+        flow_data = self._flow({"Authorization": value})
+
+        strip_secret_field_values_in_place(flow_data, variable_references=set())
+
+        assert self._headers(flow_data) == {"Authorization": None}
+
+    def test_should_null_it_for_a_reader_with_no_variable_manifest(self):
+        """A public share resolves nothing, so it gets the name as little as the secret."""
+        from langflow.utils.flow_secrets import strip_secret_field_values_in_place
+
+        flow_data = self._flow({"Authorization": variable_name_for(mcp_header_scope("ui_svc"), "Authorization")})
+
+        strip_secret_field_values_in_place(flow_data, variable_references=None)
+
+        assert self._headers(flow_data) == {"Authorization": None}
+
+    def test_should_still_null_a_credential_the_generic_rules_catch(self):
+        """Lifting the references out must not switch the ordinary scrub off.
+
+        It catches more than a secret-named key: a credential inside a URL under an
+        innocent key, and a secret nested deeper in a value. An earlier version of this
+        skipped the generic pass for the whole field and lost both.
+        """
+        from langflow.utils.flow_secrets import strip_secret_field_values_in_place
+
+        flow_data = self._flow(
+            {
+                "Authorization": variable_name_for(mcp_header_scope("ui_svc"), "Authorization"),
+                "X-Callback": "https://user:pw@internal.example.com/hook",  # pragma: allowlist secret
+                "X-Meta": {"api_key": "sk_live_nested"},  # pragma: allowlist secret
+                "Accept": "application/json",
+            }
+        )
+        references: set[str] = set()
+
+        strip_secret_field_values_in_place(flow_data, variable_references=references)
+
+        assert self._headers(flow_data) == {
+            "Authorization": variable_name_for(mcp_header_scope("ui_svc"), "Authorization"),
+            "X-Callback": None,
+            "X-Meta": {"api_key": None},
+            "Accept": "application/json",
+        }
+        assert references == {variable_name_for(mcp_header_scope("ui_svc"), "Authorization")}
+
+    def test_should_null_a_name_the_owner_does_not_have(self):
+        """Given the owner's real variable names, the reference has to be one of them."""
+        from langflow.utils.flow_secrets import strip_secret_field_values_in_place
+
+        flow_data = self._flow({"Authorization": variable_name_for(mcp_header_scope("ui_svc"), "Authorization")})
+
+        strip_secret_field_values_in_place(
+            flow_data, variable_references=set(), known_variable_names={"SOMETHING_ELSE"}
+        )
+
+        assert self._headers(flow_data) == {"Authorization": None}
+
+    def test_should_handle_the_box_stored_as_rows_too(self):
+        """``DictInput(is_list=True)`` is stored as a mapping or as key/value rows.
+
+        The component reads both at run time, so handling one and not the other misses
+        half the flows: the row form created no variable and the credential was dropped.
+        """
+        from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets
+        from langflow.utils.flow_secrets import strip_secret_field_values_in_place
+
+        flow_data = self._flow(self._rows({"Authorization": "Bearer ui-token", "Accept": "application/json"}))
+
+        _, variables = extract_and_strip_mcp_secrets(flow_data)
+        references: set[str] = set()
+        strip_secret_field_values_in_place(flow_data, variable_references=references)
+
+        expected = variable_name_for(mcp_header_scope("ui_svc"), "Authorization")
+        assert variables == {expected: "Bearer ui-token"}
+        assert self._headers(flow_data) == [
+            {"key": "Authorization", "value": expected},
+            {"key": "Accept", "value": "application/json"},
+        ]
+        assert references == {expected}
+
+    def test_should_null_a_literal_stored_as_rows(self):
+        from langflow.utils.flow_secrets import strip_secret_field_values_in_place
+
+        flow_data = self._flow(self._rows({"Authorization": "Bearer never-stripped"}))
+
+        strip_secret_field_values_in_place(flow_data, variable_references=set())
+
+        assert self._headers(flow_data) == [{"key": "Authorization", "value": None}]
+
+    def test_should_not_share_a_variable_with_the_server_config(self):
+        """The box overrides the config, so they cannot point at one credential.
+
+        Sharing a name made the config's value win, so the override the author typed was
+        silently discarded and the component authenticated with the value it was meant
+        to replace.
+        """
+        from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets
+
+        flow_data = self._flow(
+            {"Authorization": "Bearer from-the-box"},
+            server={"name": "ui_svc", "config": {"url": "https://x/mcp", "headers": {"Authorization": "from-config"}}},
+        )
+
+        _, variables = extract_and_strip_mcp_secrets(flow_data)
+
+        assert variables[variable_name_for(mcp_header_scope("ui_svc"), "Authorization")] == "Bearer from-the-box"
+        assert variables[variable_name_for("ui_svc", "Authorization")] == "from-config"
+
+    def test_should_declare_a_custom_header_save_time_rewrote(self):
+        """Save time rewrites every header outside NON_SECRET_HEADERS, so packaging must too.
+
+        Checking a narrower rule left the generated name in the flow and declared nothing,
+        so the target was never asked for it and the header resolved to its own name.
+        """
+        from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets
+        from langflow.utils.flow_secrets import strip_secret_field_values_in_place
+
+        flow_data = self._flow({"X-Tenant": "tenant-123", "Accept": "application/json"})
+        extract_and_strip_mcp_secrets(flow_data)
+        references: set[str] = set()
+
+        strip_secret_field_values_in_place(flow_data, variable_references=references)
+
+        expected = variable_name_for(mcp_header_scope("ui_svc"), "X-Tenant")
+        assert self._headers(flow_data) == {"X-Tenant": expected, "Accept": "application/json"}
+        assert references == {expected}
