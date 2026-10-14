@@ -1,5 +1,6 @@
 from unittest.mock import Mock
 
+import pytest
 from langflow.schema.data import Data
 from langflow.utils.data_structure import (
     analyze_value,
@@ -359,20 +360,15 @@ class TestGetSampleValues:
         assert len(result["list_field"]) == 2  # Should be limited by max_items
         assert len(result["nested_dict"]["inner"]) == 2  # Nested sampling
 
-    def test_nested_structure_sampling(self):
+    @pytest.mark.parametrize("max_items", [1, 2, 4])
+    def test_nested_structure_sampling(self, max_items):
         """Test sampling from nested structures."""
         nested_structure = {"data": [{"items": [1, 2, 3, 4, 5]}, {"items": [6, 7, 8, 9, 10]}]}
 
-        result = get_sample_values(nested_structure, max_items=2)
+        result = get_sample_values(nested_structure, max_items=max_items)
 
-        assert len(result["data"]) == 2
-        # The function recursively applies max_items at each level
-        # But the nested dictionaries are returned as-is, then their contents are sampled
-        # Let's just verify the structure is correct without specific lengths
-        assert "items" in result["data"][0]
-        assert "items" in result["data"][1]
-        assert isinstance(result["data"][0]["items"], list)
-        assert isinstance(result["data"][1]["items"], list)
+        expected = [{"items": [1, 2, 3, 4, 5][:max_items]}, {"items": [6, 7, 8, 9, 10][:max_items]}]
+        assert result == {"data": expected[:max_items]}
 
     def test_empty_collections(self):
         """Test sampling from empty collections."""
