@@ -19,7 +19,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, Field, field_serializer
 
 from langflow.api.utils import DbSession
 from langflow.api.v1.audit_reads import (
@@ -175,8 +175,10 @@ class AuditFeedActor(BaseModel):
     type: str | None
     id: UUID | None
     user_id: UUID | None
-    acting_issuer: str | None
-    acting_subject: str | None
+    acting_issuer: str | None = Field(deprecated=True)
+    acting_subject: str | None = Field(deprecated=True)
+    represented_issuer: str | None
+    represented_subject: str | None
 
 
 class AuditFeedItem(BaseModel):
@@ -233,8 +235,10 @@ def feed_item(feed_row: AuditFeedRow) -> AuditFeedItem:
         type=row.actor_type,
         id=row.actor_id,
         user_id=row.user_id,
-        acting_issuer=row.acting_issuer if is_resource else None,
-        acting_subject=row.acting_subject if is_resource else None,
+        acting_issuer=row.effective_represented_issuer if is_resource else None,
+        acting_subject=row.effective_represented_subject if is_resource else None,
+        represented_issuer=row.effective_represented_issuer if is_resource else None,
+        represented_subject=row.effective_represented_subject if is_resource else None,
     )
     return AuditFeedItem(
         id=row.id,

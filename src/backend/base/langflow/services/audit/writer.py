@@ -126,6 +126,8 @@ def build_audit_event(draft: AuditEventDraft) -> AuditEvent:
         actor_id=draft.actor.actor_id,
         acting_issuer=draft.actor.acting_issuer,
         acting_subject=draft.actor.acting_subject,
+        represented_issuer=draft.actor.represented_issuer,
+        represented_subject=draft.actor.represented_subject,
         action=draft.action,
         operation=draft.operation.value,
         event_type=draft.event_type.value,
