@@ -31,8 +31,37 @@ describe("useGetConfig", () => {
     useUtilityStore.setState({
       catalogGovernanceEnabled: false,
       substituteOutdatedComponentCode: true,
+      vectorStoreConfigLoaded: false,
+      localVectorStoreAvailable: true,
+      defaultVectorStoreBackend: undefined,
     });
   });
+
+  it.each(["opensearch", undefined])(
+    "marks vector-store config ready after a full response with default %s",
+    async (backend) => {
+      mockApiGet.mockResolvedValue({
+        data: {
+          type: "full",
+          max_file_size_upload: 100,
+          local_vector_store_available: false,
+          default_vector_store_backend: backend,
+        },
+      });
+      renderHook(() => useGetConfig());
+      expect(useUtilityStore.getState()).toMatchObject({
+        vectorStoreConfigLoaded: false,
+      });
+      await act(async () => {
+        await mockQueryFn?.();
+      });
+      expect(useUtilityStore.getState()).toMatchObject({
+        vectorStoreConfigLoaded: true,
+        localVectorStoreAvailable: false,
+        defaultVectorStoreBackend: backend,
+      });
+    },
+  );
 
   it("stores component-policy and catalog flags from public config", async () => {
     mockApiGet.mockResolvedValue({
@@ -60,6 +89,9 @@ describe("useGetConfig", () => {
     expect(useUtilityStore.getState().substituteOutdatedComponentCode).toBe(
       false,
     );
+    expect(useUtilityStore.getState()).toMatchObject({
+      vectorStoreConfigLoaded: false,
+    });
   });
 
   it("defaults trusted outdated-component substitution on for older config responses", async () => {
