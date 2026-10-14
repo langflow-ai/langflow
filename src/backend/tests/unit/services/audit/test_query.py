@@ -34,6 +34,25 @@ PROJECTS = AuditResourceType.PROJECT
 T0 = datetime(2026, 9, 11, 16, 0, tzinfo=timezone.utc)
 
 
+def test_represented_and_legacy_filter_names_share_a_cursor_fingerprint():
+    legacy = AuditEventFilters(resource_type=PROJECTS, acting_issuer="issuer", acting_subject="subject")
+    represented = AuditEventFilters(resource_type=PROJECTS, represented_issuer="issuer", represented_subject="subject")
+    assert legacy.fingerprint() == represented.fingerprint()
+
+
+@pytest.mark.parametrize("canonical", [False, True])
+async def test_represented_filters_read_new_and_old_writer_rows(audit_session, canonical):
+    event = build_audit_event(project_patch_draft())
+    event.acting_issuer, event.acting_subject = "issuer", "subject"
+    if canonical:
+        event.represented_issuer, event.represented_subject = "issuer", "subject"
+    audit_session.add(event)
+    await audit_session.commit()
+    filters = AuditEventFilters(resource_type=PROJECTS, represented_issuer="issuer", represented_subject="subject")
+    page = await list_audit_events(audit_session, filters, limit=10)
+    assert [row.id for row in page.items] == [event.id]
+
+
 async def _insert(session, *, at: datetime, **overrides):
     event = build_audit_event(project_patch_draft(**overrides))
     event.timestamp = at

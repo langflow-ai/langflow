@@ -21,8 +21,11 @@ from sqlmodel import Field, SQLModel
 RESOURCE_TYPE_MAX_LENGTH = 64
 RESOURCE_NAME_MAX_LENGTH = 255
 ACTOR_TYPE_MAX_LENGTH = 32
-ACTING_ISSUER_MAX_LENGTH = 2048
-ACTING_SUBJECT_MAX_LENGTH = 512
+REPRESENTED_ISSUER_MAX_LENGTH = 2048
+REPRESENTED_SUBJECT_MAX_LENGTH = 512
+# Deprecated aliases retained for integrations using the original contract.
+ACTING_ISSUER_MAX_LENGTH = REPRESENTED_ISSUER_MAX_LENGTH
+ACTING_SUBJECT_MAX_LENGTH = REPRESENTED_SUBJECT_MAX_LENGTH
 ACTION_MAX_LENGTH = 128
 OPERATION_MAX_LENGTH = 64
 EVENT_TYPE_MAX_LENGTH = 16
@@ -36,6 +39,10 @@ EVENT_TYPE_RESULT_CHECK = (
 )
 ACTING_PAIR_CHECK = (
     "(acting_issuer IS NULL AND acting_subject IS NULL) OR (acting_issuer IS NOT NULL AND acting_subject IS NOT NULL)"
+)
+REPRESENTED_PAIR_CHECK = (
+    "(represented_issuer IS NULL AND represented_subject IS NULL) "
+    "OR (represented_issuer IS NOT NULL AND represented_subject IS NOT NULL)"
 )
 
 
@@ -72,6 +79,7 @@ class AuditEvent(SQLModel, table=True):  # type: ignore[call-arg]
     __table_args__ = (
         CheckConstraint(EVENT_TYPE_RESULT_CHECK, name=conv("ck_audit_events_event_type_result")),
         CheckConstraint(ACTING_PAIR_CHECK, name=conv("ck_audit_events_acting_pair")),
+        CheckConstraint(REPRESENTED_PAIR_CHECK, name=conv("ck_audit_events_represented_pair")),
         # Ascending keys serve (timestamp DESC, id DESC) by backward scan; DESC keys churn autogenerate.
         Index("ix_audit_events_resource_timeline", "resource_type", "resource_id", "timestamp", "id"),
         Index("ix_audit_events_type_timeline", "resource_type", "timestamp", "id"),
@@ -79,6 +87,7 @@ class AuditEvent(SQLModel, table=True):  # type: ignore[call-arg]
         Index("ix_audit_events_user_timeline", "user_id", "timestamp"),
         Index("ix_audit_events_actor_timeline", "actor_type", "actor_id", "timestamp"),
         Index("ix_audit_events_acting_timeline", "acting_issuer", "acting_subject", "timestamp"),
+        Index("ix_audit_events_represented_timeline", "represented_issuer", "represented_subject", "timestamp"),
         Index("ix_audit_events_request_id", "request_id"),
     )
 
@@ -98,6 +107,21 @@ class AuditEvent(SQLModel, table=True):  # type: ignore[call-arg]
     acting_subject: str | None = Field(
         default=None, sa_column=Column(sa.String(ACTING_SUBJECT_MAX_LENGTH), nullable=True)
     )
+    represented_issuer: str | None = Field(
+        default=None, sa_column=Column(sa.String(REPRESENTED_ISSUER_MAX_LENGTH), nullable=True)
+    )
+    represented_subject: str | None = Field(
+        default=None, sa_column=Column(sa.String(REPRESENTED_SUBJECT_MAX_LENGTH), nullable=True)
+    )
+
+    @property
+    def effective_represented_issuer(self) -> str | None:
+        return self.represented_issuer if self.represented_issuer is not None else self.acting_issuer
+
+    @property
+    def effective_represented_subject(self) -> str | None:
+        return self.represented_subject if self.represented_subject is not None else self.acting_subject
+
     action: str = Field(sa_column=Column(sa.String(ACTION_MAX_LENGTH), nullable=False))
     operation: str = Field(sa_column=Column(sa.String(OPERATION_MAX_LENGTH), nullable=False))
     event_type: str = Field(sa_column=Column(sa.String(EVENT_TYPE_MAX_LENGTH), nullable=False))
