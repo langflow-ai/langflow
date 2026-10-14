@@ -19,6 +19,7 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import type { MCPServerInfoType } from "@/types/mcp";
 import { cn } from "@/utils/utils";
+import { serverErrorText } from "./serverErrorText";
 
 export default function MCPServersPage() {
   const { t } = useTranslation();
@@ -139,7 +140,13 @@ export default function MCPServersPage() {
                       >
                         {server.name}
                       </span>
-                      <ShadTooltip content={server.error}>
+                      <ShadTooltip
+                        content={
+                          server.error
+                            ? serverErrorText(server.error, t)
+                            : undefined
+                        }
+                      >
                         <span
                           className={cn(
                             "cursor-default select-none !text-mmd text-muted-foreground",
@@ -167,7 +174,7 @@ export default function MCPServersPage() {
                         <span className="sr-only">
                           {t("mcp.servers.statusErrorDetail", {
                             name: server.name,
-                            error: server.error,
+                            error: serverErrorText(server.error, t),
                           })}
                         </span>
                       )}

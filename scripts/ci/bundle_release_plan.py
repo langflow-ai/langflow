@@ -231,21 +231,26 @@ def _lfx_specifiers(requirements: Iterable[str]) -> tuple[str, ...]:
     return tuple(specifiers)
 
 
-def _admits_lfx_series(specifier: str, lfx_version: str) -> bool:
-    """Whether ``specifier`` admits any lfx in ``lfx_version``'s minor series.
+def _lfx_series_admission(specifier: str, lfx_version: str) -> bool | None:
+    """Whether ``specifier`` admits any lfx in ``lfx_version``'s minor series, or ``None`` if it cannot tell.
 
-    Clauses without a comparable bound (``==``, ``~=``, ``!=``) count as admitting so the caller fails closed.
+    ``False`` means a comparable bound excludes the series. ``None`` means some clause has no comparable
+    bound (``==``, ``~=``, ``!=``, an unparsable version) or the requirement is a bare ``lfx``.
     """
     major, minor, _, _, _ = parse_version(lfx_version)
     series_start = parse_version(f"{major}.{minor}.0.dev0")
     series_end = parse_version(f"{major}.{minor + 1}.0.dev0")
-    for clause in filter(None, specifier.split(",")):
+    clauses = [clause for clause in specifier.split(",") if clause]
+    known = bool(clauses)
+    for clause in clauses:
         match = re.fullmatch(r"(?P<op>>=|<=|>|<)(?P<bound>.+)", clause)
         if match is None:
+            known = False
             continue
         try:
             bound = _version_key(match["bound"])
         except PlanError:
+            known = False
             continue
         op = match["op"]
         if (
@@ -254,7 +259,15 @@ def _admits_lfx_series(specifier: str, lfx_version: str) -> bool:
             or (op == "<=" and bound < series_start)
         ):
             return False
-    return True
+    return True if known else None
+
+
+def _admits_lfx_series(specifier: str, lfx_version: str) -> bool:
+    """Whether ``specifier`` may admit lfx in ``lfx_version``'s minor series.
+
+    A range this check cannot evaluate counts as admitting, so a guard that blocks on admission fails closed.
+    """
+    return _lfx_series_admission(specifier, lfx_version) is not False
 
 
 def _newer_public_versions(package: str, version: str, latest: str, client: IndexClient) -> list[str]:
@@ -291,6 +304,26 @@ def _ensure_not_behind_public_latest(package: str, version: str, lfx_version: st
             f"lfx release line can install; bump {package} above {newer} before building so dependency "
             "resolution cannot prefer a newer release"
         )
+
+
+def _ensure_reusable_for_lfx_line(package: str, version: str, release: dict[str, Any], lfx_version: str) -> None:
+    """Reject reusing a public release that another lfx line published under the same version.
+
+    Each lfx minor line owns its own bundle minor. A version the other line already published carries
+    that line's lfx floor, so reusing it would pin this release to a bundle it cannot install. Reuse
+    needs every lfx requirement to provably admit this build's series; anything this check cannot
+    evaluate blocks the build so it fails closed.
+    """
+    specifiers = _lfx_specifiers((release.get("info") or {}).get("requires_dist") or ())
+    admissions = [_lfx_series_admission(specifier, lfx_version) for specifier in specifiers]
+    if admissions and all(admission is True for admission in admissions):
+        return
+    observed = ", ".join(f"lfx{specifier}" for specifier in specifiers) or "lfx range unknown"
+    verdict = "which excludes" if False in admissions else "which this check cannot confirm admits"
+    raise PlanError(
+        f"{package} {version}: already published for {observed}, {verdict} lfx {lfx_version}; bump "
+        f"{package} to an unpublished version in this lfx line's bundle minor before building"
+    )
 
 
 def bump_version(version: str, bump: str = "patch", prerelease: str | None = None) -> str:
@@ -798,7 +831,9 @@ def restamp_unpublished_bundles(
     try:
         for bundle in bundles.values():
             _ensure_not_behind_public_latest(bundle.name, bundle.version, lfx_version, client)
-            if client.get_release(bundle.name, bundle.version) is not None:
+            release = client.get_release(bundle.name, bundle.version)
+            if release is not None:
+                _ensure_reusable_for_lfx_line(bundle.name, bundle.version, release, lfx_version)
                 targets.append(
                     VersionTarget(
                         package=bundle.name,
