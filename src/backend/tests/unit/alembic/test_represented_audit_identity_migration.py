@@ -47,7 +47,7 @@ def _event(table, **identity):
     )
 
 
-def test_migration_backfills_history_and_keeps_both_pairs_valid(db_url):  # noqa: F811
+def test_migration_preserves_acting_history_without_inventing_represented_identity(db_url):  # noqa: F811
     engine = sa.create_engine(_engine_url(db_url))
     try:
         with engine.begin() as conn:
@@ -60,9 +60,11 @@ def test_migration_backfills_history_and_keeps_both_pairs_valid(db_url):  # noqa
             table = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
             rows = list(conn.execute(sa.select(table)))
             assert len(rows) == 2
-            represented = [row for row in rows if row.represented_issuer]
-            assert [(row.represented_issuer, row.represented_subject) for row in represented] == [("issuer", "用户")]
-            # An old process may still insert only acting_* after migration.
+            assert all(row.represented_issuer is None and row.represented_subject is None for row in rows)
+            assert [(row.acting_issuer, row.acting_subject) for row in rows if row.acting_issuer] == [
+                ("issuer", "用户")
+            ]
+            # Both independent identity pairs remain valid after migration.
             conn.execute(_event(table, acting_issuer="old-writer", acting_subject="later"))
             conn.execute(_event(table, represented_issuer="new-writer", represented_subject="later"))
             indexes = {item["name"] for item in sa.inspect(conn).get_indexes("audit_events")}

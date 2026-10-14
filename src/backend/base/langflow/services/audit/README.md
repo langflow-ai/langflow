@@ -34,17 +34,18 @@ runs after authentication and before the mutation, even when auditing is off.
 Use TLS for the service connection. The original bearer token is not forwarded.
 
 Audit rows retain the authenticated account and credential in `user_id`,
-`actor_type`, and `actor_id`. The asserted identity is stored in
+`actor_type`, and `actor_id`. `acting_issuer` and `acting_subject` describe the
+authenticated actor's own issuer-qualified identity when known. Control-plane
+API-key calls have no such pair and leave these fields null. The asserted end-user identity is stored in
 `represented_issuer` and `represented_subject`. Success and failure events use
 the same validated request context. This metadata grants no permissions.
 
-The migration adds the represented columns, pair constraint, and index. It
-copies retained `acting_*` history in batches and preserves the old columns for
-rolling upgrades. New writers populate both pairs. Readers fall back to old
-columns for rows inserted by old processes after migration. Resource-specific
-and combined audit responses expose `represented_*` plus deprecated `acting_*`
-aliases. Both query spellings are accepted; conflicting aliases produce 400.
-Equivalent filter spellings retain the same cursor fingerprint.
+The migration adds the represented columns, pair constraint, and index without
+changing acting columns or history. Existing rows retain null represented
+identity. Neither pair is inferred from the other. Resource-specific and
+combined audit responses expose both independent pairs. Acting and represented
+filters apply to their respective columns and can be combined to select an
+actor acting for a particular end user. Cursors are bound to the distinct filters.
 
 The endpoint audit-wiring change is required for replacement-operation PUT
 events. This identity transport does not create additional mutation events or

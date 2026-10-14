@@ -34,23 +34,23 @@ PROJECTS = AuditResourceType.PROJECT
 T0 = datetime(2026, 9, 11, 16, 0, tzinfo=timezone.utc)
 
 
-def test_represented_and_legacy_filter_names_share_a_cursor_fingerprint():
-    legacy = AuditEventFilters(resource_type=PROJECTS, acting_issuer="issuer", acting_subject="subject")
+def test_acting_and_represented_filters_have_distinct_cursor_fingerprints():
+    acting = AuditEventFilters(resource_type=PROJECTS, acting_issuer="issuer", acting_subject="subject")
     represented = AuditEventFilters(resource_type=PROJECTS, represented_issuer="issuer", represented_subject="subject")
-    assert legacy.fingerprint() == represented.fingerprint()
+    assert acting.fingerprint() != represented.fingerprint()
 
 
-@pytest.mark.parametrize("canonical", [False, True])
-async def test_represented_filters_read_new_and_old_writer_rows(audit_session, canonical):
+@pytest.mark.parametrize("represented", [False, True])
+async def test_represented_filters_do_not_fall_back_to_acting_identity(audit_session, represented):
     event = build_audit_event(project_patch_draft())
     event.acting_issuer, event.acting_subject = "issuer", "subject"
-    if canonical:
+    if represented:
         event.represented_issuer, event.represented_subject = "issuer", "subject"
     audit_session.add(event)
     await audit_session.commit()
     filters = AuditEventFilters(resource_type=PROJECTS, represented_issuer="issuer", represented_subject="subject")
     page = await list_audit_events(audit_session, filters, limit=10)
-    assert [row.id for row in page.items] == [event.id]
+    assert [row.id for row in page.items] == ([event.id] if represented else [])
 
 
 async def _insert(session, *, at: datetime, **overrides):
