@@ -1,4 +1,4 @@
-"""Add represented audit identity without removing the deprecated acting columns.
+"""Add represented audit identity separately from authenticated acting identity.
 
 Revision ID: a6f81c2d903b
 Revises: e5a7c9b1d3f2
@@ -6,11 +6,9 @@ Create Date: 2026-10-14
 
 Phase: EXPAND
 
-Keep old columns, constraints and indexes for rolling upgrades. Backfill existing
-identity pairs in bounded batches. New writers populate both pairs; readers
-fall back to acting columns for rows inserted by old processes after backfill.
-Downgrade preserves the additive columns and all audit history. Removing the old
-columns requires a later CONTRACT release after old writers have stopped.
+Keep acting columns, constraints, indexes and history unchanged. Represented
+columns start null: acting identity cannot be used to infer represented identity.
+Downgrade preserves the additive columns and all audit history.
 """
 
 import sqlalchemy as sa
@@ -48,19 +46,6 @@ def upgrade() -> None:
     indexes = {item["name"] for item in sa.inspect(conn).get_indexes(TABLE)}
     if INDEX not in indexes:
         op.create_index(INDEX, TABLE, ["represented_issuer", "represented_subject", "timestamp"])
-    table = sa.Table(TABLE, sa.MetaData(), autoload_with=conn)
-    pending = sa.and_(
-        table.c.represented_issuer.is_(None),
-        table.c.represented_subject.is_(None),
-        table.c.acting_issuer.is_not(None),
-        table.c.acting_subject.is_not(None),
-    )
-    while ids := list(conn.execute(sa.select(table.c.id).where(pending).limit(1000)).scalars()):
-        conn.execute(
-            sa.update(table)
-            .where(table.c.id.in_(ids))
-            .values(represented_issuer=table.c.acting_issuer, represented_subject=table.c.acting_subject)
-        )
 
 
 def downgrade() -> None:

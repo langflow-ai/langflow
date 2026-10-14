@@ -7,6 +7,8 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from langflow.api.v1.audit_reads import AuditActorRead
+from langflow.api.v1.audits import AuditFeedActor
 from langflow.services.audit.attribution import AuditActor
 from langflow.services.audit.details import AuditContractError
 from langflow.services.audit.represented import (
@@ -17,11 +19,14 @@ from langflow.services.audit.represented import (
     decode_identity_value,
 )
 from langflow.services.audit.vocabulary import AuditActorType
+from langflow.services.audit.writer import stage_audit_event
 from langflow.services.auth.context import AuthCredentialContext, clear_current_auth_context, set_current_auth_context
 from langflow.services.deps import get_settings_service
 from lfx.services.settings.groups.observability import ObservabilitySettings
 from pydantic import ValidationError
 from starlette.requests import Request
+
+from .conftest import project_patch_draft
 
 
 def encoded(value: str) -> str:
@@ -94,15 +99,52 @@ def test_allowlist_configuration_validates_and_deduplicates_record_ids():
         ObservabilitySettings(audit_trusted_api_key_ids="not-a-key-record-uuid")
 
 
-def test_represented_actor_populates_legacy_aliases_and_refuses_conflicts():
+def test_acting_and_represented_identity_are_independent():
     fields = {"user_id": uuid4(), "actor_type": AuditActorType.API_KEY, "actor_id": uuid4()}
     actor = AuditActor(**fields, represented_issuer="issuer", represented_subject="subject")
-    assert (actor.acting_issuer, actor.acting_subject) == ("issuer", "subject")
+    assert (actor.acting_issuer, actor.acting_subject) == (None, None)
+    actor = AuditActor(**fields, acting_issuer="actor-issuer", acting_subject="actor-subject")
+    assert (actor.represented_issuer, actor.represented_subject) == (None, None)
+    actor = AuditActor(
+        **fields,
+        acting_issuer="actor-issuer",
+        acting_subject="actor-subject",
+        represented_issuer="other-issuer",
+        represented_subject="other-subject",
+    )
+    assert (actor.acting_issuer, actor.acting_subject) == ("actor-issuer", "actor-subject")
+    assert (actor.represented_issuer, actor.represented_subject) == ("other-issuer", "other-subject")
+
+
+@pytest.mark.parametrize("prefix", ["acting", "represented"])
+def test_each_identity_pair_is_validated_independently(prefix):
+    fields = {"user_id": uuid4(), "actor_type": AuditActorType.API_KEY, "actor_id": uuid4()}
     with pytest.raises(AuditContractError):
-        AuditActor(
-            **fields,
-            represented_issuer="issuer",
-            represented_subject="subject",
-            acting_issuer="other",
-            acting_subject="subject",
-        )
+        AuditActor(**fields, **{f"{prefix}_subject": "subject"})
+    with pytest.raises(AuditContractError):
+        AuditActor(**fields, **{f"{prefix}_issuer": "issuer", f"{prefix}_subject": "s" * 513})
+
+
+async def test_writer_persists_distinct_identity_pairs(audit_session, audit_enabled):  # noqa: ARG001
+    actor = AuditActor(
+        user_id=uuid4(),
+        actor_type=AuditActorType.USER,
+        actor_id=uuid4(),
+        acting_issuer="actor-issuer",
+        acting_subject="actor",
+        represented_issuer="end-user-issuer",
+        represented_subject="end-user",
+    )
+    event = await stage_audit_event(audit_session, project_patch_draft(actor=actor))
+    await audit_session.commit()
+    await audit_session.refresh(event)
+    assert (event.acting_issuer, event.acting_subject) == ("actor-issuer", "actor")
+    assert (event.represented_issuer, event.represented_subject) == ("end-user-issuer", "end-user")
+
+
+@pytest.mark.parametrize("schema", [AuditActorRead, AuditFeedActor])
+def test_acting_identity_remains_a_supported_api_field(schema):
+    properties = schema.model_json_schema()["properties"]
+    for name in ("acting_issuer", "acting_subject"):
+        assert name in properties
+        assert not properties[name].get("deprecated", False)
