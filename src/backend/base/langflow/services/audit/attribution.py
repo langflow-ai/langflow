@@ -1,9 +1,9 @@
-"""Who an event is attributed to, derived from the credential and never the caller.
+"""Authenticated actor and represented identity are independent audit identities.
 
-A caller cannot supply any of these values. ``user_id`` is the Langflow account the
-request executes under, ``actor_type``/``actor_id`` the credential that
-authenticated it. Represented identity comes from request context validated
-after authentication against the exact credential allowlist.
+``user_id`` is the executing account; ``actor_type``/``actor_id`` identify the
+authenticated credential. The acting pair describes that actor's own identity
+when known. The represented pair describes an upstream principal asserted by
+an explicitly trusted credential. Neither pair changes authorization.
 """
 
 from __future__ import annotations
@@ -17,6 +17,8 @@ from langflow.services.audit.details import AuditContractError
 from langflow.services.audit.represented import current_represented_identity
 from langflow.services.audit.vocabulary import AuditActorType
 from langflow.services.database.models.audit_event.model import (
+    ACTING_ISSUER_MAX_LENGTH,
+    ACTING_SUBJECT_MAX_LENGTH,
     REPRESENTED_ISSUER_MAX_LENGTH,
     REPRESENTED_SUBJECT_MAX_LENGTH,
 )
@@ -44,25 +46,25 @@ class AuditActor:
     represented_subject: str | None = None
 
     def __post_init__(self) -> None:
-        represented = (self.represented_issuer, self.represented_subject)
-        legacy = (self.acting_issuer, self.acting_subject)
-        if represented != (None, None) and legacy not in ((None, None), represented):
-            msg = "Represented identity conflicts with deprecated acting identity"
-            raise AuditContractError(msg)
-        issuer, subject = represented if represented != (None, None) else legacy
-        object.__setattr__(self, "represented_issuer", issuer)
-        object.__setattr__(self, "represented_subject", subject)
-        object.__setattr__(self, "acting_issuer", issuer)
-        object.__setattr__(self, "acting_subject", subject)
-        if (issuer is None) != (subject is None):
-            msg = "represented_issuer and represented_subject must be set together"
-            raise AuditContractError(msg)
-        if issuer is not None and len(issuer) > REPRESENTED_ISSUER_MAX_LENGTH:
-            msg = "represented_issuer is longer than the contract allows"
-            raise AuditContractError(msg)
-        if subject is not None and len(subject) > REPRESENTED_SUBJECT_MAX_LENGTH:
-            msg = "represented_subject is longer than the contract allows"
-            raise AuditContractError(msg)
+        for prefix, issuer, subject, issuer_limit, subject_limit in (
+            ("acting", self.acting_issuer, self.acting_subject, ACTING_ISSUER_MAX_LENGTH, ACTING_SUBJECT_MAX_LENGTH),
+            (
+                "represented",
+                self.represented_issuer,
+                self.represented_subject,
+                REPRESENTED_ISSUER_MAX_LENGTH,
+                REPRESENTED_SUBJECT_MAX_LENGTH,
+            ),
+        ):
+            if (issuer is None) != (subject is None):
+                msg = f"{prefix}_issuer and {prefix}_subject must be set together"
+                raise AuditContractError(msg)
+            if issuer is not None and len(issuer) > issuer_limit:
+                msg = f"{prefix}_issuer is longer than the contract allows"
+                raise AuditContractError(msg)
+            if subject is not None and len(subject) > subject_limit:
+                msg = f"{prefix}_subject is longer than the contract allows"
+                raise AuditContractError(msg)
 
 
 SYSTEM_ACTOR = AuditActor(user_id=None, actor_type=AuditActorType.SYSTEM, actor_id=None)
