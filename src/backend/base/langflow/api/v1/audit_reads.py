@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, Field, field_serializer
 from sqlalchemy import func
 from sqlalchemy.orm import aliased
 from sqlmodel import and_, col, or_, select
@@ -51,7 +51,12 @@ _REPEATABLE: dict[str, type[Enum]] = {
     "actor_type": AuditActorType,
 }
 _SINGLE_UUIDS = ("user_id", "actor_id", "request_id")
-_TEXT_LIMITS = {"acting_subject": ACTING_SUBJECT_MAX_LENGTH, "acting_issuer": ACTING_ISSUER_MAX_LENGTH}
+_TEXT_LIMITS = {
+    "acting_subject": ACTING_SUBJECT_MAX_LENGTH,
+    "acting_issuer": ACTING_ISSUER_MAX_LENGTH,
+    "represented_subject": ACTING_SUBJECT_MAX_LENGTH,
+    "represented_issuer": ACTING_ISSUER_MAX_LENGTH,
+}
 _RFC3339 = re.compile(
     r"^(?P<base>\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2})(?:\.(?P<fraction>\d{1,6}))?(?P<offset>[Zz]|[+-]\d{2}:\d{2})$"
 )
@@ -169,6 +174,13 @@ def parse_audit_query(
         if key in single and len(single[key]) > limit:
             msg = f"{key} is longer than {limit} characters"
             raise bad_request(msg)
+    for suffix in ("issuer", "subject"):
+        legacy, represented = f"acting_{suffix}", f"represented_{suffix}"
+        if represented in single:
+            if legacy in single and single[legacy] != single[represented]:
+                msg = "Conflicting represented identity filters"
+                raise bad_request(msg)
+            single[legacy] = single[represented]
     if "acting_issuer" in single and "acting_subject" not in single:
         msg = "acting_issuer must be paired with acting_subject"
         raise bad_request(msg)
@@ -313,8 +325,10 @@ class AuditActorRead(BaseModel):
     type: str
     id: UUID | None
     user_id: UUID | None
-    acting_issuer: str | None
-    acting_subject: str | None
+    represented_issuer: str | None
+    represented_subject: str | None
+    acting_issuer: str | None = Field(deprecated=True)
+    acting_subject: str | None = Field(deprecated=True)
 
 
 def actor_of(event: AuditEvent) -> AuditActorRead:
@@ -322,8 +336,10 @@ def actor_of(event: AuditEvent) -> AuditActorRead:
         type=event.actor_type,
         id=event.actor_id,
         user_id=event.user_id,
-        acting_issuer=event.acting_issuer,
-        acting_subject=event.acting_subject,
+        represented_issuer=event.effective_represented_issuer,
+        represented_subject=event.effective_represented_subject,
+        acting_issuer=event.effective_represented_issuer,
+        acting_subject=event.effective_represented_subject,
     )
 
 
@@ -381,6 +397,8 @@ def openapi_parameters(id_param: str, id_description: str) -> list[dict[str, Any
         param("actor_id", "Exact authenticated principal or credential.", {"type": "string", "format": "uuid"}),
         param("acting_subject", "Exact represented-user subject.", {"type": "string"}),
         param("acting_issuer", "Represented-user issuer; requires acting_subject.", {"type": "string"}),
+        param("represented_subject", "Exact represented-user subject.", {"type": "string"}),
+        param("represented_issuer", "Represented-user issuer; requires represented_subject.", {"type": "string"}),
         param("request_id", "Exact request correlation id.", {"type": "string", "format": "uuid"}),
         param("since", "Inclusive RFC 3339 timestamp.", {"type": "string", "format": "date-time"}),
         param("until", "Exclusive RFC 3339 timestamp, later than since.", {"type": "string", "format": "date-time"}),

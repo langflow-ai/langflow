@@ -222,6 +222,9 @@ async def get_current_user(
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
     else:
+        from langflow.services.audit.represented import bind_represented_identity
+
+        bind_represented_identity(request)
         set_authenticated_telemetry_user(user)
         return user
 
