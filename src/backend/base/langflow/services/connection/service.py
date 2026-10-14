@@ -584,6 +584,15 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                     credential = await self._credential_from_row(
                         session, row=row, rejected_token_digest=request.rejected_token_digest
                     )
+                except AuthExpiredError as exc:
+                    _set_status(row, PersistedConnectionStatus.EXPIRED)
+                    row.health = ConnectionHealth.UNHEALTHY.value
+                    row.health_checked_at = _utc_now()
+                    row.updated_at = row.health_checked_at
+                    session.add(row)
+                    # Let the transaction commit the health change before the
+                    # run receives the error, as a manual health check would.
+                    resolution_error = exc
                 except IntegrationError as exc:
                     # A rotating refresh token may already have been exchanged. Keep
                     # that encrypted update; the base class checks scopes only after

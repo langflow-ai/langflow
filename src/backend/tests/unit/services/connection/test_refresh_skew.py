@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlsplit
 from uuid import UUID
 
+import httpx
 import pytest
 from langflow.services.connection.oauth import providers
 from langflow.services.connection.oauth.broker import digest
@@ -118,11 +119,12 @@ async def authorized_connection(client, logged_in_headers, oauth_config, monkeyp
             "token_type": "Bearer",
         }
 
-    monkeypatch.setattr(providers, "_request", initial_exchange)
-    completed = await client.get(
-        "/api/v1/connections/oauth/google/callback",
-        params={"state": query["state"][0], "code": "temporary-code"},
-    )
+    with monkeypatch.context() as consent_patch:
+        consent_patch.setattr(providers, "_request", initial_exchange)
+        completed = await client.get(
+            "/api/v1/connections/oauth/google/callback",
+            params={"state": query["state"][0], "code": "temporary-code"},
+        )
     assert completed.status_code == 200, completed.text
     return row
 
@@ -145,6 +147,58 @@ def _recording_refresh(monkeypatch, *, omit_refresh_token: bool = False) -> list
 
     monkeypatch.setattr(providers, "_request", refresh)
     return calls
+
+
+async def _visible_connection(client, headers, connection_id):
+    response = await client.get("/api/v1/connections", headers=headers)
+    assert response.status_code == 200, response.text
+    return next(row for row in response.json() if row["id"] == connection_id)
+
+
+@pytest.mark.parametrize("refresh_mode", ["proactive", "reactive"])
+async def test_rejected_refresh_persists_expired_health_before_raising(
+    authorized_connection, client, logged_in_headers, monkeypatch, respx_mock, refresh_mode
+):
+    """Runtime refresh failures must be visible without a manual health check."""
+    row = authorized_connection
+    if refresh_mode == "proactive":
+        await _rewrite_stored_payload(
+            row["id"], expires_at=(datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
+        )
+    request = _resolution(
+        row["owner_id"],
+        rejected_token_digest=digest(STORED_ACCESS_TOKEN) if refresh_mode == "reactive" else None,
+    )
+    before = await _visible_connection(client, logged_in_headers, row["id"])
+    assert (before["status"], before["health"]) == ("ready", "healthy")
+    stored = await _read_stored_payload(row["id"])
+    rejected = respx_mock.post("https://oauth2.googleapis.com/token").mock(
+        return_value=httpx.Response(
+            400, json={"error": "invalid_grant", "error_description": f"Rejected {STORED_ACCESS_TOKEN}"}
+        )
+    )
+
+    resolver = get_connection_resolver_service()
+    with pytest.raises(AuthExpiredError) as caught:
+        await resolver.resolve(request)
+
+    assert rejected.call_count == 1
+    assert parse_qs(rejected.calls[0].request.content.decode())["grant_type"] == ["refresh_token"]
+    assert caught.value.code == "auth-expired"
+    assert STORED_ACCESS_TOKEN not in str(caught.value)
+    after = await _visible_connection(client, logged_in_headers, row["id"])
+    assert (after["status"], after["health"]) == ("expired", "unhealthy")
+    assert after["status_reason"] is None
+    assert after["health_checked_at"] != before["health_checked_at"]
+    assert after["updated_at"] == after["health_checked_at"]
+    assert after["has_credentials"] is True
+    assert await _read_stored_payload(row["id"]) == stored
+
+    # A later successful refresh can recover the connection and replace its tokens.
+    _recording_refresh(monkeypatch)
+    await resolver.resolve(request)
+    recovered = await _visible_connection(client, logged_in_headers, row["id"])
+    assert (recovered["status"], recovered["health"]) == ("ready", "healthy")
 
 
 async def test_token_inside_the_sixty_second_skew_is_refreshed(authorized_connection, monkeypatch):
@@ -237,7 +291,9 @@ async def test_expired_oauth_credential_without_a_refresh_token_is_auth_expired(
     assert STORED_ACCESS_TOKEN not in repr(vars(caught.value))
 
 
-async def test_a_process_without_the_registrations_reports_configuration_not_expiry(authorized_connection, monkeypatch):
+async def test_a_process_without_the_registrations_reports_configuration_not_expiry(
+    authorized_connection, client, logged_in_headers, monkeypatch
+):
     """LE-2479 finding 3: the refresh fails locally, so nothing may look revoked.
 
     A listener deployed with only a database URL and a secret key holds
@@ -251,12 +307,16 @@ async def test_a_process_without_the_registrations_reports_configuration_not_exp
     await _rewrite_stored_payload(row["id"], expires_at=(datetime.now(timezone.utc) - timedelta(hours=1)).isoformat())
     calls = _recording_refresh(monkeypatch)
     monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", "{}")
+    before = await _visible_connection(client, logged_in_headers, row["id"])
 
     with pytest.raises(ConnectionUnresolvedError) as caught:
         await get_connection_resolver_service().resolve(_resolution(row["owner_id"]))
 
     assert caught.value.reason == "registration-unavailable"
     assert calls == [], "the refresh must fail before it reaches the provider's token endpoint"
+    after = await _visible_connection(client, logged_in_headers, row["id"])
+    for field in ("status", "status_reason", "health", "health_checked_at", "updated_at"):
+        assert after[field] == before[field]
 
 
 async def test_a_health_check_without_the_registrations_leaves_the_connection_alone(
