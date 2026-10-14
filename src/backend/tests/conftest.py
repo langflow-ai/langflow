@@ -580,9 +580,16 @@ async def client_fixture(
             restored = template.restore(db_path) if template else False
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("LANGFLOW_KNOWLEDGE_BASES_DIR", str(db_path.parent / "knowledge"))
             monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
             monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
             monkeypatch.setenv("DO_NOT_TRACK", "true")
+            # Triggers: keep the leased dispatcher out of the test app. It is a
+            # background loop that polls the database, so leaving it on would
+            # race any test that drives the dispatcher directly and would add a
+            # poll to every unrelated API test. Trigger tests call the loop's
+            # own entry points instead.
+            monkeypatch.setenv("LANGFLOW_TRIGGER_DISPATCHER_ENABLED", "false")
             if "load_flows" in request.keywords:
                 shutil.copyfile(
                     pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
@@ -623,6 +630,11 @@ async def client_fixture(
                 if template:
                     startup_patch.setattr(service_utils, "initialize_database", initialize_test_database)
                 manager = await stack.enter_async_context(LifespanManager(app, startup_timeout=60, shutdown_timeout=60))
+                # Startup schedules storage discovery. Settle it before tests
+                # insert fenced records that the background migration could alter.
+                from langflow.services.knowledge_base_storage import coordinator
+
+                await coordinator.wait_for_upgrade(timeout=30)
             # Restore the real initializer before test code runs. Tests of
             # database initialization must still exercise production behavior.
             client = await stack.enter_async_context(

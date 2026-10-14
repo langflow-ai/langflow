@@ -3,12 +3,12 @@ import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent/types";
 import {
   ACTIVE_DB_PROVIDER_VARIABLE,
-  type AvailableDBProviderId,
   type DBProviderConfigValue,
   getDBProviderOption,
   getDefaultDBProviderConfig,
   getGlobalVariableValue,
   isDBProviderConfigured,
+  type StoredDBProviderId,
   toAPIBackendType,
 } from "@/constants/dbProviderConstants";
 import { isModelEnabledForType } from "@/controllers/API/helpers/enabled-model-policy";
@@ -46,17 +46,14 @@ export function useCreateMemoryModal({
   // entirely from DB Providers settings (global variables) — there is no per-MB
   // config to fill in — so the only gate is whether the chosen provider is
   // configured. Mirrors the Knowledge Base upload modal's provider selection.
-  const [backendType, setBackendType] =
-    useState<AvailableDBProviderId>("chroma");
+  const [backendType, setBackendType] = useState<StoredDBProviderId>("sqlite");
   const [backendConfig, setBackendConfig] = useState<
     Record<string, DBProviderConfigValue>
   >({});
   // Cache per-provider config so switching away and back restores the user's
   // (settings-derived) selection instead of resetting it.
   const perProviderConfigsRef = useRef<
-    Partial<
-      Record<AvailableDBProviderId, Record<string, DBProviderConfigValue>>
-    >
+    Partial<Record<StoredDBProviderId, Record<string, DBProviderConfigValue>>>
   >({});
   const hasAppliedBackendDefaults = useRef(false);
 
@@ -96,30 +93,44 @@ export function useCreateMemoryModal({
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
   );
-
-  // Default to the platform's active DB provider (Chroma Cloud / OpenSearch when
-  // configured), falling back to local Chroma — identical to Knowledge Bases.
-  // When local storage is unavailable (production profile), the fallback is
-  // pgVector instead so we never seed a Chroma the create endpoint rejects.
-  const defaultBackendSelection = useMemo(
-    () =>
-      getDefaultDBProviderConfig(globalVariables, localVectorStoreAvailable),
-    [globalVariables, localVectorStoreAvailable],
+  const defaultVectorStoreBackend = useUtilityStore(
+    (state) => state.defaultVectorStoreBackend,
+  );
+  const vectorStoreConfigLoaded = useUtilityStore(
+    (state) => state.vectorStoreConfigLoaded,
   );
 
-  // Seed the selector from the active provider once global variables load.
+  // Default to the platform's active DB provider (OpenSearch / Postgres when
+  // configured), falling back to local SQLite — identical to Knowledge Bases.
+  // When local storage is unavailable (production profile), the fallback is
+  // pgVector instead so we never seed a local store the create endpoint rejects.
+  const defaultBackendSelection = useMemo(
+    () =>
+      getDefaultDBProviderConfig(
+        globalVariables,
+        localVectorStoreAvailable,
+        defaultVectorStoreBackend,
+      ),
+    [globalVariables, localVectorStoreAvailable, defaultVectorStoreBackend],
+  );
+
+  // Both requests must settle before committing the one-shot default.
   useEffect(() => {
-    if (hasAppliedBackendDefaults.current || !globalVariablesReady) {
+    if (
+      hasAppliedBackendDefaults.current ||
+      !globalVariablesReady ||
+      !vectorStoreConfigLoaded
+    ) {
       return;
     }
     hasAppliedBackendDefaults.current = true;
     setBackendType(defaultBackendSelection.backendType);
     setBackendConfig(defaultBackendSelection.backendConfig);
-  }, [defaultBackendSelection, globalVariablesReady]);
+  }, [defaultBackendSelection, globalVariablesReady, vectorStoreConfigLoaded]);
 
   const handleBackendProviderChange = useCallback(
     (
-      newType: AvailableDBProviderId,
+      newType: StoredDBProviderId,
       freshConfig: Record<string, DBProviderConfigValue>,
     ) => {
       perProviderConfigsRef.current[backendType] = backendConfig;
@@ -131,11 +142,13 @@ export function useCreateMemoryModal({
   );
 
   const backendConfigured =
+    vectorStoreConfigLoaded &&
     globalVariablesReady &&
     isDBProviderConfigured(
       backendType,
       globalVariables,
       localVectorStoreAvailable,
+      defaultVectorStoreBackend,
     );
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
     setErrorData: state.setErrorData,
@@ -299,7 +312,7 @@ export function useCreateMemoryModal({
 
     // Block creation only when a *remote* backend isn't configured in DB
     // Providers settings. `isDBProviderConfigured` returns true unconditionally
-    // for local Chroma, so the default/local path is never blocked here.
+    // for local SQLite, so the default/local path is never blocked here.
     if (!globalVariablesReady || !backendConfigured) {
       setErrorData({
         title: t("memory.validationError"),
@@ -332,10 +345,9 @@ export function useCreateMemoryModal({
       preproc_instructions: preprocessingEnabled
         ? preprocessingPrompt.trim()
         : undefined,
-      // `chroma_cloud` collapses to `chroma` for the API; the server
-      // discriminates local vs cloud via `backend_config.mode`.
+      // The server selects the environment default when none is explicit.
       backend_type:
-        !hasExplicitActiveProvider && backendType === "chroma"
+        !hasExplicitActiveProvider && backendType === "sqlite"
           ? undefined
           : toAPIBackendType(backendType),
       backend_config: backendConfig,

@@ -30,10 +30,13 @@ Alternatively, you can use [knowledge bases](#knowledge-bases), which include bu
 Vector store components read and write to vector databases.
 Typically, these components connect to remote databases, but some vector store components support local databases.
 
-As of Langflow 1.12, most vector store bundles, including the **Chroma DB** component in the visual editor, are not in the default Langflow installation.
-Knowledge bases still use local Chroma storage in the default installation.
+Most additional vector store providers are not in the default Langflow installation.
+The Chroma components are retired in 1.13.
+In Langflow 1.13, knowledge bases use local SQLite storage by default.
+Existing local Chroma knowledge bases upgrade automatically on supported single-host installations.
+For progress and recovery options, see [Upgrade knowledge and memory storage](./knowledge-storage-upgrade.mdx).
 You will have to install any additional vector store providers.
-FOr more information, see [Additional bundles](/extensions-bundle-list#additional-bundles).
+For more information, see [Additional bundles](/extensions-bundle-list#additional-bundles).
 
 import PartialVectorRagBlurb from '@site/docs/_partial-vector-rag-blurb.mdx';
 
@@ -128,67 +131,32 @@ To configure these providers, go to **Settings → DB Providers**.
 The selected provider applies to all new knowledge bases and memory bases you create.
 Existing knowledge bases and memory bases continue to use the provider that was active when they were created.
 
-With Chroma Cloud and OpenSearch, each knowledge base and memory base stores its chunks in its own collection or index, named `lf_` followed by 24 hexadecimal characters derived from its owner and name.
-Users who share a Chroma Cloud database or OpenSearch cluster can create knowledge bases with the same name without sharing chunks.
-Only a superuser can create a knowledge base that uses a specific existing collection or index, by setting `collection_name` or `index_name` in its `backend_config`.
+With OpenSearch, each knowledge base and memory base stores its chunks in its own index, named `lf_` followed by 24 hexadecimal characters derived from its owner and name.
+Users who share an OpenSearch cluster can create knowledge bases with the same name without sharing chunks.
+Only a superuser can create a knowledge base that uses a specific existing index, by setting `index_name` in its `backend_config`.
 
-:::warning Upgrade note: Chroma Cloud and OpenSearch knowledge bases created by earlier versions
-Earlier versions named each Chroma Cloud collection and OpenSearch index after the knowledge base name alone, so knowledge bases with the same name that belonged to different users shared storage when their credentials pointed at the same Chroma Cloud database or OpenSearch cluster.
-When you upgrade, the database migration keeps existing data available without changing anything in Chroma Cloud or OpenSearch:
-
-* If only one user has a knowledge base with a given name, it keeps using its existing collection or index. The migration records that name in its `backend_config` as `collection_name` (Chroma Cloud) or `index_name` (OpenSearch), with `collection_name_origin` or `index_name_origin` set to `legacy_kb_name`. No action is needed.
-* If knowledge bases that belong to different users have the same name, their chunks might be mixed and can't be separated by owner. Those knowledge bases start with their own empty collection or index, and the old one isn't changed or deleted. The same applies to a knowledge base whose old collection or index name is `lf_` followed by 24 hexadecimal characters, because that name format is reserved. Their `backend_config` records the old name as `legacy_shared_collection` or `legacy_shared_index`, and Langflow logs a warning each time they are used.
-
-To restore a knowledge base in the second case, ingest its sources again, and then delete the old collection or index once no other knowledge base needs it.
-The migration can't tell which Chroma Cloud database or OpenSearch cluster each user's credentials point at, so it also takes this path when the users have separate accounts and their data was never mixed. In that case, restore each knowledge base without re-ingesting by setting `collection_name` or `index_name` back to the old name in its `backend_config` in the `knowledge_base` table.
+:::warning Upgrading from Chroma
+Chroma local storage and Chroma Cloud are retired in 1.13.
+Existing stores remain fenced until migrated or explicitly retired, and their sources are preserved.
+Read [Upgrade Knowledge and Memory storage](./knowledge-storage-upgrade.mdx) before updating an existing installation.
 :::
 
-#### Chroma (default)
+#### SQLite (default)
 
-By default, knowledge bases use [ChromaDB](https://docs.trychroma.com/docs/overview/introduction) as a local vector store, with no additional setup required.
-Knowledge bases are stored local to your Langflow instance.
-The default storage location depends on your operating system and installation method:
+New knowledge bases use SQLite with sqlite-vec on local disk, without a separate database server.
+Each store uses the owner's UUID, the knowledge base UUID, and its storage generation:
 
-- **Langflow Desktop**:
-    - **macOS**: `/Users/<username>/.langflow/knowledge_bases`
-    - **Windows**: `C:\Users\<name>\AppData\Roaming\com.LangflowDesktop\knowledge_bases`
-- **Langflow OSS**:
-    - **macOS/Windows/Linux/WSL with `uv pip install`**: `<path_to_venv>/lib/python3.12/site-packages/langflow/knowledge_bases` (Python version can vary. Knowledge bases aren't shared between virtual environments.)
-    - **macOS/Windows/Linux/WSL with `git clone`**: `<path_to_clone>/src/backend/base/langflow/knowledge_bases`
-
-If you set the `LANGFLOW_CONFIG_DIR` environment variable, the `knowledge_bases` subdirectory is created relative to that path.
-
-To change the default `knowledge_bases` directory path, set the `LANGFLOW_KNOWLEDGE_BASES_DIR` environment variable:
-
-```bash
-export LANGFLOW_KNOWLEDGE_BASES_DIR="/path/to/parent/directory"
+```text
+<knowledge_bases_root>/sqlite/<owner UUID>/<KB UUID>/<generation>/vectors.sqlite3
 ```
 
-#### Chroma Cloud
-
-To use [Chroma Cloud](https://docs.trychroma.com/docs/overview/introduction) as a database provider, you need a Chroma Cloud account and an API key from Chroma Cloud.
-
-1. From your Chroma Cloud dashboard, copy your **API Key**, **Tenant**, and **Database** names.
-2. To connect Chroma Cloud to Langflow, click **Settings**, and then click **DB Providers**.
-3. Select **Chroma Cloud**.
-4. Enter the following values:
-
-    - **API Key**: Enter your Chroma Cloud API key.
-    - **Tenant**: Optionally, enter your tenant name. If blank, defaults to the tenant associated with your API key.
-    - **Database**: Optionally, enter your database name. If blank, defaults to `default_database`.
-    - **Region**: Optionally, enter your cloud region.
-
-5. Click **Save and Use Chroma Cloud**.
-
-    Optionally, click **Test Connection** to verify that Langflow can reach your Chroma Cloud instance before saving.
-
-    The Chroma Cloud database is now connected to Langflow as a knowledge base provider.
-    To create a knowledge base using this provider, see [Create a knowledge base](#create-a-knowledge-base).
-
-    :::tip
-    Each knowledge base stores its chunks in its own Chroma Cloud collection, named `lf_` followed by 24 hexadecimal characters derived from the knowledge base's owner and name.
-    Users who use the same tenant and database can create knowledge bases with the same name without sharing chunks.
-    :::
+Set `LANGFLOW_KNOWLEDGE_BASES_DIR` to choose the storage root.
+The default is `~/.langflow/knowledge_bases`.
+Keep this directory on a local filesystem on one host.
+Use OpenSearch or Postgres pgvector for deployments that share knowledge storage across hosts.
+SQLite search is exact and filters before selecting the closest matches.
+Local scores are negative distance.
+OpenSearch scores also use the negative-distance convention in 1.13, so review downstream score thresholds when upgrading.
 
 #### OpenSearch
 

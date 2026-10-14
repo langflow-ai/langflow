@@ -1,4 +1,5 @@
 from .authz import (
+    AuthzAccessException,
     AuthzAuditLog,
     AuthzEditLock,
     AuthzRole,
@@ -7,6 +8,7 @@ from .authz import (
     AuthzShare,
     AuthzTeam,
     AuthzTeamMember,
+    AuthzTeamMemberGrant,
     CasbinRule,
     SharePermissionLevel,
     ShareScope,
@@ -20,6 +22,7 @@ from .sso_secret import (
 )
 
 __all__ = [
+    "AuthzAccessException",
     "AuthzAuditLog",
     "AuthzEditLock",
     "AuthzRole",
@@ -28,6 +31,7 @@ __all__ = [
     "AuthzShare",
     "AuthzTeam",
     "AuthzTeamMember",
+    "AuthzTeamMemberGrant",
     "CasbinRule",
     "SSOConfig",
     "SSOConfigCreate",

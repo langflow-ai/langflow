@@ -1,0 +1,113 @@
+---
+title: Trigger capacity and replica behavior
+slug: /deployment-trigger-capacity
+---
+
+Trigger capacity depends on notification volume, source synchronization work, flow duration, and database latency. An active-trigger count alone does not describe the workload. There is no certified maximum trigger count or event rate; validate the workload you expect, including bursts and recovery from outages.
+
+The figures on this page describe implementation defaults. They are sizing estimates, not throughput or delivery guarantees.
+
+## What scales
+
+| Stage | Work | Effect of adding replicas |
+|---|---|---|
+| Ingress | Verify deliveries and persist events or source hints | API replicas can share requests; they still use one database and should share rate-limit storage. |
+| Listeners | Hold connections and poll provider change feeds | Listener replicas share connections through database leases. One busy connection is not divided across replicas. |
+| Schedule production | Turn due schedules into ledger events | A shared lease normally elects one schedule producer. More API replicas provide takeover capacity. |
+| Trigger dispatch | Claim canonical events and submit jobs | A shared lease elects one dispatcher. Adding API replicas does not multiply normal dispatch throughput. |
+| Source maintenance | Expand hints, reconcile change feeds, renew subscriptions, and retry cleanup | A separate leased loop runs alongside dispatch. Slow providers can delay other sources, while ordinary job submission continues. |
+| Flow execution | Execute the submitted jobs | Capacity depends on the background execution configuration, flow duration, downstream quotas, and per-trigger concurrency. |
+
+Use a shared PostgreSQL database for deployments with multiple API or listener replicas. Subprocess listener mode still creates a second process; it does not remove SQLite write contention. Keep the database URL, encryption key, and OAuth registrations consistent across API and listener processes. See [listener deployment](./deployment-trigger-listeners.mdx).
+
+## Estimate dispatch capacity
+
+By default, a dispatcher pass claims at most 25 ledger rows. A full batch of successful submissions immediately starts another pass, yielding to other async work between passes. A partly full or blocked pass waits `LANGFLOW_TRIGGER_DISPATCHER_POLL_INTERVAL_S` (five seconds by default).
+
+For full batches under steady ownership, an optimistic service-rate estimate is `B / T`, where `B` is `LANGFLOW_TRIGGER_MAX_EVENTS_PER_POLL` and `T` is measured pass duration. Include database work, job submission, and maintenance when measuring `T`. There is no fixed five-events-per-second ceiling from sleeping after every full batch.
+
+For example, 1,000 claimable events need at least 40 passes with a batch of 25. If each pass took one second, dispatch alone would take roughly 40 seconds, before concurrency constraints, intermittent empty passes, and flow execution. This is arithmetic, not a throughput guarantee. A backlog continues growing if arrivals exceed the sustainable service rate.
+
+A source notification creates a hint row, then its change-feed scan can produce many canonical rows that submit flows. Count hints, expanded changes, and jobs separately. Canonical source events are inserted in batches of at most 100 within the same transaction as their cursor and stored item versions.
+
+The default `concurrency_limit` is one per trigger. Claimed rows and dispatched jobs consume that capacity until accounting releases it. A single busy trigger therefore cannot consume the whole global batch at that setting. Raising its concurrency can increase throughput, but also permits overlapping flows and does not establish event ordering.
+
+## Source polling and latency
+
+Polling listeners wait approximately 30 seconds, with 15% jitter, after a poll round finishes. Microsoft and Google source adapters enforce a minimum base interval of 30 seconds. Round duration is added to that interval. Sources on one connection are polled sequentially; a slow source delays later sources on the same connection, and a failed round can back off the connection.
+
+Microsoft and Google push notifications wake a change-feed scan. Canonical changes discovered by that scan wait for a subsequent dispatch pass. For active push triggers, a backup scan is scheduled five minutes after a successful scan. Recovery also considers missing or expired subscriptions, independently of a hint exhausting its retries. Source maintenance considers at most five due sources per pass, so this is a recovery cadence rather than a five-minute maximum delivery latency.
+
+Provider synchronization, renewal, and cleanup run in a separate source-maintenance task. They still run sequentially within that task, so a slow provider can delay other sources; database contention can affect both tasks. A source round collects its pages in memory before committing, has a 100-page limit, and does not checkpoint unfinished rounds. A source requiring more pages can repeatedly fail at the same boundary. Large sources need validation for enable time, catch-up time, memory, provider quota, and database lock duration.
+
+The HTTP transport uses a 20-second timeout configuration per request. Pagination and credential refresh can make a complete source round substantially longer; there is no equivalent 20-second deadline for the entire round.
+
+## Replica ownership and delivery semantics
+
+Replicas coordinate through database leases and conditional claims. PostgreSQL row locks serialize a trigger's concurrency check with claims. The event ledger has a unique key per trigger and deduplication identity, and normal flow submissions derive a stable job identifier from the ledger event.
+
+These protections do not promise exactly-once external effects. A provider can redeliver, a process can continue briefly after losing its lease, and a flow can retry after performing an external action. Make externally visible operations idempotent using an application-level event identity. Explicit event replay creates new work. End-to-end ordering is not guaranteed.
+
+The dispatcher, source-maintenance, and renewal passes heartbeat their named leases during work, at one third of `LANGFLOW_TRIGGER_LEASE_TTL_S` (30 seconds by default). Dispatch and renewal heartbeats also extend live claims owned by that worker. Failure to renew cancels the ongoing pass; event and renewal accounting recheck ownership after provider or job-submission calls. Source commits serialize the cursor comparison and reject changed configuration, connection, or state. Activation and source recovery share a per-trigger lease.
+
+These safeguards reduce overlap during slow work. They cannot undo a provider operation already accepted before cancellation or guarantee progress through a database outage. Keep external actions idempotent and measure failover under the deployment's actual process and database failure modes.
+
+Listener connection leases default to 30 seconds, with a 10-second heartbeat checked by the five-second reconcile loop. The recovery target is two lease lifetimes under a responsive database and process, not an outage-independent bound. Provider reconnection, backoff, database latency, and process stalls can extend recovery. Track actual delivery lag in addition to listener readiness.
+
+Rate-limit storage defaults to `memory://`, which makes counters local to each API process. Configure shared storage through `LANGFLOW_RATE_LIMIT_STORAGE_URI` when limits must apply across workers and replicas. More ingress replicas can otherwise admit more work while the singleton dispatcher retains the same normal service rate.
+
+## Configuration and tradeoffs
+
+| Setting | Default | Sizing implication |
+|---|---|---|
+| `LANGFLOW_TRIGGER_MAX_EVENTS_PER_POLL` | `25` | Larger batches amortize pass overhead but increase transaction work and in-flight claims. |
+| `LANGFLOW_TRIGGER_DISPATCHER_POLL_INTERVAL_S` | `5` | Wait after partly full or blocked dispatch passes, and between source-maintenance passes. Full dispatch batches drain immediately. |
+| `LANGFLOW_TRIGGER_LEASE_TTL_S` | `30` | Controls trigger worker, scheduler, and event-claim leases. Longer values delay takeover. |
+| Per-trigger `concurrency_limit` | `1` | Limits claimed/dispatched work for one trigger. Increase only when overlapping flows are acceptable. |
+| `LANGFLOW_LISTENER_POLL_INTERVAL_S` | `30` | Polling delay after work, with jitter; Microsoft and Google sources enforce a 30-second minimum. |
+| `LANGFLOW_LISTENER_RECONCILE_INTERVAL_S` | `5` | Each replica scans active connected triggers; more replicas add database work. |
+| `LANGFLOW_LISTENER_LEASE_TTL_S` | `30` | Listener ownership lifetime. |
+| `LANGFLOW_LISTENER_HEARTBEAT_INTERVAL_S` | `10` | Checked during reconcile; keep well below listener TTL. |
+| `LANGFLOW_TRIGGER_SUBSCRIPTION_RENEW_INTERVAL_S` | `300` | Frequency of subscription-renewal checks, with at most 25 rows claimed by default. |
+| `LANGFLOW_TRIGGER_EVENT_RETENTION_DAYS` | `30` | Retention for terminal ledger rows. It does not cap pending backlog. |
+| `LANGFLOW_TRIGGER_REPLAY_WINDOW_DAYS` | `7` | Operator replay window; must not exceed event retention. |
+| `LANGFLOW_TRIGGER_PURGE_INTERVAL_S` | `3600` | Cadence of terminal-event cleanup. |
+| `LANGFLOW_RATE_LIMIT_STORAGE_URI` | `memory://` | Use shared storage for aggregate ingress limits. |
+
+Do not select a larger batch or more replicas from event count alone. First measure tick duration, oldest pending age, database lock waits, and provider request volume. Keep arrival rate below the measured sustainable rate with room for bursts and retries.
+
+## Source lifecycle and deployment choices
+
+Microsoft, Google Calendar, and Google Drive source components expose an advanced **Delivery Mode**: `auto`, `push`, or `poll`. Auto requires enabled ingress and an OAuth registration with a public HTTPS callback before choosing push. Explicit push fails when that configuration is missing; polling requires a listener process. Hosted deployments and Gmail require push. The configuration check does not prove that a configured DNS name is reachable from the provider.
+
+Saving a source allocates its public identifier, so its ingress URL is available before enable. Push activation persists a pending state, performs baseline collection and watch creation without holding a database writer during provider calls, then activates the trigger. Events wait until activation succeeds. Failed activation reports an error and can be retried with Enable.
+
+Disable and deletion atomically queue remote cleanup before retiring local subscriptions. Cleanup uses the original owner's connection for fixed revocation requests, even after background flow execution is opted out; it cannot submit flows or read source items. Ordinary cleanup resolves credentials at execution time. When deleting a user, outstanding cleanup retains only an encrypted, task-bound access token before the owner connection is removed; refresh tokens and OAuth consent bindings are deleted. The retained token expires at the earliest of its token expiry, watch expiry, or one hour, and is then purged even during retry backoff. Cleanup retries transient failures and treats already-removed watches as success. If no usable access token remains at deletion, the provider is blocked by policy, or the token expires or is rejected before cleanup succeeds, remote cleanup waits for provider expiration. A provider accepting a create immediately before a process crash can also leave a watch until expiration.
+
+Gmail stop applies to an entire mailbox ([Google API contract](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users/stop)). Triggers in one database coordinate using the provider's mailbox identity, including when separate OAuth connections reach the same mailbox. They must share one Pub/Sub topic, with a push subscription to each trigger URL. Cleanup stops the mailbox watch only after its last local consumer is retired. Legacy watches without recorded mailbox identity must be disabled and re-enabled before adding another watch; cleanup does not issue an unverifiable mailbox-wide stop. Coordinate other applications or separate Langflow databases using the same mailbox watch outside this mechanism.
+
+## Storage and operational signals
+
+Terminal events are retained for 30 days by default. At one retained ledger row per second, that is approximately 2.6 million rows before considering payload size, indexes, job records, notification fan-out, or source-version state. Pending work is not removed merely because it is old. Source-version records outlive terminal events to prevent unchanged items from being replayed during resynchronization.
+
+Monitor or instrument:
+
+- Accepted notifications, expanded canonical events, submitted jobs, and completed flows separately.
+- Pending count, oldest pending age, dispatch lag, and retry/dead-event rates per trigger and deployment.
+- Tick and source-round duration, lease expiry, listener rebalance time, and database lock waits.
+- Provider requests, throttling, subscription expiry, renewal failures, and time since successful source synchronization.
+- Database growth, retention cleanup time, process memory, and background-job queue depth.
+
+Listener `/healthz` reports process, database, reconciliation, and lease readiness. It does not prove that a provider subscription is delivering or that a flow has completed. An active trigger state is also insufficient evidence of recent successful delivery.
+
+## Establish a deployment-specific envelope
+
+Test the actual flow mix and database before describing a deployment as supporting a particular load. Record software version, settings, replica counts, hardware, provider quotas, active connections, active triggers, and flow-duration distribution alongside the results.
+
+1. Measure steady traffic and bursts, including notification fan-out and a single busy connection. Verify that pending age returns to baseline after the burst.
+2. Exercise provider throttling, slow multi-page reads, large baselines, token expiry, and lost notification recovery while unrelated triggers remain active.
+3. Use at least two API and listener replicas with PostgreSQL. Restart and kill owners during receipt, source collection, job submission, and completion accounting. Check canonical-event identity, job identity, concurrency limits, cursor progress, and eventual recovery.
+4. Stall work beyond both lease TTLs and test database interruptions. A normal claim race passing does not establish this behavior.
+5. Soak long enough to include subscription renewal, cleanup, and realistic retained-ledger size. Report latency percentiles and loss/retry behavior as well as average throughput.
+
+Publish the measured envelope and its workload assumptions. A local microbenchmark or a green unit suite does not establish a production capacity guarantee.

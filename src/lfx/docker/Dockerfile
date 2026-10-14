@@ -67,6 +67,7 @@ COPY --from=builder --chown=1000 /app/.venv /app/.venv
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 ENV HOME=/app/data
+ENV LANGFLOW_AUTO_LOGIN=false
 ENV BASH_ENV="" \
     ENV="" \
     PROMPT_COMMAND=""

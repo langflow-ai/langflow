@@ -599,6 +599,19 @@ const TableComponent = forwardRef<
             lastPage: t("table.lastPage"),
             firstPage: t("table.firstPage"),
             previousPage: t("table.previousPage"),
+            pageSizeSelectorLabel: t("table.pageSizeSelectorLabel"),
+            // Screen-reader text AG Grid otherwise reads in English.
+            ariaPageSizeSelectorLabel: t("table.ariaPageSizeSelectorLabel"),
+            ariaHeaderSelection: t("table.ariaHeaderSelection"),
+            ariaRowToggleSelection: t("table.ariaRowToggleSelection"),
+            ariaRowSelectAll: t("table.ariaRowSelectAll"),
+            ariaRowSelectionDisabled: t("table.ariaRowSelectionDisabled"),
+            ariaChecked: t("table.ariaChecked"),
+            ariaUnchecked: t("table.ariaUnchecked"),
+            ariaIndeterminate: t("table.ariaIndeterminate"),
+            ariaSortableColumn: t("table.ariaSortableColumn"),
+            ariaMenuColumn: t("table.ariaMenuColumn"),
+            ariaFilterColumn: t("table.ariaFilterColumn"),
           }}
           defaultColDef={{
             minWidth: 100,

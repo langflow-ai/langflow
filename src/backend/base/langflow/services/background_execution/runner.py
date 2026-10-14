@@ -28,6 +28,7 @@ from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT, WORKFL
 from langflow.services.background_execution.live_bus import LiveFrame
 from langflow.services.database.models.jobs.model import JobStatus, SignalType
 from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, PauseRequested
+from langflow.services.telemetry.context import telemetry_user_context
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -92,13 +93,16 @@ class JobRunner:
         async def _wrapped() -> None:
             # Per-pass clock: paused time never accrues here (resume re-enqueues a fresh
             # run). The suspend-window budget is the separate input deadline (LE-1452).
-            if self._job_timeout is not None:
-                await asyncio.wait_for(
-                    self._drive(job_id=job_id, source_kwargs=source_kwargs),
-                    timeout=self._job_timeout,
-                )
-            else:
-                await self._drive(job_id=job_id, source_kwargs=source_kwargs)
+            job = await self._jobs.get_job_by_job_id(job_id)
+            user_id = (job.job_metadata or {}).get("telemetry_user_id") if job is not None else None
+            with telemetry_user_context(user_id):
+                if self._job_timeout is not None:
+                    await asyncio.wait_for(
+                        self._drive(job_id=job_id, source_kwargs=source_kwargs),
+                        timeout=self._job_timeout,
+                    )
+                else:
+                    await self._drive(job_id=job_id, source_kwargs=source_kwargs)
 
         heartbeat_task = self._start_heartbeat(job_id)
         paused = False

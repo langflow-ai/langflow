@@ -48,9 +48,13 @@ test(
       },
     );
 
+    // Armed before the full `/flows` navigation, so this budget also covers the
+    // page load. On Windows CI the Vite dev server spends ~20-35s serving the
+    // unbundled module graph before the app bootstraps and issues this request
+    // (nightly 33576072242, shard 69: it arrived ~32s after the goto).
     const firstPageRequest = page.waitForRequest(
       (request) => PROJECT_PAGE_PATTERN.test(request.url()),
-      { timeout: TIMEOUTS.standard },
+      { timeout: TIMEOUTS.long },
     );
 
     const dropTarget = await openFlowsList(page);

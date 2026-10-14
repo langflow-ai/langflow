@@ -39,6 +39,7 @@ from lfx.log.logger import logger
 from lfx.observability import execution_protocol, extract_trace_link, queued_trace_link, tracing_is_available
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
+from lfx.utils.async_helpers import RUN_CANCEL_GRACE_SECONDS, cancel_and_wait
 from lfx.utils.flow_validation import prepare_flow_build_for_user_from_cache
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
 from lfx.workflow.adapters.langflow import (
@@ -55,6 +56,11 @@ from lfx.workflow.converters import (
 
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.utils.execution_errors import caller_owns_flow, error_for_client
+from langflow.api.utils.execution_principal import (
+    FAMILY_WORKFLOW_V2,
+    execution_principal_for,
+    stamp_execution_principal,
+)
 from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.workflow_validation import _validate_output_ids
 from langflow.api.warm_graph import warm_deepcopy
@@ -167,6 +173,7 @@ class _WorkflowEventQueue:
     def __init__(self, maxsize: int) -> None:
         self._queue: asyncio.Queue[_QueueItem] = asyncio.Queue(maxsize=maxsize)
         self._overflowed = False
+        self._closed = False
         self._loop = asyncio.get_running_loop()
         self._overflow_task: asyncio.Task[None] | None = None
 
@@ -178,12 +185,12 @@ class _WorkflowEventQueue:
         return await self._queue.get()
 
     async def put(self, item: _QueueItem) -> None:
-        if self._overflowed:
+        if self._overflowed or self._closed:
             return
         await self._queue.put(item)
 
     def put_nowait(self, item: _QueueItem) -> None:
-        if self._overflowed:
+        if self._overflowed or self._closed:
             return
         try:
             self._queue.put_nowait(item)
@@ -200,6 +207,16 @@ class _WorkflowEventQueue:
         }
         await self._queue.put((f"error-{uuid4()}", json.dumps(payload).encode("utf-8"), time.time()))
         await self._queue.put((None, None, time.time()))
+
+    def close(self) -> None:
+        """Mark the consumer gone: later puts return at once and a blocked put is released.
+
+        Nothing reads the queue after the consumer stops, so the run's terminal sentinel
+        ``put`` on a full queue would otherwise block forever and pin the run task.
+        """
+        self._closed = True
+        while not self._queue.empty():
+            self._queue.get_nowait()
 
     async def aclose(self) -> None:
         if self._overflow_task is not None and not self._overflow_task.done():
@@ -246,6 +263,10 @@ async def _stream_event_frames(
     # Required, not defaulted: a default is how an unwired caller gets a confidently wrong
     # label, which is the one thing the absent-rather-than-"unknown" rule exists to prevent.
     protocol: str,
+    # Same rule as ``protocol``, for a stronger reason: this one is an authorization
+    # input, so it is required rather than defaulted. ``protocol`` is telemetry;
+    # ``execution_family`` decides whose connections the run may resolve.
+    execution_family: str,
     emit_output_capture: bool = False,
     expose_error_details: bool = False,
     execution_timeout: float | None | _CeilingFromSettings = _CEILING_FROM_SETTINGS,
@@ -375,6 +396,7 @@ async def _stream_event_frames(
                         # and background paths silently drop request tweaks.
                         tweaks=parsed.tweaks,
                         expose_error_details=expose_error_details,
+                        execution_family=execution_family,
                         redact_build_params=(
                             provider_policy_flow is not None
                             and not caller_owns_flow(provider_policy_flow, current_user)
@@ -537,13 +559,16 @@ async def _stream_event_frames(
         _stream_cancelled = True
         raise
     finally:
-        if not run_task.done():
-            run_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await run_task
-        await queue.aclose()
+        queue.close()
+        # One cancel, not one per event-loop tick from the cancelled response scope a
+        # client disconnect leaves this in; see cancel_and_wait for why a bare
+        # ``await run_task`` here re-cancels every running component.
+        try:
+            await cancel_and_wait(run_task, grace_seconds=RUN_CANCEL_GRACE_SECONDS)
+        finally:
+            await queue.aclose()
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
-        # Scarf telemetry pipeline both see every v2 workflow run.
+        # Product telemetry pipeline both see every v2 workflow run.
         # Mirrors the v1 endpoints.py instrumentation for the streaming path.
         # Skip on: pause (run is resumable), client disconnect (not a failure).
         if not stream_paused and not _stream_cancelled:
@@ -598,6 +623,7 @@ def _execute_streaming_workflow(
             # The live v2 stream. Which client sent it is a separate attribute, read from the
             # X-Langflow-Client header, because the playground calls this same public endpoint.
             protocol="v2",
+            execution_family=FAMILY_WORKFLOW_V2,
             expose_error_details=caller_owns_flow(flow, current_user),
         ):
             yield frame
@@ -618,6 +644,7 @@ async def execute_sync_workflow_with_timeout(
     checkpoint_store: CheckpointStore | None = None,
     *,
     expose_error_details: bool | None = None,
+    execution_family: str = FAMILY_WORKFLOW_V2,
 ) -> WorkflowExecutionResponse:
     """Execute workflow with timeout protection.
 
@@ -631,6 +658,8 @@ async def execute_sync_workflow_with_timeout(
         checkpoint_store: When provided, enables HITL checkpointing so a flow that
             pauses for human input returns a ``suspended`` response instead of failing.
         expose_error_details: Override the owner-derived client error policy.
+        execution_family: Matrix family for connection resolution, forwarded to
+            ``execute_sync_workflow``.
 
     Returns:
         WorkflowExecutionResponse with complete results
@@ -650,6 +679,7 @@ async def execute_sync_workflow_with_timeout(
                 http_request=http_request,
                 checkpoint_store=checkpoint_store,
                 expose_error_details=expose_error_details,
+                execution_family=execution_family,
             ),
             timeout=_resolve_execution_timeout(),
         )
@@ -704,6 +734,7 @@ async def execute_sync_workflow(
     checkpoint_store: CheckpointStore | None = None,
     *,
     expose_error_details: bool | None = None,
+    execution_family: str = FAMILY_WORKFLOW_V2,
 ) -> WorkflowExecutionResponse:
     """Execute workflow synchronously and return complete results.
 
@@ -734,6 +765,11 @@ async def execute_sync_workflow(
             returns a ``suspended`` response (carrying the human-input request) instead of
             running through. Off by default, so non-HITL callers are unchanged.
         expose_error_details: Override the owner-derived client error policy.
+        execution_family: The matrix family this run belongs to (workflow_v2, or
+            ``a2a`` when the A2A surface borrows this executor). It selects the
+            identity the graph resolves connections under; A2A callers admitted
+            through the public grant arrive as the anonymous execution user and
+            resolve no user connection at all.
 
     Returns:
         WorkflowExecutionResponse: Complete execution results with outputs and metadata
@@ -786,6 +822,15 @@ async def execute_sync_workflow(
         # component policy. It must win over ``flow.data``, and it must bypass the warm
         # template — which is built from the unsanitized stored row.
         sanitized_flow_data = parsed.data
+        # ``getattr``: the same tolerance ``caller_owns_flow`` above applies, since
+        # this executor is also driven with partial flow objects (A2A's prepared
+        # public flow, and the job-runner stubs).
+        execution_principal = execution_principal_for(
+            execution_family,
+            user=current_user,
+            flow_owner_id=getattr(flow, "user_id", None),
+            end_user_id=parsed.end_user_id,
+        )
         # Opt-in warm fast-path: serve a deepcopy of the pre-built template
         # instead of rebuilding. Cold-fall-back (None) for tweaks, request context/globals,
         # or a HITL/checkpointed run — none of which fit a shared user-agnostic template.
@@ -802,6 +847,7 @@ async def execute_sync_workflow(
                     user_id=user_id,
                     session_id=session_id,
                     stream=False,
+                    execution_principal=execution_principal,
                 )
             if graph is None:
                 # Use deepcopy to prevent mutation of the original flow.data
@@ -817,6 +863,7 @@ async def execute_sync_workflow(
                     flow_name=flow.name,
                     context=context,
                 )
+        stamp_execution_principal(graph, execution_principal)
         # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the
         # graph non-persisting (astore_message honors this per component). Defaults
         # True for every other run.
@@ -856,6 +903,9 @@ async def execute_sync_workflow(
     warnings = [warning] if warning else []
     # user_id stays the executing service account (flow fetch / resume rely on it); the end
     # user is recorded in job_metadata so status/stop isolate to it. See F8 / create_job.
+    # The run starts right below in this request, so the row is born IN_PROGRESS rather
+    # than QUEUED and then flipped: one statement less, and the startup sweep, which
+    # re-enqueues QUEUED workflow rows as background runs, never sees a sync run QUEUED.
     await job_service.create_job(
         job_id=job_id,
         flow_id=flow_id_str,
@@ -863,6 +913,10 @@ async def execute_sync_workflow(
         end_user_id=parsed.end_user_id,
         # Keep the notice available to GET status even when sync result caching is off.
         initial_metadata={"component_substitution_warning": warning} if warning else None,
+        status=JobStatus.IN_PROGRESS,
+        # Live from insert, then kept alive by execute_with_status, so an orphan sweep
+        # cannot fail it mid-run. Its own job_metadata write comes after the run ends.
+        heartbeat=True,
     )
     _sync_run_paused = False
     _sync_run_success = False
@@ -880,6 +934,8 @@ async def execute_sync_workflow(
             task_result, execution_session_id = await job_service.execute_with_status(
                 job_id=job_id,
                 run_coro_func=run_graph_internal,
+                mark_in_progress=False,
+                keep_alive=True,
                 graph=graph,
                 flow_id=flow_id_str,
                 session_id=session_id,
@@ -981,7 +1037,7 @@ async def execute_sync_workflow(
         return error_response
     finally:
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
-        # Scarf telemetry pipeline both see every v2 sync workflow run.
+        # Product telemetry pipeline both see every v2 sync workflow run.
         # Mirrors the _stream_event_frames instrumentation for the SSE path.
         if not _sync_run_paused:
             try:

@@ -16,6 +16,7 @@ ShareResourceType = Literal[
     "knowledge_base",
     "variable",
     "file",
+    "connection",
 ]
 
 ShareScopeLiteral = Literal["private", "team", "user", "public"]

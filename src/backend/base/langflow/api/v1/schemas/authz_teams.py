@@ -50,7 +50,7 @@ class TeamMemberCreate(BaseModel):
     """Payload for adding a user to a team."""
 
     user_id: UUID
-    source: Literal["manual", "sso"] = "manual"
+    source: Literal["manual"] = "manual"
 
 
 class TeamMemberRead(BaseModel):

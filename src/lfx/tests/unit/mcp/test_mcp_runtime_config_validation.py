@@ -187,6 +187,8 @@ async def test_update_tools_does_not_apply_stdio_policy_to_streamable_http(monke
         "https://mcp.example.com/mcp",
         headers={},
         verify_ssl=True,
+        # Unpinned configs keep the historical SSE fallback; a pinned preset sets this False.
+        allow_sse_fallback=True,
     )
 
 

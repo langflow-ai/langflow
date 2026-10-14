@@ -8,7 +8,7 @@ always hit its ImportError guard, which misleadingly told users to
 ``pip install zep-python`` (already installed, just incompatible).
 
 The component is deprecated (``legacy=True``, replaced by the Message History
-component, ``helpers.Memory``). Rather than delete it outright -- which would
+component, ``models_and_agents.Memory``). Rather than delete it outright -- which would
 break saved flows that still reference it -- it is kept as a stub: existing
 flows continue to load, and building the node now raises a clear error
 pointing at the replacement instead of the misleading install hint.
@@ -36,7 +36,7 @@ class ZepChatMemory(LCChatMemoryComponent):
     name = "ZepChatMemory"
     icon = "ZepMemory"
     legacy = True
-    replacement = ["helpers.Memory"]
+    replacement = ["models_and_agents.Memory"]
 
     inputs = [
         MessageTextInput(name="url", display_name="Zep URL", info="URL of the Zep instance."),

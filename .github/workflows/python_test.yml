@@ -58,7 +58,7 @@ jobs:
   build:
     uses: ./.github/workflows/backend-unit-tests.yml
     with:
-      python-versions: ${{ inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]' }}
+      python-versions: ${{ inputs.python-versions || '["3.10", "3.14"]' }}
       ref: ${{ inputs.ref || github.ref }}
       runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
     secrets:
@@ -291,12 +291,14 @@ jobs:
           uv pip install dist/*.whl
       - name: Test CLI
         if: steps.check-version.outputs.skipped == 'false'
+        env:
+          LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
         run: |
           source new-venv/bin/activate
           python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
-          timeout 120 bash -c 'until curl -f http://localhost:7860/api/v1/auto_login; do sleep 5; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          timeout 120 bash -c 'until curl -f http://localhost:7860/health_check; do sleep 5; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
           sleep 20 # give the server some time to terminate

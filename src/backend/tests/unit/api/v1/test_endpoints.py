@@ -58,6 +58,35 @@ async def test_get_config_mirrors_assistant_message_length(client: AsyncClient, 
 
 
 @pytest.mark.parametrize(
+    ("pgvector", "opensearch", "expected"),
+    [
+        ("postgresql://u:pw@db/lf", None, "postgres"),
+        (None, "https://opensearch.internal:9200", "opensearch"),
+        ("postgresql://u:pw@db/lf", "https://opensearch.internal:9200", "postgres"),
+        (None, None, "sqlite"),
+    ],
+)
+async def test_get_config_reports_server_resolved_default_vector_store(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch, pgvector, opensearch, expected
+):
+    """The UI defaults its provider picker to this instead of assuming pgVector.
+
+    An OpenSearch-only deployment must report ``opensearch``, matching what a create request with
+    no ``backend_type`` resolves to server-side.
+    """
+    for name, value in (("PGVECTOR_CONNECTION_STRING", pgvector), ("OPENSEARCH_URL", opensearch)):
+        if value is None:
+            monkeypatch.delenv(name, raising=False)
+        else:
+            monkeypatch.setenv(name, value)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["default_vector_store_backend"] == expected
+
+
+@pytest.mark.parametrize(
     ("project_id", "workspace_id"),
     [(uuid4(), uuid4()), (None, None)],
 )
@@ -1093,6 +1122,14 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
     assert "a2a_enabled" in result, "Authenticated response must expose the a2a server flag"
     # The Assistant panel reads this to explain, rather than 404, when the experience is off.
     assert "agentic_experience" in result, "Authenticated response must expose the agentic experience flag"
+
+    # The autosave interval the client actually uses comes from here, not from
+    # the frontend constant, which only covers the moments before this response
+    # lands. Every save is a full-graph overwrite, so this number is the window
+    # in which two people editing one flow can diverge unnoticed.
+    assert result["auto_saving_interval"] == 5000, (
+        "The autosave debounce must stay at 5000ms; the frontend's AUTOSAVE_DEBOUNCE_TIME fallback has to match it"
+    )
 
 
 async def test_get_config_exposes_outdated_component_substitution_policy(

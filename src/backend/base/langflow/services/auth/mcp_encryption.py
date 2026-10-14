@@ -7,6 +7,7 @@ from cryptography.fernet import InvalidToken
 from lfx.log.logger import logger
 
 from langflow.services.auth import utils as auth_utils
+from langflow.utils.mcp_config_secrets import MCP_SECRET_CONFIG_MAPS
 
 # Fields that should be encrypted when stored
 SENSITIVE_FIELDS = [
@@ -14,9 +15,6 @@ SENSITIVE_FIELDS = [
     "api_key",
 ]
 
-# Sub-maps of an ``mcpServers`` entry whose *values* carry secrets (API keys,
-# bearer tokens) and must be encrypted at rest in the mcp_server table.
-MCP_SECRET_CONFIG_MAPS = ("env", "headers")
 MCP_CONFIG_VALUE_MASK = "********"
 
 
@@ -105,6 +103,13 @@ def _header_arg_positions(args: list[str] | None) -> dict[str, list[int]]:
         else:
             index += 1
     return positions
+
+
+def _argv_secret_positions(args: list[str] | None) -> list[int]:
+    """Return header-value indices for secret-key rotation and integrity checks."""
+    if not isinstance(args, list):
+        return []
+    return sorted(index for positions in _header_arg_positions(args).values() for index in positions)
 
 
 def encrypt_mcp_config(config: dict[str, Any] | None) -> dict[str, Any] | None:

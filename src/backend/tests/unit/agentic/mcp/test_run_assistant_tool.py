@@ -162,7 +162,9 @@ class TestRunAssistantAndPersist:
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
         user_id = uuid4()
-        created_flow = SimpleNamespace(id=uuid4(), name="Assistant Flow", data=None, user_id=user_id)
+        created_flow = SimpleNamespace(
+            id=uuid4(), name="Assistant Flow", data=None, version_token=None, user_id=user_id
+        )
         session = _session_mock()
         session.get = AsyncMock(return_value=created_flow)
         with (
@@ -205,6 +207,7 @@ class TestRunAssistantAndPersist:
             id=uuid4(),
             name="My Flow",
             data={"nodes": [], "edges": []},
+            version_token=None,
             user_id=user_id,
             updated_at=previous_updated_at,
         )
@@ -247,6 +250,7 @@ class TestRunAssistantAndPersist:
             id=uuid4(),
             name="Locked Flow",
             data={"nodes": [], "edges": []},
+            version_token=None,
             user_id=user_id,
             locked=True,
         )
@@ -277,6 +281,7 @@ class TestRunAssistantAndPersist:
             id=uuid4(),
             name="Unlocked Flow",
             data={"nodes": [], "edges": []},
+            version_token=None,
             user_id=user_id,
             locked=False,
         )
@@ -321,7 +326,7 @@ class TestRunAssistantAndPersist:
 
         user_id = uuid4()
         original_data = {"nodes": [], "edges": []}
-        flow = SimpleNamespace(id=uuid4(), name="My Flow", data=original_data, user_id=user_id)
+        flow = SimpleNamespace(id=uuid4(), name="My Flow", data=original_data, version_token=None, user_id=user_id)
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         with (
@@ -352,7 +357,9 @@ class TestRunAssistantAndPersist:
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
         user_id = uuid4()
-        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        flow = SimpleNamespace(
+            id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, version_token=None, user_id=user_id
+        )
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         with (
@@ -386,7 +393,11 @@ class TestRunAssistantAndPersist:
         user_id = uuid4()
         existing_node = {"id": "Prompt-xyz", "data": {"id": "Prompt-xyz", "type": "Prompt Template"}}
         flow = SimpleNamespace(
-            id=uuid4(), name="My Flow", data={"nodes": [existing_node], "edges": []}, user_id=user_id
+            id=uuid4(),
+            name="My Flow",
+            data={"nodes": [existing_node], "edges": []},
+            version_token=None,
+            user_id=user_id,
         )
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
@@ -418,7 +429,7 @@ class TestRunAssistantAndPersist:
         from fastapi import HTTPException
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
-        flow = SimpleNamespace(id=uuid4(), name="Not yours", data=None, user_id=uuid4())
+        flow = SimpleNamespace(id=uuid4(), name="Not yours", data=None, version_token=None, user_id=uuid4())
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
@@ -440,7 +451,9 @@ class TestRunAssistantAndPersist:
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
         user_id = uuid4()
-        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        flow = SimpleNamespace(
+            id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, version_token=None, user_id=user_id
+        )
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
@@ -470,7 +483,7 @@ class TestRunAssistantAndPersist:
 
         user_id = uuid4()
         original_data = {"nodes": [], "edges": []}
-        flow = SimpleNamespace(id=uuid4(), name="My Flow", data=original_data, user_id=user_id)
+        flow = SimpleNamespace(id=uuid4(), name="My Flow", data=original_data, version_token=None, user_id=user_id)
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         blocked_data = {
@@ -514,7 +527,9 @@ class TestRunAssistantAndPersist:
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
         user_id = uuid4()
-        created_flow = SimpleNamespace(id=uuid4(), name="Assistant Flow", data=None, user_id=user_id)
+        created_flow = SimpleNamespace(
+            id=uuid4(), name="Assistant Flow", data=None, version_token=None, user_id=user_id
+        )
         session = _session_mock()
         session.get = AsyncMock(return_value=created_flow)
         blocked_data = {
@@ -572,7 +587,9 @@ class TestRunAssistantReleasesTransactionBeforeRun:
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
         user_id = uuid4()
-        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        flow = SimpleNamespace(
+            id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, version_token=None, user_id=user_id
+        )
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
@@ -627,7 +644,9 @@ class TestRunAssistantProgressForwarding:
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
         user_id = uuid4()
-        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        flow = SimpleNamespace(
+            id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, version_token=None, user_id=user_id
+        )
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         received: list[dict] = []
@@ -658,7 +677,9 @@ class TestRunAssistantProgressForwarding:
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
         user_id = uuid4()
-        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        flow = SimpleNamespace(
+            id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, version_token=None, user_id=user_id
+        )
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
@@ -688,7 +709,9 @@ class TestRunAssistantProgressForwarding:
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
         user_id = uuid4()
-        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        flow = SimpleNamespace(
+            id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, version_token=None, user_id=user_id
+        )
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         with (
@@ -884,7 +907,11 @@ class TestRunAssistantAppliesProposedFieldEdits:
 
         user_id = uuid4()
         flow = SimpleNamespace(
-            id=uuid4(), name="My Flow", data=self._agent_data("You are a Langflow Agent."), user_id=user_id
+            id=uuid4(),
+            name="My Flow",
+            data=self._agent_data("You are a Langflow Agent."),
+            version_token=None,
+            user_id=user_id,
         )
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
@@ -925,7 +952,11 @@ class TestRunAssistantAppliesProposedFieldEdits:
 
         user_id = uuid4()
         flow = SimpleNamespace(
-            id=uuid4(), name="My Flow", data=self._agent_data("You are a Langflow Agent."), user_id=user_id
+            id=uuid4(),
+            name="My Flow",
+            data=self._agent_data("You are a Langflow Agent."),
+            version_token=None,
+            user_id=user_id,
         )
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
@@ -982,6 +1013,7 @@ class TestRunAssistantPersistsAuthoritativeWorkingFlow:
             id=uuid4(),
             name="My Flow",
             data={"nodes": [{"id": "Agent-1"}, {"id": "Old-1"}], "edges": []},
+            version_token=None,
             user_id=user_id,
         )
         session = _session_mock()
@@ -1029,6 +1061,7 @@ class TestRunAssistantPersistsAuthoritativeWorkingFlow:
             id=uuid4(),
             name="My Flow",
             data={"nodes": [blocked_node], "edges": []},
+            version_token=None,
             user_id=user_id,
         )
         session = _session_mock()
@@ -1071,7 +1104,9 @@ class TestRunAssistantPersistsAuthoritativeWorkingFlow:
         from langflow.agentic.utils import assistant_runner
 
         user_id = uuid4()
-        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        flow = SimpleNamespace(
+            id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, version_token=None, user_id=user_id
+        )
         session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
