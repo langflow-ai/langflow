@@ -10,6 +10,7 @@ import en from "../en.json";
 import es from "../es.json";
 import fr from "../fr.json";
 import ja from "../ja.json";
+import ko from "../ko.json";
 import pt from "../pt.json";
 import zhHans from "../zh-Hans.json";
 
@@ -18,6 +19,7 @@ const LOCALES: Record<string, Record<string, string>> = {
   es,
   fr,
   ja,
+  ko,
   pt,
   "zh-Hans": zhHans,
 };

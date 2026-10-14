@@ -7,11 +7,13 @@ import { getPresentComponentTypes } from "@/utils/componentConstraints";
 import { removeCountFromString } from "@/utils/utils";
 import { TOOLTIP_MESSAGES } from "../helpers/constants";
 import { disableItem } from "../helpers/disable-item";
+import { getBundleComponentLabel } from "../helpers/get-bundle-component-label";
 import { getDisabledTooltip } from "../helpers/get-disabled-tooltip";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
 
 const SidebarItemsList = ({
   item,
+  bundleDisplayName = "",
   dataFilter,
   nodeColors,
   onDragStart,
@@ -47,6 +49,12 @@ const SidebarItemsList = ({
         })
         .map((SBItemName) => {
           const currentItem = dataFilter[item.name][SBItemName];
+          const paletteLabel = bundleDisplayName
+            ? getBundleComponentLabel(
+                bundleDisplayName,
+                currentItem.display_name,
+              )
+            : undefined;
           if (SBItemName === "MCPTools") {
             return null;
           }
@@ -89,6 +97,7 @@ const SidebarItemsList = ({
                 itemName={SBItemName}
                 error={!!currentItem.error}
                 display_name={currentItem.display_name}
+                paletteLabel={paletteLabel}
                 official={currentItem.official !== false}
                 beta={currentItem.beta ?? false}
                 legacy={currentItem.legacy ?? false}

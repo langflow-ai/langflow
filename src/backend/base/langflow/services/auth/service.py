@@ -54,6 +54,7 @@ from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
     get_user_by_username,
+    get_user_by_username_case_insensitive,
     update_user_last_login_at,
 )
 from langflow.services.database.models.user.model import User, UserRead
@@ -1029,11 +1030,13 @@ class AuthService(BaseAuthService):
 
     @staticmethod
     async def _unique_external_username(db: AsyncSession, identity: ExternalIdentity) -> str:
+        # Case-insensitive: "Alice" is taken when "alice" exists (ix_user_username_lower),
+        # so an exact-match miss must not skip the fallback tiers.
         desired = identity.username
-        if await get_user_by_username(db, desired) is None:
+        if await get_user_by_username_case_insensitive(db, desired) is None:
             return desired
         fallback = _external_username_fallback(identity.provider, identity.subject)
-        if await get_user_by_username(db, fallback) is None:
+        if await get_user_by_username_case_insensitive(db, fallback) is None:
             return fallback
         # Final tier: fold the desired name into the digest so two providers'
         # subjects that collide on the helper's digest still resolve uniquely.
@@ -1329,7 +1332,8 @@ class AuthService(BaseAuthService):
         if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
             try:
                 flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
-                if flow_owner is None:
+                # A deactivated owner (including one whose erase is in progress) must not keep running flows.
+                if flow_owner is None or not flow_owner.is_active:
                     raise HTTPException(status_code=404, detail="Flow not found")
                 return flow_owner  # noqa: TRY300
             except HTTPException:

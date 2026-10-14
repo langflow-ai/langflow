@@ -131,6 +131,47 @@ async def test_aadd_messagetables(async_session):
     assert added_messages[0].text == "New Test message"
 
 
+@pytest.mark.parametrize("expire_on_commit", [False, True])
+async def test_aadd_messagetables_reads_back_only_when_commit_expires(expire_on_commit):
+    """The rows are not read back unless the session dropped their values on commit.
+
+    The returned message matches the stored row either way, and a later commit
+    of the same session has nothing left to flush.
+    """
+    from sqlalchemy import event
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.pool import StaticPool
+    from sqlmodel import SQLModel
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    statements: list[str] = []
+    event.listen(engine.sync_engine, "before_cursor_execute", lambda _c, _cu, stmt, *_: statements.append(stmt))
+    try:
+        message = MessageTable.from_message(
+            Message(text="stored", sender="User", sender_name="User", session_id="s1"), flow_id=uuid4()
+        )
+        async with AsyncSession(engine, expire_on_commit=expire_on_commit) as session:
+            added = await aadd_messagetables([message], session)
+            assert not session.dirty
+            await session.commit()
+
+        verbs = [stmt.split(None, 1)[0].upper() for stmt in statements]
+        assert verbs == (["INSERT", "SELECT"] if expire_on_commit else ["INSERT"])
+
+        async with AsyncSession(engine) as session:
+            stored = await session.get(MessageTable, added[0].id)
+        assert added[0].id == stored.id
+        assert added[0].text == stored.text == "stored"
+        assert added[0].flow_id == stored.flow_id
+        assert added[0].properties == MessageRead.model_validate(stored, from_attributes=True).properties
+        assert added[0].timestamp.replace(tzinfo=None) == stored.timestamp.replace(tzinfo=None)
+    finally:
+        await engine.dispose()
+
+
 async def test_aadd_messagetables_propagates_cancelled_error_from_commit():
     cancellation = asyncio.CancelledError("commit cancelled")
     message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")

@@ -817,6 +817,14 @@ export const BROKEN_EDGES_WARNING =
 
 export const SAVE_DEBOUNCE_TIME = 300;
 
+// How long an edit waits before the flow is written back. Every save is a
+// full-graph overwrite, so this interval is the window in which two people can
+// diverge, and n8n reached for the same lever after attributing their
+// false-conflict problem to a more eager autosave. Deliberately not the
+// template-refresh delay above: holding a field's refresh back only leaves the
+// user waiting.
+export const AUTOSAVE_DEBOUNCE_TIME = 5000;
+
 export const IS_MAC =
   typeof navigator !== "undefined" &&
   navigator.userAgent.toUpperCase().includes("MAC");

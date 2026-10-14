@@ -31,6 +31,12 @@ class TestTextOperationsComponent(ComponentTestBaseWithoutClient):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
 
+    async def component_setup(self, component_class, default_kwargs):
+        component = await super().component_setup(component_class, default_kwargs)
+        # Outputs are dynamic: the frontend builds them for the selected operation.
+        await self.map_frontend_outputs(component, "operation", default_kwargs["operation"])
+        return component
+
 
 class TestTextOperationsWordCount:
     def test_word_count_basic(self):

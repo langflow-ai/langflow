@@ -24,6 +24,7 @@ from lfx.graph.checkpoint.resume import resume_graph_with_decision
 from lfx.graph.checkpoint.store import CheckpointStore, InMemoryCheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.schema import VertexBuildResult
+from lfx.run._defaults import apply_run_defaults
 
 if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
@@ -126,6 +127,9 @@ async def run_graph_with_human_input(
                 raise RuntimeError(msg) from exc
             decision = reroute_decision_on_timeout(request, decision)
             graph = resume_graph_with_decision(checkpoint, store, request.get("request_id"), decision)
+            # Checkpoints preserve identity provenance, but the CLI must restore
+            # its principal without replacing the user whose files the run uses.
+            apply_run_defaults(graph, session_id=graph.session_id or None, user_id=None, overwrite_user_id=False)
             continue
         break
 

@@ -9,8 +9,9 @@ from typing import Annotated
 from uuid import UUID
 
 import orjson
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
@@ -48,6 +49,10 @@ from langflow.api.v1.authz_route_dependencies import (
     AuthorizedWriteFlow,
     RequireFlowCreate,
 )
+from langflow.api.v1.flow_conflict import (
+    ensure_version_precondition,
+    parse_if_match,
+)
 from langflow.api.v1.flows_helpers import (
     _build_flows_download_response,
     _canonicalize_flow_destination,
@@ -66,6 +71,16 @@ from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_dep
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.api.v1.schemas.public_flows import PublicFlowRead
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.services.audit import vocabulary as audit_vocab
+from langflow.services.audit.operations import (
+    audited_permission,
+    audited_route,
+    describe_flow_body,
+    describe_loaded_resource,
+    mark_committed,
+    mark_unique_conflict,
+    stage_flow_succeeded,
+)
 from langflow.services.auth.utils import get_current_active_user, get_optional_user
 from langflow.services.authorization import (
     FlowAction,
@@ -75,6 +90,7 @@ from langflow.services.authorization import (
     visible_scope_prefilter,
 )
 from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.authorization.public_access import (
     PublicResourceAction,
     authorize_public_flow_access,
@@ -107,7 +123,6 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_catalog_policy_service, get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
-from langflow.utils.compression import compress_response
 from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
 
 # Re-export helpers so existing ``from langflow.api.v1.flows import ...`` still works.
@@ -165,17 +180,17 @@ FLOW_PERSIST_FAILED = "Could not persist the flow."
 # ("UNIQUE constraint failed: flow.user_id, flow.name") while PostgreSQL names the constraint
 # ('... violates unique constraint "unique_flow_name"'). Match whichever marker is present so both
 # backends produce the same client-facing detail. Every constraint below is named in the models.
-_UNIQUE_VIOLATION_DETAILS: tuple[tuple[str, str], ...] = (
-    ("unique_flow_endpoint_name", "Endpoint name must be unique"),
-    ("flow.endpoint_name", "Endpoint name must be unique"),
-    ("unique_flow_name", "Name must be unique"),
-    ("flow.name", "Name must be unique"),
-    ("unique_folder_name", "Project name must be unique"),
-    ("folder.name", "Project name must be unique"),
-    ("flow_pkey", "A flow with this ID already exists"),
-    ("flow.id", "A flow with this ID already exists"),
-    ("folder_pkey", "A project with this ID already exists"),
-    ("folder.id", "A project with this ID already exists"),
+_UNIQUE_VIOLATION_DETAILS: tuple[tuple[str, str, str], ...] = (
+    ("unique_flow_endpoint_name", "Endpoint name must be unique", "endpoint_name"),
+    ("flow.endpoint_name", "Endpoint name must be unique", "endpoint_name"),
+    ("unique_flow_name", "Name must be unique", "name"),
+    ("flow.name", "Name must be unique", "name"),
+    ("unique_folder_name", "Project name must be unique", "name"),
+    ("folder.name", "Project name must be unique", "name"),
+    ("flow_pkey", "A flow with this ID already exists", "id"),
+    ("flow.id", "A flow with this ID already exists", "id"),
+    ("folder_pkey", "A project with this ID already exists", "id"),
+    ("folder.id", "A project with this ID already exists", "id"),
 )
 _UNIQUE_VIOLATION_TEXT = ("UNIQUE constraint failed", "duplicate key value violates unique constraint")
 _UNIQUE_VIOLATION_SQLSTATE = "23505"
@@ -202,6 +217,11 @@ def _is_unique_violation(exc: Exception, msg: str) -> bool:
     return any(marker in msg for marker in _UNIQUE_VIOLATION_TEXT)
 
 
+def _column_conflict(column: str, *, status_code: int) -> HTTPException:
+    detail = f"{column.capitalize().replace('_', ' ')} must be unique"
+    return mark_unique_conflict(HTTPException(status_code=status_code, detail=detail), column)
+
+
 def _sqlite_unique_detail(msg: str, *, status_code: int) -> HTTPException:
     """Map a SQLite ``UNIQUE constraint failed: <cols>`` message to a client-facing detail.
 
@@ -224,11 +244,11 @@ def _sqlite_unique_detail(msg: str, *, status_code: int) -> HTTPException:
         column = _SQLITE_FLOW_UNIQUE_COLUMNS.get(tuple(columns))
         if column is None:
             return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
-        return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
+        return _column_conflict(column, status_code=status_code)
 
-    for marker, detail in _UNIQUE_VIOLATION_DETAILS:
+    for marker, detail, column in _UNIQUE_VIOLATION_DETAILS:
         if marker in constraint:
-            return HTTPException(status_code=status_code, detail=detail)
+            return mark_unique_conflict(HTTPException(status_code=status_code, detail=detail), column)
     return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
 
 
@@ -251,18 +271,18 @@ def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -
 
     column = _postgres_unique_column(getattr(exc, "orig", None) or exc)
     if column is not None:
-        return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
+        return _column_conflict(column, status_code=status_code)
 
     if _SQLITE_UNIQUE_MARKER in msg:
         return _sqlite_unique_detail(msg, status_code=status_code)
 
-    for marker, detail in _UNIQUE_VIOLATION_DETAILS:
+    for marker, detail, marked_column in _UNIQUE_VIOLATION_DETAILS:
         if marker in msg:
-            return HTTPException(status_code=status_code, detail=detail)
+            return mark_unique_conflict(HTTPException(status_code=status_code, detail=detail), marked_column)
     return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
 
 
-def _validate_catalog_policy_for_write(
+def validate_catalog_policy_for_write(
     flow_data: dict | None,
     *,
     snapshot: CatalogPolicySnapshot,
@@ -274,6 +294,9 @@ def _validate_catalog_policy_for_write(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except CatalogPolicyIdentityUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+_validate_catalog_policy_for_write = validate_catalog_policy_for_write
 
 
 # build router
@@ -296,6 +319,13 @@ def _flow_read_for_caller(flow: Flow | FlowRead, caller_id: UUID) -> FlowRead:
 
 
 @router.post("/", response_model=FlowRead, status_code=201)
+@audited_route(
+    audit_vocab.AuditResourceType.FLOW,
+    audit_vocab.FLOW_CREATE,
+    audit_vocab.AuditOperation.CREATE,
+    describe=describe_flow_body("flow"),
+    authorized=True,
+)
 async def create_flow(
     *,
     session: DbSession,
@@ -356,7 +386,11 @@ async def create_flow(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=FLOW_CREATE_FAILED) from e
 
 
-@router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
+@router.get(
+    "/",
+    response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader] | Page[FlowHeader],
+    status_code=200,
+)
 async def read_flows(
     *,
     current_user: CurrentActiveUser,
@@ -456,18 +490,18 @@ async def read_flows(
                     act=FlowAction.READ,
                 )
             if header_flows:
-                # Convert to FlowHeader objects and compress the response
+                # Convert to FlowHeader objects
                 flow_headers = []
                 for flow in flows:
                     header = FlowHeader.model_validate(flow, from_attributes=True)
                     if flow.user_id != current_user.id:
                         header.data = strip_secret_field_values(header.data)
                     flow_headers.append(header)
-                return compress_response(flow_headers)
+                return JSONResponse(content=jsonable_encoder(flow_headers))
 
             # Convert to FlowRead while session is still active to avoid detached instance errors
             flow_reads = [_flow_read_for_caller(flow, current_user.id) for flow in flows]
-            return compress_response(flow_reads)
+            return JSONResponse(content=jsonable_encoder(flow_reads))
 
         stmt = stmt.where(Flow.folder_id == folder_id)
 
@@ -492,8 +526,24 @@ async def read_flows(
                 owner_extractor=lambda flow: flow.user_id,
                 act=FlowAction.READ,
             )
-        page.items = [_flow_read_for_caller(flow, current_user.id) for flow in page.items]
-        return page  # noqa: TRY300 — final return inside try matches the existing style of this handler
+        if header_flows:
+            # Same page of rows, header shape: one data-less listing that still
+            # carries ``total`` (the flow count) and each row's change hint.
+            flow_headers = []
+            for flow in page.items:
+                header = FlowHeader.model_validate(flow, from_attributes=True)
+                if flow.user_id != current_user.id:
+                    header.data = strip_secret_field_values(header.data)
+                flow_headers.append(header)
+            return Page[FlowHeader].create(flow_headers, params, total=page.total)
+
+        # An explicit Page[FlowRead] keeps the response-model union from
+        # serializing these rows under the Page[FlowHeader] shape.
+        return Page[FlowRead].create(
+            [_flow_read_for_caller(flow, current_user.id) for flow in page.items],
+            params,
+            total=page.total,
+        )
 
     except Exception as e:
         import logging as _logging
@@ -586,6 +636,14 @@ async def read_public_flow(
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
+@audited_route(
+    audit_vocab.AuditResourceType.FLOW,
+    audit_vocab.FLOW_WRITE,
+    audit_vocab.AuditOperation.PATCH,
+    resource_id_param="flow_id",
+    describe=describe_flow_body("flow", loaded_param="db_flow"),
+    authorized=True,
+)
 async def update_flow(
     *,
     session: DbSession,
@@ -594,9 +652,11 @@ async def update_flow(
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ):
     """Update a flow."""
     actor = UserRead.model_validate(current_user, from_attributes=True)
+    expected_version_token = parse_if_match(if_match)
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         # Destination check: resolve the actual owner-folder/workspace tuple
@@ -616,13 +676,15 @@ async def update_flow(
             flow.folder_id = target_folder_id
         if target_workspace_id != db_flow.workspace_id or target_folder_id != db_flow.folder_id:
             try:
-                await ensure_flow_permission(
-                    actor,
-                    FlowAction.WRITE,
-                    flow_id=flow_id,
-                    flow_user_id=db_flow.user_id,
-                    workspace_id=target_workspace_id,
-                    folder_id=target_folder_id,
+                await audited_permission(
+                    ensure_flow_permission(
+                        actor,
+                        FlowAction.WRITE,
+                        flow_id=flow_id,
+                        flow_user_id=db_flow.user_id,
+                        workspace_id=target_workspace_id,
+                        folder_id=target_folder_id,
+                    )
                 )
             except HTTPException as exc:
                 raise deny_to_404(exc, detail="Flow not found") from exc
@@ -649,19 +711,24 @@ async def update_flow(
             )
             if not db_flow_for_attempt:
                 raise HTTPException(status_code=404, detail="Flow not found")
+            # Compared against the row we just re-read under lock, so a writer that
+            # committed between the client's read and this attempt is still caught.
+            await ensure_version_precondition(session, db_flow_for_attempt, expected_version_token)
             # TOCTOU: a concurrent PATCH could have moved this flow to a
             # different workspace/folder between the destination check above
             # and this retry attempt. Re-authorize against the freshly
             # reloaded source AND destination so the writer cannot ride a
             # stale check across a race.
             try:
-                await ensure_flow_permission(
-                    actor,
-                    FlowAction.WRITE,
-                    flow_id=flow_id,
-                    flow_user_id=db_flow_for_attempt.user_id,
-                    workspace_id=db_flow_for_attempt.workspace_id,
-                    folder_id=db_flow_for_attempt.folder_id,
+                await audited_permission(
+                    ensure_flow_permission(
+                        actor,
+                        FlowAction.WRITE,
+                        flow_id=flow_id,
+                        flow_user_id=db_flow_for_attempt.user_id,
+                        workspace_id=db_flow_for_attempt.workspace_id,
+                        folder_id=db_flow_for_attempt.folder_id,
+                    )
                 )
             except HTTPException as exc:
                 raise deny_to_404(exc, detail="Flow not found") from exc
@@ -677,13 +744,15 @@ async def update_flow(
                 or attempt_target_folder_id != db_flow_for_attempt.folder_id
             ):
                 try:
-                    await ensure_flow_permission(
-                        actor,
-                        FlowAction.WRITE,
-                        flow_id=flow_id,
-                        flow_user_id=db_flow_for_attempt.user_id,
-                        workspace_id=attempt_target_workspace_id,
-                        folder_id=attempt_target_folder_id,
+                    await audited_permission(
+                        ensure_flow_permission(
+                            actor,
+                            FlowAction.WRITE,
+                            flow_id=flow_id,
+                            flow_user_id=db_flow_for_attempt.user_id,
+                            workspace_id=attempt_target_workspace_id,
+                            folder_id=attempt_target_folder_id,
+                        )
                     )
                 except HTTPException as exc:
                     raise deny_to_404(exc, detail="Flow not found") from exc
@@ -706,6 +775,7 @@ async def update_flow(
                 flow=flow,
                 user_id=actor.id,
                 storage_service=storage_service,
+                expected_version_token=expected_version_token,
             )
 
         async def update_attempt(_attempt: int) -> FlowRead:
@@ -717,11 +787,14 @@ async def update_flow(
                 )
             return await operation()
 
-        flow_read = await run_with_lock_retry(
-            update_attempt,
-            session=session,
-            description=f"update_flow {flow_id}",
-        )
+        # Each attempt rechecks permission; on SQLite a decision committed by the
+        # audit writer mid-attempt would invalidate the snapshot and fail every retry.
+        async with audit_guard_in_transaction(session):
+            flow_read = await run_with_lock_retry(
+                update_attempt,
+                session=session,
+                description=f"update_flow {flow_id}",
+            )
         return _flow_read_for_caller(flow_read, actor.id)
     except HTTPException:
         raise
@@ -748,6 +821,13 @@ async def update_flow(
 
 
 @router.put("/{flow_id}", response_model=FlowRead)
+@audited_route(
+    audit_vocab.AuditResourceType.FLOW,
+    audit_vocab.FLOW_WRITE,
+    audit_vocab.AuditOperation.REPLACE,
+    resource_id_param="flow_id",
+    describe=describe_flow_body("flow"),
+)
 async def upsert_flow(
     *,
     session: DbSession,
@@ -755,16 +835,16 @@ async def upsert_flow(
     flow: FlowCreate,
     current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ):
     """Create or update a flow with a specific ID (upsert).
 
     Returns 201 for creation, 200 for update.  Returns 404 if owned by another user.
     """
-    from fastapi.responses import JSONResponse
-
     # Read once, outside the retry loop: a rollback between attempts expires the ORM User
     # and a later attribute read would lazy-load outside the greenlet.
     writer_id = current_user.id
+    expected_version_token = parse_if_match(if_match)
     # Extract once: a rollback between retry attempts discards the staged rows but not the
     # in-place rewrite, so a second extraction would find only its own reference.
     masked_targets: list[MCPSecretTarget] = []
@@ -785,13 +865,18 @@ async def upsert_flow(
                 raise HTTPException(status_code=404, detail="Flow not found")
 
             try:
-                await ensure_flow_permission(
-                    current_user,
-                    FlowAction.WRITE,
-                    flow_id=flow_id,
-                    flow_user_id=existing_flow.user_id,
-                    workspace_id=existing_flow.workspace_id,
-                    folder_id=existing_flow.folder_id,
+                await audited_permission(
+                    ensure_flow_permission(
+                        current_user,
+                        FlowAction.WRITE,
+                        flow_id=flow_id,
+                        flow_user_id=existing_flow.user_id,
+                        workspace_id=existing_flow.workspace_id,
+                        folder_id=existing_flow.folder_id,
+                    ),
+                    # An upsert over an existing Flow is a replace, so a failure
+                    # names the Flow that is there and not the name the body asked for.
+                    resource_name=existing_flow.name,
                 )
             except HTTPException as exc:
                 raise deny_to_404(exc, detail="Flow not found") from exc
@@ -815,13 +900,15 @@ async def upsert_flow(
                 flow.folder_id = target_folder_id
             if target_workspace_id != existing_flow.workspace_id or target_folder_id != existing_flow.folder_id:
                 try:
-                    await ensure_flow_permission(
-                        current_user,
-                        FlowAction.WRITE,
-                        flow_id=flow_id,
-                        flow_user_id=existing_flow.user_id,
-                        workspace_id=target_workspace_id,
-                        folder_id=target_folder_id,
+                    await audited_permission(
+                        ensure_flow_permission(
+                            current_user,
+                            FlowAction.WRITE,
+                            flow_id=flow_id,
+                            flow_user_id=existing_flow.user_id,
+                            workspace_id=target_workspace_id,
+                            folder_id=target_folder_id,
+                        )
                     )
                 except HTTPException as exc:
                     raise deny_to_404(exc, detail="Flow not found") from exc
@@ -846,13 +933,15 @@ async def upsert_flow(
                 # outer check and this write must not let a shared editor carry
                 # stale workspace permission into a different project.
                 try:
-                    await ensure_flow_permission(
-                        current_user,
-                        FlowAction.WRITE,
-                        flow_id=flow_id,
-                        flow_user_id=existing_flow_for_attempt.user_id,
-                        workspace_id=existing_flow_for_attempt.workspace_id,
-                        folder_id=existing_flow_for_attempt.folder_id,
+                    await audited_permission(
+                        ensure_flow_permission(
+                            current_user,
+                            FlowAction.WRITE,
+                            flow_id=flow_id,
+                            flow_user_id=existing_flow_for_attempt.user_id,
+                            workspace_id=existing_flow_for_attempt.workspace_id,
+                            folder_id=existing_flow_for_attempt.folder_id,
+                        )
                     )
                 except HTTPException as exc:
                     raise deny_to_404(exc, detail="Flow not found") from exc
@@ -873,13 +962,15 @@ async def upsert_flow(
                     or attempt_target_folder_id != existing_flow_for_attempt.folder_id
                 ):
                     try:
-                        await ensure_flow_permission(
-                            current_user,
-                            FlowAction.WRITE,
-                            flow_id=flow_id,
-                            flow_user_id=existing_flow_for_attempt.user_id,
-                            workspace_id=attempt_target_workspace_id,
-                            folder_id=attempt_target_folder_id,
+                        await audited_permission(
+                            ensure_flow_permission(
+                                current_user,
+                                FlowAction.WRITE,
+                                flow_id=flow_id,
+                                flow_user_id=existing_flow_for_attempt.user_id,
+                                workspace_id=attempt_target_workspace_id,
+                                folder_id=attempt_target_folder_id,
+                            )
                         )
                     except HTTPException as exc:
                         raise deny_to_404(exc, detail="Flow not found") from exc
@@ -888,12 +979,14 @@ async def upsert_flow(
                 await stage_mcp_secrets(
                     carried_secrets, secret_variables, writer_id, session, masked_targets=masked_targets
                 )
+                await ensure_version_precondition(session, existing_flow_for_attempt, expected_version_token)
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,
                     flow=flow,
                     current_user=current_user,
                     storage_service=storage_service,
+                    expected_version_token=expected_version_token,
                 )
 
             if folder_id_will_change:
@@ -908,12 +1001,16 @@ async def upsert_flow(
         else:
             # CREATE path - flow doesn't exist
             await _canonicalize_flow_destination(session, flow, current_user.id, reject_invalid=True)
-            await ensure_flow_permission(
-                current_user,
-                FlowAction.CREATE,
-                workspace_id=flow.workspace_id,
-                folder_id=flow.folder_id,
-                folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
+            await audited_permission(
+                ensure_flow_permission(
+                    current_user,
+                    FlowAction.CREATE,
+                    workspace_id=flow.workspace_id,
+                    folder_id=flow.folder_id,
+                    folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
+                ),
+                action=audit_vocab.FLOW_CREATE,
+                operation=audit_vocab.AuditOperation.CREATE,
             )
             _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
             await stage_mcp_secrets(
@@ -946,6 +1043,14 @@ async def upsert_flow(
 
 
 @router.delete("/{flow_id}", status_code=200)
+@audited_route(
+    audit_vocab.AuditResourceType.FLOW,
+    audit_vocab.FLOW_DELETE,
+    audit_vocab.AuditOperation.DELETE,
+    resource_id_param="flow_id",
+    describe=describe_loaded_resource("flow"),
+    authorized=True,
+)
 async def delete_flow(
     *,
     session: DbSession,
@@ -954,27 +1059,42 @@ async def delete_flow(
     current_user: CurrentActiveUser,
 ):
     """Delete a flow."""
+    from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup, finalize_flow_memory_base_cleanup
+
     actor = UserRead.model_validate(current_user, from_attributes=True)
     target_flow_id = flow_id
     flow_owner_ids: dict[UUID, UUID] = {target_flow_id: flow.user_id}
+    memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
 
     async def _delete_attempt(_attempt: int) -> None:
         async def _delete_operation() -> None:
             flow_owner_ids.clear()
+            memory_base_cleanups.clear()
             retry_target = await _read_flow(session, target_flow_id, actor.id)
             if retry_target is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
-            await ensure_flow_permission(
-                actor,
-                FlowAction.DELETE,
-                flow_id=retry_target.id,
-                flow_user_id=retry_target.user_id,
-                workspace_id=retry_target.workspace_id,
-                folder_id=retry_target.folder_id,
+            await audited_permission(
+                ensure_flow_permission(
+                    actor,
+                    FlowAction.DELETE,
+                    flow_id=retry_target.id,
+                    flow_user_id=retry_target.user_id,
+                    workspace_id=retry_target.workspace_id,
+                    folder_id=retry_target.folder_id,
+                )
             )
             flow_owner_ids[retry_target.id] = retry_target.user_id
-            if not await cascade_delete_flow(session, target_flow_id):
+            deleted_name, deleted_folder_id = retry_target.name, retry_target.folder_id
+            if not await cascade_delete_flow(session, target_flow_id, memory_base_cleanups=memory_base_cleanups):
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+            await stage_flow_succeeded(
+                session,
+                action=audit_vocab.FLOW_DELETE,
+                operation=audit_vocab.AuditOperation.DELETE,
+                flow_id=target_flow_id,
+                flow_name=deleted_name,
+                project_before=deleted_folder_id,
+            )
 
         await retry_flow_operation_on_deployment_guard(
             db=session,
@@ -984,6 +1104,11 @@ async def delete_flow(
 
     try:
         await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_flow {target_flow_id}")
+        # Commit the deletion before the best-effort external teardown so a
+        # remote collection is dropped only for a flow that is actually gone.
+        await session.commit()
+        mark_committed()
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
     except HTTPException:
         raise
     except Exception as exc:
@@ -1004,6 +1129,12 @@ async def delete_flow(
 
 
 @router.post("/batch/", response_model=list[FlowRead], status_code=201)
+@audited_route(
+    audit_vocab.AuditResourceType.FLOW,
+    audit_vocab.FLOW_CREATE,
+    audit_vocab.AuditOperation.CREATE,
+    describe=describe_flow_body("flow_list"),
+)
 async def create_flows(
     *,
     session: DbSession,
@@ -1028,12 +1159,14 @@ async def create_flows(
     # trusting caller-supplied denormalized scope fields.
     for flow in flow_list.flows:
         await _canonicalize_flow_destination(session, flow, current_user.id)
-        await ensure_flow_permission(
-            current_user,
-            FlowAction.CREATE,
-            workspace_id=flow.workspace_id,
-            folder_id=flow.folder_id,
-            folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
+        await audited_permission(
+            ensure_flow_permission(
+                current_user,
+                FlowAction.CREATE,
+                workspace_id=flow.workspace_id,
+                folder_id=flow.folder_id,
+                folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
+            )
         )
     # Guard against duplicate IDs up-front so callers get a clean 422 instead
     # of an unhandled DB IntegrityError.  Use upload_file() for upsert semantics.
@@ -1071,8 +1204,17 @@ async def create_flows(
     except IntegrityError as exc:
         await session.rollback()
         raise _handle_unique_constraint_error(exc, status_code=409) from exc
-    for db_flow in db_flows:
+    for db_flow, requested in zip(db_flows, flow_list.flows, strict=True):
         await session.refresh(db_flow)
+        await stage_flow_succeeded(
+            session,
+            action=audit_vocab.FLOW_CREATE,
+            operation=audit_vocab.AuditOperation.CREATE,
+            flow_id=db_flow.id,
+            flow_name=db_flow.name,
+            written_fields=requested.model_fields_set,
+            project_after=db_flow.folder_id,
+        )
         # Mirror _new_flow: an fs_path verified above is materialized with the
         # flow's content so the fs sync poller never reads an empty file.
         await _save_flow_to_fs(db_flow, current_user.id, storage_service)
@@ -1081,6 +1223,7 @@ async def create_flows(
 
 
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)
+@audited_route(audit_vocab.AuditResourceType.FLOW, audit_vocab.FLOW_CREATE, audit_vocab.AuditOperation.CREATE)
 async def upload_file(
     *,
     session: DbSession,
@@ -1193,12 +1336,14 @@ async def upload_file(
             fallback_folder_id=fallback_folder_id,
             authorized_existing_folder_id=existing_flow.folder_id if existing_flow is not None else None,
         )
-        await ensure_flow_permission(
-            current_user,
-            FlowAction.CREATE,
-            workspace_id=flow.workspace_id,
-            folder_id=flow.folder_id,
-            folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
+        await audited_permission(
+            ensure_flow_permission(
+                current_user,
+                FlowAction.CREATE,
+                workspace_id=flow.workspace_id,
+                folder_id=flow.folder_id,
+                folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
+            )
         )
 
         # Upload upserts ignore omitted/null data. Validate the stored graph in
@@ -1251,18 +1396,29 @@ async def upload_file(
 
 
 @router.delete("/")
+@audited_route(
+    audit_vocab.AuditResourceType.FLOW,
+    audit_vocab.FLOW_DELETE,
+    audit_vocab.AuditOperation.DELETE,
+    session_param="db",
+    user_param="user",
+)
 async def delete_multiple_flows(
     flow_ids: list[UUID],
     user: CurrentActiveUser,
     db: DbSession,
 ):
     """Delete multiple flows by their IDs."""
+    from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup, finalize_flow_memory_base_cleanup
+
     actor = UserRead.model_validate(user, from_attributes=True)
     try:
         authorized_flow_owner_ids: dict[UUID, UUID] = {}
+        memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
 
         async def _delete_operation() -> int:
             authorized_flow_owner_ids.clear()
+            memory_base_cleanups.clear()
             if not flow_ids:
                 return 0
             # Widen fetch when cross-user DELETE is supported; else owner-scoped.
@@ -1277,19 +1433,32 @@ async def delete_multiple_flows(
             flows_to_delete = (await db.exec(stmt)).all()
             for flow in flows_to_delete:
                 # Propagate plugin deny (403) so bulk delete fails audibly.
-                await ensure_flow_permission(
-                    actor,
-                    FlowAction.DELETE,
-                    flow_id=flow.id,
-                    flow_user_id=flow.user_id,
-                    workspace_id=flow.workspace_id,
-                    folder_id=flow.folder_id,
+                await audited_permission(
+                    ensure_flow_permission(
+                        actor,
+                        FlowAction.DELETE,
+                        flow_id=flow.id,
+                        flow_user_id=flow.user_id,
+                        workspace_id=flow.workspace_id,
+                        folder_id=flow.folder_id,
+                    )
                 )
             authorized_flow_owner_ids.update((flow.id, flow.user_id) for flow in flows_to_delete)
+            # Names and folders are read before the delete, when the rows are still loaded.
+            targets = [(flow.id, flow.name, flow.folder_id) for flow in flows_to_delete]
             deleted = 0
-            for flow in flows_to_delete:
-                if await cascade_delete_flow(db, flow.id):
-                    deleted += 1
+            for flow_id, flow_name, folder_id in targets:
+                if not await cascade_delete_flow(db, flow_id, memory_base_cleanups=memory_base_cleanups):
+                    continue
+                deleted += 1
+                await stage_flow_succeeded(
+                    db,
+                    action=audit_vocab.FLOW_DELETE,
+                    operation=audit_vocab.AuditOperation.DELETE,
+                    flow_id=flow_id,
+                    flow_name=flow_name,
+                    project_before=folder_id,
+                )
             await db.flush()
             return deleted
 
@@ -1305,6 +1474,11 @@ async def delete_multiple_flows(
             session=db,
             description=f"delete_multiple_flows count={len(flow_ids)}",
         )
+        # Commit the deletions before the best-effort external teardown so a
+        # remote collection is dropped only for flows that are actually gone.
+        await db.commit()
+        mark_committed()
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
     except HTTPException:
         raise
     except Exception as exc:
@@ -1420,7 +1594,7 @@ async def read_basic_examples(
                 blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
             )
         )
-        return compress_response(visible_flows)
+        return JSONResponse(content=jsonable_encoder(visible_flows))
 
     async with _starter_flows_lock:
         # Double-check inside lock to prevent thundering herd
@@ -1434,7 +1608,7 @@ async def read_basic_examples(
                     blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
                 )
             )
-            return compress_response(visible_flows)
+            return JSONResponse(content=jsonable_encoder(visible_flows))
 
         # Ensure raw DB data is cached
         cached_flow_reads = _starter_flows_cache.get("starter_flows")
@@ -1447,7 +1621,7 @@ async def read_basic_examples(
                 ).first()
 
                 if not starter_folder:
-                    return compress_response([])
+                    return JSONResponse(content=jsonable_encoder([]))
 
                 all_starter_folder_flows = (
                     await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))
@@ -1488,7 +1662,7 @@ async def read_basic_examples(
             blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
         )
     )
-    return compress_response(visible_flows)
+    return JSONResponse(content=jsonable_encoder(visible_flows))
 
 
 @router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)
