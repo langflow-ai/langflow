@@ -126,6 +126,23 @@ describe("Primary Input Identification", () => {
         ).primaryInputFieldName,
       ).toBe("secondary");
     });
+    it("should never pick a connection_ref field as primary input", () => {
+      const templates = {
+        google_connection: { type: "connection_ref" },
+        calendar_id: { type: "str", input_types: ["Message"] },
+      };
+
+      const result = findPrimaryInput(
+        ["google_connection", "calendar_id"],
+        templates,
+        false,
+        nodeId,
+        [],
+      );
+
+      expect(result.displayHandleMap.get("google_connection")).toBe(false);
+      expect(result.primaryInputFieldName).toBe("calendar_id");
+    });
   });
 
   describe("filtering and tool mode", () => {
