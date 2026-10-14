@@ -597,6 +597,40 @@ async def _stream_event_frames(
                 await logger.awarning("Telemetry hook failed for streaming run %s", run_id or flow_id, exc_info=True)
 
 
+async def _with_transport_keepalive(frames: AsyncIterator[bytes]) -> AsyncIterator[bytes]:
+    """Keep an idle SSE response alive without cancelling or changing source events.
+
+    The same source read remains pending across heartbeat deadlines. Closing the
+    response cancels that read once, waits for its cleanup, and closes the source.
+    """
+    next_frame: asyncio.Task[bytes] | None = asyncio.create_task(anext(frames))
+    try:
+        while next_frame is not None:
+            done, _pending = await asyncio.wait({next_frame}, timeout=_STREAM_KEEPALIVE_INTERVAL_SECONDS)
+            if not done:
+                yield _STREAM_KEEPALIVE_FRAME
+                continue
+            ready = next_frame
+            next_frame = None
+            try:
+                frame = ready.result()
+            except StopAsyncIteration:
+                return
+            next_frame = asyncio.create_task(anext(frames))
+            yield frame
+    finally:
+        try:
+            if next_frame is not None:
+                # The source already bounds run cleanup. Shield this read's
+                # teardown from the response's level-triggered cancellation.
+                with contextlib.suppress(StopAsyncIteration):
+                    await cancel_and_wait(next_frame, grace_seconds=None)
+        finally:
+            close = getattr(frames, "aclose", None)
+            if close is not None:
+                await close()
+
+
 def _execute_streaming_workflow(
     *,
     adapter: StreamAdapter,
@@ -615,52 +649,30 @@ def _execute_streaming_workflow(
     """
 
     async def _frames_only() -> AsyncIterator[bytes]:
-        frames = _stream_event_frames(
-            adapter=adapter,
-            flow_id=flow.id,
-            flow_name=flow.name,
-            background_tasks=background_tasks,
-            parsed=parsed,
-            current_user=current_user,
-            provider_policy_flow=flow,
-            source_flow_owner_id=flow.user_id,
-            run_id=run_id,
-            # The live v2 stream. Which client sent it is a separate attribute, read from the
-            # X-Langflow-Client header, because the playground calls this same public endpoint.
-            protocol="v2",
-            execution_family=FAMILY_WORKFLOW_V2,
-            expose_error_details=caller_owns_flow(flow, current_user),
-        )
-
-        next_frame: asyncio.Task[tuple[bytes, str]] | None = asyncio.create_task(anext(frames))
-        try:
-            while next_frame is not None:
-                # Keep the same source read pending across idle deadlines. Cancelling
-                # anext() on each timeout would cancel the workflow itself.
-                done, _pending = await asyncio.wait({next_frame}, timeout=_STREAM_KEEPALIVE_INTERVAL_SECONDS)
-                if not done:
-                    yield _STREAM_KEEPALIVE_FRAME
-                    continue
-                ready = next_frame
-                next_frame = None
-                try:
-                    frame, _event_type = ready.result()
-                except StopAsyncIteration:
-                    return
-                next_frame = asyncio.create_task(anext(frames))
+        """Strip internal event types while retaining ownership of the source."""
+        async with contextlib.aclosing(
+            _stream_event_frames(
+                adapter=adapter,
+                flow_id=flow.id,
+                flow_name=flow.name,
+                background_tasks=background_tasks,
+                parsed=parsed,
+                current_user=current_user,
+                provider_policy_flow=flow,
+                source_flow_owner_id=flow.user_id,
+                run_id=run_id,
+                # The live v2 stream. Which client sent it is a separate attribute, read from the
+                # X-Langflow-Client header, because the playground calls this same public endpoint.
+                protocol="v2",
+                execution_family=FAMILY_WORKFLOW_V2,
+                expose_error_details=caller_owns_flow(flow, current_user),
+            )
+        ) as frames:
+            async for frame, _event_type in frames:
                 yield frame
-        finally:
-            try:
-                if next_frame is not None:
-                    # The source already bounds run cleanup. Shield this read's
-                    # teardown from the response's level-triggered cancellation.
-                    with contextlib.suppress(StopAsyncIteration):
-                        await cancel_and_wait(next_frame, grace_seconds=None)
-            finally:
-                await frames.aclose()
 
     return EventSourceResponse(
-        _frames_only(),
+        _with_transport_keepalive(_frames_only()),
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
