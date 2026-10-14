@@ -9109,7 +9109,7 @@ integration = [
 
 [[package]]
 name = "lfx-amazon"
-version = "0.1.7"
+version = "0.1.8"
 source = { editable = "src/bundles/amazon" }
 dependencies = [
     { name = "boto3" },
