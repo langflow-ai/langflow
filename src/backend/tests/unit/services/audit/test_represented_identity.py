@@ -9,6 +9,7 @@ import pytest
 from fastapi import HTTPException
 from langflow.api.v1.audit_reads import AuditActorRead
 from langflow.api.v1.audits import AuditFeedActor
+from langflow.services.audit import represented as represented_module
 from langflow.services.audit.attribution import AuditActor
 from langflow.services.audit.details import AuditContractError
 from langflow.services.audit.represented import (
@@ -36,6 +37,28 @@ def encoded(value: str) -> str:
 @pytest.mark.parametrize("value", ["auth0|Alice", "用户-Ålice", " CaseSensitive ", "s" * 512])
 def test_identity_decoding_preserves_exact_unicode(value):
     assert decode_identity_value(encoded(value), 512) == value
+
+
+@pytest.mark.parametrize("character_limit", [1, 2, 3, 512, 2048])
+def test_largest_utf8_values_fit_the_wire_limit(character_limit):
+    # Each owl uses four UTF-8 bytes. The small limits also cover all possible
+    # base64 padding lengths, while the larger ones are the actual field limits.
+    value = "🦉" * character_limit
+    assert decode_identity_value(encoded(value), character_limit) == value
+
+
+@pytest.mark.parametrize("character_limit", [512, 2048])
+def test_oversized_wire_values_are_rejected_before_decoding(monkeypatch, character_limit):
+    wire_value = encoded("🦉" * (character_limit + 1))
+
+    def unexpected_decode(*_args, **_kwargs):
+        message = "Oversized headers must not reach the decoder"
+        raise AssertionError(message)
+
+    monkeypatch.setattr(represented_module.base64, "b64decode", unexpected_decode)
+    with pytest.raises(HTTPException) as raised:
+        decode_identity_value(wire_value, character_limit)
+    assert raised.value.status_code == 400
 
 
 @pytest.mark.parametrize(
