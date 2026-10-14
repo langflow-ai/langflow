@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -29,6 +31,20 @@ class ObservabilitySettings(BaseModel):
     """
     audit_retention_days: int = 90
     """Days an audit event is kept. Cleanup deletes by timestamp only; 0 keeps events forever."""
+    audit_trusted_api_key_ids: list[UUID] = []
+    """Database API-key record IDs allowed to assert represented audit identity.
+
+    Comma-separated UUIDs or a programmatic UUID list. Empty trusts no credential. During key
+    rotation both old and new record IDs may be allowed. User IDs and env keys do
+    not grant this audit-only privilege.
+    """
+
+    @field_validator("audit_trusted_api_key_ids", mode="before")
+    @classmethod
+    def normalize_audit_trusted_api_key_ids(cls, value: str | list[UUID] | None) -> list[UUID]:
+        entries = value.split(",") if isinstance(value, str) else (value or [])
+        return list(dict.fromkeys(UUID(str(entry).strip()) for entry in entries if str(entry).strip()))
+
     audit_exclude_events: list[str] = []
     """Audited actions never recorded, comma-separated: ``flow:write``, ``flow:*`` or ``*:delete``.
 

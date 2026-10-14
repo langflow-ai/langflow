@@ -64,9 +64,22 @@ class AuditEventFilters:
     actor_id: UUID | None = None
     acting_issuer: str | None = None
     acting_subject: str | None = None
+    represented_issuer: str | None = None
+    represented_subject: str | None = None
     request_id: UUID | None = None
     since: datetime | None = None
     until: datetime | None = None
+
+    def __post_init__(self) -> None:
+        for suffix in ("issuer", "subject"):
+            legacy = getattr(self, f"acting_{suffix}")
+            represented = getattr(self, f"represented_{suffix}")
+            if legacy is not None and represented is not None and legacy != represented:
+                msg = "Conflicting represented identity filters"
+                raise ValueError(msg)
+            value = represented if represented is not None else legacy
+            object.__setattr__(self, f"represented_{suffix}", value)
+            object.__setattr__(self, f"acting_{suffix}", value)
 
     def fingerprint(self) -> str:
         canonical: dict[str, Any] = {
@@ -93,11 +106,15 @@ class AuditEventFilters:
             AuditEvent.resource_id: self.resource_id,
             AuditEvent.user_id: self.user_id,
             AuditEvent.actor_id: self.actor_id,
-            AuditEvent.acting_issuer: self.acting_issuer,
-            AuditEvent.acting_subject: self.acting_subject,
             AuditEvent.request_id: self.request_id,
         }
         clauses.extend(col(column) == value for column, value in exact.items() if value is not None)
+        for represented, legacy, value in (
+            (AuditEvent.represented_issuer, AuditEvent.acting_issuer, self.represented_issuer),
+            (AuditEvent.represented_subject, AuditEvent.acting_subject, self.represented_subject),
+        ):
+            if value is not None:
+                clauses.append(or_(col(represented) == value, and_(col(represented).is_(None), col(legacy) == value)))
         any_of = {
             AuditEvent.operation: self.operations,
             AuditEvent.event_type: self.event_types,

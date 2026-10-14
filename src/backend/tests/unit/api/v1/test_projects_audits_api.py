@@ -30,7 +30,7 @@ ITEM_KEYS = {
     "actor",
     "details",
 }
-ACTOR_KEYS = {"type", "id", "user_id", "acting_issuer", "acting_subject"}
+ACTOR_KEYS = {"type", "id", "user_id", "acting_issuer", "acting_subject", "represented_issuer", "represented_subject"}
 
 
 @pytest.fixture
@@ -74,6 +74,8 @@ async def test_a_page_has_the_contract_shape_newest_first(client, logged_in_head
         "user_id": str(active_user.id),
         "acting_issuer": None,
         "acting_subject": None,
+        "represented_issuer": None,
+        "represented_subject": None,
     }
     assert delete["error_code"] is None
     assert page["items"][1]["details"] == {"schema_version": 1, "description": "e"}
