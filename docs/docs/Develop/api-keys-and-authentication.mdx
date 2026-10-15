@@ -215,13 +215,14 @@ To recover them, temporarily re-enable auto-login and set a password on that sam
       -H "Authorization: Bearer ACCESS_TOKEN"
     ```
 
-5. Set a strong password on that account. Don't use the legacy default value `langflow`.
+5. Set a strong password on that account. Don't use the legacy default value `langflow`. Read the password into a variable so that it isn't stored in your shell history, and avoid `"` and `\` characters, which break the JSON body.
 
     ```bash
+    read -rs NEW_PASSWORD
     curl -s -X PATCH http://localhost:7860/api/v1/users/USER_ID \
       -H "Authorization: Bearer ACCESS_TOKEN" \
       -H "Content-Type: application/json" \
-      -d '{"password": "NEW_PASSWORD"}'
+      -d "{\"password\": \"$NEW_PASSWORD\"}"
     ```
 
 6. Stop Langflow. Remove `LANGFLOW_AUTO_LOGIN=true` or set it to `false`. If the account's username isn't `langflow`, set `LANGFLOW_SUPERUSER` to it. Set `LANGFLOW_SUPERUSER_PASSWORD` to the password from step 5. Startup requires this variable, but it doesn't overwrite the password you just set.
