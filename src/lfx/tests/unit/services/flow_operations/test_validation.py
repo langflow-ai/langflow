@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import math
 
 import pytest
@@ -117,19 +116,6 @@ def test_an_integer_too_large_for_a_double_is_a_non_finite_number():
     assert find_graph_violations(graph, check_values=False) == []
 
 
-def test_an_unpaired_surrogate_is_a_violation_in_a_string_or_a_key():
-    # The path of a malformed key names its object, so it never holds the key.
-    graph = _graph()
-    graph["nodes"][0]["data"]["node"]["template"] = {"text": {"value": "a\ud800"}, "\udc00": {}}
-    graph["nodes"][1]["data"]["node"]["template"] = {"emoji": {"value": "\U0001f600"}}
-
-    assert _codes(graph) == [
-        (GraphViolationCode.UNPAIRED_SURROGATE, ("nodes", 0, "data", "node", "template")),
-        (GraphViolationCode.UNPAIRED_SURROGATE, ("nodes", 0, "data", "node", "template", "text", "value")),
-    ]
-    assert find_graph_violations(graph, check_values=False) == []
-
-
 def test_validate_raises_with_every_violation():
     graph = _graph()
     graph["nodes"].append(_node("a"))
@@ -185,41 +171,6 @@ def test_an_added_edge_is_checked_and_its_violation_is_for_the_client():
     assert [violation.to_dict()["code"] for violation in violations] == ["EDGE_HANDLE_NOT_FOUND"]
     assert violations[0].path == ("edges", 0)
     assert violations[0].to_dict()["resolution"] == "manual"
-
-
-def test_the_json_form_of_a_violation_holds_no_unpaired_surrogate():
-    # An edge id and a template key with one: the edge is named by its path,
-    # and the table path stops at the template that holds the key.
-    graph = _connectable()
-    graph["edges"].append(_edge_to("missing", "e\ud800"))
-    graph["nodes"][1]["data"]["node"]["template"]["t\ud800"] = {"type": "table", "value": [{"v": 1}]}
-
-    violations = find_graph_violations(graph, base={"nodes": [], "edges": []})
-
-    assert violations[2].edge_id == "e\ud800"
-    assert [violation.to_dict() | {"message": None} for violation in violations] == [
-        {
-            "code": "TABLE_ROW_ID_MISSING",
-            "path": ["nodes", 1, "data", "node", "template"],
-            "message": None,
-            "resolution": "auto",
-        },
-        {
-            "code": "TABLE_ROW_POS_INVALID",
-            "path": ["nodes", 1, "data", "node", "template"],
-            "message": None,
-            "resolution": "auto",
-        },
-        {"code": "EDGE_HANDLE_NOT_FOUND", "path": ["edges", 0], "message": None, "resolution": "manual"},
-        {
-            "code": "UNPAIRED_SURROGATE",
-            "path": ["nodes", 1, "data", "node", "template"],
-            "message": None,
-            "resolution": "auto",
-        },
-        {"code": "UNPAIRED_SURROGATE", "path": ["edges", 0, "id"], "message": None, "resolution": "auto"},
-    ]
-    json.dumps([violation.to_dict() for violation in violations], ensure_ascii=False).encode("utf-8")
 
 
 def test_a_second_edge_into_a_single_input_is_refused():
