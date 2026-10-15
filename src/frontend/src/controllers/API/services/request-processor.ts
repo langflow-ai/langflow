@@ -29,7 +29,7 @@ function isClientError(error: unknown): boolean {
 
 // A migration pause gives every change this answer until an admin ends it, so a
 // retry only delays it. The text is REFUSAL in the server's migration_pause.py.
-function isPauseRefusal(error: unknown): boolean {
+export function isPauseRefusal(error: unknown): boolean {
   return (
     axios.isAxiosError(error) &&
     error.response?.status === 503 &&
