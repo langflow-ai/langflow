@@ -163,6 +163,7 @@ EXPECTED_FIELDS = {
     "audit_retention_days",
     "audit_exclude_events",
     "audit_trusted_api_key_ids",
+    "audit_trusted_api_key",
     "max_flow_version_entries_per_flow",
     # EvalsSettings
     "evals_max_items",
