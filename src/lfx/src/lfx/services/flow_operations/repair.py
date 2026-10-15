@@ -30,13 +30,7 @@ import hashlib
 from dataclasses import dataclass
 from typing import Any
 
-from lfx.services.flow_operations.canonical import (
-    canonical_json,
-    is_finite_number,
-    is_row_position,
-    is_well_formed,
-    to_well_formed,
-)
+from lfx.services.flow_operations.canonical import canonical_json, is_finite_number, is_row_position
 from lfx.services.flow_operations.codes import MANUAL_CODES, GraphViolationCode
 from lfx.services.flow_operations.edge_rules import derive_missing_handle_forms
 from lfx.services.flow_operations.ids import new_edge_id
@@ -66,7 +60,6 @@ REPAIRS: dict[GraphViolationCode, str] = {
     GraphViolationCode.EDGE_ENDPOINT_INVALID: "dropped the edge",
     GraphViolationCode.NODE_DATA_NOT_OBJECT: "replaced with an empty object",
     GraphViolationCode.NON_FINITE_NUMBER: "replaced with null",
-    GraphViolationCode.UNPAIRED_SURROGATE: "replaced each unpaired surrogate with U+FFFD",
     GraphViolationCode.TABLE_ROW_NOT_OBJECT: "dropped the row",
     GraphViolationCode.TABLE_ROW_ID_MISSING: "assigned a generated row id",
     GraphViolationCode.TABLE_ROW_ID_DUPLICATE: "assigned a generated row id; the first row keeps the id",
@@ -124,7 +117,7 @@ def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
         return RepairResult(repaired, fixes)
 
     repaired = copy.deepcopy(flow_data)
-    _replace_invalid_values(repaired, (), fix)
+    _replace_non_finite(repaired, (), fix)
     for key in ("nodes", "edges"):
         if not isinstance(repaired.get(key), list):
             fix(GraphViolationCode.COLLECTION_NOT_LIST, (key,))
@@ -274,38 +267,18 @@ def _repair_table(rows: list[Any], path: GraphPath, fix, previous: Any = None) -
     fill_missing_positions(rows)
 
 
-def _replace_invalid_values(value: Any, path: GraphPath, fix) -> Any:
+def _replace_non_finite(value: Any, path: GraphPath, fix) -> Any:
     stack: list[tuple[Any, GraphPath]] = [(value, path)]
     while stack:
         container, container_path = stack.pop()
-        if isinstance(container, dict):
-            _repair_keys(container, container_path, fix)
         items = container.items() if isinstance(container, dict) else enumerate(container)
         for key, item in list(items):
             if isinstance(item, (int, float)) and not is_finite_number(item):
                 fix(GraphViolationCode.NON_FINITE_NUMBER, (*container_path, key))
                 container[key] = None
-            elif isinstance(item, str) and not is_well_formed(item):
-                fix(GraphViolationCode.UNPAIRED_SURROGATE, (*container_path, key))
-                container[key] = to_well_formed(item)
             elif isinstance(item, (dict, list)):
                 stack.append((item, (*container_path, key)))
     return value
-
-
-def _repair_keys(mapping: dict[str, Any], path: GraphPath, fix) -> None:
-    """Replace the unpaired surrogates in an object's keys, keeping their order.
-
-    Two keys that become one would lose a value, so such an object is left as
-    it is, and the repaired graph fails validation.
-    """
-    keys = [to_well_formed(key) for key in mapping]
-    if keys == list(mapping) or len(set(keys)) < len(keys):
-        return
-    fix(GraphViolationCode.UNPAIRED_SURROGATE, path)
-    items = list(zip(keys, mapping.values(), strict=True))
-    mapping.clear()
-    mapping.update(items)
 
 
 def _is_id(value: Any) -> bool:
