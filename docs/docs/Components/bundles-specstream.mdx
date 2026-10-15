@@ -1,0 +1,58 @@
+---
+title: SpecStream
+slug: /bundles-specstream
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **SpecStream** bundle.
+
+[SpecStream](https://specstream.ai) is a live web data engine.
+You describe a list in plain words, such as companies, local businesses, people, grants, tenders, products, papers, or repositories, and SpecStream returns the finished list: every row that matches, each with the page it was read from.
+Lists are priced per matching row, and SpecStream quotes a price ceiling before anything runs.
+
+The component calls the SpecStream HTTP API at `https://api.specstream.ai` and needs a SpecStream API key.
+Create the key under **Agents & API** in your SpecStream workspace.
+
+For more information, see the [SpecStream API documentation](https://specstream.ai/docs/api).
+
+## Find List
+
+This component reads a request written in plain words, gets a quote, and starts the list only if the quoted ceiling is within **Maximum Price (USD)**.
+It waits for the list to finish, then returns the rows.
+Only matching rows are charged.
+
+If the quote is above the maximum, or SpecStream needs a clearer request, the component raises an error and nothing runs.
+
+Every row includes the columns that the list shows, plus the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `source_url` | The page the row was read from. |
+| `checked_at` | When that page was read. |
+| `position` | The row's position in the list. |
+| `list_id` | The ID of the list. Reading a list again costs nothing. |
+| `list_link` | A link to the list in the SpecStream workspace. |
+
+The component has two outputs that share one run: a [`DataFrame`](/data-types#table) named **Table**, and a list of [`Data`](/data-types#json) objects named **Rows**, one per row.
+In **Tool Mode**, an agent chooses the request.
+The price ceiling is a component setting, so the agent can't raise it.
+
+### Find List parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| SpecStream API Key (`api_key`) | SecretString | Input parameter. Your SpecStream API key. |
+| Request (`request`) | String | Input parameter. The list to find, in plain words. For example, `Roofing companies in Columbus, Ohio with their website and phone`. |
+| Number of Results (`max_results`) | Integer | Input parameter. How many matching rows to find, from 1 to 1000. Default: `25`. |
+| Maximum Price (USD) (`max_price_usd`) | Float | Input parameter. The most this list may cost. Default: `5.0`. |
+| Run Key (`run_key`) | String | Input parameter. Optional. Reuse the same key to get the run you already started instead of paying for a new one. If empty, the key is built from the request, the limits, and the current hour, so a retried step doesn't buy the same list twice. |
+| Wait (seconds) (`wait_seconds`) | Integer | Input parameter. How long to wait for the list to finish before returning the rows found so far. Default: `420`. |

@@ -597,6 +597,7 @@ module.exports = {
             "Components/bundles-serpingapi",
             "Components/bundles-serply",
             "Components/bundles-slack",
+            "Components/bundles-specstream",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
             "Components/bundles-valkey",

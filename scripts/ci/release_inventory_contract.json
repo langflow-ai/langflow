@@ -319,6 +319,7 @@
         "scrapegraph",
         "searchapi",
         "serpapi",
+        "specstream",
         "spider",
         "supabase",
         "tavily",

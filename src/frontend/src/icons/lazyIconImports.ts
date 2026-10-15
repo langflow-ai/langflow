@@ -483,6 +483,10 @@ export const lazyIconsMapping = {
     })),
   Slides: () =>
     import("@/icons/Slides").then((mod) => ({ default: mod.SlidesIcon })),
+  SpecStream: () =>
+    import("@/icons/SpecStream").then((mod) => ({
+      default: mod.SpecStreamIcon,
+    })),
   Spider: () =>
     import("@/icons/Spider").then((mod) => ({ default: mod.SpiderIcon })),
   Streamlit: () =>
