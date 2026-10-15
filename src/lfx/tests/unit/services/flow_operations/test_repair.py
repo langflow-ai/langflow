@@ -276,6 +276,33 @@ def test_an_integer_too_large_for_a_double_is_replaced_with_null():
     ]
 
 
+def test_unpaired_surrogates_are_replaced_with_the_replacement_character():
+    graph = {"nodes": [_node("a")], "edges": []}
+    graph["nodes"][0]["data"]["node"]["template"] = {"\udc00k": {"value": "a\ud800"}, "b": {}}
+
+    result = repair_flow_data(graph)
+
+    assert result.flow_data["nodes"][0]["data"]["node"]["template"] == {"\ufffdk": {"value": "a\ufffd"}, "b": {}}
+    assert list(result.flow_data["nodes"][0]["data"]["node"]["template"]) == ["\ufffdk", "b"]
+    assert [(fix.code, fix.path) for fix in result.fixes] == [
+        (GraphViolationCode.UNPAIRED_SURROGATE, ("nodes", 0, "data", "node", "template")),
+        (GraphViolationCode.UNPAIRED_SURROGATE, ("nodes", 0, "data", "node", "template", "\ufffdk", "value")),
+    ]
+
+
+def test_keys_that_would_become_one_are_not_repaired():
+    # Replacing the surrogate would merge two keys and lose a value.
+    graph = {"nodes": [_node("a")], "edges": []}
+    template = graph["nodes"][0]["data"]["node"]["template"]
+    template["\ud800"] = {}
+    template["\ufffd"] = {}
+
+    with pytest.raises(FlowDataValidationError) as exc_info:
+        repair_flow_data(graph)
+
+    assert [violation.code for violation in exc_info.value.violations] == [GraphViolationCode.UNPAIRED_SURROGATE]
+
+
 def test_a_badly_broken_graph_comes_out_following_every_rule():
     graph = {
         "nodes": [None, {"id": 3}, {"id": "a", "data": []}, {"id": "a"}, {"data": {"node": {"template": 1}}}],

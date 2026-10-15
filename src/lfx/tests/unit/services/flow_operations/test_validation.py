@@ -116,6 +116,19 @@ def test_an_integer_too_large_for_a_double_is_a_non_finite_number():
     assert find_graph_violations(graph, check_values=False) == []
 
 
+def test_an_unpaired_surrogate_is_a_violation_in_a_string_or_a_key():
+    # The path of a malformed key names its object, so it never holds the key.
+    graph = _graph()
+    graph["nodes"][0]["data"]["node"]["template"] = {"text": {"value": "a\ud800"}, "\udc00": {}}
+    graph["nodes"][1]["data"]["node"]["template"] = {"emoji": {"value": "\U0001f600"}}
+
+    assert _codes(graph) == [
+        (GraphViolationCode.UNPAIRED_SURROGATE, ("nodes", 0, "data", "node", "template")),
+        (GraphViolationCode.UNPAIRED_SURROGATE, ("nodes", 0, "data", "node", "template", "text", "value")),
+    ]
+    assert find_graph_violations(graph, check_values=False) == []
+
+
 def test_validate_raises_with_every_violation():
     graph = _graph()
     graph["nodes"].append(_node("a"))
