@@ -156,13 +156,22 @@ async def _watchdog_loop(
             continue
 
 
-async def _roster_beat(registry: Any, *, owner: str, state: WorkerState, current_job_id: Any) -> None:
+async def _roster_beat(
+    registry: Any,
+    *,
+    owner: str,
+    state: WorkerState,
+    current_job_id: Any,
+) -> None:
     """Record this worker's presence and what it is doing. Best effort.
 
     Opens its own short-lived session: the claim loop holds none, and the roster
     write must not join a transaction that a long job would keep open. Failures
     are swallowed because fleet visibility must never break the claim loop, and
     the next beat supersedes a missed one anyway.
+
+    Callers hold ``_roster_writes`` across their read-then-write, so this does
+    not take it: an ``asyncio.Lock`` is not reentrant.
     """
     from langflow.services.deps import session_scope
 
@@ -192,6 +201,7 @@ async def _roster_loop(
     interval_s: float,
     stop_event: asyncio.Event,
     current_job: Callable[[], Any],
+    lock: asyncio.Lock,
 ) -> None:
     """Refresh this worker's presence on an interval, whatever it is doing.
 
@@ -207,9 +217,13 @@ async def _roster_loop(
             # converge into one synchronized write burst every interval.
             await asyncio.wait_for(stop_event.wait(), timeout=interval_s * random.uniform(0.75, 1.25))  # noqa: S311
         except asyncio.TimeoutError:
-            job_id = current_job()
-            state = WorkerState.IDLE if job_id is None else WorkerState.BUSY
-            await _roster_beat(registry, owner=owner, state=state, current_job_id=job_id)
+            # Read and write under one lock. Reading outside it would let a
+            # transition's beat be overtaken by this one still carrying the job
+            # that just finished, leaving the roster naming a finished job.
+            async with lock:
+                job_id = current_job()
+                state = WorkerState.IDLE if job_id is None else WorkerState.BUSY
+                await _roster_beat(registry, owner=owner, state=state, current_job_id=job_id)
 
 
 async def run_worker_loop(
@@ -223,7 +237,7 @@ async def run_worker_loop(
     lease_ttl_s: float = 45.0,
     watchdog_interval_s: float | None = None,
     registry: Any = None,
-    roster_interval_s: float | None = None,
+    roster_interval_s: float = 15.0,
 ) -> None:
     """Claim-and-run loop with a periodic lease watchdog. Returns on *stop_event*.
 
@@ -242,10 +256,11 @@ async def run_worker_loop(
         registry: worker roster store; when set (with *owner*) this worker
             registers, beats while it lives, and deregisters on graceful stop,
             so the API-side collector can report the fleet.
-        roster_interval_s: how often to beat while idle. Transitions between
-            idle and busy always beat immediately, so this only bounds how long
-            a steady state goes unrefreshed; it must stay below the roster's
-            freshness window or a live idle worker would read as offline.
+        roster_interval_s: how often to refresh presence. Not optional
+            alongside *registry*: a roster that only beat on transitions would
+            drop a worker out of the gauges for exactly as long as it was busy,
+            which is what the refresh exists to prevent. Callers derive it from
+            the same setting the collector uses as the online window.
     """
     # Startup reconcile: requeue work lost by a previously-crashed worker.
     await backend.requeue_lost(lease_ttl_s=lease_ttl_s)
@@ -253,6 +268,9 @@ async def run_worker_loop(
     roster = registry if (registry is not None and owner is not None) else None
     current_job_id: Any = None
     roster_task: asyncio.Task | None = None
+    # Serializes roster writes between the claim loop's transitions and the
+    # periodic refresh, so the two cannot land out of order.
+    roster_writes = asyncio.Lock()
     if roster is not None:
         from langflow.services.deps import session_scope
 
@@ -261,16 +279,16 @@ async def run_worker_loop(
         with contextlib.suppress(Exception):
             async with session_scope() as session:
                 await roster.register(session, owner=owner, pid=os.getpid(), host=socket.gethostname())
-        if roster_interval_s is not None:
-            roster_task = asyncio.create_task(
-                _roster_loop(
-                    roster,
-                    owner=owner,
-                    interval_s=roster_interval_s,
-                    stop_event=stop_event,
-                    current_job=lambda: current_job_id,
-                )
+        roster_task = asyncio.create_task(
+            _roster_loop(
+                roster,
+                owner=owner,
+                interval_s=roster_interval_s,
+                stop_event=stop_event,
+                current_job=lambda: current_job_id,
+                lock=roster_writes,
             )
+        )
 
     watchdog_task: asyncio.Task | None = None
     if watchdog_interval_s is not None:
@@ -306,7 +324,8 @@ async def run_worker_loop(
                 # A transition, so beat now instead of waiting out the interval:
                 # the roster carries which job this worker holds, and that is
                 # only useful while it still holds it.
-                await _roster_beat(roster, owner=owner, state=WorkerState.BUSY, current_job_id=current_job_id)
+                async with roster_writes:
+                    await _roster_beat(roster, owner=owner, state=WorkerState.BUSY, current_job_id=current_job_id)
             try:
                 await runner.run(job_id)
             except asyncio.CancelledError:
@@ -322,7 +341,8 @@ async def run_worker_loop(
                     # Clear current_job_id as soon as the job is done, however it
                     # ended: a roster still naming a finished job reads as a
                     # worker stuck on it.
-                    await _roster_beat(roster, owner=owner, state=WorkerState.IDLE, current_job_id=None)
+                    async with roster_writes:
+                        await _roster_beat(roster, owner=owner, state=WorkerState.IDLE, current_job_id=None)
     finally:
         if watchdog_task is not None:
             watchdog_task.cancel()

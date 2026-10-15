@@ -61,7 +61,9 @@ async def test_reregister_same_owner_is_idempotent_upsert():
 
     # Drive it busy so we can prove re-register resets to IDLE.
     async with session_scope() as session:
-        await service.heartbeat(session, owner=owner, state=WorkerState.BUSY, current_job_id=uuid4())
+        await service.heartbeat(
+            session, owner=owner, state=WorkerState.BUSY, current_job_id=uuid4(), pid=200, host="host-old"
+        )
 
     # Re-register with new pid/host (no IntegrityError on the existing PK).
     async with session_scope() as session:
@@ -91,7 +93,7 @@ async def test_heartbeat_updates_state_job_and_advances_last_heartbeat():
 
     job_id = uuid4()
     async with session_scope() as session:
-        await service.heartbeat(session, owner=owner, state=WorkerState.BUSY, current_job_id=job_id)
+        await service.heartbeat(session, owner=owner, state=WorkerState.BUSY, current_job_id=job_id, pid=1, host="h")
 
     async with session_scope() as session:
         row = await session.get(WorkerRegistry, owner)

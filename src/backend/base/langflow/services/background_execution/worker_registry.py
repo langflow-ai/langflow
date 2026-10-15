@@ -86,8 +86,8 @@ class WorkerRegistryService:
         owner: str,
         state: WorkerState,
         current_job_id: UUID | None,
-        pid: int = 0,
-        host: str = "",
+        pid: int,
+        host: str,
     ) -> None:
         """Refresh ``last_heartbeat`` and set ``state`` + ``current_job_id`` for ``owner``.
 
@@ -96,11 +96,10 @@ class WorkerRegistryService:
         worker whose row was pruned reappears on its next beat. ``started_at`` is set to
         now for the recreated row since the original start time is no longer known.
 
-        ``pid`` / ``host`` are only used for that recreate, and a caller that knows its
-        own identity should pass them: a row rebuilt as ``pid=0``/``host=""`` names a
-        process that does not exist, which is worse for an operator than the gap it
-        replaces. They are ignored when the row is already there, since the row the
-        worker registered already carries the real values.
+        ``pid`` / ``host`` are only used for that recreate, and they are required
+        rather than defaulted so a row naming a process that does not exist cannot
+        be constructed at all. They are ignored when the row is already there,
+        since the row the worker registered already carries the real values.
         """
         now = datetime.now(timezone.utc)
         row = await session.get(WorkerRegistry, owner)
@@ -132,32 +131,27 @@ class WorkerRegistryService:
     async def count_by_state(self, session: AsyncSession, *, now: datetime, online_window: timedelta) -> dict[str, int]:
         """Aggregate fresh-worker counts: ``{"online", "busy", "idle"}``.
 
-        A row is fresh (online) when ``last_heartbeat >= now - online_window``; busy is
-        fresh AND ``state == BUSY``, idle is fresh AND ``state == IDLE``. Counted in SQL
-        with a dialect-aware cutoff (see ``_heartbeat_cutoff``). A stale row counts
-        toward none of the three.
+        A row is fresh (online) when ``last_heartbeat >= now - online_window``.
+        Counted with one GROUP BY, the shape ``count_nonterminal_jobs`` already
+        uses, and zero-filled over the canonical states so one that empties
+        reports 0 rather than vanishing. A stale row counts toward none of them.
+
+        ``online`` is the sum of those states rather than its own query:
+        ``state`` is NOT NULL with exactly two members, so the states partition
+        the fresh rows. A separate COUNT could only ever agree with them, and a
+        later edit to one statement would let the two drift apart silently.
         """
         sql_cutoff = _heartbeat_cutoff(session, now - online_window)
-        fresh = col(WorkerRegistry.last_heartbeat) >= sql_cutoff
-
-        online = (await session.exec(select(func.count()).select_from(WorkerRegistry).where(fresh))).one()
-        busy = (
-            await session.exec(
-                select(func.count())
-                .select_from(WorkerRegistry)
-                .where(fresh)
-                .where(WorkerRegistry.state == WorkerState.BUSY)
-            )
-        ).one()
-        idle = (
-            await session.exec(
-                select(func.count())
-                .select_from(WorkerRegistry)
-                .where(fresh)
-                .where(WorkerRegistry.state == WorkerState.IDLE)
-            )
-        ).one()
-        return {"online": int(online), "busy": int(busy), "idle": int(idle)}
+        stmt = (
+            select(WorkerRegistry.state, func.count())
+            .where(col(WorkerRegistry.last_heartbeat) >= sql_cutoff)
+            .group_by(col(WorkerRegistry.state))
+        )
+        counts = {state.value: 0 for state in WorkerState}
+        for state, count in (await session.exec(stmt)).all():
+            # SQLite hands back the raw string where Postgres hands back the enum.
+            counts[state.value if isinstance(state, WorkerState) else str(state)] = int(count)
+        return {"online": sum(counts.values()), **counts}
 
     async def prune_stale(self, session: AsyncSession, *, now: datetime, retention_s: float) -> int:
         """Delete rows whose ``last_heartbeat`` is older than ``retention_s``; return the count.
