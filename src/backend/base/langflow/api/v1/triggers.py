@@ -187,8 +187,8 @@ async def list_triggers(
 
     With ``flow_id``, the triggers on that one flow, authorized as a flow read
     (404 when the caller cannot read it). Without it, the triggers on every flow
-    the caller can read - the same visibility the flow list applies, so a shared
-    flow's triggers appear exactly when the flow does. ``scope=all`` is the
+    the caller can read, including shared flows when a registered plugin
+    supports cross-user fetch. ``scope=all`` is the
     operator view: every user's triggers with each owner's username, superuser
     only.
     """

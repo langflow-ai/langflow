@@ -104,7 +104,7 @@ Verified 2026-10-15 against `src/backend/base/langflow/api/v1/triggers.py`. Ever
 
 | Query | Meaning |
 |---|---|
-| no `flow_id` (default) | triggers on every flow the caller can read; same visibility as the flow list, so a shared flow's triggers appear exactly when the flow does |
+| no `flow_id` (default) | triggers on every flow the caller can read, including shared flows when an authorization plugin supports cross-user fetch |
 | `flow_id=<uuid>` | triggers on that flow; 404 when the caller cannot read it (unchanged) |
 | `scope=all` | operator view: every user's triggers, each with `owner_username`; 403 unless superuser. Combines with `flow_id`, `provider`, `state` |
 | `provider`, `state` | exact-match filters (`provider=slack`, `state=needs_reconnect`); core triggers (schedule, inbound webhook) have no provider |
@@ -112,6 +112,10 @@ Verified 2026-10-15 against `src/backend/base/langflow/api/v1/triggers.py`. Ever
 
 In the operator view, a row on someone else's flow carries no allowed per-trigger actions: the per-trigger routes are
 flow-scoped, so the operator acts on those rows through the bulk routes with `trigger_ids`.
+
+When a cross-user authorization plugin supplies no SQL visibility prefilter, the list checks read permission in
+bounded candidate batches before applying the page window. Denied rows do not consume the offset or limit.
+Without cross-user fetch support, including the OSS pass-through, the fallback remains owner-scoped.
 
 ### Server-computed actions on every `TriggerRead`
 
@@ -173,8 +177,10 @@ changes nothing, so the confirmation dialog's counts come from the server.
 The response is `{action, dry_run, matched, changed, unchanged, failed, owners}`: every matched id lands in exactly
 one of `changed`, `unchanged`, or `failed` (`{trigger_id, detail}`), and `owners` counts distinct owners of the
 changed triggers. Each trigger commits on its own with its audit row (`trigger:admin_pause`, `trigger:admin_resume`,
-naming the operator), so a failure part-way leaves earlier changes in place and is reported in `failed`. A resume the
-server refuses releases the operator's hold and leaves the trigger paused with the reason in `last_error`; a push
+naming the operator), independently of `AUTHZ_AUDIT_ENABLED` and `AUTHZ_AUDIT_DURABLE`. Audit staging or persistence
+failure rolls back that trigger's change and is reported in `failed`, while earlier commits remain in place. A resume the
+server refuses releases the operator's hold and leaves the trigger paused with the reason in `last_error`. That release
+commits with an audit row recording `outcome=enable_refused` and the refusal reason. A push
 source whose subscription fails records that failure on the trigger, as the owner's own resume would. Each row is
 re-read under a lock just before it changes, so an owner acting during the batch is seen rather than overwritten.
 

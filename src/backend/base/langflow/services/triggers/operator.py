@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.log.logger import logger
 from sqlmodel import col, select
 
+from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import (
     ARMED_TRIGGER_STATES,
@@ -38,6 +39,7 @@ from langflow.services.database.models.trigger.schemas import (
     TriggerState,
 )
 from langflow.services.triggers.constants import AUDIT_ADMIN_PAUSE, AUDIT_ADMIN_RESUME
+from langflow.services.triggers.locking import lock_trigger
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -62,7 +64,9 @@ async def _selected_ids(session: AsyncSession, *, request: TriggerBulkRequest) -
 
 async def _current(session: AsyncSession, trigger_id: UUID, *, lock: bool) -> Trigger | None:
     """The row as it is now, not as the selection saw it."""
-    return await session.get(Trigger, trigger_id, populate_existing=True, with_for_update=lock)
+    if lock:
+        return await lock_trigger(session, trigger_id)
+    return await session.get(Trigger, trigger_id, populate_existing=True)
 
 
 def _pausable(row: Trigger) -> bool:
@@ -74,7 +78,7 @@ def _resumable(row: Trigger) -> bool:
 
 
 class _Audit:
-    """One operator audit row, written in the change's own transaction when audit is durable."""
+    """One required operator audit row, written in the change's own transaction."""
 
     def __init__(self, action: str, *, actor_id: UUID, row: Trigger) -> None:
         self.entry: dict[str, Any] = {
@@ -82,21 +86,18 @@ class _Audit:
             "action": action,
             "obj": f"trigger:{row.id}",
             "result": "allow",
-            "details": {"provider": row.provider},
+            "details": {"event": AUDIT_EVENT_MUTATION, "provider": row.provider},
         }
-        self.staged = False
 
     def stage(self, session: AsyncSession) -> None:
-        from langflow.services.authorization.audit import stage_audit_decision
+        from langflow.services.authorization.audit import AuditPersistenceError, stage_audit_decision
 
-        self.staged = stage_audit_decision(session=session, **self.entry)
-
-    async def submit_if_not_staged(self) -> None:
-        """Best-effort mode: submit only after the change it describes has committed."""
-        if not self.staged:
-            from langflow.services.authorization.audit import audit_decision
-
-            await audit_decision(**self.entry)
+        try:
+            stage_audit_decision(session=session, required=True, **self.entry)
+        except Exception as exc:
+            # Provider/storage errors, including ValueError, are not an
+            # owner-facing enable refusal and must not release the hold.
+            raise AuditPersistenceError from exc
 
 
 async def _run(
@@ -116,28 +117,31 @@ async def _run(
     owners: set[UUID] = set()
     trigger_ids = await _selected_ids(session, request=request)
     for trigger_id in trigger_ids:
-        row = await _current(session, trigger_id, lock=not request.dry_run)
-        if row is None or not eligible(row):
-            unchanged.append(trigger_id)
+        try:
+            row = await _current(session, trigger_id, lock=not request.dry_run)
+            if row is None or not eligible(row):
+                if not request.dry_run:
+                    await session.rollback()  # Release even an unchanged row's lock.
+                unchanged.append(trigger_id)
+                continue
+            owner_id = row.user_id
+            if not request.dry_run:
+                audit = _Audit(audit_action, actor_id=actor_id, row=row)
+                try:
+                    await apply(row, audit)
+                except ValueError as exc:
+                    # Enable/disable refusals are owner-facing. Releasing a
+                    # refused resume must also succeed with its required audit.
+                    await session.rollback()
+                    if on_refusal is not None:
+                        await on_refusal(trigger_id, str(exc))
+                    failed.append(TriggerBulkFailure(trigger_id=trigger_id, detail=str(exc)))
+                    continue
+        except Exception:  # noqa: BLE001 - one trigger must not stop an incident response
+            await session.rollback()
+            await logger.aexception("Operator %s failed for trigger %s", action.value, trigger_id)
+            failed.append(TriggerBulkFailure(trigger_id=trigger_id, detail=_UNEXPECTED_FAILURE))
             continue
-        owner_id = row.user_id
-        if not request.dry_run:
-            audit = _Audit(audit_action, actor_id=actor_id, row=row)
-            try:
-                await apply(row, audit)
-            except ValueError as exc:
-                # Owner-facing by contract: every refusal the enable and disable
-                # paths raise is a message written for the trigger's owner.
-                await session.rollback()
-                if on_refusal is not None:
-                    await on_refusal(trigger_id, str(exc))
-                failed.append(TriggerBulkFailure(trigger_id=trigger_id, detail=str(exc)))
-                continue
-            except Exception:  # noqa: BLE001 - one trigger must not stop an incident response
-                await session.rollback()
-                await logger.aexception("Operator %s failed for trigger %s", action.value, trigger_id)
-                failed.append(TriggerBulkFailure(trigger_id=trigger_id, detail=_UNEXPECTED_FAILURE))
-                continue
         changed.append(trigger_id)
         owners.add(owner_id)
     return TriggerBulkResult(
@@ -158,7 +162,6 @@ async def bulk_pause(
         await service.admin_pause(session, row=row)
         audit.stage(session)
         await session.commit()
-        await audit.submit_if_not_staged()
 
     return await _run(
         session,
@@ -178,7 +181,6 @@ async def bulk_resume(
         enabled = await service.enable(session, row=row)
         audit.stage(session)
         await session.commit()
-        await audit.submit_if_not_staged()
         # Committed above, so the operator's hold is released and audited even
         # when the provider subscription below fails; the initializer then
         # records that failure on the trigger, as it does for the owner's resume.
@@ -188,10 +190,14 @@ async def bulk_resume(
         """The operator released it, so it must stop reading as paused by an administrator."""
         row = await _current(session, trigger_id, lock=True)
         if row is None or not _resumable(row):
+            await session.rollback()
             return
         row.admin_paused_at = None
         row.last_error = f"An administrator resumed this trigger, but it could not start: {detail}"
         session.add(row)
+        audit = _Audit(AUDIT_ADMIN_RESUME, actor_id=actor_id, row=row)
+        audit.entry["details"].update(outcome="enable_refused", reason=detail)
+        audit.stage(session)
         await session.commit()
 
     return await _run(

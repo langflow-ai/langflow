@@ -40,6 +40,7 @@ from langflow.services.triggers.constants import (
     SLACK_TRIGGER_KINDS,
 )
 from langflow.services.triggers.errors import TriggerNotFoundError
+from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.ownership import require_owned_connection
 from langflow.services.triggers.reconciliation import apply_config_verdict
 from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
@@ -255,6 +256,7 @@ class TriggerService(Service):
         return row
 
     async def enable(self, session: AsyncSession, *, row: Trigger) -> Trigger:
+        row = await self._lock_for_mutation(session, row=row)
         if row.state not in _ENABLEABLE_STATES:
             msg = f"Trigger in state {row.state!r} cannot be enabled."
             raise ValueError(msg)
@@ -332,6 +334,7 @@ class TriggerService(Service):
         return paused
 
     async def disable(self, session: AsyncSession, *, row: Trigger) -> Trigger:
+        row = await self._lock_for_mutation(session, row=row)
         if row.state == TriggerState.DEAD.value:
             msg = "A dead trigger cannot be disabled."
             raise ValueError(msg)
@@ -346,6 +349,14 @@ class TriggerService(Service):
         # operator already paused: the operator's bulk resume must then leave it.
         row.admin_paused_at = None
         return await self.set_state(session, row=row, state=TriggerState.PAUSED)
+
+    @staticmethod
+    async def _lock_for_mutation(session: AsyncSession, *, row: Trigger) -> Trigger:
+        current = await lock_trigger(session, row.id)
+        if current is None:
+            msg = "The trigger no longer exists."
+            raise ValueError(msg)
+        return current
 
     async def pin(self, session: AsyncSession, *, row: Trigger, flow_version_id: UUID | None) -> Trigger:
         """Pin the trigger to a flow version, or unpin with ``None``."""

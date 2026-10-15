@@ -7,9 +7,9 @@ route it serves.
 Two lists:
 
 * :func:`list_visible_triggers` - the caller's own view, across every flow they
-  can read. Visibility is the flow list's, exactly: the SQL prefilter when an
-  authorization plugin offers one, otherwise owner-scoped rows narrowed by
-  :func:`filter_visible_resources`.
+  can read. Uses the plugin's SQL prefilter when available, otherwise checks
+  read permission before paginating. Only a cross-user-fetch plugin may widen
+  the fallback beyond owned flows.
 * :func:`list_all_triggers` - the superuser operator view, across every user,
   with each owner's username.
 
@@ -43,6 +43,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerRead, TriggerState
 from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_settings_service
 from langflow.services.triggers.capabilities import NO_ACCESS, TriggerCaller, trigger_capabilities
 
 if TYPE_CHECKING:
@@ -183,13 +184,27 @@ async def list_visible_triggers(
             project_column=Flow.folder_id,
             visibility=visibility,
         )
-    else:
+    elif not await cross_user_fetch_enabled():
         statement = statement.where(owned)
-    statement = _newest_first(_filtered(statement, provider=provider, state=state), limit=limit, offset=offset)
-    rows = [(trigger, flow) for trigger, flow in (await session.exec(statement)).all()]
-    if visibility is None:
-        # Same in-memory narrowing the flow list applies when no plugin
-        # prefilter exists; a no-op while AUTHZ_ENABLED is off.
+    statement = _filtered(statement, provider=provider, state=state)
+    if visibility is not None or not get_settings_service().auth_settings.AUTHZ_ENABLED:
+        statement = _newest_first(statement, limit=limit, offset=offset)
+        return [(trigger, flow, None) for trigger, flow in (await session.exec(statement)).all()]
+    return await _readable_trigger_page(session, user, statement, limit=limit, offset=offset)
+
+
+async def _readable_trigger_page(
+    session: AsyncSession, user: User | UserRead, statement, *, limit: int, offset: int
+) -> list[tuple[Trigger, Flow, str | None]]:
+    """Apply read permission before the page window without loading the whole table."""
+    batch_size = 200
+    scanned = 0
+    result: list[tuple[Trigger, Flow, str | None]] = []
+    while True:
+        batch = _newest_first(statement, limit=batch_size, offset=scanned)
+        rows = (await session.exec(batch)).all()
+        if not rows:
+            return result
         flows = list({flow.id: flow for _trigger, flow in rows}.values())
         visible = await filter_visible_resources(
             user,
@@ -200,8 +215,18 @@ async def list_visible_triggers(
             act=FlowAction.READ,
         )
         visible_ids = {flow.id for flow in visible}
-        rows = [(trigger, flow) for trigger, flow in rows if flow.id in visible_ids]
-    return [(trigger, flow, None) for trigger, flow in rows]
+        for trigger, flow in rows:
+            if flow.id not in visible_ids:
+                continue
+            if offset:
+                offset -= 1
+                continue
+            result.append((trigger, flow, None))
+            if len(result) == limit:
+                return result
+        scanned += len(rows)
+        if len(rows) < batch_size:
+            return result
 
 
 async def list_all_triggers(

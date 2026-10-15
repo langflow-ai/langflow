@@ -254,6 +254,78 @@ async def test_a_collaborator_is_offered_exactly_what_their_role_allows(
     assert body["blocked_actions"] == blocked
 
 
+@pytest.mark.parametrize(("authz_enabled", "cross_user"), [(True, True), (True, False), (False, True)])
+async def test_fallback_visibility_filters_before_pagination(
+    client, logged_in_headers, active_user, monkeypatch, authz_enabled, cross_user
+):
+    from langflow.services.authorization import fetch, guards, listing
+    from langflow.services.deps import get_settings_service
+
+    other_id, _ = await _user()
+    denied_flow = await _flow(other_id)
+    shared_flow = await _flow(other_id)
+    own_flow = await _flow(active_user.id)
+    denied = await _trigger(
+        denied_flow, other_id, provider="slack", created_at=datetime(2026, 1, 3, tzinfo=timezone.utc)
+    )
+    shared = await _trigger(
+        shared_flow, other_id, provider="slack", created_at=datetime(2026, 1, 2, tzinfo=timezone.utc)
+    )
+    own = await _trigger(
+        own_flow, active_user.id, provider="slack", created_at=datetime(2026, 1, 1, tzinfo=timezone.utc)
+    )
+    # More denied rows than one bounded candidate batch must not hide the
+    # visible rows or leave a hole in the page window.
+    async with session_scope() as session:
+        session.add_all(
+            [
+                Trigger(
+                    flow_id=denied_flow,
+                    user_id=other_id,
+                    name=f"denied-{index}",
+                    kind="schedule",
+                    provider="slack",
+                    state="active",
+                    config=dict(_SCHEDULE),
+                    concurrency_limit=1,
+                    max_attempts=5,
+                    created_at=datetime(2026, 1, 3, tzinfo=timezone.utc),
+                )
+                for index in range(200)
+            ]
+        )
+
+    class ReadShared:
+        async def supports_cross_user_fetch(self):
+            return cross_user
+
+        async def is_enabled(self):
+            return authz_enabled
+
+        async def get_resource_visibility(self, **_kwargs):
+            return None
+
+        async def enforce(self, *, obj, act, **_kwargs):
+            return obj == f"flow:{shared_flow}" and act == "read"
+
+        async def batch_enforce(self, *, requests, **_kwargs):
+            return [obj == f"flow:{shared_flow}" and act == "read" for obj, act in requests]
+
+    authz = ReadShared()
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_ENABLED", authz_enabled)
+    for module in (fetch, guards, listing):
+        monkeypatch.setattr(module, "get_authorization_service", lambda: authz)
+
+    expected = [shared, own] if authz_enabled and cross_user else [own]
+    for offset in range(len(expected) + 1):
+        response = await client.get(
+            f"api/v1/triggers?provider=slack&limit=1&offset={offset}", headers=logged_in_headers
+        )
+        assert response.status_code == 200, response.text
+        assert [row["id"] for row in response.json()] == [str(value) for value in expected[offset : offset + 1]]
+        assert all(row["id"] != str(denied) for row in response.json())
+
+
 # --------------------------------------------------------------------------- #
 # Operator bulk pause and resume (B3)
 # --------------------------------------------------------------------------- #
