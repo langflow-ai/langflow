@@ -4,7 +4,6 @@ from uuid import UUID
 
 import httpx
 import pytest
-from langflow.services.connection.oauth import providers
 from langflow.services.database.models.connection import ConnectionSecret
 from langflow.services.deps import session_scope
 
@@ -26,10 +25,15 @@ pytestmark = pytest.mark.no_blockbuster
     ],
 )
 async def test_revoke_pasted_slack_token(
-    client, logged_in_headers, monkeypatch, token, identity, provider_response, expected
+    client, logged_in_headers, monkeypatch, respx_mock, token, identity, provider_response, expected
 ):
     monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "self_managed")
     monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", "{}")
+    # Web API tokens must pass validation before they can be stored and revoked.
+    if not token.startswith("xapp-"):
+        respx_mock.post("https://slack.com/api/auth.test", headers={"Authorization": f"Bearer {token}"}).respond(
+            200, json={"ok": True}
+        )
     created = await client.post(
         "/api/v1/connections",
         headers=logged_in_headers,
@@ -43,10 +47,8 @@ async def test_revoke_pasted_slack_token(
     )
     assert created.status_code == 201, created.text
     connection_id = created.json()["id"]
-    calls = []
 
     def slack(request):
-        calls.append(request)
         assert request.method == "POST"
         assert str(request.url) == "https://slack.com/api/auth.revoke"
         assert request.headers["Authorization"] == f"Bearer {token}"
@@ -56,23 +58,18 @@ async def test_revoke_pasted_slack_token(
             raise httpx.ReadTimeout(msg, request=request)
         return httpx.Response(200, json=provider_response)
 
-    original_client = httpx.AsyncClient
-    monkeypatch.setattr(
-        providers.httpx,
-        "AsyncClient",
-        lambda **kwargs: original_client(transport=httpx.MockTransport(slack), **kwargs),
-    )
+    revoke_request = respx_mock.post("https://slack.com/api/auth.revoke").mock(side_effect=slack)
     revoked = await client.post(f"/api/v1/connections/{connection_id}/revoke", headers=logged_in_headers)
     assert revoked.status_code == 200, revoked.text
     assert revoked.json()["provider_revocation"] == expected
     assert revoked.json()["status"] == "revoked"
     assert revoked.json()["has_credentials"] is False
     assert token not in revoked.text
-    assert len(calls) == 1
+    assert revoke_request.call_count == 1
     async with session_scope() as session:
         assert await session.get(ConnectionSecret, UUID(connection_id)) is None
 
     repeated = await client.post(f"/api/v1/connections/{connection_id}/revoke", headers=logged_in_headers)
     assert repeated.status_code == 200, repeated.text
     assert repeated.json()["provider_revocation"] == "not_applicable"
-    assert len(calls) == 1
+    assert revoke_request.call_count == 1
