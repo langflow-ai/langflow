@@ -27,7 +27,6 @@ from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey, UnmaskedApiKeyRead
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.storage.local import LocalStorageService
 from lfx.services.deps import session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -153,24 +152,6 @@ async def test_upload_file(files_client, files_created_api_key):
 
     response_json = response.json()
     assert "id" in response_json
-
-
-@pytest.fixture(name="save_file_spy")
-def save_file_spy_fixture(monkeypatch):
-    """Record every file name handed to the storage layer.
-
-    Rejecting an upload must happen before anything is written, so the tests below
-    assert on this list rather than on the status code alone.
-    """
-    saved_file_names: list[str] = []
-    original_save_file = LocalStorageService.save_file
-
-    async def recording_save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
-        saved_file_names.append(file_name)
-        await original_save_file(self, flow_id, file_name, data, append=append)
-
-    monkeypatch.setattr(LocalStorageService, "save_file", recording_save_file)
-    return saved_file_names
 
 
 async def test_should_reject_with_400_when_uploaded_file_is_empty(files_client, files_created_api_key, save_file_spy):
