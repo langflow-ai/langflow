@@ -72,6 +72,42 @@ def test_error_reads_text_from_error_message_payload():
     assert "component blew up" in out[0].message
 
 
+def test_integration_error_preserves_hint_and_code_without_traceback():
+    from lfx.integrations import AuthExpiredError
+    from lfx.schema.message import ErrorMessage
+
+    error = AuthExpiredError(provider="google")
+    message = ErrorMessage(exception=error)
+    payload = message.model_dump()
+    payload["content_blocks"][1]["contents"][0]["traceback"] = "private traceback"
+
+    event = AGUITranslator(run_id="r1", thread_id="t1").translate("error", payload)[0]
+
+    assert isinstance(event, RunErrorEvent)
+    assert error.safe_message in event.message
+    assert error.hint in event.message
+    assert event.code == error.code
+    assert "private traceback" not in event.message
+
+
+def test_error_deduplicates_solutions_and_ignores_other_content():
+    payload = {
+        "text": "Failure",
+        "content_blocks": [
+            {
+                "contents": [
+                    {"type": "error", "solution": "Retry later."},
+                    {"type": "error", "solution": "Retry later."},
+                    {"type": "text", "solution": "Not an error hint"},
+                ]
+            },
+        ],
+    }
+    event = AGUITranslator(run_id="r1", thread_id="t1").translate("error", payload)[0]
+    assert event.message == "Failure\n\nRetry later."
+    assert event.code is None
+
+
 def test_token_sequence_emits_start_contents_then_end_on_boundary():
     t = AGUITranslator(run_id="r1", thread_id="t1")
     t.start()
