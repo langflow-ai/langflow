@@ -777,6 +777,15 @@ def _strip_template_field_value(
     field["value"] = _strip_structured_secret_values_in_place(field.get("value"))
 
 
+def is_secret_header_name(header_name: object) -> bool:
+    """Whether a header name reads as a credential rather than as routing data.
+
+    Both halves of the Headers-box handling are held to this, so a header rewritten at
+    save time is the same one kept and declared at packaging.
+    """
+    return _is_secret_name(header_name)
+
+
 def mcp_header_scope(server_name: str) -> str:
     """The scope a Headers box's variables are named under, apart from the server's own.
 
@@ -836,11 +845,11 @@ def _strip_mcp_header_field(
     server_name = name if isinstance(name, str) and name else "server"
     preserved: list[tuple[Callable[[object], None], object]] = []
     for set_value, header_name, value in iter_mcp_header_cells(headers):
-        # The same rule save time applies, not `_is_secret_name`. Save time rewrites
-        # every header outside `NON_SECRET_HEADERS`, so `X-Tenant` becomes a reference
-        # too; checking a narrower rule here left that name in the flow and declared
-        # nothing, and the target was never asked for it.
-        if str(header_name).lower() in _mcp_config_secrets.NON_SECRET_HEADERS:
+        # Credential-named headers only, which is the rule the save side is held to as
+        # well so the two agree. Treating every header outside `NON_SECRET_HEADERS` as a
+        # credential swept up ordinary routing headers: `X-Tenant: acme` became a
+        # variable an operator then had to provision for a value that is not a secret.
+        if not _is_secret_name(header_name):
             continue
         expected = _mcp_config_secrets.variable_name_for(mcp_header_scope(server_name), str(header_name))
         if (

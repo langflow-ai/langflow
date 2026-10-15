@@ -622,21 +622,21 @@ class TestTheComponentsOwnHeadersBox:
         assert variables[variable_name_for(mcp_header_scope("ui_svc"), "Authorization")] == "Bearer from-the-box"
         assert variables[variable_name_for("ui_svc", "Authorization")] == "from-config"
 
-    def test_should_declare_a_custom_header_save_time_rewrote(self):
-        """Save time rewrites every header outside NON_SECRET_HEADERS, so packaging must too.
+    def test_should_leave_an_ordinary_routing_header_alone(self):
+        """`X-Tenant: acme` is data, not a credential, and must survive untouched.
 
-        Checking a narrower rule left the generated name in the flow and declared nothing,
-        so the target was never asked for it and the header resolved to its own name.
+        An earlier version treated every header outside NON_SECRET_HEADERS as a secret,
+        which is the rule a server *config* follows. Here it swept up routing headers
+        and turned a tenant id into a variable somebody then had to provision.
         """
         from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets
         from langflow.utils.flow_secrets import strip_secret_field_values_in_place
 
-        flow_data = self._flow({"X-Tenant": "tenant-123", "Accept": "application/json"})
-        extract_and_strip_mcp_secrets(flow_data)
-        references: set[str] = set()
+        flow_data = self._flow({"X-Tenant": "acme", "Authorization": "Bearer ui-token"})
 
-        strip_secret_field_values_in_place(flow_data, variable_references=references)
+        _, variables = extract_and_strip_mcp_secrets(flow_data)
+        strip_secret_field_values_in_place(flow_data, variable_references=set())
 
-        expected = variable_name_for(mcp_header_scope("ui_svc"), "X-Tenant")
-        assert self._headers(flow_data) == {"X-Tenant": expected, "Accept": "application/json"}
-        assert references == {expected}
+        expected = variable_name_for(mcp_header_scope("ui_svc"), "Authorization")
+        assert list(variables) == [expected]
+        assert self._headers(flow_data) == {"X-Tenant": "acme", "Authorization": expected}

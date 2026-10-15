@@ -30,7 +30,7 @@ from langflow.services.database.lock_retry import is_database_lock_error
 from langflow.services.database.models import MCPServer
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
-from langflow.utils.flow_secrets import iter_mcp_header_cells, mcp_header_scope
+from langflow.utils.flow_secrets import is_secret_header_name, iter_mcp_header_cells, mcp_header_scope
 from langflow.utils.mcp_config_secrets import (
     HEADER_ARG_FLAG,
     NON_SECRET_HEADERS,
@@ -120,7 +120,12 @@ def _strip_component_headers(template: dict[str, Any], server_name: str, variabl
     if not isinstance(field, dict) or not isinstance(field.get("value"), (dict, list)):
         return
     # The box is a list of rows as often as a mapping, and the component reads both.
-    cells = list(iter_mcp_header_cells(field["value"]))
+    # Only credential-named headers are handed over: `strip_config_secrets` rewrites
+    # everything outside `NON_SECRET_HEADERS`, which is right for a server config but
+    # too wide here -- it would turn `X-Tenant: acme` into a variable to provision.
+    cells = [cell for cell in iter_mcp_header_cells(field["value"]) if is_secret_header_name(cell[1])]
+    if not cells:
+        return
     stripped, header_variables, found = strip_config_secrets(
         {"headers": {str(name): value for _, name, value in cells}}, mcp_header_scope(server_name)
     )
