@@ -32,7 +32,7 @@ import hashlib
 import json
 import math
 from decimal import Decimal
-from typing import Any
+from typing import Any, NoReturn
 
 from lfx.services.flow_operations.exceptions import FlowDataValidationError
 from lfx.services.flow_operations.schema import load_node_schema
@@ -176,12 +176,21 @@ def _without(mapping: dict[str, Any], keys: frozenset[str]) -> dict[str, Any]:
     return {key: item for key, item in mapping.items() if key not in keys}
 
 
+def _reject_constant(token: str) -> NoReturn:
+    msg = f"{token} is not valid JSON"
+    raise ValueError(msg)
+
+
 def parse_handle(handle: Any) -> dict[str, Any] | None:
-    """Return the object a handle string encodes (JSON with ``œ`` for ``"``), or None when it encodes none."""
+    """Return the object a handle string encodes (JSON with ``œ`` for ``"``), or None when it encodes none.
+
+    The string is parsed as strict JSON, as JavaScript's ``JSON.parse`` reads
+    it: the ``NaN``, ``Infinity`` and ``-Infinity`` tokens do not parse.
+    """
     if not isinstance(handle, str):
         return None
     try:
-        parsed = json.loads(handle.replace(_HANDLE_QUOTE, '"'))
+        parsed = json.loads(handle.replace(_HANDLE_QUOTE, '"'), parse_constant=_reject_constant)
     except ValueError:
         return None
     return parsed if isinstance(parsed, dict) else None

@@ -59,6 +59,15 @@ describe("parseHandle", () => {
     expect(parseHandle("[1]")).toBeNull();
     expect(parseHandle(3)).toBeNull();
   });
+
+  // The engine's canonical tests read the same strings.
+  it.each([
+    "{œnameœ:œoutœ,œxœ:NaN}",
+    "{œnameœ:œoutœ,œxœ:Infinity}",
+    "{œnameœ:œoutœ,œxœ:-Infinity}",
+  ])("does not parse a non-finite token in %s", (handle) => {
+    expect(parseHandle(handle)).toBeNull();
+  });
 });
 
 describe("orderedRows", () => {
