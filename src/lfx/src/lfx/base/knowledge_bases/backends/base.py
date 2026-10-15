@@ -195,8 +195,8 @@ class BaseVectorStoreBackend(ABC):
         (``connector_base.ConnectorIngestionSource.resolve_secret``):
 
         1. Langflow's ``variable_service`` scoped to ``self.user_id``.
-        2. Process env var of the same name as a fallback for desktop /
-           single-user deployments that skip the UI step.
+        2. Process env var of the same name, only when ``fallback_to_env_var``
+           is enabled, for deployments that skip the UI step.
 
         The provenance matters for values that become a *network destination*.
         A Langflow variable is written by the tenant through the UI/API, so a URL
@@ -235,6 +235,15 @@ class BaseVectorStoreBackend(ABC):
                             return str(value), "variable"
             except Exception as exc:  # noqa: BLE001 — fall through to env
                 logger.debug("variable_service lookup for %s failed: %s", variable_name, exc)
+
+        from lfx.services.deps import get_settings_service
+
+        try:
+            fallback_enabled = get_settings_service().settings.fallback_to_env_var
+        except (AttributeError, TypeError):
+            fallback_enabled = False
+        if not fallback_enabled:
+            return None, "missing"
 
         # safe_getenv denies reserved names (LANGFLOW_SECRET_KEY, DATABASE_URL, ...) so a
         # tenant-supplied KB secret name cannot exfiltrate the server's own secrets.
