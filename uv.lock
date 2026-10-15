@@ -10236,7 +10236,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-slack"
-version = "0.2.1"
+version = "0.2.2"
 source = { editable = "src/bundles/slack" }
 dependencies = [
     { name = "aiohttp" },
