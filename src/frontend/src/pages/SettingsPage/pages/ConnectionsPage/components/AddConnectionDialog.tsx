@@ -115,7 +115,6 @@ export function AddConnectionDialog({
   );
   const slackToken = useSlackTokenConnection({
     providerId,
-    provider,
     deploymentContext,
     reauthorizing: !!reauthorize,
     create: create.mutateAsync,
@@ -209,10 +208,38 @@ export function AddConnectionDialog({
     [reauthorize, requestable, ceiling],
   );
 
+  const reauthorizeId = reauthorize?.id;
+  const initializedReauthorization = useRef<{
+    connectionId: string;
+    registrationId: string;
+  } | null>(null);
+
   useEffect(() => {
-    if (!reauthorizeList) return;
-    setSelectedScopes(new Set(reauthorizeList.granted));
-  }, [reauthorizeList]);
+    if (!reauthorizeId || !reauthorizeList) {
+      initializedReauthorization.current = null;
+      return;
+    }
+    if (registrations.isLoading || !resolvedRegistration) return;
+    // Refetches may change the available scopes without changing the user's
+    // choices. Apply defaults only for a new connection or registration.
+    if (
+      initializedReauthorization.current?.connectionId === reauthorizeId &&
+      initializedReauthorization.current?.registrationId ===
+        resolvedRegistration
+    ) {
+      return;
+    }
+    initializedReauthorization.current = {
+      connectionId: reauthorizeId,
+      registrationId: resolvedRegistration,
+    };
+    setSelectedScopes(new Set(reauthorizeList.defaultSelected));
+  }, [
+    reauthorizeId,
+    reauthorizeList,
+    registrations.isLoading,
+    resolvedRegistration,
+  ]);
 
   // Consent lands on the server: only a row that moved on from the state it had
   // when consent started carries this authorization's outcome.
@@ -358,7 +385,7 @@ export function AddConnectionDialog({
     displayName.trim().length > 0 &&
     (usesToken ? slackToken.tokenKind !== null : !noRegistration);
 
-  /** A pasted token is stored as-is: no consent window, nothing to wait for. */
+  /** The server validates pasted tokens before returning the connection. */
   const onCreateWithToken = async () => {
     try {
       const row = await slackToken.createWithToken({
@@ -548,9 +575,6 @@ export function AddConnectionDialog({
                   onAllowBackgroundRunsChange={
                     slackToken.setAllowBackgroundRuns
                   }
-                  botTokenScopes={slackToken.botTokenScopes}
-                  tokenScopes={slackToken.tokenScopes}
-                  onToggleTokenScope={slackToken.toggleTokenScope}
                 />
               )}
 

@@ -9,6 +9,7 @@ from lfx.integrations import (
     AuthExpiredError,
     ConnectionNotAuthorizedError,
     IntegrationError,
+    IntegrationNetworkError,
     InvalidRequestError,
     ProviderUnavailableError,
     RateLimitedError,
@@ -40,6 +41,7 @@ def test_integration_error_codes_are_stable() -> None:
         "scope-missing",
         "rate-limited",
         "provider-unavailable",
+        "network-error",
         "action-unsupported",
         "policy-blocked",
         "invalid-request",
@@ -136,3 +138,13 @@ def test_permanent_request_errors_survive_normalization(error_type):
     assert error.code in INTEGRATION_ERROR_CODES
     assert normalize_integration_error(error, provider="google") is error
     assert "Retry the action later" not in error.hint
+
+
+def test_network_error_preserves_its_distinct_code_and_safe_guidance():
+    error = IntegrationNetworkError(provider="google", reason="timeout", host="gmail.googleapis.com")
+    assert normalize_integration_error(error, provider="google") is error
+    assert error.code in INTEGRATION_ERROR_CODES
+    assert error.retryable is False
+    assert error.http_status == 504
+    assert "timed out" in str(error)
+    assert error.hint in str(error)

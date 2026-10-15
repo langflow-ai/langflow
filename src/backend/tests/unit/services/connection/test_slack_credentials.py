@@ -82,14 +82,18 @@ async def test_an_app_level_token_is_stored_with_a_server_set_marker(
 
 
 async def test_a_bot_token_cannot_claim_the_app_level_marker(
-    client: AsyncClient, logged_in_headers: dict[str, str]
+    client: AsyncClient, logged_in_headers: dict[str, str], respx_mock
 ) -> None:
+    probe = respx_mock.post("https://slack.com/api/auth.test").respond(
+        200, json={"ok": True}, headers={"x-oauth-scopes": "chat:write,reactions:write"}
+    )
     forged = await client.post(
         "api/v1/connections",
         json=_body(BOT_TOKEN, name="forged", granted_scopes=["chat:write", "connections:write"]),
         headers=logged_in_headers,
     )
     assert forged.status_code == 422, forged.text
+    assert not probe.called
 
     honest = await client.post(
         "api/v1/connections",
@@ -98,6 +102,7 @@ async def test_a_bot_token_cannot_claim_the_app_level_marker(
     )
     assert honest.status_code == 201, honest.text
     assert honest.json()["granted_scopes"] == ["chat:write", "reactions:write"]
+    assert probe.call_count == 1
 
 
 @pytest.mark.parametrize(
