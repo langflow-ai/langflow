@@ -127,6 +127,7 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
                 "MrscraperWebSearch",
             },
         ),
+        ("specstream", {"SpecStreamFindListComponent"}),
         (
             "figranium",
             {

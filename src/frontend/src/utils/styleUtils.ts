@@ -521,6 +521,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Serping API", name: "serpingapi", icon: "Search" },
   { display_name: "Serply", name: "serply", icon: "Search" },
   { display_name: "Slack", name: "slack", icon: "Slack" },
+  { display_name: "SpecStream", name: "specstream", icon: "SpecStream" },
   { display_name: "Spider", name: "spider", icon: "Spider" },
   { display_name: "Supabase", name: "supabase", icon: "Supabase" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
