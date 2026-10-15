@@ -14,9 +14,9 @@ appended, and a deleted row's slot is taken by the last row.
 
 from __future__ import annotations
 
-import math
 from typing import TYPE_CHECKING, Any
 
+from lfx.services.flow_operations.canonical import is_finite_number
 from lfx.services.flow_operations.exceptions import FlowOperationValidationError
 
 if TYPE_CHECKING:
@@ -53,7 +53,7 @@ class ListIndex:
     def require_position(self, row: dict[str, Any], *, context: str) -> None:
         """Check that a table row carries a finite numeric position."""
         position = row.get(self.keyed.position)
-        if isinstance(position, bool) or not isinstance(position, (int, float)) or not math.isfinite(position):
+        if isinstance(position, bool) or not isinstance(position, (int, float)) or not is_finite_number(position):
             msg = f"{context}: a table row's {self.keyed.position} must be a finite number"
             raise FlowOperationValidationError(msg)
 
