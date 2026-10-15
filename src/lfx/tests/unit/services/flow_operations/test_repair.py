@@ -265,6 +265,17 @@ def test_repair_is_deterministic_and_leaves_the_input_alone():
     assert graph == original
 
 
+def test_an_integer_too_large_for_a_double_is_replaced_with_null():
+    graph = {"nodes": [_node("a", position={"x": 10**309, "y": 2**53 + 1})], "edges": []}
+
+    result = repair_flow_data(graph)
+
+    assert result.flow_data["nodes"][0]["position"] == {"x": None, "y": 2**53 + 1}
+    assert [(fix.code, fix.path) for fix in result.fixes] == [
+        (GraphViolationCode.NON_FINITE_NUMBER, ("nodes", 0, "position", "x"))
+    ]
+
+
 def test_a_badly_broken_graph_comes_out_following_every_rule():
     graph = {
         "nodes": [None, {"id": 3}, {"id": "a", "data": []}, {"id": "a"}, {"data": {"node": {"template": 1}}}],

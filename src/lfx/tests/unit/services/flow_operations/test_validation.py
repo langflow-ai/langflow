@@ -107,6 +107,15 @@ def test_non_finite_numbers_are_violations_unless_values_are_skipped():
     assert find_graph_violations(graph, check_values=False) == []
 
 
+def test_an_integer_too_large_for_a_double_is_a_non_finite_number():
+    # JavaScript reads it as Infinity. Integers within the double range stay valid.
+    graph = _graph()
+    graph["nodes"][0]["position"] = {"x": 10**309, "y": 2**53 + 1}
+
+    assert _codes(graph) == [(GraphViolationCode.NON_FINITE_NUMBER, ("nodes", 0, "position", "x"))]
+    assert find_graph_violations(graph, check_values=False) == []
+
+
 def test_validate_raises_with_every_violation():
     graph = _graph()
     graph["nodes"].append(_node("a"))
