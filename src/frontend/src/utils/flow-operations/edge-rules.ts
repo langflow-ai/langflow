@@ -86,7 +86,8 @@ export function readHandles(edge: JsonObject): Handles {
 
 function handle(edge: JsonObject, key: string): JsonObject {
   const data = edge.data;
-  if (data !== undefined && !isObject(data))
+  // `data: null` holds no handle objects, as if it were missing (ops-history, "Repair").
+  if (data !== undefined && data !== null && !isObject(data))
     throw edgeError(edge, "EDGE_HANDLE_INVALID", "data must be an object");
   const hasObject = isObject(data) && key in data;
   const hasString = key in edge;
