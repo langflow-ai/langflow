@@ -90,7 +90,7 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
     async def search_messages(self) -> list[Data]:
         """Return the matching messages as Data rows."""
         if self._rows is not None:
-            self.status = f"{len(self._rows)} message(s)"
+            self.status = self._rows
             return self._rows
         limit = int(self.top or DEFAULT_TOP)
         if limit <= 0:
@@ -119,7 +119,7 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
         self._next_link = next_link
         rows = [Data(data=item) for item in items]
         self._rows = rows
-        self.status = f"{len(rows)} message(s)"
+        self.status = rows
         return rows
 
     async def next_page_link(self) -> Message:

@@ -92,7 +92,7 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
     async def list_events(self) -> list[Data]:
         """Return the expanded event instances as Data rows."""
         if self._rows is not None:
-            self.status = f"{len(self._rows)} event(s)"
+            self.status = self._rows
             return self._rows
         limit = int(self.top or DEFAULT_TOP)
         if limit <= 0:
@@ -115,7 +115,7 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
         self._next_link = next_link
         rows = [Data(data=item) for item in items]
         self._rows = rows
-        self.status = f"{len(rows)} event(s)"
+        self.status = rows
         return rows
 
     async def next_page_link(self) -> Message:
