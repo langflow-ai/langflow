@@ -115,14 +115,21 @@ class AtlasCloudModelComponent(LCModelComponent):
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             model_list = response.json()
-        except requests.RequestException as e:
+        except (requests.RequestException, ValueError) as e:
             self.status = f"Error fetching models: {e}"
+            return MODEL_NAMES
+
+        data = model_list.get("data") if isinstance(model_list, dict) else None
+        if not isinstance(data, list):
             return MODEL_NAMES
 
         models = [
             model_id
-            for model in model_list.get("data", [])
-            if (model_id := model.get("id")) and not any(m in model_id.lower() for m in _NON_CHAT_MARKERS)
+            for model in data
+            if isinstance(model, dict)
+            and isinstance(model_id := model.get("id"), str)
+            and model_id
+            and not any(m in model_id.lower() for m in _NON_CHAT_MARKERS)
         ]
         return models or MODEL_NAMES
 

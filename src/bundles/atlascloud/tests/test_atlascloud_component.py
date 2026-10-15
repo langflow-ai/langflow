@@ -207,6 +207,23 @@ def test_get_models_falls_back_when_everything_is_filtered(mock_get):
     assert component.get_models() == MODEL_NAMES
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [None, [], "<html></html>", {"data": None}, {"data": "oops"}, {"data": [None, 3, {"id": 5}, {"name": "x"}]}],
+)
+@patch("requests.get")
+def test_get_models_falls_back_on_malformed_payload(mock_get, payload):
+    mock_response = MagicMock()
+    mock_response.json.return_value = payload
+    mock_response.raise_for_status.return_value = None
+    mock_get.return_value = mock_response
+
+    component = AtlasCloudModelComponent()
+    component.set_attributes(dict(DEFAULT_KWARGS))
+
+    assert component.get_models() == MODEL_NAMES
+
+
 @patch("requests.get")
 def test_get_models_fallback(mock_get):
     mock_get.side_effect = requests.RequestException("Network error")
