@@ -1045,6 +1045,7 @@ class ErrorMessage(Message):
                             field=str(exception.field) if hasattr(exception, "field") else None,
                             reason=markdown_reason,
                             solution=str(solution) if solution is not None else None,
+                            code=exception.code if isinstance(exception, IntegrationError) else None,
                             traceback=traceback.format_exc() if include_traceback else "",
                         )
                     ],

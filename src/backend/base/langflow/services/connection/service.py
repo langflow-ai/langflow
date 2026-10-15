@@ -15,6 +15,7 @@ from lfx.integrations.errors import (
     ConnectionUnresolvedError,
     IntegrationError,
     IntegrationPolicyBlockedError,
+    ProviderUnavailableError,
     ScopeMissingError,
 )
 from lfx.integrations.models import (
@@ -584,6 +585,15 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                     credential = await self._credential_from_row(
                         session, row=row, rejected_token_digest=request.rejected_token_digest
                     )
+                except AuthExpiredError as exc:
+                    _set_status(row, PersistedConnectionStatus.EXPIRED)
+                    row.health = ConnectionHealth.UNHEALTHY.value
+                    row.health_checked_at = _utc_now()
+                    row.updated_at = row.health_checked_at
+                    session.add(row)
+                    # Let the transaction commit the health change before the
+                    # run receives the error, as a manual health check would.
+                    resolution_error = exc
                 except IntegrationError as exc:
                     # A rotating refresh token may already have been exchanged. Keep
                     # that encrypted update; the base class checks scopes only after
@@ -820,6 +830,8 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         try:
             payload = await broker.refresh_if_needed(session, row, payload, rejected_token_digest=rejected_token_digest)
         except OAuthError as exc:
+            if exc.reason == "provider-unavailable":
+                raise ProviderUnavailableError(provider=row.provider_key) from None
             if getattr(exc, "reason", None) == "registration-unavailable":
                 # The credential is fine and reconnecting would not help: this
                 # process cannot see the registration the connection was
