@@ -470,8 +470,11 @@ provider's account or admin console as well. This includes rejected token types 
 network failures. For Slack Socket Mode app-level tokens (`xapp-`), use
 **Basic Information > App-Level Tokens** in the Slack app's settings if the request fails.
 `not_applicable` means no credential was stored or the connection used a pasted token
-for a provider other than Slack. The Connections page distinguishes confirmed provider
-revocation from local credential removal. For Microsoft's `unsupported`, remove the app's consent in Entra as
+for a provider other than Slack.
+
+The Connections page distinguishes confirmed provider revocation from local credential removal.
+
+For Microsoft's `unsupported`, remove the app's consent in Entra as
 described in [Revocation](./entra-app-registration#revocation).
 
 `revoked` reports token revocation, not a complete uninstall. Langflow sends only the
