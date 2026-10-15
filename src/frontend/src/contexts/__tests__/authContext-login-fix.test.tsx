@@ -40,25 +40,23 @@ jest.mock("@/utils/local-storage-util", () => ({
 
 const mockSetIsAuthenticated = jest.fn();
 const mockSetIsAdmin = jest.fn();
+const mockSetUserData = jest.fn();
 
 type MockAuthState = {
   setIsAuthenticated: typeof mockSetIsAuthenticated;
   setIsAdmin: typeof mockSetIsAdmin;
+  setUserData: typeof mockSetUserData;
 };
 
 const getMockAuthState = (): MockAuthState => ({
   setIsAuthenticated: mockSetIsAuthenticated,
   setIsAdmin: mockSetIsAdmin,
+  setUserData: mockSetUserData,
 });
 
 const mockAuthStore = Object.assign(
-  <T,>(selector: (state: MockAuthState) => T): T => {
-    const state = {
-      setIsAuthenticated: mockSetIsAuthenticated,
-      setIsAdmin: mockSetIsAdmin,
-    };
-    return selector(state);
-  },
+  <T,>(selector: (state: MockAuthState) => T): T =>
+    selector(getMockAuthState()),
   { getState: getMockAuthState },
 );
 

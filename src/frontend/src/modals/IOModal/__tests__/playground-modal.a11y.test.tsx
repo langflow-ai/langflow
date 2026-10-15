@@ -100,16 +100,16 @@ jest.mock("@/customization/feature-flags", () => ({
 // and spin into a "Maximum update depth exceeded" loop.
 const messagesQueryResult = { isFetched: true, refetch: jest.fn() };
 const deleteSessionResult = { mutate: jest.fn() };
-const sessionsFromFlowData = { sessions: [] as string[] };
+const sessionsFromFlowData: string[] = [];
 const sessionsFromFlowResult = {
   data: sessionsFromFlowData,
   isLoading: false,
   refetch: jest.fn(),
 };
 
-jest.mock("@/controllers/API/queries/messages", () => ({
+jest.mock("@/controllers/API/queries/messages/use-get-message-history", () => ({
   __esModule: true,
-  useGetMessagesQuery: () => messagesQueryResult,
+  useGetMessageHistory: () => messagesQueryResult,
 }));
 
 jest.mock("@/controllers/API/queries/messages/use-delete-sessions", () => ({

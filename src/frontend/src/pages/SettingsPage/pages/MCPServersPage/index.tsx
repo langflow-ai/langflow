@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Loading from "@/components/ui/loading";
+import { McpServerNotFoundError } from "@/controllers/API/queries/mcp/mcp-server-not-found-error";
 import { useDeleteMCPServer } from "@/controllers/API/queries/mcp/use-delete-mcp-server";
 import { useGetMCPServer } from "@/controllers/API/queries/mcp/use-get-mcp-server";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
@@ -18,6 +19,7 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import type { MCPServerInfoType } from "@/types/mcp";
 import { cn } from "@/utils/utils";
+import { serverErrorText } from "./serverErrorText";
 
 export default function MCPServersPage() {
   const { t } = useTranslation();
@@ -38,13 +40,15 @@ export default function MCPServersPage() {
       const data = await getServer({ name });
       setEditInitialData(data);
       setEditOpen(true);
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-    } catch (e: any) {
+    } catch (e: unknown) {
+      if (e instanceof McpServerNotFoundError) {
+        setErrorData({ title: t("mcp.servers.errorNoLongerExists") });
+        return;
+      }
       setErrorData({
         title: t("mcp.servers.errorFetching"),
-        list: [e.message],
+        list: [e instanceof Error ? e.message : String(e)],
       });
-    } finally {
     }
   };
 
@@ -136,7 +140,13 @@ export default function MCPServersPage() {
                       >
                         {server.name}
                       </span>
-                      <ShadTooltip content={server.error}>
+                      <ShadTooltip
+                        content={
+                          server.error
+                            ? serverErrorText(server.error, t)
+                            : undefined
+                        }
+                      >
                         <span
                           className={cn(
                             "cursor-default select-none !text-mmd text-muted-foreground",
@@ -164,7 +174,7 @@ export default function MCPServersPage() {
                         <span className="sr-only">
                           {t("mcp.servers.statusErrorDetail", {
                             name: server.name,
-                            error: server.error,
+                            error: serverErrorText(server.error, t),
                           })}
                         </span>
                       )}

@@ -43,7 +43,6 @@ def test_langflow_base_default_is_service_complete_without_extensions_or_torch()
 
     assert {
         "redis",
-        "chromadb",
         "mcp",
         "kubernetes",
         "aiobotocore",
@@ -57,7 +56,7 @@ def test_langflow_base_default_is_service_complete_without_extensions_or_torch()
         "openlayer",
     } <= requirement_names
     assert not any(name.startswith("lfx-") for name in requirement_names)
-    assert requirement_names.isdisjoint({"torch", "torchvision", "litellm"})
+    assert requirement_names.isdisjoint({"torch", "torchvision", "litellm", "chromadb", "langchain-chroma", "altk"})
 
 
 def test_full_langflow_consumes_base_workspace_distribution():

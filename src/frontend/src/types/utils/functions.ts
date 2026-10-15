@@ -23,9 +23,12 @@ export interface ColumnField {
   sortable: boolean;
   filterable: boolean;
   formatter?: FormatterType;
+  // Declared backend type (e.g. "str", "boolean"); the formatter is derived from it when absent.
+  type?: string;
   description?: string;
   load_from_db?: boolean;
   disable_edit?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   default?: any;
   edit_mode?: "modal" | "inline" | "popover";
   hidden?: boolean;

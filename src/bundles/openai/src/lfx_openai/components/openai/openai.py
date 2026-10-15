@@ -1,7 +1,7 @@
 from langchain_openai import OpenAIEmbeddings
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
-from lfx.base.models.provider_ssrf import openai_compatible_client_kwargs
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, openai_compatible_client_kwargs
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 
@@ -75,6 +75,19 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
     ]
 
     def build_embeddings(self) -> Embeddings:
+        # A key that resolves to a value held in the server process environment is the
+        # operator's credential: it may only leave the deployment to an endpoint the
+        # operator sanctioned (the default OpenAI endpoint or an allowlisted host).
+        # Pass the same expression OpenAIEmbeddings receives below: `or None` means an empty key
+        # reaches the SDK as None, at which point it loads OPENAI_API_KEY from the server
+        # environment and sends it to this tenant-chosen base URL.
+        ensure_credential_endpoint_allowed(
+            self.openai_api_key or None,
+            self.openai_api_base,
+            default_url=DEFAULT_OPENAI_API_BASE,
+            sdk_env_fallback="OPENAI_API_KEY",
+        )
+
         # openai_api_base is tenant-editable and the SDK sends the operator's stored API key to
         # whatever host it names. Apply the connector SSRF policy and route a custom endpoint
         # through DNS-pinned, redirect-free clients. No-op for the default OpenAI endpoint.

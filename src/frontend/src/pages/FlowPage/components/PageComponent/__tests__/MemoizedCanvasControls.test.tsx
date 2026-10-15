@@ -6,6 +6,13 @@ const mockCurrentFlow = {
   locked: false,
 };
 
+const mockAssistantState = { isAssistantProcessing: false };
+
+jest.mock("@/stores/assistantManagerStore", () => ({
+  __esModule: true,
+  default: (selector) => selector(mockAssistantState),
+}));
+
 jest.mock("nanoid", () => ({
   nanoid: () => "test-id",
 }));
@@ -45,10 +52,11 @@ jest.mock("@/stores/flowStore", () => ({
 
 jest.mock("@/components/core/canvasControlsComponent/CanvasControls", () => ({
   __esModule: true,
-  default: ({ children, effectiveLocked }) => (
+  default: ({ children, effectiveLocked, assistantLocked }) => (
     <div
       data-testid="canvas-controls"
       data-effective-locked={String(Boolean(effectiveLocked))}
+      data-assistant-locked={String(Boolean(assistantLocked))}
     >
       {children}
     </div>
@@ -87,6 +95,7 @@ describe("MemoizedCanvasControls", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCurrentFlow.locked = false;
+    mockAssistantState.isAssistantProcessing = false;
   });
 
   it("should_render_canvas_controls_wrapper", () => {
@@ -133,4 +142,38 @@ describe("MemoizedCanvasControls", () => {
       "Symbol(react.memo)",
     );
   });
+
+  it("keeps the assistant reachable when only its own run locks editing", () => {
+    mockAssistantState.isAssistantProcessing = true;
+
+    render(<MemoizedCanvasControls {...defaultProps} />);
+
+    const controls = screen.getByTestId("canvas-controls");
+    expect(controls).toHaveAttribute("data-effective-locked", "true");
+    expect(controls).toHaveAttribute("data-assistant-locked", "false");
+  });
+
+  it.each([
+    ["flow lock", true, false, false],
+    ["permission restriction", false, true, false],
+    ["external agent", false, false, true],
+  ])(
+    "preserves the %s during assistant processing",
+    (_reason, locked, isReadOnly, isAgentWorking) => {
+      mockCurrentFlow.locked = locked;
+      mockAssistantState.isAssistantProcessing = true;
+
+      render(
+        <MemoizedCanvasControls
+          {...defaultProps}
+          isReadOnly={isReadOnly}
+          isAgentWorking={isAgentWorking}
+        />,
+      );
+
+      const controls = screen.getByTestId("canvas-controls");
+      expect(controls).toHaveAttribute("data-effective-locked", "true");
+      expect(controls).toHaveAttribute("data-assistant-locked", "true");
+    },
+  );
 });

@@ -1,6 +1,7 @@
 import copy
 import operator
 from textwrap import dedent
+from types import SimpleNamespace
 
 import pytest
 from lfx.components.data import FileComponent
@@ -14,6 +15,27 @@ from lfx.graph.graph.constants import Finish
 from lfx.schema import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+
+
+@pytest.fixture(autouse=True)
+def _unrestricted_local_files(monkeypatch):
+    """Opt these graphs out of local-file containment, on by default since 1.12.3.
+
+    ``_file_component`` points a FileInput at the placeholder ``"test.txt"`` and stubs the
+    component's output, so nothing is ever read from disk. Under containment that placeholder
+    is still a relative path with no user or flow scope behind it -- these graphs are built
+    directly rather than loaded for a user -- so building the vertex denies it.
+
+    The denial also depends on test ordering: the FileInput is only recognized as canonical
+    once some earlier test in the same worker has warmed ``component_cache.all_types_dict``,
+    which is why this surfaced as one erroring test per CI run rather than a clean failure.
+    These tests assert graph topology and run order, not what containment does with a path, so
+    they take the same single-tenant opt-out as the rest of #15210's test changes.
+    """
+    monkeypatch.setattr(
+        "lfx.utils.file_path_security.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+    )
 
 
 def _sample_dataframe() -> DataFrame:

@@ -18,6 +18,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from lfx.base.knowledge_bases.backends import is_local_chroma
+from lfx.base.knowledge_bases.backends.naming import ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 from lfx.base.knowledge_bases.validation import validate_collection_name
 from lfx.base.models.provider_registry import is_api_key_optional, provider_name_for_id, resolve_provider_id
@@ -64,7 +65,6 @@ from langflow.services.memory_base.ingestion import (
 from langflow.services.memory_base.kb_path_helpers import (
     BackendProvisioningError,
     delete_kb,
-    delete_kb_remote_collection,
     initialize_kb,
     resolve_kb_username,
     sanitize_kb_name,
@@ -219,7 +219,7 @@ async def _create_kb_record_for_memory_base(
     embedding_model: str,
     backend_type: str,
     backend_config: dict,
-) -> None:
+) -> uuid.UUID:
     """Persist the ``knowledge_base`` row backing a Memory Base.
 
     Memory Bases used to exist only as a directory plus a sidecar file, so their
@@ -232,7 +232,7 @@ async def _create_kb_record_for_memory_base(
     """
     from langflow.api.utils import knowledge_base_service
 
-    await knowledge_base_service.create_record(
+    record = await knowledge_base_service.create_record(
         user_id=user_id,
         name=kb_name,
         model_selection={"name": embedding_model, "provider": embedding_provider},
@@ -240,6 +240,7 @@ async def _create_kb_record_for_memory_base(
         backend_config=backend_config,
         source_types=["memory"],
     )
+    return record.id
 
 
 class MemoryBaseService(Service):
@@ -258,6 +259,7 @@ class MemoryBaseService(Service):
         *,
         is_superuser: bool = False,
     ) -> MemoryBase:
+        """Validate the owned flow and providers before provisioning a Memory Base and its KB."""
         backend_type = payload.backend_type or resolve_default_kb_backend()
         backend_config = payload.backend_config or {}
 
@@ -268,6 +270,8 @@ class MemoryBaseService(Service):
         rejection = local_chroma_rejection_reason(backend_type, backend_config, resource="memory base")
         if rejection is not None:
             raise BackendProvisioningError(rejection)
+        # Raises ``StorageRoutingNotAllowedError``, which the route maps to 403.
+        ensure_storage_routing_allowed(backend_config, is_superuser=is_superuser)
 
         # 1. Verify that the referenced flow belongs to this user.
         async with session_scope() as db:
@@ -330,7 +334,7 @@ class MemoryBaseService(Service):
         # DB row is the source of truth, so an orphan is worse than the old sidecar).
         from sqlalchemy.exc import IntegrityError
 
-        needs_cleanup = False
+        created_kb_id: uuid.UUID | None = None
         try:
             # ``initialize_kb`` raises ``BackendProvisioningError`` for a non-local
             # backend whose connectivity check fails, so a bad remote config is
@@ -342,10 +346,9 @@ class MemoryBaseService(Service):
                 backend_type=backend_type,
                 backend_config=backend_config,
             )
-            # From here on a collection may exist and the row will be written, so
-            # any later failure must roll both back.
-            needs_cleanup = True
-            await _create_kb_record_for_memory_base(
+            # Only a successfully created identity belongs to this attempt.
+            # Failed creation must never clean up another record by name.
+            created_kb_id = await _create_kb_record_for_memory_base(
                 user_id=user_id,
                 kb_name=kb_name,
                 embedding_provider=embedding_provider,
@@ -379,36 +382,33 @@ class MemoryBaseService(Service):
                     raise ValueError(msg) from None
                 await db.refresh(mb)
         except Exception:
-            if needs_cleanup:
-                await self._cleanup_orphaned_provisioning(kb_name=kb_name, kb_username=kb_username, user_id=user_id)
+            if created_kb_id is not None:
+                await self._cleanup_orphaned_provisioning(
+                    kb_record_id=created_kb_id, kb_name=kb_name, kb_username=kb_username
+                )
             raise
 
         return mb
 
-    async def _cleanup_orphaned_provisioning(self, *, kb_name: str, kb_username: str, user_id: uuid.UUID) -> None:
+    async def _cleanup_orphaned_provisioning(self, *, kb_record_id: uuid.UUID, kb_name: str, kb_username: str) -> None:
         """Compensating cleanup when a create fails after KB provisioning.
 
-        Mirrors :meth:`delete`'s teardown order — remote collection first (it
-        needs the ``knowledge_base`` row to resolve backend config), then the
-        row, then local disk — so a rejected create leaves nothing behind.
-        Best-effort and idempotent: each step no-ops when there is nothing to
-        remove.
+        Delete only the identity created by this attempt. The storage protocol
+        retains routing on failure, and a reused name cannot redirect cleanup.
         """
         from lfx.log.logger import logger
 
         from langflow.api.utils import knowledge_base_service
 
         try:
-            await delete_kb_remote_collection(kb_name=kb_name, user_id=user_id)
-        except Exception as exc:  # noqa: BLE001 — rollback is best-effort
-            await logger.awarning("Create rollback: remote collection cleanup failed for kb_name=%s: %s", kb_name, exc)
-        try:
-            await knowledge_base_service.delete_by_user_and_name(user_id, kb_name)
+            await knowledge_base_service.delete_record(kb_record_id)
         except Exception as exc:  # noqa: BLE001 — rollback is best-effort
             await logger.awarning("Create rollback: knowledge_base row cleanup failed for kb_name=%s: %s", kb_name, exc)
+            return
         await delete_kb(kb_name=kb_name, kb_username=kb_username)
 
     async def list_for_user(self, user_id: uuid.UUID) -> list[MemoryBase]:
+        """List Memory Bases owned by the specified user."""
         async with session_scope() as db:
             stmt = select(MemoryBase).where(MemoryBase.user_id == user_id)
             result = await db.exec(stmt)
@@ -441,6 +441,7 @@ class MemoryBaseService(Service):
         return stmt
 
     async def get(self, memory_base_id: uuid.UUID, user_id: uuid.UUID) -> MemoryBase | None:
+        """Read a Memory Base only when it belongs to the specified user."""
         async with session_scope() as db:
             stmt = select(MemoryBase).where(MemoryBase.id == memory_base_id).where(MemoryBase.user_id == user_id)
             result = await db.exec(stmt)
@@ -505,46 +506,52 @@ class MemoryBaseService(Service):
             return mb
 
     async def delete(self, memory_base_id: uuid.UUID, user_id: uuid.UUID) -> bool:
-        """Delete a MemoryBase and its associated KB directory."""
+        """Keep the Memory identity and history until storage deletion succeeds."""
+        from sqlalchemy import and_
+
+        from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+        from langflow.services.knowledge_base_storage.runtime import delete_storage_for_record
+
         async with session_scope() as db:
-            stmt = select(MemoryBase).where(MemoryBase.id == memory_base_id).where(MemoryBase.user_id == user_id)
-            result = await db.exec(stmt)
-            mb = result.first()
-            if mb is None:
+            stmt = (
+                select(MemoryBase, KnowledgeBaseRecord)
+                .outerjoin(
+                    KnowledgeBaseRecord,
+                    and_(
+                        KnowledgeBaseRecord.user_id == MemoryBase.user_id,
+                        KnowledgeBaseRecord.name == MemoryBase.kb_name,
+                    ),
+                )
+                .where(MemoryBase.id == memory_base_id)
+                .where(MemoryBase.user_id == user_id)
+            )
+            identity = (await db.exec(stmt)).first()
+            if identity is None:
                 return False
-
+            mb, kb_record = identity
             kb_name = mb.kb_name
+            kb_record_id = kb_record.id if kb_record is not None else None
             kb_username = await resolve_kb_username(db, user_id)
-
-            # Cancel active ingestion jobs before removing the DB record
             await cancel_active_jobs(memory_base_id=memory_base_id, db=db)
-
-            await db.delete(mb)
+            # Commit job cancellation without removing the retryable identity.
             await db.commit()
 
-        # Drop the remote vector-store collection FIRST, while the
-        # knowledge_base row (and its backend config) still exists — otherwise
-        # the OpenSearch index / Chroma Cloud collection is stranded with no way
-        # to resolve how to reach it. Best-effort; local Chroma is a no-op here
-        # (its vectors are removed by ``delete_kb`` below).
-        await delete_kb_remote_collection(kb_name=kb_name, user_id=user_id)
+        # A provider or filesystem failure leaves both rows in place. Repeating
+        # this request can finish a durable deleting/deleted storage operation.
+        if kb_record is not None:
+            await delete_storage_for_record(kb_record)
 
-        # Delete the backing knowledge_base row — it's the authoritative record for
-        # this Memory Base, so leaving it would orphan the row (and keep the KB's
-        # memory-base guards active for a name the user just freed). Best-effort:
-        # the memory_base row is already committed.
-        from langflow.api.utils import knowledge_base_service
-
-        try:
-            await knowledge_base_service.delete_by_user_and_name(user_id, kb_name)
-        except Exception:  # noqa: BLE001
-            from lfx.log.logger import logger
-
-            await logger.awarning("Could not delete knowledge_base row for Memory Base kb_name=%s", kb_name)
-
-        # Delete the corresponding KB from disk (best-effort — DB already committed)
+        async with session_scope() as db:
+            mb = await db.get(MemoryBase, memory_base_id)
+            # Names may have been reused by a concurrent delete/create. Only
+            # remove the immutable identity captured with this Memory Base.
+            kb = await db.get(KnowledgeBaseRecord, kb_record_id) if kb_record_id is not None else None
+            if mb is not None:
+                await db.delete(mb)
+            if kb is not None:
+                await db.delete(kb)
+            await db.commit()
         await delete_kb(kb_name=kb_name, kb_username=kb_username)
-
         return True
 
     # ------------------------------------------------------------------ #
@@ -631,6 +638,7 @@ class MemoryBaseService(Service):
         actor_user_id: uuid.UUID,
         session_id: str,
     ) -> str:
+        """Authorize and enqueue ingestion for one Memory Base conversation."""
         return await _trigger_ingestion(
             memory_base_id,
             owner_user_id,
@@ -646,6 +654,7 @@ class MemoryBaseService(Service):
         session_id: str,
         job_id: uuid.UUID | None,
     ) -> None:
+        """Capture eligible flow output into the associated Memory Base session."""
         await _on_flow_output(
             flow_id,
             session_id,
@@ -654,6 +663,7 @@ class MemoryBaseService(Service):
         )
 
     async def check_mismatch(self, memory_base_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        """Check whether the owner-scoped Memory Base embedding configuration has drifted."""
         return await _check_mismatch(
             memory_base_id,
             user_id,
@@ -666,6 +676,7 @@ class MemoryBaseService(Service):
         owner_user_id: uuid.UUID,
         actor_user_id: uuid.UUID,
     ) -> list[str]:
+        """Authorize and enqueue regeneration of the Memory Base sessions."""
         return await _regenerate(
             memory_base_id,
             owner_user_id,
@@ -674,14 +685,14 @@ class MemoryBaseService(Service):
             trigger_ingestion_fn=self.trigger_ingestion,
         )
 
-    async def purge_session_data(self, user_id: uuid.UUID, session_ids: list[str]) -> int:
+    async def purge_session_data(self, user_id: uuid.UUID, session_ids: list[str], *, db=None) -> int:
         """Remove Chroma chunks and tracking rows for the given sessions.
 
         Called when the user deletes session messages from the UI so that the
         ingested embeddings don't leak into newly-created sessions. Scoped to
         the caller's Memory Bases — never touches another user's data.
         """
-        return await _purge_session_data(user_id=user_id, session_ids=session_ids)
+        return await _purge_session_data(user_id=user_id, session_ids=session_ids, db=db)
 
     # ------------------------------------------------------------------ #
     #  Public query helpers                                                #
@@ -706,6 +717,7 @@ class MemoryBaseService(Service):
     async def _get_or_create_session(
         self, db: AsyncSession, memory_base_id: uuid.UUID, session_id: str
     ) -> MemoryBaseSession:
+        """Find or initialize the processing cursor for a Memory Base conversation."""
         stmt = (
             select(MemoryBaseSession)
             .where(MemoryBaseSession.memory_base_id == memory_base_id)

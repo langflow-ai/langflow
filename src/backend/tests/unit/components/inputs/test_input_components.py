@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 from anyio import Path
 from lfx.components.input_output import ChatInput, TextInputComponent
@@ -86,8 +88,18 @@ class TestChatInput(ComponentTestBaseWithClient):
         assert isinstance(message, Message)
         assert message.session_id == ""
 
-    async def test_message_response_with_files(self, component_class, tmp_path):
-        """Test message response with file attachments."""
+    async def test_message_response_with_files(self, component_class, tmp_path, monkeypatch):
+        """Test message response with file attachments.
+
+        ChatInput confines attachment paths to the executing graph's storage scope, which is
+        on by default since 1.12.3. This component is built without a graph, so it has no
+        scope and tmp_path is out of bounds; the assertion here is that the attachment travels
+        onto the Message, not what containment does with it, so take the single-tenant opt-out.
+        """
+        monkeypatch.setattr(
+            "lfx.utils.file_path_security.get_settings_service",
+            lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+        )
         # Create a temporary test file
         test_file = Path(tmp_path) / "test.txt"
         await test_file.write_text("Test content", encoding="utf-8")

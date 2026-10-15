@@ -31,6 +31,10 @@ describe("parseIterationsCommand", () => {
     expect(r?.announcement).toContain("45");
   });
 
+  it("should mirror the backend's shipped step budget of 100", () => {
+    expect(DEFAULT_ITERATIONS_LIMIT).toBe(100);
+  });
+
   it("mentions the default when unset", () => {
     const r = parseIterationsCommand("/iterations", null);
     expect(r?.announcement).toContain(String(DEFAULT_ITERATIONS_LIMIT));

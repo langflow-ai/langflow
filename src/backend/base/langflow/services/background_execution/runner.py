@@ -23,11 +23,12 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
-from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT
+from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT, WORKFLOW_STOP_CHECKPOINT_EVENT
 
 from langflow.services.background_execution.live_bus import LiveFrame
 from langflow.services.database.models.jobs.model import JobStatus, SignalType
 from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, PauseRequested
+from langflow.services.telemetry.context import telemetry_user_context
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -92,13 +93,16 @@ class JobRunner:
         async def _wrapped() -> None:
             # Per-pass clock: paused time never accrues here (resume re-enqueues a fresh
             # run). The suspend-window budget is the separate input deadline (LE-1452).
-            if self._job_timeout is not None:
-                await asyncio.wait_for(
-                    self._drive(job_id=job_id, source_kwargs=source_kwargs),
-                    timeout=self._job_timeout,
-                )
-            else:
-                await self._drive(job_id=job_id, source_kwargs=source_kwargs)
+            job = await self._jobs.get_job_by_job_id(job_id)
+            user_id = (job.job_metadata or {}).get("telemetry_user_id") if job is not None else None
+            with telemetry_user_context(user_id):
+                if self._job_timeout is not None:
+                    await asyncio.wait_for(
+                        self._drive(job_id=job_id, source_kwargs=source_kwargs),
+                        timeout=self._job_timeout,
+                    )
+                else:
+                    await self._drive(job_id=job_id, source_kwargs=source_kwargs)
 
         heartbeat_task = self._start_heartbeat(job_id)
         paused = False
@@ -264,6 +268,15 @@ class JobRunner:
                 output_data = payload.get("data")
                 if isinstance(output_data, dict):
                     output_events.append(output_data)
+                continue
+            if event_type == WORKFLOW_STOP_CHECKPOINT_EVENT:
+                # Off-wire vertex boundary, emitted only when the per-vertex
+                # frames this loop would otherwise poll on are suppressed. Poll
+                # STOP and drop it: no append_event, no publish, so a narrowed
+                # run stays as cancellable as a full one without putting graph
+                # data on the wire or in the durable log.
+                if await self._stop_requested(job_id):
+                    raise self._user_cancelled()
                 continue
             if event_type == HUMAN_INPUT_REQUIRED_EVENT:
                 from langflow.services.jobs.service import _unwrap_pause_payload

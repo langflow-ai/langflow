@@ -55,9 +55,22 @@ export type UtilityStoreType = {
   // server's cap instead of a UI-local constant that can drift below it.
   assistantMaxMessageLength: number;
   setAssistantMaxMessageLength: (assistantMaxMessageLength: number) => void;
-  // False on the production deployment profile, where local Chroma is refused.
+  // False on the production deployment profile, where local SQLite is refused.
   localVectorStoreAvailable: boolean;
   setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) => void;
+  // Backend the server picks for a new KB/MB that names none (env-driven:
+  // postgres, else opensearch, else sqlite). Undefined until config loads.
+  defaultVectorStoreBackend: string | undefined;
+  setDefaultVectorStoreBackend: (
+    defaultVectorStoreBackend: string | undefined,
+  ) => void;
+  // Readiness is independent of the optional default-backend field so older
+  // authenticated config responses still enable provider initialization.
+  vectorStoreConfigLoaded: boolean;
+  setVectorStoreConfig: (config: {
+    localVectorStoreAvailable: boolean;
+    defaultVectorStoreBackend: string | undefined;
+  }) => void;
   mcpBaseUrl: string;
   setMcpBaseUrl: (mcpBaseUrl: string) => void;
   /**

@@ -6,6 +6,7 @@ slug: /api-keys-and-authentication
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
+import PartialAutoLoginDefaults from '@site/docs/_partial-auto-login-defaults.mdx';
 
 This page documents Langflow's built-in authentication, including user accounts, Langflow API keys, and the environment variables that control access to your server.
 To connect Langflow to an external identity provider or SSO system, see [SSO and external authentication](./external-authentication).
@@ -154,25 +155,49 @@ This section describes the available authentication configuration variables.
 You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file in the Langflow repository as a template for your own `.env` file.
 
 For JWT token signing configuration, including algorithm selection and key management, see [Configure JWT token signing](#configure-jwt-token-signing).
+To connect Langflow to an upstream identity provider, see [SSO and external authentication](./external-authentication).
+For role-based access control, see [Authorization](./authorization).
 
 ### LANGFLOW_AUTO_LOGIN {#langflow-auto-login}
 
 This variable controls whether the visual editor uses automatic login or requires users to sign in.
 
-* If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor, authenticate as a superuser to run certain Langflow CLI commands, and use a Langflow API key for Langflow API requests.
+* If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor and authenticate as a superuser to run certain Langflow CLI commands.
+Management API requests accept a Langflow API key or a session token. Session tokens can be sent in the `access_token_lf` cookie or `Authorization: Bearer` header.
+Requests that run a flow require a Langflow API key in the `x-api-key` header or query parameter. This includes `/api/v1/run`, `/api/v1/run/advanced`, `/api/v1/predict`, `/api/v1/process`, and `/api/v1/responses`.
 You must explicitly set [`LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) before startup. Set [`LANGFLOW_SUPERUSER`](#langflow-superuser) only if you want to override the default superuser username (`langflow`).
 
 * If `LANGFLOW_AUTO_LOGIN=True`, the visual editor automatically signs in all users as the configured superuser, and Langflow uses that username with a configured or generated bootstrap password.
 All users share the same visual editor environment without password protection, and they can run Langflow CLI commands as superusers.
-API requests still require a Langflow API key unless you also set [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](#langflow-skip-auth-auto-login) to `true`.
+Management API requests still require a Langflow API key or a session token unless you also set [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](#langflow-skip-auth-auto-login) to `true`. Requests that run a flow require a Langflow API key in the `x-api-key` header or query parameter.
 
-The Langflow application default is `True`.
-Official Langflow Docker images set `false`. For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
+<PartialAutoLoginDefaults />
+
+Official tags point to a release-only commit that disables auto-login, so GitHub's automatic source ZIP/TAR downloads use the same default as the wheels published to PyPI and GitHub Releases.
+DEV and CDK images set `LANGFLOW_AUTO_LOGIN=false` starting in Langflow 1.13.
+For more information about containers, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
+
+#### Upgrade an existing auto-login installation {#upgrade-from-auto-login}
+
+Before installing a release that disables auto-login, prepare the existing account for password sign-in. Keep the same database, configuration directory, encryption key, and superuser username so that your flows and stored credentials remain available.
+
+If your flows use the File System component, also follow [Move shared files when enabling authentication](/file-system#move-shared-files-when-enabling-authentication). Its shared files remain on disk but are not automatically assigned to the private workspace used after sign-in. Existing LFX flow exports also need their [saved File System component updated](/file-system#upgrade-an-existing-flow-export).
+
+1. Back up the database and configuration directory. Keep the instance restricted to trusted local access during the transition.
+2. While signed in to the existing installation, identify the current account with the authenticated [Get current user API](/api-users#get-current-user). If you already know its password, verify that password with `POST /api/v1/login` and continue to step 4.
+3. If the account uses an unknown generated bootstrap password, use an existing administrator session or API key with `PATCH /api/v1/users/{user_id}` to set a strong password on **that same account**. Send only the `password` field, as described in [Update user](/api-users#update-user), then verify password sign-in. The self-service `reset-password` endpoint requires the old password and is not suitable for an unknown bootstrap password.
+4. Set `LANGFLOW_AUTO_LOGIN=false`, set `LANGFLOW_SUPERUSER` to the existing account's username, and set `LANGFLOW_SUPERUSER_PASSWORD` before restarting or upgrading. Startup requires this setting, but it does **not** overwrite a non-legacy password on an existing account. Use the password established in the previous steps.
+5. Start the new release with the existing database and configuration directory. In a fresh browser session, sign in with the established password and verify that your existing flows are present.
+
+Do not delete the existing account, database, or encryption key to regain access. Creating a different superuser does not transfer ownership of the existing account's flows. If you upgraded before preparing the account, use an existing administrator credential to update that account's password; if none is available, complete the preparation on a backed-up previous installation restricted to local access before upgrading again.
+
+An explicit `LANGFLOW_AUTO_LOGIN=true` in an existing environment or `.env` file takes precedence over the new default. Remove that override or set it to `false` as part of the transition. Disabling auto-login prevents new anonymous sessions; it does not revoke previously issued sessions or API keys.
 
 #### LANGFLOW_SKIP_AUTH_AUTO_LOGIN {#langflow-skip-auth-auto-login}
 
-When `LANGFLOW_AUTO_LOGIN=true`, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` to also skip API key authentication for API requests.
-The default is `false`, so API keys are still required even when auto-login is enabled.
+When `LANGFLOW_AUTO_LOGIN=true`, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` to also skip authentication for API requests.
+Unauthenticated requests then run as the configured superuser.
+The default is `false`, so a Langflow API key or a session token is still required for management API requests even when auto-login is enabled. Requests that run a flow require a Langflow API key in the `x-api-key` header or query parameter.
 This variable will be removed in a future release.
 
 ### LANGFLOW_ENABLE_SUPERUSER_CLI {#langflow-enable-superuser-cli}
@@ -192,7 +217,7 @@ LANGFLOW_SUPERUSER_PASSWORD=securepassword
 
 `LANGFLOW_SUPERUSER_PASSWORD` is required if `LANGFLOW_AUTO_LOGIN=False`. `LANGFLOW_SUPERUSER` is optional and defaults to `langflow`.
 `LANGFLOW_SUPERUSER_PASSWORD` can't use the legacy default value `langflow`; startup fails closed instead.
-When `LANGFLOW_AUTO_LOGIN=True`, `LANGFLOW_SUPERUSER` selects the auto-login account username and `LANGFLOW_SUPERUSER_PASSWORD` is optional. If the password isn't set, Langflow generates an unknown bootstrap password for the auto-login account.
+When `LANGFLOW_AUTO_LOGIN=True`, `LANGFLOW_SUPERUSER` selects the auto-login account username and `LANGFLOW_SUPERUSER_PASSWORD` is optional. If the password isn't set, or if it is the legacy value `langflow`, Langflow generates a bootstrap password for the auto-login account.
 
 When you [start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled), if the required password is _not_ set, then startup fails instead of creating a default password.
 These defaults don't apply when using the Langflow CLI command [`langflow superuser`](/configuration-cli#langflow-superuser).
@@ -480,12 +505,16 @@ An anonymous link grants only resource read and flow execution. It never grants 
 
 When `LANGFLOW_AUTHZ_ENABLED=true`, anonymous access also requires an authorization plugin that opts into public principals, maps request hosts through a deployment-owned allowlist, resolves a tenant from that mapping and server-derived domain context, and allows the action. The OSS public-principal plugin seam defaults to deny and never performs cross-tenant discovery. Plugins must not treat the raw `Host` header as a trusted tenant identity.
 
+For more information, see [Authorization](./authorization).
+
 For A2A, `auth_type=none` applies this contract to both the direct agent card and execution routes. API-key and OAuth agent cards remain anonymously readable by direct link for A2A protocol discovery, but their JSON-RPC execution routes retain owner-key admission and owner execution.
 
 ### LANGFLOW_RATE_LIMIT_* {#login-rate-limiting}
 
 The following environment variables configure IP-based rate limiting to protect against brute-force attacks on the `/login` endpoint and abuse of public flow endpoints.
 When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` header.
+
+The connection and integration endpoints count requests per signed-in user instead of per IP address, so users who reach Langflow through the same NAT or proxy do not share a limit. The unauthenticated OAuth callback is the exception and is still counted per IP address.
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
@@ -494,6 +523,8 @@ When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` h
 | `LANGFLOW_RATE_LIMIT_STORAGE_URI` | String | `memory://` | Storage backend for rate limit counters. Use `memory://` for single-server deployments or `redis://host:port` for multi-server deployments where the limit should be shared across instances. |
 | `LANGFLOW_RATE_LIMIT_TRUST_PROXY` | Boolean | `False` | When `true`, Langflow reads the client IP from the rightmost `X-Forwarded-For` header entry instead of the direct connection IP. Enable only when Langflow is behind a trusted reverse proxy or load balancer. Do not enable if users can reach Langflow directly, as this allows header spoofing. |
 | `LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE` | Integer | `20` | Maximum number of unauthenticated public-flow runs allowed per minute from a single IP address. Public flows consume resources under an isolated anonymous principal, so they are rate-limited separately from the `/login` endpoint. |
+| `LANGFLOW_CONNECTION_METADATA_RATE_LIMIT_PER_MINUTE` | Integer | `60` | Maximum number of connection and integration metadata reads allowed per minute for each signed-in user. These endpoints return no credential material and make no outbound provider call, and the Connections UI polls the connection listing every two seconds while an OAuth consent is pending, so they are limited separately from and more generously than the `/login` endpoint. Connection writes have their own limit, and credential tests, health checks, and the OAuth endpoints keep their own tighter buckets. |
+| `LANGFLOW_CONNECTION_WRITE_RATE_LIMIT_PER_MINUTE` | Integer | `30` | Maximum number of connection creates, updates, revokes, and deletes allowed per minute for each signed-in user. The four operations share one limit, sized for someone managing connections in the Connections UI rather than for login attempts. Credential tests, health checks, and starting an OAuth consent use `LANGFLOW_RATE_LIMIT_PER_MINUTE`, each with its own counter. |
 
 ### LANGFLOW_SSRF_* and LANGFLOW_CONNECTOR_SSRF_* {#ssrf-protection}
 
@@ -507,7 +538,58 @@ In a shared server where users you do not fully trust can build flows, set `LANG
 | `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `True` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
 | `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
 | `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED` | Boolean | `True` | Apply SSRF host validation to connector components that take a tenant-controlled host or URL. Uses `LANGFLOW_SSRF_PROTECTION_ENABLED` and `LANGFLOW_SSRF_ALLOWED_HOSTS` for the host policy. Set to `false`, or allowlist specific hosts, only when a trusted single-tenant deployment intentionally connects to private-network services. |
-| `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK` | Boolean | `True` | When connector SSRF validation is enabled, allow literal loopback hosts (`localhost`, `127.0.0.0/8`, `::1`) so local Ollama, LM Studio, and similar services keep working. Multi-tenant deployments where a tenant must not reach the server's loopback should set this to `false`. |
+| `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK` | Boolean | `True` | When connector SSRF validation is enabled, allow literal loopback hosts (`localhost`, `127.0.0.0/8`, `::1`) and local Redis/MongoDB Unix sockets. Multi-tenant deployments where a tenant must not reach the server's loopback should set this to `false`. |
+| `LANGFLOW_KB_ALLOWED_HOSTS` | List[String] | Not set | An **exclusive** allowlist of destination hosts for the network knowledge base backends (OpenSearch and Postgres pgvector). Accepts the same patterns as `LANGFLOW_SSRF_ALLOWED_HOSTS`. Unlike that variable, which is an exception list that still admits any unlisted public host, this one denies by default: a destination a user supplies is refused unless its host is listed here. A destination Langflow reads from a server environment variable is already operator-controlled and does not need an entry, so setting `OPENSEARCH_URL` on the server keeps working unchanged. See the note below. |
+
+Connector validation covers Cassandra, MongoDB, Redis vector store, PGVector, Couchbase, Valkey, Supabase, and the other vector stores and tools listed above. Private service names in container networks (for example, `redis`, `mongo`, or `postgres` resolving to 172.x addresses) require an entry in `LANGFLOW_SSRF_ALLOWED_HOSTS`. MongoDB and Couchbase SRV targets are checked by their own hostnames; allowlisting only the seed name does not cover those targets. For a single Couchbase DNS seed with an explicit port, validation checks both the seed and any SRV targets. Allowlist the target names with a wildcard such as `*.cluster.internal`, or their address range with a CIDR.
+
+Use commas to separate Couchbase bootstrap hosts. With connector SSRF validation enabled, semicolons in the Couchbase connection-string authority are rejected because the SDK can interpret them as part of a DNS hostname.
+
+In 1.12.4, PGVector connections to `localhost` or `127.0.0.1` are blocked by default, matching the SQL Database components. To keep a trusted local PGVector flow working, set `LANGFLOW_SSRF_ALLOWED_HOSTS=localhost` (and include `127.0.0.1` if used). Connector checks validate bootstrap addresses, but MongoDB, Redis Sentinel, Couchbase, and Valkey clients can discover additional peers after connecting or resolve a validated name again. Use network egress controls to prevent those clients from reaching internal services.
+
+#### Model provider endpoints {#provider-allowed-hosts}
+
+Custom model provider endpoints require HTTPS unless the operator explicitly permits HTTP through `LANGFLOW_SSRF_ALLOWED_HOSTS`.
+This allowlist accepts bare hostnames, IP addresses, `*.domain` wildcards, and CIDR ranges, without schemes or ports.
+For a URL containing an IP address, a covering CIDR grants the HTTP exception: for example, `172.16.0.0/12` permits `http://172.17.0.3:8080/v1`.
+For a DNS hostname, use its name or a wildcard; the HTTPS check does not resolve hostnames to match CIDRs.
+
+An API key sourced from the server environment also requires the custom destination to be approved in `LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS`.
+That separate allowlist accepts bare hosts, `host:port`, and `*.domain` wildcards, but not CIDRs.
+Prefix an entry with `http://` to explicitly permit sending that credential over HTTP.
+For example, a trusted internal gateway at `http://172.17.0.3:8080/v1` using a server-provisioned key needs both settings:
+
+```bash
+export LANGFLOW_SSRF_ALLOWED_HOSTS=172.16.0.0/12
+export LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS=http://172.17.0.3:8080
+```
+
+#### Knowledge base destinations {#kb-allowed-hosts}
+
+The OpenSearch knowledge base backend needs a stricter rule than the other connectors.
+
+The SSRF variables above validate a hostname and then hand the original URL to a vendor SDK, which resolves DNS again when it connects.
+For the **API Request** component Langflow closes that gap by pinning the validated IP address. `OpenSearchVectorSearch` passes one set of arguments to both its synchronous and asynchronous clients, so a single pinned transport cannot serve both.
+A hostname whose DNS answer changes between validation and connection can therefore still reach an internal address.
+
+`LANGFLOW_KB_ALLOWED_HOSTS` closes that by requiring the destination to be one you chose:
+
+```bash
+export LANGFLOW_KB_ALLOWED_HOSTS=search.corp.example,*.opensearch.internal
+```
+
+A destination is permitted when either of the following is true:
+
+* Langflow read it from a server environment variable, such as `OPENSEARCH_URL` set on the server process. Only an operator can set one, so no allowlist entry is needed.
+* Its host appears in `LANGFLOW_KB_ALLOWED_HOSTS`.
+
+Everything else is refused, including hosts that resolve to ordinary public addresses.
+A cluster URL a user saved as a Langflow variable in the UI needs an entry.
+
+This is a second check rather than a replacement: an approved host must still satisfy `LANGFLOW_SSRF_PROTECTION_ENABLED` and `LANGFLOW_SSRF_ALLOWED_HOSTS`, so an environment variable pointing at a cloud metadata address is still refused.
+Both checks share the `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED` switch.
+
+The pgvector knowledge base backend uses the database URL validation described below, including connector SSRF checks and restrictions on local TLS files.
 
 ### Component hardening for untrusted users {#multi-tenant-component-hardening}
 
@@ -517,10 +599,16 @@ For more information, see [Docker image defaults](/deployment-docker#docker-imag
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
+| `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | Boolean | `True` | When `false`, blocks user-authored component code and registered built-in code-execution components at runtime. See [Block custom components](/deployment-block-custom-components). |
 | `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Boolean | `False` | When `true`, blocks execution of any flow containing a built-in arbitrary-code-execution component, including the [**Python Interpreter**](/python-interpreter), Python REPL/Code tools, [**Smart Transform**](/smart-transform), [**CSV Agent**](/bundles-langchain#csv-agent), and code-running agents such as [**CodeAct**](/bundles-codeagents#codeact-agent-smolagents), [**CUGA**](/bundles-cuga), and [**OpenDsStar**](/bundles-codeagents#opendstar-agent). |
-| `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `False` | When `true`, built-in file-reading components, including the [**File**](/read-file), [**Directory**](/legacy-core-components#legacy-data-components), [**JSON/CSV-to-Data**](/legacy-core-components#legacy-data-components), and the [**CSV Agent**](/bundles-langchain#csv-agent), [**JSON Agent**](/bundles-langchain#legacy-langchain-components), and [**OpenAPI Agent**](/bundles-langchain#openapi-agent) can only read and write paths inside the [`LANGFLOW_CONFIG_DIR`](/memory) storage directory. This also blocks `sqlite` and `duckdb` dialects in the [**SQL Database**](/sql-database) components and local-filesystem Git clones. |
+| `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `True` | By default, built-in file-reading components, including the [**File**](/read-file), [**Directory**](/legacy-core-components#legacy-data-components), [**JSON/CSV-to-Data**](/legacy-core-components#legacy-data-components), and the [**CSV Agent**](/bundles-langchain#csv-agent), [**JSON Agent**](/bundles-langchain#legacy-langchain-components), and [**OpenAPI Agent**](/bundles-langchain#openapi-agent) can only read and write paths inside the [`LANGFLOW_CONFIG_DIR`](/memory) storage directory. This also blocks `sqlite` and `duckdb` dialects in the [**SQL Database**](/sql-database) components and local-filesystem Git clones. **Security warning:** setting this to `false` allows any user who can build flows to read arbitrary files on the server (including Langflow's own secret keys) through file components and `sqlite:////path` database URLs. Set it to `false` only in single-tenant deployments where reading local server files by absolute path is an intentional feature. |
+| `LANGFLOW_DATABASE_TLS_FILES_DIR` | Absolute directory path | Unset | Directory of administrator-provided TLS files that SQL database connector URLs may reference while local file access stays restricted. Only PostgreSQL `sslrootcert`, `sslcert`, and `sslkey` and MySQL/MariaDB `ssl_ca`, `ssl_cert`, and `ssl_key` options are eligible. The referenced file must exist and resolve to a regular file inside this directory; traversal and symlink escapes are rejected. Keep this directory outside tenant-writable storage and mount it read-only. |
 | `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | When `true`, applies a strict Docker-argument policy to MCP stdio servers that use the `docker` transport. Rejects host filesystem or device mounts, `host/another-container` namespaces, non-default networks, privilege flags, and sandbox-disabling `--security-opt` values. Forms such as `--network none` / `bridge` and `--security-opt no-new-privileges` remain allowed. |
 | `LANGFLOW_TWEAKS_POLICY` | String | `permissive` | Which component fields a run request may set through `tweaks`. For more information, see [Restrict API tweaks](./deployment-tweaks-policy). |
+
+With the default `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true`, SQL Database URLs using `mysql+mysqlconnector://` must include `allow_local_infile=false`, and URLs using `mariadb+mariadbconnector://` must include `local_infile=false`. Add the option with `?` or append it with `&` if the URL already has a query string. On a trusted single-tenant server, setting `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=false` restores the prior URL behavior but also permits flows to access local server files.
+
+For a database that requires a local CA certificate, stage the file in a directory managed by the server administrator and set `LANGFLOW_DATABASE_TLS_FILES_DIR` to that directory. For example, set `LANGFLOW_DATABASE_TLS_FILES_DIR=/etc/langflow/db-tls` and use `postgresql://user:password@db.example.com/app?sslrootcert=/etc/langflow/db-tls/ca.pem`. The setting grants all tenants who can supply a database URL access to the staged TLS files through the database driver, including client keys. Stage only files that every such tenant is authorized to use, and do not let tenants write to or replace files in this directory. Other local-file URL options remain blocked, and database host validation still applies when connector SSRF validation is enabled.
 
 Enable these flags when untrusted users can build flows on this server.
 
@@ -531,7 +619,7 @@ To enable these flags, set the following:
 
 * `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`: blocks user-authored component code and registered built-in code-execution components. See [Block custom components](/deployment-block-custom-components).
 * `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true`: blocks built-in code-execution components.
-* `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true`: confines built-in file access to the upload sandbox.
+* `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true`: confines built-in file access to the upload sandbox. This is the default; keep it enabled when untrusted users can build flows.
 * `LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true`: tightens Docker MCP server arguments.
 * `LANGFLOW_TWEAKS_POLICY=declared` or `off`: limits which component fields an API caller can override at run time. See [Restrict API tweaks](./deployment-tweaks-policy).
 
@@ -773,13 +861,7 @@ This involves disabling automatic login, setting superuser credentials, and gene
 
 This configuration is recommended for any deployment where Langflow is exposed to a shared or public network, or where multiple users access the same Langflow server.
 
-:::tip Docker images
-Official Langflow Docker images already set `LANGFLOW_AUTO_LOGIN=false`.
-You still must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally `LANGFLOW_SUPERUSER`) before the container can start.
-For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
-:::
-
-With authentication enabled, all users must sign in to the visual editor with valid credentials, and API requests require authentication with a Langflow API key.
+With authentication enabled, all users must sign in to the visual editor with valid credentials. Management API requests require a Langflow API key or a session token. Requests that run a flow require a Langflow API key in the `x-api-key` header or query parameter.
 Sign in as a superuser to [create a Langflow API key](#create-a-langflow-api-key) with superuser privileges.
 User management is through the [Users API](/api-users), not the visual editor.
 
@@ -1001,6 +1083,9 @@ Superusers add, activate, list, and delete users, set **Superuser**, and set oth
 
 ## See also
 
+* [Authentication and authorization overview](./authentication-overview)
+* [SSO and external authentication](./external-authentication)
+* [Authorization](./authorization)
 * [Langflow environment variables](/environment-variables)
 * [Users endpoints](/api-users)
 * [Langflow Security Policy](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md) — reporting vulnerabilities, security configuration, and [secret key rotation](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md#secret-key-rotation)

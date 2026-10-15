@@ -5,8 +5,15 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, computed_field, field_serializer
 from pydantic import Field as PydanticField
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, UniqueConstraint, false, func
+from sqlalchemy.sql.naming import conv
 from sqlmodel import JSON, Field, SQLModel
+
+# Final name of the ``version_number >= 1`` CHECK. It is wrapped in ``conv()`` below so Alembic's
+# ``ck_%(table_name)s_%(constraint_name)s`` convention (installed on SQLModel.metadata by
+# alembic/env.py) renders the same name whether the table is created by
+# ``SQLModel.metadata.create_all`` or by the migration's ``op.create_table``.
+VERSION_NUMBER_CHECK_NAME = "ck_flow_version_version_number_positive"
 
 
 class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
@@ -23,6 +30,11 @@ class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     version_number: int = Field(nullable=False, ge=1)
     description: str | None = Field(default=None, nullable=True, max_length=500)
+    retained: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, server_default=false()),
+    )
+    retained_reason: str | None = Field(default=None, nullable=True, max_length=255)
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True),
     )
@@ -32,7 +44,7 @@ class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
     # flow_id. No additional index is needed for the list/prune queries.
     __table_args__ = (
         UniqueConstraint("flow_id", "version_number", name="unique_flow_version_number"),
-        CheckConstraint("version_number >= 1", name="check_version_number_positive"),
+        CheckConstraint("version_number >= 1", name=conv(VERSION_NUMBER_CHECK_NAME)),
     )
 
 
@@ -44,7 +56,13 @@ class FlowVersionRead(BaseModel):
     user_id: UUID | None
     version_number: int = PydanticField(ge=1)
     description: str | None
+    retained: bool = False
+    retained_reason: str | None = None
     created_at: datetime
+    username: str | None = PydanticField(
+        default=None,
+        description="Display name of whoever authored this version, resolved from user_id.",
+    )
     is_deployed: bool | None = PydanticField(
         default=None,
         description=(
@@ -73,9 +91,16 @@ class FlowVersionReadWithData(FlowVersionRead):
 
 
 class FlowVersionCreate(BaseModel):
-    """Schema for creating a flow version — user only provides description."""
+    """Schema for creating a flow version.
+
+    ``data`` lets a caller archive a graph the server never had — the state on
+    somebody's canvas as they abandon it. Without it the only snapshot possible
+    is of what is already stored, which is exactly the state that is *not* at
+    risk of being lost.
+    """
 
     description: str | None = Field(default=None, max_length=500)
+    data: dict | None = Field(default=None)
 
 
 class FlowVersionListResponse(BaseModel):

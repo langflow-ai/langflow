@@ -1,0 +1,208 @@
+name: Backend unit tests
+on:
+  workflow_call:
+    inputs:
+      python-versions:
+        type: string
+        default: '["3.10", "3.14"]'
+      ref:
+        type: string
+        default: ''
+      runs-on:
+        type: string
+        default: ubuntu-latest
+      shards:
+        type: number
+        default: 10
+      workers:
+        type: number
+        default: 2
+      distribution:
+        type: string
+        default: load
+      publish-coverage:
+        type: boolean
+        default: true
+    secrets:
+      OPENAI_API_KEY:
+        required: false
+      ANTHROPIC_API_KEY:
+        required: false
+      CODECOV_TOKEN:
+        required: false
+permissions:
+  contents: read
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      groups: ${{ steps.plan.outputs.groups }}
+      namespace: ${{ steps.plan.outputs.namespace }}
+      commit: ${{ steps.plan.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - id: plan
+        env:
+          SHARDS: ${{ inputs.shards }}
+          WORKERS: ${{ inputs.workers }}
+          DISTRIBUTION: ${{ inputs.distribution }}
+          BASE_REF: ${{ github.base_ref || inputs.ref || github.ref_name }}
+          RUNNER_SPEC: ${{ inputs.runs-on }}
+        run: |
+          [[ "$SHARDS" =~ ^[0-9]+$ && "$WORKERS" =~ ^[0-9]+$ ]]
+          (( SHARDS >= 1 && SHARDS <= 20 && WORKERS >= 1 && WORKERS <= 8 ))
+          [[ "$DISTRIBUTION" == load || "$DISTRIBUTION" == worksteal ]]
+          echo "groups=$(jq -cn --argjson count "$SHARDS" '[range(1; $count + 1)]')" >> "$GITHUB_OUTPUT"
+          branch="${BASE_REF#refs/heads/}"
+          namespace=$(printf '%s\n%s' "$branch" "$RUNNER_SPEC" | sha256sum | cut -c1-16)
+          echo "namespace=$namespace" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+  baseline:
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ${{ fromJSON(inputs.python-versions) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.plan.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/cache/restore@v6
+        with:
+          path: ci-durations/durations.json
+          key: backend-timings-v1-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-${{ matrix.python-version == '3.10' && 'cov' || 'no-cov' }}-w${{ inputs.workers }}-${{ inputs.distribution }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            backend-timings-v1-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-${{ matrix.python-version == '3.10' && 'cov' || 'no-cov' }}-w${{ inputs.workers }}-${{ inputs.distribution }}-
+      - name: Fall back to checked-in durations on a cold cache
+        run: |
+          mkdir -p ci-durations
+          if [ ! -f ci-durations/durations.json ]; then
+            cp src/backend/tests/.test_durations ci-durations/durations.json
+          fi
+      # Freeze one baseline for all shards, even if another run finishes now.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: backend-baseline-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-s${{ inputs.shards }}-w${{ inputs.workers }}-${{ inputs.distribution }}
+          path: ci-durations/durations.json
+          retention-days: 7
+  test:
+    name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
+    needs: [plan, baseline]
+    runs-on: ${{ startsWith(inputs.runs-on, '[') && fromJSON(inputs.runs-on) || inputs.runs-on }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJSON(inputs.python-versions) }}
+        group: ${{ fromJSON(needs.plan.outputs.groups) }}
+    env:
+      UV_MANAGED_PYTHON: 'true'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.plan.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          python-version: ${{ matrix.python-version }}
+          prune-cache: false
+      - name: Install the project
+        run: uv sync --frozen
+      - uses: actions/download-artifact@v8
+        with:
+          name: backend-baseline-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-s${{ inputs.shards }}-w${{ inputs.workers }}-${{ inputs.distribution }}
+          path: ci-durations
+      - name: Run unit tests
+        timeout-minutes: 50
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WORKERS: ${{ inputs.workers }}
+          DISTRIBUTION: ${{ inputs.distribution }}
+          SHARDS: ${{ inputs.shards }}
+          GROUP: ${{ matrix.group }}
+          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: |
+          coverage=(--no-cov)
+          if [ "$PYTHON_VERSION" == '3.10' ]; then
+            coverage=(--cov --cov-config=pyproject.toml --cov-report=xml)
+          fi
+          mkdir -p test-results
+          CI_TEST_COMMIT=$(git rev-parse HEAD)
+          export CI_TEST_COMMIT
+          /usr/bin/time -v -o test-results/resources.txt \
+            uv run --no-sync python -m pytest src/backend/tests/unit \
+            --ignore=src/backend/tests/unit/template -m 'not api_key_required' \
+            -n "$WORKERS" --dist "$DISTRIBUTION" --max-worker-restart=1 \
+            --splits "$SHARDS" --group "$GROUP" --splitting-algorithm least_duration \
+            --durations-path ci-durations/durations.json --durations=20 \
+            -p scripts.ci.backend_test_metrics --ci-baseline ci-durations/durations.json \
+            --ci-report-dir test-results --junitxml=test-results/junit.xml \
+            --reruns=0 --instafail -ra -q "${coverage[@]}"
+      - name: Upload test evidence, including failed runs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-results-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-s${{ inputs.shards }}-w${{ inputs.workers }}-${{ inputs.distribution }}-g${{ matrix.group }}
+          path: |
+            test-results/
+            coverage.xml
+          retention-days: 14
+          if-no-files-found: warn
+      # Preserve the existing public repository's success-only Codecov upload.
+      - name: Upload coverage to Codecov
+        if: inputs.publish-coverage && matrix.python-version == '3.10'
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: backend
+          name: backend-coverage-group-${{ matrix.group }}
+          fail_ci_if_error: false
+          directory: ./
+  report:
+    name: Backend performance - Python ${{ matrix.python-version }}
+    needs: [plan, test]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJSON(inputs.python-versions) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.plan.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: backend-results-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-s${{ inputs.shards }}-w${{ inputs.workers }}-${{ inputs.distribution }}-g*
+          path: results
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          python-version: '3.13'
+      - name: Summarize and validate complete timings
+        run: |
+          uv run --no-project --with pytest python scripts/ci/backend_test_metrics.py results \
+            --expected-shards '${{ inputs.shards }}' --output ci-durations/durations.json
+      - name: Save timings for the next run on this branch
+        uses: actions/cache/save@v6
+        with:
+          path: ci-durations/durations.json
+          key: backend-timings-v1-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-${{ matrix.python-version == '3.10' && 'cov' || 'no-cov' }}-w${{ inputs.workers }}-${{ inputs.distribution }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: backend-timings-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-s${{ inputs.shards }}-w${{ inputs.workers }}-${{ inputs.distribution }}
+          path: ci-durations/durations.json
+          retention-days: 30

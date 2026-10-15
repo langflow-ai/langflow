@@ -14,19 +14,19 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from lfx.base.models.provider_registry import is_api_key_optional
 from lfx.base.models.unified_models import (
     get_all_variables_for_provider,
     get_provider_required_variable_keys,
     get_provider_secret_variable_key,
     get_unified_models_detailed,
+    is_known_model_provider,
 )
 from lfx.log.logger import logger
-from lfx.services.deps import get_settings_service
+from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from langflow.agentic.api.deps import require_agentic_experience
+from langflow.agentic.api.deps import require_agentic_component_admin, require_agentic_experience
 from langflow.agentic.api.schemas import AssistantRequest, HeadlessAssistantRequest
 from langflow.agentic.helpers.sse import format_complete_event, format_error_event
 from langflow.agentic.services.assistant_service import (
@@ -49,6 +49,9 @@ from langflow.api.utils.core import CurrentActiveUser, DbSession, release_db_tra
 from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 router = APIRouter(prefix="/agentic", tags=["Agentic"], include_in_schema=False)
+
+
+_ASSISTANT_EXECUTION_DEPENDENCIES = [Depends(require_agentic_experience), Depends(require_agentic_component_admin)]
 
 
 @dataclass(frozen=True)
@@ -100,8 +103,12 @@ async def _resolve_assistant_context(
             detail=f"Provider '{provider}' is not configured. Available providers: {enabled_providers}",
         )
 
+    # A provider configured by connection settings alone (Ollama's base URL, a local
+    # OpenAI-compatible server) declares no secret, so an absent key name is expected
+    # and says nothing about recognition. Only a name the model catalog does not know
+    # is genuinely unknown here.
     api_key_name = get_provider_secret_variable_key(provider)
-    if not api_key_name and not is_api_key_optional(provider):
+    if not api_key_name and not is_known_model_provider(provider):
         raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
 
     model_name = request.model_name or get_default_model(provider, user_id=user_id) or ""
@@ -174,7 +181,7 @@ async def _validate_flow_access(flow_id: str | None, user_id: UUID, session: Asy
     return flow
 
 
-@router.post("/execute/{flow_name}", dependencies=[Depends(require_agentic_experience)])
+@router.post("/execute/{flow_name}", dependencies=_ASSISTANT_EXECUTION_DEPENDENCIES)
 async def execute_named_flow(
     flow_name: str,
     request: AssistantRequest,
@@ -327,7 +334,7 @@ async def check_assistant_config(
     }
 
 
-@router.post("/assist", dependencies=[Depends(require_agentic_experience)])
+@router.post("/assist", dependencies=_ASSISTANT_EXECUTION_DEPENDENCIES)
 async def assist(
     request: AssistantRequest,
     current_user: CurrentActiveUser,
@@ -363,7 +370,7 @@ async def assist(
         )
 
 
-@router.post("/assist/stream", dependencies=[Depends(require_agentic_experience)])
+@router.post("/assist/stream", dependencies=_ASSISTANT_EXECUTION_DEPENDENCIES)
 async def assist_stream(
     request: AssistantRequest,
     http_request: Request,
@@ -417,7 +424,7 @@ async def assist_stream(
     )
 
 
-@router.post("/assist/run", dependencies=[Depends(require_agentic_experience)], include_in_schema=False)
+@router.post("/assist/run", dependencies=_ASSISTANT_EXECUTION_DEPENDENCIES, include_in_schema=False)
 async def assist_headless(
     request: HeadlessAssistantRequest,
     current_user: CurrentActiveUser,
@@ -446,16 +453,22 @@ async def assist_headless(
 
         async def _drive() -> dict:
             try:
-                return await run_assistant_and_persist(
-                    session=session,
-                    user_id=current_user.id,
-                    instruction=request.instruction,
-                    flow_id=request.flow_id,
-                    provider=request.provider,
-                    model_name=request.model_name,
-                    session_id=request.session_id,
-                    on_progress=on_progress,
-                )
+                # ``session`` is function-scoped: FastAPI closes it when the
+                # handler returns, which is before this generator runs. Reusing
+                # it here would silently re-acquire a connection outside the
+                # request's transaction, with no teardown commit behind the
+                # writes. Own the scope explicitly instead.
+                async with session_scope() as stream_session:
+                    return await run_assistant_and_persist(
+                        session=stream_session,
+                        user_id=current_user.id,
+                        instruction=request.instruction,
+                        flow_id=request.flow_id,
+                        provider=request.provider,
+                        model_name=request.model_name,
+                        session_id=request.session_id,
+                        on_progress=on_progress,
+                    )
             finally:
                 await queue.put(None)
 

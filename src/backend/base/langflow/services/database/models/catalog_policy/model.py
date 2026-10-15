@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, text
+from sqlalchemy.sql.naming import conv
 from sqlmodel import Field, SQLModel
 from sqlmodel.sql.sqltypes import AutoString
 
@@ -76,19 +77,19 @@ class CatalogPolicyRule(SQLModel, table=True):  # type: ignore[call-arg]
     __table_args__ = (
         CheckConstraint(
             _RESOURCE_KIND_CHECK,
-            name="ck_catalog_policy_rule_resource_kind",
+            name=conv("ck_catalog_policy_rule_resource_kind"),
         ),
         CheckConstraint(
             _MODE_CHECK,
-            name="ck_catalog_policy_rule_mode",
+            name=conv("ck_catalog_policy_rule_mode"),
         ),
         CheckConstraint(
             _SCOPE_CHECK,
-            name="ck_catalog_policy_rule_scope",
+            name=conv("ck_catalog_policy_rule_scope"),
         ),
         CheckConstraint(
             _SCOPE_DOMAIN_CHECK,
-            name="ck_catalog_policy_rule_scope_domain_consistency",
+            name=conv("ck_catalog_policy_rule_scope_domain_consistency"),
         ),
         Index(
             "uq_catalog_policy_rule_scoped",

@@ -1,6 +1,7 @@
 """Tests for FileDescriptionGeneratorComponent."""
 
 import json
+import subprocess
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -228,6 +229,27 @@ class TestFileDescriptionGeneratorComponent:
             patch("subprocess.Popen", return_value=mock_proc),
             patch.object(self.component, "_serialize_llm", return_value={"__class_path__": "test.LLM"}),
             pytest.raises(RuntimeError, match="Ingestion subprocess failed"),
+        ):
+            self.component.generate_descriptions()
+
+    def test_missing_opendsstar_reports_manual_install_from_real_subprocess(self, monkeypatch, tmp_path):
+        """Execute the child import rather than fabricating its error output."""
+        self.component.file_data = [Data(data={"file_path": str(tmp_path / "input.txt")})]
+        self.component.cache_dir = str(tmp_path / "cache")
+        self.component.embedding_model = "test-model"
+        self.component.batch_size = 8
+        self.component.timeout = 10
+        real_popen = subprocess.Popen
+
+        def start_without_opendsstar(args, **kwargs):
+            # Force absence even on a developer machine with a manual installation.
+            child_script = "import sys\nsys.modules['OpenDsStar'] = None\n" + args[3]
+            return real_popen([*args[:3], child_script, *args[4:]], **kwargs)
+
+        monkeypatch.setattr(subprocess, "Popen", start_without_opendsstar)
+        with (
+            patch.object(self.component, "_serialize_llm", return_value={}),
+            pytest.raises(RuntimeError, match="requires a separate manual installation of OpenDsStar"),
         ):
             self.component.generate_descriptions()
 

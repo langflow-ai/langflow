@@ -226,6 +226,22 @@ class WorkflowRunRequest(BaseModel):
             "values return 422 with the available list. Ignored when mode=sync."
         ),
     )
+    expose_graph_state: bool | None = Field(
+        default=None,
+        description=(
+            "Whether the stream may carry the flow's graph state: the events "
+            "naming every component that will run and carrying each component's "
+            "own output (``STATE_SNAPSHOT``/``STATE_DELTA``, ``STEP_STARTED``/"
+            "``STEP_FINISHED`` and ``langflow.log`` on ``agui``; "
+            "``vertices_sorted``, per-vertex ``build_start``, ``end_vertex`` and "
+            "``log`` on ``langflow``). Unset defaults to ``False`` for ``agui``, "
+            "whose consumers are usually third-party clients, and ``True`` for "
+            "``langflow``, whose passthrough shape existing callers already "
+            "parse. The terminal ``output`` event is the flow's answer and is "
+            "never suppressed. Not accepted by ``/workflows/public``, which "
+            "always forces it off."
+        ),
+    )
     data: dict[str, Any] | None = Field(
         None,
         description=(
@@ -411,6 +427,10 @@ class WorkflowExecutionResponse(BaseModel):
         ),
     )
     errors: list[ErrorDetail] = []
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Non-fatal notices about this run, such as saved component code being replaced by server code.",
+    )
     inputs: dict[str, Any] = {}
     globals: dict[GlobalVarKey, GlobalVarValue] = Field(default_factory=dict)
     outputs: dict[str, ComponentOutput] = {}

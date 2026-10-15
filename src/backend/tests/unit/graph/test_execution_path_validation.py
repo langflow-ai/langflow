@@ -6,6 +6,7 @@ using the test flows in src/backend/tests/data/ which don't require API keys.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import shutil
 from copy import deepcopy
@@ -15,7 +16,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
     from lfx.graph.graph.base import Graph
 
@@ -23,28 +24,53 @@ from .test_execution_path_equivalence import ExecutionTrace, ExecutionTracer, as
 
 TEST_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
+LOOP_CSV_FLOW = "loop_csv_test.json"
+LOOP_CSV_NAME = "loop_test.csv"
+
 # Test flows that should work without external dependencies
 TEST_FLOWS = [
     "LoopTest.json",  # Simple loop with feedback
-    "loop_csv_test.json",  # Real-world failing case from issue
+    LOOP_CSV_FLOW,  # Real-world failing case from issue
     "MemoryChatbotNoLLM.json",
 ]
 
 
 @pytest.fixture
-def loop_csv_path() -> Generator[Path, None, None]:
-    """Copy loop_test.csv to current working directory so File component can find it.
+def stage_loop_csv() -> Generator[Callable[[dict, str], dict], None, None]:
+    """Stage ``loop_test.csv`` in a graph scope's storage directory and point the flow at it.
 
-    The File component resolves relative paths relative to the current working directory,
-    so we need to place the file there rather than in the cache directory.
+    ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` defaults to true, so the File component may only
+    read paths under ``config_dir/<user_id|flow_id>`` -- where an uploaded file actually lands.
+    This fixture therefore stages the CSV the way an upload does (write it into the scope
+    directory, hand the FileInput the ``"<scope>/<file name>"`` storage key that
+    ``StorageService.resolve_component_path`` expands) instead of dropping it in the working
+    directory, which is exactly the out-of-scope read the secure default denies.
     """
-    # Copy to current working directory
-    file_path = Path.cwd() / "loop_test.csv"
-    shutil.copy(TEST_DATA_DIR / "loop_test.csv", file_path.as_posix())
-    yield file_path
-    # Remove the file
-    if file_path.exists():
-        file_path.unlink()
+    staged: list[Path] = []
+
+    def _stage(graph_data: dict, scope: str) -> dict:
+        from lfx.services.deps import get_settings_service
+
+        scope_dir = Path(get_settings_service().settings.config_dir) / scope
+        scope_dir.mkdir(parents=True, exist_ok=True)
+        target = scope_dir / LOOP_CSV_NAME
+        shutil.copy(TEST_DATA_DIR / LOOP_CSV_NAME, target.as_posix())
+        staged.append(target)
+
+        storage_key = f"{scope}/{LOOP_CSV_NAME}"
+        for node in graph_data.get("nodes", []):
+            field = node.get("data", {}).get("node", {}).get("template", {}).get("path")
+            if isinstance(field, dict) and field.get("file_path") == [LOOP_CSV_NAME]:
+                field["file_path"] = [storage_key]
+        return graph_data
+
+    yield _stage
+
+    for target in staged:
+        if target.exists():
+            target.unlink()
+        with contextlib.suppress(OSError):
+            target.parent.rmdir()
 
 
 async def run_via_async_start_traced(graph: Graph) -> ExecutionTrace:
@@ -124,8 +150,8 @@ async def run_via_arun_traced(graph: Graph) -> ExecutionTrace:
 
 @pytest.mark.parametrize("flow_name", TEST_FLOWS)
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("loop_csv_path", "client")
-async def test_flow_execution_equivalence(flow_name: str):
+@pytest.mark.usefixtures("client")
+async def test_flow_execution_equivalence(flow_name: str, stage_loop_csv):
     """Test that a flow produces identical results via both execution paths."""
     from uuid import uuid4
 
@@ -143,18 +169,29 @@ async def test_flow_execution_equivalence(flow_name: str):
     graph_data = flow_data.get("data", flow_data)
 
     # Create two independent copies with valid UUIDs for persisted identifiers.
+    user_id_async_start = str(uuid4())
+    user_id_arun = str(uuid4())
+
+    payload_async_start = deepcopy(graph_data)
+    payload_arun = deepcopy(graph_data)
+
+    if flow_name == LOOP_CSV_FLOW:
+        # Each copy runs as its own user, so the CSV is staged once per storage scope.
+        stage_loop_csv(payload_async_start, user_id_async_start)
+        stage_loop_csv(payload_arun, user_id_arun)
+
     graph_for_async_start = Graph.from_payload(
-        deepcopy(graph_data),
+        payload_async_start,
         flow_id=str(uuid4()),
         flow_name=flow_name,
-        user_id=str(uuid4()),
+        user_id=user_id_async_start,
     )
 
     graph_for_arun = Graph.from_payload(
-        deepcopy(graph_data),
+        payload_arun,
         flow_id=str(uuid4()),
         flow_name=flow_name,
-        user_id=str(uuid4()),
+        user_id=user_id_arun,
     )
 
     # Run both paths with tracing

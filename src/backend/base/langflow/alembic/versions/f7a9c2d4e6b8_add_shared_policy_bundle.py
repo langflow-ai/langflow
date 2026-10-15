@@ -212,8 +212,8 @@ def _create_revision_table() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("reason", sa.String(length=REASON_MAX_LENGTH), nullable=True),
         sa.Column("rollback_of_revision", sa.Integer(), nullable=True),
-        sa.CheckConstraint("revision >= 1", name="ck_policy_bundle_revision_positive"),
-        sa.CheckConstraint("length(content_hash) = 64", name="ck_policy_bundle_revision_hash_length"),
+        sa.CheckConstraint("revision >= 1", name=op.f("ck_policy_bundle_revision_positive")),
+        sa.CheckConstraint("length(content_hash) = 64", name=op.f("ck_policy_bundle_revision_hash_length")),
         sa.ForeignKeyConstraint(
             ["rollback_of_revision"],
             [f"{REVISION_TABLE}.revision"],
@@ -230,8 +230,8 @@ def _create_active_table() -> None:
         sa.Column("revision", sa.Integer(), nullable=False),
         sa.Column("initialized", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.CheckConstraint(f"id = {SINGLETON_ID}", name="ck_policy_bundle_active_singleton"),
-        sa.CheckConstraint("revision >= 1", name="ck_policy_bundle_active_revision_positive"),
+        sa.CheckConstraint(f"id = {SINGLETON_ID}", name=op.f("ck_policy_bundle_active_singleton")),
+        sa.CheckConstraint("revision >= 1", name=op.f("ck_policy_bundle_active_revision_positive")),
         sa.PrimaryKeyConstraint("id"),
     )
 

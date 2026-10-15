@@ -8,6 +8,10 @@ on:
         description: "Release tag, or an immutable commit SHA / pull request ref when dry_run is true."
         required: true
         type: string
+      release_commit:
+        description: "Full 40-character source commit SHA (prepared SHA for releases); retained on retries."
+        required: true
+        type: string
       release_package_base:
         description: "Release Langflow Base"
         required: true
@@ -49,7 +53,7 @@ on:
         type: boolean
         default: false
       create_release:
-        description: "Whether to create a gh release"
+        description: "Publish the GitHub release. Final artifact publication reserves a draft even when false."
         required: false
         type: boolean
         default: false
@@ -64,6 +68,11 @@ on:
         type: boolean
         default: true
 
+# Hold the source tag stable until every build and publication job has finished.
+concurrency:
+  group: release-source-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
 jobs:
   echo-inputs:
     name: Echo Workflow Inputs
@@ -72,6 +81,7 @@ jobs:
       - name: Echo workflow inputs
         run: |
           echo "release_tag: ${{ inputs.release_tag }}"
+          echo "release_commit: ${{ inputs.release_commit }}"
           echo "release_package_base: ${{ inputs.release_package_base }}"
           echo "release_package_main: ${{ inputs.release_package_main }}"
           echo "release_lfx: ${{ inputs.release_lfx }}"
@@ -82,6 +92,7 @@ jobs:
           echo "pre_release: ${{ inputs.pre_release }}"
           echo "create_release: ${{ inputs.create_release }}"
           echo "dry_run: ${{ inputs.dry_run }}"
+          echo "run_pip_check: ${{ inputs.run_pip_check }}"
 
   validate-tag:
     name: Validate Tag Input
@@ -90,13 +101,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
           fetch-depth: 0 # Fetch all history - required for tags (?)
       - name: Validate release source
         env:
           DRY_RUN: ${{ inputs.dry_run }}
           RELEASE_REF: ${{ inputs.release_tag }}
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
         run: |
+          if [[ ! "$RELEASE_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] ||
+             [ "$(git rev-parse HEAD)" != "$(printf '%s' "$RELEASE_COMMIT" | tr '[:upper:]' '[:lower:]')" ]; then
+            echo "Error: release_commit must be the full source commit SHA."
+            exit 1
+          fi
           if [ "$DRY_RUN" = "true" ]; then
             resolved=$(git rev-parse HEAD)
             if [[ "$RELEASE_REF" =~ ^[0-9a-fA-F]{40}$ ]] ||
@@ -124,7 +141,21 @@ jobs:
             exit 1
           fi
 
+          if [ "$(git rev-parse "refs/tags/$RELEASE_REF^{commit}")" != "$(git rev-parse HEAD)" ]; then
+            echo "Error: the release tag no longer matches release_commit; start a new release run."
+            exit 1
+          fi
+
           echo "Validated: '$RELEASE_REF' is a valid tag."
+
+      - name: Set up release source verification
+        if: ${{ !inputs.dry_run }}
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          python-version: "3.13"
+      - name: Verify tagged source disables auto-login
+        if: ${{ !inputs.dry_run }}
+        run: uv run --no-project python scripts/ci/release_auth_defaults.py verify-source
 
   validate-tag-format:
     name: Validate Tag Format and Check for Duplicates
@@ -134,14 +165,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.release_commit }}
           fetch-depth: 0
 
       - name: Validate Tag Has v Prefix
         if: ${{ !inputs.dry_run }}
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          PRE_RELEASE: ${{ inputs.pre_release }}
         run: |
-          TAG="${{ inputs.release_tag }}"
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ Error: Tag must start with 'v' and follow semver format (v1.2.3)"
+          TAG="$RELEASE_TAG"
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            :
+          elif [ "$PRE_RELEASE" = "true" ] && [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+rc(0|[1-9][0-9]*)$ ]]; then
+            echo "Validated immutable pre-release source tag."
+          else
+            echo "❌ Error: Use v1.2.3, or v1.2.3rcN with pre_release enabled"
             echo "   Got: $TAG"
             echo ""
             echo "This is required to ensure GitHub's generateReleaseNotes uses the correct base comparison."
@@ -178,7 +217,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           persist-credentials: false
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
       - name: Validate selected package dependencies
         run: |
           main_version=$(python3 -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
@@ -244,7 +283,7 @@ jobs:
         if: ${{ inputs.pre_release }}
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
 
       - name: Setup Environment
         if: ${{ inputs.pre_release }}
@@ -260,6 +299,8 @@ jobs:
         id: rc
         if: ${{ inputs.pre_release }}
         shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           set -euo pipefail
 
@@ -309,6 +350,17 @@ jobs:
           }
 
           max_rc=0
+          # A failed attempt may never publish its RC. An immutable retry tag
+          # supplies a floor so the next attempt can advance without moving tags.
+          if [[ "${RELEASE_TAG:-}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)rc([0-9]+)$ ]]; then
+            tag_version="${BASH_REMATCH[1]}"
+            max_rc="${BASH_REMATCH[2]}"
+            source_version="$(read_pyproject_version pyproject.toml)"
+            if [ "$tag_version" != "$source_version" ]; then
+              echo "Pre-release tag base $tag_version does not match source version $source_version." >&2
+              exit 1
+            fi
+          fi
           consider_versions() {
             local label="$1"
             local base_version="$2"
@@ -319,6 +371,19 @@ jobs:
             if [ "$rc_number" -gt "$max_rc" ]; then
               max_rc="$rc_number"
             fi
+          }
+
+          # A package whose final is already on PyPI is reused rather than re-released,
+          # so the RCs it shipped in an earlier cycle must not raise the shared number.
+          consider_unreleased_versions() {
+            local label="$1"
+            local base_version="$2"
+            local versions_file="$3"
+            if grep -Fxq "$base_version" "$versions_file"; then
+              echo "${label}: final ${base_version} is already published; excluding its historical RCs."
+              return
+            fi
+            consider_versions "$label" "$base_version" "$versions_file"
           }
 
           tmp_dir="$(mktemp -d)"
@@ -344,7 +409,7 @@ jobs:
           if [ "${{ inputs.release_sdk || inputs.release_lfx }}" = "true" ]; then
             version="$(read_pyproject_version src/sdk/pyproject.toml)"
             fetch_pypi_versions "langflow-sdk" "$tmp_dir/langflow-sdk-pypi.txt"
-            consider_versions "PyPI langflow-sdk" "$version" "$tmp_dir/langflow-sdk-pypi.txt"
+            consider_unreleased_versions "PyPI langflow-sdk" "$version" "$tmp_dir/langflow-sdk-pypi.txt"
           fi
 
           if [ "${{ inputs.release_bundles }}" = "true" ]; then
@@ -361,11 +426,7 @@ jobs:
               version="$(read_pyproject_version "$pyproject")"
               output_file="$tmp_dir/${package_name}-pypi.txt"
               fetch_pypi_versions "$package_name" "$output_file"
-              if grep -Fxq "$version" "$output_file"; then
-                echo "PyPI ${package_name}: final ${version} is already published; excluding its historical RCs."
-              else
-                consider_versions "PyPI ${package_name}" "$version" "$output_file"
-              fi
+              consider_unreleased_versions "PyPI ${package_name}" "$version" "$output_file"
             done
           fi
 
@@ -398,7 +459,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
 
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
@@ -452,7 +513,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
 
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
@@ -503,7 +564,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
 
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
@@ -554,7 +615,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
 
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
@@ -591,10 +652,19 @@ jobs:
             fi
           else
             if [ ${{inputs.pre_release}} == "true" ]; then
-              rc_number="${{ needs.determine-rc-number.outputs.rc_number }}"
-              version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" --rc-number "$rc_number")"
-              echo "Shared release candidate number: rc$rc_number"
-              echo "SDK pre-release version to be released: $version"
+              # Fail the step rather than guess: determine-rc-number left a published SDK out of
+              # the shared number, so minting an RC of it by mistake could collide on PyPI.
+              sdk_pypi_json="$(curl --retry 3 --retry-delay 2 --retry-connrefused -fsS "https://pypi.org/pypi/langflow-sdk/json")"
+              sdk_published="$(jq --arg version "$version" '.releases | has($version)' <<< "$sdk_pypi_json")"
+              if [ "$sdk_published" = "true" ]; then
+                echo "SDK $version is already published; reusing it for this pre-release."
+                last_released_version="$version"
+              else
+                rc_number="${{ needs.determine-rc-number.outputs.rc_number }}"
+                version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" --rc-number "$rc_number")"
+                echo "Shared release candidate number: rc$rc_number"
+                echo "SDK pre-release version to be released: $version"
+              fi
             else
               last_released_version=$(curl -s "https://pypi.org/pypi/langflow-sdk/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
               echo "Latest SDK release version: $last_released_version"
@@ -615,7 +685,7 @@ jobs:
     needs: [validate-tag, validate-dependencies]
     uses: ./.github/workflows/ci.yml
     with:
-      ref: ${{ inputs.release_tag }}
+      ref: ${{ inputs.release_commit }}
       python-versions: "['3.10', '3.11', '3.12', '3.13', '3.14']"
       frontend-tests-folder: "tests"
       release: true
@@ -632,7 +702,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
@@ -702,7 +772,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
@@ -761,11 +831,21 @@ jobs:
           # Verify the change
           echo "Updated langflow-sdk dependency:"
           grep "langflow-sdk" pyproject.toml
+      - name: Inject production Segment write key
+        env:
+          LANGFLOW_SEGMENT_WRITE_KEY: ${{ secrets.LANGFLOW_SEGMENT_WRITE_KEY }}
+        run: uv run --no-sync python scripts/ci/inject_segment_write_key.py
       - name: Build project for distribution
         run: |
+          uv run --no-sync python scripts/ci/release_auth_defaults.py prepare
           cd src/lfx
           rm -rf dist/
           uv build --wheel --out-dir dist
+          uv run --no-sync python ../../scripts/ci/release_auth_defaults.py verify dist/*.whl
+      - name: Verify production Segment write key
+        env:
+          LANGFLOW_SEGMENT_WRITE_KEY: ${{ secrets.LANGFLOW_SEGMENT_WRITE_KEY }}
+        run: uv run --no-sync python scripts/ci/inject_segment_write_key.py --verify-wheel src/lfx/dist/*.whl
       - name: Verify built version
         run: |
           EXPECTED_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
@@ -818,7 +898,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
@@ -917,11 +997,16 @@ jobs:
           assert "langflow-base" not in entry_points
           PY
       - name: Test CLI
+        env:
+          LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
         run: |
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist
           uv pip install src/backend/base/dist/*.whl
+          # Workspace sources take precedence over --find-links during dependency
+          # installation. Replace LFX last so startup tests the published artifact.
+          uv pip install --force-reinstall --no-deps lfx-dist/*.whl
           uv run --no-sync python - <<'PY'
           import re
           from importlib.metadata import distributions
@@ -943,7 +1028,13 @@ jobs:
           uv run --no-sync python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
-          timeout 120 bash -c 'until curl -f http://localhost:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          timeout 120 bash -c 'until curl -f http://localhost:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:7860/api/v1/auto_login)
+          if [ "$status" != "403" ]; then
+            echo "Release wheel authentication check failed: auto_login returned $status; expected 403."
+            kill "$SERVER_PID"
+            exit 1
+          fi
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
           sleep 20 # give the server some time to terminate
@@ -987,7 +1078,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
@@ -1151,6 +1242,8 @@ jobs:
           print(f"Verified {wheel.name}: direct base + curated defaults + opt-in bundles extra")
           PY
       - name: Test CLI
+        env:
+          LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
         run: |
           uv pip install dist/langflow-*.whl
           uv run python -m langflow run --host localhost --port 7860 --backend-only &
@@ -1194,7 +1287,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
@@ -1312,7 +1405,7 @@ jobs:
        inputs.build_docker_main)
     uses: ./.github/workflows/release-inventory-gate.yml
     with:
-      ref: ${{ inputs.release_tag }}
+      ref: ${{ inputs.release_commit }}
       main-version: ${{ needs.determine-main-version.outputs.version }}
       base-version: ${{ needs.determine-base-version.outputs.version || needs.determine-main-version.outputs.version }}
       sdk-artifact-name: ${{ needs.build-sdk.result == 'success' && 'dist-sdk' || '' }}
@@ -1321,18 +1414,50 @@ jobs:
       main-artifact-name: ${{ needs.build-main.result == 'success' && 'dist-main' || '' }}
       bundles-artifact-name: ${{ needs.build-bundles.result == 'success' && needs.build-bundles.outputs.bundles-found == '1' && 'dist-bundles' || '' }}
 
+  reserve-final-release:
+    name: Reserve final publication
+    needs: [validate-tag, validate-tag-format, ci, test-cross-platform, release-inventory]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.validate-tag.result == 'success' &&
+      needs.validate-tag-format.result == 'success' &&
+      needs.ci.result == 'success' &&
+      (needs.test-cross-platform.result == 'success' || needs.test-cross-platform.result == 'skipped') &&
+      (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout release source
+        if: ${{ !inputs.dry_run && !inputs.pre_release }}
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_commit }}
+      - name: Reserve tag before final artifacts can be published
+        if: ${{ !inputs.dry_run && !inputs.pre_release }}
+        uses: actions/github-script@v9
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+        with:
+          script: |
+            const { reserveFinalPublication } = require('./scripts/ci/release_auth/publication.cjs');
+            await reserveFinalPublication(github, context.repo, process.env.RELEASE_TAG, process.env.RELEASE_COMMIT);
+
   publish-base:
     name: Publish Langflow Base to PyPI
     if: |
       always() &&
       !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
       inputs.release_package_base &&
       needs.build-base.result == 'success' &&
       needs.test-cross-platform.result == 'success' &&
       (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped') &&
       needs.ci.result == 'success' &&
       (needs.publish-bundles.result == 'success' || needs.publish-bundles.result == 'skipped')
-    needs: [build-base, test-cross-platform, release-inventory, ci, publish-bundles]
+    needs: [reserve-final-release, build-base, test-cross-platform, release-inventory, ci, publish-bundles]
     runs-on: ubuntu-latest
     steps:
       - name: Download base artifact
@@ -1355,10 +1480,11 @@ jobs:
 
   publish-bundles:
     name: Publish Bundles to PyPI
-    needs: [build-bundles, test-cross-platform, release-inventory, ci, publish-lfx]
+    needs: [reserve-final-release, build-bundles, test-cross-platform, release-inventory, ci, publish-lfx]
     if: |
       always() &&
       !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
       inputs.release_bundles &&
       needs.build-bundles.result == 'success' &&
       needs.build-bundles.outputs.bundles-found == '1' &&
@@ -1371,7 +1497,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
           persist-credentials: false
       - name: Download bundles artifact
         uses: actions/download-artifact@v8
@@ -1409,6 +1535,7 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
       inputs.release_package_main &&
       needs.build-main.result == 'success' &&
       needs.test-cross-platform.result == 'success' &&
@@ -1418,6 +1545,7 @@ jobs:
       (needs.publish-base.result == 'success' || needs.publish-base.result == 'skipped')
     needs:
       [
+        reserve-final-release,
         build-main,
         test-cross-platform,
         release-inventory,
@@ -1447,10 +1575,11 @@ jobs:
 
   publish-sdk:
     name: Publish langflow-sdk to PyPI
-    needs: [build-sdk, test-cross-platform, release-inventory, ci]
+    needs: [reserve-final-release, build-sdk, test-cross-platform, release-inventory, ci]
     if: |
       always() &&
       !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
       inputs.release_sdk &&
       needs.build-sdk.result == 'success' &&
       needs.ci.result == 'success' &&
@@ -1461,7 +1590,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.release_commit }}
       - name: Download SDK artifact
         uses: actions/download-artifact@v8
         with:
@@ -1482,10 +1611,11 @@ jobs:
 
   publish-lfx:
     name: Publish LFX to PyPI
-    needs: [build-lfx, test-cross-platform, release-inventory, ci, publish-sdk]
+    needs: [reserve-final-release, build-lfx, test-cross-platform, release-inventory, ci, publish-sdk]
     if: |
       always() &&
       !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
       inputs.release_lfx &&
       needs.build-lfx.result == 'success' &&
       needs.test-cross-platform.result == 'success' &&
@@ -1517,15 +1647,16 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
       inputs.build_docker_base &&
       needs.ci.result == 'success' &&
       needs.determine-base-version.result == 'success' &&
       (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped') &&
       (!inputs.release_package_base || needs.build-base.result == 'success')
-    needs: [ci, determine-base-version, release-inventory, build-base]
+    needs: [reserve-final-release, ci, determine-base-version, release-inventory, build-base]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_tag }}
+      ref: ${{ inputs.release_commit }}
       release_type: base
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-base-version.outputs.version }}
@@ -1538,16 +1669,17 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
       inputs.build_docker_main &&
       needs.ci.result == 'success' &&
       needs.determine-main-version.result == 'success' &&
       needs.release-inventory.result == 'success' &&
       (!inputs.release_package_main || needs.build-main.result == 'success') &&
       (!inputs.release_bundles || needs.build-bundles.result == 'success')
-    needs: [ci, determine-main-version, release-inventory, build-main, build-bundles]
+    needs: [reserve-final-release, ci, determine-main-version, release-inventory, build-main, build-bundles]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_tag }}
+      ref: ${{ inputs.release_commit }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
@@ -1558,10 +1690,10 @@ jobs:
   call_docker_build_main_backend:
     name: Call Docker Build Workflow for Langflow Backend
     if: ${{ inputs.build_docker_main && !inputs.dry_run }}
-    needs: [call_docker_build_main, determine-main-version]
+    needs: [reserve-final-release, call_docker_build_main, determine-main-version]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_tag }}
+      ref: ${{ inputs.release_commit }}
       release_type: main-backend
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
@@ -1571,10 +1703,10 @@ jobs:
   call_docker_build_main_frontend:
     name: Call Docker Build Workflow for Langflow Frontend
     if: ${{ inputs.build_docker_main && !inputs.dry_run }}
-    needs: [call_docker_build_main, determine-main-version]
+    needs: [reserve-final-release, call_docker_build_main, determine-main-version]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_tag }}
+      ref: ${{ inputs.release_commit }}
       release_type: main-frontend
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
@@ -1586,14 +1718,15 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
       inputs.build_docker_main &&
       needs.ci.result == 'success' &&
       needs.release-inventory.result == 'success' &&
       needs.call_docker_build_main.result == 'success'
-    needs: [ci, release-inventory, call_docker_build_main, determine-main-version, build-main]
+    needs: [reserve-final-release, ci, release-inventory, call_docker_build_main, determine-main-version, build-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_tag }}
+      ref: ${{ inputs.release_commit }}
       release_type: main-ep
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
@@ -1606,14 +1739,15 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
       inputs.build_docker_main &&
       needs.ci.result == 'success' &&
       needs.release-inventory.result == 'success' &&
       needs.call_docker_build_main.result == 'success'
-    needs: [ci, release-inventory, call_docker_build_main, determine-main-version, build-main]
+    needs: [reserve-final-release, ci, release-inventory, call_docker_build_main, determine-main-version, build-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_tag }}
+      ref: ${{ inputs.release_commit }}
       release_type: main-all
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
@@ -1628,6 +1762,7 @@ jobs:
       contents: write
     needs:
       [
+        reserve-final-release,
         determine-base-version,
         determine-main-version,
         build-base,
@@ -1639,6 +1774,7 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
       !inputs.dry_run &&
       inputs.create_release &&
       (!inputs.release_package_main ||
@@ -1679,11 +1815,11 @@ jobs:
         id: release_commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
           PUBLISHED_TAG: ${{ inputs.pre_release && (needs.determine-main-version.outputs.version || needs.determine-base-version.outputs.version) || inputs.release_tag }}
         run: |
-          sha=$(gh api "repos/${{ github.repository }}/commits/$RELEASE_TAG" --jq '.sha')
-          echo "Release tag '$RELEASE_TAG' resolves to commit $sha"
+          sha="$RELEASE_COMMIT"
+          echo "Release source is pinned to commit $sha"
           if gh api "repos/${{ github.repository }}/git/ref/tags/$PUBLISHED_TAG" >/dev/null 2>&1; then
             echo "Tag '$PUBLISHED_TAG' already exists; omitting target_commitish."
             echo "sha=" >> "$GITHUB_OUTPUT"

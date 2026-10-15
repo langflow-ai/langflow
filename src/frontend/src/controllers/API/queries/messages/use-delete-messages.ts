@@ -36,6 +36,10 @@ export const useDeleteMessages: useMutationFunctionType<
   > = mutate(["useDeleteMessages"], deleteMessage, {
     ...options,
     onSettled: (...args) => {
+      // Deletions shift offsets; refresh loaded pages before requesting older rows.
+      queryClient.invalidateQueries({
+        queryKey: ["useGetMessagesQuery"],
+      });
       queryClient.invalidateQueries({
         queryKey: ["useGetSessionsFromFlowQuery"],
       });

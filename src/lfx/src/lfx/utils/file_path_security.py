@@ -4,10 +4,14 @@ The built-in file-reading components (File, Directory, JSON/CSV-to-Data) accept 
 path from a tenant-controlled input field. Without restriction a tenant can read arbitrary
 server files (``/etc/passwd``, the SQLite DB, secrets) or other tenants' uploads.
 
-When ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is enabled, resolved local file paths must stay
-within the authenticated user's or executing flow's storage subdirectory under
-``settings.config_dir``. The check is a no-op when the setting is disabled (OSS default), so
-single-tenant deployments keep the existing "read any local file by absolute path" behavior.
+When ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is enabled (the default), resolved local file paths
+must stay within the authenticated user's or executing flow's storage subdirectory under
+``settings.config_dir``. The check is a no-op when the setting is explicitly disabled, which
+single-tenant deployments may do to keep the legacy "read any local file by absolute path"
+behavior. UNC/device paths are denied in either mode before resolution because Windows may
+connect to the remote host while resolving them. Reading the setting fails closed: if the
+settings service is unavailable the restriction is treated as enabled, because the default is
+on and a fail-open read would drop containment for every caller without an operator opting out.
 
 Reserved-secret denial: the storage data directory IS ``config_dir``, which also holds the
 server-managed secret files as siblings of the per-flow upload subdirectories — the Fernet
@@ -21,6 +25,7 @@ would disclose every tenant's stored credentials.
 from __future__ import annotations
 
 import contextlib
+import contextvars
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -28,11 +33,53 @@ from lfx.logging import logger
 from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
+
+
+_current_file_access_scopes: contextvars.ContextVar[tuple[str, ...] | None] = contextvars.ContextVar(
+    "lfx_current_file_access_scopes", default=None
+)
+
+
+@contextlib.contextmanager
+def file_access_scope(scope_ids: Iterable[object]) -> Iterator[None]:
+    """Bind trusted graph storage scopes while components read message attachments."""
+    token = _current_file_access_scopes.set(tuple(str(scope) for scope in scope_ids))
+    try:
+        yield
+    finally:
+        _current_file_access_scopes.reset(token)
+
+
+def enforce_current_file_access(file_path: str | Path) -> Path:
+    """Confine a local read to the executing graph, or the storage-root floor outside a run.
+
+    Message payloads cannot establish their own access scope. Component execution binds
+    trusted user/flow scopes, including public source-flow provenance, for these reads.
+    Trusted callers outside a graph still cannot read server-managed secrets or escape
+    storage unless the operator explicitly disables local-file restriction.
+    """
+    scope_ids = _current_file_access_scopes.get()
+    return enforce_local_file_access(file_path, scope_ids=scope_ids, allow_storage_root=scope_ids is None)
+
+
+def enforce_current_storage_key_scope(path: str) -> None:
+    """Check a normalized object-storage key against the executing graph's trusted scopes.
+
+    Trusted standalone callers have no tenant scope to enforce. A graph with missing
+    scopes must fail closed instead of being mistaken for a standalone caller.
+    """
+    scope_ids = _current_file_access_scopes.get()
+    if scope_ids is None:
+        return
+    if not scope_ids:
+        msg = "Object-storage access requires an authenticated user or flow scope."
+        raise StorageNamespaceError(msg)
+    enforce_storage_key_scope(path, scope_ids)
 
 
 class LocalFileAccessError(ValueError):
-    """Raised when a resolved path escapes the allowed storage root under restriction."""
+    """Raised when a local path is unsafe or escapes the allowed storage scope."""
 
 
 class StorageNamespaceError(LocalFileAccessError):
@@ -51,15 +98,23 @@ _RESERVED_SECRET_FILENAMES = frozenset({"secret_key", "private_key.pem", "public
 
 
 def is_local_file_access_restricted() -> bool:
-    """Return True if local file access is restricted to the storage directory."""
+    """Return True if local file access is restricted to the storage directory.
+
+    Fails CLOSED. ``get_settings_service()`` returns ``None`` when service creation fails, so
+    this read can raise. The setting defaults to True, so answering False there would hand back
+    the opposite of the configured default and silently drop containment for every caller
+    (``enforce_local_file_access``, the FileInput tweak path, and the sqlite/duckdb database-URL
+    and local-Git-clone checks in ``ssrf_protection``). The single-tenant opt-out is honored
+    only when the setting is actually readable.
+    """
     try:
         return bool(get_settings_service().settings.restrict_local_file_access)
-    except Exception:  # noqa: BLE001 - settings service may be unavailable; fail open to default
+    except Exception:  # noqa: BLE001 - settings service may be unavailable; fail closed to the default
         logger.warning(
             "Could not read restrict_local_file_access setting; treating local file restriction "
-            "as DISABLED (fail-open to default). Local-file containment is not being enforced."
+            "as ENABLED (fail-closed). Local file paths outside the storage scope are denied."
         )
-        return False
+        return True
 
 
 def _reserved_secret_paths(data_dir: Path) -> set[Path]:
@@ -231,7 +286,7 @@ def enforce_local_file_access(
     """Ensure a local path is inside the current user/flow storage scope when restricted.
 
     Symlinks are resolved before the containment check so a symlink inside the storage dir
-    cannot point outside it.
+    cannot point outside it. UNC/device paths are always denied before resolution.
 
     Args:
         resolved_path: A filesystem path. It is re-resolved here (``Path.resolve()``) so that
@@ -249,14 +304,34 @@ def enforce_local_file_access(
         The resolved path as a ``Path`` object when allowed.
 
     Raises:
-        LocalFileAccessError: If the restriction is enabled and the path escapes the
-            authenticated user's or executing flow's storage scope.
+        LocalFileAccessError: If the path is a UNC/device path, or if restriction is enabled
+            and the path escapes the authenticated user's or executing flow's storage scope.
     """
+    # On Windows, resolving a UNC or device path can open an SMB connection before
+    # the scope check runs. Deny it before any filesystem operation in either mode.
+    raw_path = str(resolved_path)
+    # Windows accepts either slash as a separator, including mixed UNC prefixes
+    # such as ``\\/server`` and ``/\\server``.
+    if raw_path.replace("\\", "/").startswith("//"):
+        msg = "Access to UNC and device file paths is not permitted."
+        raise LocalFileAccessError(msg)
+
     path = Path(resolved_path)
     if not is_local_file_access_restricted():
         return path
 
-    data_dir = Path(get_settings_service().settings.config_dir).resolve()
+    # The restriction is in force, so an unreadable settings service must deny rather than
+    # raise an opaque AttributeError from ``None.settings``: same fail-closed reasoning as
+    # ``is_local_file_access_restricted``, and it keeps the denial on the LocalFileAccessError
+    # contract callers already map to a 400.
+    try:
+        data_dir = Path(get_settings_service().settings.config_dir).resolve()
+    except Exception as e:  # settings unavailable while the restriction is in force; deny
+        msg = (
+            "Access to local file paths is disabled because the storage directory could not be "
+            "resolved (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true). Use an uploaded file instead."
+        )
+        raise LocalFileAccessError(msg) from e
     allowed_roots = _scope_roots(data_dir, scope_ids, allow_storage_root=allow_storage_root)
     try:
         candidate = path.resolve()

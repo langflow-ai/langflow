@@ -1,6 +1,7 @@
 from langchain_openai import ChatOpenAI
 from lfx.base.models.aiml_constants import AimlModels
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, openai_compatible_client_kwargs
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import (
@@ -21,6 +22,8 @@ class AIMLModelComponent(LCModelComponent):
     icon = "AIML"
     name = "AIMLModel"
     documentation = "https://docs.aimlapi.com/api-reference"
+
+    _default_api_base = "https://api.aimlapi.com/v2"
 
     inputs = [
         *LCModelComponent.get_base_inputs(),
@@ -76,9 +79,12 @@ class AIMLModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
-        aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com/v2"
+        aiml_api_base = self.aiml_api_base or self._default_api_base
 
-        openai_api_key = secret_value_to_str(aiml_api_key)
+        openai_api_key = secret_value_to_str(aiml_api_key) or None
+        ensure_credential_endpoint_allowed(
+            openai_api_key, aiml_api_base, default_url=self._default_api_base, sdk_env_fallback="OPENAI_API_KEY"
+        )
 
         # TODO: Once OpenAI fixes their o1 models, this part will need to be removed
         # to work correctly with o1 temperature settings.
@@ -92,6 +98,7 @@ class AIMLModelComponent(LCModelComponent):
             base_url=aiml_api_base,
             max_tokens=max_tokens or None,
             **model_kwargs,
+            **openai_compatible_client_kwargs(self.aiml_api_base, default_url=self._default_api_base),
         )
 
     def _get_exception_message(self, e: Exception):

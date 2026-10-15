@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.util import project_mcp_server_name, sanitize_mcp_name
 from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service
@@ -101,6 +101,48 @@ class MCPServerValidationResult:
         return not self.server_exists or self.project_id_matches
 
 
+PROJECT_SERVER_ID_SUFFIX_LENGTH = 8
+
+
+def project_mcp_server_name_candidates(project_id: UUID, project_name: str) -> list[str]:
+    """Return the MCP server names a project may be registered under, most preferred first.
+
+    The base name is truncated, so distinct project names can derive the same one. The
+    id-suffixed fallback keeps those projects apart without renaming servers that already exist.
+    Sanitized names never contain hyphens, so the fallback cannot equal another project's base name.
+    """
+    base_name = project_mcp_server_name(project_name)
+    id_suffix = UUID(str(project_id)).hex[:PROJECT_SERVER_ID_SUFFIX_LENGTH]
+    prefix_length = MAX_MCP_SERVER_NAME_LENGTH - 4 - PROJECT_SERVER_ID_SUFFIX_LENGTH - 1
+    stem = base_name.removeprefix("lf-")
+    return [base_name, f"lf-{stem[:prefix_length].rstrip('_')}-{id_suffix}"]
+
+
+async def _server_config_targets_project(server_config: dict, project_id: UUID) -> bool:
+    existing_urls = await extract_urls_from_strings(server_config.get("args") or [])
+    return any(str(project_id) in url for url in existing_urls)
+
+
+def _conflict_message(server_name: str, project_name: str, project_id: UUID, operation: str) -> str:
+    if operation == "create":
+        return (
+            f"MCP server name conflict: '{server_name}' already exists "
+            f"for a different project. Cannot create MCP server for project "
+            f"'{project_name}' (ID: {project_id})"
+        )
+    if operation == "update":
+        return (
+            f"MCP server name conflict: '{server_name}' exists for a different project. "
+            f"Cannot update MCP server for project '{project_name}' (ID: {project_id})"
+        )
+    if operation == "delete":
+        return (
+            f"MCP server '{server_name}' exists for a different project. "
+            f"Cannot delete MCP server for project '{project_name}' (ID: {project_id})"
+        )
+    return ""
+
+
 async def validate_mcp_server_for_project(
     project_id: UUID,
     project_name: str,
@@ -111,6 +153,10 @@ async def validate_mcp_server_for_project(
     operation: str = "create",
 ) -> MCPServerValidationResult:
     """Validate MCP server for a project operation.
+
+    A server already registered for this project under any candidate name wins; otherwise the
+    first unused candidate is returned. A conflict is reported only when every candidate is taken
+    by a different project.
 
     Args:
         project_id: The project UUID
@@ -124,62 +170,51 @@ async def validate_mcp_server_for_project(
     Returns:
         MCPServerValidationResult with validation details
     """
-    # Generate server name that would be used for this project
-    server_name = f"lf-{sanitize_mcp_name(project_name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+    candidate_names = project_mcp_server_name_candidates(project_id, project_name)
+    server_name = candidate_names[0]
 
     try:
-        existing_servers = await get_server_list(user, session, storage_service, settings_service)
+        existing_servers = (await get_server_list(user, session, storage_service, settings_service)).get(
+            "mcpServers", {}
+        )
 
-        if server_name not in existing_servers.get("mcpServers", {}):
-            # Server doesn't exist
+        for candidate_name in candidate_names:
+            candidate_config = existing_servers.get(candidate_name)
+            if candidate_config is not None and await _server_config_targets_project(candidate_config, project_id):
+                return MCPServerValidationResult(
+                    server_exists=True,
+                    project_id_matches=True,
+                    server_name=candidate_name,
+                    existing_config=candidate_config,
+                )
+
+        # A row stored under an older naming scheme (every CJK name used to collapse to
+        # lf-unnamed) matches no candidate. Registration and deletion adopt it so they neither
+        # duplicate nor orphan it; a rename keeps deriving from names so the row still moves.
+        if operation in {"create", "delete"}:
+            for stored_name, stored_config in existing_servers.items():
+                if stored_name.startswith("lf-") and await _server_config_targets_project(stored_config, project_id):
+                    return MCPServerValidationResult(
+                        server_exists=True,
+                        project_id_matches=True,
+                        server_name=stored_name,
+                        existing_config=stored_config,
+                    )
+
+        free_name = next((name for name in candidate_names if name not in existing_servers), None)
+        if free_name is not None:
             return MCPServerValidationResult(
                 project_id_matches=False,
                 server_exists=False,
-                server_name=server_name,
+                server_name=free_name,
             )
-
-        # Server exists - check if project ID matches
-        existing_server_config = existing_servers["mcpServers"][server_name]
-        existing_args = existing_server_config.get("args", [])
-        project_id_matches = False
-
-        if existing_args:
-            # SSE URL is typically the last argument
-            # TODO: Better way Required to check the postion of the SSE URL in the args
-            existing_sse_urls = await extract_urls_from_strings(existing_args)
-            for existing_sse_url in existing_sse_urls:
-                if str(project_id) in existing_sse_url:
-                    project_id_matches = True
-                    break
-        else:
-            project_id_matches = False
-
-        # Generate appropriate conflict message based on operation
-        conflict_message = ""
-        if not project_id_matches:
-            if operation == "create":
-                conflict_message = (
-                    f"MCP server name conflict: '{server_name}' already exists "
-                    f"for a different project. Cannot create MCP server for project "
-                    f"'{project_name}' (ID: {project_id})"
-                )
-            elif operation == "update":
-                conflict_message = (
-                    f"MCP server name conflict: '{server_name}' exists for a different project. "
-                    f"Cannot update MCP server for project '{project_name}' (ID: {project_id})"
-                )
-            elif operation == "delete":
-                conflict_message = (
-                    f"MCP server '{server_name}' exists for a different project. "
-                    f"Cannot delete MCP server for project '{project_name}' (ID: {project_id})"
-                )
 
         return MCPServerValidationResult(
             server_exists=True,
-            project_id_matches=project_id_matches,
+            project_id_matches=False,
             server_name=server_name,
-            existing_config=existing_server_config,
-            conflict_message=conflict_message,
+            existing_config=existing_servers[server_name],
+            conflict_message=_conflict_message(server_name, project_name, project_id, operation),
         )
 
     except Exception as e:  # noqa: BLE001

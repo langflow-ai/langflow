@@ -60,6 +60,8 @@ def _err(code: str, **kw: object) -> ExtensionError:
 # Lines are intentionally long so the diff between expected and actual is one
 # line per change; ``noqa: E501`` is intentional throughout this dict.
 _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
+    "integration-identity-conflict": "error[integration-identity-conflict]: Ambiguous integration metadata: msg",
+    "lfx-version-too-old": "error[lfx-version-too-old]: Unsupported integration manifest: msg",
     "manifest-not-found": "error[manifest-not-found]: No extension.json or [tool.langflow.extension] entry found in loc.",  # noqa: E501
     "manifest-invalid": "error[manifest-invalid]: Invalid manifest at loc: msg",
     "manifest-unreadable": "error[manifest-unreadable]: Could not read manifest at loc: msg",

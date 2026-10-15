@@ -32,6 +32,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 from sqlalchemy import JSON, BigInteger, CheckConstraint, Column, DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.sql.naming import conv
 from sqlmodel import Field, SQLModel
 
 # JSONB on Postgres (binary, dedup, GIN-indexable on the ``items``
@@ -137,6 +138,6 @@ class IngestionRun(IngestionRunBase, table=True):  # type: ignore[call-arg]
     __table_args__ = (
         CheckConstraint(
             "status IN (" + ", ".join(f"'{v}'" for v in _RUN_STATUS_VALUES) + ")",
-            name="ck_ingestion_run_status",
+            name=conv("ck_ingestion_run_status"),
         ),
     )

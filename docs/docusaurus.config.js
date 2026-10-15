@@ -458,6 +458,10 @@ const config = {
             ]
           },
           {
+            to: "/next/guardrails",
+            from: "/next/guardrails-legacy",
+          },
+          {
             to: "/legacy-core-components",
             from: [
               "/directory",

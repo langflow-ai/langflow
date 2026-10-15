@@ -26,6 +26,15 @@ This module restricts that environment:
   attributes that are invisible to the AST, and it rejects literal replacement-field
   templates that reach into a dunder regardless of which formatter ultimately consumes
   them.
+* :func:`import_allowed_module` wraps each allow-listed module in :class:`_ModuleProxy`
+  before it is injected into the exec globals. Module-granularity trust is unsound in
+  Python: a module object transitively exposes its entire import graph through ordinary
+  public attributes, so e.g. ``json.codecs.sys.modules["os"]`` (also ``re.enum.sys``,
+  ``typing.sys``, ``numpy.sys``) reaches the host ``os`` module without tripping the AST
+  gate or the dunder wildcard. The proxy refuses underscore-prefixed attributes and the
+  names in ``_BLOCKED_MODULE_ATTRIBUTES``, and recursively re-wraps sub-module
+  attributes, so no real module object (and no path to ``sys.modules``) ever enters the
+  sandbox.
 
 This is defense-in-depth, NOT a guaranteed sandbox — Python sandboxing is notoriously
 hard and determined attackers may still find gadgets. The primary control for untrusted
@@ -37,7 +46,9 @@ from __future__ import annotations
 
 import ast
 import builtins
+import importlib
 import re
+import types
 
 # Builtins considered safe to expose to interpreter code. Deliberately excludes anything
 # that can import modules, execute/compile code, touch the filesystem, or reach
@@ -178,6 +189,113 @@ _BLOCKED_ATTRIBUTES = frozenset(
 # dunder-bearing template is rejected regardless of which formatter consumes it.
 _FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
 
+# Attribute names through which an allow-listed module transitively exposes the
+# interpreter's module system or host-powerful modules. A real module object exposes
+# its entire import graph as ordinary public attributes — json.codecs.sys, re.enum.sys,
+# typing.sys and numpy.sys all bind ``sys`` at top level, and from there
+# ``sys.modules["os"]`` is a one-step direct hit. These chains use no dunder and no
+# blocked AST attribute, so the gate cannot see them; _ModuleProxy refuses these names
+# instead. Note this intentionally does NOT block the top-level allow-listed module
+# itself: allow-listing ``os`` in Global Imports remains an explicit (trusted) admin
+# choice — what is closed here is *transitive* exposure through an unrelated module.
+_BLOCKED_MODULE_ATTRIBUTES = frozenset(
+    {
+        # Module system / interpreter internals: reaching these reaches sys.modules.
+        "sys",
+        "modules",
+        "builtins",
+        "importlib",
+        "loader",
+        "spec",
+        "meta_path",
+        "path_hooks",
+        "find_spec",
+        "find_module",
+        "load_module",
+        "exec_module",
+        "create_module",
+        "module_from_spec",
+        "builtin_module_names",
+        "runpy",
+        "inspect",
+        "gc",
+        # Host-powerful stdlib modules frequently bound transitively: os.system /
+        # subprocess / ctypes are RCE; shutil / pathlib / io / socket read or write the
+        # host filesystem and network with the server process's privileges.
+        "os",
+        "subprocess",
+        "ctypes",
+        # numpy.ctypeslib.load_library(...) loads arbitrary native libraries and hands
+        # out callable C functions (e.g. libc.system) even though ``ctypes`` itself is
+        # blocked; ``ctypeslib`` is a public sub-module attribute on numpy.
+        "ctypeslib",
+        "shutil",
+        "pathlib",
+        "io",
+        "socket",
+        # Named by the report's PoC chains: json.codecs.sys, re.enum.sys.
+        "codecs",
+        "enum",
+    }
+)
+
+
+class _ModuleProxy:
+    """Read-only, attribute-filtering proxy for an allow-listed module.
+
+    Injecting the real module object into the exec globals exposes its transitive
+    import graph through public attributes (``json.codecs.sys.modules["os"]``),
+    bypassing the AST gate and restricted builtins. The sandbox receives this proxy
+    instead: dunder/underscore-prefixed attributes and the names in
+    ``_BLOCKED_MODULE_ATTRIBUTES`` are refused, and sub-module attributes are
+    recursively re-wrapped, so no real module object ever enters the sandbox.
+
+    ``__getattribute__`` (not ``__getattr__``) is overridden so the internal
+    ``_module`` slot is unreachable from sandboxed code as well.
+    """
+
+    def __init__(self, module: types.ModuleType) -> None:
+        object.__setattr__(self, "_module", module)
+
+    def __getattribute__(self, name: str):
+        if name.startswith("_") or name in _BLOCKED_MODULE_ATTRIBUTES:
+            msg = f"Access to attribute '{name}' is not allowed."
+            raise AttributeError(msg)
+        module = object.__getattribute__(self, "_module")
+        value = getattr(module, name)
+        if isinstance(value, types.ModuleType):
+            return _ModuleProxy(value)
+        return value
+
+    def __setattr__(self, name: str, value) -> None:
+        msg = "Allow-listed modules are read-only in the Python Interpreter."
+        raise AttributeError(msg)
+
+    def __delattr__(self, name: str) -> None:
+        msg = "Allow-listed modules are read-only in the Python Interpreter."
+        raise AttributeError(msg)
+
+    def __repr__(self) -> str:
+        module = object.__getattribute__(self, "_module")
+        return f"<sandboxed module {module.__name__!r}>"
+
+
+def import_allowed_module(name: str) -> tuple[str, _ModuleProxy]:
+    """Import an allow-listed module and return ``(module_name, sandbox-safe proxy)``.
+
+    Args:
+        name: Dotted module name from the Global Imports allow-list.
+
+    Returns:
+        The imported module's ``__name__`` (the globals key) and a ``_ModuleProxy``
+        wrapping the module so its transitive import graph stays out of the sandbox.
+
+    Raises:
+        ImportError: If the module cannot be imported.
+    """
+    module = importlib.import_module(name)
+    return module.__name__, _ModuleProxy(module)
+
 
 class CodeExecutionDisabledError(ValueError):
     """Raised when code-execution components are disabled by policy.
@@ -188,11 +306,11 @@ class CodeExecutionDisabledError(ValueError):
 
 
 def ensure_code_execution_enabled() -> None:
-    """Refuse to run Python code when either server code-execution policy disables it.
+    """Refuse Python code execution when the server policy denies the caller.
 
     Registered code-execution components run user- or model-supplied Python. They honor
-    both ``allow_custom_components`` and ``block_code_interpreter_components`` so a
-    component cannot bypass either policy through direct or tool-mode execution.
+    ``allow_custom_components``, ``block_code_interpreter_components`` and
+    ``custom_component_admin_only`` apply to direct and tool-mode execution.
 
     Failure handling is deliberately asymmetric so the gate can never be
     silently bypassed:
@@ -235,6 +353,16 @@ def ensure_code_execution_enabled() -> None:
             "Set LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=false to enable this component."
         )
         raise CodeExecutionDisabledError(msg)
+    if getattr(settings_service.settings, "custom_component_admin_only", False) is True:
+        from lfx.services.model_provider_policy import current_model_provider_policy_context
+
+        # The execution host binds this principal from the authenticated user.
+        # Do not infer administrator privilege from graph input fields or the flow
+        # owner's identity. Missing context must fail closed, including direct calls.
+        principal = current_model_provider_policy_context()
+        if principal is None or principal.user_id is None or principal.attributes.get("is_superuser") is not True:
+            msg = "Python code execution is restricted to administrators because custom_component_admin_only is True."
+            raise CodeExecutionDisabledError(msg)
 
 
 def safe_builtins() -> dict:

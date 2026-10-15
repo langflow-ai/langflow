@@ -70,6 +70,7 @@ POST /api/v2/workflows
 | `files` | `array` | No | - | Pre-uploaded file paths to attach to the run (stream and background modes only). |
 | `start_component_id` | `string` | No | - | Partial-run start component id (stream and background modes only). |
 | `stop_component_id` | `string` | No | - | Partial-run stop component id (stream and background modes only). |
+| `expose_graph_state` | `boolean` | No | `false` for `agui`, `true` for `langflow` | Whether the stream may carry the flow's graph state (per-component events and component outputs). Not accepted by `POST /api/v2/workflows/public`, which always runs without it. See [Graph state](#stream-only-the-conversation). |
 
 ### Execute flow in `sync` mode
 
@@ -138,6 +139,7 @@ Omit `stream_protocol` or set it explicitly to `"langflow"`. Use `curl -N` so th
 | `token` | Streaming LLM token chunk (`data.chunk`). |
 | `end_vertex` | A component finished building. |
 | `output` | Normalized terminal component output (same shape as sync-mode `outputs`). |
+| `warning` | Non-terminal notice (`data.message`), such as server code replacing saved component code. The run continues. |
 | `end` | Run finished successfully. |
 | `error` | Run failed (`data.error`). |
 | `cancelled` | Run stopped by the client. |
@@ -182,6 +184,31 @@ Send `POST /api/v2/workflows` with `"mode": "stream"` and `"stream_protocol": "a
 | `CUSTOM` | Langflow-specific extensions (see below). |
 
 Langflow also emits `CUSTOM` events that generic AG-UI clients can ignore, such as `langflow.log`, `langflow.content.*`, `langflow.message.removed`, and `langflow.run.cancelled`.
+
+`CUSTOM` events named `langflow.warning` carry a non-terminal notice in `value.message`, such as server code replacing saved component code. Display the notice and continue processing events until `RUN_FINISHED` or `RUN_ERROR`.
+
+##### Graph state: what the stream says about the flow {#stream-only-the-conversation}
+
+Some events describe the flow itself rather than the conversation. On `agui` those are `STATE_SNAPSHOT` and `STATE_DELTA` (every component id that will run, and each component's own output), `STEP_STARTED` / `STEP_FINISHED`, and `langflow.log`. On `langflow` they are `vertices_sorted`, the per-vertex `build_start`, `end_vertex`, and `log`. A component's output here is whatever it produced, including intermediate results that are not the flow's answer, such as retrieved documents or a rendered prompt.
+
+`expose_graph_state` controls them:
+
+```json
+{
+  "flow_id": "your-flow-id",
+  "mode": "stream",
+  "stream_protocol": "agui",
+  "expose_graph_state": true
+}
+```
+
+**Changed in 1.12.3:** when the field is omitted, `agui` now defaults to `false`, since its consumers are usually third-party clients that read the conversation. `langflow` still defaults to `true`, so callers parsing the passthrough shape are unaffected. Set the field explicitly to pin the behavior on either protocol. A server logs one notice per process the first time an `agui` run relies on the new default.
+
+With graph state off, the stream carries `RUN_*`, `TEXT_MESSAGE_*`, `TOOL_CALL_*`, and the `CUSTOM` events tied to the conversation: `langflow.content.*`, `langflow.message.removed`, `langflow.run.cancelled`, `langflow.human_input_required`, and `langflow.warning`. Messages no longer name the component that produced them: `properties.source` is emptied, which also removes the model name an LLM component reports there. The `output` event on `langflow` is the flow's answer, so it is still sent, and it carries the id of the output component that produced it. With graph state on, `langflow` reports an `output` for every terminal component, matching what sync returns; with it off, only real output components report, since a component left dangling is terminal without being the answer and its event would carry its own content. Human-in-the-loop is unaffected: a `request_id` embeds the paused component's id because resume needs it.
+
+Suppressed events are never generated, so a background run never persists them and a re-attached client receives the same narrowed stream.
+
+`POST /api/v2/workflows/public` does not accept the field and always runs without graph state, on every protocol. An anonymous visitor to a shared flow has no reason to receive its topology, and a request that sends `expose_graph_state` is rejected with `422` rather than silently ignored.
 
 For the full AG-UI event catalog, see the [AG-UI specification](https://docs.ag-ui.com/concepts/architecture).
 
@@ -252,6 +279,7 @@ For more information, see [Execute flow with selected `stream` mode](#execute-fl
   },
   "has_errors": false,
   "errors": [],
+  "warnings": [],
   "inputs": {},
   "globals": {
     "FILENAME": "relatório—final.pdf",
@@ -278,8 +306,11 @@ For more information, see [Execute flow with selected `stream` mode](#execute-fl
 | `output.source` | Component id that produced `output.text` when `output.reason` is `single`. |
 | `outputs` | Map of component id → component result. |
 | `has_errors` | `true` when `errors` is non-empty. |
+| `warnings` | Non-fatal notices, such as server code replacing saved component code. Empty when none apply; warnings do not change `status` or `has_errors`. Also included when polling completed results. |
 | `created_timestamp` | ISO-8601 UTC timestamp (not a Unix epoch). |
 | `session_id` | Session used for the run; pass it on the next request to continue the same chat history. |
+
+Component substitution notices are returned to authenticated workflow callers. Anonymous public Playground runs do not expose these server policy details.
 
 Each value in `outputs` includes:
 

@@ -1,6 +1,5 @@
 """Cache service implementations for lfx."""
 
-import pickle
 import threading
 import time
 from collections import OrderedDict
@@ -65,8 +64,10 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
             if self.expiration_time is None or time.time() - item["time"] < self.expiration_time:
                 # Move the key to the end to make it recently used
                 self._cache.move_to_end(key)
-                # Check if the value is pickled
-                return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]  # noqa: S301
+                # Return the value exactly as stored. Bytes must never be fed to
+                # pickle.loads here: the cache has no integrity protection, so
+                # deserializing them would be unauthenticated CWE-502 (H1-3982189).
+                return item["value"]
             self.delete(key)
         return CACHE_MISS
 
@@ -87,7 +88,6 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
             elif self.max_size and len(self._cache) >= self.max_size:
                 # Remove least recently used item
                 self._cache.popitem(last=False)
-            # pickle locally to mimic Redis
 
             self._cache[key] = {"value": value, "time": time.time()}
 

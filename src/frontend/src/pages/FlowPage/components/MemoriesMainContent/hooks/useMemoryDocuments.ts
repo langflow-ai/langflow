@@ -7,6 +7,7 @@ import { useGetMemoryMessages } from "@/controllers/API/queries/memories/use-get
 
 type UseMemoryDocumentsArgs = {
   memoryId?: string | null;
+  storageState?: string;
   sessionId: string | null;
   memorySessions: MemorySessionInfo[];
 };

@@ -51,7 +51,7 @@ from langflow.services.database.models.auth import AuthzTeam, AuthzTeamMember
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service
 
-router = APIRouter(prefix="/authz/teams", tags=["Authorization"], include_in_schema=False)
+router = APIRouter(prefix="/authz/teams", tags=["Authorization"])
 
 # See ``authz_roles._LIST_MAX_LIMIT`` — same bound, applied to teams + members.
 _LIST_MAX_LIMIT = 200
@@ -145,7 +145,7 @@ TEAM_ADMINISTRATOR_ONLY = [Depends(_require_team_administrator_dependency)]
 
 
 @router.get("", response_model=list[TeamRead])
-@router.get("/", response_model=list[TeamRead])
+@router.get("/", response_model=list[TeamRead], include_in_schema=False)
 async def list_teams(
     session: DbSession,
     current_user: CurrentActiveUser,  # noqa: ARG001 — any authenticated user can list
@@ -188,7 +188,13 @@ async def read_team(
 
 
 @router.post("", response_model=TeamRead, status_code=status.HTTP_201_CREATED, dependencies=TEAM_ADMINISTRATOR_ONLY)
-@router.post("/", response_model=TeamRead, status_code=status.HTTP_201_CREATED, dependencies=TEAM_ADMINISTRATOR_ONLY)
+@router.post(
+    "/",
+    response_model=TeamRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=TEAM_ADMINISTRATOR_ONLY,
+    include_in_schema=False,
+)
 async def create_team(
     payload: TeamCreate,
     current_user: CurrentActiveUser,

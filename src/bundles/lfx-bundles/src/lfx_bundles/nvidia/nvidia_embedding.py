@@ -1,10 +1,13 @@
 from typing import Any
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
+from lfx.base.models.provider_ssrf import validate_provider_base_url
 from lfx.field_typing import Embeddings
 from lfx.inputs.inputs import DropdownInput, SecretStrInput
 from lfx.io import FloatInput, MessageTextInput
 from lfx.schema.dotdict import dotdict
+
+DEFAULT_NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 
 class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
@@ -27,7 +30,7 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
             name="base_url",
             display_name="NVIDIA Base URL",
             refresh_button=True,
-            value="https://integrate.api.nvidia.com/v1",
+            value=DEFAULT_NVIDIA_BASE_URL,
             required=True,
         ),
         SecretStrInput(
@@ -64,6 +67,9 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
         except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the Nvidia model."
             raise ImportError(msg) from e
+        # base_url is tenant-editable and the SDK sends the operator's API key to whatever
+        # host it names. Block internal/cloud-metadata destinations before connecting.
+        validate_provider_base_url(self.base_url, default_url=DEFAULT_NVIDIA_BASE_URL)
         try:
             output = NVIDIAEmbeddings(
                 model=self.model,

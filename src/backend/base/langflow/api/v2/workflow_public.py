@@ -123,6 +123,7 @@ async def execute_public_workflow(
     # Lazy-import to avoid the circular ``v2.workflow`` -> ``api.build`` ->
     # ``v1.chat`` -> ``api.build`` cycle that fires when ``v2.__init__`` is
     # collected at import time.
+    from langflow.api.utils.execution_principal import FAMILY_WORKFLOW_PUBLIC_V2
     from langflow.api.v2.workflow import _unknown_protocol_http_exception
     from langflow.api.v2.workflow_execution import _stream_event_frames
 
@@ -232,11 +233,21 @@ async def execute_public_workflow(
         StreamAdapterContext(
             run_id=run_id,
             thread_id=scoped_session or str(virtual_flow_id),
+            # Forced, not a caller choice: an anonymous visitor has no reason to
+            # receive the flow's topology or its components' outputs, and this
+            # endpoint already defaults to the restrictive choice elsewhere (it
+            # strips secrets, forbids data/tweaks, namespaces sessions). The
+            # field is absent from ``PublicWorkflowRunRequest``, so a body that
+            # asks for it is rejected by ``extra="forbid"`` rather than silently
+            # ignored.
+            expose_graph_state=False,
         ),
     )
 
     # The narrower public schema has no ``data``/``tweaks`` fields; we
     # carry only the partial-run knobs into ParsedWorkflowRun.
+    # Substitution notices are for authenticated callers. Anonymous shared-link
+    # visitors cannot edit the flow and should not receive server policy details.
     parsed = ParsedWorkflowRun(
         flow_id=str(virtual_flow_id),
         input_value=request.input_value,
@@ -250,6 +261,12 @@ async def execute_public_workflow(
         # opt-in preserves approved code without restoring owner credentials.
         data=sanitized_public_data,
         files=request.files,
+        expose_graph_state=False,
+        # The shareable playground runs on this endpoint and its chat-view still
+        # renders from the v1 side-channel, so the mirror stays on. It carries
+        # the conversation (add_message/token/remove_message/error/end), not the
+        # graph state suppressed above.
+        emit_v1_side_channel=True,
     )
 
     async def _frames_only() -> AsyncIterator[bytes]:
@@ -267,6 +284,9 @@ async def execute_public_workflow(
             # Anonymous shared-link traffic, kept apart from signed-in v2 runs the same way
             # playground.public is kept apart from playground.
             protocol="v2.public",
+            # The anonymous visitor principal: no user connection is ever resolved
+            # for a public run, whichever connection the flow references.
+            execution_family=FAMILY_WORKFLOW_PUBLIC_V2,
             expose_error_details=False,
         ):
             yield frame

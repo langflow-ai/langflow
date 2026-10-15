@@ -54,6 +54,7 @@ _serialized_field_type_to_type: dict[str, type] = {
     FieldTypes.ACTION_PICKER.value: list,
     FieldTypes.DURATION.value: dict,
     FieldTypes.CONNECTION.value: str,
+    FieldTypes.CONNECTION_REF.value: str,
     FieldTypes.AUTH.value: dict,
     FieldTypes.FILE.value: str,
     FieldTypes.PROMPT.value: str,
@@ -328,6 +329,8 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
         raise TypeError(msg)
     fields = {}
     for input_model in inputs:
+        if input_model.field_type == FieldTypes.CONNECTION_REF:
+            continue
         # Create a Pydantic Field for each input field
         field_type = input_model.field_type
         if isinstance(field_type, FieldTypes):
@@ -374,6 +377,8 @@ def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None =
         raise TypeError(msg)
     fields = {}
     for input_model in inputs:
+        if input_model.type == FieldTypes.CONNECTION_REF.value:
+            continue
         # Create a Pydantic Field for each input field
         try:
             field_type = _serialized_field_type_to_type[input_model.type]

@@ -44,6 +44,16 @@ def _vertex_data(vertex: Vertex) -> VertexCheckpointData:
 
 def build_checkpoint(graph: Graph) -> GraphCheckpoint:
     run_state = graph.run_manager.to_dict()
+    shared_user = getattr(graph, "_headless_filesystem_user_id", None)
+    principal = getattr(graph, "execution_principal", None)
+    if (
+        shared_user != graph.user_id
+        or principal is None
+        or principal.kind != "headless_operator"
+        or principal.family != "lfx_headless"
+        or getattr(graph, "end_user_id", None)
+    ):
+        shared_user = None
     flow_payload: dict[str, Any] = dict(graph.raw_graph_data)
     if flow_payload == _EMPTY_GRAPH_DATA:
         flow_payload = {"nodes": list(graph._vertices), "edges": list(graph._edges)}  # noqa: SLF001
@@ -53,6 +63,7 @@ def build_checkpoint(graph: Graph) -> GraphCheckpoint:
         source_flow_id=graph.source_flow_id,
         session_id=graph.session_id or None,
         user_id=str(graph.user_id) if graph.user_id else None,
+        headless_filesystem_user_id=shared_user,
         job_id=graph.job_id,
         flow_payload=flow_payload,
         run_map={k: list(v) for k, v in run_state["run_map"].items()},
@@ -65,6 +76,10 @@ def build_checkpoint(graph: Graph) -> GraphCheckpoint:
         vertices_layers=[list(layer) for layer in graph.vertices_layers],
         first_layer=list(graph._first_layer),  # noqa: SLF001
         inactivated_vertices={str(v) for v in graph.inactivated_vertices},
+        branch_inactivation_sources={
+            str(source): {str(vertex) for vertex in vertices}
+            for source, vertices in graph.branch_inactivation_sources.items()
+        },
         conditionally_excluded_vertices={str(v) for v in graph.conditionally_excluded_vertices},
         activated_vertices=list(graph.activated_vertices),
         vertex_results={vertex.id: _vertex_data(vertex) for vertex in graph.vertices},

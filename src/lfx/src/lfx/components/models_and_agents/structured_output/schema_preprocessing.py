@@ -32,5 +32,5 @@ def _coerce_multiple(value: Any) -> bool:
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
-        return value.lower() in _TRUTHY_MULTIPLE_STRINGS
+        return value.strip().lower() in _TRUTHY_MULTIPLE_STRINGS
     return bool(value)

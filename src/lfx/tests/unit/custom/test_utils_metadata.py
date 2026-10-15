@@ -1,9 +1,31 @@
 """Test metadata functionality in custom utils."""
 
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
 from lfx.custom.utils import _generate_code_hash, build_component_metadata, build_custom_component_template_from_inputs
+
+
+def test_registry_error_clears_integration_stamps_on_reused_templates(monkeypatch):
+    from lfx.custom.utils import _stamp_integration_policy_identity
+
+    node = SimpleNamespace(
+        metadata={
+            "integration_provider_id": "old-provider",
+            "integration_capability_ids": ["old-provider.action"],
+            "module": "keep.this.module",
+        }
+    )
+
+    def unavailable_registry():
+        msg = "capability registry unavailable"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr("lfx.extension.bundle_registry.get_default_registry", unavailable_registry)
+    _stamp_integration_policy_identity(node, object())
+
+    assert node.metadata == {"module": "keep.this.module"}
 
 
 class TestCodeHashGeneration:
@@ -655,3 +677,18 @@ class LMStudioModelComponent(LCModelComponent):
         # assert mock_frontend.metadata["module"] == "custom_components.my_test_component"
         # assert "code_hash" in mock_frontend.metadata
         # assert len(mock_frontend.metadata["code_hash"]) == 12
+
+
+def test_trigger_components_are_marked_with_their_kind_and_other_components_are_not():
+    """The palette hides every trigger behind one flag by this marker, wherever it is listed."""
+    from lfx.components.triggers.schedule_trigger import ScheduleTriggerComponent
+    from lfx.custom.utils import _stamp_trigger_kind
+
+    trigger_node = SimpleNamespace(metadata={})
+    _stamp_trigger_kind(trigger_node, ScheduleTriggerComponent())
+    assert trigger_node.metadata == {"trigger_kind": "schedule"}
+
+    # A reused template never keeps a stale marker.
+    reused = SimpleNamespace(metadata={"trigger_kind": "schedule", "module": "keep.this.module"})
+    _stamp_trigger_kind(reused, object())
+    assert reused.metadata == {"module": "keep.this.module"}

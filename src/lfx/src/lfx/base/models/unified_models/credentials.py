@@ -190,8 +190,13 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     return env_value.strip() if env_value and env_value.strip() else None
 
 
-def _env_value_for(var_key: str) -> str | None:
-    """Read a provider key from the environment, accepting a LANGFLOW_ alias.
+def provider_variable_from_env(var_key: str) -> str | None:
+    """Read a provider variable from the environment, accepting a LANGFLOW_ alias.
+
+    The single answer to "what is this provider variable's environment value".
+    Live model discovery resolves the same variables, so it shares this helper
+    rather than reading ``os.environ`` directly — two readers that disagreed on
+    accepted name shapes would leave a provider enabled but undiscoverable.
 
     Provider keys are conventionally bare (``GOOGLE_API_KEY``), but some .env
     templates prefix everything with ``LANGFLOW_`` (matching how Langflow reads
@@ -229,7 +234,7 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
         for var_info in provider_vars:
             var_key = var_info.get("variable_key")
             if var_key:
-                env_value = _env_value_for(var_key)
+                env_value = provider_variable_from_env(var_key)
                 if env_value:
                     result[var_key] = env_value
         return result
@@ -264,7 +269,7 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                     # env fallback (keeps served flows isolated from process-wide credentials).
                     if is_env_fallback_disabled():
                         continue
-                    env_value = _env_value_for(var_key)
+                    env_value = provider_variable_from_env(var_key)
                     if env_value:
                         values[var_key] = env_value
 
@@ -286,7 +291,7 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
         # this post-DB-miss rotation fallback.
         if is_env_fallback_disabled():
             continue
-        env_value = _env_value_for(var_key)
+        env_value = provider_variable_from_env(var_key)
         if env_value:
             db_values[var_key] = env_value
 
@@ -514,7 +519,9 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error getting unified models for provider {provider}: {e}")
 
-    validation_model = model_name or first_model
+    # WatsonX's static catalog is not region-specific. When no model was
+    # requested, select one from the configured endpoint below instead.
+    validation_model = model_name if provider == "IBM WatsonX" else model_name or first_model
     validation_metadata = next(
         (model.get("metadata", {}) for model in provider_models if model.get("model_name") == validation_model),
         {},

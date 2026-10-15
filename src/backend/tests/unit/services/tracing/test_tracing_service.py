@@ -210,6 +210,32 @@ async def test_start_end_tracers(tracing_service):
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_tracers")
+async def test_start_tracers_continues_after_one_initializer_fails(tracing_service):
+    """One unavailable optional integration must not disable the remaining tracers."""
+    with patch.object(
+        tracing_service,
+        "_initialize_arize_phoenix_tracer",
+        side_effect=ModuleNotFoundError("No module named 'openinference'"),
+    ):
+        await tracing_service.start_tracers(uuid.uuid4(), "run", "user", "session")
+
+    trace_context = trace_context_var.get()
+    assert "arize_phoenix" not in trace_context.tracers
+    assert set(trace_context.tracers) == {
+        "langsmith",
+        "langwatch",
+        "langfuse",
+        "opik",
+        "traceloop",
+        "native",
+        "openlayer",
+    }
+
+    await tracing_service.end_tracers({})
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
 async def test_start_tracers_forwards_tracing_user_id_to_langfuse(tracing_service):
     """``tracing_user_id`` reaches Langfuse as a distinct field; ``user_id`` stays the auth user.
 

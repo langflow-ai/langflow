@@ -18,10 +18,6 @@ if TYPE_CHECKING:
     from ibm_db_dbi import Connection
 
 import numpy as np
-from langchain_community.vectorstores.utils import (
-    DistanceStrategy,
-    maximal_marginal_relevance,
-)
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
@@ -31,6 +27,7 @@ from lfx_ibm.components.ibm.db2_security import (
     sanitize_sql_string,
     validate_identifier,
 )
+from lfx_ibm.components.ibm.db2_vector_utils import DistanceStrategy, maximal_marginal_relevance
 
 logger = logging.getLogger(__name__)
 log_level = os.getenv("LOG_LEVEL", "WARNING").upper()  # Changed to WARNING for production
@@ -1057,9 +1054,12 @@ class DB2VS(VectorStore):
 
         # Get distance_strategy with default
         distance_strategy = kwargs.get("distance_strategy", DistanceStrategy.COSINE)
-        if not isinstance(distance_strategy, DistanceStrategy):
+        try:
+            # Accept the equivalent string enum used by existing callers and saved code.
+            distance_strategy = DistanceStrategy(distance_strategy)
+        except (TypeError, ValueError) as exc:
             msg = f"Expected DistanceStrategy got {type(distance_strategy).__name__}"
-            raise TypeError(msg)
+            raise TypeError(msg) from exc
 
         query = kwargs.get("query", "What is a Db2 database")
 

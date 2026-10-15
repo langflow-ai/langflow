@@ -171,12 +171,27 @@ def _coerce_ai_message_blocks(content: Any) -> list[dict[str, Any]]:
     ``{"type": "text", "text": str}``. Anything we don't recognise is
     skipped — the on_tool_start fallback in handle_on_tool_start will
     still pick up tool calls if a provider routes them outside .content.
+
+    A stream that mixes string and text-dict chunks aggregates into a list
+    holding both, e.g. ``[{"type": "text", "text": "Echo: hello m"},
+    "cp"]``. Plain strings are text too, and adjacent text pieces are
+    joined into one block: they are fragments of the same answer, and the
+    renderer paints each TextContent on its own.
     """
     if isinstance(content, str):
         return [{"type": "text", "text": content}] if content else []
     if not isinstance(content, list):
         return []
-    return [item for item in content if isinstance(item, dict) and item.get("type") in {"text", "tool_use"}]
+    blocks: list[dict[str, Any]] = []
+    for item in content:
+        block = {"type": "text", "text": item} if isinstance(item, str) else item
+        if not isinstance(block, dict) or block.get("type") not in {"text", "tool_use"}:
+            continue
+        if block["type"] == "text" and blocks and blocks[-1]["type"] == "text":
+            blocks[-1] = {**blocks[-1], "text": (blocks[-1].get("text") or "") + (block.get("text") or "")}
+        else:
+            blocks.append(block)
+    return blocks
 
 
 async def handle_on_chat_model_end(
@@ -377,6 +392,22 @@ async def handle_on_tool_end(
     return agent_message, start_time
 
 
+def _coerce_tool_error(error: Any) -> Any:
+    """Return a wire-safe ``ToolContent.error`` payload.
+
+    ``astream_events`` hands ``on_tool_error`` the raw exception object. The block is
+    re-serialized on every publication (``Message.create(**model_dump())`` in
+    ``send_message``), and an exception has no JSON form: ``jsonable_encoder`` falls
+    back to ``vars(exc)`` and the error degrades to ``{}`` before it ever reaches the
+    frontend, the chat history, or the OpenAI Responses stream. Keep the message text
+    (falling back to the class name for a bare ``raise SomeError()``); strings and
+    structured payloads pass through untouched.
+    """
+    if isinstance(error, BaseException):
+        return str(error) or type(error).__name__
+    return error
+
+
 async def handle_on_tool_error(
     event: dict[str, Any],
     agent_message: Message,
@@ -390,7 +421,7 @@ async def handle_on_tool_error(
     tool_content = tool_blocks_map.get(tool_key)
 
     if tool_content and isinstance(tool_content, ToolContent):
-        tool_content.error = event["data"].get("error", "Unknown error")
+        tool_content.error = _coerce_tool_error(event["data"].get("error", "Unknown error"))
         tool_content.duration = _calculate_duration(start_time)
         tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
         agent_message = await send_message_callback(message=agent_message, skip_db_update=True)

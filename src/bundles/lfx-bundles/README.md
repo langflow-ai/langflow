@@ -54,6 +54,30 @@ For example, `lfx-bundles[google]`, `lfx-bundles[azure]`, and
 `lfx-bundles[ollama]` now install their standalone bundles, but are excluded
 from the generated aggregate extras because Langflow installs them directly.
 
+### OpenDsStar: manual installation only
+
+Starting with `lfx-bundles` 1.1.24, OpenDsStar is no longer a managed dependency,
+including in `codeagents` and `all`. The `lfx[opendsstar]` and
+`langflow-base[opendsstar]` extras have also been removed. The component code and
+saved-flow identifiers remain available for OpenDsStar Agent, CodeAct Smolagents,
+and File Description Generator, but running them requires a separate installation.
+
+To keep using these components, install into the same Python environment as
+Langflow. The last managed dependency combination was:
+
+```bash
+uv pip install 'OpenDsStar==1.0.26' 'langchain-litellm==0.5.1'
+```
+
+That combination was limited to Python 3.11–3.13 and excluded Intel macOS. The
+`langchain-litellm` pin preserves compatibility with Langflow's cryptography floor.
+An exact `uv sync` can remove manually installed packages; repeat the manual
+installation after syncing, or manage it in your own environment requirements.
+
+Manual installation reintroduces DiskCache and its unpatched
+[CVE-2025-69872](https://github.com/advisories/GHSA-w8v5-vhqr-4h9v). This opt-in is
+outside Langflow's managed dependency set and requires your own security assessment.
+
 ## Adding a provider
 
 Providers are moved here by `scripts/migrate/consolidate_bundles.py`, which also

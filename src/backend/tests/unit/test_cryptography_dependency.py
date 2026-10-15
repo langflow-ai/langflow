@@ -23,13 +23,10 @@ PACKAGE_MANIFESTS = {
     "langflow-base": REPO_ROOT / "src" / "backend" / "base" / "pyproject.toml",
 }
 COMPAT_EXTRAS = {
-    REPO_ROOT / "src" / "lfx" / "pyproject.toml": {"opendsstar": "opendsstar"},
     REPO_ROOT / "src" / "backend" / "base" / "pyproject.toml": {
-        "opendsstar": "opendsstar",
         "cuga": "cuga",
     },
     REPO_ROOT / "src" / "bundles" / "lfx-bundles" / "pyproject.toml": {
-        "codeagents": "opendsstar",
         "cuga": "cuga",
     },
 }
@@ -87,7 +84,7 @@ def test_floor_guard_rejects_excluding_only_one_vulnerable_version() -> None:
 
 
 def test_pip_facing_extras_pin_the_highest_cryptography_50_compatible_release() -> None:
-    """CUGA/OpenDsStar wheel metadata must expose the uv compatibility choice to pip."""
+    """CUGA wheel metadata must expose the uv compatibility choice to pip."""
     environments = []
     for python_version in ("3.10", "3.11", "3.12", "3.13", "3.14"):
         for sys_platform, platform_machine in (

@@ -1,0 +1,17 @@
+{
+  "label": "chromium__assistant-slash-command-menu-open",
+  "description": "Pre-existing violation outside the Assistant composer under test. The Basic Prompting starter's Language Model node renders the 'model is not available' badge as a <span> with aria-label, which IBM reports as aria_attribute_valid (aria-label on an implicit generic role). The badge only appears because the E2E backend has no provider configured. Fix it in the canvas model input component and delete this file; the slash-command menu itself scans clean.",
+  "results": [
+    {
+      "ruleId": "aria_attribute_valid",
+      "reasonId": "Fail_invalid_implicit_role_attr",
+      "level": "violation",
+      "message": "The ARIA attributes \"aria-label\" are not valid for the element <span> with implicit ARIA role \"generic\"",
+      "path": {
+        "dom": "/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[3]/div[6]/div[1]/div[1]/div[2]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]/button[1]/span[1]/span[2]",
+        "aria": "/document[1]/generic[1]/main[1]/application[1]/application[6]/generic[2]/combobox[1]/generic[1]"
+      },
+      "value": ["VIOLATION", "FAIL"]
+    }
+  ]
+}

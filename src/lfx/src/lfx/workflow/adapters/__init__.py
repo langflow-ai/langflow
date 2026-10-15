@@ -45,6 +45,10 @@ class StreamAdapterContext(BaseModel):
 
     run_id: str
     thread_id: str
+    # AG-UI only. False narrows the stream to the conversation, dropping the
+    # graph-state events the canvas renders from. Defaults True so a call site
+    # that does not thread the request flag keeps today's behavior.
+    expose_graph_state: bool = True
 
 
 @runtime_checkable

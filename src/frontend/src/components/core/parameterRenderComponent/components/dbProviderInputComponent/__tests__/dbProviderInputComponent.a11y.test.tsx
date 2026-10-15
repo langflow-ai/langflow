@@ -1,5 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { axe } from "@/utils/a11y-test";
 import DBProviderInputComponent, { DBProviderInput } from "..";
 
@@ -134,6 +135,11 @@ describe("DBProviderInput", () => {
 
 describe("DBProviderInputComponent", () => {
   beforeEach(() => {
+    useUtilityStore.setState({
+      vectorStoreConfigLoaded: true,
+      localVectorStoreAvailable: true,
+      defaultVectorStoreBackend: undefined,
+    });
     mockCurrentFlowId = "flow-project-a";
     mockGlobalVariablesQuery = {
       data: [],
@@ -149,6 +155,32 @@ describe("DBProviderInputComponent", () => {
     };
     mockGetQueryState.mockClear();
     mockUseGetGlobalVariables.mockClear();
+  });
+
+  it("waits for server config before persisting the initial provider", () => {
+    useUtilityStore.setState({ vectorStoreConfigLoaded: false });
+    const handleOnNewValue = jest.fn();
+    render(
+      <MemoryRouter>
+        <DBProviderInputComponent
+          {...fieldProps}
+          value={undefined}
+          handleOnNewValue={handleOnNewValue}
+        />
+      </MemoryRouter>,
+    );
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+    act(() => {
+      useUtilityStore.setState({
+        vectorStoreConfigLoaded: true,
+        localVectorStoreAvailable: false,
+        defaultVectorStoreBackend: "opensearch",
+      });
+    });
+    expect(handleOnNewValue).toHaveBeenCalledTimes(1);
+    expect(handleOnNewValue).toHaveBeenCalledWith({
+      value: expect.objectContaining({ backend_type: "opensearch" }),
+    });
   });
 
   // The canvas field label reaches the trigger only if the wrapper forwards

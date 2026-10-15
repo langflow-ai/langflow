@@ -140,10 +140,17 @@ export default defineConfig({
         OPENAI_BASE_URL: "http://127.0.0.1:8787/v1",
         // The E2E harness intentionally routes provider calls to its local OpenAI stub.
         LANGFLOW_SSRF_ALLOWED_HOSTS: "127.0.0.1",
+        // The stub's key is also the backend's OPENAI_API_KEY, so the
+        // credential-egress guard must allowlist the same loopback host. The
+        // http:// prefix is the opt-in for letting that key travel in cleartext,
+        // which the stub only serves over plain HTTP.
+        LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS: "http://127.0.0.1",
         DO_NOT_TRACK: "true",
         // Serve the A2A discovery + JSON-RPC endpoints so the Agent tab tests
         // can publish and exercise a live agent.
         LANGFLOW_A2A_ENABLED: "true",
+        // Shows Settings > Migration, which is off by default.
+        LANGFLOW_FEATURE_INSTANCE_MIGRATION: "true",
       },
       stdout:
         process.env.CI && process.platform === "win32" ? "pipe" : "ignore",

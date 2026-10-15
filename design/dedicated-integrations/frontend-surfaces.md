@@ -3,9 +3,16 @@
 Status: draft
 Owners (sign-off roles): frontend owner, release owner
 Last verified: 2026-09-01 against `release-1.12.0`; requirements amended 2026-09-09
+Last amended: 2026-09-10 (interim trigger consent ownership)
 
 This is the gate's exit criterion "frontend surface list". Every surface is tagged with the ticket that owns it and
 whether it is an extension of something that exists or net new. Paths are under `src/frontend/src/`.
+
+INT-8's B1 owns the permanent per-connection "Allow background runs" control. Before that page ships, TRG-7 owns
+the interim control and missing-consent recovery (`../dedicated-integrations-triggers/frontend-surfaces.md` B9).
+The permission applies to all eligible background uses of the connection, not just the selected trigger. Both
+surfaces require INT-4's connection-owner-only update API, which still needs to be added to its current PR; selecting
+an account or completing OAuth never grants this local permission implicitly.
 
 ## Surfaces that exist and need extension
 

@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, UniqueConstraint, text
+from sqlalchemy.sql.naming import conv
 from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -170,7 +171,7 @@ class AuthzRoleAssignmentGrant(SQLModel, table=True):  # type: ignore[call-arg]
         CheckConstraint(
             "(source_kind = 'manual' AND provider_id IS NULL AND external_group IS NULL) "
             "OR (source_kind = 'idp' AND provider_id IS NOT NULL AND external_group IS NOT NULL)",
-            name="ck_authz_role_assignment_grant_source",
+            name=conv("ck_authz_role_assignment_grant_source"),
         ),
         Index(
             "uq_authz_role_assignment_grant_manual",
@@ -258,7 +259,7 @@ class AuthzTeamMemberGrant(SQLModel, table=True):  # type: ignore[call-arg]
             "AND legacy_source IS NULL) OR "
             "(source_kind = 'legacy' AND provider_id IS NULL AND external_group_id IS NULL "
             "AND legacy_source IS NOT NULL)",
-            name="ck_authz_team_member_grant_source",
+            name=conv("ck_authz_team_member_grant_source"),
         ),
         Index(
             "uq_authz_team_member_grant_manual",
@@ -335,11 +336,11 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
         # partial unique indexes (which match on the lowercase form).
         CheckConstraint(
             "scope IN ('private', 'team', 'user', 'public')",
-            name="ck_authz_share_scope_enum",
+            name=conv("ck_authz_share_scope_enum"),
         ),
         CheckConstraint(
             "permission_level IN ('read', 'write', 'execute', 'admin')",
-            name="ck_authz_share_permission_enum",
+            name=conv("ck_authz_share_permission_enum"),
         ),
         # Targeted (TEAM/USER) shares require a target_id; untargeted
         # (PRIVATE/PUBLIC) shares forbid one. Matches the partial-unique-index
@@ -348,7 +349,7 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
         CheckConstraint(
             "(scope IN ('team', 'user') AND target_id IS NOT NULL) "
             "OR (scope IN ('private', 'public') AND target_id IS NULL)",
-            name="ck_authz_share_scope_target_consistency",
+            name=conv("ck_authz_share_scope_target_consistency"),
         ),
         Index(
             "uq_authz_share_targeted",
@@ -377,6 +378,44 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
     scope: str = Field(index=True)
     target_id: UUIDstr | None = Field(default=None, index=True)
     permission_level: str = Field(default=SharePermissionLevel.READ.value)
+    created_by: UUIDstr | None = Field(
+        default=None,
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
+    )
+    created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
+
+
+class AuthzAccessException(SQLModel, table=True):  # type: ignore[call-arg]
+    """A per-(user, resource) revocation of role/scope-derived access.
+
+    Deliberately narrow: one row means "this user's access to this resource
+    via a role or scope grant is revoked" — it says nothing about, and never
+    cancels, an independent :class:`AuthzShare` on the same resource. Those
+    are two separate grants with two separate removal paths on purpose, so a
+    revoke here can never silently take away more than it says it does.
+
+    ``user_id`` cascades on delete (an exception naming a deleted user is
+    meaningless); ``created_by`` uses ``SET NULL`` like ``AuthzShare.created_by``
+    so deleting the person who revoked something doesn't undo the revoke.
+    """
+
+    __tablename__ = "authz_access_exception"
+    __table_args__ = (
+        Index("ix_authz_access_exception_resource", "resource_type", "resource_id"),
+        UniqueConstraint(
+            "user_id",
+            "resource_type",
+            "resource_id",
+            name="uq_authz_access_exception_target",
+        ),
+    )
+
+    id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUIDstr = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
+    resource_type: str = Field(index=True)
+    resource_id: UUIDstr = Field(index=True)
     created_by: UUIDstr | None = Field(
         default=None,
         sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
@@ -422,7 +461,7 @@ class AuthzAuditLog(SQLModel, table=True):  # type: ignore[call-arg]
         # not apply an authoritative directory snapshot.
         CheckConstraint(
             "result IN ('allow', 'deny', 'owner_override', 'skip')",
-            name="ck_authz_audit_log_result_enum",
+            name=conv("ck_authz_audit_log_result_enum"),
         ),
     )
 

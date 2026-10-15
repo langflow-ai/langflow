@@ -881,8 +881,8 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             from OpenDsStar.agents.ds_star.open_ds_star_agent import OpenDsStarAgent
         except ImportError as e:
             error_msg = (
-                f"Cannot import OpenDsStarAgent. Please ensure OpenDsStar is properly installed.\n"
-                f"Run: uv pip install OpenDsStar\n"
+                "Cannot import OpenDsStarAgent. OpenDsStar requires a separate manual installation.\n"
+                "Run: uv pip install 'OpenDsStar==1.0.26' 'langchain-litellm==0.5.1'\n"
                 f"Error: {e}"
             )
             raise ImportError(error_msg) from e

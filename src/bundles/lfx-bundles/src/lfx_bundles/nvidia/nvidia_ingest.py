@@ -1,6 +1,7 @@
 from urllib.parse import urlparse
 
 from lfx.base.data.base_file import BaseFileComponent
+from lfx.base.models.provider_ssrf import validate_provider_base_url
 from lfx.inputs.inputs import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.schema.data import Data
 from pypdf import PdfReader
@@ -192,6 +193,9 @@ class NvidiaIngestComponent(BaseFileComponent):
                 error_msg = f"Invalid Base URL format: {e}"
                 self.log(error_msg)
                 raise ValueError(error_msg) from e
+            # base_url is tenant-editable and the ingest client sends the operator's API key
+            # to whatever host it names. Block internal/cloud-metadata destinations.
+            validate_provider_base_url(self.base_url)
         else:
             base_url_error = "Base URL is required"
             raise ValueError(base_url_error)

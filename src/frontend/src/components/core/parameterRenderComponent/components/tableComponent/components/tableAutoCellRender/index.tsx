@@ -6,7 +6,7 @@ import ObjectRender from "@/components/common/objectRender";
 import StringReader from "@/components/common/stringReaderComponent";
 import DateReader from "@/components/core/dateReaderComponent";
 import { Badge } from "@/components/ui/badge";
-import { cn, isTimeStampString } from "@/utils/utils";
+import { cn, isTimeStampString, isTruthyCellValue } from "@/utils/utils";
 import InputGlobalComponent from "../../../inputGlobalComponent";
 import ToggleShadComponent from "../../../toggleShadComponent";
 
@@ -65,7 +65,11 @@ export default function TableAutoCellRender({
   }
 
   function getCellType() {
-    let format: string = formatter ? formatter : typeof value;
+    let format: string = formatter
+      ? formatter
+      : value === null && colDef?.context?.globalVariable
+        ? "string"
+        : typeof value;
     //convert text to string to bind to the string reader
     format = format === "text" ? "string" : format;
     format = format === "json" ? "object" : format;
@@ -108,7 +112,7 @@ export default function TableAutoCellRender({
           return (
             <InputGlobalComponent
               id="string-reader-global"
-              value={localValue}
+              value={value === null ? null : localValue}
               editNode={false}
               handleOnNewValue={(newValue) => {
                 updateGlobalVariableCell(
@@ -147,11 +151,7 @@ export default function TableAutoCellRender({
       case "null":
         return "";
       case "boolean":
-        value =
-          (typeof value === "string" && value.toLowerCase() === "true") ||
-          value === true
-            ? true
-            : false;
+        value = isTruthyCellValue(value);
         return !!colDef?.onCellValueChanged ||
           !!api.getGridOption("onCellValueChanged") ? (
           <ToggleShadComponent
@@ -162,10 +162,11 @@ export default function TableAutoCellRender({
             editNode={true}
             id={"toggle" + colDef?.colId + uniqueId()}
             disabled={
-              colDef?.cellRendererParams?.isSingleToggleColumn &&
+              colDef?.cellRendererParams?.editableCell === false ||
+              (colDef?.cellRendererParams?.isSingleToggleColumn &&
               colDef?.cellRendererParams?.checkSingleToggleEditable
                 ? !colDef.cellRendererParams.checkSingleToggleEditable(props)
-                : false
+                : false)
             }
           />
         ) : (

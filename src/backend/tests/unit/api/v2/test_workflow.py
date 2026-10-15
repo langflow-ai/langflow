@@ -12,6 +12,7 @@ Test Organization:
 """
 
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
@@ -19,6 +20,7 @@ import pytest
 from httpx import AsyncClient
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import Job, JobType
+from langflow.services.task.service import TaskService
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.services.deps import session_scope
 from sqlalchemy.exc import OperationalError
@@ -387,6 +389,55 @@ class TestWorkflowStop:
             mock_task_service.revoke_task.assert_awaited_once_with(UUID(job_id))
             mock_bg_service.stop_job.assert_awaited_once()
             mock_job_service.update_job_status.assert_awaited_once_with(UUID(job_id), JobStatus.CANCELLED)
+
+    async def test_stop_workflow_with_celery_task_service(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        monkeypatch,
+    ):
+        """Celery mode must reach the stop signal and CANCELLED update (#14943).
+
+        The other stop tests replace TaskService with an AsyncMock, which hides
+        that CeleryBackend.revoke_task is synchronous.
+        """
+        job_id = uuid4()
+        mock_job = MagicMock(
+            job_id=job_id,
+            status=JobStatus.IN_PROGRESS,
+            type=JobType.WORKFLOW,
+            user_id=None,
+            job_metadata={"request": {"mode": "background"}},
+        )
+        celery_backend = MagicMock(name="CeleryBackend")
+        celery_backend.revoke_task.return_value = True
+        monkeypatch.setattr("langflow.services.task.service.CeleryBackend", lambda: celery_backend)
+        task_service = TaskService(SimpleNamespace(settings=SimpleNamespace(celery_enabled=True)))
+
+        with (
+            patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
+            patch("langflow.api.v2.workflow.get_task_service", return_value=task_service),
+            patch("langflow.api.v2.workflow.get_background_execution_service") as mock_get_bg_service,
+        ):
+            mock_job_service = MagicMock()
+            mock_job_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_job_service.update_job_status = AsyncMock()
+            mock_get_job_service.return_value = mock_job_service
+            mock_bg_service = MagicMock()
+            mock_bg_service.stop_job = AsyncMock()
+            mock_get_bg_service.return_value = mock_bg_service
+
+            response = await client.post(
+                "api/v2/workflows/stop",
+                json={"job_id": str(job_id)},
+                headers={"x-api-key": created_api_key.api_key},
+            )
+
+        assert response.status_code == 200, response.text
+        assert "cancelled successfully" in response.json()["message"]
+        celery_backend.revoke_task.assert_called_once_with(str(job_id))
+        mock_bg_service.stop_job.assert_awaited_once()
+        mock_job_service.update_job_status.assert_awaited_once_with(job_id, JobStatus.CANCELLED)
 
     @pytest.mark.parametrize(
         ("job_metadata", "job_status", "expected_mode"),

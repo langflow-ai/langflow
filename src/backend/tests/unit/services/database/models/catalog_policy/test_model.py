@@ -209,3 +209,25 @@ async def test_catalog_policy_rule_check_constraints_reject_invalid_rows(
         )
     )
     await catalog_policy_session.commit()
+
+
+def test_catalog_policy_rule_check_names_survive_naming_convention():
+    """GH #15006: conv()-marked names are final, so Alembic's ck_ convention cannot re-prefix them."""
+    from sqlalchemy import CheckConstraint, MetaData
+    from sqlalchemy.sql.naming import conv
+
+    table = CatalogPolicyRule.__table__
+    check_names = {constraint.name for constraint in table.constraints if isinstance(constraint, CheckConstraint)}
+    assert check_names == {
+        "ck_catalog_policy_rule_resource_kind",
+        "ck_catalog_policy_rule_mode",
+        "ck_catalog_policy_rule_scope",
+        "ck_catalog_policy_rule_scope_domain_consistency",
+    }
+    assert all(isinstance(name, conv) for name in check_names)
+
+    # Mirrors the ``ck`` entry of NAMING_CONVENTION in ``langflow/alembic/env.py``.
+    convention = {"ck": "ck_%(table_name)s_%(constraint_name)s"}
+    copied = table.to_metadata(MetaData(naming_convention=convention))
+    copied_names = {constraint.name for constraint in copied.constraints if isinstance(constraint, CheckConstraint)}
+    assert copied_names == check_names

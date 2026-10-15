@@ -693,3 +693,121 @@ def test_catalog_policy_migration_accepts_model_created_table_without_writes(db_
             assert row_count == 0
     finally:
         engine.dispose()
+
+
+# Mirrors the ``ck`` entry of NAMING_CONVENTION in ``langflow/alembic/env.py``.
+_NAMING_CONVENTION = {"ck": "ck_%(table_name)s_%(constraint_name)s"}
+_DOUBLED_PREFIX = f"ck_{_MIGRATION.TABLE_NAME}_ck_{_MIGRATION.TABLE_NAME}_"
+_LEGACY_POSTGRES_CHECK_NAMES = {
+    "ck_catalog_policy_rule_resource_kind": f"{_DOUBLED_PREFIX}resource_kind",
+    "ck_catalog_policy_rule_mode": f"{_DOUBLED_PREFIX}mode",
+    "ck_catalog_policy_rule_scope": f"{_DOUBLED_PREFIX}scope",
+    # The doubled name is 70 characters, so PostgreSQL DDL truncates it to the
+    # 63-character limit with SQLAlchemy's md5 suffix (GH #15006).
+    "ck_catalog_policy_rule_scope_domain_consistency": f"{_DOUBLED_PREFIX}scope_dom_f5d9",
+}
+_LEGACY_POSTGRES_REFLECTED_CHECKS = {
+    _LEGACY_POSTGRES_CHECK_NAMES[name]: sqltext for name, sqltext in _POSTGRES_REFLECTED_CHECKS.items()
+}
+
+
+class _ReflectedCheckInspector:
+    def __init__(self, checks: dict[str, str]) -> None:
+        self._checks = checks
+
+    def get_check_constraints(self, _table_name: str) -> list[dict[str, object]]:
+        return [{"name": name, "sqltext": sqltext} for name, sqltext in self._checks.items()]
+
+
+def _convention_operations(connection: sa.Connection) -> Operations:
+    """Build Operations the way env.py does: create_table inherits the naming convention."""
+    return Operations(
+        MigrationContext.configure(
+            connection,
+            opts={"target_metadata": sa.MetaData(naming_convention=_NAMING_CONVENTION)},
+        )
+    )
+
+
+def test_catalog_policy_migration_creates_single_prefix_check_names_under_naming_convention(
+    db_url,  # noqa: F811
+    monkeypatch,
+):
+    """GH #15006: op.f() keeps the migration-created names from being re-prefixed."""
+    engine = sa.create_engine(_engine_url(db_url))
+    try:
+        User.__table__.create(engine, checkfirst=True)
+
+        with engine.begin() as connection:
+            monkeypatch.setattr(_MIGRATION, "op", _convention_operations(connection))
+            _MIGRATION.upgrade()
+
+            checks = {
+                constraint["name"] for constraint in sa.inspect(connection).get_check_constraints(_MIGRATION.TABLE_NAME)
+            }
+            assert checks == set(_VALID_CHECKS)
+
+            _MIGRATION.upgrade()
+    finally:
+        engine.dispose()
+
+
+def test_catalog_policy_migration_accepts_legacy_double_prefixed_check_names(db_url, monkeypatch):  # noqa: F811
+    """GH #15006: tables created before the fix carry doubled names and must still validate."""
+    engine = sa.create_engine(_engine_url(db_url))
+    try:
+        User.__table__.create(engine, checkfirst=True)
+        # Recreate the pre-fix state: plain-string names attached under the active convention.
+        legacy_metadata = sa.MetaData(naming_convention=_NAMING_CONVENTION)
+        sa.Table("user", legacy_metadata, sa.Column("id", sa.Uuid(), primary_key=True))
+        _add_existing_catalog_table(legacy_metadata, checks=_VALID_CHECKS).create(engine)
+
+        with engine.begin() as connection:
+            inspector = sa.inspect(connection)
+            legacy_names = {constraint["name"] for constraint in inspector.get_check_constraints(_MIGRATION.TABLE_NAME)}
+            assert len(legacy_names) == len(_VALID_CHECKS)
+            assert all(name.startswith(_DOUBLED_PREFIX) for name in legacy_names)
+            if connection.dialect.name == "postgresql":
+                assert legacy_names == set(_LEGACY_POSTGRES_CHECK_NAMES.values())
+
+            monkeypatch.setattr(_MIGRATION, "op", _convention_operations(connection))
+            _MIGRATION.upgrade()
+            _MIGRATION.upgrade()
+
+            inspector = sa.inspect(connection)
+            names_after = {constraint["name"] for constraint in inspector.get_check_constraints(_MIGRATION.TABLE_NAME)}
+            assert names_after == legacy_names
+            assert {index["name"] for index in inspector.get_indexes(_MIGRATION.TABLE_NAME)} >= {
+                _MIGRATION.SCOPED_INDEX,
+                _MIGRATION.UNSCOPED_INDEX,
+            }
+    finally:
+        engine.dispose()
+
+
+def test_catalog_policy_migration_accepts_postgresql_truncated_legacy_check_names():
+    _MIGRATION._validate_check_constraints(_ReflectedCheckInspector(_LEGACY_POSTGRES_REFLECTED_CHECKS))
+
+
+def test_catalog_policy_migration_rejects_tampered_legacy_check_definition():
+    tampered = {
+        **_LEGACY_POSTGRES_REFLECTED_CHECKS,
+        f"{_DOUBLED_PREFIX}mode": (
+            "((mode)::text = ANY ((ARRAY['block'::character varying, 'allow'::character varying, "
+            "'audit'::character varying])::text[]))"
+        ),
+    }
+
+    with pytest.raises(RuntimeError, match="incompatible check constraint definitions"):
+        _MIGRATION._validate_check_constraints(_ReflectedCheckInspector(tampered))
+
+
+def test_catalog_policy_migration_reports_missing_legacy_check_by_definition():
+    partial = {
+        name: sqltext
+        for name, sqltext in _LEGACY_POSTGRES_REFLECTED_CHECKS.items()
+        if name != _LEGACY_POSTGRES_CHECK_NAMES["ck_catalog_policy_rule_scope"]
+    }
+
+    with pytest.raises(RuntimeError, match=r"missing required check constraints: \['ck_catalog_policy_rule_scope'\]"):
+        _MIGRATION._validate_check_constraints(_ReflectedCheckInspector(partial))

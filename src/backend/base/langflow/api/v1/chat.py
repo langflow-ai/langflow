@@ -44,6 +44,13 @@ from langflow.api.utils import (
     verify_public_flow_and_get_user,
 )
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.execution_principal import (
+    FAMILY_INTERACTIVE_CHAT,
+    FAMILY_LEGACY_PUBLIC_CHAT,
+    FAMILY_VOICE,
+    execution_principal_for,
+    stamp_execution_principal,
+)
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
     FlowDataRequest,
@@ -80,6 +87,7 @@ from langflow.services.job_queue.service import (
 from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.rate_limit import check_rate_limit
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
+from langflow.utils.flow_secrets import HiddenFieldMetadataError, restore_redacted_flow_values
 
 if TYPE_CHECKING:
     from lfx.graph.vertex.vertex_types import InterfaceVertex
@@ -112,13 +120,22 @@ async def _clear_invalid_graph_cache(chat_service: ChatService, flow_id: str) ->
 async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, queue_service: JobQueueService) -> None:
     """Raise HTTP 404 if the requesting user does not own the job.
 
-    Jobs with no registered owner (build_public_tmp) are accessible to any authenticated user.
+    Public temporary builds are accessible to authenticated users. Jobs with no
+    queue owner or public marker are not accessible through the v1 build routes.
     """
     try:
         job_owner = await queue_service.get_job_owner(job_id)
     except JobQueueBackendUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    if job_owner is not None and job_owner != current_user.id:
+        await logger.aexception("Failed to read job owner")
+        raise HTTPException(status_code=503, detail="Job queue is temporarily unavailable.") from exc
+    if job_owner is None:
+        try:
+            if await queue_service.is_public_job_async(job_id):
+                return
+        except JobQueueBackendUnavailableError as exc:
+            await logger.aexception("Failed to read public job marker")
+            raise HTTPException(status_code=503, detail="Job queue is temporarily unavailable.") from exc
+    if job_owner is None or job_owner != current_user.id:
         await logger.awarning(
             "Ownership check failed: user %s tried to access job %s owned by %s",
             current_user.id,
@@ -140,11 +157,12 @@ async def _register_job_owner_or_cancel(queue_service: JobQueueService, job_id: 
     try:
         await queue_service.register_job_owner(job_id, user_id)
     except JobQueueBackendUnavailableError as exc:
+        await logger.aexception("Failed to register job owner")
         try:
             await queue_service.cancel_job(job_id)
         except Exception as cancel_exc:  # noqa: BLE001
             await logger.awarning(f"Failed to cancel job {job_id} after owner registration failed: {cancel_exc!r}")
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=503, detail="Job queue is temporarily unavailable.") from exc
 
 
 def _compiled_from(graph: object, graph_data: dict) -> bool:
@@ -233,6 +251,9 @@ async def retrieve_vertices_order(
     start_time = time.perf_counter()
     components_count = None
     run_id = str(uuid.uuid4())
+    execution_principal = execution_principal_for(
+        FAMILY_INTERACTIVE_CHAT, user=current_user, flow_owner_id=flow.user_id
+    )
     try:
         with scoped_model_provider_policy_for_flow(
             flow,
@@ -243,10 +264,18 @@ async def retrieve_vertices_order(
                 trusted_data = await _trusted_stored_graph(flow.data, is_superuser=current_user.is_superuser)
                 if trusted_data is not None:
                     graph = await build_and_cache_graph_from_data(
-                        flow_id=flow_id, graph_data=trusted_data, chat_service=chat_service
+                        flow_id=flow_id,
+                        graph_data=trusted_data,
+                        chat_service=chat_service,
+                        execution_principal=execution_principal,
                     )
                 else:
-                    graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
+                    graph = await build_graph_from_db(
+                        flow_id=flow_id,
+                        session=session,
+                        chat_service=chat_service,
+                        execution_principal=execution_principal,
+                    )
             else:
                 sanitized_data = await _trusted_stored_graph(
                     data.model_dump(),
@@ -255,7 +284,10 @@ async def retrieve_vertices_order(
                 if sanitized_data is not None:
                     data = FlowDataRequest.model_validate(sanitized_data)
                 graph = await build_and_cache_graph_from_data(
-                    flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
+                    flow_id=flow_id,
+                    graph_data=data.model_dump(),
+                    chat_service=chat_service,
+                    execution_principal=execution_principal,
                 )
             graph = graph.prepare(stop_component_id, start_component_id)
         graph.set_run_id(run_id)
@@ -317,6 +349,45 @@ async def build_flow(
     flow_name: str | None = None,
     event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
 ):
+    """HTTP entry point for the v1 build route: always the ``interactive_chat`` family.
+
+    The execution family is deliberately NOT a request parameter. It selects the
+    identity connections resolve under, so a caller able to name it could ask for
+    ``webhook`` and run under the flow owner's credentials.
+    """
+    return await _build_flow_impl(
+        flow_id=flow_id,
+        background_tasks=background_tasks,
+        inputs=inputs,
+        data=data,
+        files=files,
+        stop_component_id=stop_component_id,
+        start_component_id=start_component_id,
+        log_builds=log_builds,
+        current_user=current_user,
+        queue_service=queue_service,
+        flow_name=flow_name,
+        event_delivery=event_delivery,
+        execution_family=FAMILY_INTERACTIVE_CHAT,
+    )
+
+
+async def _build_flow_impl(
+    *,
+    flow_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    inputs: InputValueRequest | None = None,
+    data: FlowDataRequest | None = None,
+    files: list[str] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
+    log_builds: bool = True,
+    current_user: CurrentActiveUser,
+    queue_service: JobQueueService,
+    flow_name: str | None = None,
+    event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
+    execution_family: str = FAMILY_INTERACTIVE_CHAT,
+):
     """Build and process a flow, returning a job ID for event polling.
 
     This endpoint requires authentication through the CurrentActiveUser dependency.
@@ -335,6 +406,9 @@ async def build_flow(
         queue_service: Queue service for job management
         flow_name: Optional name for the flow
         event_delivery: Optional event delivery type - default is streaming
+        execution_family: Matrix family for connection resolution. Chosen by the
+            caller in code (interactive_chat, legacy_public_chat, voice), never by
+            the request.
 
     Returns:
         Dict with job_id that can be used to poll for build status
@@ -408,6 +482,16 @@ async def build_flow(
     try:
         if data:
             raw_data = data.model_dump()
+            if (
+                flow.user_id != current_user.id
+                and flow.access_type != AccessTypeEnum.PUBLIC
+                and isinstance(flow.data, dict)
+            ):
+                # V1 API clients may still submit the shared editor's redacted
+                # graph. Restore only at build time, after the write override
+                # gate, so a visible unsaved edit can run with stored keys.
+                raw_data = restore_redacted_flow_values(raw_data, flow.data)
+                data = FlowDataRequest.model_validate(raw_data)
             sanitized_data = await prepare_flow_build_for_user(
                 raw_data,
                 is_superuser=current_user.is_superuser,
@@ -432,6 +516,10 @@ async def build_flow(
                     edges=sanitized_data.get("edges", []),
                     viewport=sanitized_data.get("viewport"),
                 )
+    except HiddenFieldMetadataError as exc:
+        raise HTTPException(
+            status_code=400, detail="Cannot change hidden fields or executable graph data in a shared flow."
+        ) from exc
     except CatalogPolicyIdentityUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except CustomComponentValidationError as exc:
@@ -463,6 +551,8 @@ async def build_flow(
             flow_name=flow_name,
             source_flow_owner_id=flow.user_id,
             expose_error_details=flow.user_id == current_user.id,
+            execution_family=execution_family,
+            redact_build_params=flow.user_id != current_user.id,
         )
     await _register_job_owner_or_cancel(queue_service, job_id, current_user.id)
 
@@ -489,8 +579,8 @@ async def get_build_events(
     Requires authentication and ownership verification. A job owner is registered
     when build_flow is called; if a registered owner does not match the requesting
     user the endpoint returns 404 to avoid leaking job existence.
-    Jobs started via build_public_tmp have no registered owner and remain accessible
-    to any authenticated user.
+    Jobs started via build_public_tmp are explicitly marked public. Jobs without
+    a queue owner or public marker return 404.
     """
     await _verify_job_ownership(job_id, current_user, queue_service)
     return await get_flow_events_response(
@@ -513,8 +603,8 @@ async def cancel_build(
 
     Requires authentication and ownership verification to prevent a user from
     aborting another user's running build (DoS via job cancellation).
-    Jobs with no registered owner (build_public_tmp) are accessible to any
-    authenticated user, consistent with get_build_events.
+    Jobs started via build_public_tmp are explicitly marked public. Jobs without
+    a queue owner or public marker return 404.
     """
     await _verify_job_ownership(job_id, current_user, queue_service)
     try:
@@ -596,6 +686,9 @@ async def build_vertex(
     start_time = time.perf_counter()
     error_message = None
     run_id = None
+    execution_principal = execution_principal_for(
+        FAMILY_INTERACTIVE_CHAT, user=current_user, flow_owner_id=flow.user_id
+    )
     try:
         graph: Graph = await chat_service.get_cache(flow_id_str)
     except KeyError as exc:
@@ -622,6 +715,7 @@ async def build_vertex(
                     flow_id=flow_id_str,
                     chat_service=chat_service,
                     graph_data=sanitized_data,
+                    execution_principal=execution_principal,
                 )
             run_id = str(uuid.uuid4())
             graph.set_run_id(run_id)
@@ -638,6 +732,7 @@ async def build_vertex(
                         flow_id=flow_id,
                         session=session,
                         chat_service=chat_service,
+                        execution_principal=execution_principal,
                     )
             run_id = str(uuid.uuid4())
             graph.set_run_id(run_id)
@@ -645,6 +740,12 @@ async def build_vertex(
             needs_initialize_run = False
         else:
             graph = cached_graph
+        # This cache is keyed by flow UUID, not by execution principal, and the Redis
+        # backend round-trips the graph through ``__getstate__`` (which deliberately
+        # omits the principal). Re-stamp from THIS request so a cached graph neither
+        # arrives unstamped (denying every connection) nor carries another caller's
+        # identity. The owner-only guard above is what keeps the actor correct.
+        stamp_execution_principal(graph, execution_principal)
         try:
             _validate_graph_for_execution(graph)
         except HTTPException:
@@ -723,7 +824,7 @@ async def build_vertex(
         result_data_response.timedelta = timedelta
         vertex.add_build_time(timedelta)
         inactivated_vertices = list(graph.inactivated_vertices)
-        graph.reset_inactivated_vertices()
+        graph.reset_inactivated_vertices(vertex.id)
         graph.reset_activated_vertices()
 
         await chat_service.set_cache(flow_id_str, graph)
@@ -947,6 +1048,13 @@ async def build_vertex_stream(
             graph = None
         else:
             graph = cache.get("result")
+            # Restamp as ``build_vertex`` does: the cache is keyed by flow UUID, and the
+            # Redis backend round-trips the graph through ``__getstate__``, which omits
+            # the principal. The owner-only lookup above keeps the actor correct.
+            stamp_execution_principal(
+                graph,
+                execution_principal_for(FAMILY_INTERACTIVE_CHAT, user=current_user, flow_owner_id=flow.user_id),
+            )
             try:
                 _validate_graph_for_execution(graph)
             except HTTPException:
@@ -969,15 +1077,22 @@ async def build_vertex_stream(
         raise HTTPException(status_code=500, detail="Error building Component") from exc
 
 
-async def build_flow_and_stream(flow_id, inputs, background_tasks, current_user):
+async def build_flow_and_stream(flow_id, inputs, background_tasks, current_user, *, execution_family=FAMILY_VOICE):
+    """Voice's build seam.
+
+    Voice has no ``Graph.from_payload`` of its own: it reuses the v1 build path,
+    so the only thing that distinguishes it from ``interactive_chat`` is the
+    family stamped on the graph.
+    """
     queue_service = get_queue_service()
-    build_response = await build_flow(
+    build_response = await _build_flow_impl(
         flow_id=flow_id,
         inputs=inputs,
         background_tasks=background_tasks,
         current_user=current_user,
         queue_service=queue_service,
         event_delivery=EventDeliveryType.STREAMING,
+        execution_family=execution_family,
     )
     job_id = build_response["job_id"]
     return await get_flow_events_response(
@@ -1158,6 +1273,9 @@ async def build_public_tmp(
                 queue_service=queue_service,
                 flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
                 source_flow_owner_id=flow.user_id,
+                # Anonymous direct-link traffic: the graph runs under the stable
+                # non-user principal, which resolves no user connection at all.
+                execution_family=FAMILY_LEGACY_PUBLIC_CHAT,
                 expose_error_details=False,
             )
         # Gate the public events/cancel endpoints to jobs that were actually
@@ -1203,7 +1321,7 @@ async def build_public_tmp(
     )
 
 
-async def _assert_public_job(job_id: str, queue_service: JobQueueService) -> None:
+async def _assert_public_job(job_id: str, queue_service: JobQueueService, unavailable_detail: str) -> None:
     """Raise HTTP 404 if job_id was not registered through the public build endpoint.
 
     Prevents unauthenticated callers from reading or cancelling private-flow
@@ -1212,7 +1330,17 @@ async def _assert_public_job(job_id: str, queue_service: JobQueueService) -> Non
     Why 404 not 403: returning 403 would confirm the job exists under a different
     access tier, leaking information about private builds. 404 is neutral.
     """
-    if not await queue_service.is_public_job_async(job_id):
+    try:
+        is_public = await queue_service.is_public_job_async(job_id)
+    except asyncio.CancelledError:
+        raise
+    except JobQueueBackendUnavailableError as exc:
+        await logger.aerror(f"Public job marker lookup failed for job_id {job_id}: {exc!r}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=unavailable_detail) from exc
+    except Exception as exc:
+        await logger.aexception(f"Public job marker lookup failed for job_id {job_id}: {exc!r}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=unavailable_detail) from exc
+    if not is_public:
         # Static detail — do not reflect job_id back; avoid confirming which IDs exist.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
 
@@ -1234,7 +1362,7 @@ async def get_build_events_public(
     This endpoint does not require authentication, matching the public build endpoint.
     It is used by the shareable playground to consume build events.
     """
-    await _assert_public_job(job_id, queue_service)
+    await _assert_public_job(job_id, queue_service, _PUBLIC_EVENTS_UNAVAILABLE_DETAIL)
     try:
         return await get_flow_events_response(
             job_id=job_id,
@@ -1275,7 +1403,7 @@ async def cancel_build_public(
     This endpoint does not require authentication, matching the public build endpoint.
     It is used by the shareable playground to cancel builds.
     """
-    await _assert_public_job(job_id, queue_service)
+    await _assert_public_job(job_id, queue_service, _PUBLIC_CANCEL_FAILED_DETAIL)
     try:
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
 
