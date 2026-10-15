@@ -186,6 +186,7 @@ describe("reauthorizeScopeList", () => {
     ).toEqual({
       options: [CALENDAR, GMAIL_SEND],
       granted: [CALENDAR],
+      defaultSelected: [CALENDAR],
       outsideCeiling: [],
     });
   });
@@ -199,7 +200,54 @@ describe("reauthorizeScopeList", () => {
     });
     expect(list.options).toEqual([MAIL_SEND, MAIL_READ]);
     expect(list.granted).toEqual([MAIL_SEND]);
+    expect(list.defaultSelected).toEqual([MAIL_SEND]);
   });
+
+  it.each([
+    { granted: [], expected: ["offline_access"] },
+    { granted: ["Mail.Send"], expected: [MAIL_SEND, "offline_access"] },
+  ])(
+    "defaults to offline access when granted scopes are $granted",
+    ({ granted, expected }) => {
+      const list = reauthorizeScopeList({
+        provider: "microsoft",
+        requestable: [MAIL_SEND, MAIL_READ, "offline_access"],
+        granted,
+        ceiling: [MAIL_SEND, MAIL_READ, "offline_access"],
+      });
+
+      expect(list.defaultSelected).toEqual(expected);
+      expect(list.granted).not.toContain("offline_access");
+      expect(list.outsideCeiling).toEqual([]);
+    },
+  );
+
+  it("does not add offline access outside the registration ceiling", () => {
+    const list = reauthorizeScopeList({
+      provider: "microsoft",
+      requestable: [MAIL_SEND],
+      granted: ["Mail.Send", "offline_access"],
+      ceiling: [MAIL_SEND],
+    });
+
+    expect(list.defaultSelected).toEqual([MAIL_SEND]);
+    expect(list.options).toEqual([MAIL_SEND]);
+    expect(list.outsideCeiling).toEqual(["offline_access"]);
+  });
+
+  it.each(["google", "slack"])(
+    "does not change reconnect defaults for %s",
+    (provider) => {
+      const list = reauthorizeScopeList({
+        provider,
+        requestable: ["read", "write", "offline_access"],
+        granted: ["read"],
+        ceiling: ["read", "write", "offline_access"],
+      });
+
+      expect(list.defaultSelected).toEqual(["read"]);
+    },
+  );
 
   it("keeps a granted scope no action requires, in the ceiling's spelling", () => {
     const list = reauthorizeScopeList({
