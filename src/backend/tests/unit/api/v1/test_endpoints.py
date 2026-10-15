@@ -1317,6 +1317,61 @@ async def test_deprecated_upload_enforces_max_file_size(
     )
 
 
+@pytest.fixture(name="deprecated_upload_spy")
+def deprecated_upload_spy_fixture(monkeypatch):
+    """Record the filenames the deprecated upload route writes to disk."""
+    from langflow.api.v1 import endpoints as endpoints_module
+
+    saved: list[str] = []
+    real_save_uploaded_file = endpoints_module.save_uploaded_file
+
+    def recording_save_uploaded_file(file, folder_name):
+        saved.append(file.filename)
+        return real_save_uploaded_file(file, folder_name)
+
+    monkeypatch.setattr(endpoints_module, "save_uploaded_file", recording_save_uploaded_file)
+    return saved
+
+
+async def test_deprecated_upload_rejects_empty_file(
+    client: AsyncClient, logged_in_headers: dict, flow, deprecated_upload_spy: list[str]
+):
+    """Regression (#10226): a 0-byte upload must be rejected before it is stored.
+
+    This route validated only the upper size bound, so an empty file was written
+    into the flow's cache folder and the route returned 201. It is reachable
+    through the public ``langflow.load.upload_file`` SDK helper, which posts here
+    rather than to the non-deprecated twin.
+    """
+    response = await client.post(
+        f"api/v1/upload/{flow.id}",
+        files={"file": ("empty.txt", b"")},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, (
+        f"Expected 400 for an empty upload, got {response.status_code}: {response.text}"
+    )
+    assert response.json()["detail"] == "Empty file not allowed"
+    assert deprecated_upload_spy == [], "An empty upload must not reach storage"
+
+
+async def test_deprecated_upload_accepts_one_byte_file(
+    client: AsyncClient, logged_in_headers: dict, flow, deprecated_upload_spy: list[str]
+):
+    """Boundary: one byte past empty is still a valid upload and is stored."""
+    response = await client.post(
+        f"api/v1/upload/{flow.id}",
+        files={"file": ("one_byte.txt", b"x")},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED, (
+        f"Expected 201 for a 1-byte upload, got {response.status_code}: {response.text}"
+    )
+    assert deprecated_upload_spy == ["one_byte.txt"]
+
+
 async def test_custom_component_runs_trusted_copy_on_hash_collision(
     client: AsyncClient,
     logged_in_headers: dict,
