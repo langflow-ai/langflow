@@ -34,6 +34,8 @@ from langflow.services.triggers.constants import (
     CANVAS_ONLY_KINDS,
     GOOGLE_SOURCE_KINDS,
     MICROSOFT_SOURCE_KINDS,
+    PROVIDER_GOOGLE,
+    PROVIDER_MICROSOFT,
     PUSH_MECHANISMS,
     SLACK_TRIGGER_KINDS,
 )
@@ -138,6 +140,8 @@ class TriggerService(Service):
         flow_ids: list[UUID],
         limit: int = 100,
         offset: int = 0,
+        provider: str | None = None,
+        state: TriggerState | None = None,
     ) -> list[Trigger]:
         """List triggers on the given flows, newest first.
 
@@ -154,6 +158,10 @@ class TriggerService(Service):
             .offset(offset)
             .limit(limit)
         )
+        if provider is not None:
+            statement = statement.where(Trigger.provider == provider)
+        if state is not None:
+            statement = statement.where(Trigger.state == state.value)
         return list((await session.exec(statement)).all())
 
     async def list_active(self, session: AsyncSession, *, kind: str | None = None) -> list[Trigger]:
@@ -281,6 +289,48 @@ class TriggerService(Service):
             row.next_fire_at = None
         return await self.set_state(session, row=row, state=TriggerState.ACTIVE)
 
+    async def enable_and_activate(self, session: AsyncSession, *, row: Trigger) -> Trigger:
+        """Enable ``row`` and, for a push source, finish its provider activation.
+
+        A Microsoft or Google push source is left ``pending`` by :meth:`enable`;
+        the intent is committed before any provider I/O, then the initializer
+        subscribes and moves it to ``active`` (or records why it could not).
+        This commits ``session``. Raises ``ValueError`` with an owner-facing
+        reason when the trigger cannot be enabled.
+        """
+        return await self.activate_push_source(session, row=await self.enable(session, row=row))
+
+    async def activate_push_source(self, session: AsyncSession, *, row: Trigger) -> Trigger:
+        """Finish a push source's activation after :meth:`enable`; any other trigger is returned as is.
+
+        Commits ``session`` first, so callers must not hold a savepoint open
+        across this call.
+        """
+        if row.provider not in {PROVIDER_MICROSOFT, PROVIDER_GOOGLE} or (
+            (row.config or {}).get("mechanism_id") not in PUSH_MECHANISMS
+        ):
+            return row
+        from langflow.services.triggers.source_runtime import initialize_source
+
+        await session.commit()
+        await initialize_source(row.id)
+        await session.refresh(row)
+        return row
+
+    async def admin_pause(self, session: AsyncSession, *, row: Trigger) -> Trigger:
+        """Pause ``row`` on an operator's behalf, exactly as :meth:`disable` would, and say so.
+
+        The marker is what lets the owner see that an administrator paused it,
+        and what an operator's bulk resume re-arms; a pause the owner chose is
+        never resumed by the operator.
+        """
+        paused = await self.disable(session, row=row)
+        paused.admin_paused_at = datetime.now(timezone.utc)
+        session.add(paused)
+        await session.flush()
+        await session.refresh(paused)
+        return paused
+
     async def disable(self, session: AsyncSession, *, row: Trigger) -> Trigger:
         if row.state == TriggerState.DEAD.value:
             msg = "A dead trigger cannot be disabled."
@@ -292,6 +342,9 @@ class TriggerService(Service):
         from langflow.services.triggers.subscriptions import revoke_for_trigger
 
         await revoke_for_trigger(session, trigger_id=row.id)
+        # A pause asked for here is the caller's own, even on a trigger an
+        # operator already paused: the operator's bulk resume must then leave it.
+        row.admin_paused_at = None
         return await self.set_state(session, row=row, state=TriggerState.PAUSED)
 
     async def pin(self, session: AsyncSession, *, row: Trigger, flow_version_id: UUID | None) -> Trigger:

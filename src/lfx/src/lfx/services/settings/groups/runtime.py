@@ -351,6 +351,10 @@ class RuntimeSettings(BaseModel):
 
     webhook_polling_interval: int = 0
     """The polling interval for the webhook in ms. Set to 0 to disable (SSE provides real-time updates)."""
+    trigger_polling_interval: int = Field(default=5000, ge=1000)
+    """How often, in ms, the triggers UI re-fetches trigger state. Triggers have no event
+    stream, so state converges at this cadence; the floor keeps a misconfiguration from
+    turning every open settings page into a tight polling loop."""
     fs_flows_polling_interval: int = 10000
     """The polling interval in milliseconds for synchronizing flows from the file system."""
 
