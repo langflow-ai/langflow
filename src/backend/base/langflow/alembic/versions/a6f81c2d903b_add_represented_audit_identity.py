@@ -45,7 +45,9 @@ def upgrade() -> None:
                 )
     indexes = {item["name"] for item in sa.inspect(conn).get_indexes(TABLE)}
     if INDEX not in indexes:
-        op.create_index(INDEX, TABLE, ["represented_issuer", "represented_subject", "timestamp"])
+        # Index only the subject (at most 2048 UTF-8 bytes). The full issuer
+        # remains stored and filtered separately, without an oversized key.
+        op.create_index(INDEX, TABLE, ["represented_subject", "timestamp"])
 
 
 def downgrade() -> None:
