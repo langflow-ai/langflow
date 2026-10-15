@@ -233,7 +233,8 @@ class FileComponent(BaseFileComponent):
             info=(
                 "Leave blank to detect text encoding automatically. If accents or punctuation look incorrect, "
                 "enter the file's encoding, such as cp1252 or utf-8. Applies to standard text parsing and CSV, "
-                "not PDF, DOCX, or the Advanced Parser. The selected encoding is shown in logs and output metadata."
+                "not PDF, DOCX, or the Advanced Parser. For standard text parsing, the selected encoding is shown "
+                "in logs and output metadata."
             ),
         ),
         StrInput(
