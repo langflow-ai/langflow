@@ -56,6 +56,8 @@ from langflow.initial_setup.setup import (
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
 from langflow.services.audit.attribution import AuditRequestContextMiddleware
+from langflow.services.audit.represented import AuditIdentityError, UntrustedAuditIdentityError
+from langflow.services.creation_hooks import ERROR_CODE_HEADER
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
@@ -1212,6 +1214,16 @@ def create_app():
     # Replaces FastAPI's default 422 handler, which echoes each submitted value
     # (credentials included) back in the error body.
     app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
+
+    @app.exception_handler(AuditIdentityError)
+    async def audit_identity_exception_handler(_request: Request, exc: AuditIdentityError):
+        """Translate audit identity domain errors at the HTTP boundary."""
+        untrusted = isinstance(exc, UntrustedAuditIdentityError)
+        return JSONResponse(
+            status_code=HTTPStatus.FORBIDDEN if untrusted else HTTPStatus.BAD_REQUEST,
+            content={"detail": str(exc)},
+            headers={ERROR_CODE_HEADER: "REPRESENTED_IDENTITY_NOT_ALLOWED" if untrusted else "INVALID_AUDIT_CONTEXT"},
+        )
 
     @app.exception_handler(DeploymentGuardError)
     async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):

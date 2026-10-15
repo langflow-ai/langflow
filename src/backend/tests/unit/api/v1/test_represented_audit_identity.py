@@ -97,15 +97,17 @@ async def test_another_key_on_the_same_account_and_a_user_token_cannot_assert_id
             assert (await session.exec(select(Folder).where(Folder.name == name))).first() is None
 
 
-@pytest.mark.parametrize("malformed", ["partial", "duplicate", "oversized"])
+@pytest.mark.parametrize("malformed", ["partial", "duplicate", "oversized", "format_character"])
 async def test_invalid_identity_is_rejected_before_mutation(client, trusted_key, malformed):
     headers = list(_headers(trusted_key).items())
     if malformed == "partial":
         headers = [(key, value) for key, value in headers if key != SUBJECT_HEADER]
     elif malformed == "duplicate":
         headers.append((SUBJECT_HEADER, _headers(trusted_key)[SUBJECT_HEADER]))
-    else:
+    elif malformed == "oversized":
         headers = list(_headers(trusted_key, "s" * 513).items())
+    else:
+        headers = list(_headers(trusted_key, "alice\u202eevil").items())
     name = f"invalid-{uuid4().hex}"
     response = await client.post("api/v1/projects/", json={"name": name}, headers=headers)
     assert response.status_code == 400, response.text
@@ -323,11 +325,12 @@ async def test_composer_transport_auth_also_binds_represented_identity(
             assert user.id == active_user.id
             assert current_represented_identity.get().subject == "用户-Ålice"
         else:
-            from fastapi import HTTPException
+            from langflow.services.audit.represented import InvalidAuditContextError, UntrustedAuditIdentityError
 
-            with pytest.raises(HTTPException) as raised:
+            error = InvalidAuditContextError if assertion == "malformed" else UntrustedAuditIdentityError
+            # Direct dependency calls raise domain errors; the app maps these to HTTP.
+            with pytest.raises(error):
                 await verify_project_auth_conditional(project_id, request)
-            assert raised.value.status_code == (400 if assertion == "malformed" else 403)
             assert current_represented_identity.get() is None
     finally:
         current_represented_identity.reset(token)
