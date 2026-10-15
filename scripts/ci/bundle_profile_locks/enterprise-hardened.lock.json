@@ -78,9 +78,9 @@
       "providers": [
         "lfx-google"
       ],
-      "requested": ">=0.3.2,<1.0.0",
-      "requirement": "lfx-google==0.3.2",
-      "resolved_version": "0.3.2"
+      "requested": ">=0.3.3,<1.0.0",
+      "requirement": "lfx-google==0.3.3",
+      "resolved_version": "0.3.3"
     },
     {
       "distribution": "lfx-ibm",
@@ -180,7 +180,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:7a55cea15a75f423",
+  "profile_digest": "sha256:38f16208aed110ad",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
