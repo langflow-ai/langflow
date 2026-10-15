@@ -10,6 +10,25 @@ from lfx.utils.jq_security import validate_jq_program
 
 
 class TestRejectedPrograms:
+    @pytest.mark.parametrize("builtin", ["env", "input", "inputs"])
+    @pytest.mark.parametrize(
+        "expression",
+        [
+            "if true then 1, BUILTIN else 2 end",
+            "if false then 1 else 2, BUILTIN end",
+            "if 1, BUILTIN then 1 else 2 end",
+            "if false then 0 elif 1, BUILTIN then 1 else 2 end",
+            "if true then if false then 0 else 1, BUILTIN end else 2 end",
+            "if true then 1, BUILTIN, 2 else 3 end",
+            "if true then 1, {env: 2}, BUILTIN else 3 end",
+            "if true then 1, .end, BUILTIN else 3 end",
+        ],
+    )
+    def test_conditionals_do_not_turn_value_streams_into_object_keys(self, builtin, expression):
+        program = "{a: " + expression.replace("BUILTIN", builtin) + "}"
+        with pytest.raises(ValueError, match="not allowed"):
+            validate_jq_program(program)
+
     @pytest.mark.parametrize(
         "program",
         [
@@ -101,6 +120,11 @@ class TestAllowedPrograms:
             "{env}",
             "{input}",
             ". as {env: $e} | $e",
+            "{a: if true then 1, 2 else 3 end, env: .a}",
+            "{a: if true then {env: .a} else {input: .b} end, inputs}",
+            "{if: .a, end: .b, env}",
+            "{a: .if, env: .end}",
+            ". as $if | {a: $if, env}",
             # getpath only indexes the value it is applied to.
             'getpath(["a", "b"])',
             '. | getpath(["data", "id"])',
