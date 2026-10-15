@@ -256,12 +256,21 @@ is therefore a deployment-wide grant of that provider account; see
 ### Errors a caller sees
 
 When resolution fails, the response carries a machine-readable `error_code` (`connection-unresolved`,
-`connection-not-authorized`, `auth-expired`, `scope-missing`, `rate-limited`, `provider-unavailable`,
+`connection-not-authorized`, `auth-expired`, `scope-missing`, `rate-limited`, `provider-unavailable`, `network-error`,
 `action-unsupported`, `invalid-request`, `resource-not-found`) together with `hint`, `provider`, `retryable`, and `retry_after` where it applies, and
 the HTTP status the provider situation warrants (403 for an unauthorized connection, 401 for expired
 credentials, 429 for a rate limit). The error's own sentence, which names the connection handle, is returned
 only to the flow's owner; delegated and anonymous callers get a generic message alongside the same code, so
 a client can still show the right call to action without learning which account the owner connected.
+
+Google Workspace actions report `network-error` when the Langflow server cannot communicate with the
+Google API because of a timeout, DNS lookup failure, refused connection, unreachable network, or TLS
+failure. The message includes the API hostname and guidance to check the server's outbound network
+access. These failures return HTTP 504 for a timeout or 502 for other transport failures. Langflow does
+not automatically retry them because a timed-out write may already have reached Google. An actual HTTP 5xx
+response still reports `provider-unavailable` (except 501, which reports `action-unsupported`).
+Google Workspace socket operations use a 10-second timeout. This is not a total action deadline or an
+IPv4 fallback guarantee, and DNS resolution or multi-chunk transfers can take longer.
 
 For `connection-not-authorized`, the hint distinguishes a missing `allow_non_interactive` opt-in from a
 public/A2A execution or an execution whose identity was not supplied by the host. Owner diagnostics also
