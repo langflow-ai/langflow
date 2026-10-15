@@ -67,18 +67,18 @@ def read_handles(edge: dict[str, Any]) -> Handles:
     output = source.get("name")
     if not isinstance(output, str) or not output:
         raise _error(edge, GraphViolationCode.EDGE_HANDLE_INVALID, "sourceHandle must name an output")
-    field_name = target.get("fieldName")
-    loop_output = target.get("name")
-    if (field_name is None) == (loop_output is None):
+    # A key that is present counts, whatever its value: a field handle with "name": null names both.
+    names_field = "fieldName" in target
+    if names_field == ("name" in target):
         raise _error(
             edge, GraphViolationCode.EDGE_HANDLE_INVALID, "targetHandle must name exactly one of a field or an output"
         )
-    name = field_name if field_name is not None else loop_output
+    name = target["fieldName"] if names_field else target["name"]
     if not isinstance(name, str) or not name:
         raise _error(
             edge, GraphViolationCode.EDGE_HANDLE_INVALID, "targetHandle must name its field or output as a string"
         )
-    return Handles(output=output, input=("field", name) if field_name is not None else ("output", name))
+    return Handles(output=output, input=("field" if names_field else "output", name))
 
 
 def _handle(edge: dict[str, Any], key: str) -> dict[str, Any]:
