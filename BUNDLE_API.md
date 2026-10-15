@@ -224,6 +224,11 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Output artifact previews.** `Component.custom_repr()` derives automatic
+  previews from the current output's `status` without storing them in
+  `repr_value`. Explicitly configured non-empty `repr_value` overrides remain
+  supported. Public signatures and `BUNDLE_API_VERSION = 1` remain unchanged.
+
 - **Knowledge storage provider defaults.** `DBProviderInput` defaults to the
   application-provided SQLite backend. Its public name, fields and signature
   remain unchanged, so `BUNDLE_API_VERSION` remains `1`. Recognized historical

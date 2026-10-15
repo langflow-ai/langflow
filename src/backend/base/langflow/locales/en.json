@@ -1276,6 +1276,8 @@
   "components.file.inputs.storage_location.display_name.6b1f9093": "Storage Location",
   "components.file.inputs.storage_location.info.713b4100": "Choose where to read the file from.",
   "components.file.inputs.storage_location.placeholder.3c82033f": "Select Location",
+  "components.file.inputs.text_encoding.display_name.ab5ad1dc": "Text Encoding",
+  "components.file.inputs.text_encoding.info.6a86b444": "Leave blank to detect text encoding automatically. If accents or punctuation look incorrect, enter the file's encoding, such as cp1252 or utf-8. Applies to standard text parsing and CSV, not PDF, DOCX, or the Advanced Parser. The selected encoding is shown in logs and output metadata.",
   "components.file.inputs.use_multithreading.display_name.a32391d0": "[Deprecated] Use Multithreading",
   "components.file.inputs.use_multithreading.info.e1193371": "Set 'Processing Concurrency' greater than 1 to enable multithreading.",
   "components.file.outputs.message.display_name.960c8537": "Raw Content",

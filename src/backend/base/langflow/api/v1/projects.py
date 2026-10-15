@@ -50,6 +50,7 @@ from langflow.api.v1.schemas.deployment_snapshot import (
     DeploymentSnapshotFlow,
     DeploymentSnapshotProject,
     DeploymentSnapshotRequiredConnection,
+    DeploymentSnapshotRequiredMcpProject,
     DeploymentSnapshotRequiredModel,
 )
 from langflow.api.v1.schemas.replacement_operations import (
@@ -649,6 +650,11 @@ async def read_project_deployment_snapshot(
             for model in snapshot.required_models
         ],
         unresolved_model_fields=snapshot.unresolved_model_fields,
+        required_mcp_variables=list(snapshot.required_mcp_variables),
+        required_mcp_projects=[
+            DeploymentSnapshotRequiredMcpProject(server_name=project.server_name, project_id=project.project_id)
+            for project in snapshot.required_mcp_projects
+        ],
     )
 
 

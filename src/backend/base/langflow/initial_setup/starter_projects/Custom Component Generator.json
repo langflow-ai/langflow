@@ -150,6 +150,7 @@
             "lf_version": "1.6.0",
             "metadata": {
               "code_hash": "45974e6b1909",
+              "component_class_name": "ChatInput",
               "dependencies": {
                 "dependencies": [
                   {
@@ -441,6 +442,7 @@
             "lf_version": "1.10.1rc3",
             "metadata": {
               "code_hash": "14306d4a9373",
+              "component_class_name": "AgentComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -449,7 +451,7 @@
                   },
                   {
                     "name": "langgraph",
-                    "version": "1.2.9"
+                    "version": "1.2.14"
                   },
                   {
                     "name": "lfx",
@@ -1079,6 +1081,7 @@
             "legacy": false,
             "metadata": {
               "code_hash": "a6429c7f9670",
+              "component_class_name": "URLComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1534,6 +1537,7 @@
             "lf_version": "1.10.1rc3",
             "metadata": {
               "code_hash": "fddf83963c66",
+              "component_class_name": "MemoryBaseComponent",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1839,6 +1843,7 @@
             "legacy": false,
             "metadata": {
               "code_hash": "0aab1c78e1dc",
+              "component_class_name": "ChatOutput",
               "dependencies": {
                 "dependencies": [
                   {
