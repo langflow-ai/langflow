@@ -6,7 +6,6 @@ import base64
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
 from langflow.api.v1.audit_reads import AuditActorRead
 from langflow.api.v1.audits import AuditFeedActor
 from langflow.services.audit import represented as represented_module
@@ -15,6 +14,8 @@ from langflow.services.audit.details import AuditContractError
 from langflow.services.audit.represented import (
     ISSUER_HEADER,
     SUBJECT_HEADER,
+    InvalidAuditContextError,
+    UntrustedAuditIdentityError,
     bind_represented_identity,
     current_represented_identity,
     decode_identity_value,
@@ -24,6 +25,7 @@ from langflow.services.audit.writer import stage_audit_event
 from langflow.services.auth.context import AuthCredentialContext, clear_current_auth_context, set_current_auth_context
 from langflow.services.deps import get_settings_service
 from lfx.services.settings.groups.observability import ObservabilitySettings
+from lfx.workflow.end_user_identity import resolve_serving_end_user_id
 from pydantic import ValidationError
 from starlette.requests import Request
 
@@ -56,9 +58,8 @@ def test_oversized_wire_values_are_rejected_before_decoding(monkeypatch, charact
         raise AssertionError(message)
 
     monkeypatch.setattr(represented_module.base64, "b64decode", unexpected_decode)
-    with pytest.raises(HTTPException) as raised:
+    with pytest.raises(InvalidAuditContextError):
         decode_identity_value(wire_value, character_limit)
-    assert raised.value.status_code == 400
 
 
 @pytest.mark.parametrize(
@@ -74,14 +75,18 @@ def test_oversized_wire_values_are_rejected_before_decoding(monkeypatch, charact
         encoded("a\nb"),
         encoded("a\x7fb"),
         encoded("a\u2028b"),
+        encoded("a\u202eb"),
+        encoded("a\u202db"),
+        encoded("a\u200db"),
+        encoded("a\ufeffb"),
+        encoded("a\u2066b"),
         encoded("s" * 513),
     ],
 )
 def test_malformed_context_is_rejected_without_echoing_values(value):
-    with pytest.raises(HTTPException) as raised:
+    with pytest.raises(InvalidAuditContextError) as raised:
         decode_identity_value(value, 512)
-    assert raised.value.status_code == 400
-    assert raised.value.detail == "Invalid represented audit identity"
+    assert str(raised.value) == "Invalid represented audit identity"
 
 
 def test_equivalent_base64_spellings_have_the_same_identity():
@@ -108,9 +113,8 @@ def test_only_a_database_api_key_on_the_exact_allowlist_is_trusted(monkeypatch, 
                 bind_represented_identity(request)
                 assert current_represented_identity.get().subject == "subject"
             else:
-                with pytest.raises(HTTPException) as raised:
+                with pytest.raises(UntrustedAuditIdentityError):
                     bind_represented_identity(request)
-                assert raised.value.status_code == 403
                 assert current_represented_identity.get() is None
         finally:
             clear_current_auth_context()
@@ -123,6 +127,34 @@ def test_allowlist_configuration_validates_and_deduplicates_record_ids():
     assert settings.audit_trusted_api_key_ids == [first, second]
     with pytest.raises(ValidationError):
         ObservabilitySettings(audit_trusted_api_key_ids="not-a-key-record-uuid")
+
+
+@pytest.mark.parametrize("legacy_subject", [None, "legacy-session-user"])
+def test_represented_identity_preserves_authentication_and_legacy_end_user_scope(monkeypatch, legacy_subject):
+    settings = get_settings_service().settings
+    key_id = uuid4()
+    monkeypatch.setattr(settings, "audit_trusted_api_key_ids", [key_id])
+    monkeypatch.setattr(settings, "serving_end_user_header", "X-End-User-Id")
+    monkeypatch.setattr(settings, "serving_trust_proxy_headers", True)
+    headers = [
+        (ISSUER_HEADER.lower().encode(), encoded("audit-issuer").encode()),
+        (SUBJECT_HEADER.lower().encode(), encoded("audit-subject").encode()),
+    ]
+    if legacy_subject is not None:
+        headers.append((b"x-end-user-id", legacy_subject.encode()))
+    request = Request({"type": "http", "headers": headers})
+    credential = AuthCredentialContext(method="api_key", api_key_id=key_id, api_key_source="db")
+    set_current_auth_context(credential)
+    authz_before = credential.to_authz_context()
+    try:
+        bind_represented_identity(request)
+        assert represented_module.get_current_auth_context() is credential
+        assert credential.to_authz_context() == authz_before
+        assert current_represented_identity.get().subject == "audit-subject"
+        assert resolve_serving_end_user_id(http_request=request) == legacy_subject
+    finally:
+        clear_current_auth_context()
+        current_represented_identity.set(None)
 
 
 def test_acting_and_represented_identity_are_independent():

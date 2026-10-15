@@ -11,8 +11,6 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from fastapi import HTTPException
-
 from langflow.services.auth.context import AUTH_METHOD_API_KEY, get_current_auth_context
 from langflow.services.database.models.audit_event.model import (
     REPRESENTED_ISSUER_MAX_LENGTH,
@@ -30,6 +28,22 @@ _ENCODING_PREFIX = "v1."
 _MAX_ENCODED_HEADER_LENGTH = 10_926
 _BASE64_BLOCK_CHARACTERS = 4
 _ENCODED = re.compile(rf"{re.escape(_ENCODING_PREFIX)}[A-Za-z0-9_-]+\Z")
+_FORBIDDEN_CATEGORIES = frozenset({"Cc", "Cf", "Zl", "Zp"})
+
+
+class AuditIdentityError(ValueError):
+    """An asserted audit identity violates the trust or transport contract."""
+
+
+class InvalidAuditContextError(AuditIdentityError):
+    """The represented identity cannot be decoded or safely recorded."""
+
+
+class UntrustedAuditIdentityError(AuditIdentityError):
+    """The authenticated credential cannot assert represented identity."""
+
+    def __init__(self) -> None:
+        super().__init__("Credential may not assert represented audit identity")
 
 
 @dataclass(frozen=True)
@@ -43,12 +57,8 @@ current_represented_identity: ContextVar[RepresentedIdentity | None] = ContextVa
 )
 
 
-def _invalid() -> HTTPException:
-    return HTTPException(
-        status_code=400,
-        detail="Invalid represented audit identity",
-        headers={"X-Langflow-Error-Code": "INVALID_AUDIT_CONTEXT"},
-    )
+def _invalid() -> InvalidAuditContextError:
+    return InvalidAuditContextError("Invalid represented audit identity")
 
 
 def decode_identity_value(encoded: str, character_limit: int) -> str:
@@ -64,7 +74,7 @@ def decode_identity_value(encoded: str, character_limit: int) -> str:
         raise _invalid() from exc
     if not value.strip() or len(value) > character_limit:
         raise _invalid()
-    if any(unicodedata.category(char) in {"Cc", "Zl", "Zp"} for char in value):
+    if any(unicodedata.category(char) in _FORBIDDEN_CATEGORIES for char in value):
         raise _invalid()
     return value
 
@@ -95,11 +105,7 @@ def bind_represented_identity(request: Request) -> None:
             configured = hash_api_key(settings.audit_trusted_api_key.get_secret_value())
             trusted = trusted or secrets.compare_digest(credential.api_key_fingerprint, configured)
     if not trusted:
-        raise HTTPException(
-            status_code=403,
-            detail="Credential may not assert represented audit identity",
-            headers={"X-Langflow-Error-Code": "REPRESENTED_IDENTITY_NOT_ALLOWED"},
-        )
+        raise UntrustedAuditIdentityError
     identity = RepresentedIdentity(
         issuer=decode_identity_value(issuers[0], REPRESENTED_ISSUER_MAX_LENGTH),
         subject=decode_identity_value(subjects[0], REPRESENTED_SUBJECT_MAX_LENGTH),
