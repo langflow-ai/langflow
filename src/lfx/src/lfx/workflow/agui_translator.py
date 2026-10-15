@@ -173,7 +173,7 @@ class AGUITranslator:
             for block in data.get("content_blocks") or []:
                 if not isinstance(block, dict):
                     continue
-                for content in block.get("contents") or []:
+                for content in [block, *(block.get("contents") or [])]:
                     if not isinstance(content, dict) or content.get("type") != "error":
                         continue
                     solution = content.get("solution")

@@ -8,6 +8,7 @@ stateful transformation with no I/O.
 
 from __future__ import annotations
 
+import pytest
 from ag_ui.core import (
     CustomEvent,
     RunErrorEvent,
@@ -72,7 +73,9 @@ def test_error_reads_text_from_error_message_payload():
     assert "component blew up" in out[0].message
 
 
-def test_integration_error_preserves_hint_and_code_without_traceback():
+@pytest.mark.parametrize("flat_error", [False, True], ids=["nested", "flat"])
+def test_integration_error_preserves_hint_and_code_without_traceback(flat_error):
+    """Both supported content-block shapes preserve safe guidance in RUN_ERROR."""
     from lfx.integrations import AuthExpiredError
     from lfx.schema.message import ErrorMessage
 
@@ -80,6 +83,8 @@ def test_integration_error_preserves_hint_and_code_without_traceback():
     message = ErrorMessage(exception=error)
     payload = message.model_dump()
     payload["content_blocks"][1]["contents"][0]["traceback"] = "private traceback"
+    if flat_error:
+        payload["content_blocks"] = [payload["content_blocks"][1]["contents"][0]]
 
     event = AGUITranslator(run_id="r1", thread_id="t1").translate("error", payload)[0]
 
@@ -94,6 +99,10 @@ def test_error_deduplicates_solutions_and_ignores_other_content():
     payload = {
         "text": "Failure",
         "content_blocks": [
+            None,
+            "not a content block",
+            {"type": "text", "solution": "Not an error hint"},
+            {"type": "error", "solution": " Retry later. "},
             {
                 "contents": [
                     {"type": "error", "solution": "Retry later."},
