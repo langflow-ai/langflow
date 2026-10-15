@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 import pytest
@@ -13,6 +14,7 @@ from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
+from pydantic import SecretStr
 from sqlmodel import select
 from starlette.requests import Request
 
@@ -38,10 +40,14 @@ def _headers(key, subject="用户-Ålice"):
     return {"x-api-key": key.api_key, ISSUER_HEADER: encode("https://idp.example"), SUBJECT_HEADER: encode(subject)}
 
 
-@pytest.fixture
-async def trusted_key(active_user, monkeypatch):
+@pytest.fixture(params=["record_id", "secret_value"])
+async def trusted_key(active_user, monkeypatch, request):
     key = await _key(active_user)
-    monkeypatch.setattr(get_settings_service().settings, "audit_trusted_api_key_ids", [key.id])
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "audit_trusted_api_key_ids", [key.id] if request.param == "record_id" else [])
+    monkeypatch.setattr(
+        settings, "audit_trusted_api_key", SecretStr(key.api_key) if request.param == "secret_value" else None
+    )
     return key
 
 
@@ -327,3 +333,34 @@ async def test_composer_transport_auth_also_binds_represented_identity(
         current_represented_identity.reset(token)
         authenticated_caller_ctx.reset(caller_token)
         clear_current_auth_context()
+
+
+async def test_non_superuser_keeps_own_deleted_project_history_with_plugin_visibility(client, monkeypatch):
+    from langflow.api.v1 import audit_reads
+
+    user_id, username = await make_user("service-history")
+    project_id = uuid4()
+    began = datetime.now(timezone.utc) - timedelta(seconds=2)
+    for operation, action, timestamp in (
+        ("create", "project:create", began),
+        ("delete", "project:delete", began + timedelta(seconds=1)),
+    ):
+        await record_event(
+            resource_type="project",
+            resource_id=project_id,
+            resource_name="service-history",
+            action=action,
+            operation=operation,
+            timestamp=timestamp,
+            user_id=user_id,
+            actor_id=user_id,
+        )
+
+    async def plugin_visibility():
+        return True
+
+    monkeypatch.setattr(audit_reads, "plugin_decides_visibility", plugin_visibility)
+    headers = await login(client, username)
+    response = await client.get(f"api/v1/projects/audits?project_id={project_id}", headers=headers)
+    assert response.status_code == 200, response.text
+    assert [event["operation"] for event in response.json()["items"]] == ["delete", "create"]
