@@ -310,7 +310,10 @@ async def owner_visibility(
         and_(ended.isnot(None), or_(began.is_(None), ended >= began), col(AuditEvent.timestamp) > ended),
     )
     if await plugin_decides_visibility():
-        return current_life if resource_id is not None else None
+        # A named-resource window prevents inheriting another owner's old
+        # trail through UUID reuse. It must still retain the caller's own
+        # events after deletion, just as the owner-filtered branch does.
+        return or_(current_life, col(AuditEvent.user_id) == user.id) if resource_id is not None else None
     owned = and_(
         col(AuditEvent.resource_id) != UNKNOWN_RESOURCE_ID,
         col(AuditEvent.resource_id).in_(owned_resource_ids),

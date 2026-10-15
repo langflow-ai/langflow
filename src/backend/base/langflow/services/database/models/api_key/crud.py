@@ -5,7 +5,7 @@ import os
 import secrets
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -33,6 +33,7 @@ class ApiKeyAuthResult:
     user: User
     api_key_source: str
     api_key_id: UUID | None = None
+    api_key_fingerprint: str | None = field(default=None, repr=False)
     api_key_restricted: bool = False
     api_key_permissions: dict[str, Any] | None = None
 
@@ -216,11 +217,12 @@ async def _audit_scoped_authentication_refusal(session: AsyncSession, api_key: A
         await audit_decision(**event)
 
 
-def _api_key_auth_result(user: User, api_key: ApiKey) -> ApiKeyAuthResult:
+def _api_key_auth_result(user: User, api_key: ApiKey, *, fingerprint: str) -> ApiKeyAuthResult:
     return ApiKeyAuthResult(
         user=user,
         api_key_source="db",  # pragma: allowlist secret
         api_key_id=api_key.id,
+        api_key_fingerprint=fingerprint,
         api_key_restricted=api_key.permissions is not None,
         api_key_permissions=api_key.permissions,
     )
@@ -345,7 +347,7 @@ async def _check_key_from_db_with_context(
             api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
             await session.flush()
-        return _api_key_auth_result(user, api_key_obj)
+        return _api_key_auth_result(user, api_key_obj, fingerprint=incoming_hash)
 
     if len(matches) > 1:
         key_ids = [str(m.id) for m in matches]
@@ -395,7 +397,7 @@ async def _check_key_from_db_with_context(
                     api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
                 session.add(api_key_obj)
                 await session.flush()
-            return _api_key_auth_result(user, api_key_obj)
+            return _api_key_auth_result(user, api_key_obj, fingerprint=incoming_hash)
 
     return None
 

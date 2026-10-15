@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import re
+import secrets
 import unicodedata
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -71,8 +72,8 @@ def decode_identity_value(encoded: str, character_limit: int) -> str:
 def bind_represented_identity(request: Request) -> None:
     """Validate after normal authentication and before any route mutation.
 
-    The allowlist contains database API-key record UUIDs, never key material or
-    user IDs. This identity is deliberately separate from authorization context.
+    The record allowlist uses database API-key UUIDs. Secret-backed trust matches
+    a fingerprint from successful database authentication. Neither changes authorization.
     """
     from langflow.services.deps import get_settings_service
 
@@ -84,8 +85,16 @@ def bind_represented_identity(request: Request) -> None:
     if len(issuers) != 1 or len(subjects) != 1:
         raise _invalid()
     credential = get_current_auth_context()
-    trusted = get_settings_service().settings.audit_trusted_api_key_ids
-    if credential is None or credential.method != AUTH_METHOD_API_KEY or credential.api_key_id not in trusted:
+    settings = get_settings_service().settings
+    trusted = False
+    if credential is not None and credential.method == AUTH_METHOD_API_KEY and credential.api_key_id is not None:
+        trusted = credential.api_key_id in settings.audit_trusted_api_key_ids
+        if settings.audit_trusted_api_key is not None and credential.api_key_fingerprint is not None:
+            from langflow.services.database.models.api_key.crud import hash_api_key
+
+            configured = hash_api_key(settings.audit_trusted_api_key.get_secret_value())
+            trusted = trusted or secrets.compare_digest(credential.api_key_fingerprint, configured)
+    if not trusted:
         raise HTTPException(
             status_code=403,
             detail="Credential may not assert represented audit identity",
