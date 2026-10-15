@@ -360,7 +360,7 @@ def _fix_entry(graph: str, fix: GraphFix) -> dict[str, Any]:
 
 
 def _json_size(value: Any) -> int:
-    return len(json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode("utf-8", "surrogatepass"))
+    return len(json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
 
 
 _ENVELOPE_OVERHEAD = _json_size(encode_envelope([]))
