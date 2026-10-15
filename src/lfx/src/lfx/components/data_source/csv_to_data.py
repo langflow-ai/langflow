@@ -66,7 +66,7 @@ class CSVToDataComponent(Component):
                         self.resolve_path(file_path), scope_ids=component_file_access_scopes(self)
                     )
                     csv_bytes = Path(resolved_path).read_bytes()
-                    csv_data = csv_bytes.decode("utf-8")
+                    csv_data = csv_bytes.decode("utf-8-sig")
 
             elif self.csv_path:
                 file_path = self.csv_path
@@ -83,7 +83,7 @@ class CSVToDataComponent(Component):
                         )
 
                     csv_data = run_until_complete(
-                        read_file_text(file_path, encoding="utf-8", resolve_path=_resolve_local_path, newline="")
+                        read_file_text(file_path, encoding="utf-8-sig", resolve_path=_resolve_local_path, newline="")
                     )
 
             else:
