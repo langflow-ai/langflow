@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import type { FolderType } from "@/pages/MainPage/entities";
 import {
   CustomProjectSidebarProjectLabel,
+  getCustomProjectSidebarProjectTitle,
   useCustomProjectSidebar,
 } from "./custom-project-sidebar";
 
@@ -39,5 +40,8 @@ describe("custom project sidebar OSS seam", () => {
     expect(screen.getByTestId("tools")).toBeEmptyDOMElement();
     expect(screen.getByTestId("footer")).toBeEmptyDOMElement();
     expect(screen.getByText("Existing project label")).toBeInTheDocument();
+    expect(
+      getCustomProjectSidebarProjectTitle(project, "Existing project label"),
+    ).toBe("Existing project label");
   });
 });

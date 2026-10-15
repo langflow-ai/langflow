@@ -35,3 +35,10 @@ export function CustomProjectSidebarProjectLabel({
 }) {
   return <span className="block truncate">{defaultLabel}</span>;
 }
+
+export function getCustomProjectSidebarProjectTitle(
+  _project: FolderType,
+  defaultTitle: string,
+): string {
+  return defaultTitle;
+}

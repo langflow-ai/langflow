@@ -27,6 +27,7 @@ import {
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
 import {
   CustomProjectSidebarProjectLabel,
+  getCustomProjectSidebarProjectTitle,
   useCustomProjectSidebar,
 } from "@/customization/components/custom-project-sidebar";
 import {
@@ -543,7 +544,10 @@ const SideBarFoldersButtonsComponent = ({
                                           // per user the list fills with rows
                                           // that differ only in the truncated
                                           // part.
-                                          title={getProjectDisplayName(item, t)}
+                                          title={getCustomProjectSidebarProjectTitle(
+                                            item,
+                                            getProjectDisplayName(item, t),
+                                          )}
                                         >
                                           <CustomProjectSidebarProjectLabel
                                             project={item}
@@ -611,24 +615,34 @@ const SideBarFoldersButtonsComponent = ({
             )}
           >
             {projectSidebar.footer}
-            {ENABLE_KNOWLEDGE_BASES && (
-              <SidebarMenuButton
-                onClick={handleKnowledgeNavigation}
-                size="md"
-                className={cn("text-sm", projectSidebar.footerItemClassName)}
-              >
-                <ForwardedIconComponent name="Library" className="h-4 w-4" />
-                {t("sidebar.knowledge")}
-              </SidebarMenuButton>
+            {ENABLE_FILE_MANAGEMENT && (
+              <>
+                {ENABLE_KNOWLEDGE_BASES && (
+                  <SidebarMenuButton
+                    onClick={handleKnowledgeNavigation}
+                    size="md"
+                    className={cn(
+                      "text-sm",
+                      projectSidebar.footerItemClassName,
+                    )}
+                  >
+                    <ForwardedIconComponent
+                      name="Library"
+                      className="h-4 w-4"
+                    />
+                    {t("sidebar.knowledge")}
+                  </SidebarMenuButton>
+                )}
+                <SidebarMenuButton
+                  onClick={handleFilesNavigation}
+                  size="md"
+                  className={cn("text-sm", projectSidebar.footerItemClassName)}
+                >
+                  <ForwardedIconComponent name="File" className="h-4 w-4" />
+                  {t("sidebar.myFiles")}
+                </SidebarMenuButton>
+              </>
             )}
-            <SidebarMenuButton
-              onClick={handleFilesNavigation}
-              size="md"
-              className={cn("text-sm", projectSidebar.footerItemClassName)}
-            >
-              <ForwardedIconComponent name="File" className="h-4 w-4" />
-              {t("sidebar.myFiles")}
-            </SidebarMenuButton>
           </div>
         </SidebarFooter>
       )}

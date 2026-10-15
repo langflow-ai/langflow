@@ -6,6 +6,7 @@ import {
 } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import ForwardedIconComponent from "../../components/common/genericIconComponent";
 
 export interface SettingsSidebarItem {
@@ -17,7 +18,13 @@ export interface SettingsSidebarItem {
 export function useSettingsSidebarItems(): SettingsSidebarItem[] {
   const { t } = useTranslation();
   const autoLogin = useAuthStore((state) => state.autoLogin);
+  const isSuperuser = Boolean(
+    useAuthStore((state) => state.userData)?.is_superuser,
+  );
   const hasStore = useStoreStore((state) => state.hasStore);
+  const migrationEnabled = useUtilityStore(
+    (state) => state.featureFlags.instance_migration === true,
+  );
   const items: SettingsSidebarItem[] = [];
 
   if (ENABLE_PROFILE_ICONS || hasStore || !autoLogin) {
@@ -115,6 +122,19 @@ export function useSettingsSidebarItems(): SettingsSidebarItem[] {
       ),
     },
   );
+
+  if (isSuperuser && migrationEnabled) {
+    items.push({
+      title: t("settings.nav.migration"),
+      href: "/settings/migration",
+      icon: (
+        <ForwardedIconComponent
+          name="ArrowRightLeft"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    });
+  }
 
   if (!ENABLE_DATASTAX_LANGFLOW) {
     items.splice(2, 0, ...CustomStoreSidebar(true));

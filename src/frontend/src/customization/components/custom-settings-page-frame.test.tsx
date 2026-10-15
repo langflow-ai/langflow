@@ -37,6 +37,12 @@ describe("CustomSettingsPageFrame", () => {
 
     expect(screen.getByTestId("settings-page-layout")).toBeInTheDocument();
     expect(screen.getByText("General")).toBeInTheDocument();
-    expect(screen.getByText("Settings content")).toBeInTheDocument();
+    const content = screen.getByText("Settings content");
+    expect(content).toBeInTheDocument();
+    expect(content.parentElement).toHaveClass("min-w-0", "overflow-x-clip");
+    expect(content.parentElement?.parentElement).toHaveClass(
+      "min-w-0",
+      "overflow-clip",
+    );
   });
 });
