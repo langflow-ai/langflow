@@ -12,6 +12,7 @@ repository.workspace = true
 serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision"] }
 sha2 = "0.10"
 indexmap = "2"
+getrandom = "0.3"
 
 [dev-dependencies]
 libtest-mimic = "0.8"
