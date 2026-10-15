@@ -10093,7 +10093,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-microsoft"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "src/bundles/microsoft" }
 dependencies = [
     { name = "lfx" },
@@ -10236,7 +10236,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-slack"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/slack" }
 dependencies = [
     { name = "aiohttp" },
