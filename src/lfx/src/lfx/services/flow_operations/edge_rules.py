@@ -23,7 +23,7 @@ import json
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from lfx.services.flow_operations.canonical import values_equal
 from lfx.services.flow_operations.exceptions import FlowDataValidationError, FlowOperationValidationError
@@ -112,11 +112,21 @@ def _handle(edge: dict[str, Any], key: str) -> dict[str, Any]:
     raise _error(edge, EdgeRuleCode.HANDLE_INVALID, f"edge has no {key}")
 
 
+def _reject_constant(token: str) -> NoReturn:
+    msg = f"{token} is not valid JSON"
+    raise ValueError(msg)
+
+
 def _parse_handle(handle: Any) -> dict[str, Any] | None:
+    """Return the object a handle string encodes, or None when it encodes none.
+
+    The string is parsed as strict JSON, as JavaScript's ``JSON.parse`` reads
+    it: the ``NaN``, ``Infinity`` and ``-Infinity`` tokens do not parse.
+    """
     if not isinstance(handle, str):
         return None
     try:
-        parsed = json.loads(handle.replace(HANDLE_QUOTE, '"'))
+        parsed = json.loads(handle.replace(HANDLE_QUOTE, '"'), parse_constant=_reject_constant)
     except ValueError:
         return None
     return parsed if isinstance(parsed, dict) else None
