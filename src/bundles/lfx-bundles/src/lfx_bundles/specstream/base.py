@@ -215,6 +215,12 @@ class SpecStreamClient:
         if existing and existing.get("find_id"):
             find_id = existing["find_id"]
             maximum_cents = int(existing.get("maximum_cents") or max_cents)
+            if maximum_cents > max_cents:
+                msg = (
+                    f"The run for this key can cost up to {_dollars(maximum_cents)}, above your maximum of "
+                    f"{_dollars(max_cents)}. Raise Maximum price (USD) or use another Run Key. Nothing new ran."
+                )
+                raise SpecStreamError(msg)
         else:
             reading = self.request("POST", "/v1/parse", {"q": q, "locale": locale}) or {}
             if reading.get("status") != "runnable":

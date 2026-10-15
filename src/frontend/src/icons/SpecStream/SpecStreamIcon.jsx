@@ -15,7 +15,10 @@ const SvgSpecStream = ({ isDark: _isDark, ...props }) => (
         height={580}
       >
         <rect x={236} y={286} width={800} height={580} fill="#fff" />
-        <g transform="translate(874 722) scale(1.6) translate(-874 -722)">
+        <g
+          fill="#000"
+          transform="translate(874 722) scale(1.6) translate(-874 -722)"
+        >
           <path d="M848 722C849 712 852 704 849 696C846 690 843 684 842 676C837 670 836 660 838 652L836 641L846 649C852 647 858 647 862 649L870 640L871 655C873 663 872 668 868 672C884 678 897 692 900 722Z" />
           <path d="M852 719L900 720L1004 735L950 792Z" />
         </g>

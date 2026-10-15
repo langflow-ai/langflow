@@ -90,6 +90,12 @@ class SpecStreamFindListComponent(Component):
         Output(display_name="Rows", name="rows", method="find_list_data"),
     ]
 
+    def set_attributes(self, params: dict) -> None:
+        # The graph reuses this instance for later builds and applies the new inputs through
+        # set_attributes before each one, so drop the previous build's result here.
+        self._specstream_result = None
+        super().set_attributes(params)
+
     def _find(self) -> dict:
         # Both outputs read the same run; fetch it once per component execution.
         cached = getattr(self, "_specstream_result", None)

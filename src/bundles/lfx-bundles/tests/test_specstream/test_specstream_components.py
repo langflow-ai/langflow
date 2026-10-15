@@ -184,6 +184,31 @@ class TestFindList:
         assert "POST /v1/capacity/quotes" not in fake.paths()
         assert "POST /v1/capacity/executions" not in fake.paths()
 
+    def test_run_key_run_above_the_current_maximum_is_refused(self) -> None:
+        fake = FakeSpecStream(existing={"find_id": FIND_ID, "maximum_cents": 800})
+        with patch.object(httpx.Client, "request", side_effect=fake), pytest.raises(SpecStreamError, match="above"):
+            _component(run_key="weekly-roofers", max_price_usd=5.0).find_list_dataframe()
+
+        assert "POST /v1/capacity/executions" not in fake.paths()
+
+    def test_run_key_run_within_the_current_maximum_is_reused(self) -> None:
+        fake = FakeSpecStream(existing={"find_id": FIND_ID, "maximum_cents": 500})
+        with patch.object(httpx.Client, "request", side_effect=fake):
+            table = _component(run_key="weekly-roofers", max_price_usd=5.0).find_list_dataframe()
+
+        assert len(table) == 2
+        assert "POST /v1/capacity/quotes" not in fake.paths()
+
+    def test_a_new_build_does_not_reuse_the_previous_result(self) -> None:
+        fake = FakeSpecStream()
+        component = _component()
+        with patch.object(httpx.Client, "request", side_effect=fake):
+            component.find_list_dataframe()
+            component.set_attributes({"request": "Dentists in Austin, Texas"})
+            component.find_list_dataframe()
+
+        assert fake.paths().count("POST /v1/capacity/executions") == 2
+
     def test_run_key_becomes_the_idempotency_key(self) -> None:
         fake = FakeSpecStream()
         with patch.object(httpx.Client, "request", side_effect=fake):
