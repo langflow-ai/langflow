@@ -82,11 +82,11 @@ def read_handles(edge: dict[str, Any]) -> Handles:
 
 
 def _handle(edge: dict[str, Any], key: str) -> dict[str, Any]:
-    # "data": null holds no handle objects, as if it were missing (ops-history, "Repair").
-    data = edge.get("data")
-    if data is not None and not isinstance(data, dict):
+    # A key that is present counts, whatever its value: "data": null is not an object.
+    if "data" in edge and not isinstance(edge["data"], dict):
         raise _error(edge, GraphViolationCode.EDGE_HANDLE_INVALID, "data must be an object")
-    has_object = data is not None and key in data
+    data = edge.get("data", {})
+    has_object = key in data
     has_string = key in edge
     if has_object and not isinstance(data[key], dict):
         raise _error(edge, GraphViolationCode.EDGE_HANDLE_INVALID, f"data.{key} must be an object")
@@ -116,13 +116,8 @@ def handle_forms(edge: dict[str, Any]) -> dict[str, Any]:
 
 
 def derive_missing_handle_forms(edge: dict[str, Any]) -> None:
-    """Write each handle's missing form from the one present, in place, as the editor spells them.
-
-    A missing or null ``data`` becomes an object to hold the derived handle objects.
-    """
-    if edge.get("data") is None:
-        edge["data"] = {}
-    data = edge["data"]
+    """Write each handle's missing form from the one present, in place, as the editor spells them."""
+    data = edge.setdefault("data", {})
     for key in HANDLE_KEYS:
         if key in data and key not in edge:
             edge[key] = escape_handle(data[key])

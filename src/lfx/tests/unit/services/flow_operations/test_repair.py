@@ -106,25 +106,11 @@ def test_a_rule_only_the_client_can_fix_is_left_and_refused():
     assert graph == original
 
 
-def test_edge_data_that_is_null_gets_the_handle_objects_from_the_strings():
-    # "data": null holds no handle objects, as if it were missing.
+def test_edge_data_that_is_null_is_left_to_the_client():
+    # "data": null is malformed, not missing: the edge still has its handle strings.
     graph = _connectable()
     edge = _handled_edge("e")
     edge["data"] = None
-    graph["edges"].append(edge)
-
-    result = repair_flow_data(graph, base=EMPTY)
-
-    assert result.flow_data["edges"] == [_handled_edge("e")]
-    assert [(fix.code, fix.path) for fix in result.fixes] == [
-        (GraphViolationCode.EDGE_HANDLE_FORM_MISSING, ("edges", 0))
-    ]
-
-
-def test_edge_data_that_is_not_an_object_is_left_to_the_client():
-    graph = _connectable()
-    edge = _handled_edge("e")
-    edge["data"] = "handles"
     graph["edges"].append(edge)
     original = copy.deepcopy(graph)
 

@@ -2767,7 +2767,7 @@
       "code": "EDGE_HANDLE_INVALID"
     },
     {
-      "name": "edge rules: edge data that is null is missing its handle objects",
+      "name": "edge rules: edge data that is null fails",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2791,7 +2791,7 @@
         }
       ],
       "error": "FlowOperationValidationError",
-      "code": "EDGE_HANDLE_FORM_MISSING"
+      "code": "EDGE_HANDLE_INVALID"
     },
     {
       "name": "edge rules: a target handle naming both a field and an output fails",
