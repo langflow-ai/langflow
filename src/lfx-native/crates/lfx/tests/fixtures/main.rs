@@ -4,12 +4,16 @@
 //! specification. Every runtime runs all of them: this runner, and the
 //! runners of the Python and browser bindings.
 
+mod apply;
 mod support;
 
 use libtest_mimic::{Arguments, Trial};
 
 fn main() {
     let arguments = Arguments::from_args();
-    let trials: Vec<Trial> = [support::trials()].into_iter().flatten().collect();
+    let trials: Vec<Trial> = [support::trials(), apply::trials()]
+        .into_iter()
+        .flatten()
+        .collect();
     libtest_mimic::run(&arguments, trials).exit();
 }

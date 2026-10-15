@@ -4,6 +4,7 @@ members = ["crates/lfx"]
 
 [workspace.package]
 version = "0.1.0"
+authors = ["Hamza Rashid <hamzarashid.mail@gmail.com>"]
 edition = "2024"
 rust-version = "1.99"
 license = "MIT"
