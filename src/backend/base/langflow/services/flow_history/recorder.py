@@ -356,7 +356,7 @@ async def _recorded_request(session: AsyncSession, flow: Flow, request_id: UUID)
 
 
 def _json_size(value: Any) -> int:
-    return len(json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode("utf-8", "surrogatepass"))
+    return len(json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
 
 
 _ENVELOPE_OVERHEAD = _json_size(encode_envelope([]))
