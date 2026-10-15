@@ -90,6 +90,7 @@ def read_handles(edge: dict[str, Any]) -> Handles:
 
 
 def _handle(edge: dict[str, Any], key: str) -> dict[str, Any]:
+    # "data": null holds no handle objects, as if it were missing (ops-history, "Repair").
     data = edge.get("data")
     if data is not None and not isinstance(data, dict):
         raise _error(edge, EdgeRuleCode.HANDLE_INVALID, "data must be an object")
