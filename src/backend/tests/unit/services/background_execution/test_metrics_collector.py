@@ -995,3 +995,79 @@ async def test_concurrent_retention_sweeps_preserve_totals_once():
     assert await service.purge_terminal_jobs(older_than_days=30) == 0
     async with session_scope() as session:
         assert await terminal_counts(session) == expected
+
+
+async def _add_worker(*, owner: str, state, last_heartbeat, current_job_id=None) -> None:
+    """Insert one roster row directly, so the collector reads a real table."""
+    from langflow.services.database.models.worker_registry.model import WorkerRegistry
+
+    async with session_scope() as session:
+        session.add(
+            WorkerRegistry(
+                owner=owner,
+                pid=1234,
+                host="test-host",
+                started_at=last_heartbeat,
+                last_heartbeat=last_heartbeat,
+                state=state,
+                current_job_id=current_job_id,
+            )
+        )
+
+
+async def test_collect_once_reports_the_worker_fleet_and_prunes_dead_owners():
+    """The fleet gauges count only fresh workers, split by what they are doing.
+
+    Without this the scaled backend could be running a pool of workers with no
+    way to see how many are up or how many are actually busy, which is the whole
+    point of the roster.
+    """
+    from langflow.services.background_execution.metrics_collector import WORKER_ROSTER_RETENTION_SECONDS
+    from langflow.services.database.models.worker_registry.model import WorkerRegistry, WorkerState
+
+    backend = current_backend()
+    now = datetime.now(timezone.utc)
+
+    await _add_worker(owner="worker:fleet:idle", state=WorkerState.IDLE, last_heartbeat=now - timedelta(seconds=1))
+    await _add_worker(
+        owner="worker:fleet:busy",
+        state=WorkerState.BUSY,
+        last_heartbeat=now - timedelta(seconds=1),
+        current_job_id=uuid4(),
+    )
+    # Beyond the retention window, so it is both uncounted and swept away.
+    dead = "worker:fleet:dead"
+    await _add_worker(
+        owner=dead,
+        state=WorkerState.IDLE,
+        last_heartbeat=now - timedelta(seconds=WORKER_ROSTER_RETENTION_SECONDS + 60),
+    )
+
+    collector = BackgroundMetricsCollector(interval=15.0, worker_online_window_seconds=45.0)
+    async with session_scope() as session:
+        await collector.collect_once(session, now=now)
+
+    assert _gauge_value("langflow_bg_workers_online", {"backend": backend}) == 2
+    assert _gauge_value("langflow_bg_workers", {"state": "idle", "backend": backend}) == 1
+    assert _gauge_value("langflow_bg_workers", {"state": "busy", "backend": backend}) == 1
+
+    async with session_scope() as session:
+        assert await session.get(WorkerRegistry, dead) is None, "a long-dead owner must be pruned off the roster"
+
+
+async def test_collect_once_reports_an_empty_fleet_as_zero():
+    """No workers reads as 0, not as a missing series.
+
+    The default backend runs no worker processes at all, so this is the value an
+    operator sees until they start a fleet; a vanished gauge would look like
+    broken collection instead.
+    """
+    backend = current_backend()
+
+    collector = BackgroundMetricsCollector(interval=15.0, worker_online_window_seconds=45.0)
+    async with session_scope() as session:
+        await collector.collect_once(session)
+
+    assert _gauge_value("langflow_bg_workers_online", {"backend": backend}) == 0
+    assert _gauge_value("langflow_bg_workers", {"state": "idle", "backend": backend}) == 0
+    assert _gauge_value("langflow_bg_workers", {"state": "busy", "backend": backend}) == 0

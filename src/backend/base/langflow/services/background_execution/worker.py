@@ -12,13 +12,17 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 import random
+import socket
+from time import monotonic
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 
 from langflow.services.background_execution.db_backend import _coerce_uuid
 from langflow.services.background_execution.runner import JobRunner
+from langflow.services.database.models.worker_registry.model import WorkerState
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -153,6 +157,21 @@ async def _watchdog_loop(
             continue
 
 
+async def _roster_beat(registry: Any, *, owner: str, state: WorkerState, current_job_id: Any) -> None:
+    """Record this worker's presence and what it is doing. Best effort.
+
+    Opens its own short-lived session: the claim loop holds none, and the roster
+    write must not join a transaction that a long job would keep open. Failures
+    are swallowed because fleet visibility must never break the claim loop, and
+    the next beat supersedes a missed one anyway.
+    """
+    from langflow.services.deps import session_scope
+
+    with contextlib.suppress(Exception):
+        async with session_scope() as session:
+            await registry.heartbeat(session, owner=owner, state=state, current_job_id=current_job_id)
+
+
 async def run_worker_loop(
     backend: Any,
     runner: Any,
@@ -163,6 +182,8 @@ async def run_worker_loop(
     owner: str | None = None,
     lease_ttl_s: float = 45.0,
     watchdog_interval_s: float | None = None,
+    registry: Any = None,
+    roster_interval_s: float | None = None,
 ) -> None:
     """Claim-and-run loop with a periodic lease watchdog. Returns on *stop_event*.
 
@@ -178,9 +199,27 @@ async def run_worker_loop(
         lease_ttl_s: lease window the watchdog uses to decide "dead".
         watchdog_interval_s: how often the periodic watchdog runs; None disables
             it (startup-only reconcile, the prior behaviour).
+        registry: worker roster store; when set (with *owner*) this worker
+            registers, beats while it lives, and deregisters on graceful stop,
+            so the API-side collector can report the fleet.
+        roster_interval_s: how often to beat while idle. Transitions between
+            idle and busy always beat immediately, so this only bounds how long
+            a steady state goes unrefreshed; it must stay below the roster's
+            freshness window or a live idle worker would read as offline.
     """
     # Startup reconcile: requeue work lost by a previously-crashed worker.
     await backend.requeue_lost(lease_ttl_s=lease_ttl_s)
+
+    roster = registry if (registry is not None and owner is not None) else None
+    if roster is not None:
+        from langflow.services.deps import session_scope
+
+        with contextlib.suppress(Exception):
+            async with session_scope() as session:
+                await roster.register(session, owner=owner, pid=os.getpid(), host=socket.gethostname())
+    # Force the first idle beat rather than waiting out an interval, so a worker
+    # that starts into an empty queue still shows up as online promptly.
+    last_beat = None
 
     watchdog_task: asyncio.Task | None = None
     if watchdog_interval_s is not None:
@@ -197,6 +236,13 @@ async def run_worker_loop(
         while not stop_event.is_set():
             job_id = await backend.claim(block_ms=idle_block_ms)
             if job_id is None:
+                # Idle: refresh presence on the interval. Throttled because the
+                # claim poll returns every idle_block_ms (1s by default) and the
+                # roster does not need a write per second per worker.
+                due = last_beat is None or monotonic() - last_beat >= (roster_interval_s or 0)
+                if roster is not None and roster_interval_s is not None and due:
+                    await _roster_beat(roster, owner=owner, state=WorkerState.IDLE, current_job_id=None)
+                    last_beat = monotonic()
                 # claim() sleeps out its block window on an empty queue, but a
                 # backend that returns None promptly (error path, test double)
                 # must not hot-spin — yield so the stop signal and other tasks run.
@@ -208,6 +254,12 @@ async def run_worker_loop(
             if job_service is not None and owner is not None:
                 with contextlib.suppress(Exception):
                     await job_service.heartbeat(_coerce_uuid(job_id), owner)
+            if roster is not None:
+                # A transition, so beat now instead of waiting out the interval:
+                # the roster carries which job this worker holds, and that is
+                # only useful while it still holds it.
+                await _roster_beat(roster, owner=owner, state=WorkerState.BUSY, current_job_id=_coerce_uuid(job_id))
+                last_beat = monotonic()
             try:
                 await runner.run(job_id)
             except asyncio.CancelledError:
@@ -217,11 +269,26 @@ async def run_worker_loop(
                 # be retried; there is no separate lease to release — the row's
                 # status and heartbeat are the only queue state.
                 await logger.aexception(f"Worker: runner failed for job {job_id}: {exc}")
+            finally:
+                if roster is not None:
+                    # Clear current_job_id as soon as the job is done, however it
+                    # ended: a roster still naming a finished job reads as a
+                    # worker stuck on it.
+                    await _roster_beat(roster, owner=owner, state=WorkerState.IDLE, current_job_id=None)
+                    last_beat = monotonic()
     finally:
         if watchdog_task is not None:
             watchdog_task.cancel()
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await watchdog_task
+        if roster is not None:
+            # Graceful stop leaves no row behind, so the fleet count drops
+            # immediately instead of waiting for this worker to age out.
+            from langflow.services.deps import session_scope
+
+            with contextlib.suppress(Exception):
+                async with session_scope() as session:
+                    await roster.deregister(session, owner=owner)
 
 
 async def build_worker(*, owner: str | None = None):

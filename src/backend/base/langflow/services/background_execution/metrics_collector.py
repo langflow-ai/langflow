@@ -25,8 +25,10 @@ from lfx.log.logger import logger
 from sqlmodel import col, func, select
 
 from langflow.services.background_execution.metrics import current_backend
+from langflow.services.background_execution.worker_registry import WorkerRegistryService
 from langflow.services.database.models.jobs.metrics import is_background_job, terminal_counts
 from langflow.services.database.models.jobs.model import Job, JobStatus
+from langflow.services.database.models.worker_registry.model import WorkerState
 from langflow.services.deps import get_telemetry_service, session_scope
 
 if TYPE_CHECKING:
@@ -38,6 +40,10 @@ if TYPE_CHECKING:
 # FAILED / TIMED_OUT / CANCELLED are terminal.
 NONTERMINAL_STATUSES = (JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED)
 TERMINAL_COUNTS_INTERVAL_SECONDS = 300.0
+# A crashed worker leaves its row behind. Keep it well past the online window so
+# a worker that is merely slow to beat is not erased and recreated repeatedly,
+# but not so long that dead owners pile up across restarts.
+WORKER_ROSTER_RETENTION_SECONDS = 900.0
 
 
 async def count_nonterminal_jobs(session) -> dict[str, int]:
@@ -152,9 +158,15 @@ class BackgroundMetricsCollector:
         *,
         interval: float,
         duration_window_seconds: float = 300.0,
+        worker_online_window_seconds: float = 45.0,
     ):
         self.interval = interval
         self.duration_window_seconds = duration_window_seconds
+        # Defaults to the background lease TTL: a worker that has not beaten
+        # within the window the watchdog already uses to call a lease dead is
+        # not a worker an operator should count as online.
+        self.worker_online_window_seconds = worker_online_window_seconds
+        self._registry = WorkerRegistryService()
         self._stopped = False
         self._task: asyncio.Task | None = None
         self._last_totals_refresh: float | None = None
@@ -182,6 +194,20 @@ class BackgroundMetricsCollector:
                     {"status": status.value, "backend": backend},
                 )
             ot.update_gauge("langflow_bg_oldest_queued_seconds", oldest, {"backend": backend})
+
+            # Fleet presence from the durable roster. Zero-filled per state for the
+            # same reason the job statuses are: a state that empties must overwrite
+            # its stale prior value rather than keep reporting it. In the default
+            # backend there are no worker processes, so these read 0, which is the
+            # truth rather than a gap.
+            workers = await self._registry.count_by_state(
+                session, now=now, online_window=timedelta(seconds=self.worker_online_window_seconds)
+            )
+            ot.update_gauge("langflow_bg_workers_online", workers["online"], {"backend": backend})
+            for state in (WorkerState.IDLE, WorkerState.BUSY):
+                ot.update_gauge("langflow_bg_workers", workers[state.value], {"state": state.value, "backend": backend})
+            # Drop owners that aged out, so the roster reflects the live fleet.
+            await self._registry.prune_stale(session, now=now, retention_s=WORKER_ROSTER_RETENTION_SECONDS)
 
             p50, p95 = await duration_percentiles(session, now, self.duration_window_seconds)
             ot.update_gauge("langflow_bg_job_duration_p50_seconds", p50, {"backend": backend})
@@ -271,6 +297,9 @@ async def maybe_start_metrics_collector(app: FastAPI, settings: Any, *, promethe
     try:
         collector = BackgroundMetricsCollector(
             interval=settings.background_metrics_interval,
+            # Defensive like prometheus_enabled above: a settings object without
+            # the lease knob must still get a collector, not silently none.
+            worker_online_window_seconds=getattr(settings, "background_lease_ttl_s", 45.0),
         )
         collector.start()
         app.state.background_metrics_collector = collector

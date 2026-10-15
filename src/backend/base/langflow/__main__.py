@@ -974,6 +974,7 @@ def worker(
 
     async def _run_worker() -> None:
         from langflow.services.background_execution.worker import build_worker, run_worker_loop
+        from langflow.services.background_execution.worker_registry import WorkerRegistryService
 
         await initialize_services()
         settings = get_settings_service().settings
@@ -1006,6 +1007,10 @@ def worker(
                 owner=owner,
                 lease_ttl_s=settings.background_lease_ttl_s,
                 watchdog_interval_s=settings.background_watchdog_interval_s,
+                registry=WorkerRegistryService(),
+                # Beat well inside the lease TTL the collector treats as the
+                # online window, so a live idle worker never reads as offline.
+                roster_interval_s=settings.background_watchdog_interval_s,
             )
         finally:
             await teardown()

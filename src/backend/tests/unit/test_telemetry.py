@@ -216,6 +216,8 @@ def test_init(opentelemetry_instance):
     expected_bg_metrics = {
         "langflow_bg_jobs": MetricType.OBSERVABLE_GAUGE,
         "langflow_bg_oldest_queued_seconds": MetricType.OBSERVABLE_GAUGE,
+        "langflow_bg_workers_online": MetricType.OBSERVABLE_GAUGE,
+        "langflow_bg_workers": MetricType.OBSERVABLE_GAUGE,
         "langflow_bg_jobs_started_total": MetricType.OBSERVABLE_COUNTER,
         "langflow_bg_jobs_completed_total": MetricType.OBSERVABLE_COUNTER,
         "langflow_bg_jobs_failed_total": MetricType.OBSERVABLE_COUNTER,
@@ -261,6 +263,8 @@ gauges = {
     "langflow_bg_oldest_queued_seconds": ({"backend": "default"}, 3),
     "langflow_bg_job_duration_p50_seconds": ({"backend": "default"}, 10),
     "langflow_bg_job_duration_p95_seconds": ({"backend": "default"}, 20),
+    "langflow_bg_workers_online": ({"backend": "default"}, 3),
+    "langflow_bg_workers": ({"backend": "default", "state": "idle"}, 2),
 }
 counters = {
     "langflow_bg_jobs_started_total": ({"backend": "default"}, 10),
