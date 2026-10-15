@@ -18,7 +18,7 @@ from urllib.parse import parse_qsl, urlsplit
 from langflow.utils import mcp_config_secrets as _mcp_config_secrets
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
+    from collections.abc import Callable, Collection
 
 API_WORDS = ["api", "key", "token"]
 
@@ -777,6 +777,116 @@ def _strip_template_field_value(
     field["value"] = _strip_structured_secret_values_in_place(field.get("value"))
 
 
+def is_secret_header_name(header_name: object) -> bool:
+    """Whether a header name reads as a credential rather than as routing data.
+
+    Both halves of the Headers-box handling are held to this, so a header rewritten at
+    save time is the same one kept and declared at packaging.
+    """
+    return _is_secret_name(header_name)
+
+
+def mcp_header_scope(server_name: str) -> str:
+    """The scope a Headers box's variables are named under, apart from the server's own.
+
+    Both the box and the server config can set the same header, and the box exists
+    precisely to override it. Naming them alike gave them one variable, and whichever
+    was written last won -- the config, in practice, so the override was silently
+    discarded and the component authenticated with the value it was meant to replace.
+
+    Both sides derive the name from here so they cannot drift.
+    """
+    return f"{server_name} header override"
+
+
+def iter_mcp_header_cells(headers: object):
+    """Yield ``(set_value, header_name, value)`` for either shape of a Headers box.
+
+    The input is a ``DictInput(is_list=True)``, so the canvas stores it either as a
+    mapping or as a list of ``{"key", "value"}`` rows, and the component reads both at
+    run time. Anything that handles one shape and not the other silently misses half the
+    flows people actually have.
+    """
+    if isinstance(headers, dict):
+        for name, value in list(headers.items()):
+            yield (lambda new, _name=name: headers.__setitem__(_name, new)), name, value
+    elif isinstance(headers, list):
+        for row in headers:
+            if isinstance(row, dict) and "key" in row and "value" in row:
+                yield (lambda new, _row=row: _row.__setitem__("value", new)), row["key"], row["value"]
+
+
+def _is_mcp_header_reference(value: object, server_name: str, header_name: str) -> bool:
+    """Accept this server/header's generated aliases, including older unsuffixed names."""
+    expected = _mcp_config_secrets.variable_name_for(mcp_header_scope(server_name), header_name)
+    if value == expected:
+        return True
+    return (
+        isinstance(value, str)
+        and value.startswith(f"{expected}_")
+        and re.fullmatch(r"[0-9a-f]{32}", value[len(expected) + 1 :]) is not None
+    )
+
+
+def _strip_mcp_header_field(
+    template: dict,
+    variable_references: set[str] | None,
+    known_variable_names: Collection[str] | None = None,
+) -> dict | None:
+    """Scrub an MCP component's own Headers box, keeping the names save time wrote.
+
+    That box overrides the server's headers, so it is a real place to put auth. Saving
+    the flow moves a literal out of it and leaves a generated variable name.
+    The generic walk below would null that name
+    again with nothing declared to put it back, and the deployed flow would send no
+    header at all -- silently, which is how this was found.
+
+    Only generated names for this server and header are kept, with an owner-variable
+    check when available. Returns the field it handled so the caller skips it, or ``None``
+    when this node has no MCP server and the generic rules apply as before.
+    """
+    server_field = template.get("mcp_server")
+    field = template.get("headers")
+    if not isinstance(server_field, dict) or not isinstance(field, dict):
+        return None
+    server_value = server_field.get("value")
+    headers = field.get("value")
+    if not isinstance(server_value, dict) or not isinstance(headers, (dict, list)):
+        return None
+    name = server_value.get("name")
+    server_name = name if isinstance(name, str) and name else "server"
+    preserved: list[tuple[Callable[[object], None], object]] = []
+    for set_value, header_name, value in iter_mcp_header_cells(headers):
+        # Credential-named headers only, which is the rule the save side is held to as
+        # well so the two agree. Treating every header outside `NON_SECRET_HEADERS` as a
+        # credential swept up ordinary routing headers: `X-Tenant: acme` became a
+        # variable an operator then had to provision for a value that is not a secret.
+        if not _is_secret_name(header_name):
+            continue
+        if (
+            variable_references is not None
+            and _is_mcp_header_reference(value, server_name, str(header_name))
+            and (known_variable_names is None or value in known_variable_names)
+        ):
+            variable_references.add(value)
+            preserved.append((set_value, value))
+        elif _mcp_config_secrets.variable_reference_name(value) is not None:
+            # A reference that is not this server and header's own: a stale name left by
+            # a rename, say. Clear it explicitly so a strict snapshot cannot silently omit
+            # its requirement, and a shared read cannot expose the binding.
+            set_value(None)
+    # Lift the references out, scrub everything else the ordinary way, put them back.
+    # Skipping the generic pass outright would lose what it catches beyond a secret-named
+    # key: a credential inside a URL under an innocent key, and secrets nested deeper in
+    # a value. Same shape as `_strip_table_rows_in_place`.
+    for set_value, _ in preserved:
+        set_value(None)
+    _strip_structured_secret_values_in_place(headers)
+    for set_value, value in preserved:
+        set_value(value)
+    return field
+
+
 def _strip_secrets_from_nodes(
     nodes: list,
     variable_references: set[str] | None = None,
@@ -802,8 +912,9 @@ def _strip_secrets_from_nodes(
             continue
         template = node_inner.get("template")
         if isinstance(template, dict):
+            handled = _strip_mcp_header_field(template, variable_references, known_variable_names)
             for value in template.values():
-                if isinstance(value, dict):
+                if isinstance(value, dict) and value is not handled:
                     _strip_template_field_value(
                         value, variable_references, known_variable_names, keep_mcp_config=keep_mcp_config
                     )
