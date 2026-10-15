@@ -13,6 +13,7 @@ from lfx.services.flow_operations import (
     graph_hash,
     graphs_equal,
     json_type,
+    parse_handle,
     values_equal,
 )
 
@@ -234,6 +235,14 @@ def test_handles_compare_by_the_object_they_encode():
 
     assert graphs_equal(graph, other)
     assert graph_hash(graph) == graph_hash(other)
+
+
+# The editor's canonical tests read the same strings: JSON.parse refuses these tokens.
+@pytest.mark.parametrize(
+    "handle", ["{œnameœ:œoutœ,œxœ:NaN}", "{œnameœ:œoutœ,œxœ:Infinity}", "{œnameœ:œoutœ,œxœ:-Infinity}"]
+)
+def test_a_handle_string_with_a_non_finite_token_does_not_parse(handle):
+    assert parse_handle(handle) is None
 
 
 @pytest.mark.parametrize(
