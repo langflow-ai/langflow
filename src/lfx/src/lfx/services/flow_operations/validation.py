@@ -49,13 +49,26 @@ class GraphViolation:
     edge_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        result = {
+        """Return the violation as JSON, which a response sends as UTF-8.
+
+        UTF-8 cannot encode an unpaired surrogate. So the path stops at the
+        object that holds a key with one, and an edge whose id holds one is
+        named by its path alone. The UNPAIRED_SURROGATE violation at that
+        place says what is wrong. Messages name values only through ``repr``,
+        which escapes them.
+        """
+        path: list[str | int] = []
+        for part in self.path:
+            if isinstance(part, str) and not is_well_formed(part):
+                break
+            path.append(part)
+        result: dict[str, Any] = {
             "code": self.code.value,
-            "path": list(self.path),
+            "path": path,
             "message": self.message,
             "resolution": resolution_of(self.code).value,
         }
-        if self.edge_id is not None:
+        if self.edge_id is not None and is_well_formed(self.edge_id):
             result["edge_id"] = self.edge_id
         return result
 
