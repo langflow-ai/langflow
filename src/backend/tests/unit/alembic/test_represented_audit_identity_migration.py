@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import importlib
 from uuid import uuid4
 
@@ -9,6 +10,12 @@ import pytest
 import sqlalchemy as sa
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
+from langflow.services.audit.represented import decode_identity_value
+from langflow.services.database.models.audit_event.model import (
+    REPRESENTED_ISSUER_MAX_LENGTH,
+    REPRESENTED_SUBJECT_MAX_LENGTH,
+    AuditEvent,
+)
 
 from .test_migration_execution import (  # noqa: F401
     _create_pg_test_database,
@@ -76,5 +83,45 @@ def test_migration_preserves_acting_history_without_inventing_represented_identi
         NEW.downgrade()
         with engine.connect() as conn:
             assert conn.scalar(sa.select(sa.func.count()).select_from(table)) == 4
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("schema", ["migration", "model"])
+def test_maximum_unicode_identity_commits_with_mutation(db_url, schema):  # noqa: F811
+    engine = sa.create_engine(_engine_url(db_url))
+    # Distinct four-byte characters avoid compression hiding an oversized B-tree key.
+    issuer = "".join(chr(0x10000 + index) for index in range(REPRESENTED_ISSUER_MAX_LENGTH))
+    subject = "".join(chr(0x18000 + index) for index in range(REPRESENTED_SUBJECT_MAX_LENGTH))
+    for value, limit in ((issuer, REPRESENTED_ISSUER_MAX_LENGTH), (subject, REPRESENTED_SUBJECT_MAX_LENGTH)):
+        encoded = "v1." + base64.urlsafe_b64encode(value.encode()).decode().rstrip("=")
+        assert decode_identity_value(encoded, limit) == value
+    try:
+        with engine.begin() as conn:
+            if schema == "migration":
+                _upgrade(OLD, conn)
+                _upgrade(NEW, conn)
+            else:
+                AuditEvent.__table__.create(conn)
+            table = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
+            mutation = sa.Table("deployment_write", sa.MetaData(), sa.Column("id", sa.Integer, primary_key=True))
+            mutation.create(conn)
+        with engine.begin() as conn:
+            conn.execute(sa.insert(mutation).values(id=1))
+            conn.execute(_event(table, represented_issuer=issuer, represented_subject=subject))
+            conn.execute(_event(table, represented_issuer="different-issuer", represented_subject=subject))
+        with engine.connect() as conn:
+            assert conn.scalar(sa.select(sa.func.count()).select_from(mutation)) == 1
+            identities = list(conn.execute(sa.select(table.c.represented_issuer, table.c.represented_subject)))
+            assert (issuer, subject) in identities
+            assert ("different-issuer", subject) in identities
+            assert (
+                conn.scalar(
+                    sa.select(sa.func.count())
+                    .select_from(table)
+                    .where(table.c.represented_issuer == issuer, table.c.represented_subject == subject)
+                )
+                == 1
+            )
     finally:
         engine.dispose()
