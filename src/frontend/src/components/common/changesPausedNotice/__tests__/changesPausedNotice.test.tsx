@@ -1,11 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { migrationKeys } from "@/controllers/API/queries/migration";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { ChangesPausedNotice } from "..";
 
 /** Shows the notice on what the server would answer. Fresh for ever, so it never asks a server for another. */
-function showWith(paused: boolean | undefined, migrationOn = true) {
+function showWith(
+  paused: boolean | undefined,
+  migrationOn = true,
+  page = "/flows",
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { staleTime: Number.POSITIVE_INFINITY } },
   });
@@ -15,9 +20,11 @@ function showWith(paused: boolean | undefined, migrationOn = true) {
     featureFlags: { instance_migration: migrationOn },
   });
   render(
-    <QueryClientProvider client={client}>
-      <ChangesPausedNotice />
-    </QueryClientProvider>,
+    <MemoryRouter initialEntries={[page]}>
+      <QueryClientProvider client={client}>
+        <ChangesPausedNotice />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
   return client;
 }
@@ -36,6 +43,12 @@ describe("ChangesPausedNotice", () => {
 
     // The region stays, so the pause is announced when it starts.
     expect(screen.getByRole("status")).toBeEmptyDOMElement();
+  });
+
+  it("leaves the migration page to its own banner", () => {
+    showWith(true, true, "/settings/migration");
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("asks the server nothing when the migration is turned off", () => {

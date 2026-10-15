@@ -18,8 +18,9 @@ export function AppAuthenticatedPage() {
     <>
       {extensionsEnabled && <ExtensionEventsListener />}
       <StorageUpgradeNotice />
-      <ChangesPausedNotice />
       <Outlet />
+      {/* After the page, so it shows above the editor's sidebar, which sits at the same level. */}
+      <ChangesPausedNotice />
     </>
   );
 }
