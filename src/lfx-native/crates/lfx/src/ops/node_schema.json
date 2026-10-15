@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "description": "Where the units of a flow graph are, for every engine that records, diffs, merges or applies flow operations. The stored flow JSON keeps its shape; this file only says how to address it. Paths are lists of object keys; '*' matches any key. The editor keeps a byte-identical copy.",
+  "view_state": {
+    "description": "Keys never recorded, diffed, merged or compared. Saves still store them.",
+    "flow": ["viewport"],
+    "node": ["selected", "dragging", "resizing", "measured", "width", "height"],
+    "node_paths": [
+      ["data", "node", "last_updated"],
+      ["data", "node", "lf_version"]
+    ],
+    "template": ["_frontend_node_flow_id", "_frontend_node_folder_id"],
+    "template_field": [
+      "options",
+      "info",
+      "display_name",
+      "placeholder",
+      "title_case",
+      "dynamic",
+      "refresh_button",
+      "real_time_refresh",
+      "external_options",
+      "trace_as_metadata",
+      "trace_as_input",
+      "dialog_inputs"
+    ],
+    "edge": ["selected", "animated", "className"]
+  },
+  "field_units": {
+    "description": "A template field is split into units, each written whole. 'value' keys are written together; each toggle is its own value; every other key that is not view state is the field's 'definition' unit.",
+    "value": ["value", "load_from_db", "file_path", "_connection_mode"],
+    "toggles": ["advanced", "tool_mode"]
+  },
+  "whole_values": {
+    "description": "Node paths written whole, never recursed. Any other key below data.node that is not 'template', 'outputs' or view state is also written whole.",
+    "paths": [
+      ["data", "node", "field_order"],
+      ["data", "node", "base_classes"],
+      ["data", "node", "output_types"],
+      ["data", "node", "metadata"],
+      ["data", "node", "documentation"],
+      ["data", "node", "custom_fields"],
+      ["data", "node", "flow"]
+    ],
+    "recursed": [
+      [],
+      ["data"],
+      ["data", "node"],
+      ["data", "node", "template"]
+    ]
+  },
+  "keyed_lists": {
+    "description": "Lists whose items are addressed by a selector instead of an index. 'key' is the path of the item's key inside the item (an integer is a list index there). Natural-key lists are ordered by the component and selected with {\"key\": ...}; tables are ordered by 'position' then 'id' and their rows are selected with {\"id\": ...}.",
+    "natural": [
+      {"path": ["data", "node", "outputs"], "key": ["name"]},
+      {"path": ["data", "node", "template", "tools_metadata", "value"], "key": ["tags", 0]}
+    ],
+    "tables": {
+      "path": ["data", "node", "template", "*", "value"],
+      "when_field": [{"type": "table"}, {"_input_type": "TableInput"}],
+      "id": "_id",
+      "position": "_pos"
+    }
+  }
+}
