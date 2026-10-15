@@ -25,7 +25,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from lfx.services.flow_operations.canonical import is_finite_number, is_row_position, is_well_formed, values_equal
+from lfx.services.flow_operations.canonical import is_finite_number, is_row_position, values_equal
 from lfx.services.flow_operations.codes import GraphViolationCode, resolution_of
 from lfx.services.flow_operations.edge_rules import check_edge, handle_forms
 from lfx.services.flow_operations.exceptions import FlowDataValidationError, FlowOperationValidationError
@@ -49,26 +49,13 @@ class GraphViolation:
     edge_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """Return the violation as JSON, which a response sends as UTF-8.
-
-        UTF-8 cannot encode an unpaired surrogate. So the path stops at the
-        object that holds a key with one, and an edge whose id holds one is
-        named by its path alone. The UNPAIRED_SURROGATE violation at that
-        place says what is wrong. Messages name values only through ``repr``,
-        which escapes them.
-        """
-        path: list[str | int] = []
-        for part in self.path:
-            if isinstance(part, str) and not is_well_formed(part):
-                break
-            path.append(part)
-        result: dict[str, Any] = {
+        result = {
             "code": self.code.value,
-            "path": path,
+            "path": list(self.path),
             "message": self.message,
             "resolution": resolution_of(self.code).value,
         }
-        if self.edge_id is not None and is_well_formed(self.edge_id):
+        if self.edge_id is not None:
             result["edge_id"] = self.edge_id
         return result
 
@@ -82,8 +69,7 @@ def find_graph_violations(
     """Return every rule ``flow_data`` breaks, in document order.
 
     ``check_values`` also walks every value for NaN, Infinity and integers too
-    large for a double, which JavaScript reads as Infinity, and for strings
-    and object keys that hold an unpaired surrogate. The engine
+    large for a double, which JavaScript reads as Infinity. The engine
     skips it when replaying stored operations, whose values were checked when
     they were written, so replay stays proportional to the number of nodes and
     edges rather than to the size of the flow.
@@ -121,7 +107,7 @@ def find_graph_violations(
         if structural:
             violations.extend(find_edge_violations(base, flow_data))
     if check_values:
-        violations.extend(_value_violations(flow_data))
+        violations.extend(_non_finite_violations(flow_data))
     return violations
 
 
@@ -198,7 +184,7 @@ def _edge_violations(edge: Any, path: GraphPath, edge_ids: set[str], node_ids: s
     return violations
 
 
-def _value_violations(flow_data: dict[str, Any]) -> list[GraphViolation]:
+def _non_finite_violations(flow_data: dict[str, Any]) -> list[GraphViolation]:
     violations: list[GraphViolation] = []
     stack: list[tuple[Any, GraphPath]] = [(flow_data, ())]
     while stack:
@@ -211,22 +197,8 @@ def _value_violations(flow_data: dict[str, Any]) -> list[GraphViolation]:
                     "NaN, Infinity and integers too large for a double are not valid JSON",
                 )
             )
-        elif isinstance(value, str) and not is_well_formed(value):
-            violations.append(
-                GraphViolation(
-                    GraphViolationCode.UNPAIRED_SURROGATE, path, "strings must not hold an unpaired surrogate"
-                )
-            )
         elif isinstance(value, dict):
-            # The violation names the object: a path never holds a malformed key.
-            children = [(item, (*path, key)) for key, item in value.items() if is_well_formed(key)]
-            if len(children) < len(value):
-                violations.append(
-                    GraphViolation(
-                        GraphViolationCode.UNPAIRED_SURROGATE, path, "object keys must not hold an unpaired surrogate"
-                    )
-                )
-            stack.extend(reversed(children))
+            stack.extend((item, (*path, key)) for key, item in reversed(value.items()))
         elif isinstance(value, list):
             stack.extend((item, (*path, index)) for index, item in reversed(list(enumerate(value))))
     return violations

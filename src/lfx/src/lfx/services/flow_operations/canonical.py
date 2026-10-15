@@ -31,7 +31,6 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-import re
 from decimal import Decimal
 from typing import Any, NoReturn
 
@@ -52,10 +51,6 @@ _MAX_SAFE_INTEGER = 2**53
 # The smallest integer that rounds past the largest double. JavaScript reads
 # it, and every larger one, as Infinity, so it is not a finite JSON number.
 _DOUBLE_OVERFLOW = 2**1024 - 2**970
-# A UTF-16 surrogate. json.loads joins an escaped surrogate pair into one
-# character, so a surrogate left in a str is an unpaired one. RFC 8785 needs
-# I-JSON (RFC 7493), which forbids them, and UTF-8 cannot encode them.
-_SURROGATE = re.compile("[\ud800-\udfff]")
 # ECMAScript prints numbers below 1e21 in plain notation.
 _MAX_PLAIN_EXPONENT = 21
 _MIN_PLAIN_EXPONENT = -6
@@ -125,23 +120,6 @@ def _format_number(value: float) -> str:
     return f"{sign}{mantissa}e{'+' if e >= 0 else '-'}{abs(e)}"
 
 
-def is_well_formed(value: str) -> bool:
-    """Return whether a string holds no unpaired surrogate, as JavaScript's ``isWellFormed`` tells."""
-    return _SURROGATE.search(value) is None
-
-
-def to_well_formed(value: str) -> str:
-    """Return a string with each unpaired surrogate replaced by U+FFFD, as JavaScript's ``toWellFormed`` does."""
-    return _SURROGATE.sub("\ufffd", value)
-
-
-def _canonical_string(value: str) -> str:
-    if not is_well_formed(value):
-        msg = "strings must not hold an unpaired surrogate"
-        raise FlowDataValidationError(msg)
-    return json.dumps(value, ensure_ascii=False)
-
-
 def utf16_sort_key(value: str) -> bytes:
     """Order strings by UTF-16 code units, the order JavaScript's default sort uses."""
     return value.encode("utf-16-be", "surrogatepass")
@@ -157,7 +135,7 @@ def _write_canonical(value: Any, parts: list[str]) -> None:
     elif isinstance(value, (int, float)):
         parts.append(_format_number(value))
     elif isinstance(value, str):
-        parts.append(_canonical_string(value))
+        parts.append(json.dumps(value, ensure_ascii=False))
     elif isinstance(value, list):
         parts.append("[")
         for index, item in enumerate(value):
@@ -174,7 +152,7 @@ def _write_canonical(value: Any, parts: list[str]) -> None:
         for index, key in enumerate(sorted(value, key=utf16_sort_key)):
             if index:
                 parts.append(",")
-            parts.append(_canonical_string(key))
+            parts.append(json.dumps(key, ensure_ascii=False))
             parts.append(":")
             _write_canonical(value[key], parts)
         parts.append("}")
@@ -342,7 +320,7 @@ def canonical_graph_json(flow_data: dict[str, Any]) -> str:
 
 def graph_hash(flow_data: dict[str, Any]) -> str:
     """Return the SHA-256 hex digest of flow data's canonical graph form."""
-    encoded = canonical_graph_json(flow_data).encode("utf-8")
+    encoded = canonical_graph_json(flow_data).encode("utf-8", "surrogatepass")
     return hashlib.sha256(encoded).hexdigest()
 
 

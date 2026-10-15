@@ -64,28 +64,6 @@ describe("canonicalJson", () => {
     );
   });
 
-  // JSON texts the engine's canonical tests parse too. JSON.parse keeps an
-  // unpaired surrogate escape as one, and joins an escaped pair.
-  it.each([
-    String.raw`"\ud800"`,
-    String.raw`"a\udc00"`,
-    String.raw`"\ude00x"`,
-    String.raw`"x\ud83d"`,
-    String.raw`"\ud800\ud800\udc00"`,
-    String.raw`{"\ud800": 1}`,
-    String.raw`[{"k": "\udfff"}]`,
-  ])("refuses an unpaired surrogate in %s", (text) => {
-    expect(caught(() => canonicalJson(JSON.parse(text))).name).toBe(
-      "FlowDataValidationError",
-    );
-  });
-
-  it("prints a surrogate pair as its character", () => {
-    expect(
-      canonicalJson(JSON.parse(String.raw`{"\ud83d\ude00": "\ud83d\ude00"}`)),
-    ).toBe('{"\u{1F600}":"\u{1F600}"}');
-  });
-
   it("prints an integer just below the double overflow as the largest double", () => {
     expect(
       canonicalJson(

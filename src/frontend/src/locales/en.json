@@ -3137,7 +3137,6 @@
   "flowHistory.violation.EDGE_ENDPOINT_INVALID": "A connection points to a component that doesn't exist",
   "flowHistory.violation.NODE_DATA_NOT_OBJECT": "A component is missing its settings",
   "flowHistory.violation.NON_FINITE_NUMBER": "A value is not a valid number",
-  "flowHistory.violation.UNPAIRED_SURROGATE": "A text value has an invalid character",
   "flowHistory.violation.TABLE_ROW_NOT_OBJECT": "A table row is unreadable",
   "flowHistory.violation.TABLE_ROW_ID_MISSING": "A table row has no ID",
   "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "Two rows of a table share an ID",

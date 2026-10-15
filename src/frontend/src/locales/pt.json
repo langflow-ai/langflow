@@ -3138,7 +3138,6 @@
   "flowHistory.violation.EDGE_ENDPOINT_INVALID": "Uma conexão aponta para um componente que não existe",
   "flowHistory.violation.NODE_DATA_NOT_OBJECT": "Um componente está sem suas configurações",
   "flowHistory.violation.NON_FINITE_NUMBER": "Um valor não é um número válido",
-  "flowHistory.violation.UNPAIRED_SURROGATE": "Um valor de texto tem um caractere inválido",
   "flowHistory.violation.TABLE_ROW_NOT_OBJECT": "Uma linha de tabela está ilegível",
   "flowHistory.violation.TABLE_ROW_ID_MISSING": "Uma linha de tabela não tem ID",
   "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "Duas linhas de uma tabela compartilham um ID",
