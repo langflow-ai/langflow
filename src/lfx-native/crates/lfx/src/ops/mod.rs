@@ -9,6 +9,7 @@
 
 pub mod apply;
 pub mod canonical;
+pub mod diff;
 pub mod edges;
 pub mod error;
 pub mod keyed;
@@ -22,6 +23,7 @@ pub mod state;
 pub mod validate;
 
 pub use apply::{Applied, ApplyOptions, apply_flow_operations};
+pub use diff::{Derived, derive_flow_operations, diff_flow_data};
 pub use error::{Error, ErrorCode, ErrorKind, Result};
 pub use ops::{Change, Expect, FieldUpdate, Operation, Segment};
 pub use state::FlowState;

@@ -6,7 +6,7 @@
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 /// The schema file, as shipped with the engine.
 pub const NODE_SCHEMA_JSON: &str = include_str!("node_schema.json");
@@ -100,7 +100,7 @@ pub struct NodeSchema {
     pub recursed_paths: Vec<Vec<String>>,
     natural_lists: Vec<(Vec<String>, KeyedList)>,
     table_path: Vec<String>,
-    table_when_field: Vec<serde_json::Map<String, Value>>,
+    table_when_field: Vec<Map<String, Value>>,
     /// The table list, which every table field's value is.
     pub table: KeyedList,
 }
@@ -197,6 +197,30 @@ impl NodeSchema {
     /// matches one of the schema's `when_field` conditions.
     #[must_use]
     pub fn keyed_list_at<S: AsRef<str>>(&self, node: &Value, path: &[S]) -> Option<&KeyedList> {
+        self.keyed_list_where(path, |field_path| {
+            let mut field = node;
+            for part in field_path {
+                field = field.as_object()?.get(part.as_ref())?;
+            }
+            field.as_object()
+        })
+    }
+
+    /// The keyed list a template field's `value` is, given the field itself.
+    #[must_use]
+    pub fn field_value_list(&self, name: &str, field: &Map<String, Value>) -> Option<&KeyedList> {
+        self.keyed_list_where(&["data", "node", "template", name, "value"], |_| {
+            Some(field)
+        })
+    }
+
+    /// The keyed list at `path`, reading the template field a table pattern
+    /// matches through `field_at` only when it has to.
+    fn keyed_list_where<'f, S: AsRef<str>>(
+        &self,
+        path: &[S],
+        field_at: impl FnOnce(&[S]) -> Option<&'f Map<String, Value>>,
+    ) -> Option<&KeyedList> {
         if let Some((_, keyed)) = self
             .natural_lists
             .iter()
@@ -218,11 +242,7 @@ impl NodeSchema {
         let Some(wildcard) = wildcard else {
             return Some(&self.table);
         };
-        let mut field = node;
-        for part in &path[..=wildcard] {
-            field = field.as_object()?.get(part.as_ref())?;
-        }
-        let field = field.as_object()?;
+        let field = field_at(&path[..=wildcard])?;
         self.table_when_field
             .iter()
             .any(|condition| {

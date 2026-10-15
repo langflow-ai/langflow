@@ -5,13 +5,14 @@
 //! runners of the Python and browser bindings.
 
 mod apply;
+mod diff;
 mod support;
 
 use libtest_mimic::{Arguments, Trial};
 
 fn main() {
     let arguments = Arguments::from_args();
-    let trials: Vec<Trial> = [support::trials(), apply::trials()]
+    let trials: Vec<Trial> = [support::trials(), apply::trials(), diff::trials()]
         .into_iter()
         .flatten()
         .collect();
