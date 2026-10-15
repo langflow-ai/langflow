@@ -27,13 +27,24 @@ function isClientError(error: unknown): boolean {
   return typeof status === "number" && status >= 400 && status < 500;
 }
 
+// A migration pause gives every change this answer until an admin ends it, so a
+// retry only delays it. The text is REFUSAL in the server's migration_pause.py.
+function isPauseRefusal(error: unknown): boolean {
+  return (
+    axios.isAxiosError(error) &&
+    error.response?.status === 503 &&
+    error.response.data?.detail === "This instance is being migrated."
+  );
+}
+
 // Transient failures worth replaying: 5xx responses and requests that got no
 // response at all (network drop, timeout). Cancellations and request-setup
 // errors settle immediately.
 export function isRetryableServerError(error: unknown): boolean {
   if (!axios.isAxiosError(error) || axios.isCancel(error)) return false;
   const status = error.response?.status;
-  if (typeof status === "number") return status >= 500;
+  if (typeof status === "number")
+    return status >= 500 && !isPauseRefusal(error);
   return error.request != null;
 }
 
@@ -53,7 +64,7 @@ export function getRetryAfterMs(error: unknown): number | undefined {
 
 function makeRetry(maxRetries: number) {
   return (failureCount: number, error: unknown) => {
-    if (isClientError(error)) return false;
+    if (isClientError(error) || isPauseRefusal(error)) return false;
     return failureCount < maxRetries;
   };
 }

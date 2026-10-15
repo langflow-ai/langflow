@@ -1,4 +1,5 @@
 import { Outlet } from "react-router-dom";
+import { ChangesPausedNotice } from "@/components/common/changesPausedNotice";
 import { StorageUpgradeNotice } from "@/components/common/storageUpgradeNotice";
 import { ExtensionEventsListener } from "@/components/extensions/ExtensionEventsListener";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
@@ -17,6 +18,7 @@ export function AppAuthenticatedPage() {
     <>
       {extensionsEnabled && <ExtensionEventsListener />}
       <StorageUpgradeNotice />
+      <ChangesPausedNotice />
       <Outlet />
     </>
   );

@@ -49,7 +49,7 @@ from langflow.api.utils.migration_copies import (
     shown,
 )
 from langflow.api.utils.migration_jobs import active_jobs, live_listeners
-from langflow.api.utils.migration_pause import drained, under_way
+from langflow.api.utils.migration_pause import drained, is_paused, under_way
 from langflow.api.utils.migration_probes import database_identity, location, probe_database, probe_files, probe_vectors
 from langflow.api.utils.migration_runs import (
     RunActiveError,
@@ -68,7 +68,7 @@ from langflow.api.utils.migration_target import (
     start_settings,
 )
 from langflow.cli.migration_preflight import check_target_version
-from langflow.services.auth.utils import get_current_active_superuser
+from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
@@ -89,6 +89,7 @@ if TYPE_CHECKING:
 router = APIRouter(prefix="/migration", tags=["Migration"], include_in_schema=False)
 
 Superuser = Annotated[User, Depends(get_current_active_superuser)]
+SignedIn = Annotated[User, Depends(get_current_active_user)]
 
 # Failing checks an admin may accept: the move stays safe, and what is left behind is known.
 ACCEPTABLE_FINDINGS = frozenset(
@@ -354,6 +355,15 @@ async def pause_changes(request: Request, admin: Superuser) -> dict[str, Any]:
         # the same pause was refused or cut off. Nothing is paused, and the answer must not read as if it were.
         raise HTTPException(status_code=409, detail={"code": "pause_ended"})
     return await _state(record)
+
+
+@router.get("/pause")
+async def pause_state(_user: SignedIn) -> dict[str, bool]:
+    """Whether this instance refuses changes now, for the notice that every signed-in user sees on every page.
+
+    Says nothing else of the move: who paused it and the rest of the record are the admin's.
+    """
+    return {"paused": is_paused()}
 
 
 @router.delete("/pause")
