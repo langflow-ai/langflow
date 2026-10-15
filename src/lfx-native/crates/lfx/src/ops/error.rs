@@ -16,6 +16,8 @@ pub enum ErrorKind {
     /// Derived operations do not replay to the graph they were derived from.
     /// This is always a bug in the diff or the engine, never bad input.
     ReplayMismatch,
+    /// A restore's fix does not address a violation the restore would hit.
+    RestoreFixNotAllowed,
 }
 
 impl ErrorKind {
@@ -27,6 +29,7 @@ impl ErrorKind {
             Self::PreconditionFailed => "FlowOperationPreconditionError",
             Self::InvalidGraph => "FlowDataValidationError",
             Self::ReplayMismatch => "FlowOperationReplayError",
+            Self::RestoreFixNotAllowed => "RestoreFixNotAllowedError",
         }
     }
 }
@@ -46,6 +49,8 @@ pub enum ErrorCode {
     GraphInvalid,
     /// Derived operations do not replay to their target.
     ReplayMismatch,
+    /// A restore's fix addresses no violation.
+    RestoreFixNotAllowed,
     /// An edge breaks an edge rule.
     Violation(ViolationCode),
 }
@@ -61,6 +66,7 @@ impl ErrorCode {
             Self::ExpectationFailed => "EXPECTATION_FAILED",
             Self::GraphInvalid => "FLOW_GRAPH_INVALID",
             Self::ReplayMismatch => "FLOW_OPERATION_REPLAY_MISMATCH",
+            Self::RestoreFixNotAllowed => "RESTORE_FIX_NOT_ALLOWED",
             Self::Violation(code) => code.as_str(),
         }
     }

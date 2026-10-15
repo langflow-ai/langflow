@@ -11,6 +11,7 @@ pub mod apply;
 pub mod canonical;
 pub mod diff;
 pub mod edges;
+pub mod envelope;
 pub mod error;
 pub mod ids;
 pub mod keyed;
@@ -20,9 +21,12 @@ pub mod keyed;
 )]
 pub mod ops;
 pub mod repair;
+pub mod replay;
+pub mod restore;
 pub mod schema;
 pub mod state;
 pub mod validate;
+pub mod write;
 
 pub use apply::{Applied, ApplyOptions, apply_flow_operations};
 pub use diff::{Derived, derive_flow_operations, diff_flow_data};
@@ -30,3 +34,4 @@ pub use error::{Error, ErrorCode, ErrorKind, Result};
 pub use ops::{Change, Expect, FieldUpdate, Operation, Segment};
 pub use repair::{Fix, Repaired, repair_flow_data};
 pub use state::FlowState;
+pub use write::{PreparedWrite, WriteError, WriteOptions, prepare_write};
