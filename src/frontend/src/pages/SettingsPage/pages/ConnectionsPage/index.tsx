@@ -35,6 +35,7 @@ export default function ConnectionsPage() {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const userData = useAuthStore((state) => state.userData);
   const isSuperuser = Boolean(userData?.is_superuser);
 
@@ -114,15 +115,19 @@ export default function ConnectionsPage() {
     return t("connections.emptyTab");
   };
 
-  const run = async (
+  const run = async <T,>(
     connection: ConnectionRead,
-    action: () => Promise<unknown>,
-    success: string,
+    action: () => Promise<T>,
+    success: string | ((result: T) => void),
   ) => {
     setBusyId(connection.id);
     try {
-      await action();
-      setSuccessData({ title: success });
+      const result = await action();
+      if (typeof success === "string") {
+        setSuccessData({ title: success });
+      } else {
+        success(result);
+      }
     } catch (error) {
       setErrorData({
         title: t("connections.errors.actionFailed"),
@@ -176,7 +181,19 @@ export default function ConnectionsPage() {
       run(
         connection,
         () => revoke.mutateAsync(connection.id),
-        t("connections.toast.revoked"),
+        (result) => {
+          if (result.provider_revocation === "revoked") {
+            setSuccessData({ title: t("connections.toast.revoked") });
+          } else {
+            setNoticeData({
+              title: t(
+                result.provider_revocation === "failed"
+                  ? "connections.toast.revokeFailed"
+                  : "connections.toast.revokedLocally",
+              ),
+            });
+          }
+        },
       ),
     onDelete: (connection: ConnectionRead) =>
       run(
