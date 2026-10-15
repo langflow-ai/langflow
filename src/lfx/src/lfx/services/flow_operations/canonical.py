@@ -175,7 +175,7 @@ def canonical_json(value: Any) -> str:
 
 def is_row_position(value: Any) -> bool:
     """Return whether ``value`` is a valid table row position: a finite number."""
-    return not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value)
+    return not isinstance(value, bool) and isinstance(value, (int, float)) and is_finite_number(value)
 
 
 def ordered_rows(rows: list[Any]) -> list[Any]:

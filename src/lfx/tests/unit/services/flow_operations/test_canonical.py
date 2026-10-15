@@ -66,6 +66,23 @@ def test_non_finite_numbers_are_rejected(value):
         canonical_json({"x": value})
 
 
+# The smallest integer that rounds past the largest double: JavaScript reads it as Infinity.
+DOUBLE_OVERFLOW = 2**1024 - 2**970
+
+
+def test_an_integer_below_the_double_overflow_prints_as_the_largest_double():
+    assert canonical_json(DOUBLE_OVERFLOW - 1) == "1.7976931348623157e+308"
+
+
+# The editor's canonical tests parse the same digits, which JSON.parse reads as Infinity.
+@pytest.mark.parametrize("value", [DOUBLE_OVERFLOW, -DOUBLE_OVERFLOW, 10**309])
+def test_an_integer_too_large_for_a_double_is_not_finite(value):
+    with pytest.raises(FlowDataValidationError, match="not valid JSON numbers"):
+        canonical_json({"x": value})
+    with pytest.raises(FlowDataValidationError, match="not valid JSON numbers"):
+        values_equal(value, 1)
+
+
 def test_non_json_values_are_rejected():
     with pytest.raises(FlowDataValidationError):
         canonical_json({"x": object()})

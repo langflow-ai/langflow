@@ -27,11 +27,10 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import math
 from dataclasses import dataclass
 from typing import Any
 
-from lfx.services.flow_operations.canonical import canonical_json, is_row_position
+from lfx.services.flow_operations.canonical import canonical_json, is_finite_number, is_row_position
 from lfx.services.flow_operations.codes import MANUAL_CODES, GraphViolationCode
 from lfx.services.flow_operations.edge_rules import derive_missing_handle_forms
 from lfx.services.flow_operations.ids import new_edge_id
@@ -270,7 +269,7 @@ def _replace_non_finite(value: Any, path: GraphPath, fix) -> Any:
         container, container_path = stack.pop()
         items = container.items() if isinstance(container, dict) else enumerate(container)
         for key, item in list(items):
-            if isinstance(item, float) and not math.isfinite(item):
+            if isinstance(item, (int, float)) and not is_finite_number(item):
                 fix(GraphViolationCode.NON_FINITE_NUMBER, (*container_path, key))
                 container[key] = None
             elif isinstance(item, (dict, list)):
