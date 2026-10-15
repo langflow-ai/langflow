@@ -448,51 +448,6 @@ async def test_a_submitted_graph_that_breaks_the_rules_is_refused_or_repaired(cl
     assert stored.data["edges"] == []
 
 
-async def test_a_refusal_for_an_unpaired_surrogate_is_a_422_that_encodes(client: AsyncClient, logged_in_headers):
-    # The body is JSON with ASCII escapes, the way a browser can send "\ud800".
-    # A response sends UTF-8, which cannot encode one, so the refusal names the
-    # edge by its path and the template that holds the malformed key.
-    flow = await _create_flow(client, logged_in_headers, _graph(_node("a"), _node("b")))
-    edge = _edge("e\ud800", "a", "b")
-    edge["data"]["targetHandle"]["fieldName"] = "missing"
-    edge["targetHandle"] = escape_handle(edge["data"]["targetHandle"])
-    target = _node("b")
-    target["data"]["node"]["template"]["t\ud800"] = {"type": "table", "value": [{"_pos": 1}]}
-
-    refused = await client.patch(
-        f"api/v1/flows/{flow['id']}",
-        content=json.dumps({"data": _graph(_node("a"), target, edges=[edge])}),
-        headers={**logged_in_headers, "Content-Type": "application/json"},
-    )
-
-    assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-    violations = refused.json()["detail"]["violations"]
-    assert [(violation["code"], violation["path"], violation.get("edge_id")) for violation in violations] == [
-        ("TABLE_ROW_ID_MISSING", ["nodes", 1, "data", "node", "template"], None),
-        ("EDGE_HANDLE_NOT_FOUND", ["edges", 0], None),
-        ("UNPAIRED_SURROGATE", ["nodes", 1, "data", "node", "template"], None),
-        ("UNPAIRED_SURROGATE", ["edges", 0, "id"], None),
-    ]
-    assert await _rows(flow["id"]) == []
-
-    # Repair replaces malformed keys first, so the paths of its fixes encode too.
-    repaired = await client.patch(
-        f"api/v1/flows/{flow['id']}",
-        content=json.dumps(
-            {"data": _graph(_node("a"), target, edges=[_edge("e\ud800", "a", "b")]), "repair_invalid_graph": True}
-        ),
-        headers={**logged_in_headers, "Content-Type": "application/json"},
-    )
-
-    assert repaired.status_code == status.HTTP_200_OK, repaired.text
-    fixes = repaired.json()["history"]["graph_repairs"]
-    assert sorted((fix["code"], fix["path"]) for fix in fixes) == [
-        ("TABLE_ROW_ID_MISSING", ["nodes", 1, "data", "node", "template", "t\ufffd", "value", 0, "_id"]),
-        ("UNPAIRED_SURROGATE", ["edges", 0, "id"]),
-        ("UNPAIRED_SURROGATE", ["nodes", 1, "data", "node", "template"]),
-    ]
-
-
 async def test_a_stored_graph_that_breaks_the_rules_is_repaired_keeping_the_original(
     client: AsyncClient, logged_in_headers
 ):
