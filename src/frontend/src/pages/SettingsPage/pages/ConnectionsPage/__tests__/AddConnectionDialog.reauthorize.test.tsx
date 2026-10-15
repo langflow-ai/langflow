@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type {
@@ -450,6 +450,271 @@ describe("AddConnectionDialog re-authorize", () => {
     );
   });
 
+  it.each(["Mail.Send", MAIL_SEND])(
+    "requests offline access by default when reconnecting with %s",
+    async (registeredMailSend) => {
+      setRegistrations([
+        registration({
+          id: "microsoft-work",
+          provider: "microsoft",
+          scopes: [
+            registeredMailSend,
+            "Mail.Read",
+            "offline_access",
+            "openid",
+            "email",
+            "profile",
+          ],
+        }),
+      ]);
+      render(
+        dialog(
+          connection({
+            provider_key: "microsoft",
+            granted_scopes: ["Mail.Send", "openid", "email", "profile"],
+          }),
+        ),
+      );
+
+      expect(scopeBox("offline_access")).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+      // Requesting refresh tokens does not mean Entra reported a grant.
+      expect(
+        within(screen.getByText("offline_access")).queryByText("Granted"),
+      ).not.toBeInTheDocument();
+      expect(scopeBox("Mail.Read")).toHaveAttribute("aria-checked", "false");
+
+      await userEvent.click(screen.getByTestId("connection-authorize"));
+
+      await waitFor(() =>
+        expect(mockStartOAuth).toHaveBeenCalledWith({
+          id: "c1",
+          registrationId: "microsoft-work",
+          scopes: [
+            registeredMailSend,
+            "offline_access",
+            "openid",
+            "email",
+            "profile",
+          ],
+        }),
+      );
+    },
+  );
+
+  it("allows explicitly clearing offline access when reconnecting", async () => {
+    setRegistrations([
+      registration({
+        id: "microsoft-work",
+        provider: "microsoft",
+        scopes: [MAIL_SEND, "offline_access"],
+      }),
+    ]);
+    render(
+      dialog(
+        connection({
+          provider_key: "microsoft",
+          granted_scopes: ["Mail.Send"],
+        }),
+      ),
+    );
+
+    expect(scopeBox("offline_access")).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(scopeBox("offline_access"));
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+
+    await waitFor(() =>
+      expect(mockStartOAuth).toHaveBeenCalledWith({
+        id: "c1",
+        registrationId: "microsoft-work",
+        scopes: [MAIL_SEND],
+      }),
+    );
+  });
+
+  it.each(["registration", "connection"])(
+    "preserves scope choices after a %s refetch",
+    async (refetched) => {
+      const registered = registration({
+        id: "microsoft-work",
+        provider: "microsoft",
+        scopes: [MAIL_SEND, "Mail.Read", "offline_access"],
+      });
+      const row = connection({
+        provider_key: "microsoft",
+        granted_scopes: ["Mail.Send"],
+      });
+      setRegistrations([registered]);
+      const { rerender } = render(dialog(row));
+
+      await userEvent.click(scopeBox("offline_access"));
+      await userEvent.click(scopeBox("Mail.Read"));
+
+      if (refetched === "registration") {
+        setRegistrations([
+          { ...registered, scopes: [...registered.scopes, "User.Read"] },
+        ]);
+        rerender(dialog(row));
+        expect(scopeBox("User.Read")).toHaveAttribute("aria-checked", "false");
+      } else {
+        rerender(dialog({ ...row, granted_scopes: [...row.granted_scopes] }));
+      }
+
+      expect(scopeBox("offline_access")).toHaveAttribute(
+        "aria-checked",
+        "false",
+      );
+      expect(scopeBox("Mail.Read")).toHaveAttribute("aria-checked", "true");
+      await userEvent.click(screen.getByTestId("connection-authorize"));
+
+      await waitFor(() =>
+        expect(mockStartOAuth).toHaveBeenCalledWith({
+          id: "c1",
+          registrationId: "microsoft-work",
+          scopes: [MAIL_SEND, "Mail.Read"],
+        }),
+      );
+    },
+  );
+
+  it.each(["registration", "connection"])(
+    "initializes scope defaults when switching to another %s",
+    async (changed) => {
+      const registered = registration({
+        id: "microsoft-work",
+        provider: "microsoft",
+        scopes: [MAIL_SEND, "Mail.Read", "offline_access"],
+      });
+      const row = connection({
+        provider_key: "microsoft",
+        granted_scopes: ["Mail.Send"],
+      });
+      setRegistrations([registered, { ...registered, id: "microsoft-other" }]);
+      const { rerender } = render(dialog(row));
+
+      await userEvent.click(scopeBox("offline_access"));
+      await userEvent.click(scopeBox("Mail.Read"));
+
+      if (changed === "registration") {
+        await userEvent.selectOptions(
+          screen.getByRole("combobox"),
+          "microsoft-other",
+        );
+      } else {
+        rerender(dialog({ ...row, id: "c2" }));
+      }
+
+      expect(scopeBox("offline_access")).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+      expect(scopeBox("Mail.Read")).toHaveAttribute("aria-checked", "false");
+      await userEvent.click(screen.getByTestId("connection-authorize"));
+
+      await waitFor(() =>
+        expect(mockStartOAuth).toHaveBeenCalledWith({
+          id: changed === "connection" ? "c2" : "c1",
+          registrationId:
+            changed === "registration" ? "microsoft-other" : "microsoft-work",
+          scopes: [MAIL_SEND, "offline_access"],
+        }),
+      );
+    },
+  );
+
+  it("initializes offline access after the registration listing loads", async () => {
+    setRegistrations(undefined);
+    const row = connection({
+      provider_key: "microsoft",
+      granted_scopes: ["Mail.Send"],
+    });
+    const { rerender } = render(dialog(row));
+
+    expect(screen.getByTestId("connection-authorize")).toBeDisabled();
+    setRegistrations([
+      registration({
+        // The loading fallback resolves to this same id before scopes arrive.
+        id: "microsoft",
+        provider: "microsoft",
+        scopes: [MAIL_SEND, "offline_access"],
+      }),
+    ]);
+    rerender(dialog(row));
+
+    expect(scopeBox("offline_access")).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+
+    await waitFor(() =>
+      expect(mockStartOAuth).toHaveBeenCalledWith({
+        id: "c1",
+        registrationId: "microsoft",
+        scopes: [MAIL_SEND, "offline_access"],
+      }),
+    );
+  });
+
+  it("excludes selected scopes removed by a registration refetch", async () => {
+    const registered = registration({
+      id: "microsoft-work",
+      provider: "microsoft",
+      scopes: [MAIL_SEND, "Mail.Read", "offline_access"],
+    });
+    const row = connection({
+      provider_key: "microsoft",
+      granted_scopes: ["Mail.Send"],
+    });
+    setRegistrations([registered]);
+    const { rerender } = render(dialog(row));
+
+    await userEvent.click(scopeBox("Mail.Read"));
+    setRegistrations([{ ...registered, scopes: [MAIL_SEND] }]);
+    rerender(dialog(row));
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+
+    await waitFor(() =>
+      expect(mockStartOAuth).toHaveBeenCalledWith({
+        id: "c1",
+        registrationId: "microsoft-work",
+        scopes: [MAIL_SEND],
+      }),
+    );
+  });
+
+  it("retains Google identity aliases when removing an unrelated scope", async () => {
+    setRegistrations([
+      registration({
+        scopes: [CALENDAR, GMAIL_SEND, "openid", "email", "profile"],
+      }),
+    ]);
+    render(
+      dialog(
+        connection({
+          granted_scopes: [
+            CALENDAR,
+            GMAIL_SEND,
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+          ],
+        }),
+      ),
+    );
+
+    expect(scopeBox("email")).toHaveAttribute("aria-checked", "true");
+    expect(scopeBox("profile")).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(scopeBox(CALENDAR));
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+    await waitFor(() =>
+      expect(mockStartOAuth).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scopes: [GMAIL_SEND, "openid", "email", "profile"],
+        }),
+      ),
+    );
+  });
+
   it("lets re-authorization add registration scopes no component declares", async () => {
     setRegistrations([
       registration({
@@ -474,7 +739,8 @@ describe("AddConnectionDialog re-authorize", () => {
       ),
     );
 
-    for (const scope of ["offline_access", "openid", "email", "profile"]) {
+    expect(scopeBox("offline_access")).toHaveAttribute("aria-checked", "true");
+    for (const scope of ["openid", "email", "profile"]) {
       expect(scopeBox(scope)).toHaveAttribute("aria-checked", "false");
       await userEvent.click(scopeBox(scope));
     }

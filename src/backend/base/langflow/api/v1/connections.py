@@ -317,7 +317,7 @@ async def test_connection(
     current_user: CurrentActiveUser,
     service: ConnectionService,
 ) -> ConnectionRead:
-    """Validate the local credential envelope and requested scope coverage."""
+    """Check stored credentials, including Slack validation, and requested scope coverage."""
     check_rate_limit(request, scope=_SCOPE_CONNECTION_TEST, key=get_user_limiter_key(current_user.id))
     row = await _authorized_row(
         service=service,

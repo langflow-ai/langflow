@@ -129,6 +129,13 @@ def _message_history_response(message: MessageTable) -> MessageResponse:
     return MessageResponse.model_validate(message, from_attributes=True)
 
 
+def _message_update_response(message: MessageTable) -> MessageRead:
+    """Represent legacy NULL text in update responses without changing storage."""
+    if message.text is None:
+        return MessageRead.model_validate(message.model_dump() | {"text": ""})
+    return MessageRead.model_validate(message, from_attributes=True)
+
+
 async def _log_message_update_failure(error: Exception) -> None:
     from lfx.log.logger import logger
 
@@ -487,7 +494,7 @@ async def update_message(
                 sender=db_message.sender,
                 positive_feedback=current_positive_feedback,
             )
-    return db_message
+    return _message_update_response(db_message)
 
 
 @router.patch(
@@ -778,7 +785,7 @@ async def update_shared_message(
         await session.refresh(db_message)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return db_message
+    return _message_update_response(db_message)
 
 
 @router.patch("/messages/shared/session/{old_session_id}")
