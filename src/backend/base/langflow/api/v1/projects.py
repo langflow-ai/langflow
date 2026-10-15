@@ -70,6 +70,7 @@ from langflow.services.audit.operations import (
     stage_flow_succeeded,
     stage_project_succeeded,
 )
+from langflow.services.audit.writer import batch_audit_events, flush_audit_event_batch
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import (
     FlowAction,
@@ -100,6 +101,7 @@ from langflow.services.database.lock_retry import (
     sanitize_database_error,
 )
 from langflow.services.database.models.api_key.policy import ApiKeyIssuanceDeniedError
+from langflow.services.database.models.audit_event.model import AuditEvent
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
     remap_flow_guard_for_project_delete,
@@ -1052,14 +1054,15 @@ async def replace_project_operation(
         try:
             # Save helpers mutate the body. Each aborted transaction must start
             # from the original graph and its original receipt digest.
-            return await _replace_project_operation_once(
-                session=session,
-                project_id=project_id,
-                operation_id=operation_id,
-                request_body=request_body.model_copy(deep=True),
-                current_user=current_user,
-                storage_service=storage_service,
-            )
+            with batch_audit_events(session):
+                return await _replace_project_operation_once(
+                    session=session,
+                    project_id=project_id,
+                    operation_id=operation_id,
+                    request_body=request_body.model_copy(deep=True),
+                    current_user=current_user,
+                    storage_service=storage_service,
+                )
         except DBAPIError as exc:
             # Replacement locks the project's Folder row and then its existing
             # Flow rows (see the ``with_for_update()`` loads below). A concurrent
@@ -1128,6 +1131,32 @@ async def _replace_project_operation_once(
                     denied_detail="Project not found",
                     denied_error_code=_REPLACEMENT_PROJECT_NOT_FOUND_CODE,
                 )
+                if (audited := current_operation()) is not None:
+                    name = (
+                        await session.exec(
+                            select(Folder.name).where(
+                                Folder.id == project_id, Folder.user_id == receipt.project_user_id
+                            )
+                        )
+                    ).first()
+                    if name is None:
+                        # The receipt can outlive the project. Reuse a committed
+                        # audit name rather than the retry's caller-supplied name.
+                        name = (
+                            await session.exec(
+                                select(AuditEvent.resource_name)
+                                .where(
+                                    AuditEvent.resource_type == audit_vocab.AuditResourceType.PROJECT.value,
+                                    AuditEvent.resource_id == project_id,
+                                    AuditEvent.user_id == receipt.project_user_id,
+                                    AuditEvent.result == audit_vocab.AuditResult.SUCCEEDED.value,
+                                    AuditEvent.resource_name.is_not(None),
+                                )
+                                .order_by(AuditEvent.timestamp.desc(), AuditEvent.id.desc())
+                                .limit(1)
+                            )
+                        ).first()
+                    audited.identify(resource_name=name)
                 raise HTTPException(
                     status_code=status.HTTP_410_GONE,
                     detail=REPLACEMENT_RECEIPT_EXPIRED_DETAIL,
@@ -1661,6 +1690,7 @@ async def _replace_project_operation_once(
             flows_before=membership_before,
             flows_after={flow.id: flow.name for flow in result_flows},
         )
+        await flush_audit_event_batch(session)
         await session.commit()
         mark_committed()
     except (HTTPException, DBAPIError):
