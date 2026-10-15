@@ -54,24 +54,11 @@ function finiteNumber(value: number): number {
   return value;
 }
 
-// An unpaired UTF-16 surrogate: a high surrogate without a low one after it,
-// or a low surrogate without a high one before it. RFC 8785 needs I-JSON
-// (RFC 7493), which forbids them. `String.prototype.isWellFormed` tells the
-// same, but it is ES2024, newer than some browsers the editor supports.
-const UNPAIRED_SURROGATE =
-  /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/;
-
-function canonicalString(value: string): string {
-  if (UNPAIRED_SURROGATE.test(value))
-    throw invalidGraph("strings must not hold an unpaired surrogate");
-  return JSON.stringify(value);
-}
-
 function writeCanonical(value: unknown, parts: string[]): void {
   if (value === null) parts.push("null");
   else if (typeof value === "boolean") parts.push(value ? "true" : "false");
   else if (typeof value === "number") parts.push(String(finiteNumber(value)));
-  else if (typeof value === "string") parts.push(canonicalString(value));
+  else if (typeof value === "string") parts.push(JSON.stringify(value));
   else if (Array.isArray(value)) {
     parts.push("[");
     value.forEach((item, index) => {
@@ -86,7 +73,7 @@ function writeCanonical(value: unknown, parts: string[]): void {
       .sort()
       .forEach((key, index) => {
         if (index) parts.push(",");
-        parts.push(canonicalString(key), ":");
+        parts.push(JSON.stringify(key), ":");
         writeCanonical(value[key], parts);
       });
     parts.push("}");
