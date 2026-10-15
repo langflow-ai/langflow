@@ -269,3 +269,46 @@ class Uploader:
 
     def test_invalid_source_has_no_names(self):
         assert ParameterHandler._file_input_names_from_code("def broken(:\n") == frozenset()
+
+
+class TestBoolFieldStringValues:
+    """A bool field whose value arrives as text (an API tweak, a resolved variable) keeps its meaning."""
+
+    def setup_method(self):
+        mock_vertex = MagicMock()
+        mock_vertex.data = {"node": {"template": {}}}
+        self.handler = ParameterHandler(mock_vertex, storage_service=None)
+
+    @pytest.mark.parametrize("value", ["false", "False", "FALSE", " false ", "0", "no", ""])
+    def test_false_like_strings_become_false(self, value):
+        params = self.handler._handle_other_direct_types("flag", {"type": "bool"}, value, {})
+        assert params["flag"] is False
+
+    @pytest.mark.parametrize("value", ["true", "True", "1", "yes", "on"])
+    def test_true_like_strings_become_true(self, value):
+        params = self.handler._handle_other_direct_types("flag", {"type": "bool"}, value, {})
+        assert params["flag"] is True
+
+    @pytest.mark.parametrize("value", [True, False])
+    def test_real_booleans_are_unchanged(self, value):
+        params = self.handler._handle_other_direct_types("flag", {"type": "bool"}, value, {})
+        assert params["flag"] is value
+
+    async def test_string_false_tweak_reaches_component_as_false(self):
+        from lfx.components.flow_controls.conditional_router import ConditionalRouterComponent
+        from lfx.components.input_output import ChatInput, ChatOutput
+        from lfx.graph import Graph
+        from lfx.processing.process import process_tweaks
+
+        chat_in = ChatInput(_id="ChatInput-a")
+        chat_in.set(input_value="HELLO", should_store_message=False)
+        router = ConditionalRouterComponent(_id="ConditionalRouter-b")
+        router.set(input_text=chat_in.message_response, match_text="hello", operator="equals")
+        chat_out = ChatOutput(_id="ChatOutput-c")
+        chat_out.set(input_value=router.true_response, should_store_message=False)
+        payload = Graph(chat_in, chat_out).dump()["data"]
+
+        tweaked = process_tweaks(payload, {"ConditionalRouter-b": {"case_sensitive": "false"}})
+        graph = Graph.from_payload(tweaked, flow_id="test-flow")
+
+        assert graph.get_vertex("ConditionalRouter-b").params["case_sensitive"] is False
