@@ -226,6 +226,60 @@ async def test_http_error_and_redirect_never_echo_provider_credentials(monkeypat
         assert "refresh-token" not in str(error.value)
 
 
+@pytest.mark.parametrize(
+    ("status", "body", "reason"),
+    [
+        (400, {"error": "invalid_grant"}, None),
+        (200, {"ok": False, "error": "invalid_refresh_token"}, None),
+        (200, {"ok": False, "error": "token_expired"}, None),
+        (200, {"ok": False, "error": "token_revoked"}, None),
+        (500, {"error": "invalid_grant"}, "provider-unavailable"),
+        (503, {"error": "server_error"}, "provider-unavailable"),
+        (408, {}, "provider-unavailable"),
+        (429, {"error": "ratelimited"}, "provider-unavailable"),
+        (400, {"error": "temporarily_unavailable"}, "provider-unavailable"),
+        (400, {"error": "invalid_client"}, "provider-unavailable"),
+        (200, {"ok": False, "error": "internal_error"}, "provider-unavailable"),
+        (200, {"ok": False, "error": "ratelimited"}, "provider-unavailable"),
+        (200, {"error": ["invalid_grant"]}, "provider-unavailable"),
+        (200, [], "provider-unavailable"),
+    ],
+)
+async def test_only_explicit_credential_rejection_is_an_auth_failure(respx_mock, status, body, reason):
+    """Do not invalidate a stored grant on an ambiguous or transient provider failure."""
+    respx_mock.post("https://oauth2.googleapis.com/token").mock(return_value=httpx.Response(status, json=body))
+
+    with pytest.raises(OAuthError) as caught:
+        await providers._request("https://oauth2.googleapis.com/token", {"refresh_token": "fixture-refresh"})
+
+    assert caught.value.reason == reason
+    assert "fixture-refresh" not in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {},
+        {"access_token": "fixture-access", "refresh_token": []},
+        {"access_token": "fixture-access", "scope": []},
+        {"access_token": "fixture-access", "expires_in": "not-a-lifetime"},
+    ],
+)
+async def test_malformed_token_response_does_not_reject_the_stored_grant(respx_mock, body):
+    """Malformed success responses cannot establish credential expiry."""
+    respx_mock.post("https://oauth2.googleapis.com/token").mock(return_value=httpx.Response(200, json=body))
+
+    with pytest.raises(OAuthError) as caught:
+        await providers.exchange(
+            config(),
+            refresh_token="fixture-refresh",  # noqa: S106 - test fixture
+            previous_scopes=["read"],
+        )
+
+    assert caught.value.reason == "provider-unavailable"
+    assert "fixture-access" not in str(caught.value)
+
+
 async def test_google_revoke_accepts_empty_success_response(monkeypatch):
     original_client = httpx.AsyncClient
     transport = httpx.MockTransport(lambda _request: httpx.Response(200, content=b""))
