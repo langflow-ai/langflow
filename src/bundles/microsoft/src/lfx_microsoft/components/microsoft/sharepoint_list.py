@@ -94,7 +94,7 @@ class SharePointListComponent(MicrosoftGraphComponent):
     async def list_items(self) -> list[Data]:
         """Return the folder's children as Data rows."""
         if self._rows is not None:
-            self.status = f"{len(self._rows)} item(s)"
+            self.status = self._rows
             return self._rows
         limit = int(self.top or DEFAULT_TOP)
         if limit <= 0:
@@ -118,11 +118,12 @@ class SharePointListComponent(MicrosoftGraphComponent):
         self._next_link = next_link
         rows = [Data(data=item) for item in items]
         self._rows = rows
-        self.status = f"{len(rows)} item(s)"
+        self.status = rows
         return rows
 
     async def next_page_link(self) -> Message:
         """Return the unfollowed ``@odata.nextLink``, if Graph supplied one."""
         if self._rows is None:
             await self.list_items()
-        return Message(text=self._next_link or "")
+        self.status = self._next_link or ""
+        return Message(text=self.status)

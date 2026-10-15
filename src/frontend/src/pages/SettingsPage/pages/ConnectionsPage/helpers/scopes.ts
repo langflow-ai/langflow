@@ -171,6 +171,8 @@ export interface ReauthorizeScopeList {
   options: string[];
   /** The options the connection already holds; they start checked. */
   granted: string[];
+  /** Granted scopes plus provider refresh scopes to request by default. */
+  defaultSelected: string[];
   /** Granted scopes this registration cannot request again. */
   outsideCeiling: string[];
 }
@@ -218,6 +220,13 @@ export function reauthorizeScopeList({
   return {
     options,
     granted: options.filter((scope) => grantedKeys.has(key(scope))),
+    // Entra omits offline_access from granted scopes even when it issues a
+    // refresh token. Request it again on reconnect when the registration offers it.
+    defaultSelected: options.filter(
+      (scope) =>
+        grantedKeys.has(key(scope)) ||
+        (provider === "microsoft" && key(scope) === "offline_access"),
+    ),
     outsideCeiling: extra
       .filter(({ requestAs }) => !requestAs)
       .map(({ scope }) => scope),
