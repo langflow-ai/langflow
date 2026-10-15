@@ -129,13 +129,8 @@ def _handle_value(handle: Any) -> Any:
 
 
 def derive_missing_handle_forms(edge: dict[str, Any]) -> None:
-    """Write each handle's missing form from the one present, in place, as the editor spells them.
-
-    A missing or null ``data`` becomes an object to hold the derived handle objects.
-    """
-    if edge.get("data") is None:
-        edge["data"] = {}
-    data = edge["data"]
+    """Write each handle's missing form from the one present, in place, as the editor spells them."""
+    data = edge.setdefault("data", {})
     for key in HANDLE_KEYS:
         if key in data and key not in edge:
             edge[key] = escape_handle(data[key])
