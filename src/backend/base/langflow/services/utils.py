@@ -225,7 +225,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
             "Username and password must be set. "
             "Set LANGFLOW_SUPERUSER_PASSWORD before starting Langflow. "
             "If you are upgrading an existing auto-login installation, "
-            "see https://docs.langflow.org/api-keys-and-authentication#upgrade-from-auto-login"
+            "see https://docs.langflow.org/next/api-keys-and-authentication#upgrade-from-auto-login"
         )
         await logger.aerror(f"Missing credentials: username={username}, password={'set' if password else 'not set'}")
         raise ValueError(msg)
