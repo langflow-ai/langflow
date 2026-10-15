@@ -106,6 +106,7 @@ import { Streamlit } from "@/icons/Streamlit";
 import { SupabaseIcon } from "@/icons/supabase";
 import { TavilyIcon } from "@/icons/Tavily";
 import { TwelveLabsIcon } from "@/icons/TwelveLabs";
+import { TwittrAPIIcon } from "@/icons/TwittrAPI";
 import { ThumbDownIconCustom, ThumbUpIconCustom } from "@/icons/thumbs";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { UpstashSvgIcon } from "@/icons/Upstash";
@@ -234,6 +235,7 @@ export const eagerIconsMapping = {
   ThumbDownCustom: ThumbDownIconCustom,
   ThumbUpCustom: ThumbUpIconCustom,
   TwelveLabs: TwelveLabsIcon,
+  TwittrAPI: TwittrAPIIcon,
   Unstructured: UnstructuredIcon,
   VLMRun: VLMRunIcon,
   Upstash: UpstashSvgIcon,

@@ -1,0 +1,113 @@
+---
+title: TwittrAPI
+slug: /bundles-twittrapi
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="twittrapi" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **TwittrAPI** bundle.
+
+The components read public X (Twitter) data through the [TwittrAPI](https://www.twittrapi.com) REST API. They are read-only: none of them posts, likes or follows.
+
+Get an API key from [twittrapi.com](https://www.twittrapi.com). For details on the underlying API, see the [TwittrAPI documentation](https://www.twittrapi.com/docs).
+
+Every component has a **TwittrAPI Key** (`twittrapi_api_key`) input. It defaults to the `TWITTRAPI_API_KEY` [global variable](/configuration-global-variables), so you can set the key once for all TwittrAPI components.
+
+If a request fails, for example because the API key is missing or invalid or the input is not valid, the output contains a single row with an `error` column that describes the problem.
+
+In [tool mode](/agents-tools), each component exposes one tool that an [**Agent** component](/agents) can call: `twittrapi_search_tweets`, `twittrapi_get_user`, `twittrapi_user_tweets`, `twittrapi_followers`, `twittrapi_list_tweets` and `twittrapi_trends`.
+
+## Pagination
+
+**TwittrAPI Search Tweets**, **TwittrAPI User Tweets**, **TwittrAPI Followers** and **TwittrAPI List Tweets** return one page per run.
+The component logs the cursor of the next page as `next_cursor`. To get the next page, pass that value in the **Cursor** (`cursor`) input.
+
+Each page is one billed TwittrAPI call.
+
+## Post and user columns
+
+Components that return posts output a [`Table`](/data-types#table) with these columns: `id`, `url`, `text`, `createdAt`, `lang`, `authorId`, `authorUsername`, `authorName`, `likes`, `retweets`, `replies`, `quotes`, `bookmarks`, `views`, `conversationId`, `replyToTweetId`, `quotedTweetId`, and `retweetOfId`. The `text` of each row is the post text.
+
+Components that return users output these columns: `id`, `username`, `name`, `description`, `location`, `url`, `createdAt`, `avatarUrl`, `verified`, `verifiedType`, `protected`, `followers`, `following`, `tweets`, `likes`, and `listed`.
+
+## TwittrAPI Search Tweets
+
+This component searches X with the same query syntax as the X search box, including operators such as `from:`, `lang:` and `since:`.
+
+It outputs a `Table` of posts. With the `People` category, it outputs a `Table` of users.
+
+### TwittrAPI Search Tweets parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Search Query (`search_query`) | String | Input parameter. The X search query, for example `langflow lang:en` or `from:jack`. |
+| TwittrAPI Key (`twittrapi_api_key`) | SecretString | Input parameter. Your TwittrAPI key. |
+| Category (`category`) | String | Input parameter. The search tab: `Top`, `Latest`, `People`, `Photos`, or `Videos`. Default: `Top`. |
+| Count (`count`) | Integer | Input parameter. The number of items to ask for. X treats it as a hint. Default: `20`. |
+| Cursor (`cursor`) | String | Input parameter. The cursor of the page to fetch. Leave empty for the first page. |
+
+## TwittrAPI Get User
+
+This component gets one X profile by username. It outputs a [`JSON`](/data-types#json) object with the user columns.
+
+### TwittrAPI Get User parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Username (`username`) | String | Input parameter. The X handle, with or without `@`. |
+| TwittrAPI Key (`twittrapi_api_key`) | SecretString | Input parameter. Your TwittrAPI key. |
+
+## TwittrAPI User Tweets
+
+This component gets the latest posts from one X account. It outputs a `Table` of posts.
+
+### TwittrAPI User Tweets parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Username or User ID (`user`) | String | Input parameter. The X handle, or the numeric user ID. A value made only of digits is read as a user ID; prefix it with `@` to look it up as a handle. |
+| TwittrAPI Key (`twittrapi_api_key`) | SecretString | Input parameter. Your TwittrAPI key. |
+| Count (`count`) | Integer | Input parameter. The number of items to ask for. Default: `20`. |
+| Cursor (`cursor`) | String | Input parameter. The cursor of the page to fetch. |
+
+## TwittrAPI Followers
+
+This component gets the followers of one X account, newest first. It outputs a `Table` of users.
+
+### TwittrAPI Followers parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Username or User ID (`user`) | String | Input parameter. The X handle, or the numeric user ID. |
+| TwittrAPI Key (`twittrapi_api_key`) | SecretString | Input parameter. Your TwittrAPI key. |
+| Count (`count`) | Integer | Input parameter. The number of items to ask for. Default: `20`. |
+| Cursor (`cursor`) | String | Input parameter. The cursor of the page to fetch. |
+
+## TwittrAPI List Tweets
+
+This component gets the latest posts from an X list. It outputs a `Table` of posts.
+
+### TwittrAPI List Tweets parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| List ID (`list_id`) | String | Input parameter. The numeric list ID, the number in the list URL `x.com/i/lists/<list ID>`. |
+| TwittrAPI Key (`twittrapi_api_key`) | SecretString | Input parameter. Your TwittrAPI key. |
+| Count (`count`) | Integer | Input parameter. The number of items to ask for. Default: `20`. |
+| Cursor (`cursor`) | String | Input parameter. The cursor of the page to fetch. |
+
+## TwittrAPI Trends
+
+This component gets the trending topics on X for a location. It outputs a `Table` with `name`, `query`, `url`, and `tweetVolume` columns.
+
+### TwittrAPI Trends parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Location ID (`location_id`) | String | Input parameter. The Yahoo WOEID of the location, digits only. `1` is worldwide, `23424977` the United States. Default: `1`. |
+| TwittrAPI Key (`twittrapi_api_key`) | SecretString | Input parameter. Your TwittrAPI key. |
