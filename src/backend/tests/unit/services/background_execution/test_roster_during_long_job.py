@@ -23,10 +23,9 @@ class _OneJobBackend:
 @pytest.mark.usefixtures("client")
 async def test_roster_reports_a_worker_busy_on_a_long_job():
     from langflow.services.background_execution.worker import run_worker_loop
-    from langflow.services.background_execution.worker_registry import WorkerRegistryService
+    from langflow.services.database.models.worker_registry.crud import count_workers_by_state
     from langflow.services.deps import session_scope
 
-    registry = WorkerRegistryService()
     owner = "worker:probe:long"
     job_id = uuid4()
     stop_event = asyncio.Event()
@@ -43,9 +42,7 @@ async def test_roster_reports_a_worker_busy_on_a_long_job():
             self.ran.append(claimed_id)
             await asyncio.sleep(1.2)  # outlives the window
             async with session_scope() as session:
-                seen.update(
-                    await registry.count_by_state(session, now=datetime.now(timezone.utc), online_window=window)
-                )
+                seen.update(await count_workers_by_state(session, now=datetime.now(timezone.utc), online_window=window))
             stop_event.set()
 
     await run_worker_loop(
@@ -54,7 +51,7 @@ async def test_roster_reports_a_worker_busy_on_a_long_job():
         stop_event=stop_event,
         idle_block_ms=10,
         owner=owner,
-        registry=registry,
+        roster_enabled=True,
         roster_interval_s=0.1,
     )
 

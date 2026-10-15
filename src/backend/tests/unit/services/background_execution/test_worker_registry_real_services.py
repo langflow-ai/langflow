@@ -28,8 +28,8 @@ import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from langflow.services.background_execution.worker_registry import WorkerRegistryService
 from langflow.services.database.models.jobs.model import Job, JobStatus
+from langflow.services.database.models.worker_registry.crud import count_workers_by_state
 from langflow.services.database.models.worker_registry.model import WorkerRegistry, WorkerState
 from langflow.services.deps import session_scope
 from sqlmodel import col, select
@@ -64,9 +64,7 @@ async def _clear_registry() -> None:
 
 async def _counts() -> dict:
     async with session_scope() as session:
-        return await WorkerRegistryService().count_by_state(
-            session, now=datetime.now(timezone.utc), online_window=_ONLINE_WINDOW
-        )
+        return await count_workers_by_state(session, now=datetime.now(timezone.utc), online_window=_ONLINE_WINDOW)
 
 
 async def _wait_until(predicate, *, timeout: float = 60.0, interval: float = 0.5):

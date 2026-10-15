@@ -5,9 +5,10 @@ Successor to the standalone guards that held the scaled-backend modules back.
 there is no broker dependency left to hold. ``metrics`` / ``metrics_collector``
 read the ``job`` and ``job_events`` tables only, so nothing in them needs a
 fleet to exist, and they were promoted upstream ahead of this branch.
-``worker_registry`` was the last piece held, because its gauges had no data
-until something populated the roster; the worker loop populates it now, so it
-ships too and the held list is empty.
+The worker roster was the last piece held, because its gauges had no data until
+something populated it; the worker loop populates it now, so the held list is
+empty. It lives with its model in ``database/models/worker_registry`` rather
+than here, which is where this repo keeps table CRUD.
 
 What must stay true: ``job_queue_type=redis`` (the v1 build-event queue) does
 NOT drag the background backend into scaled mode, because selection is the
@@ -21,7 +22,7 @@ import importlib.util
 from langflow.services.background_execution.service import BackgroundExecutionService
 from langflow.services.deps import get_settings_service
 
-_SHIPPED_MODULES = ("db_backend", "worker", "metrics", "metrics_collector", "worker_registry")
+_SHIPPED_MODULES = ("db_backend", "worker", "metrics", "metrics_collector")
 
 
 def test_scaled_modules_ship_with_the_slice():

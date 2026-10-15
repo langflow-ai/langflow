@@ -978,7 +978,6 @@ def worker(
             build_worker,
             run_worker_loop,
         )
-        from langflow.services.background_execution.worker_registry import WorkerRegistryService
 
         await initialize_services()
         settings = get_settings_service().settings
@@ -1011,7 +1010,7 @@ def worker(
                 owner=owner,
                 lease_ttl_s=settings.background_lease_ttl_s,
                 watchdog_interval_s=settings.background_watchdog_interval_s,
-                registry=WorkerRegistryService(),
+                roster_enabled=True,
                 # Derived from the SAME knob the collector uses as the online
                 # window, not from the watchdog interval: those are independent
                 # settings, so reusing the watchdog's meant an operator raising

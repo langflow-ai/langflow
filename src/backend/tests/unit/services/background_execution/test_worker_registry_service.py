@@ -1,4 +1,4 @@
-"""WorkerRegistryService CRUD + aggregate queries over the real worker_registry table.
+"""Worker roster CRUD + aggregate queries over the real worker_registry table.
 
 These run against the REAL test DB (the ``client`` fixture; SQLite locally,
 Postgres in CI) with NO mocking. Timestamps are injected so freshness /
@@ -15,7 +15,13 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
-from langflow.services.background_execution.worker_registry import WorkerRegistryService
+from langflow.services.database.models.worker_registry.crud import (
+    count_workers_by_state,
+    deregister_worker,
+    heartbeat_worker,
+    prune_stale_workers,
+    register_worker,
+)
 from langflow.services.database.models.worker_registry.model import WorkerRegistry, WorkerState
 from langflow.services.deps import session_scope
 from sqlmodel import func, select
@@ -30,11 +36,10 @@ def _aware(dt: datetime) -> datetime:
 
 async def test_register_creates_one_idle_row():
     """Register inserts exactly one IDLE row with started_at/last_heartbeat set and no job."""
-    service = WorkerRegistryService()
     owner = "worker:1:abc"
 
     async with session_scope() as session:
-        await service.register(session, owner=owner, pid=111, host="host-a")
+        await register_worker(session, owner=owner, pid=111, host="host-a")
 
     async with session_scope() as session:
         row = await session.get(WorkerRegistry, owner)
@@ -49,11 +54,10 @@ async def test_register_creates_one_idle_row():
 
 async def test_reregister_same_owner_is_idempotent_upsert():
     """Re-registering the SAME owner does not raise and updates pid/host/started_at/state."""
-    service = WorkerRegistryService()
     owner = "worker:2:abc"
 
     async with session_scope() as session:
-        await service.register(session, owner=owner, pid=200, host="host-old")
+        await register_worker(session, owner=owner, pid=200, host="host-old")
 
     async with session_scope() as session:
         first = await session.get(WorkerRegistry, owner)
@@ -61,13 +65,13 @@ async def test_reregister_same_owner_is_idempotent_upsert():
 
     # Drive it busy so we can prove re-register resets to IDLE.
     async with session_scope() as session:
-        await service.heartbeat(
+        await heartbeat_worker(
             session, owner=owner, state=WorkerState.BUSY, current_job_id=uuid4(), pid=200, host="host-old"
         )
 
     # Re-register with new pid/host (no IntegrityError on the existing PK).
     async with session_scope() as session:
-        await service.register(session, owner=owner, pid=201, host="host-new")
+        await register_worker(session, owner=owner, pid=201, host="host-new")
 
     async with session_scope() as session:
         count = (await session.exec(select(func.count()).select_from(WorkerRegistry))).one()
@@ -82,18 +86,17 @@ async def test_reregister_same_owner_is_idempotent_upsert():
 
 async def test_heartbeat_updates_state_job_and_advances_last_heartbeat():
     """Heartbeat flips state -> BUSY + current_job_id, and last_heartbeat advances."""
-    service = WorkerRegistryService()
     owner = "worker:3:abc"
 
     async with session_scope() as session:
-        await service.register(session, owner=owner, pid=300, host="host-c")
+        await register_worker(session, owner=owner, pid=300, host="host-c")
 
     async with session_scope() as session:
         before = _aware((await session.get(WorkerRegistry, owner)).last_heartbeat)
 
     job_id = uuid4()
     async with session_scope() as session:
-        await service.heartbeat(session, owner=owner, state=WorkerState.BUSY, current_job_id=job_id, pid=1, host="h")
+        await heartbeat_worker(session, owner=owner, state=WorkerState.BUSY, current_job_id=job_id, pid=1, host="h")
 
     async with session_scope() as session:
         row = await session.get(WorkerRegistry, owner)
@@ -104,12 +107,11 @@ async def test_heartbeat_updates_state_job_and_advances_last_heartbeat():
 
 async def test_heartbeat_on_missing_owner_recreates_row():
     """Heartbeat on an owner with no row recreates it (robust against a pruned row)."""
-    service = WorkerRegistryService()
     owner = "worker:4:abc"
     job_id = uuid4()
 
     async with session_scope() as session:
-        await service.heartbeat(
+        await heartbeat_worker(
             session,
             owner=owner,
             state=WorkerState.BUSY,
@@ -131,26 +133,24 @@ async def test_heartbeat_on_missing_owner_recreates_row():
 
 async def test_deregister_removes_row_and_is_noop_when_missing():
     """Deregister deletes the row; deregister of an absent owner is a no-op."""
-    service = WorkerRegistryService()
     owner = "worker:5:abc"
 
     async with session_scope() as session:
-        await service.register(session, owner=owner, pid=500, host="host-e")
+        await register_worker(session, owner=owner, pid=500, host="host-e")
 
     async with session_scope() as session:
-        await service.deregister(session, owner=owner)
+        await deregister_worker(session, owner=owner)
 
     async with session_scope() as session:
         assert await session.get(WorkerRegistry, owner) is None
 
     # No-op: deregistering an already-gone owner must not raise.
     async with session_scope() as session:
-        await service.deregister(session, owner=owner)
+        await deregister_worker(session, owner=owner)
 
 
 async def test_count_by_state_excludes_stale_and_splits_busy_idle():
     """Seed fresh-idle, fresh-busy, and a stale row: online=2, busy=1, idle=1."""
-    service = WorkerRegistryService()
     now = datetime(2026, 6, 5, 12, 0, 0, tzinfo=timezone.utc)
     online_window = timedelta(seconds=30)
 
@@ -194,14 +194,13 @@ async def test_count_by_state_excludes_stale_and_splits_busy_idle():
         await session.flush()
 
     async with session_scope() as session:
-        counts = await service.count_by_state(session, now=now, online_window=online_window)
+        counts = await count_workers_by_state(session, now=now, online_window=online_window)
 
     assert counts == {"online": 2, "busy": 1, "idle": 1}
 
 
 async def test_prune_stale_deletes_only_old_rows_and_returns_count():
     """prune_stale deletes rows older than retention and returns the deleted count."""
-    service = WorkerRegistryService()
     now = datetime(2026, 6, 5, 12, 0, 0, tzinfo=timezone.utc)
     retention_s = 3600.0
 
@@ -244,7 +243,7 @@ async def test_prune_stale_deletes_only_old_rows_and_returns_count():
         await session.flush()
 
     async with session_scope() as session:
-        deleted = await service.prune_stale(session, now=now, retention_s=retention_s)
+        deleted = await prune_stale_workers(session, now=now, retention_s=retention_s)
 
     assert deleted == 2
 

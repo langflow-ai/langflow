@@ -106,7 +106,6 @@ class _RosterReadingBackend:
 @pytest.mark.usefixtures("client")
 async def test_idle_worker_registers_then_deregisters_on_stop():
     """An idle worker is visible as online, and leaves no row behind on graceful stop."""
-    from langflow.services.background_execution.worker_registry import WorkerRegistryService
     from langflow.services.database.models.worker_registry.model import WorkerRegistry, WorkerState
     from langflow.services.deps import session_scope
 
@@ -121,7 +120,7 @@ async def test_idle_worker_registers_then_deregisters_on_stop():
         stop_event=stop_event,
         idle_block_ms=10,
         owner=owner,
-        registry=WorkerRegistryService(),
+        roster_enabled=True,
         roster_interval_s=0.0,
     )
 
@@ -143,7 +142,6 @@ async def test_busy_worker_names_the_job_it_is_running():
     """
     from uuid import uuid4
 
-    from langflow.services.background_execution.worker_registry import WorkerRegistryService
     from langflow.services.database.models.worker_registry.model import WorkerRegistry, WorkerState
     from langflow.services.deps import session_scope
 
@@ -173,7 +171,7 @@ async def test_busy_worker_names_the_job_it_is_running():
         stop_event=stop_event,
         idle_block_ms=10,
         owner=owner,
-        registry=WorkerRegistryService(),
+        roster_enabled=True,
         roster_interval_s=0.0,
     )
 

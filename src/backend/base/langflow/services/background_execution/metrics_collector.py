@@ -25,9 +25,9 @@ from lfx.log.logger import logger
 from sqlmodel import col, func, select
 
 from langflow.services.background_execution.metrics import current_backend
-from langflow.services.background_execution.worker_registry import WorkerRegistryService
 from langflow.services.database.models.jobs.metrics import is_background_job, terminal_counts
 from langflow.services.database.models.jobs.model import Job, JobStatus
+from langflow.services.database.models.worker_registry.crud import count_workers_by_state, prune_stale_workers
 from langflow.services.database.models.worker_registry.model import WorkerState
 from langflow.services.deps import get_telemetry_service, session_scope
 
@@ -168,7 +168,6 @@ class BackgroundMetricsCollector:
         # within the window the watchdog already uses to call a lease dead is
         # not a worker an operator should count as online.
         self.worker_online_window_seconds = worker_online_window_seconds
-        self._registry = WorkerRegistryService()
         self._stopped = False
         self._task: asyncio.Task | None = None
         self._last_totals_refresh: float | None = None
@@ -202,7 +201,7 @@ class BackgroundMetricsCollector:
             # its stale prior value rather than keep reporting it. In the default
             # backend there are no worker processes, so these read 0, which is the
             # truth rather than a gap.
-            workers = await self._registry.count_by_state(
+            workers = await count_workers_by_state(
                 session, now=now, online_window=timedelta(seconds=self.worker_online_window_seconds)
             )
             ot.update_gauge("langflow_bg_workers_online", workers["online"], {"backend": backend})
@@ -210,7 +209,7 @@ class BackgroundMetricsCollector:
                 ot.update_gauge("langflow_bg_workers", workers[state.value], {"state": state.value, "backend": backend})
             # Drop owners that aged out, so the roster reflects the live fleet.
             retention_s = max(WORKER_ROSTER_RETENTION_SECONDS, 2 * self.worker_online_window_seconds)
-            await self._registry.prune_stale(session, now=now, retention_s=retention_s)
+            await prune_stale_workers(session, now=now, retention_s=retention_s)
 
             p50, p95 = await duration_percentiles(session, now, self.duration_window_seconds)
             ot.update_gauge("langflow_bg_job_duration_p50_seconds", p50, {"backend": backend})
