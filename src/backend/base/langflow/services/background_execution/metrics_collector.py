@@ -40,10 +40,12 @@ if TYPE_CHECKING:
 # FAILED / TIMED_OUT / CANCELLED are terminal.
 NONTERMINAL_STATUSES = (JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED)
 TERMINAL_COUNTS_INTERVAL_SECONDS = 300.0
-# A crashed worker leaves its row behind. Keep it well past the online window so
-# a worker that is merely slow to beat is not erased and recreated repeatedly,
-# but not so long that dead owners pile up across restarts.
-WORKER_ROSTER_RETENTION_SECONDS = 900.0
+# How long a crashed worker stays visible for forensics. An hour is a human
+# timescale rather than a multiple of a heartbeat, so it is a constant, but it
+# must never fall below the online window: a retention shorter than the window
+# would delete rows the same tick still counts as online. A raised lease TTL
+# therefore floors it at twice the window.
+WORKER_ROSTER_RETENTION_SECONDS = 3600.0
 
 
 async def count_nonterminal_jobs(session) -> dict[str, int]:
@@ -207,7 +209,8 @@ class BackgroundMetricsCollector:
             for state in (WorkerState.IDLE, WorkerState.BUSY):
                 ot.update_gauge("langflow_bg_workers", workers[state.value], {"state": state.value, "backend": backend})
             # Drop owners that aged out, so the roster reflects the live fleet.
-            await self._registry.prune_stale(session, now=now, retention_s=WORKER_ROSTER_RETENTION_SECONDS)
+            retention_s = max(WORKER_ROSTER_RETENTION_SECONDS, 2 * self.worker_online_window_seconds)
+            await self._registry.prune_stale(session, now=now, retention_s=retention_s)
 
             p50, p95 = await duration_percentiles(session, now, self.duration_window_seconds)
             ot.update_gauge("langflow_bg_job_duration_p50_seconds", p50, {"backend": backend})

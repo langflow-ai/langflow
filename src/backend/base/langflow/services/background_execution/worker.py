@@ -15,7 +15,6 @@ import contextlib
 import os
 import random
 import socket
-from time import monotonic
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -169,7 +168,48 @@ async def _roster_beat(registry: Any, *, owner: str, state: WorkerState, current
 
     with contextlib.suppress(Exception):
         async with session_scope() as session:
-            await registry.heartbeat(session, owner=owner, state=state, current_job_id=current_job_id)
+            await registry.heartbeat(
+                session,
+                owner=owner,
+                state=state,
+                current_job_id=current_job_id,
+                pid=os.getpid(),
+                host=socket.gethostname(),
+            )
+
+
+# Roster beats per online window. The collector counts a worker online for one
+# window, so beating three times inside it tolerates the beat's own jitter plus
+# a missed beat. Both sides derive from one setting, which is what keeps the
+# relationship from depending on two knobs staying in step.
+_ROSTER_BEATS_PER_WINDOW = 3.0
+
+
+async def _roster_loop(
+    registry: Any,
+    *,
+    owner: str,
+    interval_s: float,
+    stop_event: asyncio.Event,
+    current_job: Callable[[], Any],
+) -> None:
+    """Refresh this worker's presence on an interval, whatever it is doing.
+
+    Transitions beat immediately in the claim loop; this is what keeps a worker
+    visible THROUGH a job. That matters because a background job routinely runs
+    longer than the window the collector counts as online (the lease TTL), and
+    without a beat during the run a worker reads as neither online nor busy for
+    exactly as long as it is busy: zero workers on a saturated fleet.
+    """
+    while not stop_event.is_set():
+        try:
+            # Same jitter as the watchdog: a fleet started together must not
+            # converge into one synchronized write burst every interval.
+            await asyncio.wait_for(stop_event.wait(), timeout=interval_s * random.uniform(0.75, 1.25))  # noqa: S311
+        except asyncio.TimeoutError:
+            job_id = current_job()
+            state = WorkerState.IDLE if job_id is None else WorkerState.BUSY
+            await _roster_beat(registry, owner=owner, state=state, current_job_id=job_id)
 
 
 async def run_worker_loop(
@@ -211,15 +251,26 @@ async def run_worker_loop(
     await backend.requeue_lost(lease_ttl_s=lease_ttl_s)
 
     roster = registry if (registry is not None and owner is not None) else None
+    current_job_id: Any = None
+    roster_task: asyncio.Task | None = None
     if roster is not None:
         from langflow.services.deps import session_scope
 
+        # register() writes a fresh IDLE row, so the worker is visible from the
+        # moment it boots rather than from its first beat.
         with contextlib.suppress(Exception):
             async with session_scope() as session:
                 await roster.register(session, owner=owner, pid=os.getpid(), host=socket.gethostname())
-    # Force the first idle beat rather than waiting out an interval, so a worker
-    # that starts into an empty queue still shows up as online promptly.
-    last_beat = None
+        if roster_interval_s is not None:
+            roster_task = asyncio.create_task(
+                _roster_loop(
+                    roster,
+                    owner=owner,
+                    interval_s=roster_interval_s,
+                    stop_event=stop_event,
+                    current_job=lambda: current_job_id,
+                )
+            )
 
     watchdog_task: asyncio.Task | None = None
     if watchdog_interval_s is not None:
@@ -236,13 +287,9 @@ async def run_worker_loop(
         while not stop_event.is_set():
             job_id = await backend.claim(block_ms=idle_block_ms)
             if job_id is None:
-                # Idle: refresh presence on the interval. Throttled because the
-                # claim poll returns every idle_block_ms (1s by default) and the
-                # roster does not need a write per second per worker.
-                due = last_beat is None or monotonic() - last_beat >= (roster_interval_s or 0)
-                if roster is not None and roster_interval_s is not None and due:
-                    await _roster_beat(roster, owner=owner, state=WorkerState.IDLE, current_job_id=None)
-                    last_beat = monotonic()
+                # No roster write here: _roster_loop refreshes presence on its
+                # own interval, so the claim poll (every idle_block_ms, 1s by
+                # default) does not turn into a write per second per worker.
                 # claim() sleeps out its block window on an empty queue, but a
                 # backend that returns None promptly (error path, test double)
                 # must not hot-spin — yield so the stop signal and other tasks run.
@@ -254,12 +301,12 @@ async def run_worker_loop(
             if job_service is not None and owner is not None:
                 with contextlib.suppress(Exception):
                     await job_service.heartbeat(_coerce_uuid(job_id), owner)
+            current_job_id = _coerce_uuid(job_id)
             if roster is not None:
                 # A transition, so beat now instead of waiting out the interval:
                 # the roster carries which job this worker holds, and that is
                 # only useful while it still holds it.
-                await _roster_beat(roster, owner=owner, state=WorkerState.BUSY, current_job_id=_coerce_uuid(job_id))
-                last_beat = monotonic()
+                await _roster_beat(roster, owner=owner, state=WorkerState.BUSY, current_job_id=current_job_id)
             try:
                 await runner.run(job_id)
             except asyncio.CancelledError:
@@ -270,17 +317,21 @@ async def run_worker_loop(
                 # status and heartbeat are the only queue state.
                 await logger.aexception(f"Worker: runner failed for job {job_id}: {exc}")
             finally:
+                current_job_id = None
                 if roster is not None:
                     # Clear current_job_id as soon as the job is done, however it
                     # ended: a roster still naming a finished job reads as a
                     # worker stuck on it.
                     await _roster_beat(roster, owner=owner, state=WorkerState.IDLE, current_job_id=None)
-                    last_beat = monotonic()
     finally:
         if watchdog_task is not None:
             watchdog_task.cancel()
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await watchdog_task
+        if roster_task is not None:
+            roster_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await roster_task
         if roster is not None:
             # Graceful stop leaves no row behind, so the fleet count drops
             # immediately instead of waiting for this worker to age out.

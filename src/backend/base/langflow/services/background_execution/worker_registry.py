@@ -5,7 +5,7 @@ registers on startup, heartbeats (idle or busy) while it lives, records its curr
 job, and deregisters on graceful stop. The API-side metrics collector derives the
 three aggregate gauges (online/busy/idle) from this table and prunes stale rows.
 
-These methods take an ``AsyncSession`` directly and never open their own scope —
+These methods take an ``AsyncSession`` directly and never open their own scope.
 they mirror the metrics-collector query functions so the collector (which already
 owns a short-lived ``session_scope()`` per tick) and the worker loop both pass the
 session they hold. Where time matters, ``now`` is injected so the math is
@@ -13,7 +13,7 @@ deterministic and the caller owns the clock.
 
 ``last_heartbeat`` is a timezone-aware column, but SQLite hands it back naive. The
 freshness/staleness cutoff is bound per-dialect (aware on Postgres, naive-UTC on
-SQLite) — the same pattern ``duration_percentiles`` uses — so boundary rows are not
+SQLite), the same pattern ``duration_percentiles`` uses, so boundary rows are not
 dropped by a lexicographic mismatch on SQLite.
 """
 
@@ -86,21 +86,29 @@ class WorkerRegistryService:
         owner: str,
         state: WorkerState,
         current_job_id: UUID | None,
+        pid: int = 0,
+        host: str = "",
     ) -> None:
         """Refresh ``last_heartbeat`` and set ``state`` + ``current_job_id`` for ``owner``.
 
         If the row is missing (e.g. pruned out from under a still-live worker), it is
-        recreated — a heartbeat is a liveness signal and must not silently no-op, so a
+        recreated, because a heartbeat is a liveness signal and must not silently no-op, so a
         worker whose row was pruned reappears on its next beat. ``started_at`` is set to
         now for the recreated row since the original start time is no longer known.
+
+        ``pid`` / ``host`` are only used for that recreate, and a caller that knows its
+        own identity should pass them: a row rebuilt as ``pid=0``/``host=""`` names a
+        process that does not exist, which is worse for an operator than the gap it
+        replaces. They are ignored when the row is already there, since the row the
+        worker registered already carries the real values.
         """
         now = datetime.now(timezone.utc)
         row = await session.get(WorkerRegistry, owner)
         if row is None:
             row = WorkerRegistry(
                 owner=owner,
-                pid=0,
-                host="",
+                pid=pid,
+                host=host,
                 started_at=now,
                 last_heartbeat=now,
                 state=state,

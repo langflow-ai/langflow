@@ -19,6 +19,7 @@ from uuid import uuid4
 import pytest
 from langflow.services.background_execution.metrics import current_backend
 from langflow.services.background_execution.metrics_collector import (
+    WORKER_ROSTER_RETENTION_SECONDS,
     BackgroundMetricsCollector,
     count_nonterminal_jobs,
     duration_percentiles,
@@ -1071,3 +1072,47 @@ async def test_collect_once_reports_an_empty_fleet_as_zero():
     assert _gauge_value("langflow_bg_workers_online", {"backend": backend}) == 0
     assert _gauge_value("langflow_bg_workers", {"state": "idle", "backend": backend}) == 0
     assert _gauge_value("langflow_bg_workers", {"state": "busy", "backend": backend}) == 0
+
+
+async def test_retention_never_deletes_a_worker_the_same_tick_counts_online():
+    """Retention is floored at twice the online window, so the two cannot invert.
+
+    With a raised lease TTL the online window can exceed the forensic retention
+    constant. A fixed retention would then delete the row of a worker this very
+    tick reported as online.
+    """
+    from langflow.services.database.models.worker_registry.model import WorkerRegistry, WorkerState
+
+    owner = "worker:fleet:long-window"
+    now = datetime.now(timezone.utc)
+    # Online window deliberately wider than the retention constant.
+    window = WORKER_ROSTER_RETENTION_SECONDS + 1400.0
+    # Stale enough to outlast the bare constant, fresh enough to still be online.
+    await _add_worker(
+        owner=owner,
+        state=WorkerState.IDLE,
+        last_heartbeat=now - timedelta(seconds=WORKER_ROSTER_RETENTION_SECONDS + 400.0),
+    )
+
+    collector = BackgroundMetricsCollector(interval=15.0, worker_online_window_seconds=window)
+    async with session_scope() as session:
+        await collector.collect_once(session, now=now)
+
+    assert _gauge_value("langflow_bg_workers_online", {"backend": current_backend()}) == 1
+    async with session_scope() as session:
+        row = await session.get(WorkerRegistry, owner)
+    assert row is not None, "a worker still counted as online must not be pruned in the same tick"
+
+
+def test_roster_beats_several_times_per_online_window():
+    """The beat interval is derived from the window, and must stay inside it.
+
+    ``_roster_loop`` jitters each wait by up to 1.25x, so one beat per window
+    would let a live worker lapse. Anything below two beats per window makes the
+    fleet gauges flicker on an idle fleet.
+    """
+    from langflow.services.background_execution.worker import _ROSTER_BEATS_PER_WINDOW
+
+    max_jitter = 1.25
+    assert _ROSTER_BEATS_PER_WINDOW >= 2.0
+    assert max_jitter / _ROSTER_BEATS_PER_WINDOW < 1.0

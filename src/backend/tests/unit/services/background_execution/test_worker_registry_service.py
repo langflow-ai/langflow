@@ -107,13 +107,24 @@ async def test_heartbeat_on_missing_owner_recreates_row():
     job_id = uuid4()
 
     async with session_scope() as session:
-        await service.heartbeat(session, owner=owner, state=WorkerState.BUSY, current_job_id=job_id)
+        await service.heartbeat(
+            session,
+            owner=owner,
+            state=WorkerState.BUSY,
+            current_job_id=job_id,
+            pid=4242,
+            host="real-host",
+        )
 
     async with session_scope() as session:
         row = await session.get(WorkerRegistry, owner)
         assert row is not None
         assert row.state == WorkerState.BUSY
         assert row.current_job_id == job_id
+        # The caller knows its own identity, so the rebuilt row must carry it
+        # rather than naming a process that does not exist.
+        assert row.pid == 4242
+        assert row.host == "real-host"
 
 
 async def test_deregister_removes_row_and_is_noop_when_missing():
@@ -166,7 +177,7 @@ async def test_count_by_state_excludes_stale_and_splits_busy_idle():
                 current_job_id=uuid4(),
             )
         )
-        # Stale: heartbeat 60s ago (past the 30s window) — excluded everywhere.
+        # Stale: heartbeat 60s ago (past the 30s window), excluded everywhere.
         session.add(
             WorkerRegistry(
                 owner="stale",
