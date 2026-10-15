@@ -3138,8 +3138,14 @@
   "flowHistory.violation.EDGE_ENDPOINT_INVALID": "Une connexion pointe vers un composant qui n'existe pas",
   "flowHistory.violation.NODE_DATA_NOT_OBJECT": "Il manque ses paramètres à un composant",
   "flowHistory.violation.NON_FINITE_NUMBER": "Une valeur n'est pas un nombre valide",
+  "flowHistory.violation.UNPAIRED_SURROGATE": "Une valeur texte contient un caractère non valide",
+  "flowHistory.violation.TABLE_ROW_NOT_OBJECT": "Une ligne de tableau est illisible",
   "flowHistory.violation.TABLE_ROW_ID_MISSING": "Une ligne de tableau n'a pas d'ID",
   "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "Deux lignes d'un tableau partagent un ID",
   "flowHistory.violation.TABLE_ROW_POS_INVALID": "Une ligne de tableau a une position non valide",
-  "flowHistory.violation.TABLE_ROWS_UNSORTED": "Les lignes d'un tableau ne sont pas dans l'ordre"
+  "flowHistory.violation.EDGE_HANDLE_FORM_MISSING": "Il manque une partie de ses données à une connexion",
+  "flowHistory.violation.EDGE_HANDLE_INVALID": "La sortie ou l'entrée d'une connexion est illisible",
+  "flowHistory.violation.EDGE_HANDLE_NOT_FOUND": "Une connexion pointe vers une entrée ou une sortie qui n'existe pas",
+  "flowHistory.violation.EDGE_TARGET_OCCUPIED": "Une entrée qui n'accepte qu'une connexion en a plusieurs",
+  "flowHistory.violation.EDGE_TOUCHES_NOTE": "Une connexion est reliée à une note"
 }

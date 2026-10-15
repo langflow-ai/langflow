@@ -3138,8 +3138,14 @@
   "flowHistory.violation.EDGE_ENDPOINT_INVALID": "存在しないコンポーネントを指す接続があります",
   "flowHistory.violation.NODE_DATA_NOT_OBJECT": "設定のないコンポーネントがあります",
   "flowHistory.violation.NON_FINITE_NUMBER": "有効な数値ではない値があります",
+  "flowHistory.violation.UNPAIRED_SURROGATE": "無効な文字を含むテキスト値があります",
+  "flowHistory.violation.TABLE_ROW_NOT_OBJECT": "読み取れないテーブル行があります",
   "flowHistory.violation.TABLE_ROW_ID_MISSING": "ID のないテーブル行があります",
   "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "同じ ID を持つテーブル行があります",
   "flowHistory.violation.TABLE_ROW_POS_INVALID": "テーブル行の位置が無効です",
-  "flowHistory.violation.TABLE_ROWS_UNSORTED": "テーブルの行の順序が正しくありません"
+  "flowHistory.violation.EDGE_HANDLE_FORM_MISSING": "情報の一部が欠けている接続があります",
+  "flowHistory.violation.EDGE_HANDLE_INVALID": "出力または入力を読み取れない接続があります",
+  "flowHistory.violation.EDGE_HANDLE_NOT_FOUND": "存在しない入力または出力を指す接続があります",
+  "flowHistory.violation.EDGE_TARGET_OCCUPIED": "接続を 1 つだけ受け付ける入力に複数の接続があります",
+  "flowHistory.violation.EDGE_TOUCHES_NOTE": "付箋につながっている接続があります"
 }

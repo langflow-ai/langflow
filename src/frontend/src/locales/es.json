@@ -3138,8 +3138,14 @@
   "flowHistory.violation.EDGE_ENDPOINT_INVALID": "Una conexión apunta a un componente que no existe",
   "flowHistory.violation.NODE_DATA_NOT_OBJECT": "A un componente le falta su configuración",
   "flowHistory.violation.NON_FINITE_NUMBER": "Un valor no es un número válido",
+  "flowHistory.violation.UNPAIRED_SURROGATE": "Un valor de texto tiene un carácter no válido",
+  "flowHistory.violation.TABLE_ROW_NOT_OBJECT": "Una fila de tabla no es legible",
   "flowHistory.violation.TABLE_ROW_ID_MISSING": "Una fila de tabla no tiene ID",
   "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "Dos filas de una tabla comparten un ID",
   "flowHistory.violation.TABLE_ROW_POS_INVALID": "Una fila de tabla tiene una posición no válida",
-  "flowHistory.violation.TABLE_ROWS_UNSORTED": "Las filas de una tabla están desordenadas"
+  "flowHistory.violation.EDGE_HANDLE_FORM_MISSING": "A una conexión le falta parte de sus datos",
+  "flowHistory.violation.EDGE_HANDLE_INVALID": "No se puede leer la salida o la entrada de una conexión",
+  "flowHistory.violation.EDGE_HANDLE_NOT_FOUND": "Una conexión apunta a una entrada o salida que no existe",
+  "flowHistory.violation.EDGE_TARGET_OCCUPIED": "Una entrada que admite una sola conexión tiene varias",
+  "flowHistory.violation.EDGE_TOUCHES_NOTE": "Una conexión está unida a una nota"
 }

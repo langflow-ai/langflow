@@ -3137,8 +3137,14 @@
   "flowHistory.violation.EDGE_ENDPOINT_INVALID": "없는 Component를 가리키는 연결이 있습니다",
   "flowHistory.violation.NODE_DATA_NOT_OBJECT": "설정이 없는 Component가 있습니다",
   "flowHistory.violation.NON_FINITE_NUMBER": "올바른 숫자가 아닌 값이 있습니다",
+  "flowHistory.violation.UNPAIRED_SURROGATE": "잘못된 문자가 든 텍스트 값이 있습니다",
+  "flowHistory.violation.TABLE_ROW_NOT_OBJECT": "읽을 수 없는 표 행이 있습니다",
   "flowHistory.violation.TABLE_ROW_ID_MISSING": "ID가 없는 표 행이 있습니다",
   "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "한 표의 두 행이 같은 ID를 씁니다",
   "flowHistory.violation.TABLE_ROW_POS_INVALID": "위치가 올바르지 않은 표 행이 있습니다",
-  "flowHistory.violation.TABLE_ROWS_UNSORTED": "표의 행 순서가 맞지 않습니다"
+  "flowHistory.violation.EDGE_HANDLE_FORM_MISSING": "정보 일부가 빠진 연결이 있습니다",
+  "flowHistory.violation.EDGE_HANDLE_INVALID": "출력이나 입력을 읽을 수 없는 연결이 있습니다",
+  "flowHistory.violation.EDGE_HANDLE_NOT_FOUND": "없는 입력이나 출력을 가리키는 연결이 있습니다",
+  "flowHistory.violation.EDGE_TARGET_OCCUPIED": "연결을 하나만 받는 입력에 연결이 여러 개 있습니다",
+  "flowHistory.violation.EDGE_TOUCHES_NOTE": "메모에 이어진 연결이 있습니다"
 }

@@ -3137,8 +3137,14 @@
   "flowHistory.violation.EDGE_ENDPOINT_INVALID": "A connection points to a component that doesn't exist",
   "flowHistory.violation.NODE_DATA_NOT_OBJECT": "A component is missing its settings",
   "flowHistory.violation.NON_FINITE_NUMBER": "A value is not a valid number",
+  "flowHistory.violation.UNPAIRED_SURROGATE": "A text value has an invalid character",
+  "flowHistory.violation.TABLE_ROW_NOT_OBJECT": "A table row is unreadable",
   "flowHistory.violation.TABLE_ROW_ID_MISSING": "A table row has no ID",
   "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "Two rows of a table share an ID",
   "flowHistory.violation.TABLE_ROW_POS_INVALID": "A table row has an invalid position",
-  "flowHistory.violation.TABLE_ROWS_UNSORTED": "A table's rows are out of order"
+  "flowHistory.violation.EDGE_HANDLE_FORM_MISSING": "A connection is missing part of its details",
+  "flowHistory.violation.EDGE_HANDLE_INVALID": "A connection's output or input can't be read",
+  "flowHistory.violation.EDGE_HANDLE_NOT_FOUND": "A connection points to an input or output that doesn't exist",
+  "flowHistory.violation.EDGE_TARGET_OCCUPIED": "An input that takes one connection has more than one",
+  "flowHistory.violation.EDGE_TOUCHES_NOTE": "A connection is attached to a note"
 }
