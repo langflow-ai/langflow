@@ -48,6 +48,9 @@ _HANDLE_QUOTE = "œ"
 # Largest integer a JavaScript number holds exactly. Larger integers are
 # printed as the double the editor would round them to.
 _MAX_SAFE_INTEGER = 2**53
+# The smallest integer that rounds past the largest double. JavaScript reads
+# it, and every larger one, as Infinity, so it is not a finite JSON number.
+_DOUBLE_OVERFLOW = 2**1024 - 2**970
 # ECMAScript prints numbers below 1e21 in plain notation.
 _MAX_PLAIN_EXPONENT = 21
 _MIN_PLAIN_EXPONENT = -6
@@ -72,14 +75,27 @@ def json_type(value: Any) -> str:
     raise FlowDataValidationError(msg)
 
 
+def is_finite_number(value: float) -> bool:
+    """Return whether a JSON number is finite as the double JavaScript reads it.
+
+    An integer too large for a double reads as Infinity, so it is not finite.
+    """
+    if isinstance(value, int):
+        return abs(value) < _DOUBLE_OVERFLOW
+    return math.isfinite(value)
+
+
+def _non_finite_error() -> FlowDataValidationError:
+    return FlowDataValidationError("NaN, Infinity and integers too large for a double are not valid JSON numbers")
+
+
 def _format_number(value: float) -> str:
+    if not is_finite_number(value):
+        raise _non_finite_error()
     if isinstance(value, int):
         if abs(value) <= _MAX_SAFE_INTEGER:
             return str(value)
         value = float(value)
-    if not math.isfinite(value):
-        msg = "NaN and Infinity are not valid JSON numbers"
-        raise FlowDataValidationError(msg)
     if value == 0:
         return "0"
 
@@ -153,7 +169,7 @@ def canonical_json(value: Any) -> str:
 
 def is_row_position(value: Any) -> bool:
     """Return whether ``value`` is a valid table row position: a finite number."""
-    return not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value)
+    return not isinstance(value, bool) and isinstance(value, (int, float)) and is_finite_number(value)
 
 
 def ordered_rows(rows: list[Any]) -> list[Any]:
@@ -343,8 +359,6 @@ def values_equal(left: Any, right: Any) -> bool:
 
 def _as_double(value: float) -> float:
     """Return a JSON number as the double JavaScript holds, which is what its canonical form prints."""
-    double = float(value)
-    if not math.isfinite(double):
-        msg = "NaN and Infinity are not valid JSON numbers"
-        raise FlowDataValidationError(msg)
-    return double
+    if not is_finite_number(value):
+        raise _non_finite_error()
+    return float(value)

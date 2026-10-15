@@ -22,11 +22,10 @@ Two groups of rules are checked only against the stored graph a write replaces
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from typing import Any
 
-from lfx.services.flow_operations.canonical import is_row_position, values_equal
+from lfx.services.flow_operations.canonical import is_finite_number, is_row_position, values_equal
 from lfx.services.flow_operations.codes import GraphViolationCode, resolution_of
 from lfx.services.flow_operations.edge_rules import check_edge, handle_forms
 from lfx.services.flow_operations.exceptions import FlowDataValidationError, FlowOperationValidationError
@@ -69,7 +68,8 @@ def find_graph_violations(
 ) -> list[GraphViolation]:
     """Return every rule ``flow_data`` breaks, in document order.
 
-    ``check_values`` also walks every value for NaN and Infinity. The engine
+    ``check_values`` also walks every value for NaN, Infinity and integers too
+    large for a double, which JavaScript reads as Infinity. The engine
     skips it when replaying stored operations, whose values were checked when
     they were written, so replay stays proportional to the number of nodes and
     edges rather than to the size of the flow.
@@ -189,9 +189,13 @@ def _non_finite_violations(flow_data: dict[str, Any]) -> list[GraphViolation]:
     stack: list[tuple[Any, GraphPath]] = [(flow_data, ())]
     while stack:
         value, path = stack.pop()
-        if isinstance(value, float) and not math.isfinite(value):
+        if isinstance(value, (int, float)) and not is_finite_number(value):
             violations.append(
-                GraphViolation(GraphViolationCode.NON_FINITE_NUMBER, path, "NaN and Infinity are not valid JSON")
+                GraphViolation(
+                    GraphViolationCode.NON_FINITE_NUMBER,
+                    path,
+                    "NaN, Infinity and integers too large for a double are not valid JSON",
+                )
             )
         elif isinstance(value, dict):
             stack.extend((item, (*path, key)) for key, item in reversed(value.items()))

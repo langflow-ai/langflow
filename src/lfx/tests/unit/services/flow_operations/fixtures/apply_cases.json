@@ -1753,6 +1753,37 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
+      "name": "selector: a row written with a _pos too large for a double is rejected",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {"node": {"template": {"rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]}}}}
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "t",
+              "op": "set_field",
+              "path": ["data", "node", "template", "rows", "value", {"id": "r3"}],
+              "value": {
+                "_id": "r3",
+                "_pos": 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+                "v": "z"
+              }
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
       "name": "selector: a row's _pos cannot be deleted",
       "base": {
         "nodes": [
@@ -1888,6 +1919,35 @@
       ],
       "error": "FlowOperationPreconditionError",
       "code": "EXPECTATION_FAILED"
+    },
+    {
+      "name": "expect: a stored integer too large for a double is not a finite number",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "count": {
+                    "type": "int",
+                    "value": 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "count", "value"], "value": 1, "expect": {"value": 0}}]
+        }
+      ],
+      "error": "FlowDataValidationError",
+      "code": "FLOW_GRAPH_INVALID"
     },
     {
       "name": "expect: absent holds for a row that does not exist yet",
