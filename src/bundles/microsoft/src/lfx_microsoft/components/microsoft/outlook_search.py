@@ -126,4 +126,5 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
         """Return the unfollowed ``@odata.nextLink``, if Graph supplied one."""
         if self._rows is None:
             await self.search_messages()
-        return Message(text=self._next_link or "")
+        self.status = self._next_link or ""
+        return Message(text=self.status)

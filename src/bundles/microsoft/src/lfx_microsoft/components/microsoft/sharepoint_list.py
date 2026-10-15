@@ -125,4 +125,5 @@ class SharePointListComponent(MicrosoftGraphComponent):
         """Return the unfollowed ``@odata.nextLink``, if Graph supplied one."""
         if self._rows is None:
             await self.list_items()
-        return Message(text=self._next_link or "")
+        self.status = self._next_link or ""
+        return Message(text=self.status)

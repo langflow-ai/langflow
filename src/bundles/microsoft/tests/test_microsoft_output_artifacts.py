@@ -55,9 +55,11 @@ async def test_list_artifacts_include_records_and_next_link(
     results, artifacts = await component._build_results()
 
     assert [row.data for row in results[output_name]] == expected_rows
+    assert artifacts[output_name]["repr"] == str(results[output_name])
     assert artifacts[output_name]["type"] == "array"
     assert [row["data"] for row in artifacts[output_name]["raw"]] == expected_rows
     assert results["next_link"].text == expected_next_link
+    assert artifacts["next_link"]["repr"] == expected_next_link
     assert artifacts["next_link"]["type"] == "text"
     assert artifacts["next_link"]["raw"] == expected_next_link
     assert len(recorder.requests) == 1

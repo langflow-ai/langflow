@@ -53,19 +53,21 @@ async def test_list_artifacts_include_records_and_pagination(
         expected_rows = [{"id": member} for member in expected_rows]
     transport.enqueue(body)
     if inputs.get("resolve_names") and not empty:
-        user_body = load_fixture("users_info")
-        user = user_body["user"]
-        expected_rows = [
-            {
-                "id": user["id"],
-                "name": user["name"],
-                "real_name": user["real_name"],
-                "display_name": user["profile"]["display_name"],
-                "is_bot": user["is_bot"],
-            }
-            for _ in body["members"]
-        ]
-        for _ in body["members"]:
+        expected_rows = []
+        for index, member_id in enumerate(body["members"]):
+            user_body = load_fixture("users_info")
+            user = user_body["user"]
+            user.update(id=member_id, name=f"member-{index}", real_name=f"Member {index}")
+            user["profile"]["display_name"] = f"member-{index}"
+            expected_rows.append(
+                {
+                    "id": member_id,
+                    "name": user["name"],
+                    "real_name": user["real_name"],
+                    "display_name": user["profile"]["display_name"],
+                    "is_bot": user["is_bot"],
+                }
+            )
             transport.enqueue(user_body)
     expected_pagination = {"next_cursor": body["response_metadata"]["next_cursor"]}
     if output_name == "matches":
@@ -80,9 +82,13 @@ async def test_list_artifacts_include_records_and_pagination(
     results, artifacts = await component._build_results()
 
     assert [row.data for row in results[output_name]] == expected_rows
+    if output_name == "members":
+        assert [row.data["id"] for row in results[output_name]] == body["members"]
+    assert artifacts[output_name]["repr"] == str(results[output_name])
     assert artifacts[output_name]["type"] == "array"
     assert [row["data"] for row in artifacts[output_name]["raw"]] == expected_rows
     assert results["pagination"].data == expected_pagination
+    assert artifacts["pagination"]["repr"] == str(results["pagination"])
     assert artifacts["pagination"]["type"] == "object"
     assert artifacts["pagination"]["raw"] == expected_pagination
     expected_calls = 1 + (len(expected_rows) if inputs.get("resolve_names") else 0)
