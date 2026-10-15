@@ -74,6 +74,10 @@ _BLOCKED_INTROSPECTION_ATTRS: frozenset[str] = frozenset(
     }
 )
 
+# Event-loop objects can arrive as arguments or factory results, so module
+# alias tracking cannot reliably identify their process-spawning methods.
+_BLOCKED_EXECUTION_ATTRS: frozenset[str] = frozenset({"subprocess_exec", "subprocess_shell"})
+
 # Matches a dunder reached inside a str.format()/Formatter replacement field,
 # e.g. "{0.__globals__}" or "{0[__builtins__]}". Such traversals live inside a
 # literal template string and are invisible to the AST attribute check, so a
@@ -99,7 +103,7 @@ def _is_blocked_attribute(attr: str | None) -> bool:
     """
     if attr is None or attr in _INERT_DUNDER_ATTRS:
         return False
-    return attr.startswith("__") or attr in _BLOCKED_INTROSPECTION_ATTRS
+    return attr.startswith("__") or attr in _BLOCKED_INTROSPECTION_ATTRS or attr in _BLOCKED_EXECUTION_ATTRS
 
 
 # Non-call attribute *reads* that are forbidden: (module, attr, message).
@@ -109,6 +113,12 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
     ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
+    ("torch.package", "PackageImporter", "torch.package.PackageImporter is forbidden — external code loading"),
+    (
+        "torch.package.package_importer",
+        "PackageImporter",
+        "torch.package.package_importer.PackageImporter is forbidden — external code loading",
+    ),
     # PyYAML loaders that resolve ``!!python/object*`` tags — arbitrary
     # constructor invocation (deserialization RCE) on untrusted text. Blocking
     # the Loader attribute also blocks ``yaml.load(..., Loader=...)`` variants;
@@ -184,6 +194,8 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("os", "posix_spawnp", "os.posix_spawnp() is forbidden"),
     ("os", "fork", "os.fork() is forbidden"),
     ("os", "forkpty", "os.forkpty() is forbidden"),
+    ("os", "kill", "os.kill() is forbidden — process signaling"),
+    ("os", "killpg", "os.killpg() is forbidden — process group signaling"),
     ("os", "startfile", "os.startfile() is forbidden"),
     ("os", "open", "os.open() is forbidden in components — use Langflow's File components"),
     ("os", "write", "os.write() is forbidden in components — use Langflow's File components"),
@@ -203,6 +215,17 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("shutil", "rmtree", "shutil.rmtree() is forbidden"),
     ("shutil", "move", "shutil.move() is forbidden in components"),
     ("sys", "exit", "sys.exit() is forbidden in components"),
+    ("sys", "setprofile", "sys.setprofile() is forbidden — runtime frame access"),
+    ("sys", "settrace", "sys.settrace() is forbidden — runtime frame access"),
+    ("signal", "raise_signal", "signal.raise_signal() is forbidden in components"),
+    ("concurrent.futures", "ProcessPoolExecutor", "ProcessPoolExecutor is forbidden — process spawning"),
+    ("site", "addsitedir", "site.addsitedir() is forbidden — executes package startup code"),
+    ("site", "addpackage", "site.addpackage() is forbidden — executes package startup code"),
+    ("site", "main", "site.main() is forbidden — executes package startup code"),
+    ("site", "execsitecustomize", "site.execsitecustomize() is forbidden — executes package startup code"),
+    ("site", "execusercustomize", "site.execusercustomize() is forbidden — executes package startup code"),
+    ("torch", "load", "torch.load() is forbidden — unsafe object deserialization"),
+    ("torch.serialization", "load", "torch.serialization.load() is forbidden — unsafe object deserialization"),
     # Raw file access through stdlib equivalents of the blocked bare open().
     # io.StringIO/BytesIO and codecs.encode/decode stay allowed; only the
     # filesystem entry points are forbidden.
@@ -297,6 +320,19 @@ DANGEROUS_IMPORTS: set[str] = {
     # its subprocess entry points are blocked in DANGEROUS_ATTR_CALLS above.
     "multiprocessing",
     "posix",
+    "nt",
+    "_posixsubprocess",
+    # Source runners and package tooling can execute code or start processes
+    # without referencing a subprocess API in the generated source itself.
+    "runpy",
+    "pip",
+    "ensurepip",
+    "venv",
+    "setuptools",
+    "pkg_resources",
+    "build",
+    "installer",
+    "webbrowser",
     # Network / IPC primitives — same attack class as subprocess (reverse
     # shells, raw exfil, SSRF, non-HTTP protocol egress). High-level HTTP via
     # ``requests``/``httpx`` stays allowed by design (legit API components need
@@ -327,6 +363,7 @@ DANGEROUS_IMPORTS: set[str] = {
 # ``urllib.request`` additionally supports ``file://`` / ``ftp://`` schemes, so
 # it is a local-file-read and SSRF bypass beyond what plain HTTP allows.
 DANGEROUS_SUBMODULES: tuple[str, ...] = (
+    "concurrent.futures.process",
     "urllib.request",
     "urllib.error",
     "http.client",
@@ -367,6 +404,8 @@ RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
         "posix_spawnp",
         "fork",
         "forkpty",
+        "kill",
+        "killpg",
         "startfile",
         "open",
         "write",
