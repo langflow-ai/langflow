@@ -49,7 +49,8 @@ class ObservabilitySettings(BaseModel):
     @classmethod
     def normalize_audit_trusted_api_key_ids(cls, value: str | list[UUID] | None) -> list[UUID]:
         entries = value.split(",") if isinstance(value, str) else (value or [])
-        return list(dict.fromkeys(UUID(str(entry).strip()) for entry in entries if str(entry).strip()))
+        normalized = (str(entry).strip() for entry in entries)
+        return list(dict.fromkeys(UUID(entry) for entry in normalized if entry))
 
     audit_exclude_events: list[str] = []
     """Audited actions never recorded, comma-separated: ``flow:write``, ``flow:*`` or ``*:delete``.
