@@ -2671,6 +2671,33 @@
       "code": "EDGE_HANDLE_INVALID"
     },
     {
+      "name": "edge rules: edge data that is null is missing its handle objects",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [{"id": "e2", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œmanyœ}", "data": null}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_FORM_MISSING"
+    },
+    {
       "name": "edge rules: a target handle naming both a field and an output fails",
       "base": {
         "nodes": [
