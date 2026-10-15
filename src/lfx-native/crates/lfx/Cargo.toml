@@ -2,6 +2,7 @@
 name = "lfx"
 description = "Langflow's native core: the flow operation engine (lfx::ops)."
 version.workspace = true
+authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -9,6 +10,8 @@ repository.workspace = true
 
 [dependencies]
 serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision"] }
+sha2 = "0.10"
+indexmap = "2"
 
 [dev-dependencies]
 libtest-mimic = "0.8"
