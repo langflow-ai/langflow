@@ -211,7 +211,7 @@ export function AddConnectionDialog({
 
   useEffect(() => {
     if (!reauthorizeList) return;
-    setSelectedScopes(new Set(reauthorizeList.granted));
+    setSelectedScopes(new Set(reauthorizeList.defaultSelected));
   }, [reauthorizeList]);
 
   // Consent lands on the server: only a row that moved on from the state it had
