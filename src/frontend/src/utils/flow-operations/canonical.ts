@@ -13,6 +13,7 @@
  * serialization is mostly key sorting.
  */
 
+import { invalidGraph } from "./errors";
 import { keyedListAt, NODE_SCHEMA } from "./schema";
 
 type JsonObject = Record<string, unknown>;
@@ -47,8 +48,9 @@ export function jsonType(value: unknown): string {
 }
 
 function finiteNumber(value: number): number {
+  // An integer too large for a double parses as Infinity, so it lands here too.
   if (!Number.isFinite(value))
-    throw new TypeError("NaN and Infinity are not valid JSON numbers");
+    throw invalidGraph("NaN and Infinity are not valid JSON numbers");
   return value;
 }
 

@@ -7,6 +7,17 @@ import {
   parseHandle,
   valuesEqual,
 } from "../canonical";
+import { FlowOperationError } from "../errors";
+
+function caught(run: () => unknown): FlowOperationError {
+  try {
+    run();
+  } catch (error) {
+    expect(error).toBeInstanceOf(FlowOperationError);
+    return error as FlowOperationError;
+  }
+  throw new Error("expected an engine error");
+}
 
 // Expected strings and hashes are what the engine's
 // `lfx.services.flow_operations.canonical` prints for the same values.
@@ -34,6 +45,33 @@ describe("canonicalJson", () => {
   it("refuses values JSON cannot hold", () => {
     expect(() => canonicalJson({ a: Number.NaN })).toThrow();
     expect(() => canonicalJson({ a: undefined })).toThrow();
+  });
+
+  // The engine's canonical tests use the same digits: the smallest integer
+  // past the largest double, its negation, and 10**309. JSON.parse reads each
+  // as Infinity, which is not a finite JSON number.
+  it.each([
+    "179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792",
+    "-179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792",
+    `1${"0".repeat(309)}`,
+  ])("refuses an integer too large for a double", (digits) => {
+    const value = JSON.parse(digits);
+    expect(caught(() => canonicalJson({ x: value })).name).toBe(
+      "FlowDataValidationError",
+    );
+    expect(caught(() => valuesEqual(value, 1)).name).toBe(
+      "FlowDataValidationError",
+    );
+  });
+
+  it("prints an integer just below the double overflow as the largest double", () => {
+    expect(
+      canonicalJson(
+        JSON.parse(
+          "179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497791",
+        ),
+      ),
+    ).toBe("1.7976931348623157e+308");
   });
 });
 
