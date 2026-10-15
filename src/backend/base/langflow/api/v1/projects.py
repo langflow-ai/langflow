@@ -879,8 +879,8 @@ def _deny_to_404_with_code(exc: HTTPException, *, detail: str, code: str) -> HTT
     mapped = deny_to_404(exc, detail=detail)
     if mapped.status_code != status.HTTP_404_NOT_FOUND:
         return mapped
-    # Preserve the authorization-refusal marker on the mapped exception.
-    # Rebuilding it would make the audit wrapper report a failed mutation.
+    # Keep the permission-denial marker when returning 404 instead of 403.
+    # The audit wrapper uses it to distinguish denied requests from failed mutations.
     mapped.detail = detail
     mapped.headers = {**(mapped.headers or {}), ERROR_CODE_HEADER: code}
     return mapped
