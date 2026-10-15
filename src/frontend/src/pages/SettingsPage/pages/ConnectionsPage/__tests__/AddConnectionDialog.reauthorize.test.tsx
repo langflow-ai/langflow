@@ -682,6 +682,39 @@ describe("AddConnectionDialog re-authorize", () => {
     );
   });
 
+  it("retains Google identity aliases when removing an unrelated scope", async () => {
+    setRegistrations([
+      registration({
+        scopes: [CALENDAR, GMAIL_SEND, "openid", "email", "profile"],
+      }),
+    ]);
+    render(
+      dialog(
+        connection({
+          granted_scopes: [
+            CALENDAR,
+            GMAIL_SEND,
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+          ],
+        }),
+      ),
+    );
+
+    expect(scopeBox("email")).toHaveAttribute("aria-checked", "true");
+    expect(scopeBox("profile")).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(scopeBox(CALENDAR));
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+    await waitFor(() =>
+      expect(mockStartOAuth).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scopes: [GMAIL_SEND, "openid", "email", "profile"],
+        }),
+      ),
+    );
+  });
+
   it("lets re-authorization add registration scopes no component declares", async () => {
     setRegistrations([
       registration({
