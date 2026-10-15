@@ -1,0 +1,2 @@
+# Tests may unwrap: a panic is a test failure with its message.
+allow-unwrap-in-tests = true
