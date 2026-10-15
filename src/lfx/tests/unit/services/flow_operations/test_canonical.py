@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import itertools
+import json
 import math
 
 import pytest
@@ -81,6 +82,34 @@ def test_an_integer_too_large_for_a_double_is_not_finite(value):
         canonical_json({"x": value})
     with pytest.raises(FlowDataValidationError, match="not valid JSON numbers"):
         values_equal(value, 1)
+
+
+# JSON texts, so the editor's canonical tests parse the same values. json.loads
+# joins an escaped surrogate pair into one character, as JSON.parse does.
+UNPAIRED_SURROGATES = [
+    r'"\ud800"',
+    r'"a\udc00"',
+    r'"\ude00x"',
+    r'"x\ud83d"',
+    r'"\ud800\ud800\udc00"',
+    r'{"\ud800": 1}',
+    r'[{"k": "\udfff"}]',
+]
+
+
+@pytest.mark.parametrize("text", UNPAIRED_SURROGATES)
+def test_an_unpaired_surrogate_is_rejected(text):
+    with pytest.raises(FlowDataValidationError, match="unpaired surrogate"):
+        canonical_json(json.loads(text))
+
+
+def test_a_surrogate_pair_prints_as_its_character():
+    assert canonical_json(json.loads(r'{"\ud83d\ude00": "\ud83d\ude00"}')) == '{"\U0001f600":"\U0001f600"}'
+
+
+def test_the_hash_refuses_an_unpaired_surrogate():
+    with pytest.raises(FlowDataValidationError, match="unpaired surrogate"):
+        graph_hash(_graph(description="\ud800"))
 
 
 def test_non_json_values_are_rejected():
