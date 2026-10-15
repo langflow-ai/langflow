@@ -31,7 +31,7 @@ dependencies = [
     # the supported lfx axis.
     "lfx-ibm>=0.3.0,<1.0.0",
     "lfx-docling>=0.2.1,<1.0.0",
-    "lfx-datastax>=0.2.0,<1.0.0",
+    "lfx-datastax>=0.2.1,<1.0.0",
     "lfx-toolguard>=0.2.0,<1.0.0",
     "lfx-openai>=0.2.0,<1.0.0",
     "lfx-anthropic>=0.2.0,<1.0.0",
