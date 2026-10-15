@@ -45,6 +45,7 @@ import {
 } from "../helpers/scopes";
 import { useSlackTokenConnection } from "../hooks/useSlackTokenConnection";
 import AuthorizeStatus, { type AuthorizeState } from "./AuthorizeStatus";
+import ConnectionSetupHelp from "./ConnectionSetupHelp";
 import RegistrationSelect from "./RegistrationSelect";
 import ScopeChecklist from "./ScopeChecklist";
 import SlackTokenFields, { ConnectionMethodSelect } from "./SlackTokenFields";
@@ -491,6 +492,13 @@ export function AddConnectionDialog({
                 />
               )}
 
+              <ConnectionSetupHelp
+                key={`${providerId}:${usesToken}`}
+                providerId={providerId}
+                noRegistration={noRegistration}
+                usesToken={usesToken}
+              />
+
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="connection-name">
@@ -617,11 +625,6 @@ export function AddConnectionDialog({
                 </div>
               )}
 
-              {!usesToken && noRegistration && (
-                <p className="text-xs text-destructive" role="alert">
-                  {t("connections.add.noRegistration")}
-                </p>
-              )}
               {fieldError && (
                 <p className="text-xs text-destructive" role="alert">
                   {fieldError}
@@ -646,6 +649,11 @@ export function AddConnectionDialog({
         {step === "scopes" && (
           <div className="flex min-h-0 flex-col gap-4">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+              <ConnectionSetupHelp
+                key={providerId}
+                providerId={providerId}
+                noRegistration={noRegistration}
+              />
               {registrationSelect}
 
               <div className="flex flex-col gap-2">
@@ -671,12 +679,6 @@ export function AddConnectionDialog({
                   </span>
                 )}
               </div>
-
-              {noRegistration && (
-                <p className="text-xs text-destructive" role="alert">
-                  {t("connections.add.noRegistration")}
-                </p>
-              )}
             </div>
             <div className="flex shrink-0 justify-end gap-2">
               <Button variant="ghost" onClick={() => close(true)}>
