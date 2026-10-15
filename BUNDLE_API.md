@@ -230,6 +230,11 @@ the deserialize half is covered by
   the visible message. They are non-retryable and use HTTP 504 for timeouts or 502
   for other connectivity failures. HTTP provider failures retain their existing
   codes. No existing symbol or signature changes, so `BUNDLE_API_VERSION` remains `1`.
+  The stable `lfx-google` wheel requires `lfx>=1.13.0,<2.0.0`, excluding older
+  prereleases that lack this export. Publish the compatible LFX release before
+  the Google bundle. Nightly and RC builds restamp the bundle to a prerelease
+  with a matching LFX requirement instead of weakening the stable wheel's
+  requirement. Nightlies pin LFX exactly so older RCs cannot satisfy the dependency.
 
 - **Knowledge storage provider defaults.** `DBProviderInput` defaults to the
   application-provided SQLite backend. Its public name, fields and signature
