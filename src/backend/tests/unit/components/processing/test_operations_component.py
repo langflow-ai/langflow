@@ -185,6 +185,37 @@ class TestJsonOperations:
         with pytest.raises(ValueError, match="not supported for multiple data objects"):
             component.as_data()
 
+    @pytest.mark.parametrize(
+        ("payload", "expected"),
+        [
+            ({"data": "hello"}, {"data": "hello"}),
+            ({"data": [1, 2, 3]}, {"data": [1, 2, 3]}),
+            ({"data": 5}, {"data": 5}),
+            ({"data": None}, {"data": None}),
+            ({"data": {"inner": 1}}, {"inner": 1}),
+            ({"data": {}}, {}),
+            ({"data": "hello", "other": 2}, {"data": "hello"}),
+        ],
+    )
+    def test_select_keys_non_dict_data_key(self, payload, expected):
+        """Selecting the sole ``data`` key keeps non-dictionary values as payload (#15691)."""
+        component = OperationsComponent(
+            data=Data(data=payload),
+            operation=[{"name": "Select Keys"}],
+            select_keys_input=["data"],
+        )
+        result = component.as_data()
+        assert result.data == expected
+
+    def test_select_keys_missing_data_key_raises_value_error(self):
+        component = OperationsComponent(
+            data=Data(data={"other": 1}),
+            operation=[{"name": "Select Keys"}],
+            select_keys_input=["data"],
+        )
+        with pytest.raises(ValueError, match="Select key not found in data"):
+            component.as_data()
+
 
 class TestJqProgramSecurity:
     """jq programs must never reach the server environment (H1-3977755 / LE-2550).

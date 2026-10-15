@@ -291,7 +291,15 @@ class DataOperationsComponent(Component):
 
         # Filter the data
         if len(filter_criteria) == 1 and filter_criteria[0] == "data":
-            filtered = data_dict["data"]
+            # Only a dictionary value keeps the historical unwrap behavior (including
+            # empty dicts); any other value keeps its key so it survives as payload.
+            if "data" in data_dict and isinstance(data_dict["data"], dict):
+                filtered = data_dict["data"]
+            else:
+                if not all(key in data_dict for key in filter_criteria):
+                    msg = f"Select key not found in data. Available keys: {list(data_dict.keys())}"
+                    raise ValueError(msg)
+                filtered = {key: value for key, value in data_dict.items() if key in filter_criteria}
         else:
             if not all(key in data_dict for key in filter_criteria):
                 msg = f"Select key not found in data. Available keys: {list(data_dict.keys())}"
