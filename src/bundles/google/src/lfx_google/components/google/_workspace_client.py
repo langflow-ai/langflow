@@ -29,7 +29,10 @@ every action.
 from __future__ import annotations
 
 import asyncio
+import errno
 import json
+import socket
+import ssl
 from contextlib import asynccontextmanager
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
@@ -39,12 +42,14 @@ from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseDownload, build_http
+from httplib2 import ServerNotFoundError
 from lfx.integrations import (
     ActionUnsupportedError,
     AuthExpiredError,
     ConnectionNotAuthorizedError,
     IntegrationError,
+    IntegrationNetworkError,
     InvalidRequestError,
     ProviderUnavailableError,
     RateLimitedError,
@@ -62,6 +67,11 @@ if TYPE_CHECKING:
     from lfx.integrations.models import CredentialLease
 
 PROVIDER_ID = "google"
+
+# Limit each blocking socket operation without changing process-wide defaults.
+# This is not a total action deadline (DNS and multi-chunk downloads can take longer).
+_HTTP_TIMEOUT_SECONDS = 10
+_UNREACHABLE_ERRNOS = frozenset({errno.ENETUNREACH, errno.EHOSTUNREACH, errno.ENETDOWN, errno.EHOSTDOWN})
 
 _HTTP_BAD_REQUEST = 400
 _HTTP_UNAUTHORIZED = 401
@@ -154,6 +164,18 @@ def normalize_google_error(exc: BaseException) -> IntegrationError | None:
     """Map Google SDK failures onto the sanitized integration error vocabulary."""
     if isinstance(exc, IntegrationError):
         return exc
+    if isinstance(exc, TimeoutError):
+        return IntegrationNetworkError(provider=PROVIDER_ID, reason="timeout")
+    if isinstance(exc, socket.gaierror | ServerNotFoundError):
+        return IntegrationNetworkError(provider=PROVIDER_ID, reason="dns")
+    if isinstance(exc, ssl.SSLError):
+        return IntegrationNetworkError(provider=PROVIDER_ID, reason="tls")
+    if isinstance(exc, ConnectionRefusedError):
+        return IntegrationNetworkError(provider=PROVIDER_ID, reason="refused")
+    if isinstance(exc, ConnectionError):
+        return IntegrationNetworkError(provider=PROVIDER_ID, reason="connection")
+    if isinstance(exc, OSError) and exc.errno in _UNREACHABLE_ERRNOS:
+        return IntegrationNetworkError(provider=PROVIDER_ID, reason="unreachable")
     if isinstance(exc, RefreshError):
         # The lease owns refresh; a RefreshError means the token we were handed is
         # dead, which is exactly the reactive-refresh signal.
@@ -213,13 +235,15 @@ def _build_service(api: str, version: str, token: str, http: Any | None) -> Any:
     ``AuthorizedHttp`` the credentialed path builds internally. That keeps the
     token-attachment behaviour under test instead of bypassing it.
     """
-    credentials = Credentials(token=token)
-    if http is not None:
-        from google_auth_httplib2 import AuthorizedHttp
+    from google_auth_httplib2 import AuthorizedHttp
 
-        authorized = AuthorizedHttp(credentials, http=http)
-        return build(api, version, http=authorized, static_discovery=True, cache_discovery=False)
-    return build(api, version, credentials=credentials, static_discovery=True, cache_discovery=False)
+    credentials = Credentials(token=token)
+    if http is None:
+        # Keep the SDK's transport defaults (including Drive's 308 handling).
+        http = build_http()
+        http.timeout = _HTTP_TIMEOUT_SECONDS
+    authorized = AuthorizedHttp(credentials, http=http)
+    return build(api, version, http=authorized, static_discovery=True, cache_discovery=False)
 
 
 def _download_limit_error() -> InvalidRequestError:
@@ -300,13 +324,26 @@ class WorkspaceService:
         """Bound accumulated content and keep chunk I/O off the event loop."""
         return await self.execute(lambda client: _MediaDownload(request_factory(client), max_bytes))
 
+    def _normalize_error(self, exc: Exception) -> IntegrationError:
+        normalized = normalize_integration_error(exc, provider=PROVIDER_ID)
+        if isinstance(normalized, IntegrationNetworkError):
+            # The static discovery document owns this endpoint. Never extract a
+            # URL or hostname from exception text, which may include user data.
+            host = (
+                urlsplit(self._service._baseUrl).hostname  # noqa: SLF001  # SDK has no public endpoint accessor.
+                if self._service is not None
+                else None
+            )
+            return IntegrationNetworkError(provider=PROVIDER_ID, reason=normalized.reason, host=host)
+        return normalized
+
     async def execute(self, request_factory: Callable[[Any], Any]) -> Any:
         """Run one Google request, retrying exactly once after an auth rejection."""
         service = await self._ensure_service()
         try:
             return await asyncio.to_thread(lambda: request_factory(service).execute())
         except Exception as exc:  # every failure leaves this method as an IntegrationError
-            normalized = normalize_integration_error(exc, provider=PROVIDER_ID)
+            normalized = self._normalize_error(exc)
             if not isinstance(normalized, AuthExpiredError):
                 raise normalized from exc
             # One reactive refresh; the lease itself refuses a second one.
@@ -316,7 +353,7 @@ class WorkspaceService:
             try:
                 return await asyncio.to_thread(lambda: request_factory(retry_service).execute())
             except Exception as retry_exc:  # same normalization on the retry
-                raise normalize_integration_error(retry_exc, provider=PROVIDER_ID) from retry_exc
+                raise self._normalize_error(retry_exc) from retry_exc
 
 
 @asynccontextmanager
