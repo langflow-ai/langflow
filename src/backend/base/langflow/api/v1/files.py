@@ -104,6 +104,9 @@ async def upload_file(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
+    if file.size == 0:
+        raise HTTPException(status_code=400, detail="Empty file not allowed")
+
     if file.size > max_file_size_upload * 1024 * 1024:
         raise HTTPException(
             status_code=413, detail=f"File size is larger than the maximum file size {max_file_size_upload}MB."

@@ -17,6 +17,7 @@ from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserRead
+from langflow.services.storage.local import LocalStorageService
 from lfx.services.deps import session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -342,6 +343,57 @@ async def test_upload_file_size_limit(files_client, files_created_api_key, files
 
     assert response.status_code == 413, f"Expected 413, got {response.status_code}: {response.json()}"
     assert "Content size limit exceeded. Maximum allowed is 1MB and got 1.001MB." in response.json()["detail"]
+
+
+@pytest.fixture(name="save_file_spy")
+def save_file_spy_fixture(monkeypatch):
+    """Record every file name handed to the storage layer.
+
+    Rejecting an upload must happen before anything is written, so the tests below
+    assert on this list rather than on the status code alone.
+    """
+    saved_file_names: list[str] = []
+    original_save_file = LocalStorageService.save_file
+
+    async def recording_save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
+        saved_file_names.append(file_name)
+        await original_save_file(self, flow_id, file_name, data, append=append)
+
+    monkeypatch.setattr(LocalStorageService, "save_file", recording_save_file)
+    return saved_file_names
+
+
+async def test_should_reject_with_400_when_uploaded_file_is_empty(
+    files_client, files_created_api_key, files_flow, save_file_spy
+):
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": ("empty.txt", b"")},
+        headers=headers,
+    )
+
+    assert response.status_code == 400, f"Expected 400, got {response.status_code}: {response.json()}"
+    assert response.json()["detail"] == "Empty file not allowed"
+    assert save_file_spy == [], f"An empty upload must not reach storage, but these were saved: {save_file_spy}"
+
+
+async def test_should_accept_when_uploaded_file_is_one_byte(
+    files_client, files_created_api_key, files_flow, save_file_spy
+):
+    """One byte is the smallest accepted upload: the guard rejects size 0, not falsy content."""
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": ("one_byte.txt", b"0")},
+        headers=headers,
+    )
+
+    assert response.status_code == 201, f"Expected 201, got {response.status_code}: {response.json()}"
+    assert len(save_file_spy) == 1, f"Expected exactly one stored file, got: {save_file_spy}"
+    assert save_file_spy[0].endswith("one_byte.txt")
 
 
 @pytest.fixture
