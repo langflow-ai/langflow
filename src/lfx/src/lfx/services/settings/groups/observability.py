@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator
 
 
 class ObservabilitySettings(BaseModel):
@@ -31,10 +31,16 @@ class ObservabilitySettings(BaseModel):
     """
     audit_retention_days: int = 90
     """Days an audit event is kept. Cleanup deletes by timestamp only; 0 keeps events forever."""
+    audit_trusted_api_key: SecretStr | None = Field(default=None, exclude=True)
+    """API-key value allowed to assert represented audit identity after database authentication.
+
+    Supply through a deployment Secret. This does not create or activate a key.
+    The existing record-ID allowlist remains supported. Unset trusts no additional key.
+    """
     audit_trusted_api_key_ids: list[UUID] = []
     """Database API-key record IDs allowed to assert represented audit identity.
 
-    Comma-separated UUIDs or a programmatic UUID list. Empty trusts no credential. During key
+    Comma-separated UUIDs or a programmatic UUID list. Empty adds no trusted record IDs. During key
     rotation both old and new record IDs may be allowed. User IDs and env keys do
     not grant this audit-only privilege.
     """
