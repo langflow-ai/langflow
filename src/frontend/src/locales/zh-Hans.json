@@ -2188,6 +2188,8 @@
   "settings.migration.error.kbChanged": "在复制过程中发生了变化。请再次复制。",
   "settings.migration.error.kbBackend": "它使用的存储在此版本中无法打开。",
   "settings.migration.error.kbUpgrade": "此版本无法读取其当前状态下的存储。原因见“详细信息”。",
+  "settings.migration.error.kbUnreadable": "此实例无法读取其存储。原因见“详细信息”。",
+  "settings.migration.error.kbDetached": "此实例已不再提供它，因此没有可复制的内容。",
   "settings.migration.copyDb.orphans.title": "部分行属于已删除的项目",
   "settings.migration.copyDb.orphans.body": "它们指向之前已删除的项目，例如已删除流程的消息。",
   "settings.migration.copyDb.orphans.row": "{{table}} 中指向 {{parent}} 已删除行的行：{{rows}}",

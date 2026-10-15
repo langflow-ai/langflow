@@ -2188,6 +2188,8 @@
   "settings.migration.error.kbChanged": "Cambió durante la copia. Copia de nuevo.",
   "settings.migration.error.kbBackend": "Usa un almacén que esta versión no puede abrir.",
   "settings.migration.error.kbUpgrade": "Esta versión no puede leer su almacenamiento tal como está ahora. En 'Detalles' se explica por qué.",
+  "settings.migration.error.kbUnreadable": "Esta instancia no puede leer su almacén. En 'Detalles' se explica por qué.",
+  "settings.migration.error.kbDetached": "Esta instancia ya no sirve esta base, así que no hay nada que copiar.",
   "settings.migration.copyDb.orphans.title": "Algunas filas pertenecen a elementos eliminados",
   "settings.migration.copyDb.orphans.body": "Apuntan a elementos que se eliminaron antes, como los mensajes de un flujo eliminado.",
   "settings.migration.copyDb.orphans.row": "Filas de {{table}} que apuntan a filas eliminadas de {{parent}}: {{rows}}",

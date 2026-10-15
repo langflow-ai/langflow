@@ -257,6 +257,9 @@ export const ITEM_CODES: Record<string, string> = {
   kb_backend_missing: "error.kbBackend",
   kb_metric_change: "kb.ranking.body",
   kb_upgrade_pending: "error.kbUpgrade",
+  // This instance cannot open or count the store, or no longer serves it. Either way it can be left behind.
+  kb_source_unreadable: "error.kbUnreadable",
+  kb_detached: "error.kbDetached",
   file_conflict: "files.conflict",
   bad_name: "files.badName",
   no_source_bytes: "files.noFile",

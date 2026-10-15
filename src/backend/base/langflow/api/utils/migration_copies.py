@@ -33,12 +33,13 @@ DECISIONS: dict[str, dict[str, Any]] = {
         "codes": ("kb_metric_change",),
     },
     # This version has no backend for the store, the store holds fewer chunks than its row says and someone
-    # has to look at it, or its row names the destination and its chunks are not there. This instance keeps
+    # has to look at it, its row names the destination and its chunks are not there, this instance cannot open
+    # or count the store, or the store is detached and this instance no longer serves it. This instance keeps
     # the knowledge base either way.
     "leave_behind": {
         "step": "copy_knowledge_bases",
         "option": None,
-        "codes": ("kb_backend_missing", "kb_short", "kb_target_short"),
+        "codes": ("kb_backend_missing", "kb_short", "kb_target_short", "kb_source_unreadable", "kb_detached"),
     },
     "keep_bucket_file": {"step": "copy_files", "option": None, "codes": ("file_conflict",)},
     # The database names a file that this instance's storage holds no bytes for.
@@ -55,8 +56,16 @@ _ATTENTION_KEPT = 100
 # The server's own settings for Langflow and for AWS say where this instance keeps its data, and a
 # copy writes somewhere else. So a copy takes none of them, and is told by name the ones it needs.
 _OWN_SETTINGS = ("LANGFLOW_", "AWS_", "PGVECTOR_")
-# What a copy still reads from this instance.
-_SOURCE_SETTINGS = ("LANGFLOW_CONFIG_DIR", "LANGFLOW_KNOWLEDGE_BASES_DIR", "LANGFLOW_SECRET_KEY")
+# The settings that say which stores this server may dial. The first step checked this instance with them,
+# and a store that only they let through would read as out of reach without them.
+DIAL_SETTINGS = (
+    "LANGFLOW_SSRF_PROTECTION_ENABLED",
+    "LANGFLOW_SSRF_ALLOWED_HOSTS",
+    "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED",
+    "LANGFLOW_KB_ALLOWED_HOSTS",
+)
+# What a copy still reads from this instance, and the stores it may dial to read them.
+_SOURCE_SETTINGS = ("LANGFLOW_CONFIG_DIR", "LANGFLOW_KNOWLEDGE_BASES_DIR", "LANGFLOW_SECRET_KEY", *DIAL_SETTINGS)
 
 
 def copy_command(

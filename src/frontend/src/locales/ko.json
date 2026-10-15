@@ -815,6 +815,8 @@
   "settings.migration.error.kbChanged": "복사하는 동안 바뀌었습니다. 다시 복사하세요.",
   "settings.migration.error.kbBackend": "이 버전에서 열 수 없는 저장소를 씁니다.",
   "settings.migration.error.kbUpgrade": "이 버전은 지금 상태의 저장소를 읽을 수 없습니다. 이유는 '자세히'에 나와 있습니다.",
+  "settings.migration.error.kbUnreadable": "이 인스턴스가 저장소를 읽을 수 없습니다. 이유는 '자세히'에 나와 있습니다.",
+  "settings.migration.error.kbDetached": "이 인스턴스에서 더 이상 제공하지 않아 복사할 것이 없습니다.",
   "settings.migration.copyDb.orphans.title": "삭제된 항목에 속한 행이 있습니다",
   "settings.migration.copyDb.orphans.body": "삭제된 Flow의 메시지처럼 이전에 삭제된 항목을 가리킵니다.",
   "settings.migration.copyDb.orphans.row": "{{parent}}의 삭제된 행을 가리키는 {{table}}의 행: {{rows}}",

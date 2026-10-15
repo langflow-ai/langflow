@@ -1431,6 +1431,42 @@ async def test_a_knowledge_base_that_is_still_ingesting_is_not_the_admins_to_lea
     assert _states(left)["copy_knowledge_bases"] == ("blocked", "kb_ingesting")
 
 
+async def test_a_knowledge_base_this_instance_cannot_read_or_no_longer_serves_can_be_left_behind(
+    client, logged_in_headers_super_user, active_super_user, config_dir, scratch_database
+):
+    pytest.importorskip("pgvector", reason="needs the pgvector extra")
+    headers, user = logged_in_headers_super_user, active_super_user.id
+    # "lost" has a row and no store. "gone" is detached, so this instance no longer serves it.
+    lost, gone = uuid4(), uuid4()
+    await _add(KnowledgeBaseRecord(id=lost, user_id=user, name="lost", backend_type="sqlite", chunks=4))
+    detached = KnowledgeBaseRecord(id=gone, user_id=user, name="gone", backend_type="chroma", chunks=3)
+    detached.storage_state = "detached"
+    await _add(detached)
+    await _knowledge_base(user, "local", 5)
+    _sql(scratch_database, "CREATE EXTENSION vector")
+    address = scratch_database.render_as_string(hide_password=False)
+    await _connected(client, headers, config_dir, database_url=address, vectors={"kind": "pgvector"})
+    await _copy(client, headers, "copy_database")
+
+    *_, report, end = await _copy(client, headers, "copy_knowledge_bases")
+
+    assert (report["ok"], report["counts"]) == (False, {"relocated": 1, "failed": 2})
+    assert (end["status"], end["exit_code"]) == ("done", 1)
+    migration = await _migration(client, headers)
+    attention = migration["record"]["steps"]["copy_knowledge_bases"]["report"]["attention"]
+    # Copying again would not get past either of them, so the record offers to leave each one behind.
+    assert {item["subject"]: (item["code"], item["decision"]["kind"]) for item in attention} == {
+        str(lost): ("kb_source_unreadable", "leave_behind"),
+        str(gone): ("kb_detached", "leave_behind"),
+    }
+    assert _states(migration)["copy_knowledge_bases"][0] == "blocked"
+
+    await _decide(client, headers, "copy_knowledge_bases", "leave_behind", str(lost))
+    left = await _decide(client, headers, "copy_knowledge_bases", "leave_behind", str(gone))
+
+    assert _states(left)["copy_knowledge_bases"] == ("done", None)
+
+
 @pytest.mark.api_key_required
 async def test_files_are_copied_into_the_bucket_and_this_instance_keeps_its_own(
     client, logged_in_headers_super_user, active_super_user, config_dir, scratch_database, bucket, monkeypatch, tmp_path
