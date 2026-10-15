@@ -62,6 +62,7 @@ DIAL_SETTINGS = (
     "LANGFLOW_SSRF_PROTECTION_ENABLED",
     "LANGFLOW_SSRF_ALLOWED_HOSTS",
     "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED",
+    "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK",
     "LANGFLOW_KB_ALLOWED_HOSTS",
 )
 # What a copy still reads from this instance, and the stores it may dial to read them.
