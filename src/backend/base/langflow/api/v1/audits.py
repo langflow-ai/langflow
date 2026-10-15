@@ -177,6 +177,8 @@ class AuditFeedActor(BaseModel):
     user_id: UUID | None
     acting_issuer: str | None
     acting_subject: str | None
+    represented_issuer: str | None
+    represented_subject: str | None
 
 
 class AuditFeedItem(BaseModel):
@@ -235,6 +237,8 @@ def feed_item(feed_row: AuditFeedRow) -> AuditFeedItem:
         user_id=row.user_id,
         acting_issuer=row.acting_issuer if is_resource else None,
         acting_subject=row.acting_subject if is_resource else None,
+        represented_issuer=row.represented_issuer if is_resource else None,
+        represented_subject=row.represented_subject if is_resource else None,
     )
     return AuditFeedItem(
         id=row.id,

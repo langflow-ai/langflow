@@ -64,6 +64,8 @@ class AuditEventFilters:
     actor_id: UUID | None = None
     acting_issuer: str | None = None
     acting_subject: str | None = None
+    represented_issuer: str | None = None
+    represented_subject: str | None = None
     request_id: UUID | None = None
     since: datetime | None = None
     until: datetime | None = None
@@ -84,6 +86,9 @@ class AuditEventFilters:
             "since": to_utc(self.since).isoformat() if self.since else None,
             "until": to_utc(self.until).isoformat() if self.until else None,
         }
+        # Preserve existing cursor fingerprints for queries without represented filters.
+        if self.represented_issuer is not None or self.represented_subject is not None:
+            canonical.update(represented_issuer=self.represented_issuer, represented_subject=self.represented_subject)
         encoded = json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
 
@@ -95,6 +100,8 @@ class AuditEventFilters:
             AuditEvent.actor_id: self.actor_id,
             AuditEvent.acting_issuer: self.acting_issuer,
             AuditEvent.acting_subject: self.acting_subject,
+            AuditEvent.represented_issuer: self.represented_issuer,
+            AuditEvent.represented_subject: self.represented_subject,
             AuditEvent.request_id: self.request_id,
         }
         clauses.extend(col(column) == value for column, value in exact.items() if value is not None)
