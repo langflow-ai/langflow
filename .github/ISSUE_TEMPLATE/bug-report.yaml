@@ -102,6 +102,9 @@ body:
 
         **Langflow requires Python version 3.10 or greater.**
       options:
+        - "3.15"
+        - "3.14"
+        - "3.13"
         - "3.12"
         - "3.11"
         - "3.10"

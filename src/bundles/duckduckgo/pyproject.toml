@@ -1,9 +1,9 @@
 [project]
 name = "lfx-duckduckgo"
-version = "0.2.0"
+version = "0.2.1"
 description = "DuckDuckGo Search component as a standalone Langflow Extension Bundle."
 readme = "README.md"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 license = { text = "MIT" }
 authors = [
     { name = "Langflow", email = "contact@langflow.org" },
