@@ -12,7 +12,7 @@ resolving through the same precedence, so no saved flow changes behavior.
 
 from dataclasses import dataclass
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4, uuid5
 
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
@@ -71,7 +71,7 @@ class MCPSecretTarget:
     key: str
 
 
-def _iter_mcp_server_fields(flow_data: dict[str, Any] | None):
+def _iter_mcp_server_fields(flow_data: dict[str, Any] | None, flow_id: UUID | None = None):
     """Yield every ``mcp_server`` template field with its template, subflows included.
 
     The template comes too because the component's own Headers box lives beside the
@@ -79,10 +79,11 @@ def _iter_mcp_server_fields(flow_data: dict[str, Any] | None):
     """
     if not isinstance(flow_data, dict):
         return
-    frames = [iter(flow_data.get("nodes") or [])]
+    frames = [(flow_id or uuid4(), iter(flow_data.get("nodes") or []))]
     while frames:
         try:
-            node = next(frames[-1])
+            parent_scope, nodes = frames[-1]
+            node = next(nodes)
         except StopIteration:
             frames.pop()
             continue
@@ -94,27 +95,33 @@ def _iter_mcp_server_fields(flow_data: dict[str, Any] | None):
         inner = node_data.get("node")
         if not isinstance(inner, dict):
             continue
+        node_id = node.get("id")
+        # A node id is stable across autosaves. Nest its namespace so identical ids
+        # inside separate subflows cannot collide. Id-less legacy nodes get isolation.
+        scope = uuid5(parent_scope, node_id) if isinstance(node_id, str) and node_id else uuid4()
 
         template = inner.get("template")
         if isinstance(template, dict):
             field = template.get("mcp_server")
             if isinstance(field, dict):
-                yield field, template
+                yield field, template, scope
 
         nested = inner.get("flow")
         if isinstance(nested, dict):
             nested_data = nested.get("data")
             if isinstance(nested_data, dict) and isinstance(nested_data.get("nodes"), list):
-                frames.append(iter(nested_data["nodes"]))
+                frames.append((scope, iter(nested_data["nodes"])))
 
 
-def _strip_component_headers(template: dict[str, Any], server_name: str, variables: dict[str, str]) -> None:
+def _strip_component_headers(
+    template: dict[str, Any], server_name: str, variables: dict[str, str], scope: UUID
+) -> None:
     """Move a literal credential out of the component's own Headers box.
 
     That box overrides the server's headers, so it is a real place to put auth, and
     packaging nulls a secret-named entry in it -- silently, because nothing declared a
     variable to put back. It is the same shape as a config's ``headers`` map, so the
-    config scrubber names it: one header spelled one way wherever it is set.
+    config scrubber identifies which values need their own global variable.
     """
     field = template.get("headers")
     if not isinstance(field, dict) or not isinstance(field.get("value"), (dict, list)):
@@ -126,17 +133,23 @@ def _strip_component_headers(template: dict[str, Any], server_name: str, variabl
     )
     if not found:
         return
+    # Overrides belong to a flow/component, not the shared server. Stable namespaces
+    # also avoid creating a variable on every autosave when the canvas resends literals.
+    # Re-saving a reference creates nothing: strip_config_secrets leaves it alone.
+    references = {name: f"{name}_{scope.hex}" for name in header_variables}
     rewritten = stripped["headers"]
     for set_value, name, _ in cells:
         if str(name) in rewritten:
-            set_value(rewritten[str(name)])
-    variables.update(header_variables)
+            value = rewritten[str(name)]
+            set_value(references.get(value, value) if isinstance(value, str) else value)
+    variables.update({references[name]: value for name, value in header_variables.items()})
 
 
 def extract_and_strip_mcp_secrets(
     flow_data: dict[str, Any] | None,
     *,
     masked_targets: list[MCPSecretTarget] | None = None,
+    flow_id: UUID | None = None,
 ) -> tuple[list[tuple[str, dict[str, Any]]], dict[str, str]]:
     """Strip MCP secrets from ``flow_data`` in place, returning what has to be stored instead.
 
@@ -146,7 +159,7 @@ def extract_and_strip_mcp_secrets(
     carried: list[tuple[str, dict[str, Any]]] = []
     variables: dict[str, str] = {}
 
-    for field, template in _iter_mcp_server_fields(flow_data):
+    for field, template, scope in _iter_mcp_server_fields(flow_data, flow_id):
         value = field.get("value")
         if not isinstance(value, dict):
             continue
@@ -154,7 +167,7 @@ def extract_and_strip_mcp_secrets(
         server_name = name if isinstance(name, str) and name else "server"
         # Before the config guard: selecting a registered server stores a name and no
         # config at all, and the Headers box still needs stripping in that case.
-        _strip_component_headers(template, server_name, variables)
+        _strip_component_headers(template, server_name, variables, scope)
         config = value.get("config")
         if not isinstance(config, dict):
             continue
@@ -187,7 +200,7 @@ def extract_and_strip_mcp_secrets(
 def mcp_server_names(flow_data: dict[str, Any] | None) -> set[str]:
     """Names of the MCP servers a flow already references."""
     names: set[str] = set()
-    for field, _template in _iter_mcp_server_fields(flow_data):
+    for field, _template, _scope in _iter_mcp_server_fields(flow_data):
         value = field.get("value")
         if isinstance(value, dict):
             name = value.get("name")
@@ -312,7 +325,9 @@ async def stage_mcp_secrets(
             await logger.aerror(f"Could not persist MCP server config carried by a flow: {exc}")
 
 
-async def persist_and_strip_mcp_secrets(flow_data: dict[str, Any] | None, user_id: UUID, session) -> None:
+async def persist_and_strip_mcp_secrets(
+    flow_data: dict[str, Any] | None, user_id: UUID, session, *, flow_id: UUID | None = None
+) -> None:
     """Move any MCP credential in ``flow_data`` into the user's encrypted server rows.
 
     An existing row is never overwritten: it is the config the user maintains through the
@@ -332,7 +347,7 @@ async def persist_and_strip_mcp_secrets(flow_data: dict[str, Any] | None, user_i
     Under Langflow the ``mcp_server`` row still serves it; under ``lfx serve`` it is gone.
     """
     masked_targets: list[MCPSecretTarget] = []
-    carried, variables = extract_and_strip_mcp_secrets(flow_data, masked_targets=masked_targets)
+    carried, variables = extract_and_strip_mcp_secrets(flow_data, masked_targets=masked_targets, flow_id=flow_id)
     await stage_mcp_secrets(carried, variables, user_id, session, masked_targets=masked_targets)
 
 

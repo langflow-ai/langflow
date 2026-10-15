@@ -807,6 +807,18 @@ def iter_mcp_header_cells(headers: object):
                 yield (lambda new, _row=row: _row.__setitem__("value", new)), row["key"], row["value"]
 
 
+def _is_mcp_header_reference(value: object, server_name: str, header_name: str) -> bool:
+    """Accept this server/header's generated aliases, including older unsuffixed names."""
+    expected = _mcp_config_secrets.variable_name_for(mcp_header_scope(server_name), header_name)
+    if value == expected:
+        return True
+    return (
+        isinstance(value, str)
+        and value.startswith(f"{expected}_")
+        and re.fullmatch(r"[0-9a-f]{32}", value[len(expected) + 1 :]) is not None
+    )
+
+
 def _strip_mcp_header_field(
     template: dict,
     variable_references: set[str] | None,
@@ -815,13 +827,13 @@ def _strip_mcp_header_field(
     """Scrub an MCP component's own Headers box, keeping the names save time wrote.
 
     That box overrides the server's headers, so it is a real place to put auth. Saving
-    the flow moves a literal out of it and leaves the deterministic name
-    ``variable_name_for(server, key)``. The generic walk below would null that name
+    the flow moves a literal out of it and leaves a generated variable name.
+    The generic walk below would null that name
     again with nothing declared to put it back, and the deployed flow would send no
     header at all -- silently, which is how this was found.
 
-    Only the exact generated name is kept, so a literal cannot survive by looking like
-    a variable name. Returns the field it handled so the caller skips it, or ``None``
+    Only generated names for this server and header are kept, with an owner-variable
+    check when available. Returns the field it handled so the caller skips it, or ``None``
     when this node has no MCP server and the generic rules apply as before.
     """
     server_field = template.get("mcp_server")
@@ -842,14 +854,18 @@ def _strip_mcp_header_field(
         # nothing, and the target was never asked for it.
         if str(header_name).lower() in _mcp_config_secrets.NON_SECRET_HEADERS:
             continue
-        expected = _mcp_config_secrets.variable_name_for(mcp_header_scope(server_name), str(header_name))
         if (
             variable_references is not None
-            and value == expected
+            and _is_mcp_header_reference(value, server_name, str(header_name))
             and (known_variable_names is None or value in known_variable_names)
         ):
             variable_references.add(value)
             preserved.append((set_value, value))
+        elif _mcp_config_secrets.variable_reference_name(value) is not None:
+            # Generic scrubbing does not recognize names such as X-Tenant as secret.
+            # Clear rejected references explicitly so a strict snapshot cannot silently
+            # omit their requirement, and a shared read cannot expose the binding.
+            set_value(None)
     # Lift the references out, scrub everything else the ordinary way, put them back.
     # Skipping the generic pass outright would lose what it catches beyond a secret-named
     # key: a credential inside a URL under an innocent key, and secrets nested deeper in
