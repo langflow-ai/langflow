@@ -23,6 +23,7 @@ from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection import ConnectionConflictError, DatabaseConnectionResolverService
 from langflow.services.connection.oauth import broker as oauth_broker
 from langflow.services.connection.oauth.config import OAuthError, OAuthRegistration, get_oauth_settings
+from langflow.services.connection.policy import provider_has_usable_action
 from langflow.services.connection.service import enforce_integration_policy_for_provider
 from langflow.services.connection.slack_credentials import ManualCredentialError
 from langflow.services.database.models.connection import (
@@ -482,10 +483,12 @@ async def start_connection_oauth(
         action=ConnectionAction.WRITE,
         for_update=True,
     )
-    # A blocked provider must not reach the authorization screen: refuse before
-    # the broker mints state or sets a browser-binding cookie.
+    # Refuse consent when no action remains available, before the broker mints
+    # state or sets a browser-binding cookie.
     try:
-        await enforce_integration_policy_for_provider(row.provider_key, user_id=current_user.id)
+        await enforce_integration_policy_for_provider(
+            row.provider_key, user_id=current_user.id, require_usable_action=True
+        )
     except IntegrationPolicyBlockedError as exc:
         raise _policy_blocked(exc) from exc
     try:
@@ -590,8 +593,7 @@ async def list_oauth_registrations(
     if not available:
         return OAuthRegistrationListRead(registrations=[])
 
-    # A provider outside the operator's integration ceiling is refused at
-    # oauth/start, so it must not appear here either.
+    # Offer only providers that could pass the policy check at oauth/start.
     policy = await aresolve_integration_policy(
         user_id=current_user.id,
         provider_ids=frozenset(registration.provider for _, registration in available),
@@ -610,7 +612,7 @@ async def list_oauth_registrations(
                 allowed_tenants=list(registration.allowed_tenants),
             )
             for registration_id, registration in available
-            if policy.allows_provider(registration.provider)
+            if provider_has_usable_action(registration.provider, policy)
         ]
     )
 
