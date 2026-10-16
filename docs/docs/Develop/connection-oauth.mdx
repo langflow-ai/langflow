@@ -83,6 +83,27 @@ profile and test users until verification is complete. Follow Google's
 [Desktop guide](https://developers.google.com/identity/protocols/oauth2/native-app), and
 [ID-token validation requirements](https://developers.google.com/identity/openid-connect/openid-connect).
 
+### Google sign-in errors
+
+If Google shows `redirect_uri_mismatch`, compare the `redirect_uri` in the selected
+registration under `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` with the authorized
+redirect URI on that OAuth client in Google Cloud. That configured value is the URI
+this instance sends to Google. Match the scheme, hostname, port, and path exactly,
+including `/api/v1/connections/oauth/google/callback`. For example,
+`http://127.0.0.1:7896/api/v1/connections/oauth/google/callback` does not match the
+same URL on port `7895`, or one using `localhost` instead of `127.0.0.1`.
+
+If Google shows `invalid_client`, check that the registration's `client_id` matches
+the intended Google Cloud OAuth client. Apply corrected registration settings to
+every Langflow worker and restart the deployment before choosing **Try Again**.
+Retrying without changing the registration repeats the same error.
+
+Google's error page can isolate its popup from Langflow, so Langflow can no longer
+track the window even while it remains open. The dialog reports that loss of
+tracking and keeps checking for the server's authorization result until the sign-in
+link expires. Inspect the provider window for the actual error. Langflow cannot
+read its contents, and loss of tracking does not mean you closed the window.
+
 ## Customer-owned Microsoft registration
 
 1. In Microsoft Entra, create an app registration for the intended tenant and record its

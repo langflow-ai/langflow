@@ -1354,6 +1354,100 @@ describe("Pause changes", () => {
     ).toBeInTheDocument();
   });
 
+  it("says before the way back that copying the database again needs a new, empty database", async () => {
+    // The copy wrote the database whose identity is "first". `savedNow` is the one saved now.
+    const copied = (
+      status: MigrationCopyRun["status"],
+      ok?: boolean,
+      savedNow = "first",
+    ) =>
+      migration(
+        {},
+        {
+          pause: paused,
+          destinations: {
+            database: {
+              location: "db.example:5432/langflow",
+              identity: savedNow,
+            },
+            saved_by: "alice",
+            saved_at: "2026-10-06T12:00:00Z",
+          },
+          steps: {
+            copy_database: {
+              run_id: "run-1",
+              status,
+              dry_run: false,
+              started_by: "alice",
+              started_at: "2026-10-06T12:05:00Z",
+              finished_at: "2026-10-06T12:06:00Z",
+              destination: {
+                database: {
+                  location: "db.example:5432/langflow",
+                  identity: "first",
+                },
+              },
+              report:
+                ok === undefined
+                  ? null
+                  : {
+                      ok,
+                      tables_copied: ok ? 59 : 0,
+                      rows_copied: ok ? 57 : 0,
+                    },
+              error: null,
+            },
+          },
+        },
+      );
+    const newDatabase =
+      "To copy the database again, save a new, empty database in 'Where your data goes' first.";
+
+    const { unmount } = show(<Recovery migration={copied("done", true)} />);
+    expect(
+      screen.getByText(/^Turn changes back on\. Nothing is lost here\./),
+    ).toHaveTextContent(newDatabase);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Turn changes back on" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Turn changes back on?" }),
+    ).toHaveTextContent(newDatabase);
+    unmount();
+
+    const banner = show(<PausedBanner migration={copied("done", true)} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Turn changes back on" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Turn changes back on?" }),
+    ).toHaveTextContent(newDatabase);
+    banner.unmount();
+
+    // A copy that was refused or failed wrote nothing, and neither did one that never ran. Once another
+    // database is saved, the next copy goes there.
+    for (const state of [
+      copied("done", false),
+      copied("failed"),
+      migration({}, { pause: paused }),
+      copied("done", true, "second"),
+    ]) {
+      const recovery = show(<Recovery migration={state} />);
+      expect(
+        screen.getByText(/^Turn changes back on\. Nothing is lost here\./),
+      ).not.toHaveTextContent(newDatabase);
+      recovery.unmount();
+      const plain = show(<PausedBanner migration={state} />);
+      await userEvent.click(
+        screen.getByRole("button", { name: "Turn changes back on" }),
+      );
+      expect(
+        screen.getByRole("dialog", { name: "Turn changes back on?" }),
+      ).not.toHaveTextContent(newDatabase);
+      plain.unmount();
+    }
+  });
+
   it("says how to go back from where the move stands", () => {
     const { unmount } = show(<Recovery migration={migration()} />);
     expect(
@@ -2001,6 +2095,31 @@ describe("Copy the database", () => {
     expect(
       screen.getByRole("button", { name: "Copy again" }),
     ).toBeInTheDocument();
+  });
+
+  it("says where to save a new, empty database before an out-of-date copy is made again", () => {
+    const note =
+      "To copy the database again, save a new, empty database in 'Where your data goes' first.";
+    // The new instance's database holds the whole copy, and copying into it again fails once a row is gone.
+    const whole = show(
+      panel(
+        { report: { ok: true, tables_copied: 59, rows_copied: 57 } },
+        "current",
+      ),
+    );
+    expect(screen.getByText(note)).toBeInTheDocument();
+    whole.unmount();
+
+    // A copy that was refused or failed wrote nothing, so the same database takes the next one.
+    for (const run of [
+      { report: { ok: false, tables_copied: 0, rows_copied: 0 } },
+      { status: "failed" as const },
+    ]) {
+      const empty = show(panel(run, "current"));
+      expect(screen.getByText(/out of date/)).toBeInTheDocument();
+      expect(screen.queryByText(note)).not.toBeInTheDocument();
+      empty.unmount();
+    }
   });
 });
 
