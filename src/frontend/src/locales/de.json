@@ -2912,7 +2912,7 @@
   "playground.workflowWarning": "Warnung zum Workflow",
   "settings.nav.connections": "Verbindungen",
   "connections.title": "Verbindungen",
-  "connections.subtitle": "Drittanbieterkonten (wie Google, Microsoft 365 und Slack), über die Ihre Flows in Ihrem Namen handeln. Tokens bleiben auf dem Server und werden hier niemals angezeigt.",
+  "connections.subtitle": "Konten, über die Ihre Flows handeln. Tokens bleiben auf dem Server; hier werden nur Metadaten angezeigt.",
   "connections.search": "Name, Handle oder Konto suchen",
   "connections.loading": "Verbindungen werden geladen…",
   "connections.empty": "Noch keine Verbindungen.",
@@ -3007,10 +3007,6 @@
   "connections.add.displayNameTooltip": "Ein lesbarer Name, der in Verbindungslisten angezeigt wird, damit Sie dieses Konto erkennen können.",
   "connections.add.registration": "OAuth-Registrierung",
   "connections.add.instanceOwned": "Mit der gesamten Instanz teilen",
-  "connections.scope.risk.read": "Lesen",
-  "connections.scope.risk.write": "Schreiben",
-  "connections.scope.risk.destructive": "Destruktiv",
-  "connections.scope.conditional": "Für bestimmte Eingaben",
   "connections.add.scopes": "Anzufordernde Berechtigungen",
   "connections.add.noScopes": "Die Aktionen dieses Anbieters deklarieren keine Berechtigungen.",
   "connections.add.scopesOutsideCeiling": "Diese Registrierung erlaubt {{scopes}} nicht; diese werden nicht angefordert.",
@@ -3035,7 +3031,7 @@
   "connections.add.failed": "Die Autorisierung wurde nicht abgeschlossen.",
   "connections.add.denied": "Der Anbieter hat die Autorisierung abgelehnt.",
   "connections.add.expired": "Der Anmeldelink ist abgelaufen. Starten Sie erneut, um einen neuen zu erhalten.",
-  "connections.add.windowUntracked": "Langflow kann das Anmeldefenster nicht mehr verfolgen. Wenn der Anbieter einen Fehler anzeigt, bitten Sie Ihre Administration, die OAuth-Registrierung zu prüfen, bevor Sie es erneut versuchen.",
+  "connections.add.cancelled": "Das Anmeldefenster wurde vor Abschluss der Autorisierung geschlossen.",
   "connections.add.cleanupFailed": "Verbindung nicht entfernt",
   "connections.add.cleanupFailedBody": "Die unvollständige Verbindung konnte nicht gelöscht werden. Entfernen Sie sie aus der Liste.",
   "connections.add.identity": "Ausführen als",
@@ -3052,6 +3048,5 @@
   "connections.add.allowBackgroundRunsHelp": "Erforderlich für Slack-Trigger und für jeden Flow, den ein Trigger mit dieser Verbindung ausführt: Diese Ausführungen erfolgen, ohne dass jemand angemeldet ist. Sie können dies später wieder deaktivieren.",
   "connections.identity.user_delegated": "Angemeldete Person",
   "connections.identity.bot": "Ein Bot",
-  "connections.identity.service": "Ein Dienstkonto",
-  "settings.dbProviders.serverConfiguration": "Über die Serverumgebung konfiguriert. Lassen Sie die Felder unverändert, um diese Konfiguration zu verwenden."
+  "connections.identity.service": "Ein Dienstkonto"
 }

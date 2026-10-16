@@ -61,7 +61,6 @@ export type UtilityStoreType = {
   // Backend the server picks for a new KB/MB that names none (env-driven:
   // postgres, else opensearch, else sqlite). Undefined until config loads.
   defaultVectorStoreBackend: string | undefined;
-  configuredVectorStoreBackends: string[];
   setDefaultVectorStoreBackend: (
     defaultVectorStoreBackend: string | undefined,
   ) => void;
@@ -71,7 +70,6 @@ export type UtilityStoreType = {
   setVectorStoreConfig: (config: {
     localVectorStoreAvailable: boolean;
     defaultVectorStoreBackend: string | undefined;
-    configuredVectorStoreBackends: string[];
   }) => void;
   mcpBaseUrl: string;
   setMcpBaseUrl: (mcpBaseUrl: string) => void;

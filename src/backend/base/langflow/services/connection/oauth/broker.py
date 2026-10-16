@@ -259,12 +259,8 @@ async def refresh_if_needed(
     if not oauth:
         return payload
     binding = await session.get(ConnectionOAuth, row.id)
-    # The binding generation identifies the latest consent attempt, which may
-    # never complete. The caller reads the current saved credential under the
-    # connection lock, so only a successful callback replaces that grant.
-    # Revocation still removes both the binding and the stored credential.
-    if binding is None:
-        msg = "OAuth authorization was revoked. Reconnect."
+    if binding is None or str(binding.generation) != oauth.get("generation"):
+        msg = "OAuth authorization was superseded or revoked. Reconnect."
         raise OAuthError(msg)
     registration = get_oauth_settings().registration(oauth["registration_id"])
     if registration.provider != row.provider_key or registration.fingerprint() != oauth["config_digest"]:

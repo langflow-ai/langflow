@@ -63,7 +63,7 @@ export function ProviderListItem({
       </div>
       {!isComingSoon && (
         <ForwardedIconComponent
-          name={isActive || isConfigured ? "Check" : "Plus"}
+          name={isActive ? "Check" : "Plus"}
           className={cn(
             "h-4 w-4",
             isActive ? "text-status-green" : "text-muted-foreground",

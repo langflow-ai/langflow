@@ -299,11 +299,8 @@ async def test_setup_superuser_with_no_configured_credentials_fails_closed(initi
     settings.auth_settings.SUPERUSER_PASSWORD = ""
 
     async with session_scope() as session:
-        with pytest.raises(ValueError, match="Username and password must be set") as exc_info:
+        with pytest.raises(ValueError, match="Username and password must be set"):
             await setup_superuser(settings, session)
-
-    assert "LANGFLOW_SUPERUSER_PASSWORD" in str(exc_info.value)
-    assert "api-keys-and-authentication#upgrade-from-auto-login" in str(exc_info.value)
 
 
 @pytest.mark.parametrize("username", [DEFAULT_SUPERUSER, "custom_admin"])

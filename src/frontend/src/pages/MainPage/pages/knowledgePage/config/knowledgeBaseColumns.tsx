@@ -22,7 +22,10 @@ import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
 import { getKnowledgeBaseBackendLabel } from "../utils/backendMetadata";
-import { formatNumber } from "../utils/knowledgeBaseUtils";
+import {
+  formatAverageChunkSize,
+  formatNumber,
+} from "../utils/knowledgeBaseUtils";
 import { isBusyStatus, STATUS_CONFIG } from "./statusConfig";
 
 export interface KnowledgeBaseColumnsCallbacks {
@@ -207,7 +210,6 @@ export const createKnowledgeBaseColumns = (
       headerName: t("knowledge.column.name"),
       field: "name",
       flex: 2,
-      minWidth: 200,
       sortable: true,
       headerCheckboxSelection: true,
       checkboxSelection: true,
@@ -234,16 +236,14 @@ export const createKnowledgeBaseColumns = (
         }
 
         return (
-          <div className="flex min-w-0 items-center gap-3 pl-1">
-            <div className="file-icon pointer-events-none relative shrink-0">
+          <div className="flex items-center gap-3 pl-1">
+            <div className="file-icon pointer-events-none relative">
               <ForwardedIconComponent
                 name={iconName}
                 className={cn("h-6 w-6 shrink-0", iconColor)}
               />
             </div>
-            <span className="truncate" title={params.value}>
-              {params.value}
-            </span>
+            <span>{params.value}</span>
           </div>
         );
       },
@@ -316,9 +316,18 @@ export const createKnowledgeBaseColumns = (
       valueFormatter: (params) => formatNumber(params.value),
     },
     {
+      headerName: t("knowledge.column.avgChunkSize"),
+      field: "avg_chunk_size",
+      flex: 1,
+      sortable: false,
+      editable: false,
+      cellClass: baseCellClass,
+      valueFormatter: (params) => formatAverageChunkSize(params.value),
+    },
+    {
       headerName: t("knowledge.column.status"),
       field: "status",
-      width: 120,
+      flex: 1,
       sortable: false,
       editable: false,
       resizable: false,

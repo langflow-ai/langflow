@@ -16,7 +16,6 @@ import { useGetMCPServer } from "@/controllers/API/queries/mcp/use-get-mcp-serve
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
-import SettingsPageHeader from "@/pages/SettingsPage/components/SettingsPageHeader";
 import useAlertStore from "@/stores/alertStore";
 import type { MCPServerInfoType } from "@/types/mcp";
 import { cn } from "@/utils/utils";
@@ -74,21 +73,37 @@ export default function MCPServersPage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
-      <SettingsPageHeader
-        title={t("mcp.servers.title")}
-        description={t("mcp.servers.description")}
-      >
-        <Button
-          size="sm"
-          onClick={() => setAddOpen(true)}
-          data-testid="add-mcp-server-button-page"
-        >
-          <ForwardedIconComponent name="Plus" className="w-4" />
-          <span>{t("mcp.servers.addButton")}</span>
-        </Button>
-      </SettingsPageHeader>
-      <AddMcpServerModal open={addOpen} setOpen={setAddOpen} />
-      <div className={cn("flex flex-col gap-2 pb-8", !servers && "h-full")}>
+      {/* flex-wrap: at narrow viewports (WCAG 1.4.10, 320px) the action
+          button drops below the title instead of clipping off-screen. */}
+      <div className="flex w-full flex-wrap items-start justify-between gap-x-6 gap-y-2">
+        <div className="flex flex-col">
+          <h2
+            className="flex items-center text-lg font-semibold tracking-tight"
+            data-testid="settings_menu_header"
+          >
+            {t("mcp.servers.title")}
+            <ForwardedIconComponent
+              name="Mcp"
+              className="ml-2 h-5 w-5 text-primary"
+            />
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {t("mcp.servers.description")}
+          </p>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <Button
+            variant="primary"
+            onClick={() => setAddOpen(true)}
+            data-testid="add-mcp-server-button-page"
+          >
+            <ForwardedIconComponent name="Plus" className="w-4" />
+            <span>{t("mcp.servers.addButton")}</span>
+          </Button>
+          <AddMcpServerModal open={addOpen} setOpen={setAddOpen} />
+        </div>
+      </div>
+      <div className="flex h-full flex-col gap-2">
         {servers ? (
           <>
             {servers.length === 0 && (

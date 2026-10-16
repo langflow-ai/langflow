@@ -2912,7 +2912,7 @@
   "playground.workflowWarning": "Advertencia del flujo de trabajo",
   "settings.nav.connections": "Conexiones",
   "connections.title": "Conexiones",
-  "connections.subtitle": "Cuentas de terceros (como Google, Microsoft 365 y Slack) que tus flujos usan para actuar en tu nombre. Los tokens permanecen en el servidor y nunca se muestran aquí.",
+  "connections.subtitle": "Cuentas a través de las cuales actúan tus flujos. Los tokens permanecen en el servidor; aquí solo se muestran metadatos.",
   "connections.search": "Buscar por nombre, identificador o cuenta",
   "connections.loading": "Cargando conexiones…",
   "connections.empty": "Aún no hay conexiones.",
@@ -3007,10 +3007,6 @@
   "connections.add.displayNameTooltip": "Un nombre legible que se muestra en las listas de conexiones para ayudarte a reconocer esta cuenta.",
   "connections.add.registration": "Registro de OAuth",
   "connections.add.instanceOwned": "Compartir con toda la instancia",
-  "connections.scope.risk.read": "Lectura",
-  "connections.scope.risk.write": "Escritura",
-  "connections.scope.risk.destructive": "Destructivo",
-  "connections.scope.conditional": "Para algunas entradas",
   "connections.add.scopes": "Permisos que solicitar",
   "connections.add.noScopes": "Las acciones de este proveedor no declaran permisos.",
   "connections.add.scopesOutsideCeiling": "Este registro no permite {{scopes}}, así que no se solicitan.",
@@ -3035,7 +3031,7 @@
   "connections.add.failed": "La autorización no se completó.",
   "connections.add.denied": "El proveedor rechazó la autorización.",
   "connections.add.expired": "El enlace de inicio de sesión caducó. Empieza de nuevo para obtener otro.",
-  "connections.add.windowUntracked": "Langflow ya no puede seguir la ventana de inicio de sesión. Si el proveedor muestra un error, pide a tu administrador que revise el registro de OAuth antes de volver a intentarlo.",
+  "connections.add.cancelled": "La ventana de inicio de sesión se cerró antes de completar la autorización.",
   "connections.add.cleanupFailed": "Conexión no eliminada",
   "connections.add.cleanupFailedBody": "No se pudo eliminar la conexión incompleta. Quítala de la lista.",
   "connections.add.identity": "Actúa como",
@@ -3052,6 +3048,5 @@
   "connections.add.allowBackgroundRunsHelp": "Necesario para los disparadores de Slack y para cualquier flujo que un disparador ejecute con esta conexión: esas ejecuciones ocurren sin nadie con la sesión iniciada. Puedes desactivarlo más adelante.",
   "connections.identity.user_delegated": "El usuario que inició sesión",
   "connections.identity.bot": "Un bot",
-  "connections.identity.service": "Una cuenta de servicio",
-  "settings.dbProviders.serverConfiguration": "Configurado desde el entorno del servidor. Deja los campos sin cambios para usar esa configuración."
+  "connections.identity.service": "Una cuenta de servicio"
 }

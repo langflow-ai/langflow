@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Annotated, Any, cast
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
@@ -22,8 +22,6 @@ from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
     DbSessionReadOnly,
-    PageQuery,
-    SizeQuery,
     cascade_delete_flow,
     custom_params,
 )
@@ -667,8 +665,8 @@ async def read_project(
     project_id: UUID,
     current_user: CurrentActiveUser,
     params: Annotated[Params | None, Depends(custom_params)],
-    page: PageQuery = None,
-    size: SizeQuery = None,
+    page: Annotated[int | None, Query()] = None,
+    size: Annotated[int | None, Query()] = None,
     is_component: bool = False,
     is_flow: bool = False,
     search: str = "",

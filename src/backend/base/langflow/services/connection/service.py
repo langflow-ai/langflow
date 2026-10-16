@@ -41,7 +41,6 @@ from langflow.services.authorization.listing import (
 from langflow.services.connection.oauth import broker
 from langflow.services.connection.oauth.config import OAuthError, deployment_context
 from langflow.services.connection.oauth.locking import lock_connection
-from langflow.services.connection.policy import provider_has_usable_action
 from langflow.services.connection.slack_credentials import (
     PROVIDER_SLACK,
     check_slack_web_token,
@@ -238,7 +237,6 @@ async def enforce_integration_policy_for_provider(
     user_id: UUID | str | None,
     capability_ids: frozenset[str] = frozenset(),
     purpose: str = "use",
-    require_usable_action: bool = False,
 ) -> None:
     """Deny a governed provider or action before any credential work happens.
 
@@ -253,7 +251,7 @@ async def enforce_integration_policy_for_provider(
     )
 
     try:
-        policy = await arequire_integration_actions(
+        await arequire_integration_actions(
             user_id=user_id,
             provider_id=provider_key,
             policy_keys=(),
@@ -262,8 +260,6 @@ async def enforce_integration_policy_for_provider(
         )
     except IntegrationPolicyError as exc:
         raise IntegrationPolicyBlockedError(provider=provider_key, policy_key=exc.policy_key) from exc
-    if require_usable_action and not await provider_has_usable_action(provider_key, policy):
-        raise IntegrationPolicyBlockedError(provider=provider_key)
 
 
 class DatabaseConnectionResolverService(BaseConnectionResolverService):
@@ -282,8 +278,10 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         payload: ConnectionCreate,
     ) -> ConnectionRead:
-        # Require an available action before encrypting or storing credentials.
-        await enforce_integration_policy_for_provider(payload.provider_key, user_id=user.id, require_usable_action=True)
+        # "Enable an integration within the operator ceiling" happens here:
+        # creating a connection for a provider outside the ceiling is refused
+        # before any credential material is encrypted or stored.
+        await enforce_integration_policy_for_provider(payload.provider_key, user_id=user.id)
         payload = await validate_manual_credential(payload, context=deployment_context())
         owner_id = user.id if payload.ownership_mode == ConnectionOwnershipMode.USER else None
         now = _utc_now()

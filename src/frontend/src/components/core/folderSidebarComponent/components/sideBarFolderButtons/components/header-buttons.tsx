@@ -6,7 +6,6 @@ import { useUpdateUser } from "@/controllers/API/queries/auth";
 import CustomGetStartedProgress from "@/customization/components/custom-get-started-progress";
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { cn } from "@/utils/utils";
 import { AddFolderButton } from "./add-folder-button";
 import { UploadFolderButton } from "./upload-folder-button";
 
@@ -15,15 +14,11 @@ export const HeaderButtons = ({
   isUpdatingFolder,
   isPending,
   addNewFolder,
-  containerClassName,
-  titleClassName,
 }: {
   handleUploadFlowsToFolder: () => void;
   isUpdatingFolder: boolean;
   isPending: boolean;
   addNewFolder: () => void;
-  containerClassName?: string;
-  titleClassName?: string;
 }) => {
   const { t } = useTranslation();
   const userData = useAuthStore((state) => state.userData);
@@ -78,20 +73,12 @@ export const HeaderButtons = ({
         />
       )}
 
-      <div
-        className={cn(
-          "flex shrink-0 items-center justify-between gap-2 pt-2",
-          containerClassName,
-        )}
-      >
+      <div className="flex shrink-0 items-center justify-between gap-2 pt-2">
         <SidebarTrigger className="lg:hidden">
           <IconComponent name="PanelLeftClose" className="h-4 w-4" />
         </SidebarTrigger>
 
-        <div
-          id="project-sidebar-title"
-          className={cn("flex-1 text-sm font-medium", titleClassName)}
-        >
+        <div id="project-sidebar-title" className="flex-1 text-sm font-medium">
           {t("sidebar.projects")}
         </div>
         <div className="flex items-center gap-1">

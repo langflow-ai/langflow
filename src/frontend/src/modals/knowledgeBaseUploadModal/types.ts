@@ -29,7 +29,6 @@ export interface ColumnConfigRow {
 
 export interface KnowledgeBaseFormData {
   sourceName: string;
-  dirName?: string;
   files: File[];
   embeddingModel: ModelOption[] | null;
   chunkSize?: number;

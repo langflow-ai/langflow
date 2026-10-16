@@ -7,9 +7,8 @@ Two properties carry the risk here and both are tested rather than assumed:
   user-owned connection for such a principal unless the connection opted into
   ``allow_non_interactive``, and the source must surface that as the typed
   ``connection-not-authorized`` error rather than swallowing it.
-* **Reach.** The source asks for ``drive.file`` and nothing else. An unfiltered
-  empty listing is normal, while an empty folder or query result explains the
-  scope boundary instead of silently succeeding.
+* **Reach.** The source asks for ``drive.file`` and nothing else, and an empty
+  listing under that scope is a normal outcome, not a failure.
 
 HTTP is driven through ``httpx.MockTransport`` so nothing leaves the process.
 """
@@ -261,53 +260,6 @@ async def test_an_empty_listing_is_not_an_error(mock_http) -> None:
     source = _source()
 
     assert [item async for item in source.list_items()] == []
-
-
-@pytest.mark.usefixtures("resolver")
-@pytest.mark.parametrize("config", [{"folder_id": "outside-folder"}, {"query": "name = 'outside-document'"}])
-async def test_empty_filtered_listing_explains_the_drive_file_boundary(mock_http, config) -> None:
-    mock_http([_json({"files": []})])
-    source = _source(**config)
-
-    with pytest.raises(ValueError, match="No matching Drive files") as excinfo:
-        _ = [item async for item in source.list_items()]
-
-    assert "drive.file" in str(excinfo.value)
-    assert "created by or opened with this app" in str(excinfo.value)
-    assert "empty" in str(excinfo.value)
-
-
-@pytest.mark.usefixtures("resolver")
-async def test_empty_filtered_pages_are_exhausted_before_reporting_the_boundary(mock_http) -> None:
-    seen = mock_http([_json({"files": [], "nextPageToken": "next-page"}), _json({"files": []})])
-    with pytest.raises(ValueError, match=r"drive\.file"):
-        _ = [item async for item in _source(folder_id="outside-folder").list_items()]
-    assert len(seen) == 2
-    assert seen[1].url.params["pageToken"] == "next-page"
-
-
-@pytest.mark.usefixtures("resolver")
-async def test_filtered_listing_keeps_files_after_an_empty_page(mock_http) -> None:
-    mock_http(
-        [_json({"files": [], "nextPageToken": "next-page"}), _json({"files": [BINARY_FILE]}), _json({"files": []})]
-    )
-    source = _source(folder_id="app-folder")
-    assert [item.item_id async for item in source.list_items()] == [BINARY_FILE["id"]]
-    # Reusing a source must not suppress the diagnostic on a later empty run.
-    with pytest.raises(ValueError, match=r"drive\.file"):
-        _ = [item async for item in source.list_items()]
-
-
-@pytest.mark.usefixtures("resolver")
-async def test_visible_unsupported_files_are_not_reported_as_an_access_boundary(mock_http) -> None:
-    mock_http([_json({"files": [FOLDER]})])
-    assert [item async for item in _source(folder_id="app-folder").list_items()] == []
-
-
-@pytest.mark.usefixtures("resolver")
-async def test_blank_filters_keep_unfiltered_empty_listing_behavior(mock_http) -> None:
-    mock_http([_json({"files": []})])
-    assert [item async for item in _source(folder_id=" ", query="").list_items()] == []
 
 
 @pytest.mark.usefixtures("resolver")

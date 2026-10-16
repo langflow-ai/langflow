@@ -257,23 +257,26 @@ export function parseBooleanGlobalVariable(
   return defaultValue;
 }
 
-/** Preserve the environment configuration signal from servers that expose only their default. */
+/**
+ * True when ``providerType`` is the backend the server itself defaults new
+ * knowledge/memory bases to *because the deployment provisioned it through the
+ * environment* (``OPENSEARCH_URL``). Such a provider has no Langflow variables
+ * for the UI to find, yet is fully usable — the backend resolves its URL and
+ * credentials from the same env names. pgVector is excluded: it has its own
+ * test-and-activate flow in DB Providers.
+ */
 function isEnvProvisionedDefault(
   providerType: StoredDBProviderId,
   serverDefaultBackend: string | undefined,
 ): boolean {
-  return (
-    (providerType === "opensearch" || providerType === "postgres") &&
-    serverDefaultBackend === providerType
-  );
+  return providerType === "opensearch" && serverDefaultBackend === "opensearch";
 }
 
-/** Resolve the selected provider from saved preferences and server configuration. */
+/** Resolve the selected provider without treating pgVector provisioning as activation. */
 export function getActiveDBProvider(
   variables: GlobalVariable[],
   localVectorStoreAvailable = true,
   serverDefaultBackend?: string,
-  configuredBackends: readonly string[] = [],
 ): AvailableDBProviderId {
   const configuredProvider = getGlobalVariableValue(
     variables,
@@ -287,7 +290,6 @@ export function getActiveDBProvider(
       variables,
       localVectorStoreAvailable,
       serverDefaultBackend,
-      configuredBackends,
     )
   )
     return configuredProvider;
@@ -433,7 +435,6 @@ export function isDBProviderConfigured(
   variables: GlobalVariable[],
   localVectorStoreAvailable = true,
   serverDefaultBackend?: string,
-  configuredBackends: readonly string[] = [],
 ): boolean {
   if (providerType === "chroma" || providerType === "chroma_cloud")
     return false;
@@ -445,16 +446,17 @@ export function isDBProviderConfigured(
     return localVectorStoreAvailable;
   }
 
-  if (configuredBackends.includes(providerType)) return true;
-  if (isEnvProvisionedDefault(providerType, serverDefaultBackend)) return true;
-
-  // Older servers can still enable pgVector through explicit activation.
+  // pgVector has no UI fields. It becomes explicitly selectable only after the
+  // DB Providers panel has successfully tested and activated it; the server
+  // still re-validates connectivity during creation.
   if (providerType === "postgres") {
     return (
       getGlobalVariableValue(variables, ACTIVE_DB_PROVIDER_VARIABLE) ===
       "postgres"
     );
   }
+
+  if (isEnvProvisionedDefault(providerType, serverDefaultBackend)) return true;
 
   const provider = getDBProviderOption(providerType);
   // Boolean fields always have a defined default, so they don't gate
@@ -477,7 +479,6 @@ export function getDefaultDBProviderConfig(
   variables: GlobalVariable[],
   localVectorStoreAvailable = true,
   serverDefaultBackend?: string,
-  configuredBackends: readonly string[] = [],
 ): {
   backendType: AvailableDBProviderId;
   backendConfig: Record<string, DBProviderConfigValue>;
@@ -486,7 +487,6 @@ export function getDefaultDBProviderConfig(
     variables,
     localVectorStoreAvailable,
     serverDefaultBackend,
-    configuredBackends,
   );
   return {
     backendType,

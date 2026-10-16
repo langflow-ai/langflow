@@ -199,27 +199,6 @@ describe("dbProviderConstants", () => {
     ).toBe(false);
   });
 
-  it.each(["postgres", "opensearch"] as const)(
-    "accepts environment configured %s even when it is not the default",
-    (provider) => {
-      expect(
-        isDBProviderConfigured(provider, [], false, "postgres", [
-          "postgres",
-          "opensearch",
-        ]),
-      ).toBe(true);
-    },
-  );
-
-  it("does not enable an absent environment backend", () => {
-    expect(
-      isDBProviderConfigured("opensearch", [], false, "postgres", ["postgres"]),
-    ).toBe(false);
-    expect(isDBProviderConfigured("postgres", [], false, "sqlite", [])).toBe(
-      false,
-    );
-  });
-
   it("allows explicit Postgres selection only after it is active", () => {
     expect(isDBProviderConfigured("postgres", [])).toBe(false);
     expect(
@@ -340,9 +319,10 @@ describe("dbProviderConstants", () => {
       });
     });
 
-    it("recognizes an env pgVector default without explicit activation", () => {
+    it("does not treat an env pgVector default as pre-activated", () => {
+      // pgVector keeps its explicit test-and-activate flow in DB Providers.
       expect(isDBProviderConfigured("postgres", [], false, "postgres")).toBe(
-        true,
+        false,
       );
       expect(getActiveDBProvider([], localUnavailable, "postgres")).toBe(
         "postgres",
@@ -355,7 +335,7 @@ describe("dbProviderConstants", () => {
         backendConfig: {},
       });
       expect(isDBProviderConfigured("postgres", [], true, "postgres")).toBe(
-        true,
+        false,
       );
       expect(
         getActiveDBProvider(

@@ -76,7 +76,6 @@ describe("useCreateMemoryModal", () => {
       vectorStoreConfigLoaded: true,
       localVectorStoreAvailable: true,
       defaultVectorStoreBackend: undefined,
-      configuredVectorStoreBackends: [],
     });
     mockModelProvidersResult = {
       data: mockProviders,
@@ -138,39 +137,14 @@ describe("useCreateMemoryModal", () => {
     );
   });
 
-  it.each([
-    [true, []],
-    [false, []],
-    [true, ["postgres"]],
-    [false, ["postgres"]],
-  ] as const)(
-    "creates memory using environment pgVector (local storage: %s, configured: %j)",
-    (localAvailable, configured) => {
-      useUtilityStore.setState({
-        localVectorStoreAvailable: localAvailable,
-        defaultVectorStoreBackend: "postgres",
-        configuredVectorStoreBackends: [...configured],
-      });
-      const { result } = renderHook(() =>
-        useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
-      );
-      expect(result.current.backendType).toBe("postgres");
-      expect(result.current.backendConfigured).toBe(true);
-      act(() => {
-        result.current.setName("Environment Memory");
-        result.current.setSelectedEmbeddingModel([
-          result.current.embeddingModelOptions[0],
-        ]);
-      });
-      act(() => result.current.handleSubmit());
-      expect(mockMutate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          backend_type: "postgres",
-          backend_config: {},
-        }),
-      );
-    },
-  );
+  it("shows the pgVector server default without bypassing provider activation", () => {
+    useUtilityStore.setState({ defaultVectorStoreBackend: "postgres" });
+    const { result } = renderHook(() =>
+      useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
+    );
+    expect(result.current.backendType).toBe("postgres");
+    expect(result.current.backendConfigured).toBe(false);
+  });
 
   it("scopes provider and global-variable discovery to the current flow", () => {
     renderHook(() =>

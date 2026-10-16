@@ -22,7 +22,6 @@ export function ProviderConfigurationPanel({
   isPending,
   canSave,
   isHydrated,
-  hasServerConfiguration,
   getFieldValue,
   onVariableChange,
   onSecretEditingChange,
@@ -40,7 +39,6 @@ export function ProviderConfigurationPanel({
   isPending: boolean;
   canSave: boolean;
   isHydrated: boolean;
-  hasServerConfiguration: boolean;
   getFieldValue: (field: DBProviderConfigField) => string;
   onVariableChange: (key: string, value: string) => void;
   onSecretEditingChange: (key: string, editing: boolean) => void;
@@ -178,11 +176,6 @@ export function ProviderConfigurationPanel({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {hasServerConfiguration && (
-            <div className="rounded-md border border-border bg-muted/30 p-3 text-[13px] text-muted-foreground">
-              {t("settings.dbProviders.serverConfiguration")}
-            </div>
-          )}
           {provider.configFields.map((field) =>
             field.kind === "boolean" ? (
               <BooleanFieldRow

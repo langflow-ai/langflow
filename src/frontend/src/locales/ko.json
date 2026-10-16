@@ -2911,7 +2911,7 @@
   "playground.workflowWarning": "Flow 실행 경고",
   "settings.nav.connections": "연결",
   "connections.title": "연결",
-  "connections.subtitle": "Flow가 사용자를 대신해 작업할 때 쓰는 타사 계정(Google, Microsoft 365, Slack 등)입니다. Token은 서버에만 두고, 여기에는 표시하지 않습니다.",
+  "connections.subtitle": "Flow가 작업할 때 쓰는 계정입니다. Token은 서버에만 두고, 여기에는 메타데이터만 보여 줍니다.",
   "connections.search": "이름, 식별자, 계정 검색",
   "connections.loading": "연결 불러오는 중…",
   "connections.empty": "연결이 없습니다.",
@@ -3006,10 +3006,6 @@
   "connections.add.displayNameTooltip": "이 계정을 쉽게 알아볼 수 있도록 연결 목록에 표시되는 이름입니다.",
   "connections.add.registration": "OAuth 등록",
   "connections.add.instanceOwned": "인스턴스 전체에 공유",
-  "connections.scope.risk.read": "읽기",
-  "connections.scope.risk.write": "쓰기",
-  "connections.scope.risk.destructive": "파괴적",
-  "connections.scope.conditional": "일부 입력에 필요",
   "connections.add.scopes": "요청할 권한 범위",
   "connections.add.noScopes": "이 Provider의 작업에는 필요한 권한 범위가 없습니다.",
   "connections.add.scopesOutsideCeiling": "이 등록에서 허용하지 않는 권한 범위라 요청하지 않습니다: {{scopes}}",
@@ -3034,7 +3030,7 @@
   "connections.add.failed": "권한 부여를 마치지 못했습니다.",
   "connections.add.denied": "Provider가 권한 부여를 거부했습니다.",
   "connections.add.expired": "로그인 링크가 만료되었습니다. 처음부터 다시 시작해 새 링크를 받으세요.",
-  "connections.add.windowUntracked": "Langflow가 더 이상 로그인 창을 추적할 수 없습니다. 공급자가 오류를 표시하면 다시 시도하기 전에 관리자에게 OAuth 등록을 확인해 달라고 요청하세요.",
+  "connections.add.cancelled": "권한 부여를 마치기 전에 로그인 창이 닫혔습니다.",
   "connections.add.cleanupFailed": "연결을 제거하지 못했습니다",
   "connections.add.cleanupFailedBody": "완료되지 않은 연결을 삭제하지 못했습니다. 목록에서 직접 제거하세요.",
   "connections.add.identity": "실행 주체",
@@ -3051,6 +3047,5 @@
   "connections.add.allowBackgroundRunsHelp": "Slack Trigger에 필요하고, Trigger가 이 연결로 실행하는 모든 Flow에도 필요합니다. 이런 실행은 로그인한 사람 없이 이루어집니다. 나중에 끌 수 있습니다.",
   "connections.identity.user_delegated": "로그인한 사용자",
   "connections.identity.bot": "봇",
-  "connections.identity.service": "서비스 계정",
-  "settings.dbProviders.serverConfiguration": "서버 환경에서 구성되었습니다. 이 구성을 사용하려면 필드를 변경하지 마세요."
+  "connections.identity.service": "서비스 계정"
 }

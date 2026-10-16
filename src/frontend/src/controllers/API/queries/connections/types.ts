@@ -7,8 +7,6 @@
  * them and drifting.
  */
 
-import type { ConditionalScopeRequirement } from "@/utils/connection-scopes";
-
 export type Iso8601 = string;
 
 export type ConnectionOwnershipMode = "user" | "instance";
@@ -127,8 +125,6 @@ export interface IntegrationCapabilityRead {
   display_name: string;
   policy_keys: string[];
   risk: string;
-  required_scopes?: string[];
-  conditional_scopes?: ConditionalScopeRequirement[];
   maturity: string;
   substrate: string;
   identity: IntegrationIdentity;

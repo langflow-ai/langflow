@@ -1,16 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   type AvailableDBProviderId,
   DB_PROVIDER_OPTIONS,
   type DBProviderId,
   getActiveDBProvider,
-  getDBProviderConfig,
-  getGlobalVariableValue,
   isDBProviderConfigured,
-  OPENSEARCH_VARIABLES,
 } from "@/constants/dbProviderConstants";
-import SettingsPageHeader from "@/pages/SettingsPage/components/SettingsPageHeader";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { ProviderConfigurationPanel } from "./components/ProviderConfigurationPanel";
@@ -29,9 +26,6 @@ export default function DBProvidersPage() {
   const defaultVectorStoreBackend = useUtilityStore(
     (state) => state.defaultVectorStoreBackend,
   );
-  const configuredVectorStoreBackends = useUtilityStore(
-    (state) => state.configuredVectorStoreBackends,
-  );
   // Local SQLite writes to the serving box's disk, which the production profile
   // refuses. Hide it here too — this page sets the global default, so leaving it
   // selectable would let an operator re-enable the exact backend the create
@@ -48,7 +42,6 @@ export default function DBProvidersPage() {
       globalVariables,
       localVectorStoreAvailable,
       defaultVectorStoreBackend,
-      configuredVectorStoreBackends,
     ),
   );
   const [hasManuallySelectedProvider, setHasManuallySelectedProvider] =
@@ -66,14 +59,8 @@ export default function DBProvidersPage() {
         globalVariables,
         localVectorStoreAvailable,
         defaultVectorStoreBackend,
-        configuredVectorStoreBackends,
       ),
-    [
-      globalVariables,
-      localVectorStoreAvailable,
-      defaultVectorStoreBackend,
-      configuredVectorStoreBackends,
-    ],
+    [globalVariables, localVectorStoreAvailable, defaultVectorStoreBackend],
   );
 
   useEffect(() => {
@@ -85,17 +72,6 @@ export default function DBProvidersPage() {
   const selectedProvider =
     visibleProviders.find((provider) => provider.id === selectedProviderId) ??
     visibleProviders[0];
-
-  const hasServerConfiguration =
-    selectedProvider.id === "opensearch" &&
-    (configuredVectorStoreBackends.includes("opensearch") ||
-      defaultVectorStoreBackend === "opensearch") &&
-    !getGlobalVariableValue(globalVariables, OPENSEARCH_VARIABLES.URL);
-  const useServerConfiguration =
-    hasServerConfiguration &&
-    !selectedProvider.configFields.some(
-      (field) => field.variableKey in variableValues,
-    );
 
   const { getFieldValue, isHydrated, canSave } = useDBProviderFields({
     selectedProvider,
@@ -113,10 +89,7 @@ export default function DBProvidersPage() {
     isCheckingPostgres,
   } = useDBProviderActions({
     selectedProvider,
-    canSave: canSave || useServerConfiguration,
-    serverBackendConfig: useServerConfiguration
-      ? getDBProviderConfig("opensearch", globalVariables)
-      : undefined,
+    canSave,
     getFieldValue,
     variableValues,
     setVariable,
@@ -129,10 +102,23 @@ export default function DBProvidersPage() {
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <SettingsPageHeader
-        title={t("settings.dbProviders.title")}
-        description={t("settings.dbProviders.description")}
-      />
+      <div className="flex w-full items-start justify-between gap-6">
+        <div className="flex flex-col">
+          <h2
+            className="flex items-center text-lg font-semibold tracking-tight"
+            data-testid="settings_menu_header"
+          >
+            {t("settings.dbProviders.title")}
+            <ForwardedIconComponent
+              name="Database"
+              className="ml-2 h-5 w-5 text-primary"
+            />
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {t("settings.dbProviders.description")}
+          </p>
+        </div>
+      </div>
 
       <div className="flex h-[calc(100vh-305px)] w-full overflow-hidden rounded-lg border">
         <div
@@ -154,7 +140,6 @@ export default function DBProvidersPage() {
                   globalVariables,
                   localVectorStoreAvailable,
                   defaultVectorStoreBackend,
-                  configuredVectorStoreBackends,
                 )
               }
               onSelect={() => {
@@ -174,9 +159,8 @@ export default function DBProvidersPage() {
               variableValues={variableValues}
               editingSecret={editingSecret}
               isPending={isPending}
-              canSave={canSave || useServerConfiguration}
-              isHydrated={isHydrated || useServerConfiguration}
-              hasServerConfiguration={hasServerConfiguration}
+              canSave={canSave}
+              isHydrated={isHydrated}
               getFieldValue={getFieldValue}
               onVariableChange={(key, value) =>
                 setVariableValues((prev) => ({ ...prev, [key]: value }))

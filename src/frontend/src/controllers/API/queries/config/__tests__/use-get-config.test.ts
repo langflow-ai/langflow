@@ -34,7 +34,6 @@ describe("useGetConfig", () => {
       vectorStoreConfigLoaded: false,
       localVectorStoreAvailable: true,
       defaultVectorStoreBackend: undefined,
-      configuredVectorStoreBackends: [],
     });
   });
 
@@ -47,7 +46,6 @@ describe("useGetConfig", () => {
           max_file_size_upload: 100,
           local_vector_store_available: false,
           default_vector_store_backend: backend,
-          configured_vector_store_backends: ["postgres", "opensearch"],
         },
       });
       renderHook(() => useGetConfig());
@@ -61,7 +59,6 @@ describe("useGetConfig", () => {
         vectorStoreConfigLoaded: true,
         localVectorStoreAvailable: false,
         defaultVectorStoreBackend: backend,
-        configuredVectorStoreBackends: ["postgres", "opensearch"],
       });
     },
   );

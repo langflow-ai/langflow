@@ -157,10 +157,10 @@ export const GeneralPage = () => {
   }
 
   return (
-    <div className="flex h-full w-full flex-col gap-6">
+    <div className="flex h-full w-full flex-col gap-6 overflow-x-hidden">
       <GeneralPageHeaderComponent />
 
-      <div className="flex w-full flex-col gap-6 pb-8">
+      <div className="flex w-full flex-col gap-6">
         <LanguageFormComponent />
 
         {ENABLE_PROFILE_ICONS && (
@@ -185,13 +185,13 @@ export const GeneralPage = () => {
             />
           </CustomSettingsPasswordFormGate>
         )}
-
-        <CustomTelemetryToggle />
-
-        <CustomRegistrationData />
-
-        <CustomTermsLinks />
       </div>
+
+      <CustomTelemetryToggle />
+
+      <CustomRegistrationData />
+
+      <CustomTermsLinks />
     </div>
   );
 };

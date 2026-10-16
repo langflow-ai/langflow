@@ -26,11 +26,6 @@ import {
 } from "@/controllers/API/queries/folders";
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
 import {
-  CustomProjectSidebarProjectLabel,
-  getCustomProjectSidebarProjectTitle,
-  useCustomProjectSidebar,
-} from "@/customization/components/custom-project-sidebar";
-import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
@@ -88,7 +83,6 @@ const SideBarFoldersButtonsComponent = ({
   const pathname = location.pathname;
   const folders = useFolderStore((state) => state.folders);
   const loading = !folders;
-  const projectSidebar = useCustomProjectSidebar(folders);
   const refInput = useRef<HTMLInputElement>(null);
 
   const _navigate = useCustomNavigate();
@@ -444,42 +438,34 @@ const SideBarFoldersButtonsComponent = ({
   return (
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
-      className={projectSidebar.className}
       data-testid="project-sidebar"
       aria-labelledby="project-sidebar-title"
     >
-      <SidebarHeader
-        className={cn("px-4 py-1", projectSidebar.headerContainerClassName)}
-      >
+      <SidebarHeader className="px-4 py-1">
         <HeaderButtons
           handleUploadFlowsToFolder={handleUploadFlowsToFolder}
           isUpdatingFolder={isUpdatingFolder}
           isPending={isPending}
           addNewFolder={addNewFolder}
-          containerClassName={projectSidebar.headerRowClassName}
-          titleClassName={projectSidebar.headerClassName}
         />
-        {projectSidebar.tools}
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup
-          className={cn("p-4 py-2", projectSidebar.contentClassName)}
-        >
+        <SidebarGroup className="p-4 py-2">
           <SidebarGroupContent>
             <PermissionsProvider
               resourceType="project"
-              resourceIds={projectSidebar.projects
+              resourceIds={folders
                 .map((folder) => folder.id ?? "")
                 .filter(Boolean)}
             >
               <SidebarMenu>
                 {!loading ? (
-                  projectSidebar.projects.length === 0 ? (
+                  folders.length === 0 ? (
                     <div className="px-2 py-5 text-center text-sm text-muted-foreground">
                       {t("sidebar.emptyMessage")}
                     </div>
                   ) : (
-                    projectSidebar.projects.map((item) => {
+                    folders.map((item) => {
                       const editFolderName = editFolders?.filter(
                         (folder) => folder.id === item.id,
                       )[0];
@@ -512,7 +498,6 @@ const SideBarFoldersButtonsComponent = ({
                                   }}
                                   className={cn(
                                     "flex-grow pr-8",
-                                    projectSidebar.itemClassName,
                                     hoveredFolderId === item.id && "bg-accent",
                                     checkHoveringFolder(item.id!),
                                   )}
@@ -537,25 +522,16 @@ const SideBarFoldersButtonsComponent = ({
                                         />
                                       ) : (
                                         <span
-                                          className="block w-0 grow text-sm opacity-100"
+                                          className="block w-0 grow truncate text-sm opacity-100"
                                           // The sidebar cannot be widened, so a
                                           // truncated name is otherwise
                                           // unreadable. With one default project
                                           // per user the list fills with rows
                                           // that differ only in the truncated
                                           // part.
-                                          title={getCustomProjectSidebarProjectTitle(
-                                            item,
-                                            getProjectDisplayName(item, t),
-                                          )}
+                                          title={getProjectDisplayName(item, t)}
                                         >
-                                          <CustomProjectSidebarProjectLabel
-                                            project={item}
-                                            defaultLabel={getProjectDisplayName(
-                                              item,
-                                              t,
-                                            )}
-                                          />
+                                          {getProjectDisplayName(item, t)}
                                         </span>
                                       )}
                                     </div>
@@ -563,12 +539,7 @@ const SideBarFoldersButtonsComponent = ({
                                 </SidebarMenuButton>
                               )}
                             </ProjectRenamePermission>
-                            <div
-                              className={cn(
-                                "absolute right-2 top-[0.45rem] flex items-center hover:text-foreground",
-                                projectSidebar.itemActionClassName,
-                              )}
-                            >
+                            <div className="absolute right-2 top-[0.45rem] flex items-center hover:text-foreground">
                               <SelectOptions
                                 item={item}
                                 handleDeleteFolder={handleDeleteFolder}
@@ -604,45 +575,27 @@ const SideBarFoldersButtonsComponent = ({
           </div>
         )}
       </SidebarContent>
-      {(projectSidebar.footer || ENABLE_FILE_MANAGEMENT) && (
-        <SidebarFooter
-          className={cn("border-t", projectSidebar.footerClassName)}
-        >
-          <div
-            className={cn(
-              "grid w-full items-center gap-2 p-2",
-              projectSidebar.footerContentClassName,
+      {ENABLE_FILE_MANAGEMENT && (
+        <SidebarFooter className="border-t">
+          <div className="grid w-full items-center gap-2 p-2">
+            {ENABLE_KNOWLEDGE_BASES && (
+              <SidebarMenuButton
+                onClick={handleKnowledgeNavigation}
+                size="md"
+                className="text-sm"
+              >
+                <ForwardedIconComponent name="Library" className="h-4 w-4" />
+                {t("sidebar.knowledge")}
+              </SidebarMenuButton>
             )}
-          >
-            {projectSidebar.footer}
-            {ENABLE_FILE_MANAGEMENT && (
-              <>
-                {ENABLE_KNOWLEDGE_BASES && (
-                  <SidebarMenuButton
-                    onClick={handleKnowledgeNavigation}
-                    size="md"
-                    className={cn(
-                      "text-sm",
-                      projectSidebar.footerItemClassName,
-                    )}
-                  >
-                    <ForwardedIconComponent
-                      name="Library"
-                      className="h-4 w-4"
-                    />
-                    {t("sidebar.knowledge")}
-                  </SidebarMenuButton>
-                )}
-                <SidebarMenuButton
-                  onClick={handleFilesNavigation}
-                  size="md"
-                  className={cn("text-sm", projectSidebar.footerItemClassName)}
-                >
-                  <ForwardedIconComponent name="File" className="h-4 w-4" />
-                  {t("sidebar.myFiles")}
-                </SidebarMenuButton>
-              </>
-            )}
+            <SidebarMenuButton
+              onClick={handleFilesNavigation}
+              size="md"
+              className="text-sm"
+            >
+              <ForwardedIconComponent name="File" className="h-4 w-4" />
+              {t("sidebar.myFiles")}
+            </SidebarMenuButton>
           </div>
         </SidebarFooter>
       )}

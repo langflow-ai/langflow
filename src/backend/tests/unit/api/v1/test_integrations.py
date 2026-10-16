@@ -47,13 +47,6 @@ def _manifest() -> IntegrationCapabilityManifest:
                 "auth_profile_id": "user",
                 "identity": "user_delegated",
                 "required_scopes": ["drive.file"],
-                "conditional_scopes": [
-                    {
-                        "scope": "drive.readonly",
-                        "role": "optional",
-                        "condition": {"kind": "input_truthy", "input": "include_shared"},
-                    }
-                ],
                 "policy_keys": [SEARCH_KEY],
                 "substrate": "sdk",
                 "maturity": "ga",
@@ -144,18 +137,6 @@ async def test_list_integrations_is_unrestricted_without_a_policy(
     assert entry["connection_count"] == 0
     assert {capability["id"] for capability in entry["capabilities"]} == {SEARCH_CAPABILITY, DELETE_CAPABILITY}
     assert all(capability["allowed"] for capability in entry["capabilities"])
-    for capability in entry["capabilities"]:
-        assert capability["required_scopes"] == ["drive.file"]
-        expected_conditional = [
-            {
-                "scope": "drive.readonly",
-                "role": "optional",
-                "condition": {"kind": "input_truthy", "input": "include_shared"},
-            }
-        ]
-        assert capability["conditional_scopes"] == (
-            expected_conditional if capability["id"] == SEARCH_CAPABILITY else []
-        )
 
 
 @pytest.mark.usefixtures("active_user", "loaded_integration")

@@ -11,7 +11,6 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
-from lfx.integrations.capabilities import ConditionalScopeRequirement
 from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.services.deps import get_integration_policy_service
 from lfx.services.integration_policy import IntegrationPolicyPurpose, aresolve_integration_policy
@@ -41,8 +40,6 @@ class IntegrationCapabilityRead(BaseModel):
     display_name: str
     policy_keys: list[str]
     risk: str
-    required_scopes: list[str] = Field(default_factory=list)
-    conditional_scopes: list[ConditionalScopeRequirement] = Field(default_factory=list)
     maturity: str
     substrate: str
     identity: str
@@ -168,8 +165,6 @@ async def list_integrations(
                     display_name=capability.display_name,
                     policy_keys=list(capability.policy_keys),
                     risk=capability.risk,
-                    required_scopes=list(capability.required_scopes),
-                    conditional_scopes=list(capability.conditional_scopes),
                     maturity=capability.maturity,
                     substrate=capability.substrate,
                     identity=capability.identity,

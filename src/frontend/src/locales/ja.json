@@ -2912,7 +2912,7 @@
   "playground.workflowWarning": "ワークフローの警告",
   "settings.nav.connections": "接続",
   "connections.title": "接続",
-  "connections.subtitle": "フローがあなたに代わって操作するために使用するサードパーティのアカウント（Google、Microsoft 365、Slackなど）です。トークンはサーバーに保管され、ここには表示されません。",
+  "connections.subtitle": "フローが代理として動作するアカウントです。トークンはサーバーに保管され、ここにはメタデータのみ表示されます。",
   "connections.search": "名前、ハンドル、アカウントを検索",
   "connections.loading": "接続を読み込み中…",
   "connections.empty": "接続はまだありません。",
@@ -3007,10 +3007,6 @@
   "connections.add.displayNameTooltip": "このアカウントを識別しやすくするために接続一覧に表示される、わかりやすい名前です。",
   "connections.add.registration": "OAuth 登録",
   "connections.add.instanceOwned": "インスタンス全体で共有する",
-  "connections.scope.risk.read": "読み取り",
-  "connections.scope.risk.write": "書き込み",
-  "connections.scope.risk.destructive": "破壊的",
-  "connections.scope.conditional": "一部の入力で必要",
   "connections.add.scopes": "要求するスコープ",
   "connections.add.noScopes": "このプロバイダーのアクションはスコープを宣言していません。",
   "connections.add.scopesOutsideCeiling": "この登録では {{scopes}} が許可されていないため、要求しません。",
@@ -3035,7 +3031,7 @@
   "connections.add.failed": "認可が完了しませんでした。",
   "connections.add.denied": "プロバイダーが認可を拒否しました。",
   "connections.add.expired": "サインインのリンクが期限切れです。最初からやり直してください。",
-  "connections.add.windowUntracked": "Langflow はサインイン画面を追跡できなくなりました。プロバイダーにエラーが表示されている場合は、再試行する前に管理者に OAuth 登録の確認を依頼してください。",
+  "connections.add.cancelled": "認可が完了する前にサインイン画面が閉じられました。",
   "connections.add.cleanupFailed": "接続を削除できません",
   "connections.add.cleanupFailedBody": "未完了の接続を削除できませんでした。一覧から削除してください。",
   "connections.add.identity": "実行者",
@@ -3052,6 +3048,5 @@
   "connections.add.allowBackgroundRunsHelp": "Slack トリガーと、トリガーがこの接続で実行するすべてのフローに必要です。これらの実行は誰もサインインしていない状態で行われます。後でオフにすることもできます。",
   "connections.identity.user_delegated": "サインイン中のユーザー",
   "connections.identity.bot": "ボット",
-  "connections.identity.service": "サービスアカウント",
-  "settings.dbProviders.serverConfiguration": "サーバー環境で設定済みです。この設定を使用するには、フィールドを変更しないでください。"
+  "connections.identity.service": "サービスアカウント"
 }

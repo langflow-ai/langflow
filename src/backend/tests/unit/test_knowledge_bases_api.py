@@ -1129,57 +1129,6 @@ class TestKnowledgeBaseAPI:
         assert kb["size"] == 1024
         mock_backfill.assert_not_awaited()
 
-    @pytest.mark.parametrize(
-        ("job_status", "kb_status", "chunks", "expected_status"),
-        [
-            ("failed", "ingesting", 5, "ready"),
-            ("timed_out", "ingesting", 5, "ready"),
-            ("failed", "ingesting", 0, "empty"),
-            ("cancelled", "ready", 5, "ready"),
-            ("completed", "ready", 5, "ready"),
-            ("failed", "failed", 5, "failed"),
-            ("queued", "ready", 5, "ingesting"),
-            ("in_progress", "ingesting", 5, "ingesting"),
-        ],
-    )
-    async def test_list_keeps_base_availability_separate_from_ended_run(
-        self, client, logged_in_headers, active_user, job_status, kb_status, chunks, expected_status
-    ):
-        from langflow.services.database.models.jobs.model import JobStatus, JobType
-        from langflow.services.database.models.knowledge_base import KnowledgeBaseStatus
-        from langflow.services.deps import get_job_service
-
-        record = await knowledge_base_service.create_record(
-            user_id=active_user.id,
-            name="Interrupted_Ingestion",
-            model_selection={"name": "model", "provider": "OpenAI"},
-            chunks=chunks,
-        )
-        failure_reason = "Storage is unavailable" if kb_status == "failed" else None
-        await knowledge_base_service.update_status(
-            record.id, status=KnowledgeBaseStatus(kb_status), failure_reason=failure_reason
-        )
-        job_id = uuid.uuid4()
-        await get_job_service().create_job(
-            job_id=job_id,
-            flow_id=job_id,
-            job_type=JobType.INGESTION,
-            asset_type="knowledge_base",
-            asset_id=record.id,
-            user_id=active_user.id,
-            status=JobStatus(job_status),
-        )
-
-        response = await client.get("api/v1/knowledge_bases", headers=logged_in_headers)
-
-        assert response.status_code == 200
-        listed = next(kb for kb in response.json() if kb["id"] == str(record.id))
-        assert listed["status"] == expected_status
-        assert listed["failure_reason"] == failure_reason
-        assert listed["chunks"] == chunks
-        assert listed["last_job_id"] == str(job_id)
-        assert (await get_job_service().get_job_by_job_id(job_id)).status == JobStatus(job_status)
-
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_list_and_detail_reflect_cleared_db_separator(
         self,

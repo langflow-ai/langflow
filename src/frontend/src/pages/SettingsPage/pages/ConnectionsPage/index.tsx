@@ -16,7 +16,6 @@ import {
   useUpdateConnectionMutation,
 } from "@/controllers/API/queries/connections";
 import CustomConnectionsTabs from "@/customization/components/custom-connections-tabs";
-import SettingsPageHeader from "@/pages/SettingsPage/components/SettingsPageHeader";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import AddConnectionDialog from "./components/AddConnectionDialog";
@@ -250,12 +249,14 @@ export default function ConnectionsPage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
-      <SettingsPageHeader
-        title={t("connections.title")}
-        description={t("connections.subtitle")}
-      >
+      <div className="flex w-full items-start justify-between gap-4">
+        <div className="flex flex-col">
+          <h2 className="text-lg font-semibold">{t("connections.title")}</h2>
+          <p className="text-sm text-muted-foreground">
+            {t("connections.subtitle")}
+          </p>
+        </div>
         <Button
-          size="sm"
           onClick={() => {
             setReauthorizing(undefined);
             setDialogOpen(true);
@@ -265,10 +266,10 @@ export default function ConnectionsPage() {
           disabled={!integrationsQuery.isSuccess || noProviders}
           data-testid="add-connection"
         >
-          <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+          <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
           {t("connections.add.title")}
         </Button>
-      </SettingsPageHeader>
+      </div>
 
       {/* Always mounted: a status region inserted with its text already in
           place is not reliably announced. */}

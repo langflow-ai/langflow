@@ -6,7 +6,6 @@ import { shortScope } from "../helpers/scopes";
 
 export type AuthorizeState =
   | { kind: "waiting" }
-  | { kind: "untracked" }
   | { kind: "connected"; connection: ConnectionRead }
   | { kind: "failed"; message: string };
 
@@ -27,13 +26,6 @@ export function AuthorizeStatus({ state }: AuthorizeStatusProps) {
         />
         {t("connections.add.waiting")}
       </div>
-    );
-  }
-  if (state?.kind === "untracked") {
-    return (
-      <p className="text-sm text-muted-foreground" role="status">
-        {t("connections.add.windowUntracked")}
-      </p>
     );
   }
   if (state?.kind === "connected") {

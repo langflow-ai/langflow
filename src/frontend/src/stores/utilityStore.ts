@@ -89,7 +89,6 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) =>
     set({ localVectorStoreAvailable }),
   defaultVectorStoreBackend: undefined,
-  configuredVectorStoreBackends: [],
   setDefaultVectorStoreBackend: (
     defaultVectorStoreBackend: string | undefined,
   ) => set({ defaultVectorStoreBackend }),

@@ -33,7 +33,6 @@ const getErrorDetail = (error: unknown) =>
 export function useDBProviderActions({
   selectedProvider,
   canSave,
-  serverBackendConfig,
   getFieldValue,
   variableValues,
   setVariable,
@@ -45,7 +44,6 @@ export function useDBProviderActions({
 }: {
   selectedProvider: DBProviderOption;
   canSave: boolean;
-  serverBackendConfig?: Record<string, unknown>;
   getFieldValue: (field: DBProviderConfigField) => string;
   variableValues: Record<string, string>;
   setVariable: (params: {
@@ -135,9 +133,6 @@ export function useDBProviderActions({
 
     try {
       const fieldsToSave = selectedProvider.configFields.filter((field) => {
-        // Environment credentials and defaults stay on the server. Activating
-        // this configuration only persists the selected provider.
-        if (serverBackendConfig) return false;
         if (field.kind === "boolean") {
           // Persist booleans only when the user actually flipped them
           // this session — otherwise we'd write the default to a
@@ -236,22 +231,18 @@ export function useDBProviderActions({
     // Persist the variables first; the server-side test reads
     // OPENSEARCH_URL etc. through ``variable_service``. Skip the
     // activation step — testing must not switch the active provider.
-    const saved =
-      serverBackendConfig ||
-      (await handleSave({ silent: true, skipActivation: true }));
+    const saved = await handleSave({ silent: true, skipActivation: true });
     if (!saved) {
       // ``handleSave`` already surfaced an error toast.
       return;
     }
 
     try {
-      const backendConfig =
-        serverBackendConfig ??
-        buildBackendConfigPayload(
-          selectedProvider.id as AvailableDBProviderId,
-          literalFields,
-          booleanFields,
-        );
+      const backendConfig = buildBackendConfigPayload(
+        selectedProvider.id as AvailableDBProviderId,
+        literalFields,
+        booleanFields,
+      );
       const response = await testProviderConnection({
         backend_type: toAPIBackendType(
           selectedProvider.id as AvailableDBProviderId,
