@@ -26,6 +26,22 @@ class LFXUvicornWorker(UvicornWorker):
     here and can host per-worker customization if needed later.
     """
 
+    # ``reset_contextvars``: start every request task from a clean context. A request that
+    # arrives while another is still in flight on the same connection is queued as a pipelined
+    # request, and uvicorn then starts it from inside the finishing request's task
+    # (httptools_impl ``on_response_complete`` -> ``_start_asgi_task``). ``create_task`` copies
+    # the context, so the new request begins with the previous request's already-ended server
+    # span still current. OpenTelemetry's ASGI middleware reads that as nesting and emits the
+    # request as an INTERNAL child of an unrelated, finished request instead of as a SERVER
+    # root, which merges unrelated traces and hides most HTTP traffic from RED metrics and
+    # service maps. A browser page load triggers it; sequential curl never does. See CPython
+    # #140947.
+    #
+    # Spread over the base class's kwargs rather than replacing them, so the inherited loop and
+    # http choices still apply. Kept in step with the two ``uvicorn.run`` calls in
+    # ``lfx.cli.commands``, and with ``langflow.server.LangflowUvicornWorker``.
+    CONFIG_KWARGS = {**UvicornWorker.CONFIG_KWARGS, "reset_contextvars": True}
+
 
 class LFXGunicornApp(BaseApplication):
     def __init__(self, app_import_string: str, options: dict) -> None:
