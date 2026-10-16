@@ -4,9 +4,11 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from time import perf_counter
 from typing import Any, Protocol
 
+import anyio
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessageChunk
 
+from lfx.log.logger import logger
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
@@ -536,12 +538,16 @@ async def process_agent_events(
     else:
         agent_message.properties.icon = "Bot"
         agent_message.properties.state = "partial"
-    # Store the initial message and capture the message id
-    agent_message = await send_message_callback(message=agent_message)
-    # Capture the original message id - this must stay consistent throughout if streaming
-    # Message may not contain id if the Agent is not connected to a Chat Output (_should_skip_message is True)
-    initial_message_id = agent_message.get_id()
+    primary_error: BaseException | None = None
+    # Initial publication errors historically propagate without the message wrapper.
+    initial_message_published = False
     try:
+        # Store the initial message and capture the message id
+        agent_message = await send_message_callback(message=agent_message)
+        # Capture the original message id - this must stay consistent throughout if streaming
+        # Message may not contain id if the Agent is not connected to a Chat Output (_should_skip_message is True)
+        initial_message_id = agent_message.get_id()
+        initial_message_published = True
         # Track tool content and start times by the same name + run_id key.
         tool_blocks_map: dict[str, ToolContent] = {}
         tool_start_times: dict[str, float] = {}
@@ -594,8 +600,22 @@ async def process_agent_events(
         agent_message.properties.state = "complete"
         # Final DB update with the complete message (skip_db_update=False by default)
         agent_message = await send_message_callback(message=agent_message)
-    except AgentPausedError:
+    except BaseException as e:
+        # Cancellation and pauses must remain primary if closing also fails.
+        primary_error = e
+        if initial_message_published and isinstance(e, Exception) and not isinstance(e, AgentPausedError):
+            raise ExceptionWithMessageError(agent_message, str(e)) from e
         raise
-    except Exception as e:
-        raise ExceptionWithMessageError(agent_message, str(e)) from e
+    finally:
+        # A callback failure/cancellation happens outside __anext__, so async for
+        # leaves the producer suspended. Close it before returning to the graph.
+        aclose = getattr(agent_executor, "aclose", None)
+        if aclose is not None:
+            try:
+                with anyio.CancelScope(shield=True):
+                    await aclose()
+            except BaseException:
+                if primary_error is None:
+                    raise
+                logger.exception("Failed to close the agent event stream while handling an error")
     return await Message.create(**agent_message.model_dump())
