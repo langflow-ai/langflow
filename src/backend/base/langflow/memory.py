@@ -2,13 +2,16 @@ import asyncio
 import json
 from collections.abc import Sequence
 from contextlib import suppress
+from datetime import datetime, timezone
 from uuid import UUID
 
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
 from lfx.log.logger import logger
+from lfx.memory.session_state import SessionMemoryState
 from lfx.utils.async_helpers import run_until_complete
-from sqlalchemy import delete
+from sqlalchemy import and_, delete, or_, update
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -18,6 +21,7 @@ from langflow.services.database.models.message.model import (
     MessageRead,
     MessageTable,
 )
+from langflow.services.database.models.session_memory.model import SessionMemoryStateTable
 from langflow.services.deps import session_scope
 
 
@@ -617,3 +621,216 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
     async def aclear(self) -> None:
         flow_id, user_id = self._require_scope()
         await adelete_messages(self.session_id, self.context_id, flow_id=flow_id, user_id=user_id)
+
+
+def _session_memory_scope_filters(flow_id: UUID, user_id: UUID, session_id: str, context_id: str | None):
+    """Predicates identifying one session-memory row; ``None`` context is stored as ``""``."""
+    return (
+        SessionMemoryStateTable.flow_id == flow_id,
+        SessionMemoryStateTable.user_id == user_id,
+        SessionMemoryStateTable.session_id == session_id,
+        SessionMemoryStateTable.context_id == (context_id or ""),
+    )
+
+
+def _to_session_memory_state(row: SessionMemoryStateTable) -> SessionMemoryState:
+    return SessionMemoryState(
+        summary=row.summary,
+        cursor_message_id=row.cursor_message_id,
+        cursor_timestamp=row.cursor_timestamp,
+        folded_count=row.folded_count,
+        version=row.version,
+    )
+
+
+async def aget_session_memory_state(
+    *,
+    flow_id: UUID | str | None,
+    user_id: UUID | str | None,
+    session_id: str,
+    context_id: str | None,
+) -> SessionMemoryState:
+    """Return the stored summary state for a session, or an empty (version 0) state when none exists."""
+    flow_id, user_id = _message_scope(flow_id, user_id)
+    if flow_id is None or user_id is None:
+        return SessionMemoryState()
+    async with session_scope() as session:
+        row = (
+            await session.exec(
+                select(SessionMemoryStateTable).where(
+                    *_session_memory_scope_filters(flow_id, user_id, session_id, context_id)
+                )
+            )
+        ).first()
+        return _to_session_memory_state(row) if row else SessionMemoryState()
+
+
+async def asave_session_memory_state(
+    *,
+    flow_id: UUID | str | None,
+    user_id: UUID | str | None,
+    session_id: str,
+    context_id: str | None,
+    summary: str,
+    cursor_message_id: UUID | str,
+    folded_delta: int,
+    summary_model: str | None,
+    expected_version: int,
+) -> SessionMemoryState | None:
+    """Compare-and-swap save of the summary state; returns None when the save lost a race or the cursor is gone.
+
+    ``expected_version == 0`` inserts the first row; otherwise a single conditional UPDATE only
+    succeeds while the stored version is still ``expected_version``. The cursor timestamp is read from
+    the message row so it keeps the database's full precision.
+    """
+    flow_id, user_id = _message_scope(flow_id, user_id)
+    if flow_id is None or user_id is None:
+        return None
+    cursor_id = UUID(str(cursor_message_id))
+    scope = _session_memory_scope_filters(flow_id, user_id, session_id, context_id)
+    now = datetime.now(timezone.utc)
+    async with session_scope() as session:
+        cursor_timestamp = (
+            await session.exec(
+                select(MessageTable.timestamp).where(
+                    MessageTable.id == cursor_id,
+                    MessageTable.flow_id == flow_id,
+                    MessageTable.user_id == user_id,
+                )
+            )
+        ).first()
+        if cursor_timestamp is None:
+            return None
+        if expected_version == 0:
+            row = SessionMemoryStateTable(
+                flow_id=flow_id,
+                user_id=user_id,
+                session_id=session_id,
+                context_id=context_id or "",
+                summary=summary,
+                cursor_message_id=cursor_id,
+                cursor_timestamp=cursor_timestamp,
+                folded_count=folded_delta,
+                summary_model=summary_model,
+                version=1,
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(row)
+            try:
+                await session.flush()
+            except IntegrityError:
+                # Another run created the row first; leave the session usable and report the lost race.
+                await session.rollback()
+                return None
+            return _to_session_memory_state(row)
+        result = await session.exec(
+            update(SessionMemoryStateTable)
+            .where(*scope, SessionMemoryStateTable.version == expected_version)
+            .values(
+                version=expected_version + 1,
+                summary=summary,
+                cursor_message_id=cursor_id,
+                cursor_timestamp=cursor_timestamp,
+                folded_count=SessionMemoryStateTable.folded_count + folded_delta,
+                summary_model=summary_model,
+                updated_at=now,
+            )
+            .execution_options(synchronize_session=False)
+        )
+        if result.rowcount == 0:
+            return None
+        row = (await session.exec(select(SessionMemoryStateTable).where(*scope))).one()
+        return _to_session_memory_state(row)
+
+
+async def aget_messages_between(
+    *,
+    flow_id: UUID | str | None,
+    user_id: UUID | str | None,
+    session_id: str,
+    context_id: str | None,
+    after_message_id: UUID | str | None,
+    after_timestamp: datetime | None,
+    before_message_id: UUID | str,
+    limit: int,
+) -> list[Message]:
+    """Return non-error messages strictly between two cursors, oldest first.
+
+    Bounds are compared as ``(timestamp, id)`` tuples using the database's own values (a message's
+    string timestamp may have lost sub-second precision). When the lower-bound message no longer
+    exists, ``after_timestamp`` is used instead; with neither the range is open below.
+    """
+    flow_id, user_id = _message_scope(flow_id, user_id)
+    if flow_id is None or user_id is None:
+        return []
+    async with session_scope() as session:
+        boundary = (
+            await session.exec(
+                select(MessageTable.timestamp, MessageTable.id).where(MessageTable.id == UUID(str(before_message_id)))
+            )
+        ).first()
+        if boundary is None:
+            return []
+        before_ts, before_id = boundary
+        stmt = (
+            select(MessageTable)
+            .where(
+                MessageTable.flow_id == flow_id,
+                MessageTable.user_id == user_id,
+                MessageTable.session_id == session_id,
+                MessageTable.error == False,  # noqa: E712
+                MessageTable.category != "error",
+                or_(
+                    col(MessageTable.timestamp) < before_ts,
+                    and_(col(MessageTable.timestamp) == before_ts, col(MessageTable.id) < before_id),
+                ),
+            )
+            .order_by(col(MessageTable.timestamp).asc(), col(MessageTable.id).asc())
+            .limit(limit)
+        )
+        if context_id:
+            stmt = stmt.where(MessageTable.context_id == context_id)
+        after = None
+        if after_message_id is not None:
+            after = (
+                await session.exec(
+                    select(MessageTable.timestamp, MessageTable.id).where(
+                        MessageTable.id == UUID(str(after_message_id))
+                    )
+                )
+            ).first()
+        if after is not None:
+            after_ts, after_id = after
+            stmt = stmt.where(
+                or_(
+                    col(MessageTable.timestamp) > after_ts,
+                    and_(col(MessageTable.timestamp) == after_ts, col(MessageTable.id) > after_id),
+                )
+            )
+        elif after_timestamp is not None:
+            stmt = stmt.where(col(MessageTable.timestamp) > after_timestamp)
+        messages = await session.exec(stmt)
+        return [await Message.create(**d.model_dump()) for d in messages]
+
+
+async def adelete_session_memory_states(
+    *,
+    flow_ids: list[UUID],
+    session_ids: list[str] | None = None,
+    db: AsyncSession | None = None,
+) -> int:
+    """Delete summary state for flows (optionally only some sessions); returns the rows removed.
+
+    Not scoped to a graph run: callers (session/flow delete endpoints) have already checked ownership.
+    Pass ``db`` to delete inside the caller's transaction; otherwise a session of its own is used.
+    """
+    if not flow_ids:
+        return 0
+    stmt = delete(SessionMemoryStateTable).where(col(SessionMemoryStateTable.flow_id).in_(flow_ids))
+    if session_ids is not None:
+        stmt = stmt.where(col(SessionMemoryStateTable.session_id).in_(session_ids))
+    if db is not None:
+        return (await db.exec(stmt)).rowcount
+    async with session_scope() as session:
+        return (await session.exec(stmt)).rowcount

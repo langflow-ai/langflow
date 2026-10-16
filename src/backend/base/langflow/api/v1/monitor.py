@@ -11,6 +11,7 @@ from sqlmodel import col, delete, func, select
 
 from langflow.api.utils import DbSession, custom_params
 from langflow.api.utils.flow_utils import compute_virtual_flow_id
+from langflow.memory import adelete_session_memory_states
 from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.authorization import FlowAction, ensure_flow_permission
@@ -226,6 +227,12 @@ async def _purge_memory_base_session_data(user_id: UUID, session_ids: list[str],
     """Purge vectors before committing message deletion, preserving retry on failure."""
     if session_ids:
         await get_memory_base_service().purge_session_data(user_id=user_id, session_ids=session_ids, db=db)
+
+
+async def _delete_session_summaries(db, user_id: UUID, session_ids: list[str]) -> None:
+    """Drop rolling chat summaries for these sessions in flows owned by the user, in the caller's transaction."""
+    owned_flow_ids = list((await db.exec(select(Flow.id).where(Flow.user_id == user_id))).all())
+    await adelete_session_memory_states(flow_ids=owned_flow_ids, session_ids=session_ids, db=db)
 
 
 @router.get("/builds", dependencies=[Depends(get_current_active_user)])
@@ -554,6 +561,7 @@ async def delete_messages_session(
         async with session_storage_operation(user_id=current_user.id, session_ids=owned_sessions):
             await _purge_memory_base_session_data(current_user.id, owned_sessions, db=session)
             await delete_messages_for_user_by_session(session, current_user.id, session_id)
+            await _delete_session_summaries(session, current_user.id, owned_sessions)
             await session.commit()
     except StorageUnavailableError as e:
         await session.rollback()
@@ -638,6 +646,7 @@ async def delete_messages_sessions(
                 .where(col(MessageTable.id).in_(message_ids))
                 .execution_options(synchronize_session="fetch")
             )
+            await _delete_session_summaries(session, current_user.id, affected_session_ids)
             await session.commit()
     except StorageUnavailableError as e:
         await session.rollback()

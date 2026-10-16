@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, cast
@@ -44,6 +45,13 @@ from lfx.base.agents.events import AgentPausedError, ExceptionWithMessageError, 
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.constants import STREAM_INFO_TEXT
+from lfx.base.memory.session_compressor import (
+    FOLD_TIMEOUT_SECONDS,
+    LfxSessionMemoryStore,
+    build_history_with_summary,
+    clip_words,
+    format_fold_prompt,
+)
 from lfx.base.models.unified_models import (
     get_language_model_options,
     get_llm,
@@ -60,6 +68,7 @@ from lfx.inputs.inputs import BoolInput, DropdownInput, ModelInput, StrInput
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
 from lfx.log.logger import logger
 from lfx.memory import delete_message
+from lfx.memory.flow_context import should_persist_messages
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
@@ -221,6 +230,14 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             info="Number of chat history messages to retrieve.",
             advanced=True,
             show=True,
+        ),
+        BoolInput(
+            name="summarize_older_messages",
+            display_name="Summarize Older Messages",
+            info="Keep a running summary of messages older than the chat history window, "
+            "so early context survives when the window is small.",
+            value=False,
+            advanced=True,
         ),
         IntInput(
             name="max_tokens",
@@ -409,7 +426,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             return None
         return val
 
-    def _get_llm(self):
+    def _get_llm(self, *, stream: bool = True):
         """Override parent to include max_tokens from the Agent's input field.
 
         Streaming is mandatory for AgentComponent: ``runnable.astream_events(v2)`` only
@@ -420,12 +437,13 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         Without ``stream=True``, the chat model accumulates the whole response and
         only emits ``on_chat_model_end``, silently disabling the Playground's live-
         typing view and breaking the streaming contract on the /events surface.
+        Internal one-shot calls (e.g. history summarization) pass ``stream=False``.
         """
         return get_llm(
             model=self.model,
             user_id=self.user_id,
             api_key=getattr(self, "api_key", None),
-            stream=True,
+            stream=stream,
             max_tokens=self._get_max_tokens_value(),
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
@@ -1014,9 +1032,52 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             n_messages=self.n_messages,
             user_id=_safe_graph_user_id(self),
         )
-        return [
+        window = [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]
+        if not (self.summarize_older_messages and self.n_messages and should_persist_messages()):
+            return window
+
+        # get_agent_requirements() re-runs on remediation retries and in json_response; fold once per turn.
+        input_id = getattr(self.input_value, "id", None)
+        cached = getattr(self, "_summary_history_memo", None)
+        if input_id is not None and cached is not None and cached[0] == input_id:
+            return cached[1]
+        history = await build_history_with_summary(
+            window=window,
+            n_messages=self.n_messages,
+            store=LfxSessionMemoryStore(
+                flow_id=getattr(self.graph, "flow_id", None),
+                user_id=_safe_graph_user_id(self),
+                session_id=self.graph.session_id,
+                context_id=self.context_id,
+                summary_model=None,
+            ),
+            summarize=self._summarize_history,
+        )
+        if input_id is not None:
+            self._summary_history_memo = (input_id, history)
+        return history
+
+    async def _summarize_history(self, previous_summary: str, messages: Sequence[Message]) -> str | None:
+        """Fold `messages` into `previous_summary` with a non-streaming LLM call; None on any failure."""
+        try:
+            llm = self._get_llm(stream=False)
+            response = await asyncio.wait_for(
+                llm.ainvoke(format_fold_prompt(previous_summary, messages), config={"callbacks": []}),
+                FOLD_TIMEOUT_SECONDS,
+            )
+            content = response.content
+            if isinstance(content, list):
+                content = "".join(
+                    block if isinstance(block, str) else block.get("text", "")
+                    for block in content
+                    if isinstance(block, str) or (isinstance(block, dict) and block.get("type", "text") == "text")
+                )
+            return clip_words(str(content).strip()) or None
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"session_summary_fold_failed: {type(exc).__name__}")
+            return None
 
     def update_input_types(self, build_config: dotdict) -> dotdict:
         """Update input types for all fields in build_config."""

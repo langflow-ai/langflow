@@ -5,9 +5,11 @@ service-based architecture. It mirrors the langflow.memory API but works with
 lfx's Message model and service interfaces.
 """
 
+from datetime import datetime
 from uuid import UUID
 
 from lfx.log.logger import logger
+from lfx.memory.session_state import SessionMemoryState
 from lfx.schema.message import Message
 from lfx.services.deps import session_scope
 from lfx.utils.async_helpers import run_until_complete
@@ -346,3 +348,54 @@ async def aadd_messagetables(messages: Message | list[Message]) -> list[Message]
         List[Message]: Added messages.
     """
     return await aadd_messages(messages)
+
+
+async def aget_session_memory_state(
+    *,
+    flow_id: UUID | None,  # noqa: ARG001
+    user_id: str | UUID | None,  # noqa: ARG001
+    session_id: str | None,  # noqa: ARG001
+    context_id: str | None,  # noqa: ARG001
+) -> SessionMemoryState | None:
+    """Session summaries need a database; None means the feature is unsupported."""
+    return None
+
+
+async def asave_session_memory_state(
+    *,
+    flow_id: UUID | None,  # noqa: ARG001
+    user_id: str | UUID | None,  # noqa: ARG001
+    session_id: str | None,  # noqa: ARG001
+    context_id: str | None,  # noqa: ARG001
+    summary: str,  # noqa: ARG001
+    cursor_message_id: UUID | str,  # noqa: ARG001
+    folded_delta: int,  # noqa: ARG001
+    summary_model: str | None,  # noqa: ARG001
+    expected_version: int,  # noqa: ARG001
+) -> SessionMemoryState | None:
+    """No-op: nothing is persisted without a database."""
+    return None
+
+
+async def aget_messages_between(
+    *,
+    flow_id: UUID | None,  # noqa: ARG001
+    user_id: str | UUID | None,  # noqa: ARG001
+    session_id: str | None,  # noqa: ARG001
+    context_id: str | None,  # noqa: ARG001
+    after_message_id: UUID | str | None,  # noqa: ARG001
+    after_timestamp: datetime | None,  # noqa: ARG001
+    before_message_id: UUID | str,  # noqa: ARG001
+    limit: int,  # noqa: ARG001
+) -> list[Message]:
+    """No-op: no stored messages without a database."""
+    return []
+
+
+async def adelete_session_memory_states(
+    *,
+    flow_ids: list[UUID],  # noqa: ARG001
+    session_ids: list[str] | None = None,  # noqa: ARG001
+) -> int:
+    """No-op: nothing to delete without a database."""
+    return 0
