@@ -42,7 +42,24 @@ describe("CustomSettingsPageFrame", () => {
     expect(content.parentElement).toHaveClass("min-w-0", "overflow-x-clip");
     expect(content.parentElement?.parentElement).toHaveClass(
       "min-w-0",
-      "overflow-clip",
+      "overflow-x-clip",
     );
+  });
+
+  it("scrolls only the content so the header and the menu stay in view", () => {
+    render(
+      <CustomSettingsPageFrame
+        title="Settings"
+        description="Preferences"
+        items={[{ title: "General", href: "/settings/general", icon: null }]}
+      >
+        <div>Settings content</div>
+      </CustomSettingsPageFrame>,
+    );
+
+    const scroller = screen.getByTestId("settings-content-scroll");
+    expect(scroller).toContainElement(screen.getByText("Settings content"));
+    expect(scroller).toHaveClass("min-h-0", "overflow-y-auto");
+    expect(scroller).not.toContainElement(screen.getByText("General"));
   });
 });
