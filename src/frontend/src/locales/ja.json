@@ -2156,6 +2156,7 @@
   "settings.migration.copy.preparing": "新しいデータベースを準備しています…",
   "settings.migration.copy.again": "もう一度コピー",
   "settings.migration.copy.stale": "このコピーは古くなったため、無効です。もう一度コピーしてください。",
+  "settings.migration.copy.newDatabase": "データベースをもう一度コピーするには、先に「{{step}}」で新しい空のデータベースを保存してください。",
   "settings.migration.copy.stopTitle": "コピーを停止しますか？",
   "settings.migration.copyDb.body": "すべてのテーブルを一度にコピーします。途中で失敗した場合は何も残らず、もう一度コピーできます。",
   "settings.migration.copyDb.progress": "行: {{done}} / {{total}}",

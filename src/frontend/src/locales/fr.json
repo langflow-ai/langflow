@@ -2156,6 +2156,7 @@
   "settings.migration.copy.preparing": "Préparation de la nouvelle base de données…",
   "settings.migration.copy.again": "Copier à nouveau",
   "settings.migration.copy.stale": "Cette copie n'est plus à jour et ne compte plus. Copiez à nouveau.",
+  "settings.migration.copy.newDatabase": "Pour copier de nouveau la base de données, enregistrez d'abord une base de données neuve et vide dans « {{step}} ».",
   "settings.migration.copy.stopTitle": "Arrêter la copie ?",
   "settings.migration.copyDb.body": "Copie toutes les tables en une seule fois. En cas d'échec, rien n'est conservé et vous pouvez recommencer.",
   "settings.migration.copyDb.progress": "Lignes : {{done}} sur {{total}}",

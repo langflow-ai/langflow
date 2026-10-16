@@ -208,6 +208,22 @@ export const hasStarted = (migration: MigrationState) =>
   );
 
 /**
+ * Whether the last database copy wrote the database saved now, so copying again needs an empty one. A copy that
+ * was refused, failed or was stopped wrote nothing. The record keeps only the last copy, though, so one of those
+ * after a whole copy hides the earlier one.
+ */
+export const databaseCopied = (migration: MigrationState) => {
+  const run = migration.record.steps.copy_database;
+  return (
+    run?.status === "done" &&
+    run.report?.ok === true &&
+    // A database saved since then is another one, as the server tells them apart.
+    run.destination?.database?.identity ===
+      migration.record.destinations?.database?.identity
+  );
+};
+
+/**
  * The page's entry for a check that ran on the new instance's data. The check of the copy names each one
  * as the command prints it, without the "source: " the first step's names carry.
  */

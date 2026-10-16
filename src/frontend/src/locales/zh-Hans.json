@@ -2156,6 +2156,7 @@
   "settings.migration.copy.preparing": "正在准备新数据库…",
   "settings.migration.copy.again": "再次复制",
   "settings.migration.copy.stale": "此次复制已过期，不再有效。请再次复制。",
+  "settings.migration.copy.newDatabase": "要再次复制数据库，请先在“{{step}}”中保存全新的空数据库。",
   "settings.migration.copy.stopTitle": "停止复制？",
   "settings.migration.copyDb.body": "一次复制所有表。如果中途失败，不会保留任何内容，您可以再次复制。",
   "settings.migration.copyDb.progress": "行：{{done}} / {{total}}",
