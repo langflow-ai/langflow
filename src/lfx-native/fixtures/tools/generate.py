@@ -1717,6 +1717,60 @@ def write_cases() -> dict[str, Any]:
     }
 
 
+# --- limit_cases.json ----------------------------------------------------------------------
+
+# The deepest nesting every runtime accepts: one limit, the same in each (rust-flow-engine-plan,
+# "Deep flows"). Every runtime parses with serde_json, which refuses a 128th level.
+MAX_DEPTH = 127
+# Levels above a template field's value in a flow: the flow, nodes, the node, data, node, template, the field.
+FLOW_LEVELS = 7
+
+
+def _nested_arrays(depth: int) -> str:
+    return "[" * depth + "]" * depth
+
+
+def _flow_nested(depth: int) -> str:
+    value = _nested_arrays(depth - FLOW_LEVELS)
+    return '{"nodes": [{"id": "a", "data": {"node": {"template": {"x": {"value": ' + value + '}}}}}], "edges": []}'
+
+
+def limit_cases() -> dict[str, Any]:
+    """JSON every runtime must refuse or accept, as the docs decide, not as the Python engine does.
+
+    The Python engine accepts lone surrogates and any depth. The Rust engine
+    cannot hold a lone surrogate in a string, and the docs ask for one depth
+    limit that holds in every runtime, so these expectations are decisions.
+    """
+    refused = [
+        ("a lone high surrogate", '{"name": "\\ud800"}'),
+        ("a lone low surrogate", '["\\udc00"]'),
+        ("a high surrogate followed by a character that is not a low surrogate", '"\\ud800\\u0041"'),
+        (f"nesting {MAX_DEPTH + 1} levels deep", _nested_arrays(MAX_DEPTH + 1)),
+        (f"a flow nested {MAX_DEPTH + 1} levels deep", _flow_nested(MAX_DEPTH + 1)),
+    ]
+    accepted = [
+        ("a surrogate pair is one character", '"\\ud83d\\ude00"'),
+        (f"nesting {MAX_DEPTH} levels deep", _nested_arrays(MAX_DEPTH)),
+        (f"a flow nested {MAX_DEPTH} levels deep", _flow_nested(MAX_DEPTH)),
+    ]
+    error = {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}
+    return {
+        "description": (
+            "JSON text the engine refuses or accepts, whichever runtime calls it. These rules are decided by the "
+            "docs, not taken from the Python engine, which accepts all of these: a lone surrogate cannot be held "
+            'in a Rust string and cannot be stored through the flows API (rust-flow-engine-investigation, "Lone '
+            f'surrogates"), and one depth limit, {MAX_DEPTH} levels of nesting, holds in every runtime '
+            '(rust-flow-engine-plan, "Deep flows"). A case gives JSON text; reading it as a value (canonical_json) '
+            "must fail with the error, or succeed with the canonical text."
+        ),
+        "refused": [{"name": name, "json": text, "error": error} for name, text in refused],
+        "accepted": [
+            {"name": name, "json": text, "canonical": canonical_json(json.loads(text))} for name, text in accepted
+        ],
+    }
+
+
 def main() -> None:
     for name, build in [
         ("canonical_cases.json", canonical_cases),
@@ -1727,6 +1781,7 @@ def main() -> None:
         ("replay_cases.json", replay_cases),
         ("restore_cases.json", restore_cases),
         ("write_cases.json", write_cases),
+        ("limit_cases.json", limit_cases),
     ]:
         _write(name, build())
         print(f"wrote {name}")

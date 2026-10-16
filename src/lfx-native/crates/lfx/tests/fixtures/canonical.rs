@@ -13,7 +13,7 @@ fn parse(text: &str) -> Result<Value, Failed> {
 /// Every canonical case.
 pub fn trials() -> Vec<Trial> {
     let document = load("canonical_cases.json");
-    let mut trials = Vec::new();
+    let mut trials = limit_trials();
     for section in ["numbers", "values"] {
         for (name, case) in section_cases(&document, section) {
             trials.push(Trial::test(
@@ -79,6 +79,35 @@ pub fn trials() -> Vec<Trial> {
                 assert_json_eq("parsed handle", &parsed, &case["parsed"])
             },
         ));
+    }
+    trials
+}
+
+/// `limit_cases.json`: JSON text the engine refuses or accepts as it reads it.
+fn limit_trials() -> Vec<Trial> {
+    let document = load("limit_cases.json");
+    let mut trials = Vec::new();
+    for section in ["refused", "accepted"] {
+        for (name, case) in section_cases(&document, section) {
+            trials.push(Trial::test(
+                format!("limit_cases::{section}::{name}"),
+                move || {
+                    let actual = match lfx::ops::api::canonical_json(
+                        case["json"].as_str().unwrap_or_default(),
+                    ) {
+                        Ok(text) => json!({"canonical": text}),
+                        Err(error) => {
+                            json!({"error": {"error": error.kind(), "code": error.code()}})
+                        }
+                    };
+                    let expected = match case.get("error") {
+                        Some(error) => json!({"error": error}),
+                        None => json!({"canonical": case["canonical"]}),
+                    };
+                    assert_json_eq("reading the text", &actual, &expected)
+                },
+            ));
+        }
     }
     trials
 }

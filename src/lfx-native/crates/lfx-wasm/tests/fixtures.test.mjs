@@ -147,8 +147,14 @@ cases("diff_cases.json", "cases", (c) => {
   assert.ok(ops.graphsEqual(state.toJson(), target));
 });
 
-for (const section of ["numbers", "values"]) {
-  cases("canonical_cases.json", section, (c) => {
+const textSections = [
+  ["canonical_cases.json", "numbers"],
+  ["canonical_cases.json", "values"],
+  ["limit_cases.json", "refused"],
+  ["limit_cases.json", "accepted"],
+];
+for (const [file, section] of textSections) {
+  cases(file, section, (c) => {
     const result = outcome(() => ops.canonicalJson(c.json));
     const actual = result.error ? { error: failure(result.error) } : { canonical: result.value };
     check(strict, "canonical form", actual, c.error ? { error: c.error } : { canonical: c.canonical });
@@ -295,7 +301,7 @@ cases("write_cases.json", "cases", (c) => {
 test("every fixture file is run", () => {
   const run = [
     "apply_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json", "envelope_cases.json",
-    "inverse_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "replay_cases.json",
+    "inverse_cases.json", "limit_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "replay_cases.json",
     "restore_cases.json", "table_cases.json", "validation_cases.json", "write_cases.json",
   ];
   assert.deepEqual(readdirSync(FIXTURES).filter((name) => name.endsWith(".json")).sort(), run);
