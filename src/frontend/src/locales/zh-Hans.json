@@ -3051,5 +3051,6 @@
   "connections.add.allowBackgroundRunsHelp": "Slack 触发器以及触发器使用此连接运行的任何流程都需要此项：这些运行在无人登录时进行。你可以稍后将其关闭。",
   "connections.identity.user_delegated": "已登录的用户",
   "connections.identity.bot": "机器人",
-  "connections.identity.service": "服务账号"
+  "connections.identity.service": "服务账号",
+  "settings.dbProviders.serverConfiguration": "已通过服务器环境配置。保持字段不变以使用该配置。"
 }

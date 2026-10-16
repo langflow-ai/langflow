@@ -3052,5 +3052,6 @@
   "connections.add.allowBackgroundRunsHelp": "Necessário para os gatilhos do Slack e para qualquer fluxo que um gatilho execute com esta conexão: essas execuções acontecem sem ninguém conectado. Você pode desativar isso depois.",
   "connections.identity.user_delegated": "O usuário conectado",
   "connections.identity.bot": "Um bot",
-  "connections.identity.service": "Uma conta de serviço"
+  "connections.identity.service": "Uma conta de serviço",
+  "settings.dbProviders.serverConfiguration": "Configurado pelo ambiente do servidor. Deixe os campos inalterados para usar essa configuração."
 }

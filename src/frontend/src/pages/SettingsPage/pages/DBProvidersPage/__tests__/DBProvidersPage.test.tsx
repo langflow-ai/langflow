@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { GlobalVariable } from "@/types/global_variables";
 import DBProvidersPage from "../index";
 
@@ -22,8 +23,11 @@ const mockPatchMutateAsync = jest.fn((params: Record<string, unknown>) => {
   patchCalls.push(params);
   return Promise.resolve(undefined);
 });
-const mockTestMutateAsync = jest.fn(() =>
-  Promise.resolve({ ok: true, message: "cluster green" }),
+const mockTestMutateAsync = jest.fn(
+  (_params: {
+    backend_type: string;
+    backend_config: Record<string, unknown>;
+  }) => Promise.resolve({ ok: true, message: "cluster green" }),
 );
 
 const mockSetSuccessData = jest.fn();
@@ -147,6 +151,11 @@ const openSearchRequiredSaved = (): GlobalVariable[] => [
 const getSaveButton = (name: RegExp) => screen.getByRole("button", { name });
 
 beforeEach(() => {
+  useUtilityStore.setState({
+    localVectorStoreAvailable: true,
+    defaultVectorStoreBackend: undefined,
+    configuredVectorStoreBackends: [],
+  });
   mockGlobalVariables = [];
   postCalls.length = 0;
   patchCalls.length = 0;
@@ -154,6 +163,71 @@ beforeEach(() => {
 });
 
 describe("DBProvidersPage characterization", () => {
+  describe("environment-configured OpenSearch", () => {
+    it.each(["postgres", "opensearch"])(
+      "tests server configuration without saving credentials when %s is the default",
+      async (defaultBackend) => {
+        useUtilityStore.setState({
+          defaultVectorStoreBackend: defaultBackend,
+          configuredVectorStoreBackends: ["postgres", "opensearch"],
+        });
+        const user = userEvent.setup();
+        render(<DBProvidersPage />);
+        await user.click(screen.getByTestId("db-provider-item-opensearch"));
+        expect(
+          screen.getByText("settings.dbProviders.serverConfiguration"),
+        ).toBeInTheDocument();
+        const testButton = screen.getByTestId("db-provider-test-connection");
+        expect(testButton).toBeEnabled();
+        mockTestMutateAsync.mockClear();
+        await user.click(testButton);
+        await waitFor(() =>
+          expect(mockTestMutateAsync).toHaveBeenCalledWith({
+            backend_type: "opensearch",
+            backend_config: expect.objectContaining({
+              url_variable: "OPENSEARCH_URL",
+            }),
+          }),
+        );
+        const config = mockTestMutateAsync.mock.calls[0][0].backend_config;
+        expect(config).not.toHaveProperty("use_ssl");
+        expect(config).not.toHaveProperty("verify_certs");
+        expect(postCalls).toEqual([]);
+        expect(patchCalls).toEqual([]);
+      },
+    );
+
+    it("activates environment-configured OpenSearch without creating credential variables", async () => {
+      useUtilityStore.setState({
+        defaultVectorStoreBackend: "postgres",
+        configuredVectorStoreBackends: ["postgres", "opensearch"],
+      });
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+      await user.click(screen.getByTestId("db-provider-item-opensearch"));
+      await user.click(getSaveButton(/^use opensearch$/i));
+      await waitFor(() => expect(postCalls).toHaveLength(1));
+      expect(postCalls[0]).toMatchObject({
+        name: "LANGFLOW_KNOWLEDGE_BACKEND",
+        value: "opensearch",
+      });
+      expect(patchCalls).toEqual([]);
+    });
+
+    it("requires a complete configuration when overriding the server fields", async () => {
+      useUtilityStore.setState({
+        configuredVectorStoreBackends: ["opensearch"],
+      });
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+      await user.click(screen.getByTestId("db-provider-item-opensearch"));
+      await user.type(
+        screen.getByPlaceholderText("https://search.example.com:9200"),
+        "https://other.example.com",
+      );
+      expect(screen.getByTestId("db-provider-test-connection")).toBeDisabled();
+    });
+  });
   describe("provider list", () => {
     it("renders supported and future providers in canonical order", () => {
       render(<DBProvidersPage />);

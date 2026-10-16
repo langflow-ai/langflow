@@ -3052,5 +3052,6 @@
   "connections.add.allowBackgroundRunsHelp": "Erforderlich für Slack-Trigger und für jeden Flow, den ein Trigger mit dieser Verbindung ausführt: Diese Ausführungen erfolgen, ohne dass jemand angemeldet ist. Sie können dies später wieder deaktivieren.",
   "connections.identity.user_delegated": "Angemeldete Person",
   "connections.identity.bot": "Ein Bot",
-  "connections.identity.service": "Ein Dienstkonto"
+  "connections.identity.service": "Ein Dienstkonto",
+  "settings.dbProviders.serverConfiguration": "Über die Serverumgebung konfiguriert. Lassen Sie die Felder unverändert, um diese Konfiguration zu verwenden."
 }
