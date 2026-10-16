@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -138,6 +139,12 @@ class _SideEffectSession:
         return SimpleNamespace(content=[], isError=False)
 
 
+@asynccontextmanager
+async def _session_in_use(session):
+    """Stub the pool boundary for isolated timeout tests; real activity is tested separately."""
+    yield session
+
+
 @CLIENTS
 @pytest.mark.asyncio
 async def test_tool_timeout_preserves_the_root_error(client_class, connection_params):
@@ -148,7 +155,7 @@ async def test_tool_timeout_preserves_the_root_error(client_class, connection_pa
     session.call_tool.side_effect = TimeoutError
 
     with (
-        patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)),
+        patch.object(client, "_session_in_use", new=lambda: _session_in_use(session)),
         patch("lfx.base.mcp.util.asyncio.sleep", new=AsyncMock()),
         pytest.raises(ValueError, match="timed out") as exc_info,
     ):
@@ -167,7 +174,7 @@ async def test_should_run_tool_once_when_response_times_out(client_class, connec
     session = _SideEffectSession(first_response_delay=0.2)
 
     with (
-        patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)),
+        patch.object(client, "_session_in_use", new=lambda: _session_in_use(session)),
         pytest.raises(ValueError, match="create_record") as exc_info,
     ):
         await client._run_tool("create_record", {"value": "payment-1"})
@@ -193,7 +200,7 @@ async def test_should_still_retry_when_session_closed_before_the_call(client_cla
     manager = MagicMock(_cleanup_session=AsyncMock(), discard_session=AsyncMock())
 
     with (
-        patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)),
+        patch.object(client, "_session_in_use", new=lambda: _session_in_use(session)),
         patch.object(client, "_get_session_manager", return_value=manager),
         patch("lfx.base.mcp.util.asyncio.sleep", new=AsyncMock()),
     ):
@@ -322,7 +329,7 @@ async def test_should_keep_client_usable_when_a_tool_call_times_out(client_class
     client._connection_params = connection_params
     session = _SideEffectSession(first_response_delay=0.2)
 
-    with patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)):
+    with patch.object(client, "_session_in_use", new=lambda: _session_in_use(session)):
         with pytest.raises(ValueError, match="timed out"):
             await client._run_tool("create_record", {"value": "payment-1"})
         result = await client._run_tool("create_record", {"value": "payment-2"})

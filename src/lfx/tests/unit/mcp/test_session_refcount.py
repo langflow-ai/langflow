@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from anyio import ClosedResourceError
 from lfx.base.mcp.util import MCPSessionManager
 
 
@@ -151,6 +152,82 @@ async def test_should_drop_stale_references_when_idle_sweep_removes_session(mana
 
     assert manager._context_to_session == {}
     assert manager._session_refcount == {}
+
+
+async def test_should_keep_activity_until_last_request_exits_after_error(manager, monkeypatch):
+    session = await manager.get_session("ctx", _params("server-a"), "stdio")
+    server_key, session_id = _pair(manager, "ctx", "server-a")
+    monkeypatch.setattr("lfx.base.mcp.util.get_session_idle_timeout", lambda: -1)
+
+    async with manager.session_activity(server_key, session):
+        with pytest.raises(ValueError, match="failed request"):  # noqa: PT012
+            async with manager.session_activity(server_key, session):
+                msg = "failed request"
+                raise ValueError(msg)
+        assert manager._sessions_for(server_key)[session_id]["active_requests"] == 1
+        await manager._cleanup_idle_sessions()
+        assert _live_sessions(manager) == 1
+
+    await manager._cleanup_idle_sessions()
+    assert _live_sessions(manager) == 0
+
+
+async def test_should_reject_session_removed_between_acquisition_and_request(manager):
+    session = await manager.get_session("ctx", _params("server-a"), "stdio")
+    server_key, _ = _pair(manager, "ctx", "server-a")
+    await manager._cleanup_session("ctx")
+
+    with pytest.raises(ClosedResourceError):
+        async with manager.session_activity(server_key, session):
+            pytest.fail("The request must not use a session that has already been swept")
+
+
+async def test_should_not_update_replacement_when_discarded_request_finishes(manager):
+    session = await manager.get_session("ctx", _params("server-a"), "stdio")
+    server_key, _ = _pair(manager, "ctx", "server-a")
+    async with manager.session_activity(server_key, session):
+        await manager.discard_session(server_key, session)
+        replacement = await manager.get_session("ctx", _params("server-a"), "stdio")
+        _, replacement_id = _pair(manager, "ctx", "server-a")
+        replacement_info = manager._sessions_for(server_key)[replacement_id]
+        last_used = replacement_info["last_used"]
+
+    assert replacement is not session
+    assert replacement_info["last_used"] == last_used
+    assert replacement_info.get("active_requests", 0) == 0
+
+
+async def test_should_release_activity_when_cancelled_while_leaving_pool_lock(manager, monkeypatch):
+    session = await manager.get_session("ctx", _params("server-a"), "stdio")
+    server_key, session_id = _pair(manager, "ctx", "server-a")
+    releasing = asyncio.Event()
+    original_release = manager._release_server_lock_if_idle
+
+    async def delayed_release(key):
+        releasing.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            await original_release(key)
+
+    monkeypatch.setattr(manager, "_release_server_lock_if_idle", delayed_release)
+
+    async def request():
+        async with manager.session_activity(server_key, session):
+            pytest.fail("Cancellation happens before the request is sent")
+
+    pending = asyncio.create_task(request())
+    try:
+        await asyncio.wait_for(releasing.wait(), timeout=2)
+        pending.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await pending
+    finally:
+        monkeypatch.setattr(manager, "_release_server_lock_if_idle", original_release)
+        pending.cancel()
+        await asyncio.gather(pending, return_exceptions=True)
+
+    assert manager._sessions_for(server_key)[session_id]["active_requests"] == 0
 
 
 async def test_should_release_once_when_the_same_context_disconnects_twice_concurrently(manager):
