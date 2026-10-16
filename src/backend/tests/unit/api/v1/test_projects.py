@@ -2065,6 +2065,22 @@ class TestReadProjectBugFix:
         assert "flows" in result
         assert result["name"] == basic_case["name"]
 
+    async def test_read_project_rejects_out_of_range_pagination_params(
+        self, client: AsyncClient, logged_in_headers, basic_case
+    ):
+        """Out-of-range page/size are a 422 validation error, not a 500."""
+        create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+        assert create_response.status_code == status.HTTP_201_CREATED
+        project_id = create_response.json()["id"]
+
+        response = await client.get(f"api/v1/projects/{project_id}?page=1&size=101", headers=logged_in_headers)
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert response.json()["detail"][0]["loc"] == ["query", "size"]
+
+        response = await client.get(f"api/v1/projects/{project_id}?page=0&size=10", headers=logged_in_headers)
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert response.json()["detail"][0]["loc"] == ["query", "page"]
+
     async def test_read_project_with_filtering_params(self, client: AsyncClient, logged_in_headers, basic_case):
         """Test read_project with filtering parameters (is_component, is_flow, search)."""
         # Create a project first

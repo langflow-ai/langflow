@@ -40,6 +40,7 @@ from langflow.api import log_router
 from langflow.api.health_check_router import health_check_router
 from langflow.api.router import router
 from langflow.api.utils.migration_pause import MigrationPauseMiddleware
+from langflow.api.v1 import connections
 from langflow.api.v1.audit_reads import VERBATIM_QUERY_PARAMS
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.api.validation_errors import request_validation_exception_handler
@@ -1259,6 +1260,11 @@ def create_app():
             path=request.url.path,
             method=request.method,
         )
+        if request.scope.get("endpoint") in (
+            connections.complete_connection_oauth,
+            connections.bind_connection_oauth_browser,
+        ):
+            return connections.oauth_rate_limit_response(int(retry_after_seconds))
         return JSONResponse(
             status_code=HTTPStatus.TOO_MANY_REQUESTS,
             content={

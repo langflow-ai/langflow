@@ -331,7 +331,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         # Isolate metadata building from storage and its statistics refresh.
         with (
-            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
             patch.object(component, "_refresh_kb_stats"),
         ):
             result = await component.build_kb_info()
@@ -356,7 +356,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         for _ in range(2):
             component = component_class(**default_kwargs)
             with (
-                patch.object(component, "_create_vector_store"),
+                patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
                 patch.object(component, "_refresh_kb_stats"),
             ):
                 result = await component.build_kb_info()
@@ -377,7 +377,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         component = component_class(**default_kwargs)
         with (
             patch("langflow.api.utils.ingestion_run_service.create_run", AsyncMock(side_effect=RuntimeError("boom"))),
-            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
             patch.object(component, "_refresh_kb_stats"),
         ):
             result = await component.build_kb_info()
@@ -520,7 +520,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_get_embeddings.return_value = mock_embedding_fn
 
         with (
-            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0})),
             patch.object(component, "_refresh_kb_stats"),
         ):
             result = await component.build_kb_info()
@@ -550,7 +550,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_get_embeddings.return_value = MagicMock()
 
         with (
-            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
             patch.object(component, "_refresh_kb_stats"),
         ):
             result = await component.build_kb_info()

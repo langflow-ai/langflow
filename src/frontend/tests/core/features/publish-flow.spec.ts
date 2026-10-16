@@ -81,3 +81,47 @@ test(
     });
   },
 );
+
+test(
+  "user should see and copy the full shareable playground link",
+  { tag: ["@release", "@workspace"] },
+  async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await openBlankFlow(page);
+    await page.waitForSelector(`[data-testid="${TID.sidebarSearchInput}"]`, {
+      timeout: TIMEOUTS.short,
+    });
+    await addComponentFromSidebar(page, {
+      search: "chat input",
+      testId: "input_outputChat Input",
+      hoverAdd: true,
+    });
+    const flowId = new URL(page.url()).pathname.split("/").pop();
+
+    await page.getByTestId(TID.publishButton).click();
+    await page.getByTestId(TID.publishSwitch).click();
+
+    const link = page.getByTestId("shareable-playground-url");
+    await expect(link).toHaveText(
+      new URL(`/playground/${flowId}`, page.url()).toString(),
+      { timeout: TIMEOUTS.medium },
+    );
+
+    await page.runA11yScan("share-menu-shareable-link");
+
+    await page.getByTestId("copy-shareable-playground-url").click();
+    await expect(
+      page.getByTestId("copy-shareable-playground-url"),
+    ).toContainText("Link copied");
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toBe(await link.innerText());
+
+    const shared = await context.newPage();
+    await shared.goto(copied);
+    await expect(shared).toHaveURL(new RegExp(`/playground/${flowId}$`));
+    await expect(shared.getByTestId("input-chat-playground")).toBeVisible({
+      timeout: TIMEOUTS.long,
+    });
+    await shared.close();
+  },
+);
