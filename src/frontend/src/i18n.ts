@@ -11,6 +11,7 @@ const SUPPORTED_LANGUAGES = [
   "ko",
   "pt",
   "zh-Hans",
+  "tr",
 ] as const;
 
 const normalizeLanguage = (lang?: string | null): string => {
