@@ -43,11 +43,32 @@ for (const section of ["memories", "traces"]) {
         if (isFlowWrite(response)) statuses.push(response.status());
       });
 
+      // Hold the first save's response until the canvas is gone, so it lands
+      // while Memories or Traces is open however fast the server answers.
+      let releaseResponse = () => {};
+      const canvasGone = new Promise<void>((resolve) => {
+        releaseResponse = resolve;
+      });
+      let held = false;
+      await page.route(/\/api\/v\d\/flows\/[0-9a-f-]{36}/i, async (route) => {
+        if (route.request().method() !== "PATCH" || held) {
+          await route.continue();
+          return;
+        }
+        held = true;
+        const response = await route.fetch();
+        await canvasGone;
+        await route.fulfill({ response });
+      });
+
       const offCanvasSave = page.waitForResponse(isFlowWrite, {
         timeout: SAVE_WINDOW_MS,
       });
       await dragFirstNode(page);
       await page.getByTestId(`sidebar-nav-${section}`).click();
+      await expect(page.locator(".react-flow__node")).toHaveCount(0);
+      await expect.poll(() => held, { timeout: SAVE_WINDOW_MS }).toBe(true);
+      releaseResponse();
       expect((await offCanvasSave).status()).toBe(200);
 
       await page.getByTestId("sidebar-nav-components").click();
