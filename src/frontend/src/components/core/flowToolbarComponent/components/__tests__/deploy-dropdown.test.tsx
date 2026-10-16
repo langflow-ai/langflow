@@ -13,6 +13,7 @@ const mockCurrentFlow = {
   folder_id: "project-1",
   access_type: "PRIVATE",
 };
+const mockWriteText = jest.fn();
 
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -45,8 +46,24 @@ jest.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenuContent: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
-  DropdownMenuItem: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
+  DropdownMenuItem: ({
+    children,
+    onSelect,
+    disabled: _disabled,
+    ...props
+  }: React.ComponentProps<"div"> & {
+    disabled?: boolean;
+    onSelect?: (event: Event) => void;
+  }) => (
+    <div
+      {...props}
+      role="menuitem"
+      tabIndex={-1}
+      onClick={() => onSelect?.(new Event("select"))}
+      onKeyDown={() => onSelect?.(new Event("select"))}
+    >
+      {children}
+    </div>
   ),
   DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
@@ -145,11 +162,52 @@ jest.mock("@/stores/flowsManagerStore", () => ({
     }),
 }));
 
+Object.defineProperty(navigator, "clipboard", {
+  configurable: true,
+  value: { writeText: mockWriteText },
+});
+
 describe("PublishDropdown", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCurrentFlow.access_type = "PRIVATE";
     mockAutoSaveFlush.mockResolvedValue(undefined);
     mockMutateAsync.mockResolvedValue(undefined);
+    mockWriteText.mockResolvedValue(undefined);
+  });
+
+  it("shows the full shareable link with a single slash when sharing is on", () => {
+    mockCurrentFlow.access_type = "PUBLIC";
+
+    render(<PublishDropdown openApiModal={false} setOpenApiModal={() => {}} />);
+
+    expect(screen.getByTestId("shareable-playground-url")).toHaveTextContent(
+      "http://localhost/playground/flow-1",
+    );
+  });
+
+  it("copies the shareable link in one click", async () => {
+    mockCurrentFlow.access_type = "PUBLIC";
+
+    render(<PublishDropdown openApiModal={false} setOpenApiModal={() => {}} />);
+    fireEvent.click(screen.getByTestId("copy-shareable-playground-url"));
+
+    await waitFor(() =>
+      expect(mockWriteText).toHaveBeenCalledWith(
+        "http://localhost/playground/flow-1",
+      ),
+    );
+    expect(
+      await screen.findByText("misc.shareableLinkCopied"),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no link to copy while sharing is off", () => {
+    render(<PublishDropdown openApiModal={false} setOpenApiModal={() => {}} />);
+
+    expect(
+      screen.queryByTestId("copy-shareable-playground-url"),
+    ).not.toBeInTheDocument();
   });
 
   it("flushes pending canvas edits before publishing the flow", async () => {
