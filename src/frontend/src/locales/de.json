@@ -3035,7 +3035,7 @@
   "connections.add.failed": "Die Autorisierung wurde nicht abgeschlossen.",
   "connections.add.denied": "Der Anbieter hat die Autorisierung abgelehnt.",
   "connections.add.expired": "Der Anmeldelink ist abgelaufen. Starten Sie erneut, um einen neuen zu erhalten.",
-  "connections.add.cancelled": "Das Anmeldefenster wurde vor Abschluss der Autorisierung geschlossen.",
+  "connections.add.windowUntracked": "Langflow kann das Anmeldefenster nicht mehr verfolgen. Wenn der Anbieter einen Fehler anzeigt, bitten Sie Ihre Administration, die OAuth-Registrierung zu prüfen, bevor Sie es erneut versuchen.",
   "connections.add.cleanupFailed": "Verbindung nicht entfernt",
   "connections.add.cleanupFailedBody": "Die unvollständige Verbindung konnte nicht gelöscht werden. Entfernen Sie sie aus der Liste.",
   "connections.add.identity": "Ausführen als",

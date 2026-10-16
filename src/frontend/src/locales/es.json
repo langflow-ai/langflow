@@ -3035,7 +3035,7 @@
   "connections.add.failed": "La autorización no se completó.",
   "connections.add.denied": "El proveedor rechazó la autorización.",
   "connections.add.expired": "El enlace de inicio de sesión caducó. Empieza de nuevo para obtener otro.",
-  "connections.add.cancelled": "La ventana de inicio de sesión se cerró antes de completar la autorización.",
+  "connections.add.windowUntracked": "Langflow ya no puede seguir la ventana de inicio de sesión. Si el proveedor muestra un error, pide a tu administrador que revise el registro de OAuth antes de volver a intentarlo.",
   "connections.add.cleanupFailed": "Conexión no eliminada",
   "connections.add.cleanupFailedBody": "No se pudo eliminar la conexión incompleta. Quítala de la lista.",
   "connections.add.identity": "Actúa como",

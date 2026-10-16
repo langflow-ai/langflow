@@ -203,7 +203,10 @@ describe("AddConnectionDialog re-authorize", () => {
       .mockReturnValue(popup as unknown as Window);
   });
 
-  afterEach(() => openSpy.mockRestore());
+  afterEach(() => {
+    openSpy.mockRestore();
+    jest.useRealTimers();
+  });
 
   it.each(["create", "reauthorize"])(
     "shows action names and risks for %s consent",
@@ -316,6 +319,135 @@ describe("AddConnectionDialog re-authorize", () => {
       await userEvent.click(screen.getByTestId("connection-done"));
       expect(popup.close).toHaveBeenCalledTimes(1);
       expect(mockRemove).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["create", "ready"],
+    ["reauthorize", "ready"],
+    ["create", "denied"],
+    ["reauthorize", "denied"],
+  ])(
+    "accepts the %s callback (%s) after losing track of the popup",
+    async (mode, outcome) => {
+      jest.useFakeTimers();
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const initial = connection(
+        mode === "create" ? { status: "pending", has_credentials: false } : {},
+      );
+      const reauthorize = mode === "reauthorize" ? initial : undefined;
+      mockCreate.mockResolvedValue(initial);
+      mockPolledConnection = initial;
+      const { rerender } = render(dialog(reauthorize));
+
+      if (mode === "create") {
+        await user.type(screen.getByTestId("connection-name"), "work");
+        await user.type(screen.getByTestId("connection-display-name"), "Work");
+        await user.click(screen.getByTestId("connection-continue"));
+      } else {
+        await user.click(screen.getByTestId("connection-authorize"));
+      }
+
+      await waitFor(() => expect(popup.location.href).toBe(AUTHORIZATION_URL));
+      await act(async () => jest.advanceTimersByTimeAsync(1000));
+      expect(screen.getByRole("dialog")).toHaveTextContent(
+        "Waiting for consent in the provider's window…",
+      );
+
+      // COOP can sever the opener reference and report closed even while the
+      // provider's error page remains open. It cannot prove user cancellation.
+      popup.closed = true;
+      act(() => jest.advanceTimersByTime(1000));
+      expect(
+        screen.queryByText(
+          "The sign-in window closed before authorization finished.",
+        ),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Langflow can no longer track the sign-in window.",
+      );
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "check the OAuth registration before trying again",
+      );
+      expect(screen.getByTestId("connection-try-again")).toBeEnabled();
+      expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
+        "href",
+        "https://docs.langflow.org/connection-oauth#customer-owned-google-registration",
+      );
+      expect(popup.close).not.toHaveBeenCalled();
+      expect(mockStartOAuth).toHaveBeenCalledTimes(1);
+
+      mockPolledConnection = connection({
+        updated_at: "2026-09-16T10:01:00",
+        status_reason: outcome === "denied" ? "oauth-denied" : null,
+      });
+      rerender(dialog(reauthorize));
+      expect(
+        screen.getByText(
+          outcome === "ready"
+            ? "Connected"
+            : "The provider denied authorization.",
+        ),
+      ).toBeInTheDocument();
+      expect(mockRemove).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["closed", "blocked"])(
+    "retries with the same scopes after the popup is %s",
+    async (state) => {
+      jest.useFakeTimers();
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      if (state === "blocked") openSpy.mockReturnValue(null);
+      render(dialog(connection()));
+      await user.click(scopeBox(GMAIL_SEND));
+      await user.click(screen.getByTestId("connection-authorize"));
+      if (state === "closed") popup.closed = true;
+      act(() => jest.advanceTimersByTime(1000));
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Langflow can no longer track the sign-in window.",
+      );
+      expect(mockStartOAuth).toHaveBeenCalledTimes(1);
+
+      popup.closed = false;
+      openSpy.mockReturnValue(popup as unknown as Window);
+      await user.click(screen.getByTestId("connection-try-again"));
+      expect(mockStartOAuth).toHaveBeenCalledTimes(2);
+      expect(mockStartOAuth.mock.calls[1][0].scopes).toEqual([
+        CALENDAR,
+        GMAIL_SEND,
+      ]);
+      expect(
+        screen.getByText("Waiting for consent in the provider's window…"),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      expect(mockRemove).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([false, true])(
+    "expires consent without a changed poll result (popup closed: %s)",
+    async (closed) => {
+      jest.useFakeTimers();
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const initial = connection();
+      mockPolledConnection = initial;
+      render(dialog(initial));
+      await user.click(screen.getByTestId("connection-authorize"));
+
+      popup.closed = closed;
+      act(() => jest.advanceTimersByTime(1000));
+      if (closed) {
+        expect(screen.getByRole("status")).toHaveTextContent(
+          "Langflow can no longer track the sign-in window.",
+        );
+      }
+      act(() => jest.advanceTimersByTime(10 * 60 * 1000 - 1000));
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "The sign-in link expired. Start again to get a new one.",
+      );
+      expect(screen.getByTestId("connection-try-again")).toBeEnabled();
     },
   );
 

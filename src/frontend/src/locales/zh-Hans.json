@@ -3034,7 +3034,7 @@
   "connections.add.failed": "授权未完成。",
   "connections.add.denied": "提供方拒绝了授权。",
   "connections.add.expired": "登录链接已过期。请重新开始以获取新链接。",
-  "connections.add.cancelled": "登录窗口在授权完成前被关闭。",
+  "connections.add.windowUntracked": "Langflow 无法继续跟踪登录窗口。如果提供商显示错误，请让管理员检查 OAuth 注册配置后再重试。",
   "connections.add.cleanupFailed": "连接未删除",
   "connections.add.cleanupFailedBody": "无法删除未完成的连接，请从列表中将其移除。",
   "connections.add.identity": "以此身份运行",
