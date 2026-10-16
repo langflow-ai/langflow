@@ -102,6 +102,7 @@ describe("knowledge-base provider defaults", () => {
       expect.objectContaining({ backend_type: "opensearch" }),
     );
   });
+
   it.each(["postgres", "opensearch"] as const)(
     "submits an environment configured %s base without saved variables",
     async (backendType) => {
@@ -133,4 +134,36 @@ describe("knowledge-base provider defaults", () => {
       );
     },
   );
+
+  it("keeps normalization for a new base and returns its stored name", async () => {
+    useUtilityStore.setState({ vectorStoreConfigLoaded: true });
+    const onSubmit = jest.fn();
+    const { result } = renderHook(() =>
+      useKnowledgeBaseForm({
+        open: true,
+        setOpen: jest.fn(),
+        hideAdvanced: true,
+        onSubmit,
+      }),
+    );
+    act(() => {
+      result.current.setSourceName("  New Research  ");
+      result.current.setSelectedEmbeddingModel([
+        result.current.embeddingModelOptions[0],
+      ]);
+    });
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "New_Research" }),
+    );
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceName: "  New Research  ",
+        dirName: "New_Research",
+      }),
+    );
+  });
 });
