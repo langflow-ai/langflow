@@ -57,6 +57,10 @@ class Column(BaseModel):
     def set_formatter_from_type(self):
         if self.type and not self.formatter:
             self.formatter = self.validate_formatter(self.type)
+        if self.default is None:
+            # ``None`` means "no default". Coercing it below would send the literal string "None" to the
+            # frontend, where the table editor prefills new rows with it.
+            return self
         if self.formatter in {"boolean", "bool"}:
             valid_trues = ["True", "true", "1", "yes"]
             valid_falses = ["False", "false", "0", "no"]
