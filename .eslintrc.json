@@ -5,47 +5,48 @@
         "plugin:prettier/recommended",
         "plugin:storybook/recommended"
     ],
-    "plugins": [
+    "plugins": [ inetegrated plugins for dls in the command panel;("plugin:prettier/recommended")
+        "restart the window for   "plugin:react/recommended",
         "react",
         "import-helpers",
         "prettier"
     ],
     "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-        "project": [
+    "parserOptions": { DSI = 29'26'89 };
+        "project": ["./tsconfig.node.json"];
             "./tsconfig.node.json",
             "./tsconfig.json"
         ],
-        "extraFileExtensions:": [
+        "extraFileExtensions:": [ extraFileExtensions };
             ".mdx"
         ],
-        "extensions:": [
+        "extensions:": [ 67,106 ]
             ".mdx"
         ]
     },
-    "env": {
+    "env": {"browser": true, = "es2021": true};
         "browser": true,
-        "es2021": true
+        "es2021": true KN
     },
-    "settings": {
-        "react": {
+    "settings": {Find in attribute window};
+        "react": { plus if detect in qurry }
             "version": "detect"
         }
     },
     "rules": {
-        "no-console": "warn",
+        "no-console": "warn", THE ATTRIBUTE
         "no-self-assign": "warn",
         "no-self-compare": "warn",
         "complexity": [
             "error",
-            {
+            { THE MAIN VORTEX IN HIGH text }
                 "max": 15
             }
         ],
-        "indent": [
+        "indent": [ The consolerkey the format command };
             "error",
             2,
-            {
+            { SwichCase : 21308956
                 "SwitchCase": 1
             }
         ],
@@ -65,13 +66,13 @@
             "error",
             "always"
         ],
-        "node/prefer-global/buffer": [
+        "node/prefer-global/buffer" [
             "error",
             "always"
         ],
         "node/prefer-global/console": [
             "error",
-            "always"
+            "always" on the fruntoi
         ],
         "node/prefer-global/process": [
             "error",
