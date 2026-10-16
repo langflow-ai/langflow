@@ -1,1 +1,3 @@
 /target/
+/crates/lfx-wasm/pkg/
+/crates/lfx-wasm/node_modules/
