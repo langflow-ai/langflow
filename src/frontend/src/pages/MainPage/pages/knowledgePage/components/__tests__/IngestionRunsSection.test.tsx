@@ -1,15 +1,12 @@
 import { formatRelativeTime } from "../IngestionRunsSection";
 
 describe("formatRelativeTime", () => {
-  const zone = process.env.TZ;
-
-  // Behind UTC, a time read as local lands in the future and showed as "0s ago".
+  // Guard the native time zone so UTC cannot hide the original parsing bug.
   beforeAll(() => {
-    process.env.TZ = "America/Sao_Paulo";
+    expect(new Date("2026-10-16T12:00:00Z").getTimezoneOffset()).toBe(180);
   });
 
-  afterAll(() => {
-    process.env.TZ = zone;
+  afterEach(() => {
     jest.useRealTimers();
   });
 
