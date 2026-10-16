@@ -291,6 +291,8 @@
   "misc.shareablePlayground": "공유용 Playground",
   "misc.activateToShare": "켜면 이 Playground의 공개 버전을 공유할 수 있습니다",
   "misc.addChatInputOutput": "Flow를 쓰려면 Chat Input이나 Chat Output을 추가하세요",
+  "misc.copyShareableLink": "링크 복사",
+  "misc.shareableLinkCopied": "링크를 복사했습니다",
   "misc.textInputModalTitle": "텍스트 편집",
   "misc.fetchError": "연결하지 못했습니다.",
   "misc.fetchErrorDesc": "문제가 없는지 확인한 뒤 다시 시도하세요.",

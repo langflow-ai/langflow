@@ -1564,6 +1564,8 @@
   "messages.loadError": "メッセージを読み込めませんでした。",
   "misc.activateToShare": "有効にすると、このプレイグラウンドの公開版を共有できます",
   "misc.addChatInputOutput": "フローにチャット入力またはチャット出力を追加してアクセスする",
+  "misc.copyShareableLink": "リンクをコピー",
+  "misc.shareableLinkCopied": "リンクをコピーしました",
   "misc.addChatInputOutputPlayground": "プレイグラウンドを使用するには、チャット入力またはチャット出力を追加してください",
   "misc.alertSaveWithApi": "⚠️ 注意：このフローをエクスポートすると、機密性の高い認証情報が漏洩する恐れがあります。",
   "misc.apiAccess": "API アクセス",

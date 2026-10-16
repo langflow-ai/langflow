@@ -1564,6 +1564,8 @@
   "messages.loadError": "Impossible de charger les messages.",
   "misc.activateToShare": "Activez cette option pour partager une version publique de ce Playground",
   "misc.addChatInputOutput": "Ajoutez une entrée ou une sortie de chat pour accéder à votre flux",
+  "misc.copyShareableLink": "Copier le lien",
+  "misc.shareableLinkCopied": "Lien copié",
   "misc.addChatInputOutputPlayground": "Ajoutez une entrée ou une sortie de chat pour utiliser l'espace de test",
   "misc.alertSaveWithApi": "⚠️ Attention : l'exportation de ce flux peut entraîner la divulgation d'identifiants sensibles.",
   "misc.apiAccess": "Accès à l'API",
