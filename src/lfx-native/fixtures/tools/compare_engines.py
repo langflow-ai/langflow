@@ -123,7 +123,7 @@ def compare(path: Path, differences: list[str]) -> int:
             [dump_flow_operation(o) for o in derived.operations],
             rust_derived["operations"],
         )
-        graph, state = base, ops.FlowState(base_text)
+        graph, state = base, ops.GraphState(base_text)
         for operation in operations:
             graph = apply_flow_operations(graph, parse_flow_operations([operation])).flow_data
             state.apply(json.dumps([operation]))

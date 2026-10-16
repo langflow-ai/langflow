@@ -100,7 +100,7 @@ function ignoringRowOrder(flow) {
 }
 
 cases("apply_cases.json", "cases", (c) => {
-  const created = outcome(() => new ops.FlowState(dump(c.base)));
+  const created = outcome(() => new ops.GraphState(dump(c.base)));
   if (created.error) return check(strict, "error", failure(created.error), { error: c.error, code: c.code });
   const state = created.value;
   const applied = outcome(() => parse(state.apply(dump(c.operations), { forward: true })));
@@ -115,7 +115,7 @@ cases("apply_cases.json", "cases", (c) => {
 
 const merge = load("merge_cases.json");
 cases("merge_cases.json", "cases", (c) => {
-  const state = new ops.FlowState(dump(merge.base));
+  const state = new ops.GraphState(dump(merge.base));
   const outcomes = {};
   for (const name of c.order) {
     const before = parse(state.toJson());
@@ -131,7 +131,7 @@ cases("merge_cases.json", "cases", (c) => {
 
 const property = load("property_cases.json");
 cases("property_cases.json", "sequences", (sequence) => {
-  const state = new ops.FlowState(dump(property.base));
+  const state = new ops.GraphState(dump(property.base));
   for (const transaction of sequence.transactions) state.apply(dump(transaction), {});
   assert.equal(ops.graphHash(state.toJson()), sequence.graph_hash);
 });
@@ -142,7 +142,7 @@ cases("diff_cases.json", "cases", (c) => {
   const [base, target] = [dump(c.base), dump(c.target)];
   check(strict, "operations", parse(ops.diff(base, target)), c.operations);
   assert.ok(ops.graphsEqual(dump(parse(ops.derive(base, target)).flow_data), target));
-  const state = new ops.FlowState(base);
+  const state = new ops.GraphState(base);
   for (const operation of c.operations) state.apply(dump([operation]), {});
   assert.ok(ops.graphsEqual(state.toJson(), target));
 });
@@ -238,7 +238,7 @@ function unordered(lists) {
 }
 
 cases("inverse_cases.json", "cases", (c) => {
-  const state = new ops.FlowState(dump(c.base));
+  const state = new ops.GraphState(dump(c.base));
   const applied = parse(state.apply(dump(c.operations), { inverse: true }));
   check(matches, "inverse operations", unordered(applied.inverse_operations), unordered(c.inverse));
   for (const inverse of [...applied.inverse_operations].reverse()) state.apply(dump(inverse), { restoring: true });

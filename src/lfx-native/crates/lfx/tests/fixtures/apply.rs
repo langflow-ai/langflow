@@ -2,7 +2,7 @@
 
 use lfx::ops::canonical::{graph_hash, graphs_equal};
 use lfx::ops::schema::NODE_SCHEMA;
-use lfx::ops::{ApplyOptions, FlowState, Operation};
+use lfx::ops::{ApplyOptions, GraphState, Operation};
 use libtest_mimic::{Failed, Trial};
 use serde_json::{Map, Value, json};
 
@@ -56,7 +56,7 @@ fn apply_case(case: &Value) -> Result<(), Failed> {
         ..ApplyOptions::default()
     };
     let mut state = None;
-    let outcome = FlowState::new(base.clone()).and_then(|new| {
+    let outcome = GraphState::new(base.clone()).and_then(|new| {
         let state = state.insert(new);
         parse(&case["operations"]).and_then(|operations| state.apply(operations, options))
     });
@@ -98,7 +98,7 @@ fn apply_case(case: &Value) -> Result<(), Failed> {
 fn inverse_round_trip(case: &Value) -> Result<(), Failed> {
     let base = &case["base"];
     let mut state =
-        FlowState::new(base.clone()).map_err(|error| format!("base does not index: {error}"))?;
+        GraphState::new(base.clone()).map_err(|error| format!("base does not index: {error}"))?;
     let options = ApplyOptions {
         inverse: true,
         ..ApplyOptions::default()
@@ -136,7 +136,7 @@ fn inverse_round_trip(case: &Value) -> Result<(), Failed> {
 
 fn merge_case(base: &Value, case: &Value) -> Result<(), Failed> {
     let mut state =
-        FlowState::new(base.clone()).map_err(|error| format!("base does not index: {error}"))?;
+        GraphState::new(base.clone()).map_err(|error| format!("base does not index: {error}"))?;
     let mut outcomes = Map::new();
     for name in case["order"].as_array().into_iter().flatten() {
         let name = name.as_str().unwrap_or_default();
@@ -173,7 +173,7 @@ fn merge_case(base: &Value, case: &Value) -> Result<(), Failed> {
 /// Replay a sequence's transactions: on one state, as a handle does, or on a new state each time.
 fn property_sequence(base: &Value, sequence: &Value, one_state: bool) -> Result<(), Failed> {
     let mut state =
-        FlowState::new(base.clone()).map_err(|error| format!("base does not index: {error}"))?;
+        GraphState::new(base.clone()).map_err(|error| format!("base does not index: {error}"))?;
     for (index, transaction) in sequence["transactions"]
         .as_array()
         .into_iter()
@@ -181,7 +181,7 @@ fn property_sequence(base: &Value, sequence: &Value, one_state: bool) -> Result<
         .enumerate()
     {
         if !one_state {
-            state = FlowState::new(state.to_value()).map_err(|error| error.to_string())?;
+            state = GraphState::new(state.to_value()).map_err(|error| error.to_string())?;
         }
         state
             .apply(

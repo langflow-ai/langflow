@@ -65,21 +65,21 @@ fn revision(value: f64) -> Result<u64, JsValue> {
 /// History playback and rebase apply many batches to one graph and read it
 /// once. A refused batch changes nothing.
 #[wasm_bindgen]
-pub struct FlowState {
-    state: lfx::ops::FlowState,
+pub struct GraphState {
+    state: lfx::ops::GraphState,
 }
 
 #[wasm_bindgen]
-impl FlowState {
+impl GraphState {
     /// Index a graph given as JSON text.
     ///
     /// # Errors
     ///
     /// The graph does not parse or breaks a structural rule.
     #[wasm_bindgen(constructor)]
-    pub fn new(flow: &str) -> Result<FlowState, JsValue> {
+    pub fn new(flow: &str) -> Result<GraphState, JsValue> {
         Ok(Self {
-            state: run(api::flow_state(flow))?,
+            state: run(api::graph_state(flow))?,
         })
     }
 
