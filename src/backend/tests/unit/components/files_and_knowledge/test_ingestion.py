@@ -342,6 +342,48 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert "rows" in result.data
         assert result.data["rows"] == 2
 
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_build_kb_info_reports_the_knowledge_base_id(
+        self, mock_get_embeddings, component_class, default_kwargs
+    ):
+        """kb_id is the persisted id of the knowledge base and is stable across runs."""
+        from langflow.api.utils import knowledge_base_service
+
+        mock_get_embeddings.return_value = MagicMock()
+        record = await knowledge_base_service.get_by_user_and_name(default_kwargs["_user_id"], "test_kb")
+
+        kb_ids = []
+        for _ in range(2):
+            component = component_class(**default_kwargs)
+            with (
+                patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
+                patch.object(component, "_refresh_kb_stats"),
+            ):
+                result = await component.build_kb_info()
+            kb_ids.append(result.data["kb_id"])
+
+        assert kb_ids == [str(record.id), str(record.id)]
+
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_build_kb_info_keeps_the_knowledge_base_id_when_run_tracking_fails(
+        self, mock_get_embeddings, component_class, default_kwargs
+    ):
+        """A failure while starting run tracking must not hide the id of an existing knowledge base."""
+        from langflow.api.utils import knowledge_base_service
+
+        mock_get_embeddings.return_value = MagicMock()
+        record = await knowledge_base_service.get_by_user_and_name(default_kwargs["_user_id"], "test_kb")
+
+        component = component_class(**default_kwargs)
+        with (
+            patch("langflow.api.utils.ingestion_run_service.create_run", AsyncMock(side_effect=RuntimeError("boom"))),
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
+            patch.object(component, "_refresh_kb_stats"),
+        ):
+            result = await component.build_kb_info()
+
+        assert result.data["kb_id"] == str(record.id)
+
     async def test_get_knowledge_bases(self, tmp_path, active_user):
         """Test getting list of knowledge bases."""
         # Create additional test directories

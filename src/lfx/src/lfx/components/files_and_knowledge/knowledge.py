@@ -1370,7 +1370,7 @@ class KnowledgeComponent(Component):
                 await _finish_despite_cancellation(backend.teardown())
 
             meta: dict[str, Any] = {
-                "kb_id": str(uuid.uuid4()),
+                "kb_id": str(kb_record_id) if kb_record_id is not None else None,
                 "kb_name": self.knowledge_base,
                 "rows": len(df_source),
                 "chunks_created": len(stored_rows),
@@ -1470,6 +1470,7 @@ class KnowledgeComponent(Component):
         job_id: uuid.UUID | None = None
         run_id: uuid.UUID | None = None
         summary: IngestionSummary | None = None
+        kb_record_id: uuid.UUID | None = None
         try:
             kb_record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
             kb_record_id = kb_record.id if kb_record is not None else None
@@ -1540,7 +1541,7 @@ class KnowledgeComponent(Component):
             raise
         except Exception as exc:  # noqa: BLE001 — telemetry must never abort ingestion
             self.log(f"Could not begin ingestion-run tracking: {exc}")
-            return None, None, None, None
+            return None, None, None, kb_record_id
         else:
             return run_id, job_id, summary, kb_record_id
 

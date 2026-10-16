@@ -169,6 +169,14 @@ def _legacy_process(process: psutil.Process) -> bool:
         if username != psutil.Process().username():
             return False
         try:
+            # A setuid program, such as the login process macOS keeps for each extra Terminal tab, has the
+            # account as its real user but runs as root. It cannot be one of the account's Langflow workers.
+            if process.uids().effective != os.geteuid():
+                return False
+        except (AttributeError, psutil.NoSuchProcess, psutil.AccessDenied):
+            # Windows has no user ids. A process that is gone is handled below.
+            pass
+        try:
             if process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
                 return False
             # macOS can deny cmdline() briefly while a same-user process exits.
