@@ -126,10 +126,10 @@ class TavilySearchComponent(Component):
             headers = {
                 "content-type": "application/json",
                 "accept": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
             }
 
             payload = {
-                "api_key": self.api_key,
                 "query": self.query,
                 "search_depth": self.search_depth,
                 "topic": self.topic,
