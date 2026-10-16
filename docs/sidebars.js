@@ -648,11 +648,6 @@ module.exports = {
           items: [
             "API-Reference/workflow-api-quickstart",
             "API-Reference/workflows-api",
-            {
-              type: "link",
-              label: "Workflow API specification (Beta)",
-              href: "/api/workflow",
-            },
           ],
         },
         "API-Reference/api-openai-responses",
