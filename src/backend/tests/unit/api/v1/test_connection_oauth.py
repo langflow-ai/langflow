@@ -671,6 +671,7 @@ async def test_unfinished_reconnect_keeps_the_saved_grant_usable(
     if needs_refresh:
         assert calls[0]["client_id"] == "test-client"
         assert calls[0]["grant_type"] == "refresh_token"
+        assert calls[0]["refresh_token"] == "refresh-must-not-leak"  # noqa: S105 - test fixture
     health = await client.post(f"/api/v1/connections/{row['id']}/health", headers=logged_in_headers)
     assert health.status_code == 200
     assert (health.json()["status"], health.json()["health"]) == ("ready", "healthy")
@@ -697,6 +698,10 @@ async def test_reconnect_replaces_tokens_only_after_completed_consent(client, lo
     monkeypatch.setattr(providers, "_request", replacement)
     assert (await callback(client, pending_query)).status_code == 200
     assert (await resolver.resolve(resolution(row))).access_token.get_secret_value() == "replacement"
+    async with session_scope() as session:
+        secret = await session.get(ConnectionSecret, UUID(row["id"]))
+        payload = _decrypt_credential_payload(secret.encrypted_payload)
+        assert payload["refresh_token"] == "replacement-refresh"  # noqa: S105 - test fixture
     revoked = await client.post(f"/api/v1/connections/{row['id']}/revoke", headers=logged_in_headers)
     assert revoked.status_code == 200
     with pytest.raises(ConnectionUnresolvedError):
