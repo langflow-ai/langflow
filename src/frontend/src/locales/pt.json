@@ -1564,6 +1564,8 @@
   "messages.loadError": "Não foi possível carregar as mensagens.",
   "misc.activateToShare": "Ative para compartilhar uma versão pública deste Playground",
   "misc.addChatInputOutput": "Adicione uma entrada de chat ou uma saída de chat para acessar seu fluxo",
+  "misc.copyShareableLink": "Copiar link",
+  "misc.shareableLinkCopied": "Link copiado",
   "misc.addChatInputOutputPlayground": "Adicione uma entrada de chat ou uma saída de chat para usar o playground",
   "misc.alertSaveWithApi": "⚠️ Atenção: a exportação deste fluxo pode expor credenciais confidenciais.",
   "misc.apiAccess": "Acesso à API",
@@ -2912,7 +2914,7 @@
   "playground.workflowWarning": "Aviso do fluxo de trabalho",
   "settings.nav.connections": "Conexões",
   "connections.title": "Conexões",
-  "connections.subtitle": "Contas por meio das quais seus fluxos agem. Os tokens permanecem no servidor; aqui só aparecem metadados.",
+  "connections.subtitle": "Contas de terceiros (como Google, Microsoft 365 e Slack) que seus fluxos usam para agir em seu nome. Os tokens permanecem no servidor e nunca são exibidos aqui.",
   "connections.search": "Pesquisar nome, identificador ou conta",
   "connections.loading": "Carregando conexões…",
   "connections.empty": "Nenhuma conexão ainda.",
@@ -3052,5 +3054,6 @@
   "connections.add.allowBackgroundRunsHelp": "Necessário para os gatilhos do Slack e para qualquer fluxo que um gatilho execute com esta conexão: essas execuções acontecem sem ninguém conectado. Você pode desativar isso depois.",
   "connections.identity.user_delegated": "O usuário conectado",
   "connections.identity.bot": "Um bot",
-  "connections.identity.service": "Uma conta de serviço"
+  "connections.identity.service": "Uma conta de serviço",
+  "settings.dbProviders.serverConfiguration": "Configurado pelo ambiente do servidor. Deixe os campos inalterados para usar essa configuração."
 }

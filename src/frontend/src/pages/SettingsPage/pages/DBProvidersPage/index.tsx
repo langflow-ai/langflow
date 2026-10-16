@@ -5,7 +5,10 @@ import {
   DB_PROVIDER_OPTIONS,
   type DBProviderId,
   getActiveDBProvider,
+  getDBProviderConfig,
+  getGlobalVariableValue,
   isDBProviderConfigured,
+  OPENSEARCH_VARIABLES,
 } from "@/constants/dbProviderConstants";
 import SettingsPageHeader from "@/pages/SettingsPage/components/SettingsPageHeader";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -83,6 +86,17 @@ export default function DBProvidersPage() {
     visibleProviders.find((provider) => provider.id === selectedProviderId) ??
     visibleProviders[0];
 
+  const hasServerConfiguration =
+    selectedProvider.id === "opensearch" &&
+    (configuredVectorStoreBackends.includes("opensearch") ||
+      defaultVectorStoreBackend === "opensearch") &&
+    !getGlobalVariableValue(globalVariables, OPENSEARCH_VARIABLES.URL);
+  const useServerConfiguration =
+    hasServerConfiguration &&
+    !selectedProvider.configFields.some(
+      (field) => field.variableKey in variableValues,
+    );
+
   const { getFieldValue, isHydrated, canSave } = useDBProviderFields({
     selectedProvider,
     globalVariables,
@@ -99,7 +113,10 @@ export default function DBProvidersPage() {
     isCheckingPostgres,
   } = useDBProviderActions({
     selectedProvider,
-    canSave,
+    canSave: canSave || useServerConfiguration,
+    serverBackendConfig: useServerConfiguration
+      ? getDBProviderConfig("opensearch", globalVariables)
+      : undefined,
     getFieldValue,
     variableValues,
     setVariable,
@@ -157,8 +174,9 @@ export default function DBProvidersPage() {
               variableValues={variableValues}
               editingSecret={editingSecret}
               isPending={isPending}
-              canSave={canSave}
-              isHydrated={isHydrated}
+              canSave={canSave || useServerConfiguration}
+              isHydrated={isHydrated || useServerConfiguration}
+              hasServerConfiguration={hasServerConfiguration}
               getFieldValue={getFieldValue}
               onVariableChange={(key, value) =>
                 setVariableValues((prev) => ({ ...prev, [key]: value }))

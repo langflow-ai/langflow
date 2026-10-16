@@ -291,6 +291,8 @@
   "misc.shareablePlayground": "Shareable Playground",
   "misc.activateToShare": "Activate to share a public version of this Playground",
   "misc.addChatInputOutput": "Add a Chat Input or Chat Output to access your flow",
+  "misc.copyShareableLink": "Copy link",
+  "misc.shareableLinkCopied": "Link copied",
   "misc.textInputModalTitle": "Edit text content",
   "misc.fetchError": "Couldn't establish a connection.",
   "misc.fetchErrorDesc": "Check if everything is working properly and try again.",
@@ -2911,7 +2913,7 @@
   "playground.workflowWarning": "Workflow warning",
   "settings.nav.connections": "Connections",
   "connections.title": "Connections",
-  "connections.subtitle": "Accounts your flows act through. Tokens stay on the server; only metadata is shown here.",
+  "connections.subtitle": "Third-party accounts (like Google, Microsoft 365 and Slack) that your flows use to act on your behalf. Tokens stay on the server and are never shown here.",
   "connections.search": "Search name, handle, or account",
   "connections.loading": "Loading connections…",
   "connections.empty": "No connections yet.",
@@ -3051,5 +3053,6 @@
   "connections.add.allowBackgroundRunsHelp": "Needed for Slack triggers, and for any flow a trigger runs with this connection: those runs happen with no one signed in. You can turn it off later.",
   "connections.identity.user_delegated": "The signed-in user",
   "connections.identity.bot": "A bot",
-  "connections.identity.service": "A service account"
+  "connections.identity.service": "A service account",
+  "settings.dbProviders.serverConfiguration": "Configured from the server environment. Leave the fields unchanged to use that configuration."
 }

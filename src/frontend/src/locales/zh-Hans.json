@@ -1564,6 +1564,8 @@
   "messages.loadError": "无法加载消息。",
   "misc.activateToShare": "启用此功能以分享此 Playground 的公开版本",
   "misc.addChatInputOutput": "添加“聊天输入”或“聊天输出”以访问您的流程",
+  "misc.copyShareableLink": "复制链接",
+  "misc.shareableLinkCopied": "链接已复制",
   "misc.addChatInputOutputPlayground": "添加“聊天输入”或“聊天输出”以使用该演示环境",
   "misc.alertSaveWithApi": "⚠️ 注意：导出此流程可能会泄露敏感凭据。",
   "misc.apiAccess": "API 访问权",
@@ -2911,7 +2913,7 @@
   "playground.workflowWarning": "工作流警告",
   "settings.nav.connections": "连接",
   "connections.title": "连接",
-  "connections.subtitle": "流程代表其执行操作的账号。令牌保存在服务器上，此处仅显示元数据。",
+  "connections.subtitle": "流程用来代表您执行操作的第三方账号（例如 Google、Microsoft 365 和 Slack）。令牌保存在服务器上，绝不会在此处显示。",
   "connections.search": "搜索名称、句柄或账号",
   "connections.loading": "正在加载连接…",
   "connections.empty": "尚无连接。",
@@ -3051,5 +3053,6 @@
   "connections.add.allowBackgroundRunsHelp": "Slack 触发器以及触发器使用此连接运行的任何流程都需要此项：这些运行在无人登录时进行。你可以稍后将其关闭。",
   "connections.identity.user_delegated": "已登录的用户",
   "connections.identity.bot": "机器人",
-  "connections.identity.service": "服务账号"
+  "connections.identity.service": "服务账号",
+  "settings.dbProviders.serverConfiguration": "已通过服务器环境配置。保持字段不变以使用该配置。"
 }
