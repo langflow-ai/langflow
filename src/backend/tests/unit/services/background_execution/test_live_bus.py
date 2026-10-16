@@ -5,7 +5,64 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from langflow.services.background_execution import live_bus
 from langflow.services.background_execution.live_bus import InMemoryLiveBus, LiveFrame
+
+
+@pytest.mark.parametrize("ephemeral_tail", [False, True], ids=["durable-tail", "token-tail"])
+async def test_reattach_recovers_durable_frames_evicted_by_slow_consumer(monkeypatch, ephemeral_tail):
+    monkeypatch.setattr(live_bus, "_SUBSCRIBER_MAXSIZE", 2)
+    bus = InMemoryLiveBus()
+    persisted = [LiveFrame(seq=1, data=b"start")]
+
+    async def read_durable(after_seq):
+        return [frame for frame in persisted if frame.seq > after_seq]
+
+    async def is_done():
+        return False
+
+    stream = bus.reattach("job", 0, read_durable, is_done=is_done)
+    assert (await anext(stream)).seq == 1
+
+    # The consumer stalls while the runner persists and publishes milestones.
+    for seq in (2, 3, 4):
+        frame = LiveFrame(seq=seq, data=str(seq).encode())
+        persisted.append(frame)
+        await bus.publish("job", frame)
+    if ephemeral_tail:
+        for data in (b"token-a", b"token-b"):
+            await bus.publish("job", LiveFrame(seq=4, data=data, durable=False))
+
+    expected = [b"2", b"3", b"4"] + ([b"token-a", b"token-b"] if ephemeral_tail else [])
+    try:
+        received = [(await asyncio.wait_for(anext(stream), timeout=2)).data for _ in expected]
+        assert received == expected
+    finally:
+        await stream.aclose()
+
+
+@pytest.mark.parametrize("full_queue", [False, True], ids=["close-sentinel", "full-queue"])
+async def test_reattach_drains_persisted_tail_when_closed(monkeypatch, full_queue):
+    monkeypatch.setattr(live_bus, "_SUBSCRIBER_MAXSIZE", 1)
+    bus = InMemoryLiveBus()
+    persisted = [LiveFrame(seq=1, data=b"start")]
+
+    async def read_durable(after_seq):
+        return [frame for frame in persisted if frame.seq > after_seq]
+
+    stream = bus.reattach("job", 0, read_durable)
+    assert (await anext(stream)).seq == 1
+    if full_queue:
+        await bus.publish("job", LiveFrame(seq=1, data=b"token", durable=False))
+    # Terminal milestones may reach the durable store without a live publish.
+    persisted.append(LiveFrame(seq=2, data=b"finished"))
+    await bus.close("job")
+
+    async def collect():
+        return [frame.data async for frame in stream]
+
+    expected = [b"token", b"finished"] if full_queue else [b"finished"]
+    assert await asyncio.wait_for(collect(), timeout=2) == expected
 
 
 async def test_subscriber_receives_published_frame():
