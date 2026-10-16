@@ -470,13 +470,20 @@ locally; its `provider_revocation` field then reports what happened upstream:
 
 | Provider | Upstream call on revoke | `provider_revocation` |
 |---|---|---|
-| Google | Google's token revocation endpoint, with the refresh token when one is stored, otherwise the access token. See the [web server registration guide](https://developers.google.com/identity/protocols/oauth2/web-server). | `revoked` |
-| Slack | [`auth.revoke`](https://docs.slack.dev/reference/methods/auth.revoke/) with the stored token | `revoked` |
-| Microsoft | None: Entra exposes no per-grant revocation endpoint for this flow | `unsupported` |
+| Google (OAuth sign-in) | Google's token revocation endpoint, with the refresh token when one is stored, otherwise the access token. See the [web server registration guide](https://developers.google.com/identity/protocols/oauth2/web-server). | `revoked` on success |
+| Slack (OAuth sign-in or pasted token) | [`auth.revoke`](https://docs.slack.dev/reference/methods/auth.revoke/) with the stored token, without requiring an OAuth registration for pasted tokens | `revoked` only when Slack confirms revocation |
+| Microsoft (OAuth sign-in) | None: Entra exposes no per-grant revocation endpoint for this flow | `unsupported` |
 
-`failed` means the provider call could not complete, so revoke the grant in the
-provider's account or admin console as well. `not_applicable` means no OAuth credential
-was stored. For Microsoft's `unsupported`, remove the app's consent in Entra as
+`failed` means the provider did not confirm revocation, so revoke the token in the
+provider's account or admin console as well. This includes rejected token types and
+network failures. For Slack Socket Mode app-level tokens (`xapp-`), use
+**Basic Information > App-Level Tokens** in the Slack app's settings if the request fails.
+`not_applicable` means no credential was stored or the connection used a pasted token
+for a provider other than Slack.
+
+The Connections page distinguishes confirmed provider revocation from local credential removal.
+
+For Microsoft's `unsupported`, remove the app's consent in Entra as
 described in [Revocation](./entra-app-registration#revocation).
 
 `revoked` reports token revocation, not a complete uninstall. Langflow sends only the
