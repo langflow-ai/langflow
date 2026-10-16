@@ -36,7 +36,7 @@ from lfx.services.flow_operations import (
 sys.path.insert(0, str(Path(__file__).parent))
 from fixture_json import dumps
 
-FIXTURE = Path(__file__).parent / "fixtures" / "property_cases.json"
+FIXTURE = Path(__file__).resolve().parents[5] / "lfx-native" / "fixtures" / "property_cases.json"
 SEED = 20261003
 SEQUENCES = 30
 TRANSACTIONS_PER_SEQUENCE = 6

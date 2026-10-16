@@ -95,9 +95,8 @@ repos:
         # component compatibility hard flows are flows exported from older releases, so they
         # embed the same hashes. The upgrade check fixtures are dumps of databases those releases
         # created, so they hold the same flows, and SQLite stores every id as 32 hex characters.
-        # The flow operation engine's shared fixtures, and the property fixture the lfx tests
-        # generate, record the graph hash a sequence must replay to, a hash by construction, so
-        # they are excluded for the same reason.
+        # The flow operation engine's shared fixtures record the graph hash a sequence must
+        # replay to, a hash by construction, so they are excluded for the same reason.
         exclude: '(^docs/|^SECURITY\.md$|src/lfx/src/lfx/_assets/component_index\.json$|src/lfx/README\.md$|^src/backend/base/langflow/initial_setup/starter_projects/|^src/bundles/.*/starter_projects/|^src/lfx/tests/data/component_compat/hard_flows/|^src/backend/tests/data/upgrade_check/|^src/lfx-native/fixtures/|^src/lfx/tests/unit/services/flow_operations/fixtures/property_cases\.json$)'
   - repo: local
     hooks:
