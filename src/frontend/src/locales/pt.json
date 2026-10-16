@@ -2128,6 +2128,7 @@
   "settings.migration.pause.done": "Pausado em {{time}} por {{user}}.",
   "settings.migration.pause.banner": "As alterações estão pausadas nesta instância.",
   "settings.migration.pause.bannerWaiting": "As alterações estão sendo recusadas. Uma pausa foi pedida e ainda não começou.",
+  "settings.migration.pause.notice": "As alterações estão pausadas nesta instância enquanto ela é movida para uma nova. Você pode ver o seu trabalho, mas as alterações que fizer agora não são salvas.",
   "settings.migration.pause.asked": "Pedida em {{time}} por {{user}}.",
   "settings.migration.pause.ended": "A pausa não começou. Enquanto este pedido esperava, as alterações foram reativadas ou outro pedido para a mesma pausa foi recusado.",
   "settings.migration.pause.resume": "Reativar alterações",

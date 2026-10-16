@@ -2128,6 +2128,7 @@
   "settings.migration.pause.done": "{{time}} に {{user}} が一時停止しました。",
   "settings.migration.pause.banner": "このインスタンスへの変更は一時停止されています。",
   "settings.migration.pause.bannerWaiting": "変更は拒否されています。一時停止が要求されましたが、まだ始まっていません。",
+  "settings.migration.pause.notice": "このインスタンスは新しいインスタンスへ移行中のため、変更は一時停止されています。作業内容は表示できますが、今行った変更は保存されません。",
   "settings.migration.pause.asked": "{{time}} に {{user}} が要求しました。",
   "settings.migration.pause.ended": "一時停止は始まりませんでした。この要求の待機中に、変更が再開されたか、同じ一時停止への別の要求が拒否されました。",
   "settings.migration.pause.resume": "変更を再開",

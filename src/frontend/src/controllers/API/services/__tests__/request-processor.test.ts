@@ -42,6 +42,15 @@ const axiosNetworkError = () => ({
   response: undefined,
 });
 const nonAxiosError = () => new Error("Network Error");
+// A migration pause answers this way to every change until an admin ends it.
+const pauseRefusal = {
+  isAxiosError: true,
+  response: {
+    status: 503,
+    headers: {},
+    data: { detail: "This instance is being migrated." },
+  },
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -84,6 +93,11 @@ describe("UseRequestProcessor.query retry policy", () => {
     expect(retry(0, axiosNetworkError())).toBe(true);
     expect(retry(4, axiosNetworkError())).toBe(true);
     expect(retry(5, axiosNetworkError())).toBe(false);
+  });
+
+  it("does not retry a read that a migration pause refused, such as the permissions lookup, which is a POST", () => {
+    const { retry } = setup();
+    expect(retry(0, pauseRefusal)).toBe(false);
   });
 
   it("treats non-axios / unknown errors as transient (retries)", () => {
@@ -239,6 +253,10 @@ describe("isRetryableServerError", () => {
   it("does not retry 4xx responses", () => {
     expect(isRetryableServerError(axiosError(401))).toBe(false);
     expect(isRetryableServerError(axiosError(422))).toBe(false);
+  });
+
+  it("does not retry a change that a migration pause refused, which fails the same way until the pause ends", () => {
+    expect(isRetryableServerError(pauseRefusal)).toBe(false);
   });
 
   it("retries axios errors that got no response", () => {
