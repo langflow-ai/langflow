@@ -2912,7 +2912,7 @@
   "playground.workflowWarning": "Avertissement du workflow",
   "settings.nav.connections": "Connexions",
   "connections.title": "Connexions",
-  "connections.subtitle": "Comptes au nom desquels vos flux agissent. Les jetons restent sur le serveur ; seules les métadonnées sont affichées ici.",
+  "connections.subtitle": "Comptes tiers (comme Google, Microsoft 365 et Slack) que vos flux utilisent pour agir en votre nom. Les jetons restent sur le serveur et ne sont jamais affichés ici.",
   "connections.search": "Rechercher un nom, un identifiant ou un compte",
   "connections.loading": "Chargement des connexions…",
   "connections.empty": "Aucune connexion pour l'instant.",

@@ -2911,7 +2911,7 @@
   "playground.workflowWarning": "Workflow warning",
   "settings.nav.connections": "Connections",
   "connections.title": "Connections",
-  "connections.subtitle": "Accounts your flows act through. Tokens stay on the server; only metadata is shown here.",
+  "connections.subtitle": "Third-party accounts (like Google, Microsoft 365 and Slack) that your flows use to act on your behalf. Tokens stay on the server and are never shown here.",
   "connections.search": "Search name, handle, or account",
   "connections.loading": "Loading connections…",
   "connections.empty": "No connections yet.",

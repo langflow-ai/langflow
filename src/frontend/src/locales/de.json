@@ -2912,7 +2912,7 @@
   "playground.workflowWarning": "Warnung zum Workflow",
   "settings.nav.connections": "Verbindungen",
   "connections.title": "Verbindungen",
-  "connections.subtitle": "Konten, über die Ihre Flows handeln. Tokens bleiben auf dem Server; hier werden nur Metadaten angezeigt.",
+  "connections.subtitle": "Drittanbieterkonten (wie Google, Microsoft 365 und Slack), über die Ihre Flows in Ihrem Namen handeln. Tokens bleiben auf dem Server und werden hier niemals angezeigt.",
   "connections.search": "Name, Handle oder Konto suchen",
   "connections.loading": "Verbindungen werden geladen…",
   "connections.empty": "Noch keine Verbindungen.",

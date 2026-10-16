@@ -2912,7 +2912,7 @@
   "playground.workflowWarning": "Advertencia del flujo de trabajo",
   "settings.nav.connections": "Conexiones",
   "connections.title": "Conexiones",
-  "connections.subtitle": "Cuentas a través de las cuales actúan tus flujos. Los tokens permanecen en el servidor; aquí solo se muestran metadatos.",
+  "connections.subtitle": "Cuentas de terceros (como Google, Microsoft 365 y Slack) que tus flujos usan para actuar en tu nombre. Los tokens permanecen en el servidor y nunca se muestran aquí.",
   "connections.search": "Buscar por nombre, identificador o cuenta",
   "connections.loading": "Cargando conexiones…",
   "connections.empty": "Aún no hay conexiones.",

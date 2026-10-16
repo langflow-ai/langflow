@@ -2911,7 +2911,7 @@
   "playground.workflowWarning": "工作流警告",
   "settings.nav.connections": "连接",
   "connections.title": "连接",
-  "connections.subtitle": "流程代表其执行操作的账号。令牌保存在服务器上，此处仅显示元数据。",
+  "connections.subtitle": "流程用来代表您执行操作的第三方账号（例如 Google、Microsoft 365 和 Slack）。令牌保存在服务器上，绝不会在此处显示。",
   "connections.search": "搜索名称、句柄或账号",
   "connections.loading": "正在加载连接…",
   "connections.empty": "尚无连接。",
