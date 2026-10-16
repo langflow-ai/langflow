@@ -18,7 +18,7 @@ use serde_json::Value;
 use crate::ops::canonical::{
     as_double, is_finite_number, is_row_position, ordered_rows, values_equal,
 };
-use crate::ops::error::{Error, Result};
+use crate::ops::error::{Error, Result, quoted};
 use crate::ops::ids::new_table_row_id;
 use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA};
 
@@ -55,7 +55,8 @@ impl ListIndex {
             let key = index.require_key(item, context)?;
             if index.slots.contains_key(key) {
                 return Err(Error::invalid(format!(
-                    "{context}: two items have the key {key:?}"
+                    "{context}: two items have the key {}",
+                    quoted(key)
                 )));
             }
             if keyed.kind == ListKind::Table {
