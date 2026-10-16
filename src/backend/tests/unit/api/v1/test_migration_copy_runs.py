@@ -898,7 +898,11 @@ async def test_a_page_that_goes_away_leaves_the_copy_running_until_it_is_stopped
     assert stopped.status_code == 202
     assert stopped.json() == {"run_id": run_id}
     rest = await asyncio.wait_for(following, _TIMEOUT)
-    assert [(event["event"], event["seq"], event["status"]) for event in rest] == [("end", 2, "cancelled")]
+    # The command says that it was stopped, then the run ends as cancelled.
+    assert [(event["event"], event["seq"], event.get("code"), event.get("status")) for event in rest] == [
+        ("error", 2, "interrupted", None),
+        ("end", 3, None, "cancelled"),
+    ]
     migration = await _migration(client, headers)
     kept = migration["record"]["steps"]["copy_database"]
     assert (kept["status"], kept["report"], kept["error"]) == ("cancelled", None, {"code": "cancelled"})
