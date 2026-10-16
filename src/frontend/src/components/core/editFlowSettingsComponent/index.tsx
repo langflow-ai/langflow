@@ -125,7 +125,6 @@ export const EditFlowSettings: React.FC<
               name="name"
               value={name ?? ""}
               placeholder={t("flow.namePlaceholder")}
-              id="name"
               maxLength={maxLength}
               minLength={minLength}
               required={true}
@@ -166,7 +165,6 @@ export const EditFlowSettings: React.FC<
           <Form.Control asChild>
             <Textarea
               name="description"
-              id="description"
               onChange={handleDescriptionChange}
               value={description!}
               placeholder={t("flow.descriptionPlaceholder")}
@@ -192,40 +190,40 @@ export const EditFlowSettings: React.FC<
         <Form.Message match="valueMissing" className="field-invalid">
           {t("flow.pleaseEnterDescription")}
         </Form.Message>
-        {/* Callers that only display the flow (no setLocked) would otherwise
-            render a focusable switch that cannot change anything. */}
-        {setLocked && (
-          <div className="mt-3">
-            <div className="flex items-center gap-2">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Form.Label className="text-mmd font-medium">
-                    {t("flow.lockFlow")}
-                  </Form.Label>
+      </Form.Field>
+      {/* Callers that only display the flow (no setLocked) would otherwise
+          render a focusable switch that cannot change anything. */}
+      {setLocked && (
+        <div className="mt-3">
+          <div className="flex items-center gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-mmd font-medium">
+                  {t("flow.lockFlow")}
+                </span>
 
-                  <ForwardedIconComponent
-                    name={locked ? "Lock" : "Unlock"}
-                    className="text-muted-foreground !w-5 !h-5"
-                  />
-                </div>
-
-                <p className="text-xs text-muted-foreground/70 mt-1 font-normal">
-                  {t("flow.lockFlowDescription")}
-                </p>
+                <ForwardedIconComponent
+                  name={locked ? "Lock" : "Unlock"}
+                  className="text-muted-foreground !w-5 !h-5"
+                />
               </div>
 
-              <Switch
-                checked={!!locked}
-                onCheckedChange={(v) => setLocked(v)}
-                disabled={readOnly}
-                className="data-[state=checked]:bg-primary ml-auto"
-                data-testid="lock-flow-switch"
-                aria-label={t("flow.lockFlowAriaLabel")}
-              />
+              <p className="text-xs text-muted-foreground mt-1 font-normal">
+                {t("flow.lockFlowDescription")}
+              </p>
             </div>
+
+            <Switch
+              checked={!!locked}
+              onCheckedChange={(v) => setLocked(v)}
+              disabled={readOnly}
+              className="data-[state=checked]:bg-primary ml-auto"
+              data-testid="lock-flow-switch"
+              aria-label={t("flow.lockFlowAriaLabel")}
+            />
           </div>
-        )}
-      </Form.Field>
+        </div>
+      )}
     </>
   );
 };
