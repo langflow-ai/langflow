@@ -783,6 +783,7 @@
   "settings.migration.copy.preparing": "Preparing the new database…",
   "settings.migration.copy.again": "Copy again",
   "settings.migration.copy.stale": "This copy is out of date, so it no longer counts. Copy again.",
+  "settings.migration.copy.newDatabase": "To copy the database again, save a new, empty database in '{{step}}' first.",
   "settings.migration.copy.stopTitle": "Stop copying?",
   "settings.migration.copyDb.body": "Copies every table in one go. If anything fails, nothing is kept and you can copy again.",
   "settings.migration.copyDb.progress": "Rows: {{done}} of {{total}}",
