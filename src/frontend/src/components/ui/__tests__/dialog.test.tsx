@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -134,6 +134,75 @@ describe("DialogContent", () => {
     );
 
     expect(screen.queryByText("Dialog")).not.toBeInTheDocument();
+  });
+
+  it("should_keep_primary_mouse_press_inside_the_portal", () => {
+    const onPointerDown = jest.fn();
+    const onMouseDown = jest.fn();
+    const onClick = jest.fn();
+
+    renderWithProviders(
+      // biome-ignore lint/a11y/noStaticElementInteractions: represents the React Flow ancestor
+      <div onPointerDown={onPointerDown} onMouseDown={onMouseDown}>
+        <Dialog open>
+          <DialogContent hideCloseButton>
+            <DialogTitle>Mouse dialog</DialogTitle>
+            <DialogDescription>Mouse propagation check</DialogDescription>
+            <button type="button" onClick={onClick}>
+              Finish Editing
+            </button>
+          </DialogContent>
+        </Dialog>
+      </div>,
+    );
+
+    const button = screen.getByRole("button", { name: "Finish Editing" });
+    fireEvent.pointerDown(button, {
+      pointerId: 1,
+      pointerType: "mouse",
+      isPrimary: true,
+      button: 0,
+    });
+    fireEvent.mouseDown(button, { button: 0 });
+    fireEvent.mouseUp(button, { button: 0 });
+    fireEvent.click(button, { button: 0 });
+
+    expect(onPointerDown).not.toHaveBeenCalled();
+    expect(onMouseDown).not.toHaveBeenCalled();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("should_keep_touch_activation_working", () => {
+    const onClick = jest.fn();
+
+    renderWithProviders(
+      <Dialog open>
+        <DialogContent hideCloseButton>
+          <DialogTitle>Touch dialog</DialogTitle>
+          <DialogDescription>Touch activation check</DialogDescription>
+          <button type="button" onClick={onClick}>
+            Finish Editing
+          </button>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    const button = screen.getByRole("button", { name: "Finish Editing" });
+    fireEvent.pointerDown(button, {
+      pointerId: 1,
+      pointerType: "touch",
+      isPrimary: true,
+      button: 0,
+    });
+    fireEvent.pointerUp(button, {
+      pointerId: 1,
+      pointerType: "touch",
+      isPrimary: true,
+      button: 0,
+    });
+    fireEvent.click(button);
+
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   it("should_restore_focus_to_opener_on_escape_without_dialog_trigger", async () => {

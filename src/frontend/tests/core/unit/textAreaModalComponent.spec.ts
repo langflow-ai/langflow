@@ -76,8 +76,17 @@ test(
 
     await page.getByTestId("text-area-modal").fill("test123123");
 
-    await page.getByTestId("genericModalBtnSave").click();
+    const saveButton = page.getByTestId("genericModalBtnSave");
+    const saveButtonBox = await saveButton.boundingBox();
+    expect(saveButtonBox).not.toBeNull();
+    await page.mouse.move(
+      saveButtonBox!.x + saveButtonBox!.width / 2,
+      saveButtonBox!.y + saveButtonBox!.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.up();
 
     await expect(textInput).toHaveValue("test123123");
+    await expect(page.getByTestId("text-area-modal")).toBeHidden();
   },
 );
