@@ -661,7 +661,7 @@ with interruption_reported("The copy did not finish.", as_json=True):
     asyncio.run(copy())
 """
     result = subprocess.run(  # noqa: S603 - fixed code in the interpreter running the tests
-        [sys.executable, "-c", code, str(signum)], capture_output=True, text=True, timeout=60, check=False
+        [sys.executable, "-c", code, str(int(signum))], capture_output=True, text=True, timeout=60, check=False
     )
 
     assert result.returncode == 128 + signum, result.stderr
