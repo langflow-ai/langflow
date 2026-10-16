@@ -5,6 +5,7 @@ import signal
 import socket
 import subprocess
 import sys
+import time
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -13,6 +14,7 @@ import typer
 from langflow.__main__ import (
     DIRECT_UVICORN_PLATFORMS,
     MULTI_WORKER_BYPASS_ENV_VAR,
+    CommandInterrupted,
     _create_superuser,
     api_key_banner,
     app,
@@ -20,6 +22,7 @@ from langflow.__main__ import (
     clamp_uvicorn_workers,
     ensure_multi_worker_safe,
     get_number_of_workers,
+    interruption_reported,
     multi_worker_bypass_warning,
     use_direct_uvicorn,
 )
@@ -537,6 +540,7 @@ def _stop_midway(tmp_path, command: str, *args: str, signum: int) -> subprocess.
 
     The database takes the connection and never answers, so the command is stopped mid-run every time.
     """
+    pytest.importorskip("psycopg", reason="needs the postgresql extra")
     from langflow.services.database.sqlite_to_postgres import upgrade_to_head
 
     listener = socket.create_server(("127.0.0.1", 0))
@@ -556,11 +560,18 @@ def _stop_midway(tmp_path, command: str, *args: str, signum: int) -> subprocess.
         text=True,
     )
     try:
-        assert select.select([listener], [], [], 120)[0], "the command never reached its database"
+        deadline = time.monotonic() + 60
+        while not select.select([listener], [], [], 0.1)[0]:
+            if child.poll() is not None:
+                out, err = child.communicate()
+                pytest.fail(f"the command exited {child.returncode} before reaching its database\n{out}\n{err}")
+            assert time.monotonic() < deadline, "the command never reached its database"
         child.send_signal(signum)
         out, err = child.communicate(timeout=120)
     finally:
-        child.kill()
+        if child.poll() is None:
+            child.kill()
+        child.communicate(timeout=10)
         listener.close()
     return subprocess.CompletedProcess(child.args, child.returncode, out, err)
 
@@ -594,3 +605,76 @@ def test_without_json_a_stopped_command_says_so_on_stderr(tmp_path):
 
     assert result.returncode == 130
     assert "Stopped by SIGINT before the end." in result.stderr
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="SIGINT and SIGTERM are POSIX signals")
+@pytest.mark.parametrize("outcome", ["completed", "failed", "exited", signal.SIGINT, signal.SIGTERM])
+def test_interruption_reporting_restores_previous_handlers(outcome):
+    previous = {signum: signal.getsignal(signum) for signum in (signal.SIGINT, signal.SIGTERM)}
+    try:
+        if outcome == "completed":
+            with interruption_reported("The copy did not finish.", as_json=False):
+                pass
+        elif outcome in ("failed", "exited"):
+            failure = ValueError("copy failed") if outcome == "failed" else SystemExit(7)
+            with (
+                pytest.raises(type(failure)) as exc_info,
+                interruption_reported("The copy did not finish.", as_json=False),
+            ):
+                raise failure
+            assert exc_info.value is failure
+        else:
+            with (
+                pytest.raises(CommandInterrupted) as exc_info,
+                interruption_reported("The copy did not finish.", as_json=False),
+            ):
+                signal.raise_signal(outcome)
+            assert exc_info.value.code == 128 + outcome
+        assert {signum: signal.getsignal(signum) for signum in previous} == previous
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="SIGINT and SIGTERM are POSIX signals")
+@pytest.mark.parametrize("signum", [signal.SIGINT, signal.SIGTERM])
+def test_an_interruption_inside_a_task_group_keeps_its_exit_code_and_final_event(signum):
+    code = """
+import asyncio
+import json
+import signal
+import sys
+
+import anyio
+from langflow.__main__ import interruption_reported
+
+async def copy():
+    try:
+        async with anyio.create_task_group():
+            async with anyio.create_task_group():
+                signal.raise_signal(int(sys.argv[1]))
+    finally:
+        signal.raise_signal(signal.SIGTERM)
+        print(json.dumps({"event": "cleanup"}), flush=True)
+
+with interruption_reported("The copy did not finish.", as_json=True):
+    asyncio.run(copy())
+"""
+    result = subprocess.run(  # noqa: S603 - fixed code in the interpreter running the tests
+        [sys.executable, "-c", code, str(signum)], capture_output=True, text=True, timeout=60, check=False
+    )
+
+    assert result.returncode == 128 + signum, result.stderr
+    events = [json.loads(line) for line in result.stdout.splitlines()]
+    assert [event["event"] for event in events] == ["cleanup", "error"]
+    assert events[-1]["code"] == "interrupted"
+    assert events[-1]["message"].startswith(f"Stopped by {signal.Signals(signum).name} before the end.")
+    assert "Traceback" not in result.stderr
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="SIGINT and SIGTERM are POSIX signals")
+def test_the_signal_helper_reports_a_child_that_exits_before_connecting(tmp_path):
+    with pytest.raises(pytest.fail.Exception, match="before reaching its database") as exc_info:
+        _stop_midway(tmp_path, "no-such-command", signum=signal.SIGTERM)
+
+    assert "No such command" in str(exc_info.value)

@@ -172,31 +172,40 @@ class CommandInterrupted(SystemExit):
         self.signal_name = signal.Signals(signum).name
 
 
-def stop_command(signum: int, _frame) -> None:
-    """Stop a migration command: its work unwinds, then it exits 130 or 143."""
-    # A second signal would cut short the cleanup the first one started.
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    signal.signal(signal.SIGTERM, signal.SIG_IGN)
-    raise CommandInterrupted(signum)
-
-
 @contextmanager
 def interruption_reported(not_done: str, *, as_json: bool) -> Iterator[None]:
     """Stop the command on SIGINT or SIGTERM and say so, with --json as the stream's last event."""
-    # For the rest of the process: the process manager's handlers, which the other commands keep, exit 0.
-    signal.signal(signal.SIGINT, stop_command)
-    signal.signal(signal.SIGTERM, stop_command)
-    try:
-        yield
-    except CommandInterrupted as exc:
-        message = f"Stopped by {exc.signal_name} before the end. {not_done} It is safe to run again."
-        if as_json:
-            from langflow.cli.events import emit
+    interrupted: CommandInterrupted | None = None
 
-            emit("error", code="interrupted", message=message)
-        else:
-            typer.echo(message, err=True)
-        raise
+    def stop_command(signum: int, _frame) -> None:
+        nonlocal interrupted
+        # A second signal would cut short the cleanup the first one started.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        interrupted = CommandInterrupted(signum)
+        raise interrupted
+
+    previous = {signum: signal.getsignal(signum) for signum in (signal.SIGINT, signal.SIGTERM)}
+    try:
+        for signum in previous:
+            signal.signal(signum, stop_command)
+        try:
+            yield
+        except BaseException:
+            # Task groups can wrap the exit. The received signal still determines the command's result.
+            if interrupted is None:
+                raise
+            message = f"Stopped by {interrupted.signal_name} before the end. {not_done} It is safe to run again."
+            if as_json:
+                from langflow.cli.events import emit
+
+                emit("error", code="interrupted", message=message)
+            else:
+                typer.echo(message, err=True)
+            raise interrupted from None
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
 
 
 def get_number_of_workers(workers=None):
