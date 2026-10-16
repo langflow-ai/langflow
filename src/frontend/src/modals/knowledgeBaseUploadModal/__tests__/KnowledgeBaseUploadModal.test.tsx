@@ -206,6 +206,10 @@ const fillRequiredFields = async (
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("KnowledgeBaseUploadModal", () => {
+  beforeAll(() => {
+    HTMLElement.prototype.scrollIntoView = jest.fn();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     useUtilityStore.getState().setVectorStoreConfig({
@@ -660,13 +664,44 @@ describe("KnowledgeBaseUploadModal", () => {
           column_config: [
             { column_name: "text", vectorize: true, identifier: true },
           ],
-          // Omit the implicit SQLite choice so the server can apply its
-          // configured default backend.
-          backend_type: undefined,
+          backend_type: "sqlite",
           backend_config: {},
         }),
       );
     });
+
+    it.each([
+      ["postgres", "Postgres pgVector"],
+      ["opensearch", "OpenSearch"],
+    ])(
+      "submits SQLite when selected instead of the server's %s default",
+      async (defaultBackend, defaultLabel) => {
+        useUtilityStore.getState().setVectorStoreConfig({
+          localVectorStoreAvailable: true,
+          defaultVectorStoreBackend: defaultBackend,
+        });
+        const user = userEvent.setup();
+        render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+          wrapper: createWrapper(),
+        });
+        expect(screen.getByTestId("kb-db-provider")).toHaveTextContent(
+          defaultLabel,
+        );
+        await user.click(screen.getByTestId("kb-db-provider"));
+        await user.click(screen.getByRole("option", { name: /SQLite Local/ }));
+        await advanceToReview(user);
+        expect(screen.getByText("SQLite Local")).toBeInTheDocument();
+        await user.click(screen.getByTestId("kb-create-button"));
+        await waitFor(() =>
+          expect(mockMutateAsync).toHaveBeenCalledWith(
+            expect.objectContaining({
+              backend_type: "sqlite",
+              backend_config: {},
+            }),
+          ),
+        );
+      },
+    );
 
     it("calls setSuccessData with the knowledge base name after creation", async () => {
       const user = userEvent.setup();
