@@ -205,6 +205,46 @@ describe("AddConnectionDialog re-authorize", () => {
 
   afterEach(() => openSpy.mockRestore());
 
+  it.each(["create", "reauthorize"])(
+    "shows action names and risks for %s consent",
+    (mode) => {
+      const provider = {
+        ...MICROSOFT,
+        capabilities: [
+          {
+            ...MICROSOFT.capabilities[0],
+            display_name: "Outlook Send Mail",
+            required_scopes: ["Mail.Send"],
+            conditional_scopes: [],
+          },
+        ],
+      };
+      mockTypes = {};
+      setRegistrations([
+        registration({
+          id: "microsoft-work",
+          provider: "microsoft",
+          scopes: [MAIL_SEND],
+        }),
+      ]);
+      render(
+        dialog(
+          mode === "reauthorize"
+            ? connection({
+                provider_key: "microsoft",
+                granted_scopes: ["Mail.Send"],
+              })
+            : undefined,
+          [provider],
+        ),
+      );
+      const row = scopeBox(MAIL_SEND).closest("label")!;
+      expect(within(row).getByText("Outlook Send Mail")).toBeVisible();
+      expect(within(row).getByText("Write")).toBeVisible();
+      expect(within(row).getByText("Mail.Send")).toBeVisible();
+    },
+  );
+
   it("asks which scopes to request before starting consent", () => {
     render(dialog(connection()));
 
