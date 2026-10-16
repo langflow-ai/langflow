@@ -107,6 +107,11 @@ class TestWindows1252TextDecoding:
     # Longer sample so chardet has more than a handful of bytes to go on.
     _ACCENTED = "Le caf\u00e9 est tr\u00e8s chaud ; il co\u00fbte 5 \u20ac, n'est-ce pas ? Oui, vraiment.\n"
 
+    # A curly quote directly followed by a letter. gb18030 accepts that byte pair
+    # (0x92 + "t" is a legal two-byte sequence decoding to U+62B0), so a chain that
+    # tries gb18030 before the Windows-1252 guess returns mojibake for this file.
+    _QUOTE_THEN_LETTER = "I don\u2019t know what you mean, it\u2019s fine.\n"
+
     @staticmethod
     def _write(path, text, encoding):
         Path(path).write_bytes(text.encode(encoding))
@@ -124,6 +129,13 @@ class TestWindows1252TextDecoding:
         self._write(target, self._ACCENTED, "cp1252")
 
         assert read_text_file(str(target)) == self._ACCENTED
+
+    def test_windows_1252_guess_precedes_gb18030(self, tmp_path):
+        """A 0x92 byte followed by a letter must not be eaten by gb18030."""
+        target = tmp_path / "quote.txt"
+        self._write(target, self._QUOTE_THEN_LETTER, "cp1252")
+
+        assert read_text_file(str(target)) == self._QUOTE_THEN_LETTER
 
     def test_async_reader_decodes_windows_1252_like_the_sync_one(self):
         """read_text_file_async shares the fallback chain, so it agrees."""
@@ -148,8 +160,8 @@ class TestWindows1252TextDecoding:
     def test_multibyte_files_are_untouched(self, tmp_path, encoding, content):
         """Chinese, Japanese and traditional-Chinese files still decode correctly.
 
-        The Windows-1252 candidate is inserted ahead of latin-1 only, so anything that
-        already decoded with utf-8 or gb18030 is unaffected.
+        The Windows-1252 candidate only takes over once utf-8 has failed, so anything
+        that already decoded with utf-8 is unaffected.
         """
         target = tmp_path / f"sample.{encoding}"
         self._write(target, content, encoding)
@@ -163,7 +175,8 @@ class TestWindows1252TextDecoding:
             lambda _bytes: {"encoding": "Windows-1252", "confidence": 0.07},
         )
 
-        chain = _detect_encoding_with_fallbacks(self._SMART_PUNCTUATION.encode("cp1252"))
+        chain = _detect_encoding_with_fallbacks(self._QUOTE_THEN_LETTER.encode("cp1252"))
 
         assert chain[0] == "utf-8"
+        assert chain.index("Windows-1252") < chain.index("gb18030")
         assert chain.index("Windows-1252") < chain.index("latin-1")
