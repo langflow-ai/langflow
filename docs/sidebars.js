@@ -196,6 +196,7 @@ module.exports = {
                 "Develop/integrations-langfuse",
                 "Develop/integrations-langsmith",
                 "Develop/integrations-langwatch",
+                "Develop/integrations-latitude",
                 "Develop/integrations-openlayer",
                 "Develop/integrations-opik",
                 "Develop/integrations-instana-traceloop",
