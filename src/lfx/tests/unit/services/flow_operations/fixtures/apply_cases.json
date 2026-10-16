@@ -1,5 +1,5 @@
 {
-  "description": "Shared apply cases for every flow operation engine. Each case applies `operations` to `base` in order; it either yields `expected` and the normalized `forward_operations` (optional fields left unset are omitted; when absent they equal `operations`; the ids a delete reports are compared as a set, since node and edge order is not state), or raises the named `error` with its `code` and leaves `base` unchanged. Keyed lists follow node_schema.json. Edges carry each handle in both forms, the `data` object and the escaped string, as the editor writes them.",
+  "description": "Shared apply cases for every flow operation engine. Each case applies `operations` to `base` in order; it either yields `expected` and the normalized `forward_operations` (optional fields left unset are omitted; when absent they equal `operations`; the ids a delete reports are compared as a set, since node and edge order is not state), or raises the named `error` with its `code` and leaves `base` unchanged. Keyed lists follow node_schema.json. Edges carry each handle in both forms, the `data` object and the escaped string, as the editor writes them. This branch's copy holds the shared cases without the ones for rules that oplog-diff adds (type changes with from_type, field metadata, and the structural checks of a base or added node). From oplog-diff on, the test reads the shared file in src/lfx-native/fixtures.",
   "cases": [
     {
       "name": "empty operation list leaves the flow unchanged",
@@ -968,7 +968,27 @@
       "code": "FLOW_GRAPH_INVALID"
     },
     {
-      "name": "selector: set_field edits one table cell by row id",
+      "name": "set_field treats integers and floats as one number type",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["position", "x"], "value": 1.5}]}],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 1.5, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "list item: set_field edits one table cell by row id",
       "base": {
         "nodes": [
           {
@@ -976,7 +996,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -988,7 +1008,7 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r2"}, "v"], "value": "w"}]
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": "w"}]
         }
       ],
       "expected": {
@@ -998,7 +1018,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "w"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "w"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1009,7 +1029,7 @@
       }
     },
     {
-      "name": "selector: set_field at a new row id appends the row",
+      "name": "list item: set_field at a new row id appends the row",
       "base": {
         "nodes": [
           {
@@ -1017,7 +1037,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1030,7 +1050,12 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r3"}], "value": {"_id": "r3", "_pos": 1.5, "v": "z"}}
+            {
+              "id": "t",
+              "op": "set_field",
+              "path": ["data", "node", "template", "rows", "value", {"key": "r3"}],
+              "value": {"__id__": "r3", "__pos__": 1.5, "v": "z"}
+            }
           ]
         }
       ],
@@ -1043,7 +1068,7 @@
                 "template": {
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}, {"_id": "r3", "_pos": 1.5, "v": "z"}]
+                    "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}, {"__id__": "r3", "__pos__": 1.5, "v": "z"}]
                   },
                   "text": {"type": "str", "value": "a"}
                 }
@@ -1055,7 +1080,7 @@
       }
     },
     {
-      "name": "selector: setting a row's _pos changes only its position",
+      "name": "list item: setting a row's __pos__ changes only its position",
       "base": {
         "nodes": [
           {
@@ -1063,7 +1088,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1075,7 +1100,7 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "_pos"], "value": 3}]
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "__pos__"], "value": 3}]
         }
       ],
       "expected": {
@@ -1085,7 +1110,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 3, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 3, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1096,7 +1121,7 @@
       }
     },
     {
-      "name": "selector: two rows may share a position",
+      "name": "list item: two rows may share a position",
       "base": {
         "nodes": [
           {
@@ -1104,7 +1129,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1116,7 +1141,9 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r0"}], "value": {"_id": "r0", "_pos": 2}}]
+          "updates": [
+            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r0"}], "value": {"__id__": "r0", "__pos__": 2}}
+          ]
         }
       ],
       "expected": {
@@ -1126,7 +1153,10 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}, {"_id": "r0", "_pos": 2}]},
+                  "rows": {
+                    "type": "table",
+                    "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}, {"__id__": "r0", "__pos__": 2}]
+                  },
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1137,7 +1167,7 @@
       }
     },
     {
-      "name": "selector: delete_field removes a table row by id",
+      "name": "list item: delete_field removes a table row by id",
       "base": {
         "nodes": [
           {
@@ -1145,7 +1175,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1155,20 +1185,22 @@
         "edges": []
       },
       "operations": [
-        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}]}]}
+        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}
       ],
       "expected": {
         "nodes": [
           {
             "id": "t",
-            "data": {"node": {"template": {"rows": {"type": "table", "value": [{"_id": "r2", "_pos": 2, "v": "y"}]}, "text": {"type": "str", "value": "a"}}}}
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r2", "__pos__": 2, "v": "y"}]}, "text": {"type": "str", "value": "a"}}}
+            }
           }
         ],
         "edges": []
       }
     },
     {
-      "name": "selector: deleting a row lets the last row take its slot",
+      "name": "list item: deleting a row lets the last row take its slot",
       "base": {
         "nodes": [
           {
@@ -1178,7 +1210,7 @@
                 "template": {
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}, {"_id": "r3", "_pos": 3, "v": "z"}]
+                    "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}, {"__id__": "r3", "__pos__": 3, "v": "z"}]
                   },
                   "text": {"type": "str", "value": "a"}
                 }
@@ -1189,7 +1221,7 @@
         "edges": []
       },
       "operations": [
-        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}]}]}
+        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}
       ],
       "expected": {
         "nodes": [
@@ -1198,7 +1230,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r3", "_pos": 3, "v": "z"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r3", "__pos__": 3, "v": "z"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1209,7 +1241,7 @@
       }
     },
     {
-      "name": "selector: delete_field of a missing row changes and records nothing",
+      "name": "list item: delete_field of a missing row changes and records nothing",
       "base": {
         "nodes": [
           {
@@ -1217,7 +1249,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1227,7 +1259,7 @@
         "edges": []
       },
       "operations": [
-        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "gone"}]}]}
+        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "gone"}]}]}
       ],
       "expected": {
         "nodes": [
@@ -1236,7 +1268,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1248,7 +1280,7 @@
       "forward_operations": []
     },
     {
-      "name": "selector: editing a cell of a missing row fails",
+      "name": "list item: editing a cell of a missing row fails",
       "base": {
         "nodes": [
           {
@@ -1256,7 +1288,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1268,14 +1300,14 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "gone"}, "v"], "value": "x"}]
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "gone"}, "v"], "value": "x"}]
         }
       ],
       "error": "FlowOperationValidationError",
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a row written at an id must carry that id",
+      "name": "list item: a row written at an id must carry that id",
       "base": {
         "nodes": [
           {
@@ -1283,7 +1315,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1295,14 +1327,16 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r3"}], "value": {"_id": "r4", "_pos": 3}}]
+          "updates": [
+            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}], "value": {"__id__": "r4", "__pos__": 3}}
+          ]
         }
       ],
       "error": "FlowOperationValidationError",
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a row's _id cannot be changed",
+      "name": "list item: a row's __id__ cannot be changed",
       "base": {
         "nodes": [
           {
@@ -1310,7 +1344,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1322,14 +1356,14 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "_id"], "value": "r9"}]
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "__id__"], "value": "r9"}]
         }
       ],
       "error": "FlowOperationValidationError",
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: table rows are not selected by key",
+      "name": "list item: an item key needs a list the schema declares keyed",
       "base": {
         "nodes": [
           {
@@ -1337,7 +1371,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1349,41 +1383,14 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "x"}]
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "text", "value", {"key": "r1"}], "value": {"__id__": "r1"}}]
         }
       ],
       "error": "FlowOperationValidationError",
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a selector needs a list the schema declares keyed",
-      "base": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {
-              "node": {
-                "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
-                  "text": {"type": "str", "value": "a"}
-                }
-              }
-            }
-          }
-        ],
-        "edges": []
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "text", "value", {"id": "r1"}], "value": {"_id": "r1"}}]
-        }
-      ],
-      "error": "FlowOperationValidationError",
-      "code": "FLOW_OPERATION_INVALID"
-    },
-    {
-      "name": "selector: set_field edits an output selected by name",
+      "name": "list item: set_field edits an output selected by name",
       "base": {
         "nodes": [
           {
@@ -1417,7 +1424,7 @@
       }
     },
     {
-      "name": "selector: set_field at a new output name appends it",
+      "name": "list item: set_field at a new output name appends it",
       "base": {
         "nodes": [
           {
@@ -1451,7 +1458,7 @@
       }
     },
     {
-      "name": "selector: outputs are not selected by id",
+      "name": "list item: items are not selected by id",
       "base": {
         "nodes": [
           {
@@ -1473,7 +1480,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: an output's name cannot be changed through its selector",
+      "name": "list item: an output's name cannot be changed at its key",
       "base": {
         "nodes": [
           {
@@ -1495,7 +1502,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a tool action is selected by its first tag",
+      "name": "list item: a tool action is selected by its first tag",
       "base": {
         "nodes": [
           {
@@ -1534,12 +1541,14 @@
       }
     },
     {
-      "name": "selector: a table stored out of position order is accepted",
+      "name": "list item: a table stored out of position order is accepted",
       "base": {
         "nodes": [
           {
             "id": "t",
-            "data": {"node": {"template": {"rows": {"type": "table", "value": [{"_id": "r1", "_pos": 2, "v": "x"}, {"_id": "r2", "_pos": 1, "v": "y"}]}}}}
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 2, "v": "x"}, {"__id__": "r2", "__pos__": 1, "v": "y"}]}}}
+            }
           }
         ],
         "edges": []
@@ -1547,26 +1556,30 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "v"], "value": "z"}]
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "z"}]
         }
       ],
       "expected": {
         "nodes": [
           {
             "id": "t",
-            "data": {"node": {"template": {"rows": {"type": "table", "value": [{"_id": "r1", "_pos": 2, "v": "z"}, {"_id": "r2", "_pos": 1, "v": "y"}]}}}}
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 2, "v": "z"}, {"__id__": "r2", "__pos__": 1, "v": "y"}]}}}
+            }
           }
         ],
         "edges": []
       }
     },
     {
-      "name": "selector: a table with two rows of one id is rejected",
+      "name": "list item: a table with two rows of one id is rejected",
       "base": {
         "nodes": [
           {
             "id": "t",
-            "data": {"node": {"template": {"rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r1", "_pos": 2, "v": "y"}]}}}}
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r1", "__pos__": 2, "v": "y"}]}}}
+            }
           }
         ],
         "edges": []
@@ -1574,41 +1587,21 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "v"], "value": "z"}]
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "z"}]
         }
       ],
       "error": "FlowOperationValidationError",
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a row written without a numeric _pos is rejected",
+      "name": "list item: a row written without a numeric __pos__ is rejected",
       "base": {
         "nodes": [
           {
             "id": "t",
-            "data": {"node": {"template": {"rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]}}}}
-          }
-        ],
-        "edges": []
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r3"}], "value": {"_id": "r3", "_pos": "a3", "v": "z"}}
-          ]
-        }
-      ],
-      "error": "FlowOperationValidationError",
-      "code": "FLOW_OPERATION_INVALID"
-    },
-    {
-      "name": "selector: a row written with a _pos too large for a double is rejected",
-      "base": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {"node": {"template": {"rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]}}}}
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]}}}
+            }
           }
         ],
         "edges": []
@@ -1620,10 +1613,39 @@
             {
               "id": "t",
               "op": "set_field",
-              "path": ["data", "node", "template", "rows", "value", {"id": "r3"}],
+              "path": ["data", "node", "template", "rows", "value", {"key": "r3"}],
+              "value": {"__id__": "r3", "__pos__": "a3", "v": "z"}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: a row written with a __pos__ too large for a double is rejected",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]}}}
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "t",
+              "op": "set_field",
+              "path": ["data", "node", "template", "rows", "value", {"key": "r3"}],
               "value": {
-                "_id": "r3",
-                "_pos": 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+                "__id__": "r3",
+                "__pos__": 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
                 "v": "z"
               }
             }
@@ -1634,24 +1656,29 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a row's _pos cannot be deleted",
+      "name": "list item: a row's __pos__ cannot be deleted",
       "base": {
         "nodes": [
           {
             "id": "t",
-            "data": {"node": {"template": {"rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]}}}}
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]}}}
+            }
           }
         ],
         "edges": []
       },
       "operations": [
-        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "_pos"]}]}
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "__pos__"]}]
+        }
       ],
       "error": "FlowOperationValidationError",
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: an output without a name cannot be selected around",
+      "name": "list item: when one output has no name, no output can be written by key",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"display_name": "unnamed"}]}}}], "edges": []},
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "n", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}, "hidden"], "value": true}]}
@@ -1665,7 +1692,9 @@
         "nodes": [
           {
             "id": "t",
-            "data": {"node": {"template": {"rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]}}}}
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]}}}
+            }
           }
         ],
         "edges": []
@@ -1688,7 +1717,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1701,7 +1730,7 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "v"], "value": "q", "expect": {"value": "x"}}
+            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "q", "expect": {"value": "x"}}
           ]
         },
         {
@@ -1710,16 +1739,16 @@
             {
               "id": "t",
               "op": "set_field",
-              "path": ["data", "node", "template", "rows", "value", {"id": "r2"}],
-              "value": {"_id": "r2", "_pos": 2, "v": 2},
-              "expect": {"value": {"v": "y", "_pos": 2, "_id": "r2"}}
+              "path": ["data", "node", "template", "rows", "value", {"key": "r2"}],
+              "value": {"__id__": "r2", "__pos__": 2, "v": 2},
+              "expect": {"value": {"v": "y", "__pos__": 2, "__id__": "r2"}}
             }
           ]
         },
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r2"}, "v"], "value": 3, "expect": {"value": 2.0}}
+            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": 3, "expect": {"value": 2.0}}
           ]
         }
       ],
@@ -1730,7 +1759,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "q"}, {"_id": "r2", "_pos": 2, "v": 3}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "q"}, {"__id__": "r2", "__pos__": 2, "v": 3}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1749,7 +1778,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1763,7 +1792,7 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "v"], "value": "q", "expect": {"value": "old"}}
+            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "q", "expect": {"value": "old"}}
           ]
         }
       ],
@@ -1808,7 +1837,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1824,8 +1853,8 @@
             {
               "id": "t",
               "op": "set_field",
-              "path": ["data", "node", "template", "rows", "value", {"id": "r3"}],
-              "value": {"_id": "r3", "_pos": 1.5, "v": "z"},
+              "path": ["data", "node", "template", "rows", "value", {"key": "r3"}],
+              "value": {"__id__": "r3", "__pos__": 1.5, "v": "z"},
               "expect": {"absent": true}
             }
           ]
@@ -1840,7 +1869,7 @@
                 "template": {
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r3", "_pos": 1.5, "v": "z"}, {"_id": "r2", "_pos": 2, "v": "y"}]
+                    "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r3", "__pos__": 1.5, "v": "z"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]
                   },
                   "text": {"type": "str", "value": "a"}
                 }
@@ -1860,7 +1889,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1876,8 +1905,8 @@
             {
               "id": "t",
               "op": "set_field",
-              "path": ["data", "node", "template", "rows", "value", {"id": "r1"}],
-              "value": {"_id": "r1", "_pos": 1},
+              "path": ["data", "node", "template", "rows", "value", {"key": "r1"}],
+              "value": {"__id__": "r1", "__pos__": 1},
               "expect": {"absent": true}
             }
           ]
@@ -1895,7 +1924,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1908,7 +1937,7 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r9"}, "v"], "value": "x", "expect": {"value": "x"}}
+            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r9"}, "v"], "value": "x", "expect": {"value": "x"}}
           ]
         }
       ],
@@ -1924,7 +1953,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -1937,7 +1966,7 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r2"}], "expect": {"value": {"_id": "r2"}}}
+            {"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}], "expect": {"value": {"__id__": "r2"}}}
           ]
         }
       ],
@@ -1945,7 +1974,7 @@
       "code": "EXPECTATION_FAILED"
     },
     {
-      "name": "update_edges: writes an edge's handles in place, both forms together",
+      "name": "edge change: an edge's handles change by deleting and adding it, both forms together",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1963,11 +1992,18 @@
         ]
       },
       "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "one", "inputTypes": ["Message"]}},
-            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œoneœ,œinputTypesœ:[œMessageœ]}"}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ,œinputTypesœ:[œMessageœ]}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one", "inputTypes": ["Message"]}}
+            }
           ]
         }
       ],
@@ -1989,7 +2025,7 @@
       }
     },
     {
-      "name": "update_edges: cannot change an edge's source, target or id",
+      "name": "update_edges is not an operation: an edge changes by delete and add",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2011,29 +2047,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "update_edges: rejects an unknown edge",
-      "base": {
-        "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
-        ],
-        "edges": [
-          {
-            "id": "e1",
-            "source": "s",
-            "target": "d",
-            "sourceHandle": "{œnameœ:œoutœ}",
-            "targetHandle": "{œfieldNameœ:œoneœ}",
-            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
-          }
-        ]
-      },
-      "operations": [{"type": "update_edges", "updates": [{"id": "e9", "op": "set_field", "path": ["type"], "value": "x"}]}],
-      "error": "FlowOperationValidationError",
-      "code": "FLOW_OPERATION_INVALID"
-    },
-    {
-      "name": "update_edges: moving an edge onto a field that does not exist fails",
+      "name": "edge change: re-adding an edge onto a field that does not exist fails",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2051,11 +2065,18 @@
         ]
       },
       "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "nope"}},
-            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œnopeœ}"}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œnopeœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "nope"}}
+            }
           ]
         }
       ],
@@ -2063,7 +2084,7 @@
       "code": "EDGE_HANDLE_NOT_FOUND"
     },
     {
-      "name": "update_edges: moving an edge onto a free field applies",
+      "name": "edge change: re-adding an edge onto a free field applies",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2081,11 +2102,18 @@
         ]
       },
       "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "many"}},
-            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œmanyœ}"}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
           ]
         }
       ],
@@ -2107,7 +2135,7 @@
       }
     },
     {
-      "name": "update_edges: changing a stale edge's handles checks it again",
+      "name": "edge change: re-adding a stale edge with other handles checks it again",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2133,11 +2161,18 @@
         ]
       },
       "operations": [
+        {"type": "delete_edges", "ids": ["e-stale"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e-stale", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "removed", "inputTypes": ["Data"]}},
-            {"id": "e-stale", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œremovedœ,œinputTypesœ:[œDataœ]}"}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-stale",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œremovedœ,œinputTypesœ:[œDataœ]}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed", "inputTypes": ["Data"]}}
+            }
           ]
         }
       ],
@@ -2145,7 +2180,7 @@
       "code": "EDGE_HANDLE_NOT_FOUND"
     },
     {
-      "name": "update_edges: a write beside the handles leaves a stale edge alone",
+      "name": "edge change: re-adding a stale edge checks it, whatever changed",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2170,34 +2205,27 @@
           }
         ]
       },
-      "operations": [{"type": "update_edges", "updates": [{"id": "e-stale", "op": "set_field", "path": ["data", "note"], "value": "kept"}]}],
-      "expected": {
-        "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
-        ],
-        "edges": [
-          {
-            "id": "e1",
-            "source": "s",
-            "target": "d",
-            "sourceHandle": "{œnameœ:œoutœ}",
-            "targetHandle": "{œfieldNameœ:œoneœ}",
-            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
-          },
-          {
-            "id": "e-stale",
-            "source": "s",
-            "target": "d",
-            "sourceHandle": "{œnameœ:œoutœ}",
-            "targetHandle": "{œfieldNameœ:œremovedœ}",
-            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed"}, "note": "kept"}
-          }
-        ]
-      }
+      "operations": [
+        {"type": "delete_edges", "ids": ["e-stale"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-stale",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œremovedœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed"}, "note": "kept"}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
     },
     {
-      "name": "update_edges: changing one form of a handle alone fails",
+      "name": "edge change: an added edge whose handle forms disagree fails",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2222,7 +2250,22 @@
           }
         ]
       },
-      "operations": [{"type": "update_edges", "updates": [{"id": "e1", "op": "set_field", "path": ["data", "targetHandle", "fieldName"], "value": "many"}]}],
+      "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ],
       "error": "FlowOperationValidationError",
       "code": "EDGE_HANDLE_INVALID"
     },
@@ -3363,7 +3406,7 @@
       "forward_operations": [{"type": "delete_nodes", "ids": ["d"]}, {"type": "delete_edges", "ids": ["e1", "e-fb"]}]
     },
     {
-      "name": "cascade: an edge rewired earlier in the batch goes with its new field",
+      "name": "cascade: an edge re-added earlier in the batch goes with its new field",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -3381,11 +3424,18 @@
         ]
       },
       "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "many"}},
-            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œmanyœ}"}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
           ]
         },
         {"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "many"]}]}
@@ -3398,11 +3448,18 @@
         "edges": []
       },
       "forward_operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "many"}},
-            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œmanyœ}"}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
           ]
         },
         {"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "many"]}]},
