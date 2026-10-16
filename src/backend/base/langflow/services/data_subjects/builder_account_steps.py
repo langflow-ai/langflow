@@ -12,6 +12,7 @@ from langflow.services.data_subjects.batching import clear_reference_batch, dele
 from langflow.services.data_subjects.transactions import builder_transactions
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.auth.authz import (
+    AuthzAccessException,
     AuthzAuditLog,
     AuthzEditLock,
     AuthzRole,
@@ -172,7 +173,9 @@ BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("edit_locks", _delete_by_user(AuthzEditLock, AuthzEditLock.holder_user_id)),
     ("shares", erase_shares),
     ("role_assignments", erase_role_assignments),
+    ("access_exceptions", _delete_by_user(AuthzAccessException, AuthzAccessException.user_id)),
     ("share_creator", _clear_reference(AuthzShare, AuthzShare.created_by)),
+    ("access_exception_creator", _clear_reference(AuthzAccessException, AuthzAccessException.created_by)),
     ("assignment_actor", _clear_reference(AuthzRoleAssignment, AuthzRoleAssignment.assigned_by)),
     ("role_creator", _clear_reference(AuthzRole, AuthzRole.created_by)),
     ("catalog_rule_creator", _clear_reference(CatalogPolicyRule, CatalogPolicyRule.created_by)),

@@ -199,6 +199,27 @@ describe("dbProviderConstants", () => {
     ).toBe(false);
   });
 
+  it.each(["postgres", "opensearch"] as const)(
+    "accepts environment configured %s even when it is not the default",
+    (provider) => {
+      expect(
+        isDBProviderConfigured(provider, [], false, "postgres", [
+          "postgres",
+          "opensearch",
+        ]),
+      ).toBe(true);
+    },
+  );
+
+  it("does not enable an absent environment backend", () => {
+    expect(
+      isDBProviderConfigured("opensearch", [], false, "postgres", ["postgres"]),
+    ).toBe(false);
+    expect(isDBProviderConfigured("postgres", [], false, "sqlite", [])).toBe(
+      false,
+    );
+  });
+
   it("allows explicit Postgres selection only after it is active", () => {
     expect(isDBProviderConfigured("postgres", [])).toBe(false);
     expect(
@@ -240,6 +261,109 @@ describe("dbProviderConstants", () => {
       expect(getActiveDBProvider(variables, localUnavailable)).toBe(
         "opensearch",
       );
+    });
+
+    describe("when the server resolves OpenSearch as the default backend", () => {
+      // OpenSearch-only deployment: OPENSEARCH_URL is an env var, so there are
+      // no Langflow variables for the UI to find.
+      it("defaults to OpenSearch instead of assuming pgVector", () => {
+        expect(getActiveDBProvider([], localUnavailable, "opensearch")).toBe(
+          "opensearch",
+        );
+        expect(
+          getDefaultDBProviderConfig([], localUnavailable, "opensearch")
+            .backendType,
+        ).toBe("opensearch");
+      });
+
+      it("defaults to OpenSearch even when local storage is available", () => {
+        expect(
+          getDefaultDBProviderConfig([], true, "opensearch"),
+        ).toMatchObject({
+          backendType: "opensearch",
+        });
+        expect(
+          isDBProviderConfigured("opensearch", [], true, "opensearch"),
+        ).toBe(true);
+      });
+
+      it("reports the env-provisioned OpenSearch as configured", () => {
+        expect(isDBProviderConfigured("opensearch", [], false)).toBe(false);
+        expect(
+          isDBProviderConfigured("opensearch", [], false, "opensearch"),
+        ).toBe(true);
+      });
+
+      it("does not hand the server's SSL default a hard-coded true", () => {
+        // The URL comes from the environment, so the scheme is invisible to
+        // the UI; forcing ``use_ssl: true`` would break an http:// cluster.
+        const { backendConfig } = getDefaultDBProviderConfig(
+          [],
+          localUnavailable,
+          "opensearch",
+        );
+        expect(backendConfig).not.toHaveProperty("use_ssl");
+        expect(backendConfig).not.toHaveProperty("verify_certs");
+        expect(backendConfig).toMatchObject({
+          url_variable: OPENSEARCH_VARIABLES.URL,
+        });
+      });
+
+      it("still sends toggles the operator saved", () => {
+        const { backendConfig } = getDefaultDBProviderConfig(
+          [variable(OPENSEARCH_VARIABLES.USE_SSL, "false")],
+          localUnavailable,
+          "opensearch",
+        );
+        expect(backendConfig).toMatchObject({ use_ssl: false });
+        expect(backendConfig).not.toHaveProperty("verify_certs");
+      });
+
+      it("keeps a SQLite pin where local storage is allowed", () => {
+        expect(
+          getActiveDBProvider(
+            [variable(ACTIVE_DB_PROVIDER_VARIABLE, "sqlite")],
+            true,
+            "opensearch",
+          ),
+        ).toBe("sqlite");
+      });
+
+      it("ignores a SQLite pin where local storage is refused", () => {
+        expect(
+          getActiveDBProvider(
+            [variable(ACTIVE_DB_PROVIDER_VARIABLE, "sqlite")],
+            localUnavailable,
+            "opensearch",
+          ),
+        ).toBe("opensearch");
+      });
+    });
+
+    it("recognizes an env pgVector default without explicit activation", () => {
+      expect(isDBProviderConfigured("postgres", [], false, "postgres")).toBe(
+        true,
+      );
+      expect(getActiveDBProvider([], localUnavailable, "postgres")).toBe(
+        "postgres",
+      );
+    });
+
+    it("follows the pgVector server default when local storage is allowed", () => {
+      expect(getDefaultDBProviderConfig([], true, "postgres")).toEqual({
+        backendType: "postgres",
+        backendConfig: {},
+      });
+      expect(isDBProviderConfigured("postgres", [], true, "postgres")).toBe(
+        true,
+      );
+      expect(
+        getActiveDBProvider(
+          [variable(ACTIVE_DB_PROVIDER_VARIABLE, "sqlite")],
+          true,
+          "postgres",
+        ),
+      ).toBe("sqlite");
     });
 
     it("falls back to Postgres even when the active variable pins SQLite", () => {

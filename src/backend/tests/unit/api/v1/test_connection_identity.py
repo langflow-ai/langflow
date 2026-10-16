@@ -47,7 +47,11 @@ async def test_resolved_credential_reports_the_row_identity(
     logged_in_headers: dict[str, str],
     name: str,
     identity: str,
+    respx_mock,
 ) -> None:
+    respx_mock.post("https://slack.com/api/auth.test").respond(
+        200, json={"ok": True}, headers={"x-oauth-scopes": "chat:write"}
+    )
     created = await client.post(
         "api/v1/connections",
         json=_slack_payload(name=name, identity=identity),

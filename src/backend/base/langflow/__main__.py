@@ -30,7 +30,8 @@ import socket
 import sys
 import time
 import warnings
-from contextlib import suppress
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from functools import partial
 from ipaddress import ip_address
 from pathlib import Path
@@ -161,6 +162,50 @@ process_manager = ProcessManager()
 # Update signal handlers to use the instance methods
 signal.signal(signal.SIGTERM, process_manager.handle_sigterm)
 signal.signal(signal.SIGINT, process_manager.handle_sigint)
+
+
+class CommandInterrupted(SystemExit):
+    """SIGINT or SIGTERM stopped a command before its end: it unwinds like any exit, with the code a shell gives."""
+
+    def __init__(self, signum: int) -> None:
+        super().__init__(128 + signum)
+        self.signal_name = signal.Signals(signum).name
+
+
+@contextmanager
+def interruption_reported(not_done: str, *, as_json: bool) -> Iterator[None]:
+    """Stop the command on SIGINT or SIGTERM and say so, with --json as the stream's last event."""
+    interrupted: CommandInterrupted | None = None
+
+    def stop_command(signum: int, _frame) -> None:
+        nonlocal interrupted
+        # A second signal would cut short the cleanup the first one started.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        interrupted = CommandInterrupted(signum)
+        raise interrupted
+
+    previous = {signum: signal.getsignal(signum) for signum in (signal.SIGINT, signal.SIGTERM)}
+    try:
+        for signum in previous:
+            signal.signal(signum, stop_command)
+        try:
+            yield
+        except BaseException:
+            # Task groups can wrap the exit. The received signal still determines the command's result.
+            if interrupted is None:
+                raise
+            message = f"Stopped by {interrupted.signal_name} before the end. {not_done} It is safe to run again."
+            if as_json:
+                from langflow.cli.events import emit
+
+                emit("error", code="interrupted", message=message)
+            else:
+                typer.echo(message, err=True)
+            raise interrupted from None
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
 
 
 def get_number_of_workers(workers=None):
@@ -1215,19 +1260,25 @@ def convert_sqlite_to_postgres(
 
     Exits non-zero if anything was refused or failed. With --json every problem
     carries a stable code, and the last line is the report.
+
+    A run stopped by SIGINT or SIGTERM exits 130 or 143, and with --json it ends
+    with an error whose code is interrupted.
     """
     from langflow.cli import sqlite_to_postgres_events as events
     from langflow.services.database.sqlite_to_postgres import convert_sqlite_to_postgres as convert
 
     configure(log_level=log_level, output_file=sys.stderr if json_output else None)
-    report = convert(
-        source,
-        target,
-        batch_size=batch_size,
-        drop_orphans=drop_orphans,
-        on_progress=events.emit_progress if json_output else None,
-        on_table=events.emit_table if json_output else None,
-    )
+    with interruption_reported(
+        "The copy is one transaction: the target has all of the rows or none of them.", as_json=json_output
+    ):
+        report = convert(
+            source,
+            target,
+            batch_size=batch_size,
+            drop_orphans=drop_orphans,
+            on_progress=events.emit_progress if json_output else None,
+            on_table=events.emit_table if json_output else None,
+        )
     if json_output:
         events.emit_report(report)
         raise typer.Exit(0 if report.ok else 1)
@@ -1287,19 +1338,25 @@ def relocate_files(
     and an "item" as each file finishes, an "error" when the run is refused, and
     a closing "report" with the counts and the items that failed.
 
-    Exits non-zero if any file could not be copied.
+    Exits non-zero if any file could not be copied. A run stopped by SIGINT or
+    SIGTERM exits 130 or 143, and with --json it ends with an "error" whose code
+    is "interrupted".
     """
     configure(log_level=log_level, output_file=sys.stderr if as_json else None)
-    failed = asyncio.run(
-        _relocate_files(
-            bucket=bucket,
-            prefix=prefix,
-            username=username or None,
-            dry_run=dry_run,
-            concurrency=concurrency,
-            as_json=as_json,
+    with interruption_reported(
+        "Some files may not be in the bucket yet, and some chat attachments may still name local paths.",
+        as_json=as_json,
+    ):
+        failed = asyncio.run(
+            _relocate_files(
+                bucket=bucket,
+                prefix=prefix,
+                username=username or None,
+                dry_run=dry_run,
+                concurrency=concurrency,
+                as_json=as_json,
+            )
         )
-    )
     if failed:
         raise typer.Exit(1)
 
@@ -1318,6 +1375,12 @@ def relocate_kb(
     allow_metric_change: bool = typer.Option(  # noqa: FBT001
         default=False,
         help="Move knowledge bases whose search rankings would change because the target ranks by another metric.",
+    ),
+    verify_skipped: bool = typer.Option(  # noqa: FBT001
+        default=True,
+        help="Before skipping a knowledge base whose row already names the target, count its chunks there, and "
+        "fail it when the store cannot be read or holds fewer than the row records. With --no-verify-skipped it "
+        "is skipped without a look at the store.",
     ),
     as_json: bool = typer.Option(  # noqa: FBT001
         False,  # noqa: FBT003
@@ -1341,13 +1404,24 @@ def relocate_kb(
 
     Safe to re-run: chunks keep their ids, so a second run upserts, and knowledge
     bases already on the target are skipped. Nothing is deleted from the source.
-    Exits non-zero if any knowledge base could not be moved.
+    Exits non-zero if any knowledge base failed.
+
+    A knowledge base whose row already names the target is not moved. Its chunks
+    are counted there first, if the row records any and its storage is ready,
+    and it fails when the store cannot be read or holds fewer chunks than the
+    row records, as it does when PGVECTOR_CONNECTION_STRING names another
+    database than the one the chunks were written to. Pass --no-verify-skipped
+    to skip it without a look at the store, for a knowledge base that is in
+    place and whose row records too many chunks.
 
     With --json, stdout carries one JSON object per line and logs go to stderr:
     "progress" as a knowledge base's chunks are copied, an "item" as each one
     finishes, and a closing "report" with the counts and the knowledge bases
     that need attention. A run refused before it starts writes one "error"
     instead. Failed items and errors carry a stable "code".
+
+    A run stopped by SIGINT or SIGTERM exits 130 or 143, and with --json it ends
+    with an "error" whose code is "interrupted".
     """
     from langflow.cli import relocate_kb_events as events
 
@@ -1367,17 +1441,19 @@ def relocate_kb(
         events.refuse(str(exc), "bad_target_config", as_json=as_json)
         raise typer.Exit(2) from exc
     configure(log_level=log_level, output_file=sys.stderr if as_json else None)
-    failed = asyncio.run(
-        _relocate_kb(
-            target_backend_type=to,
-            target_backend_config=config,
-            username=username or None,
-            dry_run=dry_run,
-            batch_size=batch_size,
-            allow_metric_change=allow_metric_change,
-            as_json=as_json,
+    with interruption_reported("Some knowledge bases may still use their old store.", as_json=as_json):
+        failed = asyncio.run(
+            _relocate_kb(
+                target_backend_type=to,
+                target_backend_config=config,
+                username=username or None,
+                dry_run=dry_run,
+                batch_size=batch_size,
+                allow_metric_change=allow_metric_change,
+                verify_skipped=verify_skipped,
+                as_json=as_json,
+            )
         )
-    )
     if failed:
         raise typer.Exit(1)
 
@@ -1490,6 +1566,20 @@ def relocation_line(result) -> str:
     return f"{line}  chunks {counts}"
 
 
+def relocation_lines(result) -> list[str]:
+    """Everything the command prints for one knowledge base: its line, a hint, its warnings."""
+    lines = [relocation_line(result) + (f"  ({result.reason})" if result.reason else "")]
+    if result.code == "kb_target_short":
+        # Only in this output. The reason and the flag go to the migration page as well, and nobody there
+        # runs the command.
+        lines.append(
+            f"{'':15} hint: if this is the right store and its row records too many chunks, "
+            "re-run with --no-verify-skipped, which skips every knowledge base already on the target "
+            "without a count"
+        )
+    return [*lines, *(f"{'':15} warning: {warning}" for warning in result.warnings)]
+
+
 async def _schema_mismatch() -> str | None:
     """Say why the database is not at this Langflow's schema, or None when it is."""
     from alembic.config import Config
@@ -1520,6 +1610,7 @@ async def _relocate_kb(
     dry_run: bool,
     batch_size: int,
     allow_metric_change: bool = False,
+    verify_skipped: bool = False,
     as_json: bool = False,
 ) -> int:
     from langflow.api.utils.knowledge_base_relocation import relocate_knowledge_bases
@@ -1540,6 +1631,7 @@ async def _relocate_kb(
         dry_run=dry_run,
         batch_size=batch_size,
         allow_metric_change=allow_metric_change,
+        verify_skipped=verify_skipped,
         on_result=events.item if as_json else None,
         on_progress=events.progress if as_json else None,
     )
@@ -1551,9 +1643,8 @@ async def _relocate_kb(
         events.report(results, by_status, dry_run=dry_run)
         return failed
     for result in results:
-        typer.echo(relocation_line(result) + (f"  ({result.reason})" if result.reason else ""))
-        for warning in result.warnings:
-            typer.echo(f"{'':15} warning: {warning}")
+        for line in relocation_lines(result):
+            typer.echo(line)
     summary = ", ".join(f"{count} {status}" for status, count in sorted(by_status.items())) or "no knowledge bases"
     typer.echo(f"Knowledge base relocation {'dry run ' if dry_run else ''}complete: {summary}.")
     return failed
@@ -1576,10 +1667,13 @@ def check_integrity(
     policy.
 
     Read-only: it reports and never repairs, so it is safe to run on production.
-    Exits non-zero if any check fails.
+    Exits non-zero if any check fails. A run stopped by SIGINT or SIGTERM exits
+    130 or 143, and with --json it ends with an error whose code is interrupted.
     """
     configure(log_level=log_level, output_file=sys.stderr if as_json else None)
-    if not asyncio.run(_check_integrity(as_json=as_json)):
+    with interruption_reported("Checks it did not report did not finish.", as_json=as_json):
+        ok = asyncio.run(_check_integrity(as_json=as_json))
+    if not ok:
         raise typer.Exit(1)
 
 
@@ -1613,6 +1707,11 @@ def migration_preflight(
     target_revision: str = typer.Option(
         "", help="Alembic revision the target image runs. Refuses a target older than this database."
     ),
+    target_version: str = typer.Option(
+        "",
+        help="Langflow version the target image runs, such as 1.13.0. Refuses a target older than this Langflow. "
+        "--target-revision is exact and wins when both are given.",
+    ),
     target_secret_key_file: Path | None = typer.Option(
         None,
         help="File holding the LANGFLOW_SECRET_KEY the target will run with.",
@@ -1629,17 +1728,30 @@ def migration_preflight(
     key opens every stored credential, and which knowledge bases record the model
     their vectors need. Then runs check-integrity against this instance.
 
-    Read-only. Exits non-zero if any check fails.
+    Read-only. Exits non-zero if any check fails. A run stopped by SIGINT or
+    SIGTERM exits 130 or 143, and with --json it ends with an error whose code is
+    interrupted.
+
+    Run it with the environment the server runs with: the database, the secret
+    key and AUTO_LOGIN are read from it.
     """
     configure(log_level=log_level, output_file=sys.stderr if as_json else None)
     # Not stripped: a Secret made from this file with --from-file carries its whitespace, so the key is tested with it.
     key = target_secret_key_file.read_text() if target_secret_key_file else None
-    if not asyncio.run(_migration_preflight(target_revision or None, key, as_json=as_json)):
+    with interruption_reported("Checks it did not report did not finish.", as_json=as_json):
+        ok = asyncio.run(
+            _migration_preflight(target_revision or None, key, target_version=target_version or None, as_json=as_json)
+        )
+    if not ok:
         raise typer.Exit(1)
 
 
 async def _migration_preflight(
-    target_revision: str | None, target_secret_key: str | None, *, as_json: bool = False
+    target_revision: str | None,
+    target_secret_key: str | None,
+    *,
+    target_version: str | None = None,
+    as_json: bool = False,
 ) -> bool:
     from langflow.cli.integrity import open_instance
     from langflow.cli.migration_preflight import run_preflight
@@ -1647,6 +1759,7 @@ async def _migration_preflight(
     open_instance()
     report = await run_preflight(
         target_revision=target_revision,
+        target_version=target_version,
         target_secret_key=target_secret_key,
         on_check=partial(_echo_check, width=24, as_json=as_json),
     )

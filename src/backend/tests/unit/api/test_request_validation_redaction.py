@@ -5,20 +5,31 @@ value that failed -- and a ``ctx`` that can quote it. QA (LE-2462, O1) showed a
 422 reflecting token material from POST /api/v1/connections and Credential
 values from POST /api/v1/variables/. The caller gains nothing it did not send,
 but 422 bodies land in proxy logs, browser devtools and error trackers.
+
+The same values reached the server log: FastAPI opens the session dependency
+before it validates the body, then throws the validation error into it, and
+session_scope logged whatever was thrown.
 """
 
+import io
+import logging
 from typing import Annotated, Literal
 
 import pytest
-from fastapi import FastAPI, Header, Query, status
+from fastapi import FastAPI, Header, Query, WebSocket, status
 from fastapi.exceptions import RequestValidationError
 from httpx import ASGITransport, AsyncClient
+from langflow.api.utils.core import DbSession
 from langflow.api.validation_errors import redact_validation_errors, request_validation_exception_handler
 from langflow.services.variable.constants import CREDENTIAL_TYPE
+from lfx.services.deps import session_scope
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictStr, ValidationError, field_validator
+from structlog import PrintLogger, make_filtering_bound_logger, wrap_logger
+from structlog.dev import ConsoleRenderer, plain_traceback
 
 CANARY = "lf-canary-9d1f4e7a2c8b"  # pragma: allowlist secret
 NUMERIC_CANARY = 5550123987
+SENTINEL = "session-scope-control-5c1e"
 
 
 def _assert_redacted(response, canary: object, *, loc: list, error_type: str) -> None:
@@ -192,6 +203,79 @@ async def test_variables_422_does_not_echo_credential_value(
     response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
 
     _assert_redacted(response, CANARY, loc=loc, error_type=error_type)
+
+
+@pytest.fixture
+def session_scope_log(monkeypatch) -> io.StringIO:
+    """Everything session_scope logs at ERROR, rendered with the traceback.
+
+    The module's own logger is a lazy structlog proxy that freezes its level and
+    sink on first use, so what capsys or caplog see depends on which test ran
+    first. A real logger with its own sink reads the same in every worker.
+    """
+    sink = io.StringIO()
+    error_logger = wrap_logger(
+        PrintLogger(file=sink),
+        processors=[ConsoleRenderer(colors=False, exception_formatter=plain_traceback)],
+        wrapper_class=make_filtering_bound_logger(logging.ERROR),
+    )
+    monkeypatch.setattr("lfx.services.deps.logger", error_logger)
+    return sink
+
+
+async def _assert_session_scope_errors_are_captured(log: io.StringIO) -> None:
+    """Positive control: without it, "the canary is not in the log" passes on a sink nothing writes to."""
+    with pytest.raises(RuntimeError, match=SENTINEL):
+        async with session_scope():
+            raise RuntimeError(SENTINEL)
+    assert "An error occurred during the session scope." in log.getvalue()
+    assert SENTINEL in log.getvalue()
+
+
+async def test_failed_body_validation_is_not_logged_by_the_session_scope(client: AsyncClient, session_scope_log):
+    await _assert_session_scope_errors_are_captured(session_scope_log)
+
+    # A sign-up with a mistyped username field: a missing field's input is the whole body.
+    response = await client.post("api/v1/users/", json={"password": CANARY})
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, response.text
+    assert CANARY not in session_scope_log.getvalue()
+
+
+@pytest.mark.usefixtures("client")
+async def test_failed_websocket_validation_is_not_logged_by_the_session_scope(session_scope_log):
+    await _assert_session_scope_errors_are_captured(session_scope_log)
+    app = FastAPI()
+
+    @app.websocket("/ws")
+    async def probe(websocket: WebSocket, limit: int, session: DbSession):  # noqa: ARG001
+        await websocket.accept()
+
+    sent: list[dict] = []
+
+    async def receive() -> dict:
+        return {"type": "websocket.connect"}
+
+    async def send(message: dict) -> None:
+        sent.append(message)
+
+    scope = {
+        "type": "websocket",
+        "asgi": {"version": "3.0"},
+        "scheme": "ws",
+        "path": "/ws",
+        "raw_path": b"/ws",
+        "query_string": f"limit={CANARY}".encode(),
+        "root_path": "",
+        "headers": [(b"host", b"testserver")],
+        "client": ("127.0.0.1", 1),
+        "server": ("testserver", 80),
+        "subprotocols": [],
+    }
+    await app(scope, receive, send)
+
+    assert [message["type"] for message in sent] == ["websocket.close"], sent
+    assert CANARY not in session_scope_log.getvalue()
 
 
 def _errors_for(model: type[BaseModel], data: dict) -> list[dict]:

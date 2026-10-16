@@ -24,7 +24,7 @@ from langflow.services.triggers.listeners.adapters import (
     unregister_adapter,
 )
 from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
-from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError
+from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError, ProviderUnavailableError
 from sqlmodel import col, select
 
 pytestmark = pytest.mark.no_blockbuster
@@ -236,8 +236,13 @@ async def test_an_auth_failure_stops_retrying_and_asks_for_a_reconnect(
         assert await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300) is None
 
 
+@pytest.mark.parametrize(
+    "failure",
+    [RuntimeError("provider said no"), ProviderUnavailableError(provider="selftest")],
+    ids=["unexpected", "provider-unavailable"],
+)
 async def test_persistent_failures_back_off_and_surface_the_error_then_a_success_clears_it(
-    make_connection, make_trigger, adapter_registry, monkeypatch
+    make_connection, make_trigger, adapter_registry, monkeypatch, failure
 ) -> None:
     """The LE-2479 QA case: five consecutive failures, then recovery."""
     from langflow.services.deps import get_settings_service
@@ -246,7 +251,7 @@ async def test_persistent_failures_back_off_and_surface_the_error_then_a_success
     monkeypatch.setattr(settings, "listener_backoff_base_s", 0.01)
     monkeypatch.setattr(settings, "listener_backoff_cap_s", 0.02)
 
-    adapter = adapter_registry(RecordingAdapter(fail_with=RuntimeError("provider said no")))
+    adapter = adapter_registry(RecordingAdapter(fail_with=failure))
     connection_id = await make_connection()
     trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
 

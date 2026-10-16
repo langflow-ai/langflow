@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from lfx.log.logger import logger
 
-from langflow.api.utils.migration_pause import is_paused
+from langflow.api.utils.migration_pause import writing
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.utils import clean_authz_audit_log
 
@@ -138,8 +138,10 @@ class AuditLogCleanupWorker:
             if await self._sleep_or_stop(self._interval):
                 break
             # A paused instance prunes nothing. The next sweep removes what this one left.
-            if not is_paused():
-                await self._run_once()
+            # A sweep holds a place, so a pause waits for one that is under way.
+            with writing(name="audit_cleanup") as let_in:
+                if let_in:
+                    await self._run_once()
 
     async def _sleep_or_stop(self, delay: float) -> bool:
         """Wait ``delay`` seconds or until stop is requested.

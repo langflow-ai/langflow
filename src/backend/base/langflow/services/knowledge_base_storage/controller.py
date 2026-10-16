@@ -12,12 +12,10 @@ import asyncio
 import json
 import math
 import os
-import shutil
 import socket
 import sqlite3
 import stat
 import sys
-import tempfile
 import time
 from contextlib import closing, suppress
 from pathlib import Path
@@ -27,9 +25,10 @@ import httpx
 import psutil
 from filelock import FileLock, Timeout
 
-from langflow.services.knowledge_base_storage import helper, maintenance
+from langflow.services.knowledge_base_storage import maintenance
+from langflow.services.knowledge_base_storage.migration_io import drain_task, run_worker
 
-# Internal modules deliberately share the verified helper and durable filesystem primitives.
+# Internal storage modules share durable filesystem and worker-identity primitives.
 # ruff: noqa: SLF001
 
 _PROCESS_TIME_TOLERANCE = 0.01
@@ -39,12 +38,6 @@ _MAX_STOP_TIMEOUT = 300
 _MAX_READINESS_TIMEOUT = 86400
 _MAX_JOURNAL_BYTES = 1024 * 1024
 _MAX_WORKERS = 1024
-_HELPER_ENV = (
-    "LANGFLOW_KB_MIGRATION_HELPER_IMAGE",
-    "LANGFLOW_KB_MIGRATION_HELPER_BUNDLE",
-    "LANGFLOW_KB_MIGRATION_HELPER_MANIFEST",
-    "LANGFLOW_KB_MIGRATION_HELPER_TRUSTED_ROOT",
-)
 
 
 class UpgradeControllerError(RuntimeError):
@@ -185,27 +178,6 @@ def _stopped(process: psutil.Process) -> bool:
         return True
 
 
-def _resume_before_stop(journal_path: Path, journal: dict) -> None:
-    """Unfreeze only the saved family if helper staging fails during interrupted preparation."""
-    if journal["phase"] not in ("prepared", "stopping"):
-        return
-    supervisor = _process(journal.get("supervisor_identity", journal["config"]["supervisor"]))
-    identities = journal.get("workers", [])
-    if not identities and supervisor is not None:
-        identities = []
-        for process in _family(supervisor.pid):
-            with suppress(psutil.NoSuchProcess):
-                identities.append(_identity(process))
-    for identity in identities:
-        if (process := _process(identity)) is not None:
-            with suppress(psutil.NoSuchProcess):
-                process.resume()
-    if supervisor is not None:
-        journal["phase"] = "prepared"
-        journal.pop("workers", None)
-        _write(journal_path, journal)
-
-
 def _stop(journal_path: Path, journal: dict, timeout: float) -> None:
     """Freeze, durably inventory, then stop only creation-time-bound identities."""
     config = journal["config"]
@@ -289,35 +261,9 @@ def _stop(journal_path: Path, journal: dict, timeout: float) -> None:
                     process.resume()
 
 
-async def stage_helper() -> None:
-    """Verify the actual pinned release and local image before any downtime."""
-    image = os.environ.get("LANGFLOW_KB_MIGRATION_HELPER_IMAGE", "")
-    docker, cosign = shutil.which("docker"), shutil.which("cosign")
-    if not helper._IMAGE.fullmatch(image) or not docker or not cosign:
-        msg = "Configure the signed release helper digest, Docker and qualified cosign before upgrading"
-        raise _error(msg)
-    selected = await helper._stage_verified_helper(docker, cosign, image)
-    # Offline verification alone does not prove the operator loaded the image.
-    await helper._command(docker, "image", "inspect", selected)
-    # Exercise the exact isolation profile before stopping the previous app.
-    # Creation does not execute the reader or expose application data.
-    with tempfile.TemporaryDirectory(prefix="langflow-helper-preflight-") as directory:
-        name = f"langflow-helper-preflight-{uuid4().hex}"
-        args = helper.isolated_command(docker, selected, Path(directory), name)
-        args[1] = "create"
-        args.remove("--rm")
-        try:
-            await helper._command(*args)
-        finally:
-            await helper._drain_task(asyncio.create_task(helper._command(docker, "rm", "--force", name)))
-
-
 def _launch_environment(config: dict, receipt: str) -> dict[str, str]:
     """Bind the verified upgrade receipt to the new worker environment."""
     environment = dict(os.environ)
-    for key in _HELPER_ENV:
-        environment.pop(key, None)
-    environment.update(config["helper"])
     environment.update(
         LANGFLOW_KB_UPGRADE_RECEIPT=receipt,
         LANGFLOW_KNOWLEDGE_BASES_DIR=config["root"],
@@ -413,7 +359,7 @@ async def _wait_ready(identity: dict, port: int, timeout: float) -> None:
             if _process(identity) is None:
                 msg = "The new application exited before readiness. Data and journal are retained"
                 raise _error(msg)
-            if await helper._disk_call(_owns_listener, identity, port):
+            if await run_worker(_owns_listener, identity, port):
                 try:
                     response = await client.get(f"http://127.0.0.1:{port}/healthz?require_storage_ready=true")
                     if response.status_code == _HTTP_OK and response.json().get("status") == "ok":
@@ -477,7 +423,6 @@ async def upgrade(
         "command": command,
         "cwd": str(cwd),
         "port": port,
-        "helper": {key: os.environ[key] for key in _HELPER_ENV if key in os.environ},
     }
     journal_path = state / "upgrade.json"
     lock_path = root / ".upgrade-controller.lock"
@@ -494,7 +439,7 @@ async def upgrade(
         if journal_path.exists():
             journal = _read(journal_path)
             if journal.get("version") != 1 or journal.get("config") != config:
-                msg = "Resume with the original instance, command, helper settings and state directory"
+                msg = "Resume with the original instance, command and state directory"
                 raise _error(msg)
         else:
             selected_supervisor = _validate_supervisor(supervisor)
@@ -528,17 +473,11 @@ async def upgrade(
                 "supervisor_identity": _identity(selected_supervisor),
             }
             _write(journal_path, journal, exclusive=True)
-        if journal["phase"] in ("prepared", "stopping", "stopped"):
-            try:
-                await stage_helper()
-            except BaseException:
-                await helper._disk_call(_resume_before_stop, journal_path, journal)
-                raise
         if journal["phase"] in ("prepared", "stopping"):
-            await helper._disk_call(_stop, journal_path, journal, stop_timeout)
+            await run_worker(_stop, journal_path, journal, stop_timeout)
         if journal["phase"] == "stopped":
             receipt = state / f"receipt-{uuid4().hex}.json"
-            await helper._disk_call(
+            await run_worker(
                 lambda: maintenance.create_receipt(
                     root=root, database=database, receipt=receipt, previous_workers=journal["workers"]
                 )
@@ -546,7 +485,7 @@ async def upgrade(
             journal.update(phase="backed_up", receipt=str(receipt))
             _write(journal_path, journal)
         if journal["phase"] == "backed_up":
-            await helper._disk_call(
+            await run_worker(
                 lambda: maintenance.validate_receipt(root=root, database=database, receipt=Path(journal["receipt"]))
             )
             journal.update(phase="launching", launch=str(state / f"launch-{uuid4().hex}.json"))
@@ -557,14 +496,13 @@ async def upgrade(
                 if _family(_read(launch)["pid"]):
                     msg = "New-version workers outlived their supervisor. Stop that deployment before restarting it"
                     raise _error(msg)
-                await helper._disk_call(
+                await run_worker(
                     lambda: maintenance.validate_receipt(root=root, database=database, receipt=Path(journal["receipt"]))
                 )
-                await stage_helper()
                 journal.update(phase="launching", launch=str(state / f"launch-{uuid4().hex}.json"))
                 _write(journal_path, journal)
         if journal["phase"] == "launching":
-            identity = await helper._drain_task(asyncio.create_task(_start(journal_path, journal)))
+            identity = await drain_task(asyncio.create_task(_start(journal_path, journal)))
             journal.update(phase="started", application=identity)
             _write(journal_path, journal)
         await _wait_ready(journal["application"], port, readiness_timeout)
@@ -626,7 +564,7 @@ def main() -> None:
             )
         )
         sys.stdout.write(f"Upgrade {result['phase']}. New supervisor PID: {result['application']['pid']}\n")
-    except (UpgradeControllerError, maintenance.MaintenanceRequiredError, helper.MigrationHelperError) as exc:
+    except (UpgradeControllerError, maintenance.MaintenanceRequiredError) as exc:
         parser.exit(1, f"{exc}\n")
 
 
