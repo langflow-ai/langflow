@@ -30,7 +30,8 @@ import socket
 import sys
 import time
 import warnings
-from contextlib import suppress
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from functools import partial
 from ipaddress import ip_address
 from pathlib import Path
@@ -161,6 +162,41 @@ process_manager = ProcessManager()
 # Update signal handlers to use the instance methods
 signal.signal(signal.SIGTERM, process_manager.handle_sigterm)
 signal.signal(signal.SIGINT, process_manager.handle_sigint)
+
+
+class CommandInterrupted(SystemExit):
+    """SIGINT or SIGTERM stopped a command before its end: it unwinds like any exit, with the code a shell gives."""
+
+    def __init__(self, signum: int) -> None:
+        super().__init__(128 + signum)
+        self.signal_name = signal.Signals(signum).name
+
+
+def stop_command(signum: int, _frame) -> None:
+    """Stop a migration command: its work unwinds, then it exits 130 or 143."""
+    # A second signal would cut short the cleanup the first one started.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    raise CommandInterrupted(signum)
+
+
+@contextmanager
+def interruption_reported(not_done: str, *, as_json: bool) -> Iterator[None]:
+    """Stop the command on SIGINT or SIGTERM and say so, with --json as the stream's last event."""
+    # For the rest of the process: the process manager's handlers, which the other commands keep, exit 0.
+    signal.signal(signal.SIGINT, stop_command)
+    signal.signal(signal.SIGTERM, stop_command)
+    try:
+        yield
+    except CommandInterrupted as exc:
+        message = f"Stopped by {exc.signal_name} before the end. {not_done} It is safe to run again."
+        if as_json:
+            from langflow.cli.events import emit
+
+            emit("error", code="interrupted", message=message)
+        else:
+            typer.echo(message, err=True)
+        raise
 
 
 def get_number_of_workers(workers=None):
@@ -1215,19 +1251,25 @@ def convert_sqlite_to_postgres(
 
     Exits non-zero if anything was refused or failed. With --json every problem
     carries a stable code, and the last line is the report.
+
+    A run stopped by SIGINT or SIGTERM exits 130 or 143, and with --json it ends
+    with an error whose code is interrupted.
     """
     from langflow.cli import sqlite_to_postgres_events as events
     from langflow.services.database.sqlite_to_postgres import convert_sqlite_to_postgres as convert
 
     configure(log_level=log_level, output_file=sys.stderr if json_output else None)
-    report = convert(
-        source,
-        target,
-        batch_size=batch_size,
-        drop_orphans=drop_orphans,
-        on_progress=events.emit_progress if json_output else None,
-        on_table=events.emit_table if json_output else None,
-    )
+    with interruption_reported(
+        "The copy is one transaction: the target has all of the rows or none of them.", as_json=json_output
+    ):
+        report = convert(
+            source,
+            target,
+            batch_size=batch_size,
+            drop_orphans=drop_orphans,
+            on_progress=events.emit_progress if json_output else None,
+            on_table=events.emit_table if json_output else None,
+        )
     if json_output:
         events.emit_report(report)
         raise typer.Exit(0 if report.ok else 1)
@@ -1287,19 +1329,25 @@ def relocate_files(
     and an "item" as each file finishes, an "error" when the run is refused, and
     a closing "report" with the counts and the items that failed.
 
-    Exits non-zero if any file could not be copied.
+    Exits non-zero if any file could not be copied. A run stopped by SIGINT or
+    SIGTERM exits 130 or 143, and with --json it ends with an "error" whose code
+    is "interrupted".
     """
     configure(log_level=log_level, output_file=sys.stderr if as_json else None)
-    failed = asyncio.run(
-        _relocate_files(
-            bucket=bucket,
-            prefix=prefix,
-            username=username or None,
-            dry_run=dry_run,
-            concurrency=concurrency,
-            as_json=as_json,
+    with interruption_reported(
+        "Some files may not be in the bucket yet, and some chat attachments may still name local paths.",
+        as_json=as_json,
+    ):
+        failed = asyncio.run(
+            _relocate_files(
+                bucket=bucket,
+                prefix=prefix,
+                username=username or None,
+                dry_run=dry_run,
+                concurrency=concurrency,
+                as_json=as_json,
+            )
         )
-    )
     if failed:
         raise typer.Exit(1)
 
@@ -1362,6 +1410,9 @@ def relocate_kb(
     finishes, and a closing "report" with the counts and the knowledge bases
     that need attention. A run refused before it starts writes one "error"
     instead. Failed items and errors carry a stable "code".
+
+    A run stopped by SIGINT or SIGTERM exits 130 or 143, and with --json it ends
+    with an "error" whose code is "interrupted".
     """
     from langflow.cli import relocate_kb_events as events
 
@@ -1381,18 +1432,19 @@ def relocate_kb(
         events.refuse(str(exc), "bad_target_config", as_json=as_json)
         raise typer.Exit(2) from exc
     configure(log_level=log_level, output_file=sys.stderr if as_json else None)
-    failed = asyncio.run(
-        _relocate_kb(
-            target_backend_type=to,
-            target_backend_config=config,
-            username=username or None,
-            dry_run=dry_run,
-            batch_size=batch_size,
-            allow_metric_change=allow_metric_change,
-            verify_skipped=verify_skipped,
-            as_json=as_json,
+    with interruption_reported("Some knowledge bases may still use their old store.", as_json=as_json):
+        failed = asyncio.run(
+            _relocate_kb(
+                target_backend_type=to,
+                target_backend_config=config,
+                username=username or None,
+                dry_run=dry_run,
+                batch_size=batch_size,
+                allow_metric_change=allow_metric_change,
+                verify_skipped=verify_skipped,
+                as_json=as_json,
+            )
         )
-    )
     if failed:
         raise typer.Exit(1)
 
@@ -1606,10 +1658,13 @@ def check_integrity(
     policy.
 
     Read-only: it reports and never repairs, so it is safe to run on production.
-    Exits non-zero if any check fails.
+    Exits non-zero if any check fails. A run stopped by SIGINT or SIGTERM exits
+    130 or 143, and with --json it ends with an error whose code is interrupted.
     """
     configure(log_level=log_level, output_file=sys.stderr if as_json else None)
-    if not asyncio.run(_check_integrity(as_json=as_json)):
+    with interruption_reported("Checks it did not report did not finish.", as_json=as_json):
+        ok = asyncio.run(_check_integrity(as_json=as_json))
+    if not ok:
         raise typer.Exit(1)
 
 
@@ -1664,7 +1719,9 @@ def migration_preflight(
     key opens every stored credential, and which knowledge bases record the model
     their vectors need. Then runs check-integrity against this instance.
 
-    Read-only. Exits non-zero if any check fails.
+    Read-only. Exits non-zero if any check fails. A run stopped by SIGINT or
+    SIGTERM exits 130 or 143, and with --json it ends with an error whose code is
+    interrupted.
 
     Run it with the environment the server runs with: the database, the secret
     key and AUTO_LOGIN are read from it.
@@ -1672,9 +1729,11 @@ def migration_preflight(
     configure(log_level=log_level, output_file=sys.stderr if as_json else None)
     # Not stripped: a Secret made from this file with --from-file carries its whitespace, so the key is tested with it.
     key = target_secret_key_file.read_text() if target_secret_key_file else None
-    if not asyncio.run(
-        _migration_preflight(target_revision or None, key, target_version=target_version or None, as_json=as_json)
-    ):
+    with interruption_reported("Checks it did not report did not finish.", as_json=as_json):
+        ok = asyncio.run(
+            _migration_preflight(target_revision or None, key, target_version=target_version or None, as_json=as_json)
+        )
+    if not ok:
         raise typer.Exit(1)
 
 

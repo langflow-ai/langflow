@@ -1,3 +1,10 @@
+import json
+import os
+import select
+import signal
+import socket
+import subprocess
+import sys
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -523,3 +530,67 @@ def test_ensure_multi_worker_safe_error_points_at_the_bypass_flag():
         ensure_multi_worker_safe(num_workers=3)
 
     assert MULTI_WORKER_BYPASS_ENV_VAR in str(exc_info.value)
+
+
+def _stop_midway(tmp_path, command: str, *args: str, signum: int) -> subprocess.CompletedProcess:
+    """Run a command until it waits on its database, signal it, and return how it ended.
+
+    The database takes the connection and never answers, so the command is stopped mid-run every time.
+    """
+    from langflow.services.database.sqlite_to_postgres import upgrade_to_head
+
+    listener = socket.create_server(("127.0.0.1", 0))
+    silent = f"postgresql://nobody@127.0.0.1:{listener.getsockname()[1]}/none"
+    env = {**os.environ, "LANGFLOW_CONFIG_DIR": str(tmp_path)}
+    if command == "convert-sqlite-to-postgres":
+        source = f"sqlite:///{tmp_path / 'langflow.db'}"
+        upgrade_to_head(source)
+        args = (*args, "--source", source, "--target", silent)
+    else:
+        env["LANGFLOW_DATABASE_URL"] = silent
+    child = subprocess.Popen(  # noqa: S603 - the interpreter running the tests, fixed arguments
+        [sys.executable, "-m", "langflow", command, *args],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        assert select.select([listener], [], [], 120)[0], "the command never reached its database"
+        child.send_signal(signum)
+        out, err = child.communicate(timeout=120)
+    finally:
+        child.kill()
+        listener.close()
+    return subprocess.CompletedProcess(child.args, child.returncode, out, err)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="SIGINT and SIGTERM are POSIX signals")
+@pytest.mark.parametrize(
+    ("command", "args", "signum"),
+    [
+        ("relocate-files", ["--bucket", "unused"], signal.SIGTERM),
+        ("relocate-kb", ["--to", "postgres"], signal.SIGINT),
+        ("convert-sqlite-to-postgres", [], signal.SIGINT),
+        ("check-integrity", [], signal.SIGTERM),
+        ("migration-preflight", [], signal.SIGINT),
+    ],
+)
+def test_a_migration_command_stopped_by_a_signal_ends_its_stream_with_an_error(tmp_path, command, args, signum):
+    # Exit 0 and a stream that just stops read as a finished move to a script or a CI step.
+    result = _stop_midway(tmp_path, command, *args, "--json", signum=signum)
+
+    events = [json.loads(line) for line in result.stdout.splitlines()]
+    assert result.returncode == 128 + signum, result.stderr
+    assert events[-1]["event"] == "error"
+    assert events[-1]["code"] == "interrupted"
+    assert events[-1]["message"].startswith(f"Stopped by {signal.Signals(signum).name} before the end.")
+    assert "report" not in [event["event"] for event in events]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="SIGINT and SIGTERM are POSIX signals")
+def test_without_json_a_stopped_command_says_so_on_stderr(tmp_path):
+    result = _stop_midway(tmp_path, "relocate-files", "--bucket", "unused", signum=signal.SIGINT)
+
+    assert result.returncode == 130
+    assert "Stopped by SIGINT before the end." in result.stderr
