@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { GlobalVariable } from "@/types/global_variables";
@@ -66,8 +66,8 @@ jest.mock("@/stores/alertStore", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name }: { name: string }) => (
-    <span data-testid={`icon-${name}`} />
+  default: ({ name, className }: { name: string; className?: string }) => (
+    <span data-testid={`icon-${name}`} className={className} />
   ),
 }));
 
@@ -229,6 +229,40 @@ describe("DBProvidersPage characterization", () => {
     });
   });
   describe("provider list", () => {
+    it.each(["environment", "saved variables"])(
+      "shows a muted check for inactive OpenSearch configured through %s",
+      (configurationSource) => {
+        if (configurationSource === "environment") {
+          useUtilityStore.setState({
+            configuredVectorStoreBackends: ["opensearch"],
+          });
+        } else {
+          mockGlobalVariables = openSearchRequiredSaved();
+        }
+        render(<DBProvidersPage />);
+        expect(screen.getByTestId("db-provider-item-sqlite")).toHaveTextContent(
+          "Active",
+        );
+        const openSearchItem = screen.getByTestId(
+          "db-provider-item-opensearch",
+        );
+        expect(openSearchItem).not.toHaveTextContent("Active");
+        const check = within(openSearchItem).getByTestId("icon-Check");
+        expect(check).toHaveClass("text-muted-foreground");
+        expect(check).not.toHaveClass("text-status-green");
+        expect(within(openSearchItem).queryByTestId("icon-Plus")).toBeNull();
+      },
+    );
+
+    it("shows a muted plus for unconfigured OpenSearch", () => {
+      render(<DBProvidersPage />);
+      const openSearchItem = screen.getByTestId("db-provider-item-opensearch");
+      expect(within(openSearchItem).getByTestId("icon-Plus")).toHaveClass(
+        "text-muted-foreground",
+      );
+      expect(within(openSearchItem).queryByTestId("icon-Check")).toBeNull();
+    });
+
     it("renders supported and future providers in canonical order", () => {
       render(<DBProvidersPage />);
       const items = screen.getAllByTestId(/^db-provider-item-/);
