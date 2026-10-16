@@ -8,7 +8,7 @@
 use serde_json::{Map, Value};
 
 use crate::ops::canonical::JsonType;
-use crate::ops::error::{Error, Result};
+use crate::ops::error::{Error, Result, quoted};
 
 /// One step of a field path.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -199,7 +199,8 @@ impl Operation {
             "update_metadata" => &["type", "fields", "delete_keys"],
             _ => {
                 return Err(Error::invalid(format!(
-                    "Unsupported operation type: {type_name:?}"
+                    "Unsupported operation type: {}",
+                    quoted(&type_name)
                 )));
             }
         };
@@ -372,7 +373,10 @@ fn strings_json(items: &[String]) -> Value {
 
 fn only_keys(object: &Map<String, Value>, allowed: &[&str], context: &str) -> Result<()> {
     match object.keys().find(|key| !allowed.contains(&key.as_str())) {
-        Some(key) => Err(Error::invalid(format!("{context}: unexpected key {key:?}"))),
+        Some(key) => Err(Error::invalid(format!(
+            "{context}: unexpected key {}",
+            quoted(key)
+        ))),
         None => Ok(()),
     }
 }

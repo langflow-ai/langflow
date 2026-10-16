@@ -627,7 +627,7 @@ pub fn find_edge_violations(base: &Value, target: &Value) -> Result<Vec<Violatio
                 broken.to_owned(),
                 Violation {
                     edge_id: Some(broken.to_owned()),
-                    ..Violation::new(code, path, error.to_string())
+                    ..Violation::new(code, path, error.message.clone())
                 },
             );
         }

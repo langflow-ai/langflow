@@ -968,8 +968,8 @@ fn keyed_list(
     );
     if !fits {
         return Err(Error::invalid(format!(
-            "{context}.path[{index}]: items of this list are selected with {{{:?}: ...}}",
-            keyed.selector_name()
+            "{context}.path[{index}]: items of this list are selected with {{{}: ...}}",
+            quoted(keyed.selector_name())
         )));
     }
     if !value.is_array() {

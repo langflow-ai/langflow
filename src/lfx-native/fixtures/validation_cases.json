@@ -1,0 +1,1426 @@
+{
+  "description": "Graph rules: find_graph_violations(flow, check_values, base). Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui). A case gives `flow` (or `flow_json`, JSON text whose numbers matter), an optional `base` (the stored graph a write replaces) and `check_values` (default true), and the violations in order, each with its code, path, message, resolution and edge_id.",
+  "cases": [
+    {
+      "name": "a valid graph has no violations",
+      "flow": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [{"id": "e", "source": "a", "target": "b"}]
+      },
+      "violations": []
+    },
+    {
+      "name": "flow data null is not an object",
+      "flow": null,
+      "violations": [{"code": "FLOW_DATA_NOT_OBJECT", "path": [], "message": "flow data must be an object", "resolution": "auto"}]
+    },
+    {
+      "name": "flow data that is a list is not an object",
+      "flow": [],
+      "violations": [{"code": "FLOW_DATA_NOT_OBJECT", "path": [], "message": "flow data must be an object", "resolution": "auto"}]
+    },
+    {
+      "name": "flow data that is a string is not an object",
+      "flow": "flow",
+      "violations": [{"code": "FLOW_DATA_NOT_OBJECT", "path": [], "message": "flow data must be an object", "resolution": "auto"}]
+    },
+    {
+      "name": "collections must be lists",
+      "flow": {"nodes": null, "edges": {}},
+      "violations": [
+        {"code": "COLLECTION_NOT_LIST", "path": ["nodes"], "message": "flow data nodes must be a list", "resolution": "auto"},
+        {"code": "COLLECTION_NOT_LIST", "path": ["edges"], "message": "flow data edges must be a list", "resolution": "auto"}
+      ]
+    },
+    {
+      "name": "missing collections are not lists",
+      "flow": {},
+      "violations": [
+        {"code": "COLLECTION_NOT_LIST", "path": ["nodes"], "message": "flow data nodes must be a list", "resolution": "auto"},
+        {"code": "COLLECTION_NOT_LIST", "path": ["edges"], "message": "flow data edges must be a list", "resolution": "auto"}
+      ]
+    },
+    {
+      "name": "entries must be objects",
+      "flow": {"nodes": ["x"], "edges": [3]},
+      "violations": [
+        {"code": "NODE_NOT_OBJECT", "path": ["nodes", 0], "message": "node must be an object", "resolution": "auto"},
+        {"code": "EDGE_NOT_OBJECT", "path": ["edges", 0], "message": "edge must be an object", "resolution": "auto"}
+      ]
+    },
+    {
+      "name": "node ids must be present and unique",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}}}},
+          {"id": "b", "data": {"node": {"template": {}}}},
+          {"id": "a", "data": {"node": {"template": {}}}},
+          {"id": "", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b"}]
+      },
+      "violations": [
+        {"code": "NODE_ID_DUPLICATE", "path": ["nodes", 2, "id"], "message": "duplicate node id", "resolution": "auto"},
+        {"code": "NODE_ID_MISSING", "path": ["nodes", 3, "id"], "message": "node must have a non-empty string id", "resolution": "auto"}
+      ]
+    },
+    {
+      "name": "edge ids must be present and unique",
+      "flow": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [{"id": "e", "source": "a", "target": "b"}, {"id": "e", "source": "a", "target": "b"}, {"source": "a", "target": "b"}]
+      },
+      "violations": [
+        {"code": "EDGE_ID_DUPLICATE", "path": ["edges", 1, "id"], "message": "duplicate edge id", "resolution": "auto"},
+        {"code": "EDGE_ID_MISSING", "path": ["edges", 2, "id"], "message": "edge must have a non-empty string id", "resolution": "auto"}
+      ]
+    },
+    {
+      "name": "edge endpoints must name existing nodes",
+      "flow": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [{"id": "e1", "target": "b"}, {"id": "e2", "source": "a", "target": "zz"}]
+      },
+      "violations": [
+        {"code": "EDGE_ENDPOINT_INVALID", "path": ["edges", 0, "source"], "message": "edge must have a non-empty string source", "resolution": "auto"},
+        {"code": "EDGE_ENDPOINT_INVALID", "path": ["edges", 1, "target"], "message": "edge target node does not exist", "resolution": "auto"}
+      ]
+    },
+    {
+      "name": "node objects must be objects: data null",
+      "flow": {"nodes": [{"id": "a", "data": null}, {"id": "b", "data": {"node": {"template": {}}}}], "edges": [{"id": "e", "source": "a", "target": "b"}]},
+      "violations": [{"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 0, "data"], "message": "data must be an object", "resolution": "auto"}]
+    },
+    {
+      "name": "node objects must be objects: data.node a list",
+      "flow": {
+        "nodes": [{"id": "a", "data": {"node": []}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [{"id": "e", "source": "a", "target": "b"}]
+      },
+      "violations": [{"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 0, "data", "node"], "message": "data.node must be an object", "resolution": "auto"}]
+    },
+    {
+      "name": "node objects must be objects: data.node.template missing",
+      "flow": {
+        "nodes": [{"id": "a", "data": {"node": {}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [{"id": "e", "source": "a", "target": "b"}]
+      },
+      "violations": [
+        {
+          "code": "NODE_DATA_NOT_OBJECT",
+          "path": ["nodes", 0, "data", "node", "template"],
+          "message": "data.node.template must be an object",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "node objects must be objects: data.node.template a string",
+      "flow": {
+        "nodes": [{"id": "a", "data": {"node": {"template": "x"}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [{"id": "e", "source": "a", "target": "b"}]
+      },
+      "violations": [
+        {
+          "code": "NODE_DATA_NOT_OBJECT",
+          "path": ["nodes", 0, "data", "node", "template"],
+          "message": "data.node.template must be an object",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "non-finite numbers are violations",
+      "flow_json": "{\"nodes\": [{\"id\": \"a\", \"position\": {\"x\": 1e400, \"y\": -1e400, \"z\": 1.5}, \"data\": {\"node\": {\"template\": {}}}}, {\"id\": \"b\", \"data\": {\"node\": {\"template\": {}}}}], \"edges\": [{\"id\": \"e\", \"source\": \"a\", \"target\": \"b\"}]}",
+      "violations": [
+        {
+          "code": "NON_FINITE_NUMBER",
+          "path": ["nodes", 0, "position", "x"],
+          "message": "NaN, Infinity and integers too large for a double are not valid JSON",
+          "resolution": "auto"
+        },
+        {
+          "code": "NON_FINITE_NUMBER",
+          "path": ["nodes", 0, "position", "y"],
+          "message": "NaN, Infinity and integers too large for a double are not valid JSON",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "non-finite numbers are not checked when values are skipped",
+      "flow_json": "{\"nodes\": [{\"id\": \"a\", \"position\": {\"x\": 1e400, \"y\": -1e400, \"z\": 1.5}, \"data\": {\"node\": {\"template\": {}}}}, {\"id\": \"b\", \"data\": {\"node\": {\"template\": {}}}}], \"edges\": [{\"id\": \"e\", \"source\": \"a\", \"target\": \"b\"}]}",
+      "check_values": false,
+      "violations": []
+    },
+    {
+      "name": "an integer too large for a double is a non-finite number",
+      "flow_json": "{\"nodes\": [{\"id\": \"a\", \"position\": {\"x\": 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000, \"y\": 9007199254740993}, \"data\": {\"node\": {\"template\": {}}}}, {\"id\": \"b\", \"data\": {\"node\": {\"template\": {}}}}], \"edges\": [{\"id\": \"e\", \"source\": \"a\", \"target\": \"b\"}]}",
+      "violations": [
+        {
+          "code": "NON_FINITE_NUMBER",
+          "path": ["nodes", 0, "position", "x"],
+          "message": "NaN, Infinity and integers too large for a double are not valid JSON",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "a non-finite number in metadata is a violation",
+      "flow_json": "{\"nodes\": [], \"edges\": [], \"zoom\": 1e999, \"list\": [1, -1e999]}",
+      "violations": [
+        {"code": "NON_FINITE_NUMBER", "path": ["zoom"], "message": "NaN, Infinity and integers too large for a double are not valid JSON", "resolution": "auto"},
+        {
+          "code": "NON_FINITE_NUMBER",
+          "path": ["list", 1],
+          "message": "NaN, Infinity and integers too large for a double are not valid JSON",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "every violation is reported, in document order",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}}}},
+          {"id": "b", "data": {"node": {"template": {}}}},
+          {"id": "a", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b"}, {"id": "e2", "source": "a", "target": "zz"}]
+      },
+      "violations": [
+        {"code": "NODE_ID_DUPLICATE", "path": ["nodes", 2, "id"], "message": "duplicate node id", "resolution": "auto"},
+        {"code": "EDGE_ENDPOINT_INVALID", "path": ["edges", 1, "target"], "message": "edge target node does not exist", "resolution": "auto"}
+      ]
+    },
+    {
+      "name": "an added edge into a missing field is for the client",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_NOT_FOUND",
+          "path": ["edges", 0],
+          "message": "edge 'e': target node 'b' has no field 'missing'",
+          "resolution": "manual",
+          "edge_id": "e"
+        }
+      ]
+    },
+    {
+      "name": "a second edge into a single input is refused",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "violations": [
+        {
+          "code": "EDGE_TARGET_OCCUPIED",
+          "path": ["edges", 1],
+          "message": "edge 'e2': field 'f' of node 'b' takes one connection and already has 'e1'",
+          "resolution": "manual",
+          "edge_id": "e2"
+        }
+      ]
+    },
+    {
+      "name": "a list field takes many edges",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": []
+    },
+    {
+      "name": "a stored edge the write leaves alone is not checked",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "violations": []
+    },
+    {
+      "name": "rewiring a stored edge checks it",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_NOT_FOUND",
+          "path": ["edges", 0],
+          "message": "edge 'e': target node 'b' has no field 'missing'",
+          "resolution": "manual",
+          "edge_id": "e"
+        }
+      ]
+    },
+    {
+      "name": "a broken edge found while checking another is reported once at itself",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {"id": "old", "source": "a", "target": "b", "sourceHandle": "x|y", "targetHandle": "z"},
+          {
+            "id": "good",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_INVALID",
+          "path": ["edges", 0],
+          "message": "edge 'old': sourceHandle must be an escaped JSON object",
+          "resolution": "manual",
+          "edge_id": "old"
+        }
+      ]
+    },
+    {
+      "name": "a stored broken edge fails the check of an edge added into its node",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {"id": "old", "source": "a", "target": "b", "sourceHandle": "x|y", "targetHandle": "z"},
+          {
+            "id": "good",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [{"id": "old", "source": "a", "target": "b", "sourceHandle": "x|y", "targetHandle": "z"}]
+      },
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_INVALID",
+          "path": ["edges", 0],
+          "message": "edge 'old': sourceHandle must be an escaped JSON object",
+          "resolution": "manual",
+          "edge_id": "old"
+        }
+      ]
+    },
+    {
+      "name": "edge rules wait for a sound structure",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}},
+          {"id": "a", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [{"code": "NODE_ID_DUPLICATE", "path": ["nodes", 3, "id"], "message": "duplicate node id", "resolution": "auto"}]
+    },
+    {
+      "name": "an edge with a note at one end",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "n",
+            "source": "a",
+            "target": "note",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "EDGE_TOUCHES_NOTE",
+          "path": ["edges", 0],
+          "message": "edge 'n': its target 'note' is a note, which has no handles",
+          "resolution": "auto",
+          "edge_id": "n"
+        }
+      ]
+    },
+    {
+      "name": "a source handle naming a missing output",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œgoneœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "gone"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_NOT_FOUND",
+          "path": ["edges", 0],
+          "message": "edge 'e': source node 'a' has no output 'gone'",
+          "resolution": "manual",
+          "edge_id": "e"
+        }
+      ]
+    },
+    {
+      "name": "a loop edge into an output that allows loops",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "l",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": []
+    },
+    {
+      "name": "a loop edge into an output that does not allow loops",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "l",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œloopœ}",
+            "targetHandle": "{œnameœ:œoutœ}",
+            "data": {"sourceHandle": {"name": "loop"}, "targetHandle": {"name": "out"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_NOT_FOUND",
+          "path": ["edges", 0],
+          "message": "edge 'l': target node 'a' has no loop output 'out'",
+          "resolution": "manual",
+          "edge_id": "l"
+        }
+      ]
+    },
+    {
+      "name": "a handle with one form missing",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {"code": "EDGE_HANDLE_FORM_MISSING", "path": ["edges", 0], "message": "edge 'e': sourceHandle is missing", "resolution": "auto", "edge_id": "e"}
+      ]
+    },
+    {
+      "name": "a handle without its object form",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {"code": "EDGE_HANDLE_FORM_MISSING", "path": ["edges", 0], "message": "edge 'e': data.targetHandle is missing", "resolution": "auto", "edge_id": "e"}
+      ]
+    },
+    {
+      "name": "a handle whose forms disagree",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_INVALID",
+          "path": ["edges", 0],
+          "message": "edge 'e': targetHandle and data.targetHandle name different handles",
+          "resolution": "manual",
+          "edge_id": "e"
+        }
+      ]
+    },
+    {
+      "name": "a handle missing in both forms",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b", "targetHandle": "{œfieldNameœ:œfœ}", "data": {"targetHandle": {"fieldName": "f"}}}]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {"code": "EDGE_HANDLE_INVALID", "path": ["edges", 0], "message": "edge 'e': edge has no sourceHandle", "resolution": "manual", "edge_id": "e"}
+      ]
+    },
+    {
+      "name": "edge data that is null is invalid",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œfœ}", "data": null}]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {"code": "EDGE_HANDLE_INVALID", "path": ["edges", 0], "message": "edge 'e': data must be an object", "resolution": "manual", "edge_id": "e"}
+      ]
+    },
+    {
+      "name": "a target handle with fieldName and a null name names both",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œnameœ:null}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f", "name": null}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_INVALID",
+          "path": ["edges", 0],
+          "message": "edge 'e': targetHandle must name exactly one of a field or an output",
+          "resolution": "manual",
+          "edge_id": "e"
+        }
+      ]
+    },
+    {
+      "name": "NaN in a handle string does not parse",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œxœ:NaN}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_INVALID",
+          "path": ["edges", 0],
+          "message": "edge 'e': targetHandle must be an escaped JSON object",
+          "resolution": "manual",
+          "edge_id": "e"
+        }
+      ]
+    },
+    {
+      "name": "a handle object that is a string",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": "out", "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_INVALID",
+          "path": ["edges", 0],
+          "message": "edge 'e': data.sourceHandle must be an object",
+          "resolution": "manual",
+          "edge_id": "e"
+        }
+      ]
+    },
+    {
+      "name": "a target handle naming neither a field nor an output",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œidœ:œbœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"id": "b"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_INVALID",
+          "path": ["edges", 0],
+          "message": "edge 'e': targetHandle must name exactly one of a field or an output",
+          "resolution": "manual",
+          "edge_id": "e"
+        }
+      ]
+    },
+    {
+      "name": "a source handle with an empty name",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": ""}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {"code": "EDGE_HANDLE_INVALID", "path": ["edges", 0], "message": "edge 'e': sourceHandle must name an output", "resolution": "manual", "edge_id": "e"}
+      ]
+    },
+    {
+      "name": "tables are not checked without a base",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "violations": []
+    },
+    {
+      "name": "an unchanged legacy table is accepted",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "violations": []
+    },
+    {
+      "name": "an added legacy table is refused",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_id"],
+          "message": "table row must have a non-empty string _id",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_pos"],
+          "message": "table row must have a finite numeric _pos",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_id"],
+          "message": "table row must have a non-empty string _id",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_pos"],
+          "message": "table row must have a finite numeric _pos",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "a keyed table is accepted when added",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": []
+    },
+    {
+      "name": "a keyed table is accepted when changed",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "xml"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "violations": []
+    },
+    {
+      "name": "replacing a keyed table with rows without ids is refused",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "violations": [
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_id"],
+          "message": "table row must have a non-empty string _id",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_pos"],
+          "message": "table row must have a finite numeric _pos",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_id"],
+          "message": "table row must have a non-empty string _id",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_pos"],
+          "message": "table row must have a finite numeric _pos",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "duplicate row ids are refused",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r1", "_pos": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "TABLE_ROW_ID_DUPLICATE",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_id"],
+          "message": "duplicate row id",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "the stored order of rows is not checked",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}, {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": []
+    },
+    {
+      "name": "a position must be a number",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [
+                      {"_id": "r1", "_pos": "1", "key": "Accept", "value": "json"},
+                      {"_id": "r2", "_pos": null, "key": "Auth", "value": "token"},
+                      {"_id": "r3", "_pos": true}
+                    ]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_pos"],
+          "message": "table row must have a finite numeric _pos",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_pos"],
+          "message": "table row must have a finite numeric _pos",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 2, "_pos"],
+          "message": "table row must have a finite numeric _pos",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "a position must be finite",
+      "flow_json": "{\"nodes\": [{\"id\": \"api\", \"data\": {\"node\": {\"template\": {\"headers\": {\"type\": \"table\", \"_input_type\": \"TableInput\", \"value\": [{\"_id\": \"r1\", \"_pos\": 1e400, \"key\": \"Accept\", \"value\": \"json\"}]}, \"url\": {\"type\": \"str\", \"value\": \"http://x\"}}}}}], \"edges\": []}",
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_pos"],
+          "message": "table row must have a finite numeric _pos",
+          "resolution": "auto"
+        },
+        {
+          "code": "NON_FINITE_NUMBER",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_pos"],
+          "message": "NaN, Infinity and integers too large for a double are not valid JSON",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "a row must be an object",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, "x", null]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "TABLE_ROW_NOT_OBJECT",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1],
+          "message": "table row must be an object",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_NOT_OBJECT",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 2],
+          "message": "table row must be an object",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "a row id must be a non-empty string",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": 2, "_pos": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_id"],
+          "message": "table row must have a non-empty string _id",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_id"],
+          "message": "table row must have a non-empty string _id",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "only table fields are checked",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"},
+                  "list": {"type": "str", "value": [{"a": 1}]}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": []
+    },
+    {
+      "name": "tool actions are a keyed list, not a table",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"},
+                  "tools_metadata": {"type": "table", "value": [{"name": "tool", "tags": ["tool"]}, {"name": "other", "tags": ["other"]}]}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": []
+    },
+    {
+      "name": "a field typed table is a table",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_id"],
+          "message": "table row must have a non-empty string _id",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_pos"],
+          "message": "table row must have a finite numeric _pos",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_id"],
+          "message": "table row must have a non-empty string _id",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_pos"],
+          "message": "table row must have a finite numeric _pos",
+          "resolution": "auto"
+        }
+      ]
+    },
+    {
+      "name": "a field whose input type is TableInput is a table",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "violations": [
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_id"],
+          "message": "table row must have a non-empty string _id",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_pos"],
+          "message": "table row must have a finite numeric _pos",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_id"],
+          "message": "table row must have a non-empty string _id",
+          "resolution": "auto"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_pos"],
+          "message": "table row must have a finite numeric _pos",
+          "resolution": "auto"
+        }
+      ]
+    }
+  ]
+}

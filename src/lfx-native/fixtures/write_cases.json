@@ -1,0 +1,867 @@
+{
+  "description": "The engine's part of a save: check, repair on request, derive, number and pack. Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui), composed from the recorder's write path (write_flow_graph) without its database steps. A case gives the stored graph, the submitted graph and the options, and either what the save stores or the graph whose violations refuse it. Random ids appear as `<generated edge id>` and `<generated row id>`.",
+  "cases": [
+    {
+      "name": "an edit records its operations in rows",
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": "hello"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ],
+        "name": "renamed"
+      },
+      "options": {
+        "started": true,
+        "repair_invalid_graph": false,
+        "latest_revision": 4,
+        "actor_user_id": "11111111-1111-4111-8111-111111111111",
+        "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "limits": {"ops": 100, "bytes": 204800},
+        "cause": "edit_code"
+      },
+      "expected": {
+        "base": {
+          "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        },
+        "stored_repaired": false,
+        "target": {
+          "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": "hello"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ],
+          "name": "renamed"
+        },
+        "repairs": [],
+        "operations": [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "b", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": "hello", "template_field": {"type": "str"}}]
+          },
+          {"type": "update_metadata", "fields": {"name": "renamed"}}
+        ],
+        "rows": [
+          {
+            "start_revision": 5,
+            "end_revision": 6,
+            "ops": {
+              "version": 1,
+              "batches": [
+                {
+                  "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                  "operations": [
+                    {
+                      "revision": 5,
+                      "cause": "edit_code",
+                      "operation": {
+                        "type": "update_nodes",
+                        "updates": [
+                          {
+                            "id": "b",
+                            "path": ["data", "node", "template", "f", "value"],
+                            "op": "set_field",
+                            "value": "hello",
+                            "template_field": {"type": "str"}
+                          }
+                        ]
+                      }
+                    },
+                    {"revision": 6, "cause": "edit_code", "operation": {"type": "update_metadata", "fields": {"name": "renamed"}}}
+                  ]
+                }
+              ]
+            },
+            "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+            "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a save that changes only view state records nothing",
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ],
+        "viewport": {"zoom": 2}
+      },
+      "options": {
+        "started": true,
+        "repair_invalid_graph": false,
+        "latest_revision": 4,
+        "actor_user_id": "11111111-1111-4111-8111-111111111111",
+        "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "limits": {"ops": 100, "bytes": 204800}
+      },
+      "expected": {
+        "base": {
+          "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        },
+        "stored_repaired": false,
+        "target": {
+          "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ],
+          "viewport": {"zoom": 2}
+        },
+        "repairs": [],
+        "operations": [],
+        "rows": []
+      }
+    },
+    {
+      "name": "a flow without history and without data starts empty",
+      "stored": null,
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "options": {
+        "started": false,
+        "repair_invalid_graph": false,
+        "latest_revision": 0,
+        "actor_user_id": "11111111-1111-4111-8111-111111111111",
+        "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "limits": {"ops": 100, "bytes": 204800}
+      },
+      "expected": {
+        "base": {"nodes": [], "edges": []},
+        "stored_repaired": false,
+        "target": {
+          "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        },
+        "repairs": [],
+        "operations": [
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+              {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+              {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+            ]
+          },
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e",
+                "source": "a",
+                "target": "b",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œfœ}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+              }
+            ]
+          }
+        ],
+        "rows": [
+          {
+            "start_revision": 1,
+            "end_revision": 2,
+            "ops": {
+              "version": 1,
+              "batches": [
+                {
+                  "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                  "operations": [
+                    {
+                      "revision": 1,
+                      "operation": {
+                        "type": "add_nodes",
+                        "nodes": [
+                          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+                          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+                          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+                        ]
+                      }
+                    },
+                    {
+                      "revision": 2,
+                      "operation": {
+                        "type": "add_edges",
+                        "edges": [
+                          {
+                            "id": "e",
+                            "source": "a",
+                            "target": "b",
+                            "sourceHandle": "{œnameœ:œoutœ}",
+                            "targetHandle": "{œfieldNameœ:œfœ}",
+                            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+            "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a stored graph that breaks the rules is refused",
+      "stored": {"nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "a", "data": {"node": {"template": {}}}}], "edges": null},
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "options": {
+        "started": false,
+        "repair_invalid_graph": false,
+        "latest_revision": 0,
+        "actor_user_id": "11111111-1111-4111-8111-111111111111",
+        "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "limits": {"ops": 100, "bytes": 204800}
+      },
+      "error": {
+        "graph": "stored",
+        "violations": [{"code": "NODE_ID_DUPLICATE", "path": ["nodes", 1, "id"], "message": "duplicate node id", "resolution": "auto"}]
+      }
+    },
+    {
+      "name": "a stored graph that breaks the rules is repaired on request",
+      "stored": {"nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "a", "data": {"node": {"template": {}}}}], "edges": null},
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "options": {
+        "started": false,
+        "repair_invalid_graph": true,
+        "latest_revision": 0,
+        "actor_user_id": "11111111-1111-4111-8111-111111111111",
+        "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "limits": {"ops": 100, "bytes": 204800}
+      },
+      "expected": {
+        "base": {
+          "nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "node-6Plfu", "data": {"node": {"template": {}}, "id": "node-6Plfu"}}],
+          "edges": []
+        },
+        "stored_repaired": true,
+        "target": {
+          "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        },
+        "repairs": [
+          {
+            "graph": "stored",
+            "code": "NODE_ID_DUPLICATE",
+            "path": ["nodes", 1, "id"],
+            "action": "assigned a generated id; the first node keeps the id and its edges"
+          }
+        ],
+        "operations": [
+          {"type": "delete_nodes", "ids": ["node-6Plfu"]},
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+              {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+            ]
+          },
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "a", "path": ["data", "node", "outputs"], "op": "set_field", "value": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}]
+          },
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e",
+                "source": "a",
+                "target": "b",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œfœ}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+              }
+            ]
+          }
+        ],
+        "rows": [
+          {
+            "start_revision": 1,
+            "end_revision": 4,
+            "ops": {
+              "version": 1,
+              "batches": [
+                {
+                  "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                  "operations": [
+                    {"revision": 1, "operation": {"type": "delete_nodes", "ids": ["node-6Plfu"]}},
+                    {
+                      "revision": 2,
+                      "operation": {
+                        "type": "add_nodes",
+                        "nodes": [
+                          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+                          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+                        ]
+                      }
+                    },
+                    {
+                      "revision": 3,
+                      "operation": {
+                        "type": "update_nodes",
+                        "updates": [
+                          {"id": "a", "path": ["data", "node", "outputs"], "op": "set_field", "value": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}
+                        ]
+                      }
+                    },
+                    {
+                      "revision": 4,
+                      "operation": {
+                        "type": "add_edges",
+                        "edges": [
+                          {
+                            "id": "e",
+                            "source": "a",
+                            "target": "b",
+                            "sourceHandle": "{œnameœ:œoutœ}",
+                            "targetHandle": "{œfieldNameœ:œfœ}",
+                            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+            "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a submitted legacy table is refused",
+      "stored": {"nodes": [], "edges": []},
+      "target": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "options": {
+        "started": true,
+        "repair_invalid_graph": false,
+        "latest_revision": 4,
+        "actor_user_id": "11111111-1111-4111-8111-111111111111",
+        "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "limits": {"ops": 100, "bytes": 204800}
+      },
+      "error": {
+        "graph": "submitted",
+        "violations": [
+          {
+            "code": "TABLE_ROW_ID_MISSING",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_id"],
+            "message": "table row must have a non-empty string _id",
+            "resolution": "auto"
+          },
+          {
+            "code": "TABLE_ROW_POS_INVALID",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_pos"],
+            "message": "table row must have a finite numeric _pos",
+            "resolution": "auto"
+          },
+          {
+            "code": "TABLE_ROW_ID_MISSING",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_id"],
+            "message": "table row must have a non-empty string _id",
+            "resolution": "auto"
+          },
+          {
+            "code": "TABLE_ROW_POS_INVALID",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_pos"],
+            "message": "table row must have a finite numeric _pos",
+            "resolution": "auto"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a submitted legacy table is repaired on request",
+      "stored": {"nodes": [], "edges": []},
+      "target": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "options": {
+        "started": true,
+        "repair_invalid_graph": true,
+        "latest_revision": 4,
+        "actor_user_id": "11111111-1111-4111-8111-111111111111",
+        "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "limits": {"ops": 100, "bytes": 204800}
+      },
+      "expected": {
+        "base": {"nodes": [], "edges": []},
+        "stored_repaired": false,
+        "target": {
+          "nodes": [
+            {
+              "id": "api",
+              "data": {
+                "node": {
+                  "template": {
+                    "headers": {
+                      "type": "table",
+                      "_input_type": "TableInput",
+                      "value": [
+                        {"key": "Accept", "value": "json", "_id": "<generated row id>", "_pos": 1},
+                        {"key": "Auth", "value": "token", "_id": "<generated row id>", "_pos": 2}
+                      ]
+                    },
+                    "url": {"type": "str", "value": "http://x"}
+                  }
+                }
+              }
+            }
+          ],
+          "edges": []
+        },
+        "repairs": [
+          {
+            "graph": "submitted",
+            "code": "TABLE_ROW_ID_MISSING",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_id"],
+            "action": "assigned a generated row id"
+          },
+          {
+            "graph": "submitted",
+            "code": "TABLE_ROW_ID_MISSING",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_id"],
+            "action": "assigned a generated row id"
+          },
+          {
+            "graph": "submitted",
+            "code": "TABLE_ROW_POS_INVALID",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "_pos"],
+            "action": "assigned a position that keeps the row where it is stored"
+          },
+          {
+            "graph": "submitted",
+            "code": "TABLE_ROW_POS_INVALID",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "_pos"],
+            "action": "assigned a position that keeps the row where it is stored"
+          }
+        ],
+        "operations": [
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {
+                "id": "api",
+                "data": {
+                  "node": {
+                    "template": {
+                      "headers": {
+                        "type": "table",
+                        "_input_type": "TableInput",
+                        "value": [
+                          {"key": "Accept", "value": "json", "_id": "<generated row id>", "_pos": 1},
+                          {"key": "Auth", "value": "token", "_id": "<generated row id>", "_pos": 2}
+                        ]
+                      },
+                      "url": {"type": "str", "value": "http://x"}
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "rows": [
+          {
+            "start_revision": 5,
+            "end_revision": 5,
+            "ops": {
+              "version": 1,
+              "batches": [
+                {
+                  "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                  "operations": [
+                    {
+                      "revision": 5,
+                      "operation": {
+                        "type": "add_nodes",
+                        "nodes": [
+                          {
+                            "id": "api",
+                            "data": {
+                              "node": {
+                                "template": {
+                                  "headers": {
+                                    "type": "table",
+                                    "_input_type": "TableInput",
+                                    "value": [
+                                      {"key": "Accept", "value": "json", "_id": "<generated row id>", "_pos": 1},
+                                      {"key": "Auth", "value": "token", "_id": "<generated row id>", "_pos": 2}
+                                    ]
+                                  },
+                                  "url": {"type": "str", "value": "http://x"}
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+            "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a submitted edge only the client can fix is refused even with repair",
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "options": {
+        "started": true,
+        "repair_invalid_graph": true,
+        "latest_revision": 4,
+        "actor_user_id": "11111111-1111-4111-8111-111111111111",
+        "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "limits": {"ops": 100, "bytes": 204800}
+      },
+      "error": {
+        "graph": "submitted",
+        "violations": [
+          {
+            "code": "EDGE_HANDLE_NOT_FOUND",
+            "path": ["edges", 0],
+            "message": "edge 'e': target node 'b' has no field 'missing'",
+            "resolution": "manual",
+            "edge_id": "e"
+          }
+        ]
+      }
+    },
+    {
+      "name": "operations past the row limit fill several rows",
+      "stored": {"nodes": [{"id": "gone", "data": {"node": {"template": {}}}}], "edges": []},
+      "target": {
+        "nodes": [
+          {"id": "n0", "data": {"node": {"template": {}}}},
+          {"id": "n1", "data": {"node": {"template": {}}}},
+          {"id": "n2", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [],
+        "name": "x"
+      },
+      "options": {
+        "started": true,
+        "repair_invalid_graph": false,
+        "latest_revision": 4,
+        "actor_user_id": "11111111-1111-4111-8111-111111111111",
+        "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "limits": {"ops": 2, "bytes": 204800}
+      },
+      "expected": {
+        "base": {"nodes": [{"id": "gone", "data": {"node": {"template": {}}}}], "edges": []},
+        "stored_repaired": false,
+        "target": {
+          "nodes": [
+            {"id": "n0", "data": {"node": {"template": {}}}},
+            {"id": "n1", "data": {"node": {"template": {}}}},
+            {"id": "n2", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [],
+          "name": "x"
+        },
+        "repairs": [],
+        "operations": [
+          {"type": "delete_nodes", "ids": ["gone"]},
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {"id": "n0", "data": {"node": {"template": {}}}},
+              {"id": "n1", "data": {"node": {"template": {}}}},
+              {"id": "n2", "data": {"node": {"template": {}}}}
+            ]
+          },
+          {"type": "update_metadata", "fields": {"name": "x"}}
+        ],
+        "rows": [
+          {
+            "start_revision": 5,
+            "end_revision": 6,
+            "ops": {
+              "version": 1,
+              "batches": [
+                {
+                  "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                  "operations": [
+                    {"revision": 5, "operation": {"type": "delete_nodes", "ids": ["gone"]}},
+                    {
+                      "revision": 6,
+                      "operation": {
+                        "type": "add_nodes",
+                        "nodes": [
+                          {"id": "n0", "data": {"node": {"template": {}}}},
+                          {"id": "n1", "data": {"node": {"template": {}}}},
+                          {"id": "n2", "data": {"node": {"template": {}}}}
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+            "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+          },
+          {
+            "start_revision": 7,
+            "end_revision": 7,
+            "ops": {
+              "version": 1,
+              "batches": [
+                {
+                  "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                  "operations": [{"revision": 7, "operation": {"type": "update_metadata", "fields": {"name": "x"}}}]
+                }
+              ]
+            },
+            "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+            "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+          }
+        ]
+      }
+    }
+  ]
+}
