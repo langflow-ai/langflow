@@ -146,3 +146,30 @@ async def test_a_picked_flows_live_graph_is_neither_validated_nor_bounded(async_
     )
 
     assert {flow.flow_id: flow.version_id for flow in artifact.flows}[picked.id] == version.id
+
+
+@pytest.mark.asyncio
+async def test_picks_resolve_on_every_page(async_session) -> None:
+    user, project, _picked, _other, _version = await _project(async_session)
+    flows = [
+        Flow(id=uuid4(), name=f"Flow {index}", user_id=user.id, folder_id=project.id, data=_graph("DRAFT_KEY"))
+        for index in range(9)
+    ]
+    versions = [
+        FlowVersion(flow_id=flow.id, user_id=user.id, version_number=1, data=_graph(f"SAVED_{index}"))
+        for index, flow in enumerate(flows)
+    ]
+    async_session.add_all([*flows, *versions])
+    await async_session.commit()
+
+    artifact = await _build(
+        async_session,
+        user,
+        project,
+        flow_versions={flow.id: version.id for flow, version in zip(flows, versions, strict=True)},
+    )
+
+    entries = {flow.flow_id: flow for flow in artifact.flows}
+    for index, (flow, version) in enumerate(zip(flows, versions, strict=True)):
+        assert entries[flow.id].version_id == version.id
+        assert entries[flow.id].required_variables == (f"SAVED_{index}",)
