@@ -189,7 +189,7 @@ If your flows use the File System component, also follow [Move shared files when
 4. Set `LANGFLOW_AUTO_LOGIN=false`, set `LANGFLOW_SUPERUSER` to the existing account's username, and set `LANGFLOW_SUPERUSER_PASSWORD` before restarting or upgrading. Startup requires this setting, but it does **not** overwrite a non-legacy password on an existing account. Use the password established in the previous steps.
 5. Start the new release with the existing database and configuration directory. In a fresh browser session, sign in with the established password and verify that your existing flows are present.
 
-Do not delete the existing account, database, or encryption key to regain access. Creating a different superuser does not transfer ownership of the existing account's flows. If you already upgraded without preparing the account, see [Recover access after upgrading](#recover-access-after-upgrading).
+Do not delete the existing account, database, or encryption key to regain access. Creating a different superuser does not transfer ownership of the existing account's flows. If you already upgraded without preparing the account, see [Recover access after upgrading](/troubleshoot#recover-access-after-upgrading).
 
 An explicit `LANGFLOW_AUTO_LOGIN=true` in an existing environment or `.env` file takes precedence over the new default. Remove that override or set it to `false` as part of the transition. Disabling auto-login prevents new anonymous sessions; it does not revoke previously issued sessions or API keys.
 

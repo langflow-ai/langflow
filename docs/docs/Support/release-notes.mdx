@@ -56,7 +56,7 @@ Highlights of this release include the following changes. For all changes, see t
 
     Official Python packages, tagged source archives, and Docker images now set `LANGFLOW_AUTO_LOGIN=false`.
     For a new installation, set `LANGFLOW_SUPERUSER_PASSWORD` before starting Langflow, then sign in with the username `langflow` (or your configured `LANGFLOW_SUPERUSER`).
-    Setting `LANGFLOW_SUPERUSER_PASSWORD` does not replace an existing account's non-legacy password. If you are upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login) before you upgrade.
+    Setting `LANGFLOW_SUPERUSER_PASSWORD` does not replace an existing account's non-legacy password. If you are upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login) before you upgrade. If you already upgraded and can't sign in, [recover access after upgrading](/troubleshoot#recover-access-after-upgrading).
     Development branches and local builds from those branches still default to automatic login.
     For trusted local development with a release package or Docker image, set `LANGFLOW_AUTO_LOGIN=true`.
 
@@ -82,19 +82,33 @@ Highlights of this release include the following changes. For all changes, see t
 
 ### New features
 
+- Audit logging
+
+    Set `LANGFLOW_AUDIT_ENABLED=true` to record an append-only history of flow and project operations, including who attempted a change, on which resource, when, how it completed, and a description of what was written.
+    Query events with `GET /api/v1/flows/audits` and `GET /api/v1/projects/audits`.
+
+    For more information, see [Audit logging](./audit-logging).
+
 - Connections
 
     Langflow stores Google Workspace, Microsoft 365, and Slack accounts as connections.
-
     For more information, see [Connections](./connections).
 
 - Concurrent editing
 
-    Langflow now protects a flow that is open in more than one place.
-    When another save has already updated the flow, your changes remain in place until you review.
-    You can select **Update Current Flow**, **Duplicate Flow**, or **Load Latest**.
-
+    Langflow now protects a flow that is open by more than one user.
     For more information, see [Concurrent editing](./concurrent-editing).
+
+- Instance migration
+
+    Langflow can check an installation before a move and copy a SQLite database to PostgreSQL.
+    Superusers can run the move from the migration API when `LANGFLOW_FEATURE_INSTANCE_MIGRATION` is set to `true`.
+    For more information, see [Database migrations](./database-migrations).
+
+- Administration API and CLI
+
+    Superusers can manage users, teams, and roles with the API or the `langflow admin` command.
+    For more information, see [Administer users and teams with the API and CLI](./admin-api-cli).
 
 ## 1.12.x
 
@@ -111,10 +125,6 @@ For 1.10.x release notes, see the [1.10.x documentation](https://docs.langflow.o
 ## 1.9.x
 
 For 1.9.x release notes, see the [1.9.x documentation](https://docs.langflow.org/1.9.0/release-notes).
-
-## 1.8.x
-
-For 1.8.x release notes, see the [1.8.x documentation](https://docs.langflow.org/1.8.0/release-notes).
 
 ## Earlier releases
 

@@ -113,15 +113,19 @@ const config = {
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
           // Versioning configuration
-          lastVersion: "1.12.0",
+          lastVersion: "1.13.0",
           versions: {
             current: {
-              label: "1.13.x (Next)",
+              label: "1.14.x (Next)",
               path: "next",
+            },
+            "1.13.0": {
+              label: "1.13.x",
+              path: "",
             },
             "1.12.0": {
               label: "1.12.x",
-              path: "",
+              path: "1.12.0",
             },
             "1.11.0": {
               label: "1.11.x",
@@ -134,10 +138,6 @@ const config = {
             "1.9.0": {
               label: "1.9.x",
               path: "1.9.0",
-            },
-            "1.8.0": {
-              label: "1.8.x",
-              path: "1.8.0",
             },
           },
           rehypePlugins: [rehypeWbrUnderscore],
@@ -171,11 +171,6 @@ const config = {
             id: "api",
             spec: "openapi/openapi.json",
             route: "/api",
-          },
-          {
-            id: "workflow",
-            spec: "openapi/langflow-workflows-openapi.json",
-            route: "/api/workflow",
           },
         ],
         theme: {
@@ -474,6 +469,10 @@ const config = {
           {
             to: "/api-keys-and-authentication",
             from: "/jwt-authentication",
+          },
+          {
+            to: "/api#tag/Workflow",
+            from: "/api/workflow",
           },
           // add more redirects like this
           // {
