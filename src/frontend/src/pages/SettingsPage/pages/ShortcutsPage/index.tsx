@@ -7,6 +7,7 @@ import TableComponent from "../../../../components/core/parameterRenderComponent
 import { Button } from "../../../../components/ui/button";
 import { defaultShortcuts } from "../../../../constants/constants";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
+import SettingsPageHeader from "../../components/SettingsPageHeader";
 import CellRenderShortcuts from "./CellRenderWrapper";
 import EditShortcutButton from "./EditShortcutButton";
 
@@ -68,52 +69,28 @@ export default function ShortcutsPage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
-      {/* flex-wrap (and no w-full on the title column): at narrow viewports
-          (WCAG 1.4.10, 320px) the Restore button wraps instead of clipping. */}
-      <div className="flex w-full flex-wrap items-start justify-between gap-x-6 gap-y-2">
-        <div className="flex flex-col">
-          <h2
-            className="flex items-center text-lg font-semibold tracking-tight"
-            data-testid="settings_menu_header"
+      <SettingsPageHeader
+        title={t("shortcuts.title")}
+        description={t("shortcuts.description")}
+      >
+        {open && (
+          <EditShortcutButton
+            disable={selectedRows.length === 0}
+            shortcut={selectedRows}
+            shortcuts={shortcuts}
+            defaultShortcuts={defaultShortcuts}
+            open={open}
+            setOpen={setOpen}
+            setSelected={setSelectedRows}
           >
-            {t("shortcuts.title")}
-            <ForwardedIconComponent
-              name="Keyboard"
-              className="ml-2 h-5 w-5 text-primary"
-            />
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("shortcuts.description")}
-          </p>
-        </div>
-        <div>
-          <div className="align-end flex w-full justify-end">
-            <div className="justify center flex items-center">
-              {open && (
-                <EditShortcutButton
-                  disable={selectedRows.length === 0}
-                  shortcut={selectedRows}
-                  shortcuts={shortcuts}
-                  defaultShortcuts={defaultShortcuts}
-                  open={open}
-                  setOpen={setOpen}
-                  setSelected={setSelectedRows}
-                >
-                  <div style={{ display: "none" }} />
-                </EditShortcutButton>
-              )}
-              <Button
-                variant="primary"
-                className="flex gap-2"
-                onClick={handleRestore}
-              >
-                <ForwardedIconComponent name="RotateCcw" className="w-4" />
-                {t("shortcuts.restoreButton")}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+            <div style={{ display: "none" }} />
+          </EditShortcutButton>
+        )}
+        <Button size="sm" className="gap-2" onClick={handleRestore}>
+          <ForwardedIconComponent name="RotateCcw" className="w-4" />
+          {t("shortcuts.restoreButton")}
+        </Button>
+      </SettingsPageHeader>
       <div className="grid gap-6 pb-8">
         <div>
           {colDefs && nodesRowData.length > 0 && (

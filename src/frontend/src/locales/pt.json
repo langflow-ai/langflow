@@ -2912,7 +2912,7 @@
   "playground.workflowWarning": "Aviso do fluxo de trabalho",
   "settings.nav.connections": "Conexões",
   "connections.title": "Conexões",
-  "connections.subtitle": "Contas por meio das quais seus fluxos agem. Os tokens permanecem no servidor; aqui só aparecem metadados.",
+  "connections.subtitle": "Contas de terceiros (como Google, Microsoft 365 e Slack) que seus fluxos usam para agir em seu nome. Os tokens permanecem no servidor e nunca são exibidos aqui.",
   "connections.search": "Pesquisar nome, identificador ou conta",
   "connections.loading": "Carregando conexões…",
   "connections.empty": "Nenhuma conexão ainda.",
@@ -3007,6 +3007,10 @@
   "connections.add.displayNameTooltip": "Um nome legível exibido nas listas de conexões para ajudar você a reconhecer esta conta.",
   "connections.add.registration": "Registro OAuth",
   "connections.add.instanceOwned": "Compartilhar com toda a instância",
+  "connections.scope.risk.read": "Leitura",
+  "connections.scope.risk.write": "Escrita",
+  "connections.scope.risk.destructive": "Destrutivo",
+  "connections.scope.conditional": "Para algumas entradas",
   "connections.add.scopes": "Escopos a solicitar",
   "connections.add.noScopes": "As ações deste provedor não declaram escopos.",
   "connections.add.scopesOutsideCeiling": "Este registro não permite {{scopes}}, portanto eles não são solicitados.",
@@ -3031,7 +3035,7 @@
   "connections.add.failed": "A autorização não foi concluída.",
   "connections.add.denied": "O provedor recusou a autorização.",
   "connections.add.expired": "O link de login expirou. Comece novamente para obter outro.",
-  "connections.add.cancelled": "A janela de login foi fechada antes de concluir a autorização.",
+  "connections.add.windowUntracked": "O Langflow não consegue mais acompanhar a janela de login. Se o provedor mostrar um erro, peça ao administrador para verificar o registro OAuth antes de tentar novamente.",
   "connections.add.cleanupFailed": "Conexão não removida",
   "connections.add.cleanupFailedBody": "Não foi possível excluir a conexão incompleta. Remova-a da lista.",
   "connections.add.identity": "Age como",
@@ -3048,5 +3052,6 @@
   "connections.add.allowBackgroundRunsHelp": "Necessário para os gatilhos do Slack e para qualquer fluxo que um gatilho execute com esta conexão: essas execuções acontecem sem ninguém conectado. Você pode desativar isso depois.",
   "connections.identity.user_delegated": "O usuário conectado",
   "connections.identity.bot": "Um bot",
-  "connections.identity.service": "Uma conta de serviço"
+  "connections.identity.service": "Uma conta de serviço",
+  "settings.dbProviders.serverConfiguration": "Configurado pelo ambiente do servidor. Deixe os campos inalterados para usar essa configuração."
 }
