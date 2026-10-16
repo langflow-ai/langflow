@@ -215,6 +215,7 @@ describe("KnowledgeBaseUploadModal", () => {
     useUtilityStore.getState().setVectorStoreConfig({
       localVectorStoreAvailable: true,
       defaultVectorStoreBackend: undefined,
+      configuredVectorStoreBackends: [],
     });
     mockModelProvidersResult = {
       data: MODEL_PROVIDERS,

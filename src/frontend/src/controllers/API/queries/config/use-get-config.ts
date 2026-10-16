@@ -55,6 +55,7 @@ export interface ConfigResponse extends BaseConfig {
   local_vector_store_available: boolean;
   /** Backend a new KB/MB lands on when none is named: postgres | opensearch | sqlite. */
   default_vector_store_backend?: string;
+  configured_vector_store_backends?: string[];
   /** Component types an administrator blocked. Authenticated callers only:
    *  the public response deliberately withholds the policy contents. */
   blocked_component_types?: string[];
@@ -216,6 +217,8 @@ export const useGetConfig: useQueryFunctionType<
         setVectorStoreConfig({
           localVectorStoreAvailable: data.local_vector_store_available ?? true,
           defaultVectorStoreBackend: data.default_vector_store_backend,
+          configuredVectorStoreBackends:
+            data.configured_vector_store_backends ?? [],
         });
       }
     }

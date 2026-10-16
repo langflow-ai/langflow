@@ -64,6 +64,7 @@ describe("knowledge-base provider defaults", () => {
       vectorStoreConfigLoaded: false,
       localVectorStoreAvailable: true,
       defaultVectorStoreBackend: undefined,
+      configuredVectorStoreBackends: [],
     });
   });
 
@@ -101,6 +102,38 @@ describe("knowledge-base provider defaults", () => {
       expect.objectContaining({ backend_type: "opensearch" }),
     );
   });
+
+  it.each(["postgres", "opensearch"] as const)(
+    "submits an environment configured %s base without saved variables",
+    async (backendType) => {
+      useUtilityStore.setState({
+        vectorStoreConfigLoaded: true,
+        localVectorStoreAvailable: false,
+        defaultVectorStoreBackend: "postgres",
+        configuredVectorStoreBackends: ["postgres", "opensearch"],
+      });
+      const { result } = renderHook(() =>
+        useKnowledgeBaseForm({
+          open: true,
+          setOpen: jest.fn(),
+          hideAdvanced: true,
+        }),
+      );
+      act(() => {
+        result.current.setSourceName("Environment_KB");
+        result.current.setSelectedEmbeddingModel([
+          result.current.embeddingModelOptions[0],
+        ]);
+        result.current.handleBackendProviderChange(backendType, {});
+      });
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ backend_type: backendType }),
+      );
+    },
+  );
 
   it("keeps normalization for a new base and returns its stored name", async () => {
     useUtilityStore.setState({ vectorStoreConfigLoaded: true });
