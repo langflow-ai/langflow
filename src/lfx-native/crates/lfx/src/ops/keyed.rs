@@ -229,7 +229,8 @@ pub fn strip_row_keys(rows: &Value) -> Value {
 }
 
 /// The names of a node's template fields whose value is a table list.
-fn table_fields(node: &Value) -> Vec<String> {
+#[must_use]
+pub fn table_fields(node: &Value) -> Vec<String> {
     let Some(template) = node
         .pointer("/data/node/template")
         .and_then(Value::as_object)

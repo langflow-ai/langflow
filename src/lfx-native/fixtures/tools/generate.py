@@ -1,4 +1,3 @@
-# ruff: noqa: INP001
 """Generate the shared fixtures whose expected outputs come from the Python engine.
 
 The expected outputs of these files come from the Python engine
@@ -1141,7 +1140,7 @@ def _recorder_namespace(ops_limit: int, bytes_limit: int) -> dict[str, Any]:
         "batch_header": envelope_module.batch_header,
         "get_settings_service": lambda: SimpleNamespace(settings=settings),
     }
-    exec(compile(ast.Module(body=body, type_ignores=[]), spec.origin, "exec"), namespace)  # noqa: S102
+    exec(compile(ast.Module(body=body, type_ignores=[]), spec.origin, "exec"), namespace)
     return namespace
 
 
@@ -1312,7 +1311,7 @@ def _replay_namespace(rows: list[SimpleNamespace]) -> dict[str, Any]:
         "decode_row": envelope_module.decode_row,
         "rows_covering": rows_covering,
     }
-    exec(compile(ast.Module(body=body, type_ignores=[]), spec.origin, "exec"), namespace)  # noqa: S102
+    exec(compile(ast.Module(body=body, type_ignores=[]), spec.origin, "exec"), namespace)
     return namespace
 
 
@@ -1730,7 +1729,7 @@ def main() -> None:
         ("write_cases.json", write_cases),
     ]:
         _write(name, build())
-        print(f"wrote {name}")  # noqa: T201
+        print(f"wrote {name}")
 
 
 if __name__ == "__main__":
