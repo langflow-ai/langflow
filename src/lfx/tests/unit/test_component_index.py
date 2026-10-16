@@ -1,8 +1,11 @@
 """Unit tests for component index system."""
 
 import hashlib
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import orjson
 import pytest
@@ -385,6 +388,129 @@ class TestImportLangflowComponents:
             "lfx.components.category1.second",
         ]
         mock_to_thread.assert_not_called()
+
+    async def test_dynamic_import_uses_default_thread_pool_when_unset(self):
+        """Unset worker count preserves the existing asyncio.to_thread behavior."""
+        module_names = [(None, "lfx.components.category1.first", False)]
+
+        with (
+            patch("lfx.interface.components.pkgutil.walk_packages", return_value=module_names),
+            patch("lfx.interface.components._warm_circular_imports"),
+            patch(
+                "lfx.interface.components._process_single_module",
+                return_value=("category1", {"first": {"template": {}}}),
+            ) as mock_process,
+            patch("lfx.interface.components.asyncio.to_thread", new_callable=AsyncMock) as mock_to_thread,
+        ):
+            mock_to_thread.side_effect = lambda func, *args: func(*args)
+            result = await _load_components_dynamically()
+
+        assert result == {"category1": {"first": {"template": {}}}}
+        mock_to_thread.assert_awaited_once_with(mock_process, "lfx.components.category1.first")
+
+    async def test_dynamic_import_caps_configured_worker_count(self):
+        """A configured limit routes parallel imports through a bounded executor.
+
+        The workers block until the executor has saturated the configured
+        ``max_workers`` slot count, so the recorded peak proves the imports were
+        actually dispatched through the bounded executor rather than the
+        unbounded default ``asyncio.to_thread`` pool.
+        """
+        module_names = [
+            (None, "lfx.components.category1.first", False),
+            (None, "lfx.components.category1.second", False),
+            (None, "lfx.components.category1.third", False),
+        ]
+
+        active = 0
+        peak = 0
+        lock = threading.Lock()
+        saturated = threading.Event()
+
+        def process_module(modname: str) -> tuple[str, dict]:
+            """Record live concurrency, then hold the slot until the pool is full."""
+            nonlocal active, peak
+            with lock:
+                active += 1
+                peak = max(peak, active)
+                if active == 2:
+                    saturated.set()
+            # Every worker waits for the pool to reach its bound before finishing,
+            # so the peak reflects steady-state concurrency and not scheduler luck.
+            saturated.wait(timeout=10)
+            time.sleep(0.05)
+            with lock:
+                active -= 1
+            component_name = modname.rsplit(".", 1)[-1]
+            return "category1", {component_name: {"template": {}}}
+
+        real_executor_cls = ThreadPoolExecutor
+        with (
+            patch("lfx.interface.components.pkgutil.walk_packages", return_value=module_names),
+            patch("lfx.interface.components._warm_circular_imports"),
+            patch(
+                "lfx.interface.components._process_single_module",
+                side_effect=process_module,
+            ) as mock_process,
+            patch(
+                "lfx.interface.components.ThreadPoolExecutor",
+                side_effect=lambda **kwargs: real_executor_cls(**kwargs),
+            ) as mock_executor,
+            patch("lfx.interface.components.asyncio.to_thread") as mock_to_thread,
+        ):
+            result = await _load_components_dynamically(component_load_max_workers=2)
+
+        assert result == {
+            "category1": {
+                "first": {"template": {}},
+                "second": {"template": {}},
+                "third": {"template": {}},
+            }
+        }
+        mock_executor.assert_called_once_with(max_workers=2, thread_name_prefix="lfx-component-loader")
+        assert mock_process.call_count == 3
+        assert peak == 2
+        mock_to_thread.assert_not_called()
+
+    async def test_import_dev_mode_forwards_configured_worker_limit(self, monkeypatch):
+        """Full dev mode forwards the operator worker cap to the dynamic loader."""
+        monkeypatch.setenv("LFX_DEV", "1")
+
+        settings_service = Mock()
+        settings_service.settings.component_load_max_workers = 4
+
+        with patch(
+            "lfx.interface.components._load_components_dynamically",
+            new_callable=AsyncMock,
+            return_value={"category1": {"comp1": {"template": {}}}},
+        ) as mock_dynamic:
+            result = await import_langflow_components(settings_service)
+
+        assert mock_dynamic.await_args.kwargs["component_load_max_workers"] == 4
+        assert "comp1" in result["components"]["category1"]
+
+    async def test_import_production_fallback_forwards_configured_worker_limit(self, tmp_path, monkeypatch):
+        """The production fallback path forwards the operator worker cap too."""
+        monkeypatch.delenv("LFX_DEV", raising=False)
+        monkeypatch.setattr("lfx.interface.components._get_cache_path", lambda: tmp_path / "component_index.json")
+
+        settings_service = Mock()
+        settings_service.settings.components_index_path = None
+        settings_service.settings.component_load_max_workers = 4
+
+        with (
+            patch("lfx.interface.components._read_component_index", return_value=None),
+            patch(
+                "lfx.interface.components._load_components_dynamically",
+                new_callable=AsyncMock,
+                return_value={"category1": {"comp1": {"template": {}}}},
+            ) as mock_dynamic,
+            patch("lfx.interface.components._save_generated_index"),
+        ):
+            result = await import_langflow_components(settings_service)
+
+        assert mock_dynamic.await_args.kwargs["component_load_max_workers"] == 4
+        assert "comp1" in result["components"]["category1"]
 
     async def test_import_with_builtin_index(self, monkeypatch):
         """Test import with valid built-in index."""

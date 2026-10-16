@@ -8,7 +8,7 @@ import os
 import pkgutil
 import threading
 import time
-from concurrent.futures import Future
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -486,6 +486,7 @@ async def _load_components_dynamically(
     target_modules: list[str] | None = None,
     *,
     parallel: bool = True,
+    component_load_max_workers: int | None = None,
 ) -> dict[str, Any]:
     """Load components dynamically by scanning and importing modules.
 
@@ -494,6 +495,8 @@ async def _load_components_dynamically(
         parallel: Process modules concurrently. Index generation disables this because
             concurrent imports can expose partially initialized compatibility modules and
             make the generated component set nondeterministic.
+        component_load_max_workers: Optional cap for parallel component imports. When unset,
+            keep using asyncio's default thread pool.
 
     Returns:
         Dictionary mapping top-level module names to their components
@@ -551,12 +554,20 @@ async def _load_components_dynamically(
     _warm_circular_imports()
 
     if parallel:
-        # Create tasks for parallel module processing
-        tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
-
-        # Wait for all modules to be processed
         try:
-            module_results = await asyncio.gather(*tasks, return_exceptions=True)
+            if component_load_max_workers is None:
+                tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
+                module_results = await asyncio.gather(*tasks, return_exceptions=True)
+            else:
+                loop = asyncio.get_running_loop()
+                with ThreadPoolExecutor(
+                    max_workers=component_load_max_workers,
+                    thread_name_prefix="lfx-component-loader",
+                ) as executor:
+                    tasks = [
+                        loop.run_in_executor(executor, _process_single_module, modname) for modname in module_names
+                    ]
+                    module_results = await asyncio.gather(*tasks, return_exceptions=True)
         except Exception as e:  # noqa: BLE001
             await logger.aerror(f"Error during parallel module processing: {e}", exc_info=True)
             return modules_dict
@@ -583,26 +594,32 @@ async def _load_components_dynamically(
     return modules_dict
 
 
-async def _load_full_dev_mode() -> tuple[dict[str, Any], str]:
+async def _load_full_dev_mode(*, component_load_max_workers: int | None = None) -> tuple[dict[str, Any], str]:
     """Load all components dynamically in full dev mode.
 
     Returns:
         Tuple of (modules_dict, index_source)
     """
     await logger.adebug("LFX_DEV full mode: loading all modules dynamically")
-    modules_dict = await _load_components_dynamically(target_modules=None)
+    modules_dict = await _load_components_dynamically(
+        target_modules=None,
+        component_load_max_workers=component_load_max_workers,
+    )
     return modules_dict, "dynamic"
 
 
 async def _load_selective_dev_mode(
     settings_service: Optional["SettingsService"],
     target_modules: list[str],
+    *,
+    component_load_max_workers: int | None = None,
 ) -> tuple[dict[str, Any], str]:
     """Load index and selectively reload specific modules.
 
     Args:
         settings_service: Settings service for custom index path
         target_modules: List of module names to reload
+        component_load_max_workers: Optional cap for parallel component imports
 
     Returns:
         Tuple of (modules_dict, index_source)
@@ -611,7 +628,10 @@ async def _load_selective_dev_mode(
     modules_dict, _ = await _load_from_index_or_cache(settings_service)
 
     # Reload specific modules dynamically
-    dynamic_modules = await _load_components_dynamically(target_modules=target_modules)
+    dynamic_modules = await _load_components_dynamically(
+        target_modules=target_modules,
+        component_load_max_workers=component_load_max_workers,
+    )
 
     # Merge/replace the targeted modules
     for top_level, components in dynamic_modules.items():
@@ -625,6 +645,8 @@ async def _load_selective_dev_mode(
 
 async def _load_production_mode(
     settings_service: Optional["SettingsService"],
+    *,
+    component_load_max_workers: int | None = None,
 ) -> tuple[dict[str, Any], str]:
     """Load components in production mode with fallback chain.
 
@@ -632,6 +654,7 @@ async def _load_production_mode(
 
     Args:
         settings_service: Settings service for custom index path
+        component_load_max_workers: Optional cap for parallel component imports
 
     Returns:
         Tuple of (modules_dict, index_source)
@@ -641,7 +664,10 @@ async def _load_production_mode(
     if not index_source:
         # No index or cache available - build dynamically and save
         await logger.adebug("Falling back to dynamic loading")
-        modules_dict = await _load_components_dynamically(target_modules=None)
+        modules_dict = await _load_components_dynamically(
+            target_modules=None,
+            component_load_max_workers=component_load_max_workers,
+        )
         index_source = "dynamic"
 
         # Save to cache for future use
@@ -672,14 +698,26 @@ async def import_langflow_components(
     """
     start_time_ms: int = int(time.time() * 1000)
     dev_mode_enabled, target_modules = _parse_dev_mode()
+    component_load_max_workers = (
+        getattr(settings_service.settings, "component_load_max_workers", None) if settings_service else None
+    )
 
     # Strategy pattern: map dev mode state to loading function
     if dev_mode_enabled and not target_modules:
-        modules_dict, index_source = await _load_full_dev_mode()
+        modules_dict, index_source = await _load_full_dev_mode(
+            component_load_max_workers=component_load_max_workers,
+        )
     elif dev_mode_enabled and target_modules:
-        modules_dict, index_source = await _load_selective_dev_mode(settings_service, target_modules)
+        modules_dict, index_source = await _load_selective_dev_mode(
+            settings_service,
+            target_modules,
+            component_load_max_workers=component_load_max_workers,
+        )
     else:
-        modules_dict, index_source = await _load_production_mode(settings_service)
+        modules_dict, index_source = await _load_production_mode(
+            settings_service,
+            component_load_max_workers=component_load_max_workers,
+        )
 
     # Send telemetry
     await _send_telemetry(
