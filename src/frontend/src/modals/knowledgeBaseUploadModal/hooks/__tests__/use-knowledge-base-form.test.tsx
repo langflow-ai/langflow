@@ -135,6 +135,40 @@ describe("knowledge-base provider defaults", () => {
     },
   );
 
+  it.each([true, false])(
+    "submits the pgVector server default without saved variables (local storage: %s)",
+    async (localAvailable) => {
+      useUtilityStore.setState({
+        vectorStoreConfigLoaded: true,
+        localVectorStoreAvailable: localAvailable,
+        defaultVectorStoreBackend: "postgres",
+      });
+      const { result } = renderHook(() =>
+        useKnowledgeBaseForm({
+          open: true,
+          setOpen: jest.fn(),
+          hideAdvanced: true,
+        }),
+      );
+      act(() => {
+        result.current.setSourceName("Environment_KB");
+        result.current.setSelectedEmbeddingModel([
+          result.current.embeddingModelOptions[0],
+        ]);
+      });
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          backend_type: "postgres",
+          backend_config: {},
+        }),
+      );
+      expect(mockSetErrorData).not.toHaveBeenCalled();
+    },
+  );
+
   it("keeps normalization for a new base and returns its stored name", async () => {
     useUtilityStore.setState({ vectorStoreConfigLoaded: true });
     const onSubmit = jest.fn();

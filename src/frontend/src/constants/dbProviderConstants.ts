@@ -257,12 +257,15 @@ export function parseBooleanGlobalVariable(
   return defaultValue;
 }
 
-/** Preserve the OpenSearch configuration signal from older servers that expose only their default. */
+/** Preserve the environment configuration signal from servers that expose only their default. */
 function isEnvProvisionedDefault(
   providerType: StoredDBProviderId,
   serverDefaultBackend: string | undefined,
 ): boolean {
-  return providerType === "opensearch" && serverDefaultBackend === "opensearch";
+  return (
+    (providerType === "opensearch" || providerType === "postgres") &&
+    serverDefaultBackend === providerType
+  );
 }
 
 /** Resolve the selected provider from saved preferences and server configuration. */
@@ -443,6 +446,7 @@ export function isDBProviderConfigured(
   }
 
   if (configuredBackends.includes(providerType)) return true;
+  if (isEnvProvisionedDefault(providerType, serverDefaultBackend)) return true;
 
   // Older servers can still enable pgVector through explicit activation.
   if (providerType === "postgres") {
@@ -451,8 +455,6 @@ export function isDBProviderConfigured(
       "postgres"
     );
   }
-
-  if (isEnvProvisionedDefault(providerType, serverDefaultBackend)) return true;
 
   const provider = getDBProviderOption(providerType);
   // Boolean fields always have a defined default, so they don't gate

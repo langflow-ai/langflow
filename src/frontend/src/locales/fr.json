@@ -1564,6 +1564,8 @@
   "messages.loadError": "Impossible de charger les messages.",
   "misc.activateToShare": "Activez cette option pour partager une version publique de ce Playground",
   "misc.addChatInputOutput": "Ajoutez une entrée ou une sortie de chat pour accéder à votre flux",
+  "misc.copyShareableLink": "Copier le lien",
+  "misc.shareableLinkCopied": "Lien copié",
   "misc.addChatInputOutputPlayground": "Ajoutez une entrée ou une sortie de chat pour utiliser l'espace de test",
   "misc.alertSaveWithApi": "⚠️ Attention : l'exportation de ce flux peut entraîner la divulgation d'identifiants sensibles.",
   "misc.apiAccess": "Accès à l'API",
@@ -2912,7 +2914,7 @@
   "playground.workflowWarning": "Avertissement du workflow",
   "settings.nav.connections": "Connexions",
   "connections.title": "Connexions",
-  "connections.subtitle": "Comptes au nom desquels vos flux agissent. Les jetons restent sur le serveur ; seules les métadonnées sont affichées ici.",
+  "connections.subtitle": "Comptes tiers (comme Google, Microsoft 365 et Slack) que vos flux utilisent pour agir en votre nom. Les jetons restent sur le serveur et ne sont jamais affichés ici.",
   "connections.search": "Rechercher un nom, un identifiant ou un compte",
   "connections.loading": "Chargement des connexions…",
   "connections.empty": "Aucune connexion pour l'instant.",
@@ -3052,5 +3054,6 @@
   "connections.add.allowBackgroundRunsHelp": "Nécessaire pour les déclencheurs Slack et pour tout flux qu'un déclencheur exécute avec cette connexion : ces exécutions ont lieu sans personne de connecté. Vous pourrez le désactiver plus tard.",
   "connections.identity.user_delegated": "L'utilisateur connecté",
   "connections.identity.bot": "Un bot",
-  "connections.identity.service": "Un compte de service"
+  "connections.identity.service": "Un compte de service",
+  "settings.dbProviders.serverConfiguration": "Configuré depuis l’environnement du serveur. Laissez les champs inchangés pour utiliser cette configuration."
 }

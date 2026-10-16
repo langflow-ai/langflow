@@ -1564,6 +1564,8 @@
   "messages.loadError": "メッセージを読み込めませんでした。",
   "misc.activateToShare": "有効にすると、このプレイグラウンドの公開版を共有できます",
   "misc.addChatInputOutput": "フローにチャット入力またはチャット出力を追加してアクセスする",
+  "misc.copyShareableLink": "リンクをコピー",
+  "misc.shareableLinkCopied": "リンクをコピーしました",
   "misc.addChatInputOutputPlayground": "プレイグラウンドを使用するには、チャット入力またはチャット出力を追加してください",
   "misc.alertSaveWithApi": "⚠️ 注意：このフローをエクスポートすると、機密性の高い認証情報が漏洩する恐れがあります。",
   "misc.apiAccess": "API アクセス",
@@ -2912,7 +2914,7 @@
   "playground.workflowWarning": "ワークフローの警告",
   "settings.nav.connections": "接続",
   "connections.title": "接続",
-  "connections.subtitle": "フローが代理として動作するアカウントです。トークンはサーバーに保管され、ここにはメタデータのみ表示されます。",
+  "connections.subtitle": "フローがあなたに代わって操作するために使用するサードパーティのアカウント（Google、Microsoft 365、Slackなど）です。トークンはサーバーに保管され、ここには表示されません。",
   "connections.search": "名前、ハンドル、アカウントを検索",
   "connections.loading": "接続を読み込み中…",
   "connections.empty": "接続はまだありません。",
@@ -3052,5 +3054,6 @@
   "connections.add.allowBackgroundRunsHelp": "Slack トリガーと、トリガーがこの接続で実行するすべてのフローに必要です。これらの実行は誰もサインインしていない状態で行われます。後でオフにすることもできます。",
   "connections.identity.user_delegated": "サインイン中のユーザー",
   "connections.identity.bot": "ボット",
-  "connections.identity.service": "サービスアカウント"
+  "connections.identity.service": "サービスアカウント",
+  "settings.dbProviders.serverConfiguration": "サーバー環境で設定済みです。この設定を使用するには、フィールドを変更しないでください。"
 }
