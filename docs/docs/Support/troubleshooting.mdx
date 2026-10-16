@@ -585,6 +585,24 @@ If you're experiencing this issue, update your Langflow installation to version 
 uv pip install langflow -U
 ```
 
+### Can't sign in after upgrading from an auto-login installation {#cant-sign-in-after-upgrade}
+
+Langflow 1.13 disables auto-login by default.
+After you upgrade an installation that signed in automatically, one of the following can occur:
+
+* Startup exits with `Username and password must be set`.
+* Langflow starts, but sign-in fails with `Incorrect username or password` even after you set `LANGFLOW_SUPERUSER_PASSWORD`.
+* The sign-up page creates a new account that doesn't have your existing flows.
+
+Your flows are still in the database. They belong to the account that auto-login used, which has a generated password that `LANGFLOW_SUPERUSER_PASSWORD` doesn't replace.
+
+To resolve this issue:
+
+1. If startup exits, set `LANGFLOW_SUPERUSER_PASSWORD` before you start Langflow.
+2. If sign-in still fails, follow [Recover access after upgrading](/api-keys-and-authentication#recover-access-after-upgrading).
+
+Don't delete the database or reinstall Langflow to regain access, because that can permanently remove your flows.
+
 ## Langflow MCP issues {#mcp}
 
 The following issues can occur when using Langflow as an MCP server or client.

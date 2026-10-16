@@ -113,9 +113,9 @@ export function AddConnectionDialog({
   const create = useCreateConnectionMutation();
   const startOAuth = useStartOAuthMutation();
   const remove = useDeleteConnectionMutation();
-  const poll = usePendingConnectionPoll(
-    authorize?.kind === "waiting" ? baseline : null,
-  );
+  const isAwaitingConsent =
+    authorize?.kind === "waiting" || authorize?.kind === "untracked";
+  const poll = usePendingConnectionPoll(isAwaitingConsent ? baseline : null);
   const slackToken = useSlackTokenConnection({
     providerId,
     deploymentContext,
@@ -247,7 +247,7 @@ export function AddConnectionDialog({
   // Consent lands on the server: only a row that moved on from the state it had
   // when consent started carries this authorization's outcome.
   useEffect(() => {
-    if (authorize?.kind !== "waiting") return;
+    if (!isAwaitingConsent) return;
     if (hasConsentLanded(poll.data, baseline)) {
       const row = poll.data as ConnectionRead;
       // Polling stops on failure. Retain that outcome so a retry's baseline
@@ -270,24 +270,28 @@ export function AddConnectionDialog({
       }
       return;
     }
-    if (Date.now() - startedAt.current > CONSENT_TIMEOUT_MS) {
-      setAuthorize({ kind: "failed", message: t("connections.add.expired") });
-    }
-  }, [authorize, poll.data, baseline, t]);
+  }, [isAwaitingConsent, poll.data, baseline, t]);
 
-  // The window closing without a change is a cancellation, not a failure to retry.
+  // A provider's Cross-Origin-Opener-Policy can make an open popup report
+  // `closed`. Keep polling the server and avoid inferring user cancellation.
   useEffect(() => {
-    if (authorize?.kind !== "waiting") return;
+    if (!isAwaitingConsent) return;
     const timer = window.setInterval(() => {
-      if (popupRef.current?.closed && !hasConsentLanded(poll.data, baseline)) {
+      if (hasConsentLanded(poll.data, baseline)) return;
+      if (Date.now() - startedAt.current >= CONSENT_TIMEOUT_MS) {
         setAuthorize({
           kind: "failed",
-          message: t("connections.add.cancelled"),
+          message: t("connections.add.expired"),
         });
+      } else if (
+        authorize?.kind === "waiting" &&
+        (!popupRef.current || popupRef.current.closed)
+      ) {
+        setAuthorize({ kind: "untracked" });
       }
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [authorize, poll.data, baseline, t]);
+  }, [isAwaitingConsent, authorize?.kind, poll.data, baseline, t]);
 
   const beginAuthorize = useCallback(
     async (connection: ConnectionRead, scopes: string[]) => {
@@ -679,6 +683,8 @@ export function AddConnectionDialog({
                     </span>
                   )}
                   <ScopeChecklist
+                    providerId={providerId}
+                    requirements={requirements}
                     scopes={requestable}
                     selected={selectedScopes}
                     onToggle={toggleScope}
@@ -734,6 +740,8 @@ export function AddConnectionDialog({
                     : t("connections.add.reauthorizeHint")}
                 </span>
                 <ScopeChecklist
+                  providerId={providerId}
+                  requirements={requirements}
                   scopes={reauthorizeOptions}
                   selected={selectedScopes}
                   onToggle={toggleScope}
@@ -766,16 +774,24 @@ export function AddConnectionDialog({
         {step === "authorize" && (
           <div className="flex flex-col gap-4">
             <AuthorizeStatus state={authorize} />
+            {authorize?.kind === "untracked" && (
+              <ConnectionSetupHelp
+                providerId={providerId}
+                noRegistration={false}
+              />
+            )}
             <div className="flex justify-end gap-2">
-              {authorize?.kind === "failed" && pendingRow && (
-                <Button
-                  variant="outline"
-                  onClick={onTryAgain}
-                  data-testid="connection-try-again"
-                >
-                  {t("connections.add.tryAgain")}
-                </Button>
-              )}
+              {(authorize?.kind === "failed" ||
+                authorize?.kind === "untracked") &&
+                pendingRow && (
+                  <Button
+                    variant="outline"
+                    onClick={onTryAgain}
+                    data-testid="connection-try-again"
+                  >
+                    {t("connections.add.tryAgain")}
+                  </Button>
+                )}
               <Button
                 onClick={() => close(authorize?.kind !== "connected")}
                 data-testid="connection-done"

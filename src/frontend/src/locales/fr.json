@@ -2912,7 +2912,7 @@
   "playground.workflowWarning": "Avertissement du workflow",
   "settings.nav.connections": "Connexions",
   "connections.title": "Connexions",
-  "connections.subtitle": "Comptes au nom desquels vos flux agissent. Les jetons restent sur le serveur ; seules les métadonnées sont affichées ici.",
+  "connections.subtitle": "Comptes tiers (comme Google, Microsoft 365 et Slack) que vos flux utilisent pour agir en votre nom. Les jetons restent sur le serveur et ne sont jamais affichés ici.",
   "connections.search": "Rechercher un nom, un identifiant ou un compte",
   "connections.loading": "Chargement des connexions…",
   "connections.empty": "Aucune connexion pour l'instant.",
@@ -3007,6 +3007,10 @@
   "connections.add.displayNameTooltip": "Un nom lisible affiché dans les listes de connexions pour vous aider à reconnaître ce compte.",
   "connections.add.registration": "Enregistrement OAuth",
   "connections.add.instanceOwned": "Partager avec toute l'instance",
+  "connections.scope.risk.read": "Lecture",
+  "connections.scope.risk.write": "Écriture",
+  "connections.scope.risk.destructive": "Destructif",
+  "connections.scope.conditional": "Pour certaines entrées",
   "connections.add.scopes": "Autorisations à demander",
   "connections.add.noScopes": "Les actions de ce fournisseur ne déclarent aucune autorisation.",
   "connections.add.scopesOutsideCeiling": "Cet enregistrement n'autorise pas {{scopes}} ; ces autorisations ne sont pas demandées.",
@@ -3031,7 +3035,7 @@
   "connections.add.failed": "L'autorisation n'a pas abouti.",
   "connections.add.denied": "Le fournisseur a refusé l'autorisation.",
   "connections.add.expired": "Le lien de connexion a expiré. Recommencez pour en obtenir un nouveau.",
-  "connections.add.cancelled": "La fenêtre de connexion a été fermée avant la fin de l'autorisation.",
+  "connections.add.windowUntracked": "Langflow ne peut plus suivre la fenêtre de connexion. Si le fournisseur affiche une erreur, demandez à votre administrateur de vérifier la configuration OAuth avant de réessayer.",
   "connections.add.cleanupFailed": "Connexion non supprimée",
   "connections.add.cleanupFailedBody": "La connexion inachevée n'a pas pu être supprimée. Retirez-la de la liste.",
   "connections.add.identity": "Agit en tant que",
@@ -3048,5 +3052,6 @@
   "connections.add.allowBackgroundRunsHelp": "Nécessaire pour les déclencheurs Slack et pour tout flux qu'un déclencheur exécute avec cette connexion : ces exécutions ont lieu sans personne de connecté. Vous pourrez le désactiver plus tard.",
   "connections.identity.user_delegated": "L'utilisateur connecté",
   "connections.identity.bot": "Un bot",
-  "connections.identity.service": "Un compte de service"
+  "connections.identity.service": "Un compte de service",
+  "settings.dbProviders.serverConfiguration": "Configuré depuis l’environnement du serveur. Laissez les champs inchangés pour utiliser cette configuration."
 }

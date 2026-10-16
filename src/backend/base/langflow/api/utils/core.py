@@ -34,6 +34,15 @@ strip_secret_field_values_in_place = _flow_secrets.strip_secret_field_values_in_
 
 MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
+# Mirrors the `le` ceiling fastapi_pagination.Params puts on `size`; MAX_PAGE_SIZE (50) stays the
+# default when size is absent, not a bound.
+PARAMS_MAX_PAGE_SIZE = 100
+
+# Bounds are declared on the query because a bound violated inside the dependency (when Params is
+# built) escapes the route's try/except and reaches the app-wide Exception handler as a 500;
+# declaring it here lets FastAPI reject it as 422 like routes that depend on Params directly.
+PageQuery = Annotated[int | None, Query(ge=MIN_PAGE_SIZE)]
+SizeQuery = Annotated[int | None, Query(ge=MIN_PAGE_SIZE, le=PARAMS_MAX_PAGE_SIZE)]
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
 CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
@@ -425,10 +434,7 @@ def parse_value(value: Any, input_type: str) -> Any:
     return value
 
 
-def custom_params(
-    page: int | None = Query(None),
-    size: int | None = Query(None),
-):
+def custom_params(page: PageQuery = None, size: SizeQuery = None):
     if page is None and size is None:
         return None
     return Params(page=page or MIN_PAGE_SIZE, size=size or MAX_PAGE_SIZE)

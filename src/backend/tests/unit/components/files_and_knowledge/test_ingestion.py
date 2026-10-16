@@ -331,7 +331,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         # Isolate metadata building from storage and its statistics refresh.
         with (
-            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
             patch.object(component, "_refresh_kb_stats"),
         ):
             result = await component.build_kb_info()
@@ -478,7 +478,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_get_embeddings.return_value = mock_embedding_fn
 
         with (
-            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0})),
             patch.object(component, "_refresh_kb_stats"),
         ):
             result = await component.build_kb_info()
@@ -508,7 +508,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_get_embeddings.return_value = MagicMock()
 
         with (
-            patch.object(component, "_create_vector_store"),
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
             patch.object(component, "_refresh_kb_stats"),
         ):
             result = await component.build_kb_info()
