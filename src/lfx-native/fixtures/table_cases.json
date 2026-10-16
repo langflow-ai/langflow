@@ -1,0 +1,490 @@
+{
+  "description": "Table rows: the helpers that order, strip and assign row ids and positions. Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui). `strip` is strip_row_keys(rows); `fill_positions` is fill_missing_positions(rows), which never renumbers, with the indexes it filled; `assign` is assign_row_ids(rows, previous); `assign_node` is assign_table_row_ids(node); `assign_changed` is assign_changed_table_row_ids(base, target), the resulting target; `strip_flow` is strip_flow_table_row_keys(flow). Random row ids appear as `<generated row id>`. Positions are compared as numbers, so 2 and 2.0 are one position.",
+  "strip": [
+    {
+      "name": "rows are stripped and put in order",
+      "rows": [{"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}, {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}],
+      "expected": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
+    },
+    {"name": "ties in position are ordered by id", "rows": [{"_id": "b", "_pos": 1, "k": 1}, {"_id": "a", "_pos": 1, "k": 2}], "expected": [{"k": 2}, {"k": 1}]},
+    {"name": "ids order by UTF-16 code units", "rows": [{"_id": "דּ", "_pos": 1}, {"_id": "😀", "_pos": 1}], "expected": [{}, {}]},
+    {"name": "1 and 1.0 are one position", "rows": [{"_id": "b", "_pos": 1.0}, {"_id": "a", "_pos": 1}], "expected": [{}, {}]},
+    {
+      "name": "a legacy table keeps its order",
+      "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
+      "expected": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
+    },
+    {"name": "a table with one row without a position keeps its order", "rows": [{"_id": "b", "_pos": 2}, {"_id": "a"}], "expected": [{}, {}]},
+    {"name": "a value that is not a list is returned as is", "rows": null, "expected": null},
+    {"name": "rows that are not objects are kept", "rows": ["x", 1], "expected": ["x", 1]}
+  ],
+  "ordered": [
+    {
+      "name": "rows are stripped and put in order",
+      "rows": [{"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}, {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}],
+      "expected": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+    },
+    {
+      "name": "ties in position are ordered by id",
+      "rows": [{"_id": "b", "_pos": 1, "k": 1}, {"_id": "a", "_pos": 1, "k": 2}],
+      "expected": [{"_id": "a", "_pos": 1, "k": 2}, {"_id": "b", "_pos": 1, "k": 1}]
+    },
+    {
+      "name": "ids order by UTF-16 code units",
+      "rows": [{"_id": "דּ", "_pos": 1}, {"_id": "😀", "_pos": 1}],
+      "expected": [{"_id": "😀", "_pos": 1}, {"_id": "דּ", "_pos": 1}]
+    },
+    {
+      "name": "1 and 1.0 are one position",
+      "rows": [{"_id": "b", "_pos": 1.0}, {"_id": "a", "_pos": 1}],
+      "expected": [{"_id": "a", "_pos": 1}, {"_id": "b", "_pos": 1.0}]
+    },
+    {
+      "name": "a legacy table keeps its order",
+      "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
+      "expected": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
+    },
+    {
+      "name": "a table with one row without a position keeps its order",
+      "rows": [{"_id": "b", "_pos": 2}, {"_id": "a"}],
+      "expected": [{"_id": "b", "_pos": 2}, {"_id": "a"}]
+    },
+    {"name": "rows that are not objects are kept", "rows": ["x", 1], "expected": ["x", 1]}
+  ],
+  "fill_positions": [
+    {
+      "name": "no positions at all become 1..n",
+      "rows": [{"k": 1}, {"k": 2}, {"k": 3}],
+      "expected": [{"k": 1, "_pos": 1}, {"k": 2, "_pos": 2}, {"k": 3, "_pos": 3}],
+      "filled": [0, 1, 2]
+    },
+    {
+      "name": "a run between two positions is spread evenly",
+      "rows": [{"_pos": 1}, {"k": 1}, {"k": 2}, {"_pos": 2}],
+      "expected": [{"_pos": 1}, {"k": 1, "_pos": 1.3333333333333333}, {"k": 2, "_pos": 1.6666666666666665}, {"_pos": 2}],
+      "filled": [1, 2]
+    },
+    {
+      "name": "a run after the last position counts up",
+      "rows": [{"_pos": 1.5}, {"k": 1}, {"k": 2}],
+      "expected": [{"_pos": 1.5}, {"k": 1, "_pos": 2.5}, {"k": 2, "_pos": 3.5}],
+      "filled": [1, 2]
+    },
+    {
+      "name": "a run before the first position counts down",
+      "rows": [{"k": 1}, {"k": 2}, {"_pos": 10}],
+      "expected": [{"k": 1, "_pos": 8}, {"k": 2, "_pos": 9}, {"_pos": 10}],
+      "filled": [0, 1]
+    },
+    {
+      "name": "a run between out-of-order neighbours follows the one before",
+      "rows": [{"_pos": 3}, {"k": 1}, {"_pos": 1}],
+      "expected": [{"_pos": 3}, {"k": 1, "_pos": 4}, {"_pos": 1}],
+      "filled": [1]
+    },
+    {
+      "name": "non-numeric positions are replaced",
+      "rows": [{"_pos": "a0"}, {"_pos": true}, {"_pos": null}],
+      "expected": [{"_pos": 1}, {"_pos": 2}, {"_pos": 3}],
+      "filled": [0, 1, 2]
+    },
+    {
+      "name": "a gap with no room left is filled without renumbering",
+      "rows": [{"_pos": 1}, {"k": 1}, {"_pos": 1.0000000000000002}],
+      "expected": [{"_pos": 1}, {"k": 1, "_pos": 1.0}, {"_pos": 1.0000000000000002}],
+      "filled": [1]
+    },
+    {"name": "valid positions are kept", "rows": [{"_pos": 7}, {"_pos": -2.5}], "expected": [{"_pos": 7}, {"_pos": -2.5}], "filled": []}
+  ],
+  "assign": [
+    {
+      "name": "new rows get random ids and positions in order",
+      "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
+      "previous": null,
+      "expected": [
+        {"key": "Accept", "value": "json", "_id": "<generated row id>", "_pos": 1},
+        {"key": "Auth", "value": "token", "_id": "<generated row id>", "_pos": 2}
+      ]
+    },
+    {
+      "name": "existing ids and positions are kept and gaps filled",
+      "rows": [{"_id": "r1", "_pos": 1, "key": "first"}, {"key": "second"}, {"_id": "r1", "_pos": 2, "key": "duplicate id"}],
+      "previous": null,
+      "expected": [
+        {"_id": "r1", "_pos": 1, "key": "first"},
+        {"key": "second", "_id": "<generated row id>", "_pos": 1.5},
+        {"_id": "<generated row id>", "_pos": 2, "key": "duplicate id"}
+      ]
+    },
+    {
+      "name": "a row equal to a stored row takes its id and position",
+      "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
+      "previous": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}],
+      "expected": [{"key": "Accept", "value": "json", "_pos": 1, "_id": "r1"}, {"key": "Auth", "value": "token", "_pos": 2, "_id": "r2"}]
+    },
+    {
+      "name": "a stored row matches at most one row",
+      "rows": [{"key": "Accept", "value": "json"}, {"key": "Accept", "value": "json"}],
+      "previous": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}],
+      "expected": [{"key": "Accept", "value": "json", "_pos": 1, "_id": "r1"}, {"key": "Accept", "value": "json", "_id": "<generated row id>", "_pos": 2}]
+    },
+    {
+      "name": "a row with a position keeps it when matched",
+      "rows": [{"key": "Auth", "value": "token", "_pos": 9}],
+      "previous": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}],
+      "expected": [{"key": "Auth", "value": "token", "_pos": 9, "_id": "r2"}]
+    },
+    {
+      "name": "a table with a row that is not an object is left alone",
+      "rows": [{"key": "Accept", "value": "json"}, "x"],
+      "previous": null,
+      "expected": [{"key": "Accept", "value": "json"}, "x"]
+    }
+  ],
+  "assign_node": [
+    {
+      "name": "every table of a new node gets ids; tool actions are not a table",
+      "node": {
+        "id": "api",
+        "data": {
+          "node": {
+            "template": {
+              "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+              "url": {"type": "str", "value": "http://x"},
+              "tools_metadata": {"type": "table", "value": [{"name": "tool", "tags": ["tool"]}]}
+            }
+          }
+        }
+      },
+      "expected": {
+        "id": "api",
+        "data": {
+          "node": {
+            "template": {
+              "headers": {
+                "type": "table",
+                "_input_type": "TableInput",
+                "value": [
+                  {"key": "Accept", "value": "json", "_id": "<generated row id>", "_pos": 1},
+                  {"key": "Auth", "value": "token", "_id": "<generated row id>", "_pos": 2}
+                ]
+              },
+              "url": {"type": "str", "value": "http://x"},
+              "tools_metadata": {"type": "table", "value": [{"name": "tool", "tags": ["tool"]}]}
+            }
+          }
+        }
+      }
+    }
+  ],
+  "assign_changed": [
+    {
+      "name": "a changed table keeps the ids of rows it still holds",
+      "base": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "target": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}, {"key": "New", "value": "x"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [
+                      {"key": "Accept", "value": "json", "_pos": 1, "_id": "r1"},
+                      {"key": "Auth", "value": "token", "_pos": 2, "_id": "r2"},
+                      {"key": "New", "value": "x", "_id": "<generated row id>", "_pos": 3}
+                    ]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "an unchanged legacy table is left alone",
+      "base": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "target": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://y"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://y"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "a new node's tables get ids",
+      "base": {"nodes": [], "edges": []},
+      "target": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [
+                      {"key": "Accept", "value": "json", "_id": "<generated row id>", "_pos": 1},
+                      {"key": "Auth", "value": "token", "_id": "<generated row id>", "_pos": 2}
+                    ]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "valid tables and other fields are left alone",
+      "base": {"nodes": [], "edges": []},
+      "target": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"},
+                  "tools_metadata": {"type": "table", "value": [{"name": "tool", "tags": ["tool"]}]}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"},
+                  "tools_metadata": {"type": "table", "value": [{"name": "tool", "tags": ["tool"]}]}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    }
+  ],
+  "strip_flow": [
+    {
+      "name": "every top-level table is stripped and ordered; a group's flow is not touched",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}, {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          },
+          {
+            "id": "group",
+            "data": {
+              "node": {
+                "template": {},
+                "flow": {
+                  "data": {
+                    "nodes": [
+                      {
+                        "id": "api",
+                        "data": {
+                          "node": {
+                            "template": {
+                              "headers": {
+                                "type": "table",
+                                "_input_type": "TableInput",
+                                "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                              },
+                              "url": {"type": "str", "value": "http://x"}
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "edges": []
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          },
+          {
+            "id": "group",
+            "data": {
+              "node": {
+                "template": {},
+                "flow": {
+                  "data": {
+                    "nodes": [
+                      {
+                        "id": "api",
+                        "data": {
+                          "node": {
+                            "template": {
+                              "headers": {
+                                "type": "table",
+                                "_input_type": "TableInput",
+                                "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                              },
+                              "url": {"type": "str", "value": "http://x"}
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "edges": []
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    }
+  ]
+}

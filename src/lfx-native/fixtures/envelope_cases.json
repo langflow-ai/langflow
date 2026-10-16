@@ -1,0 +1,1030 @@
+{
+  "description": "The stored operation envelope. Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui) (langflow.services.flow_history.envelope and the recorder's packing). `decode` gives a stored row and its operations, or the damage (`kind` and `revision`). `encode` gives recorded operations and their envelope, actors and requests. `pack` numbers operations from `latest_revision`, splits what does not fit, and packs them into rows within `limits` (sizes are compact JSON bytes).",
+  "decode": [
+    {
+      "name": "one batch",
+      "row": {
+        "start_revision": 5,
+        "end_revision": 6,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {
+              "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [
+                {"revision": 5, "operation": {"type": "delete_nodes", "ids": ["a"]}, "cause": "edit_code"},
+                {"revision": 6, "operation": {"type": "update_metadata", "fields": {"name": "x"}}}
+              ]
+            }
+          ]
+        }
+      },
+      "decoded": [
+        {
+          "revision": 5,
+          "actor_user_id": "11111111-1111-4111-8111-111111111111",
+          "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "operation": {"type": "delete_nodes", "ids": ["a"]},
+          "cause": "edit_code"
+        },
+        {
+          "revision": 6,
+          "actor_user_id": "11111111-1111-4111-8111-111111111111",
+          "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "operation": {"type": "update_metadata", "fields": {"name": "x"}}
+        }
+      ]
+    },
+    {
+      "name": "two requests from two actors",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 3,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {
+              "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [{"revision": 1, "operation": {"type": "delete_nodes", "ids": ["a"]}}]
+            },
+            {
+              "request_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+              "actor_user_id": "22222222-2222-4222-8222-222222222222",
+              "operations": [
+                {"revision": 2, "operation": {"type": "delete_nodes", "ids": ["b"]}},
+                {"revision": 3, "operation": {"type": "update_metadata", "fields": {"name": "x"}}}
+              ]
+            }
+          ]
+        }
+      },
+      "decoded": [
+        {
+          "revision": 1,
+          "actor_user_id": "11111111-1111-4111-8111-111111111111",
+          "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "operation": {"type": "delete_nodes", "ids": ["a"]}
+        },
+        {
+          "revision": 2,
+          "actor_user_id": "22222222-2222-4222-8222-222222222222",
+          "request_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          "operation": {"type": "delete_nodes", "ids": ["b"]}
+        },
+        {
+          "revision": 3,
+          "actor_user_id": "22222222-2222-4222-8222-222222222222",
+          "request_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          "operation": {"type": "update_metadata", "fields": {"name": "x"}}
+        }
+      ]
+    },
+    {
+      "name": "ids in other spellings are normalized",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 1,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {
+              "request_id": "{AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA}",
+              "actor_user_id": "urn:uuid:11111111111141118111111111111111",
+              "operations": [{"revision": 1, "operation": {"type": "delete_nodes", "ids": ["a"]}}]
+            }
+          ]
+        }
+      },
+      "decoded": [
+        {
+          "revision": 1,
+          "actor_user_id": "11111111-1111-4111-8111-111111111111",
+          "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "operation": {"type": "delete_nodes", "ids": ["a"]}
+        }
+      ]
+    },
+    {
+      "name": "a null cause is no cause",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 1,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {
+              "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [{"revision": 1, "cause": null, "operation": {"type": "delete_nodes", "ids": ["a"]}}]
+            }
+          ]
+        }
+      },
+      "decoded": [
+        {
+          "revision": 1,
+          "actor_user_id": "11111111-1111-4111-8111-111111111111",
+          "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "operation": {"type": "delete_nodes", "ids": ["a"]}
+        }
+      ]
+    },
+    {
+      "name": "a float revision equal to the expected one is accepted",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 1,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {
+              "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [{"revision": 1.0, "operation": {"type": "delete_nodes", "ids": ["a"]}}]
+            }
+          ]
+        }
+      },
+      "decoded": [
+        {
+          "revision": 1,
+          "actor_user_id": "11111111-1111-4111-8111-111111111111",
+          "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "operation": {"type": "delete_nodes", "ids": ["a"]}
+        }
+      ]
+    },
+    {
+      "name": "an unknown version",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 1,
+        "ops": {
+          "version": 2,
+          "batches": [
+            {
+              "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [{"revision": 1, "operation": {"type": "delete_nodes", "ids": ["a"]}}]
+            }
+          ]
+        }
+      },
+      "error": {"kind": "unsupported operation envelope", "revision": 1}
+    },
+    {
+      "name": "an envelope that is not an object",
+      "row": {"start_revision": 1, "end_revision": 1, "ops": [1]},
+      "error": {"kind": "unsupported operation envelope", "revision": 1}
+    },
+    {
+      "name": "batches that are not a list",
+      "row": {"start_revision": 1, "end_revision": 1, "ops": {"version": 1, "batches": {}}},
+      "error": {"kind": "unsupported operation envelope", "revision": 1}
+    },
+    {
+      "name": "a batch without operations",
+      "row": {
+        "start_revision": 4,
+        "end_revision": 4,
+        "ops": {
+          "version": 1,
+          "batches": [{"request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "actor_user_id": "11111111-1111-4111-8111-111111111111", "operations": []}]
+        }
+      },
+      "error": {"kind": "malformed request batch", "revision": 4}
+    },
+    {
+      "name": "a batch that is not an object",
+      "row": {"start_revision": 4, "end_revision": 4, "ops": {"version": 1, "batches": ["x"]}},
+      "error": {"kind": "malformed request batch", "revision": 4}
+    },
+    {
+      "name": "a batch with a malformed request id",
+      "row": {
+        "start_revision": 4,
+        "end_revision": 4,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {
+              "request_id": "not-a-uuid",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [{"revision": 4, "operation": {"type": "delete_nodes", "ids": ["a"]}}]
+            }
+          ]
+        }
+      },
+      "error": {"kind": "malformed request batch", "revision": 4}
+    },
+    {
+      "name": "a batch without an actor",
+      "row": {
+        "start_revision": 4,
+        "end_revision": 4,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {"request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "operations": [{"revision": 4, "operation": {"type": "delete_nodes", "ids": ["a"]}}]}
+          ]
+        }
+      },
+      "error": {"kind": "malformed request batch", "revision": 4}
+    },
+    {
+      "name": "a request with two batches",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 2,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {
+              "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [{"revision": 1, "operation": {"type": "delete_nodes", "ids": ["a"]}}]
+            },
+            {
+              "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [{"revision": 2, "operation": {"type": "delete_nodes", "ids": ["b"]}}]
+            }
+          ]
+        }
+      },
+      "error": {"kind": "a request has more than one batch in the row", "revision": 2}
+    },
+    {
+      "name": "a revision out of order",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 2,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {
+              "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [
+                {"revision": 1, "operation": {"type": "delete_nodes", "ids": ["a"]}},
+                {"revision": 3, "operation": {"type": "delete_nodes", "ids": ["b"]}}
+              ]
+            }
+          ]
+        }
+      },
+      "error": {"kind": "operation revision out of order", "revision": 2}
+    },
+    {
+      "name": "an element that is not an object",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 1,
+        "ops": {
+          "version": 1,
+          "batches": [{"request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "actor_user_id": "11111111-1111-4111-8111-111111111111", "operations": ["x"]}]
+        }
+      },
+      "error": {"kind": "operation revision out of order", "revision": 1}
+    },
+    {
+      "name": "a malformed operation",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 1,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {
+              "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [{"revision": 1, "operation": {"type": "rename"}}]
+            }
+          ]
+        }
+      },
+      "error": {"kind": "malformed operation", "revision": 1}
+    },
+    {
+      "name": "an element without an operation",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 1,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {"request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "actor_user_id": "11111111-1111-4111-8111-111111111111", "operations": [{"revision": 1}]}
+          ]
+        }
+      },
+      "error": {"kind": "malformed operation", "revision": 1}
+    },
+    {
+      "name": "a cause that is not a string",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 1,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {
+              "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [{"revision": 1, "operation": {"type": "delete_nodes", "ids": ["a"]}, "cause": 5}]
+            }
+          ]
+        }
+      },
+      "error": {"kind": "malformed operation", "revision": 1}
+    },
+    {
+      "name": "fewer operations than the range",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 3,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {
+              "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [{"revision": 1, "operation": {"type": "delete_nodes", "ids": ["a"]}}]
+            }
+          ]
+        }
+      },
+      "error": {"kind": "operation count does not match the row's revision range", "revision": 1}
+    },
+    {
+      "name": "more operations than the range",
+      "row": {
+        "start_revision": 1,
+        "end_revision": 1,
+        "ops": {
+          "version": 1,
+          "batches": [
+            {
+              "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "actor_user_id": "11111111-1111-4111-8111-111111111111",
+              "operations": [
+                {"revision": 1, "operation": {"type": "delete_nodes", "ids": ["a"]}},
+                {"revision": 2, "operation": {"type": "delete_nodes", "ids": ["b"]}}
+              ]
+            }
+          ]
+        }
+      },
+      "error": {"kind": "operation count does not match the row's revision range", "revision": 1}
+    }
+  ],
+  "encode": [
+    {
+      "name": "operations group into one batch per request",
+      "operations": [
+        {
+          "revision": 1,
+          "actor_user_id": "11111111-1111-4111-8111-111111111111",
+          "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "operation": {"type": "delete_nodes", "ids": ["a"]},
+          "cause": "edit_code"
+        },
+        {
+          "revision": 2,
+          "actor_user_id": "11111111-1111-4111-8111-111111111111",
+          "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "operation": {"type": "update_metadata", "fields": {"name": "x"}}
+        },
+        {
+          "revision": 3,
+          "actor_user_id": "22222222-2222-4222-8222-222222222222",
+          "request_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          "operation": {"type": "delete_nodes", "ids": ["b"]}
+        }
+      ],
+      "envelope": {
+        "version": 1,
+        "batches": [
+          {
+            "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "actor_user_id": "11111111-1111-4111-8111-111111111111",
+            "operations": [
+              {"revision": 1, "cause": "edit_code", "operation": {"type": "delete_nodes", "ids": ["a"]}},
+              {"revision": 2, "operation": {"type": "update_metadata", "fields": {"name": "x"}}}
+            ]
+          },
+          {
+            "request_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "actor_user_id": "22222222-2222-4222-8222-222222222222",
+            "operations": [{"revision": 3, "operation": {"type": "delete_nodes", "ids": ["b"]}}]
+          }
+        ]
+      },
+      "actor_user_ids": ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"],
+      "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"]
+    }
+  ],
+  "pack": [
+    {
+      "actor_user_id": "11111111-1111-4111-8111-111111111111",
+      "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": "operations within both limits share one row",
+      "operations": [{"type": "delete_nodes", "ids": ["a"]}, {"type": "update_metadata", "fields": {"name": "x"}}],
+      "latest_revision": 7,
+      "limits": {"ops": 100, "bytes": 204800},
+      "rows": [
+        {
+          "start_revision": 8,
+          "end_revision": 9,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {"revision": 8, "operation": {"type": "delete_nodes", "ids": ["a"]}},
+                  {"revision": 9, "operation": {"type": "update_metadata", "fields": {"name": "x"}}}
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        }
+      ]
+    },
+    {
+      "actor_user_id": "11111111-1111-4111-8111-111111111111",
+      "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": "the operation limit closes a row",
+      "operations": [{"type": "delete_nodes", "ids": ["a"]}, {"type": "delete_nodes", "ids": ["b"]}, {"type": "update_metadata", "fields": {"name": "x"}}],
+      "latest_revision": 0,
+      "limits": {"ops": 2, "bytes": 204800},
+      "cause": "restore",
+      "rows": [
+        {
+          "start_revision": 1,
+          "end_revision": 2,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {"revision": 1, "cause": "restore", "operation": {"type": "delete_nodes", "ids": ["a"]}},
+                  {"revision": 2, "cause": "restore", "operation": {"type": "delete_nodes", "ids": ["b"]}}
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        },
+        {
+          "start_revision": 3,
+          "end_revision": 3,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [{"revision": 3, "cause": "restore", "operation": {"type": "update_metadata", "fields": {"name": "x"}}}]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        }
+      ]
+    },
+    {
+      "actor_user_id": "11111111-1111-4111-8111-111111111111",
+      "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": "the byte limit closes a row",
+      "operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {"id": "n0", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+            {"id": "n1", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}}
+          ]
+        },
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {"id": "n2", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+            {"id": "n3", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}}
+          ]
+        }
+      ],
+      "latest_revision": 3,
+      "limits": {"ops": 100, "bytes": 600},
+      "rows": [
+        {
+          "start_revision": 4,
+          "end_revision": 4,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 4,
+                    "operation": {
+                      "type": "add_nodes",
+                      "nodes": [
+                        {"id": "n0", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+                        {"id": "n1", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}}
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        },
+        {
+          "start_revision": 5,
+          "end_revision": 5,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 5,
+                    "operation": {
+                      "type": "add_nodes",
+                      "nodes": [
+                        {"id": "n2", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+                        {"id": "n3", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}}
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        }
+      ]
+    },
+    {
+      "actor_user_id": "11111111-1111-4111-8111-111111111111",
+      "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": "a list that does not fit is split into operations of its type",
+      "operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {"id": "n0", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+            {"id": "n1", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+            {"id": "n2", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+            {"id": "n3", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+            {"id": "n4", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+            {"id": "n5", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}}
+          ]
+        }
+      ],
+      "latest_revision": 0,
+      "limits": {"ops": 100, "bytes": 700},
+      "rows": [
+        {
+          "start_revision": 1,
+          "end_revision": 1,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 1,
+                    "operation": {
+                      "type": "add_nodes",
+                      "nodes": [
+                        {"id": "n0", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+                        {"id": "n1", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+                        {"id": "n2", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+                        {"id": "n3", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}}
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        },
+        {
+          "start_revision": 2,
+          "end_revision": 2,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 2,
+                    "operation": {
+                      "type": "add_nodes",
+                      "nodes": [
+                        {"id": "n4", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}},
+                        {"id": "n5", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}}
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        }
+      ]
+    },
+    {
+      "actor_user_id": "11111111-1111-4111-8111-111111111111",
+      "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": "an item larger than the limit is an operation of its own",
+      "operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {
+              "id": "big",
+              "data": {
+                "node": {
+                  "template": {
+                    "text": {
+                      "type": "str",
+                      "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    }
+                  }
+                }
+              }
+            },
+            {"id": "n0", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}}
+          ]
+        }
+      ],
+      "latest_revision": 0,
+      "limits": {"ops": 100, "bytes": 500},
+      "rows": [
+        {
+          "start_revision": 1,
+          "end_revision": 1,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 1,
+                    "operation": {
+                      "type": "add_nodes",
+                      "nodes": [
+                        {
+                          "id": "big",
+                          "data": {
+                            "node": {
+                              "template": {
+                                "text": {
+                                  "type": "str",
+                                  "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        },
+        {
+          "start_revision": 2,
+          "end_revision": 2,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 2,
+                    "operation": {
+                      "type": "add_nodes",
+                      "nodes": [{"id": "n0", "data": {"node": {"template": {"text": {"type": "str", "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}}}}}]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        }
+      ]
+    },
+    {
+      "actor_user_id": "11111111-1111-4111-8111-111111111111",
+      "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": "updates split by the byte limit",
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "f0", "value"], "value": 0},
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "f1", "value"], "value": 1},
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "f2", "value"], "value": 2},
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "f3", "value"], "value": 3},
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "f4", "value"], "value": 4}
+          ]
+        }
+      ],
+      "latest_revision": 10,
+      "limits": {"ops": 100, "bytes": 450},
+      "rows": [
+        {
+          "start_revision": 11,
+          "end_revision": 11,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 11,
+                    "operation": {
+                      "type": "update_nodes",
+                      "updates": [
+                        {"id": "a", "path": ["data", "node", "template", "f0", "value"], "op": "set_field", "value": 0},
+                        {"id": "a", "path": ["data", "node", "template", "f1", "value"], "op": "set_field", "value": 1},
+                        {"id": "a", "path": ["data", "node", "template", "f2", "value"], "op": "set_field", "value": 2}
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        },
+        {
+          "start_revision": 12,
+          "end_revision": 12,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 12,
+                    "operation": {
+                      "type": "update_nodes",
+                      "updates": [
+                        {"id": "a", "path": ["data", "node", "template", "f3", "value"], "op": "set_field", "value": 3},
+                        {"id": "a", "path": ["data", "node", "template", "f4", "value"], "op": "set_field", "value": 4}
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        }
+      ]
+    },
+    {
+      "actor_user_id": "11111111-1111-4111-8111-111111111111",
+      "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": "deletes split by the byte limit",
+      "operations": [
+        {
+          "type": "delete_edges",
+          "ids": [
+            "edge-000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "edge-001-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "edge-002-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "edge-003-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "edge-004-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "edge-005-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "edge-006-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "edge-007-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "edge-008-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "edge-009-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "edge-010-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "edge-011-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          ]
+        }
+      ],
+      "latest_revision": 0,
+      "limits": {"ops": 100, "bytes": 400},
+      "rows": [
+        {
+          "start_revision": 1,
+          "end_revision": 1,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 1,
+                    "operation": {
+                      "type": "delete_edges",
+                      "ids": [
+                        "edge-000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                        "edge-001-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                        "edge-002-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                        "edge-003-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                        "edge-004-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        },
+        {
+          "start_revision": 2,
+          "end_revision": 2,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 2,
+                    "operation": {
+                      "type": "delete_edges",
+                      "ids": [
+                        "edge-005-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                        "edge-006-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                        "edge-007-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                        "edge-008-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                        "edge-009-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        },
+        {
+          "start_revision": 3,
+          "end_revision": 3,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 3,
+                    "operation": {"type": "delete_edges", "ids": ["edge-010-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "edge-011-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]}
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        }
+      ]
+    },
+    {
+      "actor_user_id": "11111111-1111-4111-8111-111111111111",
+      "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": "metadata splits into sets and deletes",
+      "operations": [
+        {
+          "type": "update_metadata",
+          "fields": {
+            "k0": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv",
+            "k1": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv",
+            "k2": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv",
+            "k3": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+          },
+          "delete_keys": ["gone", "old"]
+        }
+      ],
+      "latest_revision": 0,
+      "limits": {"ops": 100, "bytes": 330},
+      "rows": [
+        {
+          "start_revision": 1,
+          "end_revision": 1,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 1,
+                    "operation": {
+                      "type": "update_metadata",
+                      "fields": {
+                        "k0": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv",
+                        "k1": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        },
+        {
+          "start_revision": 2,
+          "end_revision": 2,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 2,
+                    "operation": {
+                      "type": "update_metadata",
+                      "fields": {
+                        "k2": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv",
+                        "k3": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        },
+        {
+          "start_revision": 3,
+          "end_revision": 3,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [{"revision": 3, "operation": {"type": "update_metadata", "delete_keys": ["gone", "old"]}}]
+              }
+            ]
+          },
+          "actor_user_ids": ["11111111-1111-4111-8111-111111111111"],
+          "request_ids": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+        }
+      ]
+    }
+  ]
+}

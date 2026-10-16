@@ -1,0 +1,353 @@
+{
+  "description": "Replay onto a checkpoint. Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui) (langflow.services.flow_history.replay). A case applies the operations of `rows` after `checkpoint_revision` up to `revision` to `checkpoint`, and gives the graph or the damage (`kind` and `revision`). `verify` checks a checkpoint's graph against its stored hash.",
+  "cases": [
+    {
+      "name": "replay to the end",
+      "checkpoint": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "1"}}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [],
+        "name": "flow"
+      },
+      "checkpoint_revision": 0,
+      "rows": [
+        {
+          "start_revision": 1,
+          "end_revision": 2,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 1,
+                    "operation": {
+                      "type": "update_nodes",
+                      "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "x", "value"], "value": "2"}]
+                    }
+                  },
+                  {
+                    "revision": 2,
+                    "operation": {
+                      "type": "update_nodes",
+                      "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "x", "value"], "value": "3"}]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "start_revision": 3,
+          "end_revision": 3,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                "actor_user_id": "22222222-2222-4222-8222-222222222222",
+                "operations": [{"revision": 3, "operation": {"type": "delete_nodes", "ids": ["b"]}}]
+              }
+            ]
+          }
+        }
+      ],
+      "revision": 3,
+      "expected": {"nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "3"}}}}}], "edges": [], "name": "flow"}
+    },
+    {
+      "name": "replay stops inside a row",
+      "checkpoint": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "1"}}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [],
+        "name": "flow"
+      },
+      "checkpoint_revision": 0,
+      "rows": [
+        {
+          "start_revision": 1,
+          "end_revision": 2,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 1,
+                    "operation": {
+                      "type": "update_nodes",
+                      "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "x", "value"], "value": "2"}]
+                    }
+                  },
+                  {
+                    "revision": 2,
+                    "operation": {
+                      "type": "update_nodes",
+                      "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "x", "value"], "value": "3"}]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "start_revision": 3,
+          "end_revision": 3,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                "actor_user_id": "22222222-2222-4222-8222-222222222222",
+                "operations": [{"revision": 3, "operation": {"type": "delete_nodes", "ids": ["b"]}}]
+              }
+            ]
+          }
+        }
+      ],
+      "revision": 1,
+      "expected": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "2"}}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [],
+        "name": "flow"
+      }
+    },
+    {
+      "name": "a row that began before the checkpoint",
+      "checkpoint": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "2"}}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [],
+        "name": "flow"
+      },
+      "checkpoint_revision": 1,
+      "rows": [
+        {
+          "start_revision": 1,
+          "end_revision": 2,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 1,
+                    "operation": {
+                      "type": "update_nodes",
+                      "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "x", "value"], "value": "2"}]
+                    }
+                  },
+                  {
+                    "revision": 2,
+                    "operation": {
+                      "type": "update_nodes",
+                      "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "x", "value"], "value": "3"}]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "start_revision": 3,
+          "end_revision": 3,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                "actor_user_id": "22222222-2222-4222-8222-222222222222",
+                "operations": [{"revision": 3, "operation": {"type": "delete_nodes", "ids": ["b"]}}]
+              }
+            ]
+          }
+        }
+      ],
+      "revision": 3,
+      "expected": {"nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "3"}}}}}], "edges": [], "name": "flow"}
+    },
+    {
+      "name": "the checkpoint revision itself",
+      "checkpoint": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "1"}}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [],
+        "name": "flow"
+      },
+      "checkpoint_revision": 2,
+      "rows": [],
+      "revision": 2,
+      "expected": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "1"}}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [],
+        "name": "flow"
+      }
+    },
+    {
+      "name": "a missing revision",
+      "checkpoint": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "1"}}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [],
+        "name": "flow"
+      },
+      "checkpoint_revision": 0,
+      "rows": [
+        {
+          "start_revision": 1,
+          "end_revision": 2,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 1,
+                    "operation": {
+                      "type": "update_nodes",
+                      "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "x", "value"], "value": "2"}]
+                    }
+                  },
+                  {
+                    "revision": 2,
+                    "operation": {
+                      "type": "update_nodes",
+                      "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "x", "value"], "value": "3"}]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "start_revision": 4,
+          "end_revision": 4,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                "actor_user_id": "22222222-2222-4222-8222-222222222222",
+                "operations": [{"revision": 4, "operation": {"type": "delete_nodes", "ids": ["b"]}}]
+              }
+            ]
+          }
+        }
+      ],
+      "revision": 4,
+      "error": {"kind": "missing revisions", "revision": 3}
+    },
+    {
+      "name": "rows that end before the revision",
+      "checkpoint": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "1"}}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [],
+        "name": "flow"
+      },
+      "checkpoint_revision": 0,
+      "rows": [
+        {
+          "start_revision": 1,
+          "end_revision": 2,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [
+                  {
+                    "revision": 1,
+                    "operation": {
+                      "type": "update_nodes",
+                      "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "x", "value"], "value": "2"}]
+                    }
+                  },
+                  {
+                    "revision": 2,
+                    "operation": {
+                      "type": "update_nodes",
+                      "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "x", "value"], "value": "3"}]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "revision": 3,
+      "error": {"kind": "missing revisions", "revision": 3}
+    },
+    {
+      "name": "an operation that does not apply",
+      "checkpoint": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "1"}}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [],
+        "name": "flow"
+      },
+      "checkpoint_revision": 0,
+      "rows": [
+        {
+          "start_revision": 1,
+          "end_revision": 1,
+          "ops": {
+            "version": 1,
+            "batches": [
+              {
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "actor_user_id": "11111111-1111-4111-8111-111111111111",
+                "operations": [{"revision": 1, "operation": {"type": "delete_nodes", "ids": ["zz"]}}]
+              }
+            ]
+          }
+        }
+      ],
+      "revision": 1,
+      "error": {"kind": "operation does not apply", "revision": 1}
+    },
+    {
+      "name": "a damaged row",
+      "checkpoint": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "1"}}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [],
+        "name": "flow"
+      },
+      "checkpoint_revision": 0,
+      "rows": [{"start_revision": 1, "end_revision": 1, "ops": {"version": 2, "batches": []}}],
+      "revision": 1,
+      "error": {"kind": "unsupported operation envelope", "revision": 1}
+    }
+  ],
+  "verify": [
+    {
+      "name": "a checkpoint that matches its hash",
+      "graph": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "1"}}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [],
+        "name": "flow"
+      },
+      "hash": "18643f35eff6b6da0a8ab654cce2cf0abcd426976288c11b5a866168fd251840",
+      "revision": 4
+    },
+    {
+      "name": "a checkpoint changed after it was hashed",
+      "graph": {
+        "nodes": [{"id": "a", "data": {"node": {"template": {"x": {"type": "str", "value": "1"}}}}}, {"id": "b", "data": {"node": {"template": {}}}}],
+        "edges": [],
+        "name": "changed"
+      },
+      "hash": "18643f35eff6b6da0a8ab654cce2cf0abcd426976288c11b5a866168fd251840",
+      "revision": 4,
+      "error": {"kind": "checkpoint does not match its hash", "revision": 4}
+    }
+  ]
+}

@@ -6,12 +6,27 @@ use libtest_mimic::{Failed, Trial};
 use serde_json::Value;
 
 /// The fixture files every runtime runs.
-pub const FIXTURE_FILES: [&str; 4] = [
+pub const FIXTURE_FILES: [&str; 14] = [
     "apply_cases.json",
+    "canonical_cases.json",
     "diff_cases.json",
+    "editor_cases.json",
+    "envelope_cases.json",
+    "inverse_cases.json",
     "merge_cases.json",
     "property_cases.json",
+    "repair_cases.json",
+    "replay_cases.json",
+    "restore_cases.json",
+    "table_cases.json",
+    "validation_cases.json",
+    "write_cases.json",
 ];
+
+/// The placeholder for an edge id the engine draws at random.
+pub const GENERATED_EDGE_ID: &str = "<generated edge id>";
+/// The placeholder for a row id the engine draws at random.
+pub const GENERATED_ROW_ID: &str = "<generated row id>";
 
 /// The directory that holds the shared fixtures.
 pub fn fixtures_dir() -> PathBuf {
@@ -29,11 +44,20 @@ pub fn load(name: &str) -> Value {
 
 /// The cases of a fixture file, each with its name.
 pub fn cases(document: &Value) -> Vec<(String, Value)> {
+    let section = if document.get("sequences").is_some() {
+        "sequences"
+    } else {
+        "cases"
+    };
+    section_cases(document, section)
+}
+
+/// The cases of one section of a fixture file, each with its name.
+pub fn section_cases(document: &Value, section: &str) -> Vec<(String, Value)> {
     let cases = document
-        .get("cases")
-        .or_else(|| document.get("sequences"))
+        .get(section)
         .and_then(Value::as_array)
-        .expect("a fixture file lists its cases under \"cases\" or \"sequences\"");
+        .unwrap_or_else(|| panic!("the fixture file has no section {section:?}"));
     cases
         .iter()
         .map(|case| {
@@ -78,6 +102,62 @@ pub fn json_eq(left: &Value, right: &Value) -> bool {
     }
 }
 
+/// Fail unless `actual` matches `expected`: as [`json_eq`], except that
+/// numbers compare as the doubles they are, and a generated-id placeholder
+/// matches any id of its shape.
+pub fn assert_json_matches(what: &str, actual: &Value, expected: &Value) -> Result<(), Failed> {
+    if json_matches(actual, expected) {
+        return Ok(());
+    }
+    Err(format!(
+        "{what} differs\n  actual:   {}\n  expected: {}",
+        compact(actual),
+        compact(expected)
+    )
+    .into())
+}
+
+fn json_matches(actual: &Value, expected: &Value) -> bool {
+    match (actual, expected) {
+        (Value::String(id), Value::String(placeholder)) if placeholder == GENERATED_EDGE_ID => id
+            .strip_prefix("e-")
+            .is_some_and(|rest| is_alphanumeric_id(rest, 21)),
+        (Value::String(id), Value::String(placeholder)) if placeholder == GENERATED_ROW_ID => {
+            is_alphanumeric_id(id, 10)
+        }
+        (Value::Number(a), Value::Number(b)) => {
+            a.as_str().parse::<f64>().ok() == b.as_str().parse::<f64>().ok()
+        }
+        (Value::Object(a), Value::Object(b)) => {
+            a.len() == b.len()
+                && a.iter()
+                    .all(|(key, value)| b.get(key).is_some_and(|other| json_matches(value, other)))
+        }
+        (Value::Array(a), Value::Array(b)) => {
+            a.len() == b.len() && a.iter().zip(b).all(|(a, b)| json_matches(a, b))
+        }
+        _ => actual == expected,
+    }
+}
+
+fn is_alphanumeric_id(id: &str, length: usize) -> bool {
+    id.len() == length && id.bytes().all(|byte| byte.is_ascii_alphanumeric())
+}
+
+/// A case's graph: its `<key>_json` text when it has one, so number text is exact, or its `<key>`.
+pub fn graph_of(case: &Value, key: &str) -> Value {
+    match case.get(format!("{key}_json")).and_then(Value::as_str) {
+        Some(text) => serde_json::from_str(text)
+            .unwrap_or_else(|error| panic!("{key}_json is not JSON: {error}")),
+        None => case.get(key).cloned().unwrap_or(Value::Null),
+    }
+}
+
+/// An engine error as fixtures record it.
+pub fn error_json(error: &lfx::ops::Error) -> Value {
+    serde_json::json!({"error": error.kind.class_name(), "code": error.code.as_str()})
+}
+
 /// One line of JSON, for failure messages.
 pub fn compact(value: &Value) -> String {
     serde_json::to_string(value).unwrap_or_else(|error| format!("<{error}>"))
@@ -104,10 +184,19 @@ pub fn trials() -> Vec<Trial> {
     let files = FIXTURE_FILES.iter().map(|&name| {
         Trial::test(format!("fixtures::{name}::loads"), move || {
             let document = load(name);
-            let mut names = std::collections::HashSet::new();
-            for (case, _) in cases(&document) {
-                if !names.insert(case.clone()) {
-                    return Err(format!("{name}: two cases are named {case:?}").into());
+            let Some(document) = document.as_object() else {
+                return Err(format!("{name} is not an object").into());
+            };
+            for (section, cases) in document {
+                let mut names = std::collections::HashSet::new();
+                for case in cases.as_array().into_iter().flatten() {
+                    if let Some(case) = case.get("name").and_then(Value::as_str)
+                        && !names.insert(case)
+                    {
+                        return Err(
+                            format!("{name}: two cases in {section} are named {case:?}").into()
+                        );
+                    }
                 }
             }
             Ok(())

@@ -168,7 +168,67 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-/// A string as error messages quote it.
+/// A string as error messages quote it: as Python's `repr` prints it, so
+/// messages read the same in every runtime.
 pub(crate) fn quoted(value: &str) -> String {
-    format!("{value:?}")
+    let quote = if value.contains('\'') && !value.contains('"') {
+        '"'
+    } else {
+        '\''
+    };
+    let mut out = String::with_capacity(value.len() + 2);
+    out.push(quote);
+    for c in value.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if c == quote => {
+                out.push('\\');
+                out.push(c);
+            }
+            c if is_printable(c) => out.push(c),
+            c => {
+                let code = u32::from(c);
+                let escaped = if code < 0x100 {
+                    format!("\\x{code:02x}")
+                } else if code < 0x1_0000 {
+                    format!("\\u{code:04x}")
+                } else {
+                    format!("\\U{code:08x}")
+                };
+                out.push_str(&escaped);
+            }
+        }
+    }
+    out.push(quote);
+    out
+}
+
+/// Whether Python's `str.isprintable` holds for a character: not a control,
+/// format, separator (other than a space), surrogate or private-use character.
+fn is_printable(c: char) -> bool {
+    !(c.is_control()
+        || matches!(
+            c,
+            '\u{a0}' | '\u{ad}' | '\u{600}'..='\u{605}' | '\u{61c}' | '\u{6dd}' | '\u{70f}' | '\u{1680}'
+                | '\u{180e}' | '\u{2000}'..='\u{200f}' | '\u{2028}'..='\u{202f}' | '\u{205f}'..='\u{2064}'
+                | '\u{2066}'..='\u{206f}' | '\u{3000}' | '\u{e000}'..='\u{f8ff}' | '\u{feff}'
+                | '\u{fff9}'..='\u{fffb}' | '\u{f0000}'..='\u{10ffff}'
+        ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::quoted;
+
+    #[test]
+    fn strings_are_quoted_as_python_prints_them() {
+        assert_eq!(quoted("e1"), "'e1'");
+        assert_eq!(quoted("it's"), "\"it's\"");
+        assert_eq!(quoted("a'b\"c"), "'a\\'b\"c'");
+        assert_eq!(quoted("tab\there\\"), "'tab\\there\\\\'");
+        assert_eq!(quoted("\u{1}\u{a0}é"), "'\\x01\\xa0é'");
+    }
 }

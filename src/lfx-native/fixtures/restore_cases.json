@@ -1,0 +1,534 @@
+{
+  "description": "Restore fixes: apply_restore_fixes(revision, stored, fixes). Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui) (langflow.services.flow_history.restore_fixes). A case gives the rebuilt revision, the stored flow it replaces and the client's fixes, and the fixed revision or the error.",
+  "cases": [
+    {
+      "name": "deleting an edge whose handle names nothing",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "bad",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [{"type": "delete_edges", "ids": ["bad"]}],
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "rewriting the handles of an edge whose handle names nothing",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "bad",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {"type": "update_edges", "updates": [{"id": "bad", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œfœ}"}]},
+        {"type": "update_edges", "updates": [{"id": "bad", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "f"}}]}
+      ],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "EDGE_HANDLE_INVALID"}
+    },
+    {
+      "name": "setting data on an edge that has none",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [{"id": "bad", "source": "a", "target": "b", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œmissingœ}"}]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {
+          "type": "update_edges",
+          "updates": [{"id": "bad", "op": "set_field", "path": ["data"], "value": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}}]
+        },
+        {"type": "update_edges", "updates": [{"id": "bad", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œfœ}"}]}
+      ],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
+    },
+    {
+      "name": "setting data with another key is an edit",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [{"id": "bad", "source": "a", "target": "b", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œmissingœ}"}]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {
+          "type": "update_edges",
+          "updates": [
+            {"id": "bad", "op": "set_field", "path": ["data"], "value": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}, "x": 1}}
+          ]
+        }
+      ],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
+    },
+    {
+      "name": "setting data on an edge that has it is an edit",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "bad",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {
+          "type": "update_edges",
+          "updates": [{"id": "bad", "op": "set_field", "path": ["data"], "value": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}}]
+        }
+      ],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
+    },
+    {
+      "name": "deleting either edge into an occupied input",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "fixes": [{"type": "delete_edges", "ids": ["e1"]}],
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "deleting the edge that took an occupied input",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "fixes": [{"type": "delete_edges", "ids": ["e2"]}],
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "rewriting an edge into an occupied input is not a fix",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "fixes": [{"type": "update_edges", "updates": [{"id": "e2", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œmanyœ}"}]}],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
+    },
+    {
+      "name": "deleting an edge that breaks no rule is not a fix",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "good",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [{"type": "delete_edges", "ids": ["good"]}],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
+    },
+    {
+      "name": "a delete of a fixable edge with an unknown edge",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "bad",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [{"type": "delete_edges", "ids": ["bad", "other"]}],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
+    },
+    {
+      "name": "a delete_field is not a handle rewrite",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "bad",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [{"type": "update_edges", "updates": [{"id": "bad", "op": "delete_field", "path": ["targetHandle"]}]}],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
+    },
+    {
+      "name": "a rewrite of another key is not a handle rewrite",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "bad",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [{"type": "update_edges", "updates": [{"id": "bad", "op": "set_field", "path": ["label"], "value": "x"}]}],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
+    },
+    {
+      "name": "a fix the engine cannot apply keeps the engine's code",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "bad",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [{"type": "update_edges", "updates": [{"id": "bad", "op": "set_field", "path": ["targetHandle"], "value": 5}]}],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "FIELD_TYPE_CHANGE_UNDECLARED"}
+    },
+    {
+      "name": "no fixes",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "bad",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [],
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "bad",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      }
+    }
+  ]
+}
