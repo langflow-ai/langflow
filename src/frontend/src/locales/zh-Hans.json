@@ -1564,6 +1564,8 @@
   "messages.loadError": "无法加载消息。",
   "misc.activateToShare": "启用此功能以分享此 Playground 的公开版本",
   "misc.addChatInputOutput": "添加“聊天输入”或“聊天输出”以访问您的流程",
+  "misc.copyShareableLink": "复制链接",
+  "misc.shareableLinkCopied": "链接已复制",
   "misc.addChatInputOutputPlayground": "添加“聊天输入”或“聊天输出”以使用该演示环境",
   "misc.alertSaveWithApi": "⚠️ 注意：导出此流程可能会泄露敏感凭据。",
   "misc.apiAccess": "API 访问权",

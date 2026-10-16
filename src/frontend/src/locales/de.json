@@ -1564,6 +1564,8 @@
   "messages.loadError": "Nachrichten konnten nicht geladen werden.",
   "misc.activateToShare": "Aktivieren, um eine öffentliche Version dieses Playgrounds zu teilen",
   "misc.addChatInputOutput": "Füge eine Chat-Eingabe oder eine Chat-Ausgabe hinzu, um auf deinen Ablauf zuzugreifen",
+  "misc.copyShareableLink": "Link kopieren",
+  "misc.shareableLinkCopied": "Link kopiert",
   "misc.addChatInputOutputPlayground": "Füge einen Chat-Eingabe- oder Chat-Ausgabefeld hinzu, um den Playground zu nutzen",
   "misc.alertSaveWithApi": "⚠️ Achtung: Durch das Exportieren dieses Flows können vertrauliche Anmeldedaten offengelegt werden.",
   "misc.apiAccess": "API-Zugriff",

@@ -291,6 +291,8 @@
   "misc.shareablePlayground": "Shareable Playground",
   "misc.activateToShare": "Activate to share a public version of this Playground",
   "misc.addChatInputOutput": "Add a Chat Input or Chat Output to access your flow",
+  "misc.copyShareableLink": "Copy link",
+  "misc.shareableLinkCopied": "Link copied",
   "misc.textInputModalTitle": "Edit text content",
   "misc.fetchError": "Couldn't establish a connection.",
   "misc.fetchErrorDesc": "Check if everything is working properly and try again.",
