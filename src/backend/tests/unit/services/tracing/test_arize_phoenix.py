@@ -255,6 +255,7 @@ async def test_langchain_spans_stay_isolated_across_concurrent_workflows(monkeyp
     await asyncio.wait_for(asyncio.gather(_run_a(), _run_b()), timeout=60)
 
     spans_by_project = _spans_by_project(exporters)
+    assert set(spans_by_project) == {"workflow-a", "workflow-b"}
     assert spans_by_project["workflow-a"]["chain-a"] == ["CHAIN"]
     assert spans_by_project["workflow-a"]["read_record"] == ["TOOL"]
     # Workflow B's tool span is emitted after workflow A tears its tracer down.
