@@ -752,6 +752,7 @@ async def delete_shared_messages_session(
             .where(MessageTable.session_id == session_id)
         )
         await session.exec(stmt)
+        await adelete_session_memory_states(flow_ids=[virtual_flow_id], session_ids=[session_id], db=session)
     except Exception as e:
         await session.rollback()
         raise HTTPException(status_code=500, detail=str(e)) from e

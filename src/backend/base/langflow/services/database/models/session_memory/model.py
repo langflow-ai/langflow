@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, Index, Text, UniqueConstraint
+from sqlalchemy import Column, Index, Text, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -26,15 +26,10 @@ class SessionMemoryStateTable(SQLModel, table=True):  # type: ignore[call-arg]
     context_id: str = Field(default="")
     summary: str = Field(default="", sa_column=Column(Text, nullable=False, server_default=""))
     cursor_message_id: UUID | None = Field(default=None)
-    cursor_timestamp: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    cursor_timestamp: datetime | None = Field(default=None)
     folded_count: int = Field(default=0)
     summary_model: str | None = Field(default=None)
     version: int = Field(default=0)
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime(timezone=True), nullable=False),
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime(timezone=True), nullable=False),
-    )
+    # Inferred datetime columns use SQLModel's UTCDateTime, so SQLite reads them back timezone-aware.
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

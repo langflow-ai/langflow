@@ -131,6 +131,10 @@ def _get_variable_query(
             raise ValueError(msg)
         col = getattr(MessageTable, order_by).desc() if order == "DESC" else getattr(MessageTable, order_by).asc()
         stmt = stmt.order_by(col)
+        if order_by == "timestamp":
+            # Only makes the order of exact-timestamp ties deterministic (it was undefined before).
+            id_col = MessageTable.id.desc() if order == "DESC" else MessageTable.id.asc()
+            stmt = stmt.order_by(id_col)
     if limit:
         stmt = stmt.limit(limit)
     return stmt
@@ -809,7 +813,19 @@ async def aget_messages_between(
                 )
             )
         elif after_timestamp is not None:
-            stmt = stmt.where(col(MessageTable.timestamp) > after_timestamp)
+            if after_message_id is not None:
+                # Cursor row is gone: keep its (timestamp, id) position so tied rows are not dropped.
+                stmt = stmt.where(
+                    or_(
+                        col(MessageTable.timestamp) > after_timestamp,
+                        and_(
+                            col(MessageTable.timestamp) == after_timestamp,
+                            col(MessageTable.id) > UUID(str(after_message_id)),
+                        ),
+                    )
+                )
+            else:
+                stmt = stmt.where(col(MessageTable.timestamp) > after_timestamp)
         messages = await session.exec(stmt)
         return [await Message.create(**d.model_dump()) for d in messages]
 

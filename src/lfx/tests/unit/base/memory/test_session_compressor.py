@@ -10,6 +10,7 @@ from lfx.base.memory.session_compressor import (
     FOLD_MAX,
     FOLD_THRESHOLD,
     MAX_CHARS_PER_MESSAGE,
+    MAX_FOLDS_PER_TURN,
     build_history_with_summary,
     clip_words,
     format_fold_prompt,
@@ -23,6 +24,13 @@ def _msgs(count: int, sender: str = MESSAGE_SENDER_USER) -> list[Message]:
     return [Message(text=f"m{i}", sender=sender, session_id="s", id=uuid.uuid4()) for i in range(count)]
 
 
+@pytest.fixture(autouse=True)
+def _reset_cooldowns():
+    sc._reset_fold_cooldowns()
+    yield
+    sc._reset_fold_cooldowns()
+
+
 class FakeStore:
     """In-memory store: `all_messages` is the full ordered history; the cursor is an id."""
 
@@ -32,6 +40,7 @@ class FakeStore:
         self.save_ok = save_ok
         self.saves: list[dict] = []
         self.winner: SessionMemoryState | None = None
+        self.key = ("flow", "user", "s", "")
 
     async def get_state(self):
         # The winner only becomes visible once our save has lost the race.
@@ -95,12 +104,25 @@ async def test_fold_at_threshold_saves_cursor_and_drops_older():
     assert out[1:] == window
 
 
-async def test_summarize_failure_keeps_state_and_sends_older_verbatim():
-    older, window, store = _setup(FOLD_THRESHOLD)
-    out = await build_history_with_summary(window=window, n_messages=5, store=store, summarize=FakeSummarize(None))
+async def test_summarize_failure_below_threshold_cap_sends_no_large_block_and_cools_down():
+    _older, window, store = _setup(FOLD_THRESHOLD)
+    summarize = FakeSummarize(None)
+    out = await build_history_with_summary(window=window, n_messages=5, store=store, summarize=summarize)
     assert store.saves == []
     assert out[0].text.endswith("OLD")
-    assert out[1:] == older + window
+    assert out[1:] == window  # >= threshold: never sent verbatim
+
+    # Within the cooldown summarize is not called again.
+    with patch.object(sc.logger, "ainfo") as info:
+        out = await build_history_with_summary(window=window, n_messages=5, store=store, summarize=summarize)
+    assert len(summarize.calls) == 1
+    assert out[1:] == window
+    assert any("session_summary_fold_skipped reason=cooldown" in c.args[0] for c in info.call_args_list)
+
+    # After the cooldown expires it tries again.
+    with patch.object(sc, "monotonic", return_value=sc.monotonic() + sc.FOLD_FAILURE_COOLDOWN_SECONDS + 1):
+        await build_history_with_summary(window=window, n_messages=5, store=store, summarize=summarize)
+    assert len(summarize.calls) == 2
 
 
 async def test_cas_conflict_uses_winner_state_without_second_fold():
@@ -121,15 +143,54 @@ async def test_unsupported_backend_returns_window():
     assert out == window
 
 
-async def test_backlog_folds_at_most_fold_max_and_logs():
-    older, window, store = _setup(FOLD_MAX + 10)
+async def test_backlog_beyond_budget_sends_summary_and_window_only():
+    _older, window, store = _setup((MAX_FOLDS_PER_TURN + 1) * FOLD_MAX + 10)
     summarize = FakeSummarize()
     with patch.object(sc.logger, "awarning") as warn:
         out = await build_history_with_summary(window=window, n_messages=5, store=store, summarize=summarize)
-    assert summarize.calls == [("OLD", FOLD_MAX)]
+    assert len(summarize.calls) == MAX_FOLDS_PER_TURN
     assert "session_summary_backlog" in warn.call_args.args[0]
+    assert f"folds={MAX_FOLDS_PER_TURN}" in warn.call_args.args[0]
+    assert out[0].text.endswith("NEW SUMMARY")
+    assert out[1:] == window
+
+
+async def test_small_remainder_after_capped_fold_is_sent_verbatim():
+    older, window, store = _setup(FOLD_MAX + 10)
+    summarize = FakeSummarize()
+    out = await build_history_with_summary(window=window, n_messages=5, store=store, summarize=summarize)
+    assert summarize.calls == [("OLD", FOLD_MAX)]
     assert out[0].text.endswith("NEW SUMMARY")
     assert out[1:] == older[FOLD_MAX:] + window
+
+
+async def test_double_fold_backlog_has_no_gap():
+    _older, window, store = _setup(2 * FOLD_MAX)
+    summarize = FakeSummarize()
+    out = await build_history_with_summary(window=window, n_messages=5, store=store, summarize=summarize)
+    assert [n for _, n in summarize.calls] == [FOLD_MAX, FOLD_MAX]
+    assert [s["cursor_message_id"] for s in store.saves][-1] == store.all_messages[2 * FOLD_MAX - 1].id
+    assert out[1:] == window
+
+
+async def test_cas_loss_mid_loop_stops_folding():
+    older, window, store = _setup(2 * FOLD_MAX + 5)
+    original_save = store.save_state
+
+    async def save_then_lose(**kwargs):
+        # First save wins, second loses to the winner.
+        if store.saves:
+            store.saves.append(kwargs)
+            return None
+        return await original_save(**kwargs)
+
+    store.save_state = save_then_lose
+    store.winner = SessionMemoryState(summary="WINNER", cursor_message_id=older[2 * FOLD_MAX - 1].id, version=3)
+    summarize = FakeSummarize()
+    out = await build_history_with_summary(window=window, n_messages=5, store=store, summarize=summarize)
+    assert len(summarize.calls) == 2
+    assert out[0].text.endswith("WINNER")
+    assert out[1:] == older[2 * FOLD_MAX :] + window
 
 
 async def test_storage_error_degrades_to_loaded_summary_plus_window():

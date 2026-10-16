@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
-from time import perf_counter
+from time import monotonic, perf_counter
 from typing import TYPE_CHECKING, Protocol
 
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
@@ -33,6 +33,12 @@ FOLD_MAX = 60
 MAX_CHARS_PER_MESSAGE = 4000
 SUMMARY_WORD_BUDGET = 300
 FOLD_TIMEOUT_SECONDS = 30
+MAX_FOLDS_PER_TURN = 3
+FOLD_FAILURE_COOLDOWN_SECONDS = 600
+_MAX_COOLDOWN_KEYS = 1024
+
+# scope key -> monotonic time of the last failed fold (in-process, best effort)
+_fold_failures: dict[tuple[str, ...], float] = {}
 
 FOLD_SYSTEM_PROMPT = """You maintain a running summary of a conversation between a user and an AI assistant.
 You will receive the previous summary (possibly empty) and a batch of newer messages.
@@ -56,6 +62,11 @@ Summarize = Callable[[str, Sequence[Message]], Awaitable[str | None]]
 
 class SessionMemoryStore(Protocol):
     """Persistence the compressor needs for one (flow, user, session, context) scope."""
+
+    @property
+    def key(self) -> tuple[str, ...]:
+        """Hashable identity of the scope, used to key the fold-failure cooldown."""
+        ...
 
     async def get_state(self) -> SessionMemoryState | None:
         """Current state, or None when the backend does not support summaries."""
@@ -83,6 +94,10 @@ class LfxSessionMemoryStore:
     session_id: str | None
     context_id: str | None
     summary_model: str | None = None
+
+    @property
+    def key(self) -> tuple[str, ...]:
+        return (str(self.flow_id), str(self.user_id), str(self.session_id), str(self.context_id or ""))
 
     @property
     def _scope(self) -> dict:
@@ -161,6 +176,9 @@ async def build_history_with_summary(
 ) -> list[Message]:
     """Return `[summary?, *unfolded older messages, *window]`, folding older messages when enough pile up.
 
+    Folds up to `MAX_FOLDS_PER_TURN` times per turn, skipping while a recent failure is cooling down. Unfolded
+    older messages are sent verbatim only when fewer than `FOLD_THRESHOLD` remain.
+
     Never raises: storage failures degrade to the summary loaded so far (if any) plus `window`.
     """
     state: SessionMemoryState | None = None
@@ -175,29 +193,40 @@ async def build_history_with_summary(
 
         boundary = window[0].id
         older = await store.messages_between(after=state, before_message_id=boundary, limit=FOLD_MAX)
-        capped = len(older) == FOLD_MAX
-        if capped:
-            await logger.awarning(f"session_summary_backlog limit={FOLD_MAX}")
-        if len(older) >= FOLD_THRESHOLD:
+        folds = 0
+        # Each fold advances the cursor; keep going while the fetch is capped (more backlog behind it).
+        while len(older) >= FOLD_THRESHOLD and folds < MAX_FOLDS_PER_TURN:
+            if _is_cooling_down(store.key):
+                await logger.ainfo(f"session_summary_fold_skipped reason=cooldown pending={len(older)}")
+                break
+            folds += 1
             start = perf_counter()
             new_summary = await summarize(state.summary, older)
             latency_ms = round((perf_counter() - start) * 1000)
             await logger.ainfo(f"session_summary_fold latency_ms={latency_ms} folded={len(older)}")
-            if new_summary and older[-1].id is not None:
-                saved = await store.save_state(
-                    summary=new_summary,
-                    cursor_message_id=older[-1].id,
-                    folded_delta=len(older),
-                    expected_version=state.version,
-                )
-                if saved is not None:
-                    # Anything past the FOLD_MAX cap is still unfolded: send it verbatim until the next fold.
-                    state, older = saved, []
-                    if capped:
-                        older = await store.messages_between(after=state, before_message_id=boundary, limit=FOLD_MAX)
-                else:  # lost the race: use the winner's state and send what it has not folded verbatim
-                    state = await store.get_state() or state
-                    older = await store.messages_between(after=state, before_message_id=boundary, limit=FOLD_MAX)
+            if not new_summary:
+                _record_fold_failure(store.key)
+                break
+            if older[-1].id is None:
+                break
+            saved = await store.save_state(
+                summary=new_summary,
+                cursor_message_id=older[-1].id,
+                folded_delta=len(older),
+                expected_version=state.version,
+            )
+            if saved is None:  # lost the race: continue from the winner's state, but fold no more this turn
+                state = await store.get_state() or state
+                older = await store.messages_between(after=state, before_message_id=boundary, limit=FOLD_MAX)
+                break
+            state = saved
+            older = await store.messages_between(after=state, before_message_id=boundary, limit=FOLD_MAX)
+
+        if len(older) == FOLD_MAX:
+            await logger.awarning(f"session_summary_backlog limit={FOLD_MAX} folds={folds}")
+        # Only a small, contiguous tail is sent verbatim; a large unfolded block is left for later turns.
+        if len(older) >= FOLD_THRESHOLD:
+            older = []
 
         history = _prefix(state, session_id) + older + window
         chars = sum(len(m.text or "") for m in history)
@@ -206,6 +235,27 @@ async def build_history_with_summary(
         await logger.aexception(f"session_summary_failed: {type(exc).__name__}")
         return _prefix(state, session_id) + window if state is not None else window
     return history
+
+
+def _is_cooling_down(key: tuple[str, ...]) -> bool:
+    failed_at = _fold_failures.get(key)
+    return failed_at is not None and monotonic() - failed_at < FOLD_FAILURE_COOLDOWN_SECONDS
+
+
+def _record_fold_failure(key: tuple[str, ...]) -> None:
+    """Remember a failed fold for `key`; prunes expired entries and bounds the dict size."""
+    now = monotonic()
+    for stale in [k for k, t in _fold_failures.items() if now - t >= FOLD_FAILURE_COOLDOWN_SECONDS]:
+        del _fold_failures[stale]
+    _fold_failures.pop(key, None)
+    _fold_failures[key] = now
+    while len(_fold_failures) > _MAX_COOLDOWN_KEYS:
+        del _fold_failures[next(iter(_fold_failures))]
+
+
+def _reset_fold_cooldowns() -> None:
+    """Test hook: forget all recorded fold failures."""
+    _fold_failures.clear()
 
 
 def _prefix(state: SessionMemoryState, session_id: str | None) -> list[Message]:

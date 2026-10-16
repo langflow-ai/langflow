@@ -35,6 +35,7 @@ from langflow.services.database.models.mcp_server.model import MCPServer
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.policy_bundle.model import PolicyBundleRevision
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
+from langflow.services.database.models.session_memory.model import SessionMemoryStateTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.variable.model import Variable
 
@@ -60,6 +61,11 @@ async def erase_jobs(session: AsyncSession, ctx: EraseContext) -> int:
 async def erase_messages_elsewhere(session: AsyncSession, ctx: EraseContext) -> int:
     """The person's own messages in flows owned by other people."""
     return await delete_batch(session, MessageTable, MessageTable.user_id == ctx.subject_user_id)
+
+
+async def erase_session_summaries_elsewhere(session: AsyncSession, ctx: EraseContext) -> int:
+    """Rolling chat summaries of the person's own messages in flows owned by other people."""
+    return await delete_batch(session, SessionMemoryStateTable, SessionMemoryStateTable.user_id == ctx.subject_user_id)
 
 
 async def erase_transactions_elsewhere(session: AsyncSession, ctx: EraseContext) -> int:
@@ -160,6 +166,7 @@ async def erase_folders(session: AsyncSession, ctx: EraseContext) -> int:
 BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("jobs", erase_jobs),
     ("messages_elsewhere", erase_messages_elsewhere),
+    ("session_summaries_elsewhere", erase_session_summaries_elsewhere),
     ("transactions_elsewhere", erase_transactions_elsewhere),
     ("ingestion_runs", erase_ingestion_runs),
     ("mcp_servers", _delete_by_user(MCPServer, MCPServer.user_id)),
