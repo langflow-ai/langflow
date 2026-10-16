@@ -163,12 +163,13 @@ def _phoenix_local_env(monkeypatch):
 
 
 def _spans_by_project(exporters):
-    """Map each Phoenix project to its exported spans as ``{span name: span kind}``."""
-    spans_by_project: dict[str | None, dict[str, str]] = {}
+    """Map each Phoenix project to its exported spans as ``{span name: [span kinds]}``."""
+    spans_by_project: dict[str | None, dict[str, list[str | None]]] = {}
     for exporter in exporters:
         for span in exporter.get_finished_spans():
             project = span.resource.attributes.get(PROJECT_NAME)
-            spans_by_project.setdefault(project, {})[span.name] = span.attributes.get(SPAN_KIND)
+            span_kinds = spans_by_project.setdefault(project, {}).setdefault(span.name, [])
+            span_kinds.append(span.attributes.get(SPAN_KIND))
     return spans_by_project
 
 
@@ -254,10 +255,10 @@ async def test_langchain_spans_stay_isolated_across_concurrent_workflows(monkeyp
     await asyncio.wait_for(asyncio.gather(_run_a(), _run_b()), timeout=60)
 
     spans_by_project = _spans_by_project(exporters)
-    assert spans_by_project["workflow-a"]["chain-a"] == "CHAIN"
-    assert spans_by_project["workflow-a"]["read_record"] == "TOOL"
+    assert spans_by_project["workflow-a"]["chain-a"] == ["CHAIN"]
+    assert spans_by_project["workflow-a"]["read_record"] == ["TOOL"]
     # Workflow B's tool span is emitted after workflow A tears its tracer down.
-    assert spans_by_project["workflow-b"]["read_record"] == "TOOL"
-    assert spans_by_project["workflow-b"]["chain-b-after-a-end"] == "CHAIN"
+    assert spans_by_project["workflow-b"]["read_record"] == ["TOOL"]
+    assert spans_by_project["workflow-b"]["chain-b-after-a-end"] == ["CHAIN"]
     assert "chain-b-after-a-end" not in spans_by_project.get("workflow-a", {})
     assert "chain-a" not in spans_by_project.get("workflow-b", {})
