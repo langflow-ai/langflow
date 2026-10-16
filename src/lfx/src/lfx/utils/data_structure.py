@@ -206,7 +206,7 @@ def get_data_structure(
 def get_sample_values(data: Any, max_items: int = 3) -> Any:
     """Get sample values from a data structure, handling nested structures."""
     if isinstance(data, list | tuple | set):
-        return [get_sample_values(item) for item in list(data)[:max_items]]
+        return [get_sample_values(item, max_items) for item in list(data)[:max_items]]
     if isinstance(data, dict):
         return {k: get_sample_values(v, max_items) for k, v in data.items()}
     return data
