@@ -1,0 +1,10 @@
+// FixSuiteBot Flowise Prototype (Concept Logic)
+
+// This pseudocode represents how you'd structure FixSuiteBot using Flowise-style logic
+
+// Nodes: Input -> Router -> Task Nodes -> Output
+
+{ "nodes": [ { "id": "input", "type": "textInput", "name": "User Input", "description": "User asks to fix text, create CV, or translate" }, { "id": "router", "type": "router", "routes": [ { "if": "contains(input.text, 'fix') || contains(input.text, 'grammar')", "goTo": "fixEnglish" }, { "if": "contains(input.text, 'resume')", "goTo": "resumeBuilder" }, { "if": "contains(input.text, 'cv')", "goTo": "cvBuilder" }, { "if": "contains(input.text, 'translate')", "goTo": "translator" } ] }, { "id": "fixEnglish", "type": "llmChain", "model": "gpt-3.5-turbo", "prompt": "Fix the grammar, spelling, and tone of the following text:\n\n{{input.text}}" }, { "id": "resumeBuilder", "type": "llmChain", "model": "gpt-3.5-turbo", "prompt": "Create a professional resume based on this input:\n\n{{input.text}}" }, { "id": "cvBuilder", "type": "llmChain", "model": "gpt-3.5-turbo", "prompt": "Generate a CV in academic/professional format based on this input:\n\n{{input.text}}" }, { "id": "translator", "type": "llmChain", "model": "gpt-3.5-turbo", "prompt": "Translate the following text into {{target_language}}:\n\n{{input.text}}" }, { "id": "output", "type": "textOutput", "connectsFrom": ["fixEnglish", "resumeBuilder", "cvBuilder", "translator"] } ] }
+
+// This structure can be built visually in Flowise or Langflow
+
