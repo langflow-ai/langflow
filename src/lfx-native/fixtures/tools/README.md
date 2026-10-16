@@ -33,3 +33,11 @@ npx esbuild entry.ts --bundle --platform=node --format=cjs --outfile=ts_engine.c
 ```bash
 node ../lfx-native/fixtures/tools/generate_editor.mjs ts_engine.cjs
 ```
+
+## Compare the engines on real flows
+
+`compare_engines.py` runs the Rust engine, through the Python binding, side by side with the Python engine on every starter project. Both engines must agree on hashes, violations, repair fixes, diffs and replay. Run it before the Python engine is deleted, in `src/lfx` of a checkout whose environment has both `lfx` and `lfx-native` installed:
+
+```bash
+uv run python ../lfx-native/fixtures/tools/compare_engines.py ..
+```
