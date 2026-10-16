@@ -92,6 +92,17 @@ Highlights of this release include the following changes. For all changes, see t
     Langflow now protects a flow that is open by more than one user.
     For more information, see [Concurrent editing](./concurrent-editing).
 
+- Instance migration
+
+    Langflow can check an installation before a move and copy a SQLite database to PostgreSQL.
+    Superusers can run the move from the migration API when `LANGFLOW_FEATURE_INSTANCE_MIGRATION` is set to `true`.
+    For more information, see [Database migrations](./database-migrations).
+
+- Administration API and CLI
+
+    Superusers can manage users, teams, and roles with the API or the `langflow admin` command.
+    For more information, see [Administer users and teams with the API and CLI](./admin-api-cli).
+
 ## 1.12.x
 
 For 1.12.x release notes, see the [1.12.x documentation](@site/versioned_docs/version-1.12.0/Support/release-notes.mdx).
