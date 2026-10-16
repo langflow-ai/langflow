@@ -7,6 +7,7 @@
 //! database dependencies, so the same rules apply wherever an operation comes
 //! from.
 
+pub mod api;
 pub mod apply;
 pub mod canonical;
 pub mod diff;

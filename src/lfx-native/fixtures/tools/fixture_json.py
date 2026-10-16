@@ -1,4 +1,3 @@
-# ruff: noqa: INP001
 """Compact, deterministic JSON layout for the shared flow operation fixtures.
 
 Two-space indentation, with any array or object that fits on one line kept
