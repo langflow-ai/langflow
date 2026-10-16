@@ -19,6 +19,7 @@ from lfx.base.mcp.constants import GLOBAL_VARIABLE_PLACEHOLDER_PATTERN
 from lfx.base.models.provider_registry import model_component_provider_id, resolve_provider_id
 from lfx.helpers.base_model import coalesce_bool
 from lfx.integrations.models import ConnectionRef
+from pydantic import ValidationError
 from sqlmodel import col, select
 
 from langflow.services.auth.mcp_encryption import decrypt_mcp_config
@@ -1141,9 +1142,17 @@ def _snapshot_rows(
             max_bytes=limits.max_flow_bytes,
             max_items=_MAX_JSON_ITEMS,
         )
-        payload = FlowRead.model_validate(flow, from_attributes=True).model_dump(mode="json")
-        if version_id is not None:
-            payload["data"] = deepcopy(graph)
+        if version_id is None:
+            payload = FlowRead.model_validate(flow, from_attributes=True).model_dump(mode="json")
+        else:
+            # The version's graph is validated as a live one would be, and the live graph is never copied.
+            try:
+                payload = FlowRead.model_validate({**flow.model_dump(exclude={"data"}), "data": graph}).model_dump(
+                    mode="json"
+                )
+            except ValidationError as exc:
+                msg = f"flow version {version_id} is not a valid flow: {exc.errors()[0]['msg']}"
+                raise ProjectArtifactError(msg) from exc
         flow_size, flow_items = _preflight_json_value(
             payload,
             flow_id=flow.id,

@@ -15,6 +15,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deployment_artifacts import (
     ProjectArtifactError,
+    ProjectArtifactLimits,
     ProjectArtifactNotFoundError,
     build_project_artifact,
 )
@@ -115,3 +116,33 @@ async def test_a_version_without_a_graph_is_refused(async_session) -> None:
 
     with pytest.raises(ProjectArtifactError, match="has no graph data"):
         await _build(async_session, user, project, flow_versions={picked.id: version.id})
+
+
+@pytest.mark.asyncio
+async def test_a_version_graph_is_validated_like_a_live_one(async_session) -> None:
+    user, project, picked, _other, version = await _project(async_session)
+    version.data = {"foo": 1}
+    async_session.add(version)
+    await async_session.commit()
+
+    with pytest.raises(ProjectArtifactError, match=r"is not a valid flow: .*Flow must have nodes"):
+        await _build(async_session, user, project, flow_versions={picked.id: version.id})
+
+
+@pytest.mark.asyncio
+async def test_a_picked_flows_live_graph_is_neither_validated_nor_bounded(async_session) -> None:
+    user, project, picked, _other, version = await _project(async_session)
+    # A draft that fails validation and the size limit does not stop its version shipping.
+    picked.data = {"nodes": [{"note": "x" * 4096}]}
+    async_session.add(picked)
+    await async_session.commit()
+
+    artifact = await _build(
+        async_session,
+        user,
+        project,
+        flow_versions={picked.id: version.id},
+        limits=ProjectArtifactLimits(max_flow_bytes=2048),
+    )
+
+    assert {flow.flow_id: flow.version_id for flow in artifact.flows}[picked.id] == version.id
