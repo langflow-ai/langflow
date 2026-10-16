@@ -35,7 +35,7 @@ dependencies = [
     "msgspec>=0.19.0",
     "jsonschema>=4.17.0",
     "pydantic>=2.0.0",
-    "lfx",
+    "lfx>=1.13.0.dev0,<2.0.0",
     "pandas>=2.0.0",
     "langchain_core>=0.1.0",
     "nest-asyncio>=1.6.0",
