@@ -199,7 +199,7 @@ async def get_single_flow_version(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> FlowVersionReadWithData:
-    """Return one version entry, with secret field values stripped from its data."""
+    """Return one version entry, with scrubber-recognized secret values stripped from its data."""
     await _get_user_flow(session, flow_id, current_user.id)
 
     try:
@@ -283,7 +283,8 @@ async def activate_version(
 
     Optionally archives the current draft as a new version first
     (``save_draft``), rotates the flow's version token, and honors the
-    ``If-Match`` precondition when one is supplied.
+    ``If-Match`` precondition when one is supplied for a flow with a non-null
+    version token.
     """
     flow = await _get_user_flow(session, flow_id, current_user.id)
     await ensure_version_precondition(session, flow, parse_if_match(if_match))
