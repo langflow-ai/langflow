@@ -3052,5 +3052,6 @@
   "connections.add.allowBackgroundRunsHelp": "Slack トリガーと、トリガーがこの接続で実行するすべてのフローに必要です。これらの実行は誰もサインインしていない状態で行われます。後でオフにすることもできます。",
   "connections.identity.user_delegated": "サインイン中のユーザー",
   "connections.identity.bot": "ボット",
-  "connections.identity.service": "サービスアカウント"
+  "connections.identity.service": "サービスアカウント",
+  "settings.dbProviders.serverConfiguration": "サーバー環境で設定済みです。この設定を使用するには、フィールドを変更しないでください。"
 }
