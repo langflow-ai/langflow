@@ -3031,7 +3031,7 @@
   "connections.add.failed": "A autorização não foi concluída.",
   "connections.add.denied": "O provedor recusou a autorização.",
   "connections.add.expired": "O link de login expirou. Comece novamente para obter outro.",
-  "connections.add.cancelled": "A janela de login foi fechada antes de concluir a autorização.",
+  "connections.add.windowUntracked": "O Langflow não consegue mais acompanhar a janela de login. Se o provedor mostrar um erro, peça ao administrador para verificar o registro OAuth antes de tentar novamente.",
   "connections.add.cleanupFailed": "Conexão não removida",
   "connections.add.cleanupFailedBody": "Não foi possível excluir a conexão incompleta. Remova-a da lista.",
   "connections.add.identity": "Age como",

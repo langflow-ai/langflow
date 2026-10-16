@@ -3030,7 +3030,7 @@
   "connections.add.failed": "권한 부여를 마치지 못했습니다.",
   "connections.add.denied": "Provider가 권한 부여를 거부했습니다.",
   "connections.add.expired": "로그인 링크가 만료되었습니다. 처음부터 다시 시작해 새 링크를 받으세요.",
-  "connections.add.cancelled": "권한 부여를 마치기 전에 로그인 창이 닫혔습니다.",
+  "connections.add.windowUntracked": "Langflow가 더 이상 로그인 창을 추적할 수 없습니다. 공급자가 오류를 표시하면 다시 시도하기 전에 관리자에게 OAuth 등록을 확인해 달라고 요청하세요.",
   "connections.add.cleanupFailed": "연결을 제거하지 못했습니다",
   "connections.add.cleanupFailedBody": "완료되지 않은 연결을 삭제하지 못했습니다. 목록에서 직접 제거하세요.",
   "connections.add.identity": "실행 주체",

@@ -3030,7 +3030,7 @@
   "connections.add.failed": "Authorization did not complete.",
   "connections.add.denied": "The provider denied authorization.",
   "connections.add.expired": "The sign-in link expired. Start again to get a new one.",
-  "connections.add.cancelled": "The sign-in window closed before authorization finished.",
+  "connections.add.windowUntracked": "Langflow can no longer track the sign-in window. If the provider shows an error, ask your administrator to check the OAuth registration before trying again.",
   "connections.add.cleanupFailed": "Connection not removed",
   "connections.add.cleanupFailedBody": "The unfinished connection could not be deleted. Remove it from the list.",
   "connections.add.identity": "Runs as",

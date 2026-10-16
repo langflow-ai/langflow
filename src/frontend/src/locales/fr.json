@@ -3031,7 +3031,7 @@
   "connections.add.failed": "L'autorisation n'a pas abouti.",
   "connections.add.denied": "Le fournisseur a refusé l'autorisation.",
   "connections.add.expired": "Le lien de connexion a expiré. Recommencez pour en obtenir un nouveau.",
-  "connections.add.cancelled": "La fenêtre de connexion a été fermée avant la fin de l'autorisation.",
+  "connections.add.windowUntracked": "Langflow ne peut plus suivre la fenêtre de connexion. Si le fournisseur affiche une erreur, demandez à votre administrateur de vérifier la configuration OAuth avant de réessayer.",
   "connections.add.cleanupFailed": "Connexion non supprimée",
   "connections.add.cleanupFailedBody": "La connexion inachevée n'a pas pu être supprimée. Retirez-la de la liste.",
   "connections.add.identity": "Agit en tant que",
