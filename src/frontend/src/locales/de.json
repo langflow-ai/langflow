@@ -2197,6 +2197,8 @@
   "settings.migration.error.kbChanged": "Wurde während des Kopierens geändert. Kopieren Sie erneut.",
   "settings.migration.error.kbBackend": "Verwendet einen Speicher, den diese Version nicht öffnen kann.",
   "settings.migration.error.kbUpgrade": "Diese Version kann den Speicher in seinem jetzigen Zustand nicht lesen. Unter „Details“ steht, warum.",
+  "settings.migration.error.kbUnreadable": "Diese Instanz kann ihren Speicher nicht lesen. Unter „Details“ steht, warum.",
+  "settings.migration.error.kbDetached": "Diese Instanz stellt sie nicht mehr bereit, daher gibt es nichts zu kopieren.",
   "settings.migration.copyDb.orphans.title": "Einige Zeilen gehören zu gelöschten Elementen",
   "settings.migration.copyDb.orphans.body": "Sie verweisen auf Elemente, die früher gelöscht wurden, etwa Nachrichten eines gelöschten Ablaufs.",
   "settings.migration.copyDb.orphans.row": "Zeilen in {{table}}, die auf gelöschte Zeilen von {{parent}} verweisen: {{rows}}",

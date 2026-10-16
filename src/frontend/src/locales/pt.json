@@ -2197,6 +2197,8 @@
   "settings.migration.error.kbChanged": "Mudou durante a cópia. Copie novamente.",
   "settings.migration.error.kbBackend": "Usa um armazenamento que esta versão não consegue abrir.",
   "settings.migration.error.kbUpgrade": "Esta versão não consegue ler o armazenamento como está agora. 'Detalhes' explica por quê.",
+  "settings.migration.error.kbUnreadable": "Esta instância não consegue ler o armazenamento. 'Detalhes' explica por quê.",
+  "settings.migration.error.kbDetached": "Esta instância não serve mais esta base, então não há nada para copiar.",
   "settings.migration.copyDb.orphans.title": "Algumas linhas pertencem a itens excluídos",
   "settings.migration.copyDb.orphans.body": "Elas apontam para itens excluídos antes, como mensagens de um fluxo excluído.",
   "settings.migration.copyDb.orphans.row": "Linhas de {{table}} que apontam para linhas excluídas de {{parent}}: {{rows}}",

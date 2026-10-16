@@ -2197,6 +2197,8 @@
   "settings.migration.error.kbChanged": "Elle a changé pendant la copie. Copiez à nouveau.",
   "settings.migration.error.kbBackend": "Elle utilise un stockage que cette version ne peut pas ouvrir.",
   "settings.migration.error.kbUpgrade": "Cette version ne peut pas lire son stockage dans son état actuel. « Détails » explique pourquoi.",
+  "settings.migration.error.kbUnreadable": "Cette instance ne peut pas lire son stockage. « Détails » explique pourquoi.",
+  "settings.migration.error.kbDetached": "Cette instance ne la sert plus, il n'y a donc rien à copier.",
   "settings.migration.copyDb.orphans.title": "Certaines lignes appartiennent à des éléments supprimés",
   "settings.migration.copyDb.orphans.body": "Elles renvoient à des éléments supprimés auparavant, comme les messages d'un flux supprimé.",
   "settings.migration.copyDb.orphans.row": "Lignes de {{table}} qui renvoient à des lignes supprimées de {{parent}} : {{rows}}",

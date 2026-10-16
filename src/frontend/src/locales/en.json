@@ -824,6 +824,8 @@
   "settings.migration.error.kbChanged": "It changed while copying. Copy again.",
   "settings.migration.error.kbBackend": "It uses a store this version can't open.",
   "settings.migration.error.kbUpgrade": "This version can't read its storage as it is now. Details says why.",
+  "settings.migration.error.kbUnreadable": "This instance can't read its store. Details says why.",
+  "settings.migration.error.kbDetached": "This instance no longer serves it, so there is nothing to copy.",
   "settings.migration.copyDb.orphans.title": "Some rows belong to deleted items",
   "settings.migration.copyDb.orphans.body": "They point at items deleted earlier, like messages from a deleted flow.",
   "settings.migration.copyDb.orphans.row": "Rows in {{table}} that point at deleted rows of {{parent}}: {{rows}}",
