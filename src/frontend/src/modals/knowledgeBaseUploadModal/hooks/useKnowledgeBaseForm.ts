@@ -3,11 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import {
-  ACTIVE_DB_PROVIDER_VARIABLE,
   type DBProviderConfigValue,
   getDBProviderOption,
   getDefaultDBProviderConfig,
-  getGlobalVariableValue,
   isDBProviderConfigured,
   resolveUIBackendType,
   type StoredDBProviderId,
@@ -564,26 +562,15 @@ export function useKnowledgeBaseForm({
     try {
       // Create the knowledge base (skip if adding to existing)
       if (!isAddSourcesMode) {
-        // When the user hasn't explicitly chosen a provider (no active-provider
-        // variable set, still on the SQLite default), send ``undefined`` so the
-        // server resolves the deployment default — this is what lets an
-        // env-configured pgVector auto-become the backend instead of SQLite.
-        // An explicit selection (active variable set, or any non-SQLite pick)
-        // is always sent through and honored.
-        const hasExplicitActiveProvider = Boolean(
-          getGlobalVariableValue(globalVariables, ACTIVE_DB_PROVIDER_VARIABLE),
-        );
-        const resolvedBackendType =
-          !hasExplicitActiveProvider && backendType === "sqlite"
-            ? undefined
-            : toAPIBackendType(backendType);
+        // Defaults are already resolved when the form opens. Send the provider
+        // shown in the review, including SQLite on remote-default deployments.
         await createKnowledgeBase.mutateAsync({
           name: kbName,
           embedding_provider: selectedModel.provider || "Unknown",
           embedding_model: selectedModel.id || selectedModel.name,
           model_selection: selectedModel,
           column_config: columnConfig,
-          backend_type: resolvedBackendType,
+          backend_type: toAPIBackendType(backendType),
           backend_config: backendConfig,
         });
       }
