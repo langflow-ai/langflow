@@ -2128,6 +2128,7 @@
   "settings.migration.pause.done": "Pausiert am {{time}} von {{user}}.",
   "settings.migration.pause.banner": "Änderungen an dieser Instanz sind pausiert.",
   "settings.migration.pause.bannerWaiting": "Änderungen werden abgelehnt. Eine Pause wurde angefordert und hat noch nicht begonnen.",
+  "settings.migration.pause.notice": "Änderungen an dieser Instanz sind pausiert, während sie auf eine neue umzieht. Sie können Ihre Arbeit ansehen, aber Änderungen, die Sie jetzt vornehmen, werden nicht gespeichert.",
   "settings.migration.pause.asked": "Angefordert am {{time}} von {{user}}.",
   "settings.migration.pause.ended": "Die Pause hat nicht begonnen. Während diese Anfrage wartete, wurden Änderungen wieder zugelassen oder eine andere Anfrage für dieselbe Pause wurde abgelehnt.",
   "settings.migration.pause.resume": "Änderungen wieder zulassen",
