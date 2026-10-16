@@ -21,7 +21,7 @@ use crate::ops::ops::Operation;
 use crate::ops::repair::{Fix, repair_flow_data};
 use crate::ops::replay;
 use crate::ops::restore;
-use crate::ops::state::FlowState;
+use crate::ops::state::GraphState;
 use crate::ops::validate::{Violation, find_graph_violations};
 use crate::ops::write::{WriteError, WriteOptions};
 
@@ -196,8 +196,8 @@ pub fn apply(flow: &str, operations_text: &str, options: ApplyOptions) -> ApiRes
 /// # Errors
 ///
 /// The graph does not parse or breaks a structural rule.
-pub fn flow_state(flow: &str) -> ApiResult<FlowState> {
-    Ok(FlowState::new(graph(flow)?)?)
+pub fn graph_state(flow: &str) -> ApiResult<GraphState> {
+    Ok(GraphState::new(graph(flow)?)?)
 }
 
 /// Apply a batch to a held graph; the result is what [`applied_json`] lists.
@@ -206,7 +206,7 @@ pub fn flow_state(flow: &str) -> ApiResult<FlowState> {
 ///
 /// The operations do not parse, or the engine refuses the batch, which then
 /// changes nothing.
-pub fn apply_to(state: &mut FlowState, operations_text: &str, options: ApplyOptions) -> ApiResult {
+pub fn apply_to(state: &mut GraphState, operations_text: &str, options: ApplyOptions) -> ApiResult {
     let applied = state.apply(operations(operations_text)?, options)?;
     Ok(Value::Object(applied_json(&applied, options)).to_string())
 }

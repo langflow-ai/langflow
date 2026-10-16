@@ -34,5 +34,5 @@ pub use diff::{Derived, derive_flow_operations, diff_flow_data};
 pub use error::{Error, ErrorCode, ErrorKind, Result};
 pub use ops::{Change, Expect, FieldUpdate, Operation, Segment};
 pub use repair::{Fix, Repaired, repair_flow_data};
-pub use state::FlowState;
+pub use state::GraphState;
 pub use write::{PreparedWrite, WriteError, WriteOptions, prepare_write};

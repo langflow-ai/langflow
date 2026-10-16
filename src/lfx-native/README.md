@@ -34,7 +34,7 @@ The modules of `lfx::ops`:
 | --- | --- |
 | `api` | JSON in, JSON out: the surface the bindings expose |
 | `ops` | operation types, the strict parser, and the dump |
-| `state` | `FlowState`, the indexed graph a handle keeps between batches |
+| `state` | `GraphState`, the indexed graph a handle keeps between batches |
 | `apply` | apply, with inverses |
 | `diff` | diff, and the derive check |
 | `validate` | graph rules and violations, with codes and resolutions |
@@ -58,7 +58,7 @@ This table maps each part of the engine to its callers today, in the Python engi
 
 | Part | Python (`lfx_native.ops`) | Browser (`lfx-native`) | Backend callers | Editor callers |
 | --- | --- | --- | --- | --- |
-| Apply operations | `apply`, `FlowState.apply` | `apply`, `FlowState.apply` | replay (`flow_history/replay.py`), restore fixes (`flow_history/restore_fixes.py`) | history playback (`flow-operations/history.ts`) |
+| Apply operations | `apply`, `GraphState.apply` | `apply`, `GraphState.apply` | replay (`flow_history/replay.py`), restore fixes (`flow_history/restore_fixes.py`) | history playback (`flow-operations/history.ts`) |
 | Assign row ids to a table | `assign_row_ids`, `assign_changed_table_row_ids` | `assignRowIds`, `assignChangedTableRowIds`, `assignChangedNodeTableRowIds` | the assistant (`agentic/utils/assistant_runner.py`, `flow_component.py`), the MCP patch (`lfx/mcp/server.py`) | `flowStore.ts`, `use-add-flow.ts`, template hooks, `mutate-template.ts`, `TableNodeComponent` |
 | Strip row ids and order rows | `strip_row_keys`, `strip_flow_table_row_keys`, `ordered_rows` | `stripRowKeys`, `stripFlowTableRowKeys`, `orderedRows` | flow export (`api/utils/core.py`), MCP export, the component run (`lfx/graph/vertex/param_handler.py`), the refresh endpoint (`api/v1/endpoints.py`) | download and export (`reactflowUtils.ts`), `TableNodeComponent` |
 | Canonical equality | `graphs_equal`, `values_equal` | `graphsEqual`, `valuesEqual` | the save's no-op and projection checks (`flow_history/recorder.py`) | inside the editor's engine only |
@@ -80,8 +80,8 @@ This table maps each part of the engine to its callers today, in the Python engi
 
 | Part | Browser (`lfx-native`) | Editor callers |
 | --- | --- | --- |
-| Inverses, and applying them | `FlowState.apply` with `inverse` and `restoring` | history timeline (`buildHistoryTimeline` and `graphAt` in `history.ts`) |
-| Redacted replay | `FlowState.apply` with `redacted` | history playback of operations whose secrets the API removed |
+| Inverses, and applying them | `GraphState.apply` with `inverse` and `restoring` | history timeline (`buildHistoryTimeline` and `graphAt` in `history.ts`) |
+| Redacted replay | `GraphState.apply` with `redacted` | history playback of operations whose secrets the API removed |
 | Changed nodes and edges | the `changed_nodes` and `changed_edges` of an apply | none yet; for history playback on the canvas |
 | Append rows, and renumber a full gap | `appendTableRows`, and `assignRowIds` with renumbering (the default in the browser) | `TableNodeComponent` |
 | Edge fixes for a refused restore | `edgeFixes`, `fixesForEdges` | `use-flow-version-sidebar.ts`, `refused-restore.ts` |

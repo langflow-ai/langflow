@@ -119,7 +119,7 @@ def ignoring_row_order(flow: Any) -> Any:
 @pytest.mark.parametrize("case", section("apply_cases.json", "cases"))
 def test_apply_case(case):
     try:
-        state = ops.FlowState(dump(case["base"]))
+        state = ops.GraphState(dump(case["base"]))
     except ops.EngineError as error:
         check(strict, "error", failure(error), {"error": case.get("error"), "code": case.get("code")})
         return
@@ -145,7 +145,7 @@ DOCUMENT = load("merge_cases.json")
 
 @pytest.mark.parametrize("case", section("merge_cases.json", "cases"))
 def test_merge_case(case):
-    state = ops.FlowState(dump(DOCUMENT["base"]))
+    state = ops.GraphState(dump(DOCUMENT["base"]))
     outcomes = {}
     for name in case["order"]:
         before = parse(state.to_json())
@@ -165,7 +165,7 @@ PROPERTY = load("property_cases.json")
 
 @pytest.mark.parametrize("sequence", section("property_cases.json", "sequences"))
 def test_property_sequence(sequence):
-    state = ops.FlowState(dump(PROPERTY["base"]))
+    state = ops.GraphState(dump(PROPERTY["base"]))
     for transaction in sequence["transactions"]:
         state.apply(dump(transaction))
     assert ops.graph_hash(state.to_json()) == sequence["graph_hash"]
@@ -179,7 +179,7 @@ def test_diff_case(case):
     base, target = dump(case["base"]), dump(case["target"])
     check(strict, "operations", parse(ops.diff(base, target)), case["operations"])
     assert ops.graphs_equal(dump(parse(ops.derive(base, target))["flow_data"]), target)
-    state = ops.FlowState(base)
+    state = ops.GraphState(base)
     for operation in case["operations"]:
         state.apply(dump([operation]))
     assert ops.graphs_equal(state.to_json(), target)
@@ -345,7 +345,7 @@ def unordered(lists: list[Any]) -> list[Any]:
 
 @pytest.mark.parametrize("case", section("inverse_cases.json", "cases"))
 def test_inverse_case(case):
-    state = ops.FlowState(dump(case["base"]))
+    state = ops.GraphState(dump(case["base"]))
     applied = parse(state.apply(dump(case["operations"]), inverse=True))
     check(matches, "inverse operations", unordered(applied["inverse_operations"]), unordered(case["inverse"]))
     for inverse in reversed(applied["inverse_operations"]):

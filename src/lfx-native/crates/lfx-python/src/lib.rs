@@ -65,17 +65,17 @@ fn run<T: Send>(py: Python<'_>, work: impl FnOnce() -> ApiResult<T> + Send) -> P
 /// Replay, history playback and rebase apply many batches to one graph and
 /// read it once. A refused batch changes nothing.
 #[pyclass(module = "lfx_native")]
-struct FlowState {
-    state: lfx::ops::FlowState,
+struct GraphState {
+    state: lfx::ops::GraphState,
 }
 
 #[pymethods]
-impl FlowState {
+impl GraphState {
     #[new]
     fn new(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<Self> {
         let flow = text(flow)?;
         Ok(Self {
-            state: run(py, || api::flow_state(flow))?,
+            state: run(py, || api::graph_state(flow))?,
         })
     }
 
@@ -431,7 +431,7 @@ fn node_schema() -> &'static str {
 mod _native {
     #[pymodule_export]
     use super::{
-        EngineError, FlowState, append_table_rows, apply, apply_restore_fixes,
+        EngineError, GraphState, append_table_rows, apply, apply_restore_fixes,
         assign_changed_node_table_row_ids, assign_changed_table_row_ids, assign_row_ids,
         assign_table_row_ids, canonical_json, decode_row, derive, diff, edge_fixes,
         encode_envelope, fixes_for_edges, graph_hash, graphs_equal, new_edge_id, new_table_row_id,

@@ -22,7 +22,7 @@ use crate::ops::edges::{
 use crate::ops::error::{Error, ErrorCode, Result, quoted};
 use crate::ops::ops::{Change, Expect, FieldUpdate, Operation, Path, Segment, path_label};
 use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA};
-use crate::ops::state::{FieldUndo, FlowState, Owner, Step, resolve, resolve_mut};
+use crate::ops::state::{FieldUndo, GraphState, Owner, Step, resolve, resolve_mut};
 use crate::ops::validate::missing_node_object;
 
 /// How a batch is applied.
@@ -73,7 +73,7 @@ const FORBIDDEN_EDGE_ROOTS: [&str; 3] = ["id", "source", "target"];
 const EDGE_HANDLE_ROOTS: [&str; 3] = ["sourceHandle", "targetHandle", "data"];
 const TEMPLATE_PATH: [&str; 3] = ["data", "node", "template"];
 
-impl FlowState {
+impl GraphState {
     /// Apply a batch of operations in order. On an error nothing is applied.
     ///
     /// # Errors
@@ -1206,7 +1206,7 @@ pub fn apply_flow_operations(
     operations: Vec<Operation>,
     options: ApplyOptions,
 ) -> Result<(Value, Applied)> {
-    let mut state = FlowState::new(base)?;
+    let mut state = GraphState::new(base)?;
     let applied = state.apply(operations, options)?;
     Ok((state.into_value(), applied))
 }

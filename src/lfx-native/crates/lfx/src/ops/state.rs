@@ -220,7 +220,7 @@ pub(crate) struct Batch {
 /// It holds the graph between calls: replay, history playback and rebase
 /// apply many batches to one state and read the result once.
 #[derive(Debug)]
-pub struct FlowState {
+pub struct GraphState {
     /// The flow's top-level object; `nodes` and `edges` hold placeholders.
     root: Map<String, Value>,
     pub(crate) graph: Graph,
@@ -229,7 +229,7 @@ pub struct FlowState {
     pub(crate) batch: Batch,
 }
 
-impl FlowState {
+impl GraphState {
     /// Index a flow graph, after checking its structure.
     ///
     /// Values are not walked for numbers that are not finite: that check

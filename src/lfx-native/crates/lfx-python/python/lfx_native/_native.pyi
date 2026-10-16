@@ -9,7 +9,7 @@ class EngineError(Exception):
     code: str
     details: str
 
-class FlowState:
+class GraphState:
     def __init__(self, flow: Json) -> None: ...
     def apply(
         self,
