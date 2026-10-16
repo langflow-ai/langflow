@@ -6,13 +6,14 @@ use libtest_mimic::{Failed, Trial};
 use serde_json::Value;
 
 /// The fixture files every runtime runs.
-pub const FIXTURE_FILES: [&str; 14] = [
+pub const FIXTURE_FILES: [&str; 15] = [
     "apply_cases.json",
     "canonical_cases.json",
     "diff_cases.json",
     "editor_cases.json",
     "envelope_cases.json",
     "inverse_cases.json",
+    "limit_cases.json",
     "merge_cases.json",
     "property_cases.json",
     "repair_cases.json",
