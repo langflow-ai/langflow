@@ -208,6 +208,21 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     expect(screen.queryByTestId("connection-method")).not.toBeInTheDocument();
   });
 
+  it("switches setup guidance with the Slack connection method", async () => {
+    const user = userEvent.setup();
+    renderDialog([slack]);
+    expect(screen.getByTestId("connection-callback-url")).toBeVisible();
+    await user.selectOptions(screen.getByTestId("connection-method"), "token");
+    expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
+      "href",
+      "https://docs.langflow.org/bundles-slack#two-executing-identities",
+    );
+    expect(
+      screen.queryByTestId("connection-callback-url"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("does not offer a pasted token before the deployment says what it is", () => {
     // Not ``renderDialog``: its default would stand in for the missing context.
     render(dialog([slack], undefined));
