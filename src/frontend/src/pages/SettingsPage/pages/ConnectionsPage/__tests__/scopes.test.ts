@@ -69,10 +69,25 @@ describe("scopeRequirements", () => {
       {
         capabilityId: "google.gmail.send",
         displayName: "Gmail: Send Email",
+        risk: "write",
         requiredScopes: [GMAIL_SEND],
         conditionalScopes: [{ scope: CALENDAR, input: "calendar_id" }],
       },
     ]);
+  });
+
+  it("prefers each action's manifest scopes over a shared component template", () => {
+    const conditional = {
+      scope: "drive.file",
+      role: "optional" as const,
+      condition: { kind: "input_truthy" as const, input: "attachments" },
+    };
+    const [requirement] = scopeRequirements(
+      [capability({ required_scopes: [], conditional_scopes: [conditional] })],
+      types,
+    );
+    expect(requirement.requiredScopes).toEqual([]);
+    expect(requirement.conditionalScopes).toEqual([conditional]);
   });
 
   it("reports no scopes when the component is not loaded", () => {
