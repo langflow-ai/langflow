@@ -34,6 +34,7 @@ describe("useVoiceStore", () => {
       providersList: [
         { name: "OpenAI", value: "openai" },
         { name: "ElevenLabs", value: "elevenlabs" },
+        { name: "Gandr", value: "gandr" },
       ],
       openaiVoices: [
         { name: "Alloy", value: "alloy" },
@@ -54,6 +55,7 @@ describe("useVoiceStore", () => {
       expect(result.current.providersList).toEqual([
         { name: "OpenAI", value: "openai" },
         { name: "ElevenLabs", value: "elevenlabs" },
+        { name: "Gandr", value: "gandr" },
       ]);
       expect(result.current.openaiVoices).toEqual([
         { name: "Alloy", value: "alloy" },
@@ -483,12 +485,14 @@ describe("useVoiceStore", () => {
       const { result } = renderHook(() => useVoiceStore());
       const complexVoices = [
         {
-          name: "Complex Voice",
-          voice_id: "complex-1",
+          ...mockDataFactory.createVoice({
+            name: "Complex Voice",
+            voice_id: "complex-1",
+          }),
           // Additional properties that shouldn't break the store
           extra: { data: "value" },
           metadata: ["tag1", "tag2"],
-        } as any,
+        },
       ];
 
       act(() => {
