@@ -1097,6 +1097,44 @@ describe("KnowledgeBaseUploadModal", () => {
       embeddingProvider: "OpenAI",
     };
 
+    it.each(["ui4 test", "Customer #1?"])(
+      "preserves the stored name %s when adding files",
+      async (name) => {
+        const user = userEvent.setup();
+        const onSubmit = jest.fn();
+        render(
+          <KnowledgeBaseUploadModal
+            open={true}
+            setOpen={jest.fn()}
+            onSubmit={onSubmit}
+            existingKnowledgeBase={{ ...existingKB, name }}
+          />,
+          { wrapper: createWrapper() },
+        );
+        const file = new File(["content"], "notes.txt", {
+          type: "text/plain",
+        });
+        await user.upload(
+          document.getElementById("file-input") as HTMLInputElement,
+          file,
+        );
+        await user.click(screen.getByRole("button", { name: /Next Step/i }));
+        await user.click(await screen.findByTestId("kb-create-button"));
+
+        await waitFor(() =>
+          expect(mockApiPost).toHaveBeenCalledWith(
+            `/api/v1/knowledge_bases/${encodeURIComponent(name)}/ingest`,
+            expect.any(FormData),
+            expect.any(Object),
+          ),
+        );
+        expect(mockMutateAsync).not.toHaveBeenCalled();
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ sourceName: name, dirName: name }),
+        );
+      },
+    );
+
     it("disables the name input", async () => {
       render(
         <KnowledgeBaseUploadModal

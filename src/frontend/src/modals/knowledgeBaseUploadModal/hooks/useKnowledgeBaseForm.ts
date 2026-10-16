@@ -462,20 +462,21 @@ export function useKnowledgeBaseForm({
 
   const getValidationErrors = useCallback((): Record<string, string> => {
     const errors: Record<string, string> = {};
-    const trimmedName = sourceName.trim().replace(/\s+/g, "_");
-    if (!trimmedName) {
-      errors.sourceName = t("knowledge.validationNameRequired");
-    } else if (trimmedName.length < 3 || trimmedName.length > 512) {
-      errors.sourceName = t("knowledge.validationNameLength");
-    } else if (!KB_NAME_REGEX.test(trimmedName)) {
-      errors.sourceName = t("knowledge.validationNameFormat");
-    } else if (
-      !isAddSourcesMode &&
-      existingKnowledgeBaseNames?.some(
-        (name) => name.toLowerCase() === trimmedName.toLowerCase(),
-      )
-    ) {
-      errors.sourceName = t("knowledge.validationNameDuplicate");
+    if (!isAddSourcesMode) {
+      const trimmedName = sourceName.trim().replace(/\s+/g, "_");
+      if (!trimmedName) {
+        errors.sourceName = t("knowledge.validationNameRequired");
+      } else if (trimmedName.length < 3 || trimmedName.length > 512) {
+        errors.sourceName = t("knowledge.validationNameLength");
+      } else if (!KB_NAME_REGEX.test(trimmedName)) {
+        errors.sourceName = t("knowledge.validationNameFormat");
+      } else if (
+        existingKnowledgeBaseNames?.some(
+          (name) => name.toLowerCase() === trimmedName.toLowerCase(),
+        )
+      ) {
+        errors.sourceName = t("knowledge.validationNameDuplicate");
+      }
     }
     if (!modelCatalogReady) {
       errors.embeddingModel = t("errors.failedToLoadModels");
@@ -554,7 +555,8 @@ export function useKnowledgeBaseForm({
     }
 
     const selectedModel = selectedEmbeddingModel[0];
-    const kbName = sourceName.trim().replace(/\s+/g, "_");
+    const kbName =
+      existingKnowledgeBase?.name ?? sourceName.trim().replace(/\s+/g, "_");
     setIsSubmitting(true);
 
     try {
@@ -577,6 +579,7 @@ export function useKnowledgeBaseForm({
       if (!showAdvanced && !isAddSourcesMode) {
         const callbackData: KnowledgeBaseFormData = {
           sourceName,
+          dirName: kbName,
           files: [],
           embeddingModel: selectedEmbeddingModel,
           columnConfig,
@@ -633,9 +636,11 @@ export function useKnowledgeBaseForm({
 
         // Don't await — fire and forget. Polling will track status.
         api
-          .post(`${getURL("KNOWLEDGE_BASES")}/${kbName}/ingest`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-          })
+          .post(
+            `${getURL("KNOWLEDGE_BASES")}/${encodeURIComponent(kbName)}/ingest`,
+            formData,
+            { headers: { "Content-Type": "multipart/form-data" } },
+          )
           .catch((ingestError: unknown) => {
             const err = ingestError as AxiosError<{ detail?: string }>;
             setErrorData({
@@ -649,6 +654,7 @@ export function useKnowledgeBaseForm({
 
       const callbackData: KnowledgeBaseFormData = {
         sourceName,
+        dirName: kbName,
         files,
         embeddingModel: selectedEmbeddingModel,
         chunkSize,
