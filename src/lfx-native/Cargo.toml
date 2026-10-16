@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/lfx", "crates/lfx-python"]
+members = ["crates/lfx", "crates/lfx-python", "crates/lfx-wasm"]
 
 [workspace.package]
 version = "0.1.0"
@@ -24,3 +24,13 @@ todo = "warn"
 unwrap_used = "warn"
 # Names such as `ops::OpsError` read better in full at call sites.
 module_name_repetitions = "allow"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
+# The browser package favours size; the Python wheel uses the release profile.
+[profile.wasm]
+inherits = "release"
+opt-level = "s"
