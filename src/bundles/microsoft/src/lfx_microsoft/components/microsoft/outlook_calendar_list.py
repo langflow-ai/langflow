@@ -22,7 +22,7 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
 
     display_name = "Outlook Calendar: List Events"
     description = "List the connected user's calendar events in a time window."
-    documentation = "https://learn.microsoft.com/en-us/graph/api/user-list-calendarview"
+    documentation = "https://docs.langflow.org/bundles-microsoft"
     name = "OutlookCalendarListEvents"
     capability_id = "microsoft.calendar.list"
 

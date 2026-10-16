@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -45,6 +47,7 @@ import {
 } from "../helpers/scopes";
 import { useSlackTokenConnection } from "../hooks/useSlackTokenConnection";
 import AuthorizeStatus, { type AuthorizeState } from "./AuthorizeStatus";
+import ConnectionSetupHelp from "./ConnectionSetupHelp";
 import RegistrationSelect from "./RegistrationSelect";
 import ScopeChecklist from "./ScopeChecklist";
 import SlackTokenFields, { ConnectionMethodSelect } from "./SlackTokenFields";
@@ -491,11 +494,40 @@ export function AddConnectionDialog({
                 />
               )}
 
+              <ConnectionSetupHelp
+                key={`${providerId}:${usesToken}`}
+                providerId={providerId}
+                noRegistration={noRegistration}
+                usesToken={usesToken}
+              />
+
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="connection-name">
-                    {t("connections.add.handle")}
-                  </Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="connection-name">
+                      {t("connections.add.handle")}
+                    </Label>
+                    <ShadTooltip
+                      content={t("connections.add.handleTooltip", {
+                        example: `${providerId}/work`,
+                      })}
+                      side="top"
+                      avoidCollisions
+                    >
+                      <button
+                        type="button"
+                        aria-label={t("connections.add.handleHelpLabel")}
+                        className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        data-testid="connection-handle-help"
+                      >
+                        <ForwardedIconComponent
+                          name="Info"
+                          className="h-3.5 w-3.5 text-muted-foreground"
+                          ariaHidden
+                        />
+                      </button>
+                    </ShadTooltip>
+                  </div>
                   <Input
                     id="connection-name"
                     value={name}
@@ -524,9 +556,29 @@ export function AddConnectionDialog({
                   </p>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="connection-display-name">
-                    {t("connections.add.displayName")}
-                  </Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="connection-display-name">
+                      {t("connections.add.displayName")}
+                    </Label>
+                    <ShadTooltip
+                      content={t("connections.add.displayNameTooltip")}
+                      side="top"
+                      avoidCollisions
+                    >
+                      <button
+                        type="button"
+                        aria-label={t("connections.add.displayNameHelpLabel")}
+                        className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        data-testid="connection-display-name-help"
+                      >
+                        <ForwardedIconComponent
+                          name="Info"
+                          className="h-3.5 w-3.5 text-muted-foreground"
+                          ariaHidden
+                        />
+                      </button>
+                    </ShadTooltip>
+                  </div>
                   <Input
                     id="connection-display-name"
                     value={displayName}
@@ -617,11 +669,6 @@ export function AddConnectionDialog({
                 </div>
               )}
 
-              {!usesToken && noRegistration && (
-                <p className="text-xs text-destructive" role="alert">
-                  {t("connections.add.noRegistration")}
-                </p>
-              )}
               {fieldError && (
                 <p className="text-xs text-destructive" role="alert">
                   {fieldError}
@@ -646,6 +693,11 @@ export function AddConnectionDialog({
         {step === "scopes" && (
           <div className="flex min-h-0 flex-col gap-4">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+              <ConnectionSetupHelp
+                key={providerId}
+                providerId={providerId}
+                noRegistration={noRegistration}
+              />
               {registrationSelect}
 
               <div className="flex flex-col gap-2">
@@ -671,12 +723,6 @@ export function AddConnectionDialog({
                   </span>
                 )}
               </div>
-
-              {noRegistration && (
-                <p className="text-xs text-destructive" role="alert">
-                  {t("connections.add.noRegistration")}
-                </p>
-              )}
             </div>
             <div className="flex shrink-0 justify-end gap-2">
               <Button variant="ghost" onClick={() => close(true)}>
