@@ -950,7 +950,7 @@ class OperationsComponent(Component):
                 if (
                     data.strip().startswith(("{", "[", "(", "'", '"'))
                     or data.strip().lower() in ("true", "false", "none")
-                    or data.strip().replace(".", "").isdigit()
+                    or data.strip().lstrip("+-").replace(".", "").isdigit()
                 ):
                     return ast.literal_eval(data)
             except (ValueError, SyntaxError, TypeError, MemoryError):

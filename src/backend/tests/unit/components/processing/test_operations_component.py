@@ -125,13 +125,30 @@ class TestJsonOperations:
         assert "new_key1" in result.data
         assert "key1" not in result.data
 
-    def test_literal_eval(self):
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ("[1, 2, 3]", [1, 2, 3]),
+            ("42", 42),
+            ("-42", -42),
+            ("+42", 42),
+            ("3.5", 3.5),
+            ("-3.5", -3.5),
+            ("+3.5", 3.5),
+            (" -.5 ", -0.5),
+            ({"nested": ["-42", "+3.5"]}, {"nested": [-42, 3.5]}),
+            ("hello", "hello"),
+            ("--42", "--42"),
+            ("1-2", "1-2"),
+        ],
+    )
+    def test_literal_eval(self, value, expected):
         component = OperationsComponent(
-            data=Data(data={"list_as_string": "[1, 2, 3]"}),
+            data=Data(data={"value": value}),
             operation=[{"name": "Literal Eval"}],
         )
         result = component.as_data()
-        assert result.data["list_as_string"] == [1, 2, 3]
+        assert result.data["value"] == expected
 
     def test_combine(self):
         component = OperationsComponent(
