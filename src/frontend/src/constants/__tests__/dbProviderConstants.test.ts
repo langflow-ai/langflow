@@ -199,6 +199,27 @@ describe("dbProviderConstants", () => {
     ).toBe(false);
   });
 
+  it.each(["postgres", "opensearch"] as const)(
+    "accepts environment configured %s even when it is not the default",
+    (provider) => {
+      expect(
+        isDBProviderConfigured(provider, [], false, "postgres", [
+          "postgres",
+          "opensearch",
+        ]),
+      ).toBe(true);
+    },
+  );
+
+  it("does not enable an absent environment backend", () => {
+    expect(
+      isDBProviderConfigured("opensearch", [], false, "postgres", ["postgres"]),
+    ).toBe(false);
+    expect(isDBProviderConfigured("postgres", [], false, "sqlite", [])).toBe(
+      false,
+    );
+  });
+
   it("allows explicit Postgres selection only after it is active", () => {
     expect(isDBProviderConfigured("postgres", [])).toBe(false);
     expect(

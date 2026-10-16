@@ -126,6 +126,9 @@ export function useKnowledgeBaseForm({
   const defaultVectorStoreBackend = useUtilityStore(
     (state) => state.defaultVectorStoreBackend,
   );
+  const configuredVectorStoreBackends = useUtilityStore(
+    (state) => state.configuredVectorStoreBackends,
+  );
   const vectorStoreConfigLoaded = useUtilityStore(
     (state) => state.vectorStoreConfigLoaded,
   );
@@ -218,8 +221,14 @@ export function useKnowledgeBaseForm({
         globalVariables,
         localVectorStoreAvailable,
         defaultVectorStoreBackend,
+        configuredVectorStoreBackends,
       ),
-    [globalVariables, localVectorStoreAvailable, defaultVectorStoreBackend],
+    [
+      globalVariables,
+      localVectorStoreAvailable,
+      defaultVectorStoreBackend,
+      configuredVectorStoreBackends,
+    ],
   );
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
 
@@ -497,6 +506,7 @@ export function useKnowledgeBaseForm({
           globalVariables,
           localVectorStoreAvailable,
           defaultVectorStoreBackend,
+          configuredVectorStoreBackends,
         )
       ) {
         errors.backend = `${selectedProvider.label} must be configured in DB Providers settings before it can be used.`;
@@ -537,6 +547,7 @@ export function useKnowledgeBaseForm({
     globalVariablesReady,
     localVectorStoreAvailable,
     defaultVectorStoreBackend,
+    configuredVectorStoreBackends,
     vectorStoreConfigLoaded,
     files,
     existingKnowledgeBaseNames,
