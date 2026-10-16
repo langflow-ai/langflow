@@ -7,6 +7,8 @@ the dynamic input/output routing, and the removal of the legacy "Filter
 Values" operation.
 """
 
+import copy
+
 import pandas as pd
 import pytest
 from lfx.components.processing.data_operations import DataOperationsComponent
@@ -20,6 +22,7 @@ from lfx.components.processing.operations import (
 )
 from lfx.components.processing.parse_json_data import ParseJSONDataComponent
 from lfx.components.processing.text_operations import TextOperations
+from lfx.custom.utils import build_custom_component_template
 from lfx.schema import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict
@@ -905,3 +908,99 @@ class TestJqGuardLibjqConformance:
         """A builtin inside a computed key ``{(expr): v}`` is a call, not a key name."""
         with pytest.raises(ValueError, match="not allowed"):
             validate_jq_program(program)
+
+
+class TestUpdateFrontendNodeRestoresVisibility:
+    """A saved node must come back with the ``show``/``required`` flags of *its* input type and operation.
+
+    ``update_frontend_node`` rebuilds the template from class defaults (Text input
+    visible). Before the fix only options and outputs were re-synced, so a saved
+    JSON node returned with ``data`` hidden and the canvas dropped its edge.
+    """
+
+    async def _updated_template(self, input_type: str, operation: str = "") -> dict:
+        saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        fresh = copy.deepcopy(saved)
+        saved["template"]["input_type"]["value"] = input_type
+        if operation:
+            saved["template"]["operation"]["value"] = [{"name": operation}]
+        updated = await OperationsComponent().update_frontend_node(fresh, saved)
+        return updated["template"]
+
+    async def test_json_combine_shows_list_data_input(self):
+        template = await self._updated_template("JSON", "Combine")
+        assert template["data"]["show"] is True
+        assert template["data"]["required"] is True
+        assert template["data"]["is_list"] is True
+        assert template["text_input"]["show"] is False
+        assert template["df"]["show"] is False
+        assert template["input_type"]["value"] == "JSON"
+        assert template["operation"]["value"] == [{"name": "Combine"}]
+
+    async def test_json_select_keys_shows_operation_fields_only(self):
+        template = await self._updated_template("JSON", "Select Keys")
+        assert template["data"]["show"] is True
+        assert template["data"]["is_list"] is False
+        for field in OperationsComponent.ALL_OPERATION_FIELDS:
+            if field in template:
+                expected = field in OperationsComponent.OPERATION_FIELDS["Select Keys"]
+                assert template[field]["show"] is expected, field
+
+    async def test_saved_operation_field_values_survive(self):
+        saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        fresh = copy.deepcopy(saved)
+        saved["template"]["input_type"]["value"] = "JSON"
+        saved["template"]["operation"]["value"] = [{"name": "Select Keys"}]
+        saved["template"]["select_keys_input"]["value"] = ["a", "b"]
+        updated = await OperationsComponent().update_frontend_node(fresh, saved)
+        assert updated["template"]["select_keys_input"]["value"] == ["a", "b"]
+
+    async def test_table_operation_shows_df_input(self):
+        template = await self._updated_template("Table", OPERATIONS_BY_TYPE["Table"][0]["name"])
+        assert template["df"]["show"] is True
+        assert template["df"]["required"] is True
+        assert template["text_input"]["show"] is False
+        assert template["data"]["show"] is False
+
+    async def test_text_without_operation_shows_required_text_input(self):
+        template = await self._updated_template("Text")
+        assert template["text_input"]["show"] is True
+        assert template["text_input"]["required"] is True
+        assert template["data"]["show"] is False
+        assert template["df"]["show"] is False
+        for field in OperationsComponent.ALL_OPERATION_FIELDS:
+            if field in template:
+                assert template[field]["show"] is False, field
+
+    async def test_removed_operation_name_hides_all_operation_fields(self):
+        template = await self._updated_template("JSON", "Filter Values")
+        assert template["data"]["show"] is True
+        for field in OperationsComponent.ALL_OPERATION_FIELDS:
+            if field in template:
+                assert template[field]["show"] is False, field
+
+    async def test_table_merge_shows_both_dataframe_inputs(self):
+        template = await self._updated_template("Table", "Merge")
+        assert template["left_dataframe"]["show"] is True
+        assert template["right_dataframe"]["show"] is True
+
+    async def test_path_selection_rebuilds_selected_key_options(self):
+        saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        fresh = copy.deepcopy(saved)
+        saved["template"]["input_type"]["value"] = "JSON"
+        saved["template"]["operation"]["value"] = [{"name": "Path Selection"}]
+        saved["template"]["mapped_json_display"]["value"] = '{"a":{"b":1}}'
+        saved["template"]["selected_key"]["value"] = ".a.b"
+        template = (await OperationsComponent().update_frontend_node(fresh, saved))["template"]
+        assert template["selected_key"]["show"] is True
+        assert template["selected_key"]["value"] == ".a.b"
+        assert ".a.b" in template["selected_key"]["options"]
+
+    async def test_path_selection_with_invalid_saved_json_hides_selected_key(self):
+        saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        fresh = copy.deepcopy(saved)
+        saved["template"]["input_type"]["value"] = "JSON"
+        saved["template"]["operation"]["value"] = [{"name": "Path Selection"}]
+        saved["template"]["mapped_json_display"]["value"] = "{not json"
+        template = (await OperationsComponent().update_frontend_node(fresh, saved))["template"]
+        assert template["selected_key"]["show"] is False

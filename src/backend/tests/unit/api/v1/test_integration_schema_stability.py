@@ -188,6 +188,8 @@ def test_integration_catalog_schemas_are_frozen() -> None:
         "display_name",
         "policy_keys",
         "risk",
+        "required_scopes",
+        "conditional_scopes",
         "maturity",
         "substrate",
         "identity",

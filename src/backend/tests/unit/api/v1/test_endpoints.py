@@ -60,9 +60,9 @@ async def test_get_config_mirrors_assistant_message_length(client: AsyncClient, 
 @pytest.mark.parametrize(
     ("pgvector", "opensearch", "expected"),
     [
-        ("postgresql://u:pw@db/lf", None, "postgres"),
+        ("postgresql://u:pw@db/lf", None, "postgres"),  # pragma: allowlist secret
         (None, "https://opensearch.internal:9200", "opensearch"),
-        ("postgresql://u:pw@db/lf", "https://opensearch.internal:9200", "postgres"),
+        ("postgresql://u:pw@db/lf", "https://opensearch.internal:9200", "postgres"),  # pragma: allowlist secret
         (None, None, "sqlite"),
     ],
 )
@@ -84,6 +84,11 @@ async def test_get_config_reports_server_resolved_default_vector_store(
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["default_vector_store_backend"] == expected
+    assert response.json()["configured_vector_store_backends"] == [
+        backend for backend, value in (("postgres", pgvector), ("opensearch", opensearch)) if value
+    ]
+    assert not pgvector or pgvector not in response.text
+    assert not opensearch or opensearch not in response.text
 
 
 @pytest.mark.parametrize(
@@ -1050,6 +1055,7 @@ async def test_get_config_unauthenticated_does_not_expose_sensitive_fields(clien
 
     # Verify sensitive fields are NOT present
     sensitive_fields = [
+        "configured_vector_store_backends",
         "database_url",
         "secret_key",
         "auto_saving",
