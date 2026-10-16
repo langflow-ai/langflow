@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from lfx.memory.session_state import SessionMemoryState
 from lfx.utils.langflow_utils import has_langflow_db_backend
 
 
@@ -72,12 +73,33 @@ def store_message(*args: Any, **kwargs: Any):
     return _impl().store_message(*args, **kwargs)
 
 
+def aget_session_memory_state(*args: Any, **kwargs: Any):
+    return _impl().aget_session_memory_state(*args, **kwargs)
+
+
+def asave_session_memory_state(*args: Any, **kwargs: Any):
+    return _impl().asave_session_memory_state(*args, **kwargs)
+
+
+def aget_messages_between(*args: Any, **kwargs: Any):
+    return _impl().aget_messages_between(*args, **kwargs)
+
+
+def adelete_session_memory_states(*args: Any, **kwargs: Any):
+    return _impl().adelete_session_memory_states(*args, **kwargs)
+
+
 __all__ = [
+    "SessionMemoryState",
     "aadd_messages",
     "aadd_messagetables",
     "add_messages",
     "adelete_messages",
+    "adelete_session_memory_states",
     "aget_messages",
+    "aget_messages_between",
+    "aget_session_memory_state",
+    "asave_session_memory_state",
     "astore_message",
     "aupdate_messages",
     "delete_message",

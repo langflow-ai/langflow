@@ -20,6 +20,7 @@ from langflow.services.database.models.memory_base.model import (
     MessageIngestionRecord,
 )
 from langflow.services.database.models.message.model import MessageTable
+from langflow.services.database.models.session_memory.model import SessionMemoryStateTable
 from langflow.services.database.models.traces.model import TraceTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
@@ -85,6 +86,16 @@ async def erase_messages(session: AsyncSession, ctx: EraseContext) -> int:
     )
 
 
+async def erase_session_summaries(session: AsyncSession, ctx: EraseContext) -> int:
+    return await delete_batch(
+        session,
+        SessionMemoryStateTable,
+        SessionMemoryStateTable.user_id == _keys(ctx).message_owner_id,
+        _session_matches(SessionMemoryStateTable.session_id, ctx),
+        _in_scope(SessionMemoryStateTable.flow_id, ctx),
+    )
+
+
 async def erase_traces(session: AsyncSession, ctx: EraseContext) -> int:
     return await delete_trace_batch(
         session, _session_matches(TraceTable.session_id, ctx), _in_scope(TraceTable.flow_id, ctx)
@@ -113,6 +124,7 @@ async def erase_jobs(session: AsyncSession, ctx: EraseContext) -> int:
 END_USER_STEPS: tuple[tuple[str, Step], ...] = (
     ("vertex_builds", erase_vertex_builds),
     ("messages", erase_messages),
+    ("session_summaries", erase_session_summaries),
     ("traces", erase_traces),
     ("transactions", erase_transactions),
     ("memory_ingestion_records", _memory_rows(MessageIngestionRecord)),
