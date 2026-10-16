@@ -1364,7 +1364,7 @@ class KnowledgeComponent(Component):
                 await _finish_despite_cancellation(backend.teardown())
 
             meta: dict[str, Any] = {
-                "kb_id": str(uuid.uuid4()),
+                "kb_id": str(kb_record_id) if kb_record_id is not None else None,
                 "kb_name": self.knowledge_base,
                 "rows": len(df_source),
                 "column_metadata": column_metadata,
