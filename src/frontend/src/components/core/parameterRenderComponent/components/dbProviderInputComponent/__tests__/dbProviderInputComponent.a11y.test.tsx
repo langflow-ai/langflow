@@ -184,6 +184,7 @@ describe("DBProviderInputComponent", () => {
       vectorStoreConfigLoaded: true,
       localVectorStoreAvailable: true,
       defaultVectorStoreBackend: undefined,
+      configuredVectorStoreBackends: [],
     });
     mockCurrentFlowId = "flow-project-a";
     mockGlobalVariablesQuery = {

@@ -34,6 +34,7 @@ describe("useGetConfig", () => {
       vectorStoreConfigLoaded: false,
       localVectorStoreAvailable: true,
       defaultVectorStoreBackend: undefined,
+      configuredVectorStoreBackends: [],
     });
   });
 
