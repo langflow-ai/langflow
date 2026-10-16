@@ -340,10 +340,9 @@ describe("dbProviderConstants", () => {
       });
     });
 
-    it("does not treat an env pgVector default as pre-activated", () => {
-      // pgVector keeps its explicit test-and-activate flow in DB Providers.
+    it("recognizes an env pgVector default without explicit activation", () => {
       expect(isDBProviderConfigured("postgres", [], false, "postgres")).toBe(
-        false,
+        true,
       );
       expect(getActiveDBProvider([], localUnavailable, "postgres")).toBe(
         "postgres",
@@ -356,7 +355,7 @@ describe("dbProviderConstants", () => {
         backendConfig: {},
       });
       expect(isDBProviderConfigured("postgres", [], true, "postgres")).toBe(
-        false,
+        true,
       );
       expect(
         getActiveDBProvider(
