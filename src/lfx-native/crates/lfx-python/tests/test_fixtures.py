@@ -188,7 +188,13 @@ def test_diff_case(case):
 # --- canonical_cases.json ---------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("case", section("canonical_cases.json", "numbers") + section("canonical_cases.json", "values"))
+@pytest.mark.parametrize(
+    "case",
+    section("canonical_cases.json", "numbers")
+    + section("canonical_cases.json", "values")
+    + section("limit_cases.json", "refused")
+    + section("limit_cases.json", "accepted"),
+)
 def test_canonical_text(case):
     try:
         actual = {"canonical": ops.canonical_json(case["json"])}
@@ -454,5 +460,6 @@ def test_every_fixture_file_is_run():
         "replay_cases.json",
         "restore_cases.json",
         "write_cases.json",
+        "limit_cases.json",
     }
     assert {path.name for path in FIXTURES.glob("*.json")} == run
