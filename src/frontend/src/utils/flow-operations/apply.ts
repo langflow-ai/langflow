@@ -4,8 +4,8 @@
  * This is the editor's copy of the server's flow operation engine
  * (`lfx.services.flow_operations`), used to play a flow's history back on the
  * canvas. It must produce exactly what the server does: both run the shared
- * fixtures in `src/lfx/tests/unit/services/flow_operations/fixtures/`, and
- * both read `node_schema.json` for where keyed lists are.
+ * fixtures in `src/lfx-native/fixtures/`, and both read `node_schema.json`
+ * for where keyed lists are.
  *
  * Application is copy-on-write: the input graph is never changed, and the
  * result shares every node and edge an operation did not touch.

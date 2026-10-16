@@ -2,9 +2,9 @@ import { createHash } from "crypto";
 import { readFileSync } from "fs";
 import { cloneDeep } from "lodash";
 import { join } from "path";
-import golden from "../../../../../lfx/tests/unit/services/flow_operations/fixtures/apply_cases.json";
-import mergeCases from "../../../../../lfx/tests/unit/services/flow_operations/fixtures/merge_cases.json";
-import propertyCases from "../../../../../lfx/tests/unit/services/flow_operations/fixtures/property_cases.json";
+import golden from "../../../../../lfx-native/fixtures/apply_cases.json";
+import mergeCases from "../../../../../lfx-native/fixtures/merge_cases.json";
+import propertyCases from "../../../../../lfx-native/fixtures/property_cases.json";
 import {
   applyFlowOperations,
   type FlowGraph,
