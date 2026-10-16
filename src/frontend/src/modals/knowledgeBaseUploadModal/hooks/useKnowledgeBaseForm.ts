@@ -3,11 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import {
-  ACTIVE_DB_PROVIDER_VARIABLE,
   type DBProviderConfigValue,
   getDBProviderOption,
   getDefaultDBProviderConfig,
-  getGlobalVariableValue,
   isDBProviderConfigured,
   resolveUIBackendType,
   type StoredDBProviderId,
@@ -126,6 +124,9 @@ export function useKnowledgeBaseForm({
   const defaultVectorStoreBackend = useUtilityStore(
     (state) => state.defaultVectorStoreBackend,
   );
+  const configuredVectorStoreBackends = useUtilityStore(
+    (state) => state.configuredVectorStoreBackends,
+  );
   const vectorStoreConfigLoaded = useUtilityStore(
     (state) => state.vectorStoreConfigLoaded,
   );
@@ -218,8 +219,14 @@ export function useKnowledgeBaseForm({
         globalVariables,
         localVectorStoreAvailable,
         defaultVectorStoreBackend,
+        configuredVectorStoreBackends,
       ),
-    [globalVariables, localVectorStoreAvailable, defaultVectorStoreBackend],
+    [
+      globalVariables,
+      localVectorStoreAvailable,
+      defaultVectorStoreBackend,
+      configuredVectorStoreBackends,
+    ],
   );
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
 
@@ -464,20 +471,21 @@ export function useKnowledgeBaseForm({
 
   const getValidationErrors = useCallback((): Record<string, string> => {
     const errors: Record<string, string> = {};
-    const trimmedName = sourceName.trim().replace(/\s+/g, "_");
-    if (!trimmedName) {
-      errors.sourceName = t("knowledge.validationNameRequired");
-    } else if (trimmedName.length < 3 || trimmedName.length > 512) {
-      errors.sourceName = t("knowledge.validationNameLength");
-    } else if (!KB_NAME_REGEX.test(trimmedName)) {
-      errors.sourceName = t("knowledge.validationNameFormat");
-    } else if (
-      !isAddSourcesMode &&
-      existingKnowledgeBaseNames?.some(
-        (name) => name.toLowerCase() === trimmedName.toLowerCase(),
-      )
-    ) {
-      errors.sourceName = t("knowledge.validationNameDuplicate");
+    if (!isAddSourcesMode) {
+      const trimmedName = sourceName.trim().replace(/\s+/g, "_");
+      if (!trimmedName) {
+        errors.sourceName = t("knowledge.validationNameRequired");
+      } else if (trimmedName.length < 3 || trimmedName.length > 512) {
+        errors.sourceName = t("knowledge.validationNameLength");
+      } else if (!KB_NAME_REGEX.test(trimmedName)) {
+        errors.sourceName = t("knowledge.validationNameFormat");
+      } else if (
+        existingKnowledgeBaseNames?.some(
+          (name) => name.toLowerCase() === trimmedName.toLowerCase(),
+        )
+      ) {
+        errors.sourceName = t("knowledge.validationNameDuplicate");
+      }
     }
     if (!modelCatalogReady) {
       errors.embeddingModel = t("errors.failedToLoadModels");
@@ -497,6 +505,7 @@ export function useKnowledgeBaseForm({
           globalVariables,
           localVectorStoreAvailable,
           defaultVectorStoreBackend,
+          configuredVectorStoreBackends,
         )
       ) {
         errors.backend = `${selectedProvider.label} must be configured in DB Providers settings before it can be used.`;
@@ -537,6 +546,7 @@ export function useKnowledgeBaseForm({
     globalVariablesReady,
     localVectorStoreAvailable,
     defaultVectorStoreBackend,
+    configuredVectorStoreBackends,
     vectorStoreConfigLoaded,
     files,
     existingKnowledgeBaseNames,
@@ -556,32 +566,22 @@ export function useKnowledgeBaseForm({
     }
 
     const selectedModel = selectedEmbeddingModel[0];
-    const kbName = sourceName.trim().replace(/\s+/g, "_");
+    const kbName =
+      existingKnowledgeBase?.name ?? sourceName.trim().replace(/\s+/g, "_");
     setIsSubmitting(true);
 
     try {
       // Create the knowledge base (skip if adding to existing)
       if (!isAddSourcesMode) {
-        // When the user hasn't explicitly chosen a provider (no active-provider
-        // variable set, still on the SQLite default), send ``undefined`` so the
-        // server resolves the deployment default — this is what lets an
-        // env-configured pgVector auto-become the backend instead of SQLite.
-        // An explicit selection (active variable set, or any non-SQLite pick)
-        // is always sent through and honored.
-        const hasExplicitActiveProvider = Boolean(
-          getGlobalVariableValue(globalVariables, ACTIVE_DB_PROVIDER_VARIABLE),
-        );
-        const resolvedBackendType =
-          !hasExplicitActiveProvider && backendType === "sqlite"
-            ? undefined
-            : toAPIBackendType(backendType);
+        // Defaults are already resolved when the form opens. Send the provider
+        // shown in the review, including SQLite on remote-default deployments.
         await createKnowledgeBase.mutateAsync({
           name: kbName,
           embedding_provider: selectedModel.provider || "Unknown",
           embedding_model: selectedModel.id || selectedModel.name,
           model_selection: selectedModel,
           column_config: columnConfig,
-          backend_type: resolvedBackendType,
+          backend_type: toAPIBackendType(backendType),
           backend_config: backendConfig,
         });
       }
@@ -590,6 +590,7 @@ export function useKnowledgeBaseForm({
       if (!showAdvanced && !isAddSourcesMode) {
         const callbackData: KnowledgeBaseFormData = {
           sourceName,
+          dirName: kbName,
           files: [],
           embeddingModel: selectedEmbeddingModel,
           columnConfig,
@@ -646,9 +647,11 @@ export function useKnowledgeBaseForm({
 
         // Don't await — fire and forget. Polling will track status.
         api
-          .post(`${getURL("KNOWLEDGE_BASES")}/${kbName}/ingest`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-          })
+          .post(
+            `${getURL("KNOWLEDGE_BASES")}/${encodeURIComponent(kbName)}/ingest`,
+            formData,
+            { headers: { "Content-Type": "multipart/form-data" } },
+          )
           .catch((ingestError: unknown) => {
             const err = ingestError as AxiosError<{ detail?: string }>;
             setErrorData({
@@ -662,6 +665,7 @@ export function useKnowledgeBaseForm({
 
       const callbackData: KnowledgeBaseFormData = {
         sourceName,
+        dirName: kbName,
         files,
         embeddingModel: selectedEmbeddingModel,
         chunkSize,

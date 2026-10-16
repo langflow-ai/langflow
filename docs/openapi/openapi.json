@@ -18706,6 +18706,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "minimum": 1,
                   "type": "integer"
                 },
                 {
@@ -18722,6 +18723,8 @@
             "schema": {
               "anyOf": [
                 {
+                  "maximum": 100,
+                  "minimum": 1,
                   "type": "integer"
                 },
                 {
@@ -19451,6 +19454,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "minimum": 1,
                   "type": "integer"
                 },
                 {
@@ -19467,6 +19471,8 @@
             "schema": {
               "anyOf": [
                 {
+                  "maximum": 100,
+                  "minimum": 1,
                   "type": "integer"
                 },
                 {
