@@ -144,10 +144,11 @@ export function TriggerEventDetail({
 
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-medium">{t("triggers.events.payload")}</h3>
+        {/* Wraps instead of scrolling: a scroll box of its own would need a
+            tab stop, and no role IBM accepts on a tab stop fits read-only
+            text. The detail pane scrolls a long payload instead. */}
         <pre
-          className="max-h-72 overflow-auto rounded-md border bg-muted p-3 font-mono text-xs"
-          tabIndex={0}
-          aria-label={t("triggers.events.payload")}
+          className="whitespace-pre-wrap break-all rounded-md border bg-muted p-3 font-mono text-xs"
           data-testid="trigger-event-payload"
         >
           {JSON.stringify(event.payload, null, 2)}
