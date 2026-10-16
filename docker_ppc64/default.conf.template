@@ -1,0 +1,52 @@
+worker_processes auto;
+pid /tmp/nginx.pid;
+events {}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type text/plain;
+    client_max_body_size ${LANGFLOW_MAX_FILE_SIZE_UPLOAD}M;
+
+    types {
+        text/html html;
+        text/css css;
+        application/javascript js;
+    }
+
+    server {
+        gzip on;
+        gzip_comp_level 2;
+        gzip_min_length 1000;
+        gzip_types text/xml text/css;
+        gzip_http_version 1.1;
+        gzip_vary on;
+        gzip_disable "MSIE [4-6] \.";
+
+        listen ${FRONTEND_PORT};
+
+        location / {
+            root /usr/share/nginx/html;
+            index index.html index.htm;
+            try_files $uri $uri/ /index.html =404;
+            expires 1d;
+            add_header Cache-Control "public";
+        }
+        location = /index.html {
+            root /usr/share/nginx/html;
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+            etag on;
+        }
+
+        location /api {
+            proxy_pass ${BACKEND_URL};
+        }
+        location /health_check {
+            proxy_pass ${BACKEND_URL};
+        }
+        location /health {
+            proxy_pass ${BACKEND_URL};
+        }
+
+        include /etc/nginx/extra-conf.d/*.conf;
+    }
+}
