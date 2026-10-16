@@ -491,6 +491,49 @@ The following issues can occur when upgrading your Langflow version.
 
 For information about managing Langflow versions, see [Install Langflow](/get-started-installation).
 
+### Recover access after upgrading {#recover-access-after-upgrading}
+
+Langflow 1.13 disables auto-login by default.
+After you upgrade an installation that signed in automatically, one of the following can occur:
+
+* Startup exits with `Username and password must be set`.
+* Langflow starts, but sign-in fails with `Incorrect username or password` even after you set `LANGFLOW_SUPERUSER_PASSWORD`.
+* The sign-up page creates a new account that doesn't have your existing flows.
+
+Your flows are still in the database. They belong to the account that auto-login used, which has a generated password that `LANGFLOW_SUPERUSER_PASSWORD` doesn't replace.
+
+If startup exits, set `LANGFLOW_SUPERUSER_PASSWORD` before you start Langflow. If sign-in still fails, temporarily re-enable auto-login and set a password on that same account:
+
+1. Back up the database and configuration directory.
+2. Stop Langflow. Set `LANGFLOW_AUTO_LOGIN=true` in the environment or `.env` file, then start Langflow with the same database and configuration directory. Keep the instance restricted to trusted local access until you finish.
+3. Request an auto-login token, and copy the `access_token` value from the response:
+
+    ```bash
+    curl -s http://localhost:7860/api/v1/auto_login
+    ```
+
+4. Get the account's ID, and copy the `id` value from the response:
+
+    ```bash
+    curl -s http://localhost:7860/api/v1/users/whoami \
+      -H "Authorization: Bearer ACCESS_TOKEN"
+    ```
+
+5. Set a strong password on that account. Don't use the legacy default value `langflow`. Read the password into a variable so that it isn't stored in your shell history, and avoid `"` and `\` characters, which break the JSON body.
+
+    ```bash
+    read -rs NEW_PASSWORD
+    curl -s -X PATCH http://localhost:7860/api/v1/users/USER_ID \
+      -H "Authorization: Bearer ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"password\": \"$NEW_PASSWORD\"}"
+    ```
+
+6. Stop Langflow. Remove `LANGFLOW_AUTO_LOGIN=true` or set it to `false`. If the account's username isn't `langflow`, set `LANGFLOW_SUPERUSER` to it. Set `LANGFLOW_SUPERUSER_PASSWORD` to the password from step 5. Startup requires this variable, but it doesn't overwrite the password you just set.
+7. Start Langflow, sign in with that username and password, and verify that your existing flows are present.
+
+Don't delete the database or reinstall Langflow to regain access, because that can permanently remove your flows.
+
 ### There's a mismatch between the models and the database
 
 The following error can occur during Langflow upgrades when the database schema doesn't match the current version's models:
