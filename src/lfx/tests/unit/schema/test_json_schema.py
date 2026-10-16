@@ -365,6 +365,70 @@ class TestUnderscorePropertyNames:
         assert by_wire.model_dump(by_alias=True) == {"_foo": "private", "foo": "public"}
 
 
+class TestKeywordPropertyNames:
+    """A property named after a Python keyword, or not an identifier at all.
+
+    ``create_model`` accepts such a name, but langchain-core builds the
+    LLM-facing tool schema from the model's annotations, where it cannot
+    appear: the parameter is dropped and the model is never told it exists
+    (langflow-ai/langflow#15412).
+    """
+
+    def test_keyword_property_is_renamed_and_still_dumps_its_wire_name(self):
+        schema = {
+            "type": "object",
+            "properties": {
+                "from": {"type": "integer"},
+                "size": {"type": "integer"},
+            },
+            "required": ["from", "size"],
+        }
+
+        model = create_input_schema_from_json_schema(schema)
+
+        assert list(model.model_fields) == ["from_", "size"]
+        assert list(model.model_json_schema()["properties"]) == ["from_", "size"]
+        assert model.model_validate({"from": 1, "size": 2}).model_dump(by_alias=True) == {"from": 1, "size": 2}
+        assert model.model_validate({"from_": 1, "size": 2}).model_dump(by_alias=True) == {"from": 1, "size": 2}
+
+    def test_non_identifier_property_is_renamed_and_still_dumps_its_wire_name(self):
+        schema = {"type": "object", "properties": {"sort-order": {"type": "string"}}}
+
+        model = create_input_schema_from_json_schema(schema)
+
+        assert list(model.model_fields) == ["sort_order"]
+        dumped = model.model_validate({"sort-order": "asc"}).model_dump(by_alias=True)
+        assert dumped == {"sort-order": "asc"}
+
+    def test_keyword_property_in_a_nested_object(self):
+        schema = {
+            "type": "object",
+            "properties": {
+                "range": {
+                    "type": "object",
+                    "properties": {"from": {"type": "integer"}, "to": {"type": "integer"}},
+                }
+            },
+        }
+
+        model = create_input_schema_from_json_schema(schema)
+
+        instance = model.model_validate({"range": {"from": 1, "to": 2}})
+        assert instance.model_dump(by_alias=True) == {"range": {"from": 1, "to": 2}}
+
+    def test_keyword_property_next_to_its_sanitized_sibling_keeps_both_values(self):
+        schema = {
+            "type": "object",
+            "properties": {"from": {"type": "string"}, "from_": {"type": "string"}},
+            "required": ["from", "from_"],
+        }
+
+        model = create_input_schema_from_json_schema(schema)
+
+        instance = model.model_validate({"from": "keyword", "from_": "sibling"})
+        assert instance.model_dump(by_alias=True) == {"from": "keyword", "from_": "sibling"}
+
+
 class TestFlattenSchema:
     """Tests for flatten_schema self-referential handling."""
 

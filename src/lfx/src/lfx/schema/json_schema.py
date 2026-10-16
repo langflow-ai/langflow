@@ -1,5 +1,7 @@
 """JSON Schema utilities for LFX."""
 
+import keyword
+import re
 from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, create_model
@@ -55,6 +57,17 @@ def _safe_field_name(name: str, used: set[str], reserved: set[str] | None = None
     intended for the other property.
     """
     base = name.lstrip("_") or "field"
+    # A Python keyword survives create_model, but langchain-core builds the
+    # LLM-facing schema from the model's annotations, where "from" cannot
+    # appear: the parameter is dropped and the model is never told it exists.
+    # A name that is not an identifier at all (e.g. "sort-order") goes the
+    # same way.
+    if keyword.iskeyword(base):
+        base = f"{base}_"
+    elif not base.isidentifier():
+        base = re.sub(r"\W", "_", base)
+        if not base or base[0].isdigit():
+            base = f"field_{base}" if base else "field"
     candidate = base
     i = 1
     while candidate in used or (reserved is not None and candidate in reserved and candidate != name):
@@ -253,9 +266,10 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 else:
                     default = ...  # required by Pydantic
 
-                # Add alias for camelCase if field name is snake_case
+                # Alias when the field name differs from the wire name, and for
+                # the camelCase spelling of a snake_case name.
                 field_kwargs = {"description": prop_schema.get("description")}
-                if "_" in prop_name:
+                if safe_name != prop_name or "_" in prop_name:
                     field_kwargs["validation_alias"] = _alias_choices(safe_name, prop_name, reserved_names)
                     # Emit the original wire name (including leading underscores)
                     # on model_dump(by_alias=True), not the sanitized field name.
@@ -289,9 +303,10 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         else:
             default = ...
 
-        # Add alias for camelCase if field name is snake_case
+        # Alias when the field name differs from the wire name, and for the
+        # camelCase spelling of a snake_case name.
         field_kwargs = {"description": fdef.get("description")}
-        if "_" in fname:
+        if safe_name != fname or "_" in fname:
             field_kwargs["validation_alias"] = _alias_choices(safe_name, fname, top_reserved_names)
             field_kwargs["serialization_alias"] = fname
 
