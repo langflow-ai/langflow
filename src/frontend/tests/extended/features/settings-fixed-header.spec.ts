@@ -33,5 +33,17 @@ test(
     await expect(
       page.getByRole("button", { name: "Save" }).last(),
     ).toBeInViewport();
+
+    // The scrollbar keeps the page's spacing from the cards instead of touching them.
+    const gap = await content.evaluate((scroller) => {
+      const box = scroller.getBoundingClientRect();
+      const scrollbarLeft =
+        box.left + scroller.clientLeft + scroller.clientWidth;
+      const cardsRight = (
+        scroller.firstElementChild as HTMLElement
+      ).getBoundingClientRect().right;
+      return scrollbarLeft - cardsRight;
+    });
+    expect(gap).toBeGreaterThanOrEqual(24);
   },
 );
