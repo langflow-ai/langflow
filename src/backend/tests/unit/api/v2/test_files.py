@@ -154,6 +154,114 @@ async def test_upload_file(files_client, files_created_api_key):
     assert "id" in response_json
 
 
+async def test_should_reject_with_400_when_uploaded_file_is_empty(files_client, files_created_api_key, save_file_spy):
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    response = await files_client.post(
+        "api/v2/files",
+        files={"file": ("empty.txt", b"")},
+        headers=headers,
+    )
+
+    assert response.status_code == 400, f"Expected 400, got {response.status_code}: {response.json()}"
+    assert response.json()["detail"] == "Empty file not allowed"
+    assert save_file_spy == [], f"An empty upload must not reach storage, but these were saved: {save_file_spy}"
+
+    list_response = await files_client.get("api/v2/files", headers=headers)
+    assert list_response.status_code == 200
+    assert list_response.json() == [], f"A rejected upload must not create a DB row, got: {list_response.json()}"
+
+
+async def test_should_accept_when_uploaded_file_is_one_byte(files_client, files_created_api_key, save_file_spy):
+    """One byte is the smallest accepted upload: the guard rejects size 0, not falsy content."""
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    response = await files_client.post(
+        "api/v2/files",
+        files={"file": ("one_byte.txt", b"0")},
+        headers=headers,
+    )
+
+    assert response.status_code == 201, f"Expected 201, got {response.status_code}: {response.json()}"
+    assert len(save_file_spy) == 1, f"Expected exactly one stored file, got: {save_file_spy}"
+
+
+async def test_should_report_no_file_provided_when_filename_is_missing(
+    files_client, files_created_api_key, save_file_spy
+):
+    """The filename guard runs before the empty-size guard, so its message must not change.
+
+    The body is hand-rolled because httpx omits ``filename`` entirely for an empty
+    string, which makes the part a plain form field and gets it rejected as a 422 by
+    FastAPI before the route runs. Only an explicit ``filename=""`` reaches the guard.
+    """
+    boundary = "testboundary"
+    body = (
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="file"; filename=""\r\n'
+        "Content-Type: application/octet-stream\r\n\r\n"
+        "test content\r\n"
+        f"--{boundary}--\r\n"
+    ).encode()
+    headers = {
+        "x-api-key": files_created_api_key.api_key,
+        "Content-Type": f"multipart/form-data; boundary={boundary}",
+    }
+
+    response = await files_client.post("api/v2/files", content=body, headers=headers)
+
+    assert response.status_code == 400, f"Expected 400, got {response.status_code}: {response.json()}"
+    assert response.json()["detail"] == "No file provided"
+    assert save_file_spy == [], f"A nameless upload must not reach storage, but these were saved: {save_file_spy}"
+
+
+async def test_should_reject_with_400_when_mcp_servers_config_is_empty(
+    files_client, files_created_api_key, files_active_user, save_file_spy
+):
+    """An empty MCP config is rejected for being empty, not mis-reported as invalid JSON.
+
+    Before the size guard, the empty body reached _validate_uploaded_mcp_config and
+    surfaced as 422 "not valid JSON", which hid the actual problem from the caller.
+    """
+    headers = {"x-api-key": files_created_api_key.api_key}
+    mcp_file_ext = await get_mcp_file(files_active_user, extension=True)
+
+    response = await files_client.post(
+        "api/v2/files",
+        files={"file": (mcp_file_ext, b"")},
+        headers=headers,
+    )
+
+    assert response.status_code == 400, f"Expected 400, got {response.status_code}: {response.json()}"
+    assert response.json()["detail"] == "Empty file not allowed"
+    assert save_file_spy == [], f"An empty MCP config must not reach storage, but these were saved: {save_file_spy}"
+
+
+@pytest.mark.usefixtures("max_file_size_upload_fixture")
+async def test_should_reject_with_413_when_uploaded_file_is_oversize(
+    files_client, files_created_api_key, save_file_spy
+):
+    """Rejecting empty uploads must not disturb the upper bound, which still answers 413.
+
+    The 413 is raised by ContentSizeLimitMiddleware, which counts body bytes before the
+    route runs, so the route's own 413 branch stays shadowed for this request shape.
+    """
+    headers = {"x-api-key": files_created_api_key.api_key}
+    oversize_content = b"x" * (1024 * 1024 + 1024)
+
+    response = await files_client.post(
+        "api/v2/files",
+        files={"file": ("oversize.txt", io.BytesIO(oversize_content), "application/octet-stream")},
+        headers=headers,
+    )
+
+    assert response.status_code == 413, f"Expected 413, got {response.status_code}: {response.json()}"
+    # The reported size is chunk-dependent: the middleware raises on the first chunk that
+    # crosses the limit, so only the fixed part of the message is stable enough to assert on.
+    assert "Content size limit exceeded. Maximum allowed is 1MB" in response.json()["detail"]
+    assert save_file_spy == [], f"An oversize upload must not reach storage, but these were saved: {save_file_spy}"
+
+
 async def test_should_not_persist_in_my_files_when_upload_is_ephemeral(files_client, files_created_api_key):
     """Ephemeral uploads save the file to storage but do NOT create a UserFile DB record.
 
