@@ -67,7 +67,7 @@ runs:
       shell: bash
       if: steps.cache.outputs.cache-hit != 'true'
       working-directory: ${{ inputs.working-directory }}
-      run: npx playwright install ${{ inputs.browsers }} --with-deps
+      run: npx playwright install "$GITHUB_CONTEXT_VAR" --with-deps
 
     - name: Install just Playwright's dependencies
       shell: bash
