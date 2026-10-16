@@ -94,6 +94,10 @@ const STRINGS: Record<string, string> = {
     "Not configured. Set PGVECTOR_CONNECTION_STRING in your server environment.",
   "settings.dbProviders.usePostgres": "Use Postgres pgVector",
   "settings.dbProviders.postgresSelected": "Postgres pgVector selected",
+  // Non-English copy proves these strings come from translation keys.
+  "settings.dbProviders.fields.OPENSEARCH_USE_SSL.label": "Usar TLS (HTTPS)",
+  "settings.dbProviders.fields.OPENSEARCH_PASSWORD.placeholder":
+    "Digite a senha do OpenSearch",
 };
 
 jest.mock("react-i18next", () => ({
@@ -266,6 +270,21 @@ describe("DBProvidersPage characterization", () => {
       expect(
         screen.getByTestId("db-provider-toggle-OPENSEARCH_VERIFY_CERTS"),
       ).toHaveAttribute("aria-checked", "true");
+    });
+
+    it("names the TLS switches and the password placeholder in the interface language", async () => {
+      await openOpenSearch();
+      // The switch's accessible name used to be the English field label.
+      expect(
+        screen.getByRole("switch", { name: "Usar TLS (HTTPS)" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Digite a senha do OpenSearch"),
+      ).toBeInTheDocument();
+      // Example-value placeholders have no key and stay as written.
+      expect(
+        screen.getByPlaceholderText("https://search.example.com:9200"),
+      ).toBeInTheDocument();
     });
 
     it("keeps Save and Test connection disabled until every required field has a value", async () => {

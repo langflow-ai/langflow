@@ -231,21 +231,26 @@ def _lfx_specifiers(requirements: Iterable[str]) -> tuple[str, ...]:
     return tuple(specifiers)
 
 
-def _admits_lfx_series(specifier: str, lfx_version: str) -> bool:
-    """Whether ``specifier`` admits any lfx in ``lfx_version``'s minor series.
+def _lfx_series_admission(specifier: str, lfx_version: str) -> bool | None:
+    """Whether ``specifier`` admits any lfx in ``lfx_version``'s minor series, or ``None`` if it cannot tell.
 
-    Clauses without a comparable bound (``==``, ``~=``, ``!=``) count as admitting so the caller fails closed.
+    ``False`` means a comparable bound excludes the series. ``None`` means some clause has no comparable
+    bound (``==``, ``~=``, ``!=``, an unparsable version) or the requirement is a bare ``lfx``.
     """
     major, minor, _, _, _ = parse_version(lfx_version)
     series_start = parse_version(f"{major}.{minor}.0.dev0")
     series_end = parse_version(f"{major}.{minor + 1}.0.dev0")
-    for clause in filter(None, specifier.split(",")):
+    clauses = [clause for clause in specifier.split(",") if clause]
+    known = bool(clauses)
+    for clause in clauses:
         match = re.fullmatch(r"(?P<op>>=|<=|>|<)(?P<bound>.+)", clause)
         if match is None:
+            known = False
             continue
         try:
             bound = _version_key(match["bound"])
         except PlanError:
+            known = False
             continue
         op = match["op"]
         if (
@@ -254,7 +259,15 @@ def _admits_lfx_series(specifier: str, lfx_version: str) -> bool:
             or (op == "<=" and bound < series_start)
         ):
             return False
-    return True
+    return True if known else None
+
+
+def _admits_lfx_series(specifier: str, lfx_version: str) -> bool:
+    """Whether ``specifier`` may admit lfx in ``lfx_version``'s minor series.
+
+    A range this check cannot evaluate counts as admitting, so a guard that blocks on admission fails closed.
+    """
+    return _lfx_series_admission(specifier, lfx_version) is not False
 
 
 def _newer_public_versions(package: str, version: str, latest: str, client: IndexClient) -> list[str]:
@@ -291,6 +304,26 @@ def _ensure_not_behind_public_latest(package: str, version: str, lfx_version: st
             f"lfx release line can install; bump {package} above {newer} before building so dependency "
             "resolution cannot prefer a newer release"
         )
+
+
+def _ensure_reusable_for_lfx_line(package: str, version: str, release: dict[str, Any], lfx_version: str) -> None:
+    """Reject reusing a public release that another lfx line published under the same version.
+
+    Each lfx minor line owns its own bundle minor. A version the other line already published carries
+    that line's lfx floor, so reusing it would pin this release to a bundle it cannot install. Reuse
+    needs every lfx requirement to provably admit this build's series; anything this check cannot
+    evaluate blocks the build so it fails closed.
+    """
+    specifiers = _lfx_specifiers((release.get("info") or {}).get("requires_dist") or ())
+    admissions = [_lfx_series_admission(specifier, lfx_version) for specifier in specifiers]
+    if admissions and all(admission is True for admission in admissions):
+        return
+    observed = ", ".join(f"lfx{specifier}" for specifier in specifiers) or "lfx range unknown"
+    verdict = "which excludes" if False in admissions else "which this check cannot confirm admits"
+    raise PlanError(
+        f"{package} {version}: already published for {observed}, {verdict} lfx {lfx_version}; bump "
+        f"{package} to an unpublished version in this lfx line's bundle minor before building"
+    )
 
 
 def bump_version(version: str, bump: str = "patch", prerelease: str | None = None) -> str:
@@ -663,9 +696,11 @@ def _restamped_lfx_requirement(requirement: str, expected: str) -> str:
     return f"{match['name']}{extras}{match['spacing']}{expected}{marker}"
 
 
-def _replace_lfx_floor(content: str, lfx_version: str, *, exact: bool = False) -> str:
+def _replace_lfx_floor(content: str, lfx_version: str, *, exact: bool = False, pin: bool = False) -> str:
     major = parse_version(lfx_version)[0]
     expected = f">={lfx_version},<{major + 1}.0.0" if exact else _lfx_floor_spec(lfx_version)
+    if pin:
+        expected = f"=={lfx_version}"
     data = tomllib.loads(content)
     project = data.get("project", {})
     dependencies = project.get("dependencies", [])
@@ -680,7 +715,7 @@ def _replace_lfx_floor(content: str, lfx_version: str, *, exact: bool = False) -
     observed_specifier = _requirement_parts(observed)[1]
     replacement = (
         observed
-        if not exact and _lfx_range_is_compatible(observed_specifier, lfx_version)
+        if not exact and not pin and _lfx_range_is_compatible(observed_specifier, lfx_version)
         else _restamped_lfx_requirement(observed, expected)
     )
 
@@ -780,6 +815,59 @@ def update_changed_bundles(
         raise
 
 
+def restamp_nightly_bundles(lfx_version: str, *, base_dir: Path = BASE_DIR) -> tuple[VersionTarget, ...]:
+    """Restamp bundles whose final LFX floor excludes this same-source nightly.
+
+    Keep compatible bundles unchanged. A bundle requiring this nightly's final
+    release gets its own .devN version and exact LFX pin, so publishing a
+    nightly never weakens or consumes the stable bundle's version. Other release
+    floors are refused. The caller refreshes uv.lock after the version chain.
+    """
+    major, minor, patch, phase, counter = parse_version(lfx_version)
+    if phase != -4:
+        raise PlanError("Nightly bundle restamping requires an LFX development version")
+    final_version = f"{major}.{minor}.{patch}"
+    root_path = base_dir / "pyproject.toml"
+    root_content = root_path.read_text(encoding="utf-8")
+    updates: dict[Path, str] = {}
+    targets: list[VersionTarget] = []
+    for bundle in _discover_bundles(base_dir).values():
+        _, specifier = _requirement_parts(bundle.lfx_requirement)
+        if specifier == f"=={lfx_version}" or _lfx_range_is_compatible(specifier, lfx_version):
+            continue
+        minimum, _ = _minimum_and_upper(specifier)
+        if minimum != final_version or not _lfx_range_is_compatible(specifier, final_version):
+            raise PlanError(f"{bundle.name}: cannot restamp {bundle.lfx_requirement!r} for LFX {lfx_version}")
+        target_version = restamp_version(bundle.version, f".dev{counter}")
+        content = _replace_project_version(bundle.pyproject.read_text(encoding="utf-8"), target_version)
+        # An older RC sorts after every devN. A >= nightly floor would still
+        # admit that incompatible RC, so require the runtime built from this tag.
+        updates[bundle.pyproject] = _replace_lfx_floor(content, lfx_version, pin=True)
+        for path in bundle.manifest_paths:
+            updates[path] = _replace_manifest_version(path.read_text(encoding="utf-8"), target_version)
+        root_content = _replace_bundle_floor(root_content, bundle.name, target_version)
+        targets.append(
+            VersionTarget(
+                package=bundle.name,
+                source_version=bundle.version,
+                build_version=target_version,
+                action="publish-prerelease",
+                lfx_range=f"=={lfx_version}",
+            )
+        )
+    if updates:
+        updates[root_path] = root_content
+        originals = {path: path.read_text(encoding="utf-8") for path in updates}
+        try:
+            for path, content in updates.items():
+                path.write_text(content, encoding="utf-8")
+        except Exception:
+            for path, content in originals.items():
+                path.write_text(content, encoding="utf-8")
+            raise
+    return tuple(targets)
+
+
 def restamp_unpublished_bundles(
     rc_number: int,
     lfx_version: str,
@@ -798,7 +886,9 @@ def restamp_unpublished_bundles(
     try:
         for bundle in bundles.values():
             _ensure_not_behind_public_latest(bundle.name, bundle.version, lfx_version, client)
-            if client.get_release(bundle.name, bundle.version) is not None:
+            release = client.get_release(bundle.name, bundle.version)
+            if release is not None:
+                _ensure_reusable_for_lfx_line(bundle.name, bundle.version, release, lfx_version)
                 targets.append(
                     VersionTarget(
                         package=bundle.name,

@@ -158,11 +158,12 @@ async def test_send_as_user_rejects_text_slack_would_truncate() -> None:
 
 
 @pytest.mark.usefixtures("user_resolver")
-async def test_canvas_sends_markdown_document_content(transport: SlackTransport) -> None:
+@pytest.mark.parametrize("title", ["Release notes", "  Release notes  "])
+async def test_canvas_sends_markdown_document_content(transport: SlackTransport, title: str) -> None:
     transport.enqueue(load_fixture("canvases_create"))
     component = build_component(
         SlackCanvasComponent,
-        title="Release notes",
+        title=title,
         markdown="# Release\n\nAll green.",
         channel_id="C0SLACKDEMO",
     )
@@ -175,6 +176,27 @@ async def test_canvas_sends_markdown_document_content(transport: SlackTransport)
     assert params["title"] == "Release notes"
     assert params["channel_id"] == "C0SLACKDEMO"
     assert canvas.data["canvas_id"] == "F0SLACKDOC1"
+    assert canvas.data["title"] == "Release notes"
+
+
+@pytest.mark.usefixtures("user_resolver")
+@pytest.mark.parametrize("title_inputs", [{}, {"title": ""}, {"title": "   "}, {"title": None}])
+@pytest.mark.parametrize("channel_id", ["", "C0SLACKDEMO"])
+async def test_canvas_omits_blank_title_from_the_sdk_json_body(
+    transport: SlackTransport, title_inputs: dict[str, str | None], channel_id: str
+) -> None:
+    transport.enqueue(load_fixture("canvases_create"))
+    component = build_component(SlackCanvasComponent, markdown="# Release", channel_id=channel_id, **title_inputs)
+
+    canvas = await component.build_canvas()
+
+    assert transport.last.method == "canvases.create"
+    expected = {"document_content": {"type": "markdown", "markdown": "# Release"}}
+    if channel_id:
+        expected["channel_id"] = channel_id
+    assert transport.last.req_args["json"] == expected
+    assert transport.last.authorization == "Bearer xoxp-user-token"
+    assert canvas.data == {"canvas_id": "F0SLACKDOC1", "channel_id": channel_id or None, "title": None}
 
 
 @pytest.mark.usefixtures("user_resolver", "transport")

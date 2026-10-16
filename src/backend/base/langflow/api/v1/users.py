@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from lfx.services.authorization import (
     AuthorizationMutation,
     AuthorizationMutationKind,
@@ -17,6 +17,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import PasswordResetRequest, UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.services.auth.context import current_auth_is_api_key
 from langflow.services.auth.utils import get_current_user, get_current_user_optional
 from langflow.services.authorization.admin import (
     ADMINISTRATION_REQUIRED_REASON,
@@ -45,10 +46,25 @@ from langflow.services.creation_hooks import (
     pre_creation_denied_to_http,
     run_pre_creation_hooks,
 )
+from langflow.services.data_subjects import requests as request_service
+from langflow.services.data_subjects.errors import DataSubjectError
+from langflow.services.data_subjects.user_listing import (
+    open_deletion_request_statuses,
+    open_deletion_request_subjects,
+)
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
+from langflow.services.database.models.data_subject_request import DataSubjectRequestSource
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
 from langflow.services.deps import get_auth_service, get_authorization_service, get_settings_service
+from langflow.services.rate_limit.service import check_rate_limit, get_user_limiter_key
+
+
+def _erase_worker():
+    from langflow.services.data_subjects.worker import data_subject_erase_worker
+
+    return data_subject_erase_worker
+
 
 router = APIRouter(tags=["Users"], prefix="/users")
 OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
@@ -56,6 +72,7 @@ _LEGACY_SUPERUSER_DENIAL = "The user doesn't have enough privileges"
 _PERMISSION_DENIED = "Permission denied"
 _SUPERUSER_REQUIRED_HEADERS = {"X-Langflow-Error-Code": "superuser_required"}
 _ACCESS_CEILING_HEADERS = {"X-Langflow-Error-Code": "access_ceiling"}
+PASSWORD_RESET_ATTEMPTS_PER_MINUTE = 5
 
 
 async def _audit_deny(
@@ -341,6 +358,9 @@ async def read_all_users(
     search: str | None = None,
     username: Annotated[str | None, Query(description="Exact username match")] = None,
     role_name: Annotated[str | None, Query(description="Exact assigned role-name match")] = None,
+    deletion_requested: Annotated[
+        bool | None, Query(description="Only users with an open account deletion request")
+    ] = None,
     session: DbSession,
 ) -> UsersResponse:
     """Retrieve a list of users from the database with pagination."""
@@ -365,6 +385,11 @@ async def read_all_users(
         query = query.where(User.id.in_(assigned_user_ids))
         count_query = count_query.where(User.id.in_(assigned_user_ids))
 
+    if deletion_requested:
+        requested_ids = open_deletion_request_subjects()
+        query = query.where(User.id.in_(requested_ids))
+        count_query = count_query.where(User.id.in_(requested_ids))
+
     query = query.order_by(User.username, User.id).offset(skip).limit(limit)
     users = (await session.exec(query)).fetchall()
     total_count = (await session.exec(count_query)).first()
@@ -372,6 +397,7 @@ async def read_all_users(
     return UsersResponse(
         total_count=total_count,
         users=[UserRead(**user.model_dump()) for user in users],
+        deletion_requests=await open_deletion_request_statuses(session, [user.id for user in users]),
     )
 
 
@@ -629,10 +655,23 @@ async def reset_password(
     password_reset: PasswordResetRequest,
     user: CurrentActiveUser,
     session: DbSession,
+    request: Request,
 ) -> User:
     """Change the current user's password after verifying the existing password."""
     if user_id != user.id:
         raise HTTPException(status_code=404, detail="You can't change another user's password")
+    if current_auth_is_api_key():
+        raise HTTPException(
+            status_code=403,
+            detail="Sign in interactively to change your password",
+            headers={"X-Langflow-Error-Code": "interactive_login_required"},
+        )
+    check_rate_limit(
+        request,
+        scope="password-reset",
+        limit_per_minute=PASSWORD_RESET_ATTEMPTS_PER_MINUTE,
+        key=get_user_limiter_key(user.id),
+    )
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -659,14 +698,14 @@ async def reset_password(
     return user
 
 
-@router.delete("/{user_id}")
+@router.delete("/{user_id}", status_code=202)
 async def delete_user(
     user_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
     operation_id: OperationId = None,
 ) -> dict:
-    """Delete a user from the database."""
+    """Delete a user and everything the account holds; the erase finishes in the background."""
     if current_user.id == user_id:
         await _audit_deny(
             user_id=current_user.id,
@@ -749,47 +788,31 @@ async def delete_user(
             headers=_ACCESS_CEILING_HEADERS,
         ) from exc
 
-    # IMPORTANT:
-    # This endpoint intentionally performs database cleanup only and does
-    # not issue provider-side teardown across all user deployments.
-    # The trade-off is to avoid destructive bulk deletion of external
-    # deployment resources during user deletion.
-    from langflow.services.database.models.trigger.model import Trigger
-    from langflow.services.triggers.cleanup import delete_triggers
-    from langflow.services.triggers.source_cleanup import preserve_user_cleanup_credentials
-
-    trigger_ids = (await session.exec(select(Trigger.id).where(Trigger.user_id == user_db.id))).all()
-    await delete_triggers(session, trigger_ids=trigger_ids)
-    # Keep only bounded cleanup access tokens before the owner connection and
-    # its credential envelope cascade away. This also covers earlier intents.
-    await preserve_user_cleanup_credentials(session, user_id=user_db.id)
-    await session.delete(user_db)
-    await session.flush()
-    await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
-    audit_details = administration_audit_details(
-        {
-            "event": AUDIT_EVENT_MUTATION,
-            "target_was_active": lifecycle_mutation.user_before.is_active,
-            "target_was_superuser": lifecycle_mutation.user_before.is_superuser,
-        },
-        operation_id=operation_id,
-    )
-    audit_staged = stage_audit_decision(
-        session=session,
-        user_id=current_user.id,
-        action="user:delete",
-        obj=f"user:{user_id}",
-        result="allow",
-        details=audit_details,
-    )
-    await session.commit()
-    await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
-    if not audit_staged:
-        await audit_decision(
-            user_id=current_user.id,
+    # Deleting a user is an erase: everything the account holds goes, in the background, and
+    # only after this synchronous stop succeeds. Deployments block it rather than being torn down.
+    actor_id = current_user.id
+    try:
+        request = await request_service.create_and_approve(
+            session,
+            request_service.create_builder_request(
+                session, subject=user_db, requested_by=actor_id, source=DataSubjectRequestSource.ADMIN
+            ),
+            actor_id,
+        )
+    except DataSubjectError as exc:
+        await _audit_deny(
+            user_id=actor_id,
             action="user:delete",
             obj=f"user:{user_id}",
-            result="allow",
-            details=audit_details,
+            status_code=int(exc.status_code),
+            reason=exc.code,
+            operation_id=operation_id,
         )
-    return {"detail": "User deleted"}
+        raise HTTPException(
+            status_code=int(exc.status_code),
+            detail={"code": exc.code, "message": exc.message, **exc.details},
+            headers={"X-Langflow-Error-Code": exc.code},
+        ) from exc
+    await session.commit()
+    _erase_worker().notify()
+    return {"detail": "User deletion started", "request_id": str(request.id)}

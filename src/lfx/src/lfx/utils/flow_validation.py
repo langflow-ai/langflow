@@ -666,10 +666,14 @@ def _find_code_execution_components(nodes: list[dict], blocked_hashes: frozenset
     return found
 
 
-def check_code_execution_components_and_raise(flow_data: dict | None) -> None:
+def check_code_execution_components_and_raise(
+    flow_data: dict | None,
+    *,
+    type_to_current_hash: Mapping[str, set[str]] | None = None,
+) -> None:
     """Block flows containing built-in arbitrary-code-execution components.
 
-    Called when ``block_code_interpreter_components`` is enabled. Raises
+    Called when interpreters are globally blocked or restricted to administrators. Raises
     :class:`CustomComponentValidationError` if any code-execution component is present.
     """
     if not flow_data:
@@ -682,7 +686,8 @@ def check_code_execution_components_and_raise(flow_data: dict | None) -> None:
     if not nodes:
         return
 
-    type_to_current_hash = get_component_hash_lookups_for_validation()
+    if type_to_current_hash is None:
+        type_to_current_hash = get_component_hash_lookups_for_validation()
     found = _find_code_execution_components(
         nodes,
         _blocked_code_hashes(CODE_EXECUTION_COMPONENT_TYPES, type_to_current_hash=type_to_current_hash or {}),
@@ -2056,7 +2061,7 @@ def _sanitize_admin_only_flow_build(
     """Return trusted build data after component hashes have been loaded.
 
     Admin-only mode permits regular users to refresh and run known server
-    component templates, but not to submit new or modified component code.
+    component templates that do not execute user- or model-supplied code.
     When the global restricted-mode policy permits trusted substitution for a
     drifted built-in, apply it to the detached copy first. Then validate every
     code-bearing node against the server registry and replace the request bytes
@@ -2106,6 +2111,10 @@ def _sanitize_admin_only_flow_build(
     # The code-interpreter policy also applies to proxy-injected executable code. Its type
     # alone may still say ChatInput, so validate after expansion and after drift substitution.
     validate_flow_for_current_settings(sanitized)
+    # Trusted interpreter source still executes caller-controlled input fields.
+    # A template hash match must not grant regular users code-execution privileges.
+    # Inspect the expanded graph so grouped and relabelled interpreters are covered.
+    check_code_execution_components_and_raise(sanitized, type_to_current_hash=validation_hashes)
     check_flow_and_raise(
         sanitized,
         allow_custom_components=False,

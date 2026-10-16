@@ -62,7 +62,11 @@ from lfx.schema.workflow import (
     WorkflowRunRequest,
 )
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
-from lfx.utils.flow_validation import prepare_public_flow_build, validate_public_flow_no_code_execution
+from lfx.utils.flow_validation import (
+    prepare_flow_build_for_user_from_cache,
+    prepare_public_flow_build,
+    validate_public_flow_no_code_execution,
+)
 from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
 from sqlalchemy import case, delete, false
@@ -76,7 +80,7 @@ from langflow.api.utils.execution_principal import (
     stamp_execution_principal,
 )
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
-from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError
+from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError, task_saved
 from langflow.api.v1.a2a_utils import (
     A2A_APIKEY_HEADER,
     build_agent_card,
@@ -87,6 +91,7 @@ from langflow.api.v1.a2a_utils import (
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.context import AuthCredentialContext, set_current_auth_context
+from langflow.services.auth.utils import set_authenticated_telemetry_user
 from langflow.services.authorization import (
     FlowAction,
     ensure_flow_permission,
@@ -170,6 +175,7 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> User | None:
     if api_key_result is None or api_key_result.user.id != flow.user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
     user = api_key_result.user
+    set_authenticated_telemetry_user(user)
     set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
     try:
         await ensure_flow_permission(
@@ -241,7 +247,7 @@ async def _prepare_a2a_resume_checkpoint(
     request_host: str | None = None,
     admitted_user_id: str | None = None,
 ) -> tuple[GraphCheckpoint, Flow, User | UserRead]:
-    """Reauthorize and re-apply public policy before restoring a HITL graph."""
+    """Reauthorize and re-apply caller-specific policy before restoring a HITL graph."""
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
     is_public_now = await _is_public_a2a_flow(flow)
     current_principal_id = _require_admitted_a2a_principal(
@@ -253,6 +259,12 @@ async def _prepare_a2a_resume_checkpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
     if not is_public_now:
         user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+        prepared_data = prepare_flow_build_for_user_from_cache(
+            checkpoint.flow_payload,
+            is_superuser=user.is_superuser,
+        )
+        if prepared_data is not None:
+            checkpoint = checkpoint.model_copy(update={"flow_payload": prepared_data}, deep=True)
         return checkpoint, flow, user
 
     await authorize_public_flow_access(
@@ -292,7 +304,7 @@ async def _run_flow(
     """
     # Lazy import: langflow.api.v2.workflow pulls in the execution stack and this
     # module is imported during router assembly.
-    from langflow.api.v2.workflow import execute_sync_workflow_with_timeout
+    from langflow.api.v2.workflow import _apply_execution_gates, execute_sync_workflow_with_timeout
 
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
     is_public_now = await _is_public_a2a_flow(flow)
@@ -328,6 +340,11 @@ async def _run_flow(
     parsed = parse_workflow_run_request(
         WorkflowRunRequest(flow_id=str(flow_id), input_value=text, mode="sync", session_id=session_id)
     )
+    if not is_public_now:
+        # Authenticated A2A bypasses the REST host, so apply its caller-aware gates
+        # here and carry the trusted payload into the shared executor. Graph-level
+        # validation cannot enforce the administrator-only policy without the caller.
+        parsed = _apply_execution_gates(parsed, flow, user)
     try:
         job_id = UUID(task_id)
     except ValueError:
@@ -695,6 +712,11 @@ class A2ACheckpointStore(CheckpointStore):
 
 # MessageToDict serializes the enum by name, so a stored blob's state is e.g. "TASK_STATE_CANCELED".
 _TERMINAL_STATE_NAMES = {pb.TaskState.Name(state) for state in TERMINAL_TASK_STATES}
+# The states a run ends with. One that waits for a person or for a sign-in has stopped as well, until it is answered.
+_RUN_OVER_STATE_NAMES = _TERMINAL_STATE_NAMES | {
+    pb.TaskState.Name(pb.TaskState.TASK_STATE_INPUT_REQUIRED),
+    pb.TaskState.Name(pb.TaskState.TASK_STATE_AUTH_REQUIRED),
+}
 
 
 def _task_state(blob: dict[str, Any] | None) -> str | None:
@@ -755,9 +777,13 @@ class DurableTaskStore(TaskStore):
                 # different state must not transition it. Covers both race orders of a cancel against
                 # a completion (a forced CANCELED arriving after COMPLETED persisted, or a late
                 # completion arriving after CANCELED). The state that landed first wins.
-                return
+                pass
             else:
                 row.task = blob  # fresh dict reference flags the JSON column dirty
+        state = _task_state(blob)
+        # Told to the run that holds a place in a migration pause for this task. The run decides whether
+        # this save is the one it ends with.
+        task_saved(task.id, state, run_over=state in _RUN_OVER_STATE_NAMES)
 
     async def get(self, task_id: str, context: ServerCallContext) -> pb.Task | None:
         owner = _task_scope(context)

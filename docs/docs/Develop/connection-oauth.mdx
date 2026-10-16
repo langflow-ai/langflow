@@ -256,12 +256,21 @@ is therefore a deployment-wide grant of that provider account; see
 ### Errors a caller sees
 
 When resolution fails, the response carries a machine-readable `error_code` (`connection-unresolved`,
-`connection-not-authorized`, `auth-expired`, `scope-missing`, `rate-limited`, `provider-unavailable`,
+`connection-not-authorized`, `auth-expired`, `scope-missing`, `rate-limited`, `provider-unavailable`, `network-error`,
 `action-unsupported`, `invalid-request`, `resource-not-found`) together with `hint`, `provider`, `retryable`, and `retry_after` where it applies, and
 the HTTP status the provider situation warrants (403 for an unauthorized connection, 401 for expired
 credentials, 429 for a rate limit). The error's own sentence, which names the connection handle, is returned
 only to the flow's owner; delegated and anonymous callers get a generic message alongside the same code, so
 a client can still show the right call to action without learning which account the owner connected.
+
+Google Workspace actions report `network-error` when the Langflow server cannot communicate with the
+Google API because of a timeout, DNS lookup failure, refused connection, unreachable network, or TLS
+failure. The message includes the API hostname and guidance to check the server's outbound network
+access. These failures return HTTP 504 for a timeout or 502 for other transport failures. Langflow does
+not automatically retry them because a timed-out write may already have reached Google. An actual HTTP 5xx
+response still reports `provider-unavailable` (except 501, which reports `action-unsupported`).
+Google Workspace socket operations use a 10-second timeout. This is not a total action deadline or an
+IPv4 fallback guarantee, and DNS resolution or multi-chunk transfers can take longer.
 
 For `connection-not-authorized`, the hint distinguishes a missing `allow_non_interactive` opt-in from a
 public/A2A execution or an execution whose identity was not supplied by the host. Owner diagnostics also
@@ -276,10 +285,9 @@ The [Microsoft 365 bundle](./bundles-microsoft) resolves its connections through
 `provider: "microsoft"` registration configured above. Its components hold a
 portable handle such as `microsoft/work`, never a token.
 
-[Register a Microsoft Entra application](./entra-app-registration) is the operator
-runbook for that registration: the per-action delegated permission table, the
-redirect URIs per deployment context, the consent and admin-consent rules, and
-the troubleshooting table. Two constraints are worth repeating here.
+[Configure Langflow for Microsoft Entra](./entra-app-registration) walks through
+the server registration and the **Settings** connection. Create the application
+itself in Microsoft Entra. Two constraints are worth repeating here.
 
 Use Microsoft's **short** scope names, such as `Mail.Read`, consistently in the
 registration and consent request. For execution checks, the resolver normalizes
@@ -450,7 +458,7 @@ test consent in a sandbox tenant, does not establish consent in the production t
 - **Microsoft:** Tenant user-consent settings can restrict consent to verified
   publishers and low-impact permissions, or disable it entirely, in which case each
   connection needs administrator approval. See the consent guidance in
-  [Add delegated permissions](./entra-app-registration#add-delegated-permissions).
+  [Delegated permissions](./entra-app-registration#delegated-permissions).
 - **Slack:** A workspace can require administrator approval before an app is installed
   or before new scopes are added to it. Install the app in the target workspace and
   confirm its approval before users connect accounts.
@@ -462,13 +470,20 @@ locally; its `provider_revocation` field then reports what happened upstream:
 
 | Provider | Upstream call on revoke | `provider_revocation` |
 |---|---|---|
-| Google | Google's token revocation endpoint, with the refresh token when one is stored, otherwise the access token. See the [web server registration guide](https://developers.google.com/identity/protocols/oauth2/web-server). | `revoked` |
-| Slack | [`auth.revoke`](https://docs.slack.dev/reference/methods/auth.revoke/) with the stored token | `revoked` |
-| Microsoft | None: Entra exposes no per-grant revocation endpoint for this flow | `unsupported` |
+| Google (OAuth sign-in) | Google's token revocation endpoint, with the refresh token when one is stored, otherwise the access token. See the [web server registration guide](https://developers.google.com/identity/protocols/oauth2/web-server). | `revoked` on success |
+| Slack (OAuth sign-in or pasted token) | [`auth.revoke`](https://docs.slack.dev/reference/methods/auth.revoke/) with the stored token, without requiring an OAuth registration for pasted tokens | `revoked` only when Slack confirms revocation |
+| Microsoft (OAuth sign-in) | None: Entra exposes no per-grant revocation endpoint for this flow | `unsupported` |
 
-`failed` means the provider call could not complete, so revoke the grant in the
-provider's account or admin console as well. `not_applicable` means no OAuth credential
-was stored. For Microsoft's `unsupported`, remove the app's consent in Entra as
+`failed` means the provider did not confirm revocation, so revoke the token in the
+provider's account or admin console as well. This includes rejected token types and
+network failures. For Slack Socket Mode app-level tokens (`xapp-`), use
+**Basic Information > App-Level Tokens** in the Slack app's settings if the request fails.
+`not_applicable` means no credential was stored or the connection used a pasted token
+for a provider other than Slack.
+
+The Connections page distinguishes confirmed provider revocation from local credential removal.
+
+For Microsoft's `unsupported`, remove the app's consent in Entra as
 described in [Revocation](./entra-app-registration#revocation).
 
 `revoked` reports token revocation, not a complete uninstall. Langflow sends only the
