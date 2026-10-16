@@ -5270,6 +5270,11 @@
       "bare_class_name": "MrscraperWebSearch",
       "target": "ext:mrscraper:MrscraperWebSearch@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SerpKiteSearchComponent",
+      "target": "ext:serpkite:SerpKiteSearchComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [

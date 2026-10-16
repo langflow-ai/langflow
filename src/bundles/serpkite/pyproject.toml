@@ -1,0 +1,48 @@
+[project]
+name = "lfx-serpkite"
+version = "0.1.0"
+description = "SerpKite Google SERP web-search component as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "serpkite", "search", "serp"]
+
+# Uses the stable BUNDLE_API surface and async HTTP; no vendor SDK is required.
+dependencies = [
+    "lfx>=1.13.0.dev0,<2.0.0",
+    "httpx>=0.24.0,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point.  Editable installs whose
+# ``dist.files`` only surfaces dist-info entries fall back to this
+# entry-point to find the manifest.
+[project.entry-points."langflow.extensions"]
+lfx-serpkite = "lfx_serpkite"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components live inside the lfx_serpkite package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_serpkite"]
+include = ["src/lfx_serpkite/extension.json", "src/lfx_serpkite/components/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_serpkite",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]
