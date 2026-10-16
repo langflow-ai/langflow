@@ -2911,7 +2911,7 @@
   "playground.workflowWarning": "Flow 실행 경고",
   "settings.nav.connections": "연결",
   "connections.title": "연결",
-  "connections.subtitle": "Flow가 작업할 때 쓰는 계정입니다. Token은 서버에만 두고, 여기에는 메타데이터만 보여 줍니다.",
+  "connections.subtitle": "Flow가 사용자를 대신해 작업할 때 쓰는 타사 계정(Google, Microsoft 365, Slack 등)입니다. Token은 서버에만 두고, 여기에는 표시하지 않습니다.",
   "connections.search": "이름, 식별자, 계정 검색",
   "connections.loading": "연결 불러오는 중…",
   "connections.empty": "연결이 없습니다.",

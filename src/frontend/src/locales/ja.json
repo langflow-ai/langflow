@@ -2912,7 +2912,7 @@
   "playground.workflowWarning": "ワークフローの警告",
   "settings.nav.connections": "接続",
   "connections.title": "接続",
-  "connections.subtitle": "フローが代理として動作するアカウントです。トークンはサーバーに保管され、ここにはメタデータのみ表示されます。",
+  "connections.subtitle": "フローがあなたに代わって操作するために使用するサードパーティのアカウント（Google、Microsoft 365、Slackなど）です。トークンはサーバーに保管され、ここには表示されません。",
   "connections.search": "名前、ハンドル、アカウントを検索",
   "connections.loading": "接続を読み込み中…",
   "connections.empty": "接続はまだありません。",
