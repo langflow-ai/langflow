@@ -12,7 +12,7 @@ graph it carries.
 
 from lfx_native._native import (
     EngineError,
-    FlowState,
+    GraphState,
     append_table_rows,
     apply,
     apply_restore_fixes,
@@ -48,7 +48,7 @@ from lfx_native._native import (
 
 __all__ = [
     "EngineError",
-    "FlowState",
+    "GraphState",
     "append_table_rows",
     "apply",
     "apply_restore_fixes",

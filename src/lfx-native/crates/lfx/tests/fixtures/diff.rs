@@ -1,7 +1,7 @@
 //! `diff_cases.json`: the exact operations a whole-flow save records.
 
 use lfx::ops::canonical::graphs_equal;
-use lfx::ops::{ApplyOptions, FlowState, Operation, derive_flow_operations, diff_flow_data};
+use lfx::ops::{ApplyOptions, GraphState, Operation, derive_flow_operations, diff_flow_data};
 use libtest_mimic::{Failed, Trial};
 use serde_json::Value;
 
@@ -50,7 +50,7 @@ fn diff_case(case: &Value) -> Result<(), Failed> {
 fn replay_recorded(case: &Value) -> Result<(), Failed> {
     let operations =
         Operation::list_from_json(case["operations"].clone()).map_err(|error| error.to_string())?;
-    let mut state = FlowState::new(case["base"].clone()).map_err(|error| error.to_string())?;
+    let mut state = GraphState::new(case["base"].clone()).map_err(|error| error.to_string())?;
     for operation in operations {
         state
             .apply(vec![operation], ApplyOptions::default())

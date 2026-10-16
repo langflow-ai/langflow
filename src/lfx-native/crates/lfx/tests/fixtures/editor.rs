@@ -3,7 +3,7 @@
 use lfx::ops::canonical::graphs_equal;
 use lfx::ops::keyed::{Renumber, append_table_rows, assign_changed_table_row_ids, assign_row_ids};
 use lfx::ops::restore::{edge_fixes, fixes_for_edges};
-use lfx::ops::{ApplyOptions, FlowState, Operation};
+use lfx::ops::{ApplyOptions, GraphState, Operation};
 use libtest_mimic::{Failed, Trial};
 use serde_json::{Value, json};
 
@@ -38,7 +38,7 @@ fn unordered(operations: &Value) -> Value {
 
 fn inverse_case(case: &Value) -> Result<(), Failed> {
     let base = &case["base"];
-    let mut state = FlowState::new(base.clone()).map_err(|error| error.to_string())?;
+    let mut state = GraphState::new(base.clone()).map_err(|error| error.to_string())?;
     let operations =
         Operation::list_from_json(case["operations"].clone()).map_err(|error| error.to_string())?;
     let options = ApplyOptions {

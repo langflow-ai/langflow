@@ -13,7 +13,7 @@ use serde_json::Value;
 use crate::ops::apply::ApplyOptions;
 use crate::ops::canonical::graph_hash;
 use crate::ops::envelope::{Corruption, Damage, StoredRow, decode_row};
-use crate::ops::state::FlowState;
+use crate::ops::state::GraphState;
 
 /// Fail unless a checkpoint's graph still hashes to its stored hash.
 ///
@@ -80,13 +80,13 @@ pub fn replay(
 /// The graph replay holds: the checkpoint as read, until an operation needs it indexed.
 enum Replayed {
     Checkpoint(Value),
-    State(Box<FlowState>),
+    State(Box<GraphState>),
 }
 
 impl Replayed {
-    fn state(&mut self) -> crate::ops::error::Result<&mut FlowState> {
+    fn state(&mut self) -> crate::ops::error::Result<&mut GraphState> {
         if let Self::Checkpoint(graph) = self {
-            *self = Self::State(Box::new(FlowState::new(std::mem::take(graph))?));
+            *self = Self::State(Box::new(GraphState::new(std::mem::take(graph))?));
         }
         match self {
             Self::State(state) => Ok(state),
