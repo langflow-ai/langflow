@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import contextlib
 import json
+import secrets
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -40,9 +42,11 @@ from langflow.services.connection.oauth import broker
 from langflow.services.connection.oauth.config import OAuthError, deployment_context
 from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.connection.slack_credentials import (
+    PROVIDER_SLACK,
+    check_slack_web_token,
     is_app_token_connection,
-    prepare_manual_credential,
     refuse_outside_listener,
+    validate_manual_credential,
 )
 from langflow.services.database.models.connection import (
     Connection,
@@ -278,7 +282,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         # creating a connection for a provider outside the ceiling is refused
         # before any credential material is encrypted or stored.
         await enforce_integration_policy_for_provider(payload.provider_key, user_id=user.id)
-        payload = prepare_manual_credential(payload, context=deployment_context())
+        payload = await validate_manual_credential(payload, context=deployment_context())
         owner_id = user.id if payload.ownership_mode == ConnectionOwnershipMode.USER else None
         now = _utc_now()
         raw_credentials = _credential_payload(payload)
@@ -795,6 +799,10 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             await _audit_resolution_denial(request, row=row, error=denial)
             raise denial
         credential = await self._credential_from_row(session, row=row)
+        if row.provider_key == PROVIDER_SLACK:
+            scopes = await check_slack_web_token(credential.access_token.get_secret_value())
+            row.granted_scopes = scopes
+            credential = replace(credential, granted_scopes=frozenset(scopes))
         missing = ScopeSet.missing(
             provider=row.provider_key, required=required_scopes, granted=credential.granted_scopes
         )
@@ -827,6 +835,20 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 row.id,
             )
             raise ConnectionUnresolvedError(handle, provider=row.provider_key, reason="credential-undecryptable")
+        # Pasted tokens cannot refresh. Do not retry a token Slack already
+        # rejected, and do not expire a replacement after a stale rejection.
+        if (
+            row.provider_key == PROVIDER_SLACK
+            and not payload.get("oauth")
+            and rejected_token_digest is not None
+            and secrets.compare_digest(rejected_token_digest, broker.digest(payload["access_token"]))
+        ):
+            _set_status(row, PersistedConnectionStatus.EXPIRED)
+            row.health = ConnectionHealth.UNHEALTHY.value
+            row.health_checked_at = _utc_now()
+            row.updated_at = row.health_checked_at
+            session.add(row)
+            raise AuthExpiredError(provider=row.provider_key)
         try:
             payload = await broker.refresh_if_needed(session, row, payload, rejected_token_digest=rejected_token_digest)
         except OAuthError as exc:

@@ -196,18 +196,21 @@ async def exchange(
     )
 
 
-async def revoke(registration: OAuthRegistration, payload: dict) -> bool:
-    if registration.provider == "google":
+async def revoke(provider: str, payload: dict) -> bool:
+    if provider == "google":
         await _request(
             "https://oauth2.googleapis.com/revoke",
             {"token": payload.get("refresh_token") or payload["access_token"]},
             allow_empty=True,
         )
         return True
-    if registration.provider == "slack":
-        await _request(
+    if provider == "slack":
+        result = await _request(
             "https://slack.com/api/auth.revoke", {}, headers={"Authorization": f"Bearer {payload['access_token']}"}
         )
+        if result.get("ok") is not True or result.get("revoked") is not True:
+            msg = "Slack did not confirm token revocation. Revoke the token in Slack's settings."
+            raise OAuthError(msg)
         return True
     # Entra has no RFC 7009 endpoint for revoking just this delegated grant.
     return False
