@@ -20,10 +20,13 @@ export default function CustomSettingsPageFrame({
 }: CustomSettingsPageFrameProps) {
   return (
     <PageLayout backTo={-1 as To} title={title} description={description}>
-      <SidebarProvider width="15rem" defaultOpen={false}>
+      <SidebarProvider width="15rem" defaultOpen={false} className="min-h-0">
         <SideBarButtonsComponent items={items} />
-        {/* Overflow is clipped. Neither box scrolls, and a box that hides its overflow is what a sticky element inside a page sticks to. */}
-        <main className="flex min-w-0 flex-1 overflow-clip">
+        {/* Only the content scrolls, so the Settings header and the menu stay in view; a sticky element inside a page sticks to this box. */}
+        <main
+          data-testid="settings-content-scroll"
+          className="flex min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-clip"
+        >
           <div className="flex min-w-0 flex-1 flex-col overflow-x-clip pt-1">
             {children}
           </div>
