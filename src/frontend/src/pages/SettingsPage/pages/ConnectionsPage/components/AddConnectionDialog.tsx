@@ -679,6 +679,8 @@ export function AddConnectionDialog({
                     </span>
                   )}
                   <ScopeChecklist
+                    providerId={providerId}
+                    requirements={requirements}
                     scopes={requestable}
                     selected={selectedScopes}
                     onToggle={toggleScope}
@@ -734,6 +736,8 @@ export function AddConnectionDialog({
                     : t("connections.add.reauthorizeHint")}
                 </span>
                 <ScopeChecklist
+                  providerId={providerId}
+                  requirements={requirements}
                   scopes={reauthorizeOptions}
                   selected={selectedScopes}
                   onToggle={toggleScope}
