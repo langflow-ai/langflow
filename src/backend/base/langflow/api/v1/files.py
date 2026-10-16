@@ -93,7 +93,8 @@ async def upload_file(
 
     Requires WRITE on the flow and rejects files larger than the configured
     ``max_file_size_upload`` limit (HTTP 413). The stored name is prefixed with a
-    UTC timestamp so repeated uploads of the same filename do not collide.
+    host-local timestamp that reduces collisions for repeated uploads of the
+    same filename.
     """
     # Writing a file to a flow's storage is a flow mutation: enforce WRITE so
     # the external access ceiling (e.g. a "viewer") cannot upload via this route.
