@@ -23,7 +23,7 @@ from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection import ConnectionConflictError, DatabaseConnectionResolverService
 from langflow.services.connection.oauth import broker as oauth_broker
 from langflow.services.connection.oauth.config import OAuthError, OAuthRegistration, get_oauth_settings
-from langflow.services.connection.policy import provider_has_usable_action
+from langflow.services.connection.policy import providers_with_usable_actions
 from langflow.services.connection.service import enforce_integration_policy_for_provider
 from langflow.services.connection.slack_credentials import ManualCredentialError
 from langflow.services.database.models.connection import (
@@ -600,6 +600,9 @@ async def list_oauth_registrations(
         purpose=IntegrationPolicyPurpose.DISCOVER,
         attributes=provider_policy_attributes,
     )
+    available_providers = await providers_with_usable_actions(
+        frozenset(registration.provider for _, registration in available), policy
+    )
     return OAuthRegistrationListRead(
         registrations=[
             OAuthRegistrationRead(
@@ -612,7 +615,7 @@ async def list_oauth_registrations(
                 allowed_tenants=list(registration.allowed_tenants),
             )
             for registration_id, registration in available
-            if provider_has_usable_action(registration.provider, policy)
+            if registration.provider in available_providers
         ]
     )
 

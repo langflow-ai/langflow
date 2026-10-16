@@ -262,7 +262,7 @@ async def enforce_integration_policy_for_provider(
         )
     except IntegrationPolicyError as exc:
         raise IntegrationPolicyBlockedError(provider=provider_key, policy_key=exc.policy_key) from exc
-    if require_usable_action and not provider_has_usable_action(provider_key, policy):
+    if require_usable_action and not await provider_has_usable_action(provider_key, policy):
         raise IntegrationPolicyBlockedError(provider=provider_key)
 
 
