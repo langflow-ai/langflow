@@ -780,7 +780,11 @@ class OperationsComponent(Component):
         return frontend_node
 
     async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:
-        """Keep the operation options and outputs in sync with the saved input type on load."""
+        """Keep the operation options, outputs and field visibility in sync with the saved values on load.
+
+        The rebuilt template carries class-default ``show``/``required`` flags, which the generic merge
+        does not restore, so visibility is re-derived here without touching saved field values.
+        """
         await super().update_frontend_node(new_frontend_node, current_frontend_node)
 
         template = new_frontend_node.get("template", {})
@@ -798,6 +802,23 @@ class OperationsComponent(Component):
             self.update_outputs(new_frontend_node, "operation", operation_value)
         else:
             self.update_outputs(new_frontend_node, "input_type", input_type)
+
+        # Re-apply visibility. Unlike _reset_operation_fields, keep saved values.
+        operation = self._extract_operation_name(operation_value)
+        self._show_main_input(template, input_type, operation)
+        for field in self.ALL_OPERATION_FIELDS:
+            if field in template:
+                template[field]["show"] = field in self.OPERATION_FIELDS.get(operation, [])
+
+        # The merge restores only values, so rebuild Path Selection's dropdown from the saved JSON.
+        if operation == "Path Selection" and "selected_key" in template:
+            mapped_json = template.get("mapped_json_display", {}).get("value")
+            if mapped_json:
+                try:
+                    template["selected_key"]["options"] = self.extract_all_paths(json.loads(mapped_json))
+                except (json.JSONDecodeError, TypeError, ValueError, RecursionError) as e:
+                    logger.warning(f"Error parsing saved mapped JSON: {e}")
+                    template["selected_key"]["show"] = False
 
         return new_frontend_node
 
