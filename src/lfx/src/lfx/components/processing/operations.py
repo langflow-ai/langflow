@@ -914,12 +914,15 @@ class OperationsComponent(Component):
         filter_criteria: list[str] = self.select_keys_input
 
         if len(filter_criteria) == 1 and filter_criteria[0] == "data":
-            filtered = data_dict["data"]
-        else:
-            if not all(key in data_dict for key in filter_criteria):
-                msg = f"Select key not found in data. Available keys: {list(data_dict.keys())}"
-                raise ValueError(msg)
-            filtered = {key: value for key, value in data_dict.items() if key in filter_criteria}
+            # Only a dictionary value keeps the historical unwrap behavior (including
+            # empty dicts); any other value keeps its key so it survives as payload.
+            if "data" in data_dict and isinstance(data_dict["data"], dict):
+                return Data(data=data_dict["data"])
+            filter_criteria = ["data"]
+        if not all(key in data_dict for key in filter_criteria):
+            msg = f"Select key not found in data. Available keys: {list(data_dict.keys())}"
+            raise ValueError(msg)
+        filtered = {key: value for key, value in data_dict.items() if key in filter_criteria}
 
         return Data(data=filtered)
 
