@@ -16,7 +16,8 @@ from pathlib import Path
 import pytest
 from lfx.services.flow_operations import FlowOperationError, apply_flow_operations, graphs_equal, parse_flow_operations
 
-DOCUMENT = json.loads((Path(__file__).parent / "fixtures" / "merge_cases.json").read_text())
+FIXTURES = Path(__file__).resolve().parents[5] / "lfx-native" / "fixtures"
+DOCUMENT = json.loads((FIXTURES / "merge_cases.json").read_text())
 CASES = DOCUMENT["cases"]
 
 
