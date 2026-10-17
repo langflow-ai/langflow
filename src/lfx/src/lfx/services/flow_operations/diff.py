@@ -11,8 +11,8 @@ Shape of the result, so whole-flow saves and future operation submissions
 record the same history:
 
 - at most one operation of each type, in the order ``delete_edges``,
-  ``delete_nodes``, ``add_nodes``, ``update_nodes``, ``update_edges``,
-  ``add_edges``, ``update_metadata``, each listing every item it applies to:
+  ``delete_nodes``, ``add_nodes``, ``update_nodes``, ``add_edges``,
+  ``update_metadata``, each listing every item it applies to:
   deletions in the order the stored graph lists them, everything else in the
   order the target lists it. Nothing is sorted, so the same two graphs always
   give the same operations;
@@ -31,8 +31,7 @@ record the same history:
   selector, and per key inside an item. A natural-key list whose order
   changed, and a table that is not keyed by row ids on both sides, is written
   whole;
-- an edge that still connects the same two nodes is updated in place, key by
-  key; one whose source or target changed is deleted and added again;
+- an edge that changed in any way is deleted and added again;
 - view state is never recorded, and two spellings of one handle are not a
   change.
 """
@@ -44,16 +43,15 @@ from typing import Any
 
 from lfx.services.flow_operations.apply import apply_flow_operations
 from lfx.services.flow_operations.canonical import (
-    EDGE_HANDLE_KEYS,
     EDGE_VIEW_STATE_KEYS,
     FLOW_VIEW_STATE_KEYS,
     NODE_VIEW_STATE_KEYS,
     graphs_equal,
     is_row_position,
     json_type,
-    parse_handle,
     values_equal,
 )
+from lfx.services.flow_operations.edge_rules import edge_changed
 from lfx.services.flow_operations.exceptions import FlowOperationReplayError
 from lfx.services.flow_operations.ops import (
     GRAPH_COLLECTION_KEYS,
@@ -67,7 +65,6 @@ from lfx.services.flow_operations.ops import (
     KeySelector,
     NodeFieldPath,
     SetNodeFieldUpdate,
-    UpdateEdgesOp,
     UpdateMetadataOp,
     UpdateNodeEntry,
     UpdateNodesOp,
@@ -80,7 +77,6 @@ _NON_METADATA_KEYS = GRAPH_COLLECTION_KEYS | FLOW_VIEW_STATE_KEYS
 _TEMPLATE_PATH: NodeFieldPath = ("data", "node", "template")
 _OUTPUTS_PATH: NodeFieldPath = ("data", "node", "outputs")
 _NODE_DATA_VIEW_STATE = frozenset(path[-1] for path in _SCHEMA.node_view_state_paths if path[:-1] == ("data", "node"))
-_EDGE_IDENTITY_KEYS = frozenset({"id", "source", "target"})
 _VALUE_UNIT = frozenset(_SCHEMA.value_unit)
 _TOGGLES = frozenset(_SCHEMA.toggles)
 # The parts of a template field that decide whether its value is a secret.
@@ -111,18 +107,13 @@ def diff_flow_data(base: dict[str, Any], target: dict[str, Any]) -> list[FlowOpe
     base_edges = {edge["id"]: _without(edge, EDGE_VIEW_STATE_KEYS) for edge in base["edges"]}
     target_edges = {edge["id"]: _without(edge, EDGE_VIEW_STATE_KEYS) for edge in target["edges"]}
 
-    reconnected_edge_ids = {
+    changed_edge_ids = {
         edge_id
         for edge_id, edge in target_edges.items()
-        if edge_id in base_edges
-        and (edge["source"], edge["target"]) != (base_edges[edge_id]["source"], base_edges[edge_id]["target"])
+        if edge_id in base_edges and edge_changed(base_edges[edge_id], edge)
     }
-    deleted_edge_ids = [
-        edge_id for edge_id in base_edges if edge_id not in target_edges or edge_id in reconnected_edge_ids
-    ]
-    added_edge_ids = [
-        edge_id for edge_id in target_edges if edge_id not in base_edges or edge_id in reconnected_edge_ids
-    ]
+    deleted_edge_ids = [edge_id for edge_id in base_edges if edge_id not in target_edges or edge_id in changed_edge_ids]
+    added_edge_ids = [edge_id for edge_id in target_edges if edge_id not in base_edges or edge_id in changed_edge_ids]
     deleted_node_ids = [node_id for node_id in base_nodes if node_id not in target_nodes]
     added_node_ids = [node_id for node_id in target_nodes if node_id not in base_nodes]
 
@@ -130,11 +121,6 @@ def diff_flow_data(base: dict[str, Any], target: dict[str, Any]) -> list[FlowOpe
     for node_id, node in target_nodes.items():
         if node_id in base_nodes:
             node_updates.extend(_diff_node(node_id, base_nodes[node_id], node))
-
-    edge_updates: list[UpdateNodeEntry] = []
-    for edge_id, edge in target_edges.items():
-        if edge_id in base_edges and edge_id not in reconnected_edge_ids:
-            edge_updates.extend(_diff_edge(edge_id, base_edges[edge_id], edge))
 
     operations: list[FlowOperation] = []
     if deleted_edge_ids:
@@ -150,8 +136,6 @@ def diff_flow_data(base: dict[str, Any], target: dict[str, Any]) -> list[FlowOpe
         )
     if node_updates:
         operations.append(UpdateNodesOp(type="update_nodes", updates=node_updates))
-    if edge_updates:
-        operations.append(UpdateEdgesOp(type="update_edges", updates=edge_updates))
     if added_edge_ids:
         operations.append(AddEdgesOp(type="add_edges", edges=[target_edges[edge_id] for edge_id in added_edge_ids]))
 
@@ -176,34 +160,6 @@ def derive_flow_operations(base: dict[str, Any], target: dict[str, Any]) -> Deri
 
 def _without(mapping: dict[str, Any], keys: frozenset[str]) -> dict[str, Any]:
     return {key: value for key, value in mapping.items() if key not in keys}
-
-
-# --- Edges ---------------------------------------------------------------------------
-
-
-def _diff_edge(edge_id: str, base: dict[str, Any], target: dict[str, Any]) -> list[UpdateNodeEntry]:
-    updates: list[UpdateNodeEntry] = []
-    for key, value in target.items():
-        if key in _EDGE_IDENTITY_KEYS:
-            continue
-        if key not in base:
-            updates.append(_set(edge_id, (key,), value))
-            continue
-        previous = base[key]
-        if key in EDGE_HANDLE_KEYS:
-            unchanged = values_equal(_handle_value(previous), _handle_value(value))
-        else:
-            unchanged = values_equal(previous, value)
-        if not unchanged:
-            updates.append(_set(edge_id, (key,), value, previous=previous))
-    updates.extend(_delete(edge_id, (key,)) for key in base if key not in target and key not in _EDGE_IDENTITY_KEYS)
-    return updates
-
-
-def _handle_value(handle: Any) -> Any:
-    """Compare a handle string by the object it encodes, so two spellings of one handle are the same value."""
-    parsed = parse_handle(handle)
-    return parsed if parsed is not None else handle
 
 
 # --- Nodes ---------------------------------------------------------------------------

@@ -174,7 +174,6 @@ def index_graph(flow_data: dict[str, Any]) -> GraphState:
     for edge in state.edges:
         edge_id = edge["id"]
         state.edges_by_id[edge_id] = edge
-        state.base_flow_edge_ids.add(edge_id)
         state.edge_ids_by_node_id[edge["source"]].add(edge_id)
         state.edge_ids_by_node_id[edge["target"]].add(edge_id)
 
@@ -200,13 +199,6 @@ def writable_node(state: GraphState, node_id: str) -> dict[str, Any]:
     node = state.own(state.nodes_by_id[node_id])
     state.nodes_by_id[node_id] = node
     return node
-
-
-def writable_edge(state: GraphState, edge_id: str) -> dict[str, Any]:
-    """Return the edge to write to: one this call owns (``GraphState.own``)."""
-    edge = state.own(state.edges_by_id[edge_id])
-    state.edges_by_id[edge_id] = edge
-    return edge
 
 
 def require_node_id(node: Any, *, context: str) -> str:

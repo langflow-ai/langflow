@@ -313,12 +313,11 @@ class Generator:
             {*(current.get("inputTypes") or []), self.rng.choice(["Message", "Data", "Text", "DataFrame"])}
         )
         handle = {**current, "inputTypes": input_types}
-        # A handle is written in both forms together, or they would disagree.
-        entries = [
-            self.set_entry(edge["id"], ("data", "targetHandle"), handle, current, exists=True),
-            self.set_entry(edge["id"], ("targetHandle",), _escaped(handle), edge["targetHandle"], exists=True),
-        ]
-        return [{"type": "update_edges", "updates": entries}]
+        # An edge changes by being deleted and added again, with both handle forms written together.
+        changed = copy.deepcopy(edge)
+        changed["targetHandle"] = _escaped(handle)
+        changed["data"]["targetHandle"] = handle
+        return [{"type": "delete_edges", "ids": [edge["id"]]}, {"type": "add_edges", "edges": [changed]}]
 
     def remove_field(self, graph):
         node = self.rng.choice(self.components(graph))

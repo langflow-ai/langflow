@@ -15,14 +15,15 @@ from lfx.services.flow_operations import (
     DeleteEdgesOp,
     DeleteNodesOp,
     FlowDataValidationError,
+    FlowOperationValidationError,
     KeySelector,
-    UpdateEdgesOp,
     UpdateMetadataOp,
     UpdateNodesOp,
     apply_flow_operations,
     derive_flow_operations,
     diff_flow_data,
     graphs_equal,
+    parse_flow_operations,
 )
 
 
@@ -204,27 +205,22 @@ def test_outputs_are_written_per_item():
     ]
 
 
-def test_a_changed_edge_between_the_same_nodes_is_updated_in_place():
+def test_a_changed_edge_between_the_same_nodes_is_deleted_and_added():
     target = _graph()
     target["edges"][0] = _edge("e-ab", "a", "b", field="api_key")
 
     operations = _replays(_graph(), target)
 
-    # Both forms of the handle change together; ``data`` is written whole.
+    # An edge never changes in place: the save deletes it and adds it again.
     assert operations == [
-        UpdateEdgesOp(
-            type="update_edges",
-            updates=[
-                {
-                    "id": "e-ab",
-                    "op": "set_field",
-                    "path": ["targetHandle"],
-                    "value": target["edges"][0]["targetHandle"],
-                },
-                {"id": "e-ab", "op": "set_field", "path": ["data"], "value": target["edges"][0]["data"]},
-            ],
-        )
+        DeleteEdgesOp(type="delete_edges", ids=["e-ab"]),
+        AddEdgesOp(type="add_edges", edges=[target["edges"][0]]),
     ]
+
+
+def test_update_edges_is_not_an_operation():
+    with pytest.raises(FlowOperationValidationError, match="Unsupported operation type"):
+        parse_flow_operations([{"type": "update_edges", "updates": []}])
 
 
 def test_an_edge_reconnected_to_another_node_is_deleted_and_added():

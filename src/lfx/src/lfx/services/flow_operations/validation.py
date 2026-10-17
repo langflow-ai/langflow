@@ -27,7 +27,7 @@ from typing import Any
 
 from lfx.services.flow_operations.canonical import is_finite_number, is_row_position, values_equal
 from lfx.services.flow_operations.codes import GraphViolationCode, resolution_of
-from lfx.services.flow_operations.edge_rules import check_edge, handle_forms
+from lfx.services.flow_operations.edge_rules import check_edge, edge_changed
 from lfx.services.flow_operations.exceptions import FlowDataValidationError, FlowOperationValidationError
 from lfx.services.flow_operations.schema import load_node_schema
 from lfx.services.flow_operations.state import NODE_OBJECT_PATHS, index_graph
@@ -208,20 +208,16 @@ def _non_finite_violations(flow_data: dict[str, Any]) -> list[GraphViolation]:
 
 
 def changed_edges(base: Any, target: dict[str, Any]) -> list[int]:
-    """Return the indexes of the edges ``target`` adds or rewires relative to ``base``.
+    """Return the indexes of the edges ``target`` adds relative to ``base``.
 
-    An edge is rewired when it connects other nodes or either form of a handle
-    changed.
+    That is new edges, and edges that changed (``edge_changed``), which a write
+    deletes and adds again.
     """
     stored = {edge["id"]: edge for edge in _list(base, "edges") if isinstance(edge, dict) and "id" in edge}
     changed: list[int] = []
     for index, edge in enumerate(target["edges"]):
         before = stored.get(edge["id"])
-        if (
-            before is None
-            or (before.get("source"), before.get("target")) != (edge["source"], edge["target"])
-            or not values_equal(handle_forms(before), handle_forms(edge))
-        ):
+        if before is None or edge_changed(before, edge):
             changed.append(index)
     return changed
 
