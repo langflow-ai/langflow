@@ -1,0 +1,69 @@
+---
+title: YouTube Search with FlashData
+slug: /flashdata-youtube-search
+description: Find YouTube tutorials for a learning agent in Langflow, using source-specific FlashData JSON results.
+---
+
+## Find YouTube tutorials for a learning agent
+
+Find YouTube tutorials for a learning agent. The requested count is a ceiling, not a guaranteed result count. FlashData API calls use paid Credits.
+
+Use **FlashData YouTube Search** from the [FlashData bundle](./bundles-flashdata.mdx).
+The component calls only the `youtube_search` source; choosing another FlashData component changes the source explicitly.
+
+## Configure and run
+
+1. Install the [FlashData bundle](./bundles-flashdata.mdx) in the Python environment used by Langflow and restart the server.
+2. Create a [FlashData account and API key](https://flashdata.dev), then store the key as a Langflow **Credential** global variable. Select it in **FlashData API Key**.
+3. Set `query` to `RAG evaluation tutorials`. In **Advanced Parameters (JSON)**, use the options below; leave it as an empty JSON object to use the documented defaults.
+4. Run the component once and inspect **JSON**. Running the API request uses FlashData Credits.
+5. Connect **JSON → Parser → Chat Output**. Set Parser to **Parser** mode with template `{text}` to display the JSON response as a Message. This path needs no language model.
+
+Example advanced parameters:
+
+```json
+{
+  "max_results": 5
+}
+```
+
+Inputs: query; max_results 1–20 (default 10); optional filters.
+The primary input belongs in its dedicated field. Advanced Parameters must not include it, `source`, API keys, or storage credentials.
+Unknown options and invalid types fail before a request is sent.
+
+## Use it as an Agent tool
+
+Enable **Tool Mode**, then connect the component's **Tool** output to an **Agent** component.
+The tool is named `flashdata_youtube_search`. The Agent supplies `query`; the API key and advanced settings remain configured on the component.
+Configure the Agent's model separately; model-provider calls have their own billing.
+
+Example Agent instruction:
+
+```text
+Select relevant tutorial candidates from the search results and link each video. Explain the selection from available metadata, without claiming to have watched it.
+```
+
+## Output and limits
+
+The JSON output preserves the API response and adds a `text` representation for the Parser.
+Expected source fields: results[].results: video search records; totalResults and query; usage.credits.
+Inspect the returned fields before selecting them downstream; optional fields and empty results are possible.
+
+The requested count is a ceiling, not a guaranteed result count.
+
+The bundle is open source. FlashData API calls are paid; free installation does not include free API requests.
+Review the [source contract, examples, and current rates](https://flashdata.dev/docs/sources/youtube_search) before running a flow.
+There is no automatic request retry. If a submission times out, it may already have been accepted and charged: check **Jobs** in the FlashData console before submitting again.
+For invalid keys, insufficient Credits, source permissions, or rate limits, correct the underlying issue before making a new request.
+
+## Run the source example without a model
+
+The development checkout includes `src/bundles/flashdata/examples/youtube_search.py`.
+Configure `FLASHDATA_API_KEY` in the process environment, then run:
+
+```bash
+lfx run src/bundles/flashdata/examples/youtube_search.py
+```
+
+The example injects the credential through Langflow's request context and connects the source's JSON output to Parser.
+Edit the example query before executing it; execution makes one paid FlashData request.

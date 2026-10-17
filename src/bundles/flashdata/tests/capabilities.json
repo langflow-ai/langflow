@@ -1,0 +1,527 @@
+[
+  {
+    "source": "google_search",
+    "name": "Google Search",
+    "sample": {
+      "query": "retrieval augmented generation evaluation",
+      "num": 5
+    },
+    "inputs": "query; optional gl, hl, location, num/page 1–100, tbs, autocorrect",
+    "outputs": "results[].organic: title, link, snippet, position; usage.credits",
+    "limits": "Search snippets are not fetched page content. Omitted count and locale are not filled in by the SDK.",
+    "outputExample": {
+      "source": "google_search",
+      "status": "done",
+      "results": [
+        {
+          "searchParameters": {
+            "q": "openai",
+            "gl": "us",
+            "hl": "en",
+            "type": "search",
+            "num": 10,
+            "page": 1,
+            "engine": "google"
+          },
+          "organic": [
+            {
+              "title": "OpenAI | Research & Deployment",
+              "link": "https://openai.com/",
+              "snippet": "We believe our research will eventually lead to artificial general intelligence, a system that can solve human-level problems.",
+              "position": 1
+            }
+          ],
+          "peopleAlsoAsk": [
+            {
+              "question": "Is OpenAI created by Elon Musk?"
+            }
+          ],
+          "relatedSearches": [
+            {
+              "query": "OpenAI login"
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "credits": 0.02
+      }
+    }
+  },
+  {
+    "source": "google_news",
+    "name": "Google News",
+    "sample": {
+      "query": "reusable rockets",
+      "num": 5
+    },
+    "inputs": "query; optional Google search parameters",
+    "outputs": "results[].news: titles, links and available dates/snippets; usage.credits",
+    "limits": "Returns news search results, not article full text.",
+    "outputExample": {
+      "source": "google_news",
+      "status": "done",
+      "results": [
+        {
+          "searchParameters": {
+            "q": "renewable energy",
+            "gl": "us",
+            "hl": "en",
+            "type": "news",
+            "num": 10,
+            "page": 1,
+            "allowSuggested": true
+          },
+          "news": [
+            {
+              "title": "Molder and Hatcher discuss positions on renewable energy, nuclear power ahead of November election",
+              "link": "https://tennesseelookout.com/2026/09/14/molder-and-hatcher-discuss-positions-on-renewable-energy-nuclear-power-ahead-of-november-election/",
+              "snippet": "District 5 candidates Charlie Hatcher, a Republican farmer and former Tennessee agriculture commissioner, and Chaz Molder, the Democratic...",
+              "date": "1 day ago",
+              "source": "Tennessee Lookout",
+              "imageUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSyHCzprpdTHLlK8zYoWi3-Xyuoj_YpfKHcxb3VhP2GPBH5xvFAhl0fRQA&usqp=CAI&s"
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "credits": 0.02
+      }
+    }
+  },
+  {
+    "source": "google_images",
+    "name": "Google Images",
+    "sample": {
+      "query": "rooftop solar installation",
+      "num": 5
+    },
+    "inputs": "query; optional Google search parameters",
+    "outputs": "results[].images: image/source URLs and available dimensions; usage.credits",
+    "limits": "Does not download images or establish image reuse rights.",
+    "outputExample": {
+      "source": "google_images",
+      "status": "done",
+      "results": [
+        {
+          "searchParameters": {
+            "q": "tokyo skyline",
+            "gl": "us",
+            "hl": "en",
+            "type": "images",
+            "num": 100,
+            "page": 1,
+            "engine": "google"
+          },
+          "images": [
+            {
+              "title": "Tokyo Skyline: where to enjoy the best views - WarmCheapTrips",
+              "imageUrl": "https://warmcheaptrips.com/wp-content/uploads/2024/11/Tokyo-Skyline.jpg",
+              "imageWidth": 1945,
+              "imageHeight": 1459,
+              "thumbnailUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLQIAqps-rU9vbSrchB9MbLVMr9p7IvzeeCYqcN_hv3g&s=10",
+              "thumbnailWidth": 638,
+              "thumbnailHeight": 480
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "credits": 0.02
+      }
+    }
+  },
+  {
+    "source": "google_shopping",
+    "name": "Google Shopping",
+    "sample": {
+      "query": "USB microphone",
+      "num": 5
+    },
+    "inputs": "query; optional Google search parameters",
+    "outputs": "results[].shopping: title, link, price and available merchant/rating fields; usage.credits",
+    "limits": "Prices are search snapshots; inventory and checkout price are not guaranteed.",
+    "outputExample": {
+      "source": "google_shopping",
+      "status": "done",
+      "results": [
+        {
+          "searchParameters": {
+            "q": "mechanical keyboard",
+            "gl": "us",
+            "hl": "en",
+            "type": "shopping",
+            "num": 40,
+            "page": 1,
+            "engine": "google"
+          },
+          "shopping": [
+            {
+              "title": "Keychron V1 Wired Custom Mechanical Keyboard barebone version 75% layout QMK/via programmable macro with Hot-swappable suppo",
+              "source": "Keychron.com",
+              "link": "https://www.google.com/search?ibp=oshop&q=mechanical+keyboard&prds=localAnnotatedOfferId:1,catalogid:4646494883927026855,pvo:2,pvt:hg,rds:PC_6027158597472037202%7CPROD_PC_6027158597472037202&gl=us&udm=28&pvorigin=2",
+              "price": "$69.99",
+              "imageUrl": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcTmFH2V5iUcuY9yRuK1-vTVeyU3DJLVq_MomMlGTQnfiyxxBIB9ISDiXNuhtyWOBoDJNM1rCNvc07jUU4l1bilumAMkF8aHZ07__xTWQQw1dPRD8xAGCvk4",
+              "rating": 4.8,
+              "ratingCount": 336
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "credits": 0.02
+      }
+    }
+  },
+  {
+    "source": "google_videos",
+    "name": "Google Videos",
+    "sample": {
+      "query": "database indexing tutorial",
+      "num": 5
+    },
+    "inputs": "query; optional Google search parameters",
+    "outputs": "results[].videos: video titles, links and available metadata; usage.credits",
+    "limits": "Search discovers videos; it does not return video files or transcripts.",
+    "outputExample": {
+      "source": "google_videos",
+      "status": "done",
+      "results": [
+        {
+          "searchParameters": {
+            "q": "me at the zoo",
+            "gl": "us",
+            "hl": "en",
+            "type": "videos",
+            "num": 10,
+            "page": 1,
+            "engine": "google"
+          },
+          "videos": [
+            {
+              "title": "Me at the zoo",
+              "link": "https://www.youtube.com/watch?v=jNQXAC9IVRw&vl=en",
+              "snippet": "Microplastics are accumulating in human brains at an alarming rate https://www.youtube.com/watch?v=0PT5c1z3LL8 “Nanoplastics and Human ...",
+              "imageUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNoybJBMfqr7vwH-saySvflZreMzBKZDBjW_zQMrY81E-xQZBBMzVuRw&s",
+              "videoUrl": "https://encrypted-vtbn0.gstatic.com/video?q=tbn:ANd9GcS8uZHJMduuLjzsxqOtyhx8VWeRlui2Fo0sUg",
+              "duration": "0:19",
+              "source": "YouTube"
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "credits": 0.02
+      }
+    }
+  },
+  {
+    "source": "google_places",
+    "name": "Google Places",
+    "sample": {
+      "query": "coworking Singapore",
+      "num": 5
+    },
+    "inputs": "query; optional location and other Google search parameters",
+    "outputs": "results[].places: names and available addresses, ratings and contact fields; usage.credits",
+    "limits": "Contact details may be missing; verify current hours and availability with the business.",
+    "outputExample": {
+      "source": "google_places",
+      "status": "done",
+      "results": [
+        {
+          "searchParameters": {
+            "q": "coffee in san francisco",
+            "gl": "us",
+            "hl": "en",
+            "type": "places",
+            "num": 10,
+            "page": 1,
+            "engine": "google"
+          },
+          "places": [
+            {
+              "position": 1,
+              "title": "Kopê House",
+              "address": "546 Laguna St",
+              "latitude": 37.776222,
+              "longitude": -122.42606,
+              "rating": 4.9,
+              "ratingCount": 76
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "credits": 0.02
+      }
+    }
+  },
+  {
+    "source": "youtube_search",
+    "name": "YouTube Search",
+    "sample": {
+      "query": "RAG evaluation tutorials",
+      "max_results": 5
+    },
+    "inputs": "query; max_results 1–20 (default 10); optional filters",
+    "outputs": "results[].results: video search records; totalResults and query; usage.credits",
+    "limits": "The requested count is a ceiling, not a guaranteed result count.",
+    "outputExample": {
+      "source": "youtube_search",
+      "status": "done",
+      "results": [
+        {
+          "results": [
+            {
+              "videoId": "K5KVEU3aaeQ",
+              "title": "Python Full Course for Beginners",
+              "channel": "Programming with Mosh",
+              "channelId": "UCWv7vMbMWH4-V0ZXdmDpPBA",
+              "channelUrl": "https://www.youtube.com/channel/UCWv7vMbMWH4-V0ZXdmDpPBA",
+              "duration": 7341,
+              "durationString": "2:02:21"
+            }
+          ],
+          "totalResults": 20,
+          "query": "python"
+        }
+      ],
+      "usage": {
+        "credits": 0.01
+      }
+    }
+  },
+  {
+    "source": "youtube_search_extended",
+    "name": "YouTube Extended Search",
+    "sample": {
+      "query": "retrieval evaluation tutorials",
+      "max_results": 50
+    },
+    "inputs": "query; max_results 1–700 (default 20); optional filters",
+    "outputs": "results[].results: video search records; totalResults and query; usage.credits",
+    "limits": "This is a distinct source with a separate higher rate than standard search. Requested count is not guaranteed.",
+    "outputExample": {
+      "source": "youtube_search_extended",
+      "status": "done",
+      "results": [
+        {
+          "results": [
+            {
+              "videoId": "K5KVEU3aaeQ",
+              "title": "Python Full Course for Beginners",
+              "channel": "Programming with Mosh",
+              "channelId": "UCWv7vMbMWH4-V0ZXdmDpPBA",
+              "channelUrl": "https://www.youtube.com/channel/UCWv7vMbMWH4-V0ZXdmDpPBA",
+              "duration": 7341,
+              "durationString": "2:02:21"
+            }
+          ],
+          "totalResults": 20,
+          "query": "python"
+        }
+      ],
+      "usage": {
+        "credits": 0.05
+      }
+    }
+  },
+  {
+    "source": "youtube_metadata",
+    "name": "YouTube Metadata",
+    "sample": {
+      "video_id": "dQw4w9WgXcQ",
+      "include_formats": false,
+      "include_chapters": true
+    },
+    "inputs": "video_id (11 characters); include_formats/include_chapters (default true)",
+    "outputs": "results[]: videoId, title, channel, duration and other available metadata; usage.credits",
+    "limits": "Metadata is not media download. Chapters and optional fields may be absent.",
+    "outputExample": {
+      "source": "youtube_metadata",
+      "status": "done",
+      "results": [
+        {
+          "videoId": "dQw4w9WgXcQ",
+          "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)",
+          "description": "The official video for “Never Gonna Give You Up” by Rick Astley. \n\nNever: The Autobiography 📚 OUT NOW! \nFollow this link to get your copy and listen to Rick’s ‘Never’ playlist ❤️ #RickAstleyNever\nhttps://linktr.ee/rickastleynever\n\n“Never Gonna Give You Up” was a global smash on its release in July 1987, topping the charts in 25 countries including Rick’s native UK and the US Billboard Hot 100.  It also won the Brit Award for Best single in 1988. Stock Aitken and Waterman wrote and produced the track which was the lead-off single and lead track from Rick’s debut LP “Whenever You Need Somebody”.  The album was itself a UK number one and would go on to sell over 15 million copies worldwide.\n\nThe legendary video was directed by Simon West – who later went on to make Hollywood blockbusters such as Con Air, Lara Croft – Tomb Raider and The Expendables 2.  The video passed the 1bn YouTube views milestone on 28 July 2021.\n\nSubscribe to the official Rick Astley YouTube channel: https://RickAstley.lnk.to/YTSubID\n\nFollow Rick Astley:\nFacebook: https://RickAstley.lnk.to/FBFollowID \nTwitter: https://RickAstley.lnk.to/TwitterID \nInstagram: https://RickAstley.lnk.to/InstagramID \nWebsite: https://RickAstley.lnk.to/storeID \nTikTok: https://RickAstley.lnk.to/TikTokID\n\nListen to Rick Astley:\nSpotify: https://RickAstley.lnk.to/SpotifyID \nApple Music: https://RickAstley.lnk.to/AppleMusicID \nAmazon Music: https://RickAstley.lnk.to/AmazonMusicID \nDeezer: https://RickAstley.lnk.to/DeezerID \n\nLyrics:\nWe’re no strangers to love\nYou know the rules and so do I\nA full commitment’s what I’m thinking of\nYou wouldn’t get this from any other guy\n\nI just wanna tell you how I’m feeling\nGotta make you understand\n\nNever gonna give you up\nNever gonna let you down\nNever gonna run around and desert you\nNever gonna make you cry\nNever gonna say goodbye\nNever gonna tell a lie and hurt you\n\nWe’ve known each other for so long\nYour heart’s been aching but you’re too shy to say it\nInside we both know what’s been going on\nWe know the game and we’re gonna play it\n\nAnd if you ask me how I’m feeling\nDon’t tell me you’re too blind to see\n\nNever gonna give you up\nNever gonna let you down\nNever gonna run around and desert you\nNever gonna make you cry\nNever gonna say goodbye\nNever gonna tell a lie and hurt you\n\n#RickAstley #NeverGonnaGiveYouUp #WheneverYouNeedSomebody #OfficialMusicVideo",
+          "channel": "Rick Astley",
+          "channelId": "UCuAXFkgsw1L7xaCfnd5JJOw",
+          "channelUrl": "https://www.youtube.com/channel/UCuAXFkgsw1L7xaCfnd5JJOw",
+          "channelSubscriberCount": 4540000
+        }
+      ],
+      "usage": {
+        "credits": 0.01
+      }
+    }
+  },
+  {
+    "source": "youtube_transcript",
+    "name": "YouTube Transcript",
+    "sample": {
+      "video_id": "dQw4w9WgXcQ",
+      "language": "en",
+      "auto": true
+    },
+    "inputs": "video_id; language (default en); auto (default true)",
+    "outputs": "results[]: videoId, languageCode, isAutoGenerated, segments, fullText; usage.credits",
+    "limits": "Reads an existing track. No ASR, translation, or automatic fallback to uploader captions.",
+    "outputExample": {
+      "source": "youtube_transcript",
+      "status": "done",
+      "results": [
+        {
+          "videoId": "dQw4w9WgXcQ",
+          "languageCode": "en",
+          "languageName": null,
+          "isAutoGenerated": true,
+          "segments": [
+            {
+              "start": 0.32,
+              "end": 14.58,
+              "text": "[Music]"
+            }
+          ],
+          "fullText": "[Music] We're no strangers to love. You know the rules and so do I. I feel commitments from what I'm thinking of. You wouldn't get this from any other guy. I just want to tell you how I'm feeling. Got to make you understand. Never going to give you up. I'm going to let you down. I'm going to run around and desert you. I'm going to make you say goodbye. Tell a lie and hurt you. We've known each other for so long. Your heart's been aching, but you're too shy to say we don't know what's been going on. We know the game and we're going to play. If you ask me how I'm feeling, don't tell me your truth. to see. I will give you around you. I will say goodbye and hurt you. I will give [Music] you around you. I will leave you. I will say goodbye and hurt you. Never going to give. Never going to give. Never going to give. Never going to give. We've known each other for so long. Your heart's been aching, but you're too shy to say it. We both know what's been going on. We know the game and we're going to play it. I just want to tell you how I'm feeling. Got to make you understand. Never going to give you up. Never going to let you down. Never going to run around and desert you. Heat. [Music] Heat. Heat. Heat. [Music] Never going to tell a lie and hurt you. Never going to give you up. Never going to let you down. Never going to run around and desert you. Never going to make you cry. Never going to say goodbye. Never going to say goodbye."
+        }
+      ],
+      "usage": {
+        "credits": 0.01
+      }
+    }
+  },
+  {
+    "source": "youtube_captions",
+    "name": "YouTube Captions",
+    "sample": {
+      "video_id": "dQw4w9WgXcQ",
+      "language": "en",
+      "auto": false
+    },
+    "inputs": "video_id; language (default en); auto (default false)",
+    "outputs": "results[]: videoId, languageCode, isAutoGenerated, segments, fullText; usage.credits",
+    "limits": "Defaults to uploader captions. No ASR, translation, or automatic fallback to generated captions.",
+    "outputExample": {
+      "source": "youtube_captions",
+      "status": "done",
+      "results": [
+        {
+          "videoId": "dQw4w9WgXcQ",
+          "languageCode": "en",
+          "languageName": null,
+          "isAutoGenerated": false,
+          "segments": [
+            {
+              "start": 1.36,
+              "end": 3.04,
+              "text": "[♪♪♪]"
+            }
+          ],
+          "fullText": "[♪♪♪] ♪ We're no strangers to love ♪ ♪ You know the rules\nand so do I ♪ ♪ A full commitment's\nwhat I'm thinking of ♪ ♪ You wouldn't get this\nfrom any other guy ♪ ♪ I just wanna tell you\nhow I'm feeling ♪ ♪ Gotta make you understand ♪ ♪ Never gonna give you up ♪ ♪ Never gonna let you down ♪ ♪ Never gonna run around\nand desert you ♪ ♪ Never gonna make you cry ♪ ♪ Never gonna say goodbye ♪ ♪ Never gonna tell a lie\nand hurt you ♪ ♪ We've known each other\nfor so long ♪ ♪ Your heart's been aching\nbut you're too shy to say it ♪ ♪ Inside we both know\nwhat's been going ♪ ♪ We know the game\nand we're gonna play it ♪ ♪ And if you ask me\nhow I'm feeling ♪ ♪ Don't tell me\nyou're too blind to see ♪ ♪ Never gonna give you up ♪ ♪ Never gonna let you down ♪ ♪ Never gonna run around\nand desert you ♪ ♪ Never gonna make you cry ♪ ♪ Never gonna say goodbye ♪ ♪ Never gonna tell a lie\nand hurt you ♪ ♪ Never gonna give you up ♪ ♪ Never gonna let you down ♪ ♪ Never gonna run around\nand desert you ♪ ♪ Never gonna make you cry ♪ ♪ Never gonna say goodbye ♪ ♪ Never gonna tell a lie\nand hurt you ♪ ♪ (Ooh, give you up) ♪ ♪ (Ooh, give you up) ♪ ♪ Never gonna give,\nnever gonna give ♪ ♪ (Give you up) ♪ ♪ Never gonna give,\nnever gonna give ♪ ♪ (Give you up) ♪ ♪ We've known each other\nfor so long ♪ ♪ Your heart's been aching\nbut you're too shy to say it ♪ ♪ Inside we both know\nwhat's been going ♪ ♪ We know the game\nand we're gonna play it ♪ ♪ I just wanna tell you\nhow I'm feeling ♪ ♪ Gotta make you understand ♪ ♪ Never gonna give you up ♪ ♪ Never gonna let you down ♪ ♪ Never gonna run around\nand desert you ♪ ♪ Never gonna make you cry ♪ ♪ Never gonna say goodbye ♪ ♪ Never gonna tell a lie\nand hurt you ♪ ♪ Never gonna give you up ♪ ♪ Never gonna let you down ♪ ♪ Never gonna run around\nand desert you ♪ ♪ Never gonna make you cry ♪ ♪ Never gonna say goodbye ♪ ♪ Never gonna tell a lie\nand hurt you ♪ ♪ Never gonna give you up ♪ ♪ Never gonna let you down ♪ ♪ Never gonna run around\nand desert you ♪ ♪ Never gonna make you cry ♪ ♪ Never gonna say goodbye ♪ ♪ Never gonna tell a lie\nand hurt you ♪"
+        }
+      ],
+      "usage": {
+        "credits": 0.01
+      }
+    }
+  },
+  {
+    "source": "youtube_trainability",
+    "name": "YouTube License Metadata",
+    "sample": {
+      "video_id": "dQw4w9WgXcQ"
+    },
+    "inputs": "video_id (11 characters)",
+    "outputs": "results[]: videoId and license-label indicator permitted, with available kind/etag; usage.credits",
+    "limits": "permitted is a license-label signal, not legal training permission or creator third-party training settings.",
+    "outputExample": {
+      "source": "youtube_trainability",
+      "status": "done",
+      "results": [
+        {
+          "videoId": "dQw4w9WgXcQ",
+          "kind": "youtube#videoTrainability",
+          "etag": "dQw4w9WgXcQ",
+          "permitted": [
+            "none"
+          ]
+        }
+      ],
+      "usage": {
+        "credits": 0.01
+      }
+    }
+  },
+  {
+    "source": "youtube_channel",
+    "name": "YouTube Channel",
+    "sample": {
+      "handle": "@GoogleDevelopers",
+      "video_limit": 5
+    },
+    "inputs": "handle; video_limit 1–100 (default 20)",
+    "outputs": "results[]: channelId, channelHandle, name, channelUrl, statistics, videos; usage.credits",
+    "limits": "A recent-video snapshot is not the complete channel archive.",
+    "outputExample": {
+      "source": "youtube_channel",
+      "status": "done",
+      "results": [
+        {
+          "channelId": "UC4QobU6STFB0P71PMvOGN5A",
+          "channelHandle": "@jawed",
+          "name": "jawed",
+          "description": "",
+          "subscriberCount": 6580000,
+          "videoCount": 1,
+          "viewCount": null
+        }
+      ],
+      "usage": {
+        "credits": 0.01
+      }
+    }
+  },
+  {
+    "source": "youtube_suggestions",
+    "name": "YouTube Autocomplete",
+    "sample": {
+      "query": "vector database",
+      "language": "en",
+      "region": "US"
+    },
+    "inputs": "query; language (default en); region (default US, two letters)",
+    "outputs": "results: autocomplete suggestion strings; usage.credits",
+    "limits": "Suggestions are not keyword volume or popularity measurements.",
+    "outputExample": {
+      "source": "youtube_suggestions",
+      "status": "done",
+      "results": [
+        [
+          "python for beginners"
+        ]
+      ],
+      "usage": {
+        "credits": 0.01
+      }
+    }
+  },
+  {
+    "source": "youtube_download",
+    "name": "YouTube Download to Cloud Storage",
+    "sample": {
+      "video_id": "dQw4w9WgXcQ",
+      "download_type": "audio",
+      "output_format": "m4a"
+    },
+    "inputs": "submit: video_id and optional media fields; reads: job_id. Storage comes from the Customer Storage secret JSON credential",
+    "outputs": "submit: id/status receipt; reads: job lifecycle; completed result: output JSON delivery manifest",
+    "limits": "Paid asynchronous job. Requires customer storage. Save the receipt; never submit again to poll. Result JSON expires after 24 hours; media retention depends on storage.",
+    "outputExample": {
+      "id": "job_example",
+      "status": "pending",
+      "source": "youtube_download"
+    }
+  }
+]

@@ -1,0 +1,31 @@
+[project]
+name = "lfx-flashdata"
+version = "0.1.0"
+description = "Google and YouTube data components for Langflow agents and workflows."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+dependencies = [
+    "lfx>=1.13.0.dev0,<2.0.0",
+    "httpx>=0.24.0,<1.0.0",
+    "jsonschema>=4.20.0,<5.0.0",
+    "pydantic>=2.0.0,<2.14",
+]
+
+[project.urls]
+Homepage = "https://flashdata.dev"
+Documentation = "https://flashdata.dev/docs"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-flashdata = "lfx_flashdata"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_flashdata"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/lfx_flashdata", "README.md", "pyproject.toml", "components.json", "tests", "examples"]

@@ -1,0 +1,70 @@
+---
+title: YouTube Download to Cloud Storage with FlashData
+slug: /flashdata-youtube-download
+description: Track delivery of YouTube media to your cloud storage in Langflow, using source-specific FlashData JSON results.
+---
+
+## Track delivery of YouTube media to your cloud storage
+
+Track a YouTube delivery to customer cloud storage. Paid asynchronous job. Requires customer storage. Save the receipt; never submit again to poll. Result JSON expires after 24 hours; media retention depends on storage. FlashData API calls use paid Credits.
+
+Use **FlashData YouTube Download Submit** from the [FlashData bundle](./bundles-flashdata.mdx).
+The component calls only the `youtube_download` source; choosing another FlashData component changes the source explicitly.
+
+## Configure the three-stage flow
+
+1. Install the [FlashData bundle](./bundles-flashdata.mdx), then store your FlashData API key in a **Credential** global variable.
+2. Add **FlashData YouTube Download Submit**. Set **Video ID or URL** and the media options below. Store the destination JSON in a separate **Credential** global variable and select it in **Customer Storage (secret JSON)**. Use the exact provider fields in the [storage contract](https://flashdata.dev/docs/sources/youtube_download).
+3. Confirm the paid API call and customer-storage write, then enable **Allow Paid Submission** and run Submit once. Save `id` from its JSON receipt. Do not connect Submit to a repeating poll loop.
+4. Add **FlashData YouTube Download Status**, set **Saved Job ID** to the saved receipt, and run it to inspect progress. This is a read of the same job.
+5. When the job is completed, run **FlashData YouTube Download Result** with that ID. If it is still processing, the result component returns lifecycle state without fetching the result or submitting again.
+6. Connect either read component's **JSON → Parser → Chat Output**, using Parser template `{text}`, to inspect its response without a model.
+
+Example media parameters (storage is configured separately):
+
+```json
+{
+  "download_type": "audio",
+  "output_format": "m4a"
+}
+```
+
+Inputs: Submit takes `video_id` plus optional `download_type`, `video_quality`, `fps`, `audio_language`, `audio_quality`, `yt_dlp_format`, `upload_metadata`, `output_format`, `start_at`, and `end_at`. Status and Result take `job_id`. Storage comes from **Customer Storage (secret JSON)**, configured as a Credential global variable.
+
+Audio-only downloads accept `m4a`, `mp3`, or `opus`; video downloads accept `mp4`, `webm`, or `mkv`. Without an explicit `yt_dlp_format`, video quality/FPS do not apply to audio-only requests, and audio language does not apply to video-only requests. Audio quality is only valid for audio-only requests. Clip timestamps must be within 12 hours, with the end later than the start. Invalid combinations are rejected before submission.
+Storage providers include S3, S3-compatible destinations, GCS, Azure, OSS, COS, BOS, and TOS, with provider-specific credentials.
+Credentials and the authorization switch are not exposed as Agent tool arguments.
+For an Agent that only tracks an existing delivery, give it the Status and Result tools and the saved Job ID:
+
+```text
+Read the saved job status and, when completed, retrieve its delivery result. Never submit another paid job merely to check progress.
+```
+
+Tool names are `flashdata_youtube_download_submit`, `flashdata_youtube_download_status`, and `flashdata_youtube_download_result`.
+Result JSON expires after 24 hours; media retention is controlled by your storage provider.
+Download delivery and your storage provider can incur additional charges. The component does not download media onto the Langflow host.
+
+## Output and limits
+
+The JSON output preserves the API response and adds a `text` representation for the Parser.
+Expected source fields: submit: id/status receipt; reads: job lifecycle; completed result: output JSON delivery manifest.
+Inspect the returned fields before selecting them downstream; optional fields and empty results are possible.
+
+Paid asynchronous job. Requires customer storage. Save the receipt; never submit again to poll. Result JSON expires after 24 hours; media retention depends on storage.
+
+The bundle is open source. FlashData API calls are paid; free installation does not include free API requests.
+Review the [source contract, examples, and current rates](https://flashdata.dev/docs/sources/youtube_download) before running a flow.
+There is no automatic request retry. If a submission times out, it may already have been accepted and charged: check **Jobs** in the FlashData console before submitting again.
+For invalid keys, insufficient Credits, source permissions, or rate limits, correct the underlying issue before making a new request.
+
+## Run the source example without a model
+
+The development checkout includes `src/bundles/flashdata/examples/youtube_download.py`.
+Configure `FLASHDATA_API_KEY` in the process environment, then run:
+
+```bash
+lfx run src/bundles/flashdata/examples/youtube_download.py
+```
+
+The example injects the credential through Langflow's request context and connects the source's JSON output to Parser.
+Set `FLASHDATA_DOWNLOAD_JOB_ID` to an already submitted Job ID. This example reads status and never submits a paid job.
