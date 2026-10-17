@@ -17,14 +17,7 @@
 
 import { cloneDeep } from "lodash";
 import { jsonType, valuesEqual } from "./canonical";
-import {
-  checkEdge,
-  HANDLE_KEYS,
-  handleForms,
-  inputKey,
-  nodeOutputs,
-  OUTPUTS_PATH,
-} from "./edge-rules";
+import { checkEdge, inputKey, nodeOutputs, OUTPUTS_PATH } from "./edge-rules";
 import { failedExpectation, invalidOperation } from "./errors";
 import { ListIndex } from "./keyed-lists";
 import { type KeyedList, keyedListAt, keyOf, selectorName } from "./schema";
@@ -80,10 +73,6 @@ const GRAPH_COLLECTION_KEYS = new Set(["nodes", "edges"]);
 const FORBIDDEN_WHOLE_NODE_PATHS = new Set(
   NODE_OBJECT_PATHS.map((path) => JSON.stringify(path)),
 );
-// An edge's endpoints are its identity: connecting other nodes is another edge.
-const FORBIDDEN_EDGE_UPDATE_ROOTS = new Set(["id", "source", "target"]);
-// Writes under these edge keys can change which output or input the edge connects.
-const EDGE_HANDLE_ROOTS = new Set<string>([...HANDLE_KEYS, "data"]);
 const TEMPLATE_PATH = ["data", "node", "template"];
 const JSON_TYPE_NAMES = new Set([
   "object",
@@ -217,19 +206,20 @@ function parseUpdate(value: unknown, context: string): FieldUpdate {
   return update;
 }
 
+// An edge never changes in place: a change to an edge is a delete_edges of it
+// and an add_edges of its new content, with the same id.
 const OPERATION_KEYS: Record<string, string[]> = {
   add_nodes: ["type", "nodes"],
   update_nodes: ["type", "updates"],
   delete_nodes: ["type", "ids"],
   add_edges: ["type", "edges"],
-  update_edges: ["type", "updates"],
   delete_edges: ["type", "ids"],
   update_metadata: ["type", "fields", "delete_keys"],
 };
 
 type ParsedOperation =
   | { type: "add_nodes"; nodes: JsonObject[] }
-  | { type: "update_nodes" | "update_edges"; updates: FieldUpdate[] }
+  | { type: "update_nodes"; updates: FieldUpdate[] }
   | { type: "delete_nodes" | "delete_edges"; ids: string[] }
   | { type: "add_edges"; edges: JsonObject[] }
   | { type: "update_metadata"; fields: JsonObject; delete_keys: string[] };
@@ -251,8 +241,7 @@ function parseOperation(operation: unknown): ParsedOperation {
     case "delete_nodes":
     case "delete_edges":
       return { type, ids: parseStringList(operation.ids, "ids") };
-    case "update_nodes":
-    case "update_edges": {
+    case "update_nodes": {
       if (!Array.isArray(operation.updates))
         throw invalidOperation(`${type}.updates must be a list`);
       return {
@@ -301,12 +290,11 @@ type Walk = {
  */
 function walk(
   state: GraphState,
-  root: JsonObject,
-  node: JsonObject | null,
+  node: JsonObject,
   path: PathSegment[],
   context: string,
 ): Walk {
-  let value: unknown = root;
+  let value: unknown = node;
   const steps: ItemStep[] = [];
   const enter = (container: JsonObject | unknown[], at: string | number) => {
     const child = (container as Record<string | number, unknown>)[at];
@@ -341,7 +329,7 @@ function walk(
 /** Whether the last segment of `path` exists in `parent`, and its value. */
 function readLast(
   state: GraphState,
-  node: JsonObject | null,
+  node: JsonObject,
   parent: unknown,
   path: PathSegment[],
   context: string,
@@ -366,15 +354,13 @@ function readLast(
 /** The index of the keyed list `path[index]` selects from, checking the selector fits it. */
 function keyedList(
   state: GraphState,
-  node: JsonObject | null,
+  node: JsonObject,
   path: PathSegment[],
   index: number,
   value: unknown,
   context: string,
 ): ListIndex {
-  const list: KeyedList | null = node
-    ? keyedListAt(node, path.slice(0, index))
-    : null;
+  const list: KeyedList | null = keyedListAt(node, path.slice(0, index));
   if (!list)
     throw invalidOperation(
       `${context}.path[${index}]: selector on a list the node schema does not declare keyed`,
@@ -441,7 +427,7 @@ function checkTypeChange(
 /** Write or delete the last segment of the update's path. Return what it replaced or removed, or ABSENT. */
 function writeLast(
   state: GraphState,
-  node: JsonObject | null,
+  node: JsonObject,
   parent: unknown,
   update: FieldUpdate,
   context: string,
@@ -484,21 +470,20 @@ function writeLast(
 }
 
 /**
- * Apply one set_field or delete_field to `root`, a node or an edge, walking its
- * path once. `node` is the node whose schema declares keyed lists, or null for
- * an edge, which has none. Returns the value the write replaced or removed
- * (ABSENT when there was none), and records its inverse first when asked.
+ * Apply one set_field or delete_field to `node`, walking its path once. The
+ * node's schema declares its keyed lists. Returns the value the write replaced
+ * or removed (ABSENT when there was none), and records its inverse first when
+ * asked.
  */
 function applyFieldUpdate(
   state: GraphState,
-  root: JsonObject,
-  node: JsonObject | null,
+  node: JsonObject,
   update: FieldUpdate,
   context: string,
   inverses: FieldInverses | null,
 ): unknown {
   const { path } = update;
-  const { parent, steps, missingAt } = walk(state, root, node, path, context);
+  const { parent, steps, missingAt } = walk(state, node, path, context);
   const current =
     missingAt === null
       ? readLast(state, node, parent, path, context)
@@ -540,7 +525,7 @@ class FieldInverses {
   /** Record what undoes `update`; called before it is applied. */
   record(
     state: GraphState,
-    node: JsonObject | null,
+    node: JsonObject,
     parent: unknown,
     update: FieldUpdate,
     current: { exists: boolean; value?: unknown },
@@ -752,14 +737,7 @@ function applyUpdateNodes(state: GraphState, updates: FieldUpdate[]): Applied {
         `${context}.path: cannot update entire node data objects at path ${pathLabel(update.path)}`,
       );
     const node = state.writableNode(update.id);
-    const before = applyFieldUpdate(
-      state,
-      node,
-      node,
-      update,
-      context,
-      inverses,
-    );
+    const before = applyFieldUpdate(state, node, update, context, inverses);
     if (changed(update, before)) applied.push(update);
     // Inverses add back every edge they take away, so restoring never cascades.
     if (!state.options.restoring)
@@ -779,59 +757,6 @@ function applyUpdateNodes(state: GraphState, updates: FieldUpdate[]): Applied {
     inverse.push({ type: "add_edges", edges: removedEdges });
   }
   return { forward, inverse };
-}
-
-function applyUpdateEdges(state: GraphState, updates: FieldUpdate[]): Applied {
-  if (updates.length === 0) return NOTHING;
-  rejectRepeatedPaths(updates, "update_edges");
-  const inverses = state.options.inverse ? new FieldInverses() : null;
-  const applied: FieldUpdate[] = [];
-  // The handles of each edge the batch writes under a handle key, as they were before.
-  const handlesBefore = new Map<string, JsonObject>();
-  updates.forEach((update, index) => {
-    const context = `update_edges[${index}]`;
-    if (!state.edges.has(update.id))
-      throw invalidOperation(`update_edges: edge does not exist: ${update.id}`);
-    if (!state.baseEdgeIds.has(update.id))
-      throw invalidOperation(
-        `update_edges: cannot update edge that does not exist in the original flow: ${update.id}`,
-      );
-    const root = update.path[0];
-    if (typeof root === "string" && FORBIDDEN_EDGE_UPDATE_ROOTS.has(root))
-      throw invalidOperation(
-        `${context}.path: cannot modify an edge's ${root}; connecting different nodes is a different edge, so delete it and add another`,
-      );
-    const edge = state.writableEdge(update.id);
-    if (
-      typeof root === "string" &&
-      EDGE_HANDLE_ROOTS.has(root) &&
-      !handlesBefore.has(update.id)
-    )
-      handlesBefore.set(update.id, handleForms(edge));
-    const before = applyFieldUpdate(
-      state,
-      edge,
-      null,
-      update,
-      context,
-      inverses,
-    );
-    if (changed(update, before)) applied.push(update);
-  });
-
-  // An edge whose handles the batch changed is rewired, so it is checked like a new one.
-  for (const [edgeId, before] of handlesBefore) {
-    const edge = state.edges.get(edgeId)!;
-    if (valuesEqual(handleForms(edge), before)) continue;
-    state.forgetHandles(edge);
-    if (!state.options.restoring) checkEdge(state, edge);
-    state.reindexHandles(edge);
-  }
-  return {
-    forward:
-      applied.length > 0 ? [forwardUpdates("update_edges", applied)] : [],
-    inverse: inverses?.operations("update_edges") ?? [],
-  };
 }
 
 function applyDeleteNodes(state: GraphState, requested: string[]): Applied {
@@ -973,8 +898,6 @@ function applyOperation(
       return applyDeleteNodes(state, operation.ids);
     case "add_edges":
       return applyAddEdges(state, operation.edges);
-    case "update_edges":
-      return applyUpdateEdges(state, operation.updates);
     case "delete_edges":
       return applyDeleteEdges(state, operation.ids);
     case "update_metadata":

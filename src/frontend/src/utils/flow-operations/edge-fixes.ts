@@ -9,7 +9,7 @@
  * "Repair").
  */
 
-import type { FieldUpdate, FlowOperation } from "./apply";
+import type { FlowOperation } from "./apply";
 import { valuesEqual } from "./canonical";
 import { HANDLE_KEYS } from "./edge-rules";
 
@@ -22,49 +22,53 @@ function isObject(value: unknown): value is JsonObject {
 /**
  * The operations that turn a revision's edges as read (`read`) into the edges
  * its preview shows (`shown`): a `delete_edges` for the edges the preview
- * dropped, and an `update_edges` for the handles it rewrote. Empty when the
- * preview changed no edge.
+ * dropped or whose handles it rewrote, and an `add_edges` that adds the
+ * rewritten ones back. An edge never changes in place, so a rewritten edge is
+ * deleted and added again with the same id. Empty when the preview changed no
+ * edge.
  */
 export function edgeFixes(
   read: JsonObject[],
   shown: JsonObject[],
 ): FlowOperation[] {
   const shownById = new Map(shown.map((edge) => [edge.id as string, edge]));
-  const dropped: string[] = [];
-  const updates: FieldUpdate[] = [];
+  const deleted: string[] = [];
+  const added: JsonObject[] = [];
   for (const edge of read) {
     const id = edge.id as string;
     const fixed = shownById.get(id);
     if (!fixed) {
-      dropped.push(id);
+      deleted.push(id);
       continue;
     }
-    for (const key of HANDLE_KEYS) {
-      if (!valuesEqual(edge[key] ?? null, fixed[key] ?? null))
-        updates.push({ id, op: "set_field", path: [key], value: fixed[key] });
-    }
-    const data = edge.data;
-    const fixedData = isObject(fixed.data) ? fixed.data : {};
-    const handles: JsonObject = {};
-    for (const key of HANDLE_KEYS) handles[key] = fixedData[key];
-    if (!isObject(data)) {
-      updates.push({ id, op: "set_field", path: ["data"], value: handles });
-      continue;
-    }
-    for (const key of HANDLE_KEYS) {
-      if (!valuesEqual(data[key] ?? null, handles[key] ?? null))
-        updates.push({
-          id,
-          op: "set_field",
-          path: ["data", key],
-          value: handles[key],
-        });
+    const rewritten = withHandlesOf(edge, fixed);
+    if (!valuesEqual(edge, rewritten)) {
+      deleted.push(id);
+      added.push(rewritten);
     }
   }
   const fixes: FlowOperation[] = [];
-  if (dropped.length > 0) fixes.push({ type: "delete_edges", ids: dropped });
-  if (updates.length > 0) fixes.push({ type: "update_edges", updates });
+  if (deleted.length > 0) fixes.push({ type: "delete_edges", ids: deleted });
+  if (added.length > 0) fixes.push({ type: "add_edges", edges: added });
   return fixes;
+}
+
+/**
+ * A copy of `edge` with the handles of `shown`, in both forms. A handle that
+ * `shown` lacks is removed. An edge without a `data` object gets one that
+ * holds only the handles.
+ */
+function withHandlesOf(edge: JsonObject, shown: JsonObject): JsonObject {
+  const shownData = isObject(shown.data) ? shown.data : {};
+  const data: JsonObject = isObject(edge.data) ? { ...edge.data } : {};
+  const rewritten: JsonObject = { ...edge, data };
+  for (const key of HANDLE_KEYS) {
+    if (shown[key] !== undefined) rewritten[key] = shown[key];
+    else delete rewritten[key];
+    if (shownData[key] !== undefined) data[key] = shownData[key];
+    else delete data[key];
+  }
+  return rewritten;
 }
 
 /**
@@ -81,11 +85,11 @@ export function fixesForEdges(
     if (fix.type === "delete_edges") {
       const ids = (fix.ids as string[]).filter((id) => edgeIds.has(id));
       if (ids.length > 0) kept.push({ ...fix, ids });
-    } else {
-      const updates = (fix.updates as FieldUpdate[]).filter((update) =>
-        edgeIds.has(update.id),
+    } else if (fix.type === "add_edges") {
+      const edges = (fix.edges as JsonObject[]).filter((edge) =>
+        edgeIds.has(edge.id as string),
       );
-      if (updates.length > 0) kept.push({ ...fix, updates });
+      if (edges.length > 0) kept.push({ ...fix, edges });
     }
   }
   return kept;

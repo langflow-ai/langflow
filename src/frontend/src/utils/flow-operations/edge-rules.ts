@@ -1,6 +1,6 @@
 /**
- * The rules an edge follows when a write adds it or changes its handles: the
- * editor's copy of the engine's `lfx.services.flow_operations.edge_rules`.
+ * The rules an edge follows when a write adds it: the editor's copy of the
+ * engine's `lfx.services.flow_operations.edge_rules`.
  *
  * An edge connects one output of its source node to one input of its target
  * node, and its handles name them: `sourceHandle.name` is an output of the
@@ -12,9 +12,11 @@
  * escaped JSON string (`œ` stands for `"`). Both forms must be present and
  * agree. Nothing is exempt: group nodes are checked like any node, and an edge
  * may not touch a note, which has no handles.
+ *
+ * An edge never changes in place: a write deletes it and adds it again, so
+ * the rules check every changed edge as a new edge.
  */
 
-import { cloneDeep } from "lodash";
 import { parseHandle, valuesEqual } from "./canonical";
 import { invalidGraph, invalidOperation } from "./errors";
 import type { ListIndex } from "./keyed-lists";
@@ -121,22 +123,8 @@ function handle(edge: JsonObject, key: string): JsonObject {
   throw edgeError(edge, "EDGE_HANDLE_INVALID", `edge has no ${key}`);
 }
 
-/** A copy of both forms of an edge's handles, whatever their shape, to tell whether a write changed them. */
-export function handleForms(edge: JsonObject): JsonObject {
-  const data = edge.data;
-  const strings: JsonObject = {};
-  for (const key of HANDLE_KEYS) if (key in edge) strings[key] = edge[key];
-  let objects: unknown = data;
-  if (isObject(data)) {
-    const picked: JsonObject = {};
-    for (const key of HANDLE_KEYS) if (key in data) picked[key] = data[key];
-    objects = picked;
-  }
-  return cloneDeep({ strings, data: objects }) as JsonObject;
-}
-
 /**
- * Check an edge a write adds or rewires, and return its handles. The edge
+ * Check an edge a write adds, and return its handles. The edge
  * must not touch a note, its handles must be valid and name an output of its
  * source and an input of its target, and a single input must not be taken by
  * another edge.

@@ -153,20 +153,6 @@ export function describeOperation(
             })
           : t("flowHistory.op.removedConnection");
       });
-    case "update_edges": {
-      const ids = [
-        ...new Set((operation.updates as Update[]).map((update) => update.id)),
-      ];
-      return ids.map((id) => {
-        const ends = names.edge(id);
-        return ends
-          ? t("flowHistory.op.updatedConnection", {
-              source: names.node(ends.source),
-              target: names.node(ends.target),
-            })
-          : t("flowHistory.op.updatedAConnection");
-      });
-    }
     case "update_nodes":
       return describeUpdates(operation.updates as Update[], names, t, options);
     case "update_metadata":

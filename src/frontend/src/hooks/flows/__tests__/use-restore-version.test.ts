@@ -45,12 +45,10 @@ jest.mock("@/stores/versionPreviewStore", () => {
     // The preview dropped the broken edge "e" and respelled the handles of
     // "fine", which breaks no rule.
     previewFixes: [
-      { type: "delete_edges", ids: ["e"] },
+      { type: "delete_edges", ids: ["e", "fine"] },
       {
-        type: "update_edges",
-        updates: [
-          { id: "fine", op: "set_field", path: ["sourceHandle"], value: "s" },
-        ],
+        type: "add_edges",
+        edges: [{ id: "fine", source: "a", target: "b", sourceHandle: "s" }],
       },
     ],
   });

@@ -194,14 +194,16 @@ describe("changesFrom", () => {
         type: "add_edges",
         edges: [{ id: "e1", source: "a", target: "b" }],
       }),
+      // A changed connection is deleted and added again.
+      recorded(bob, { type: "delete_edges", ids: ["e1"] }),
       recorded(bob, {
-        type: "update_edges",
-        updates: [
+        type: "add_edges",
+        edges: [
           {
             id: "e1",
-            op: "set_field",
-            path: ["data", "targetHandle", "inputTypes"],
-            value: ["Data"],
+            source: "a",
+            target: "b",
+            data: { targetHandle: { inputTypes: ["Data"] } },
           },
         ],
       }),
@@ -233,6 +235,7 @@ describe("changesFrom", () => {
     ]);
 
     expect(changes.edges.get("e1")).toEqual(bob);
+    expect(changes.removedEdges).toEqual([]);
     expect(Object.fromEntries(changes.nodes.get("a")!.fields)).toEqual({
       headers: bob,
     });

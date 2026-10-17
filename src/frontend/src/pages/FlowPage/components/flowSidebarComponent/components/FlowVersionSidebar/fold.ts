@@ -46,8 +46,7 @@ export function foldedCause(
 
 function updatesOf(operation: RecordedOperation): Update[] {
   const { type, updates } = operation.operation;
-  return (type === "update_nodes" || type === "update_edges") &&
-    Array.isArray(updates)
+  return type === "update_nodes" && Array.isArray(updates)
     ? (updates as Update[])
     : [];
 }
@@ -69,8 +68,8 @@ function listLength(value: unknown): number {
 
 /**
  * How many things an entry changed: distinct fields for writes inside
- * components and connections, and one per component or connection added or
- * removed. `onlyFields` says whether every change was a field write.
+ * components, and one per component or connection added or removed. A
+ * changed connection is removed and added again, so it counts twice. `onlyFields` says whether every change was a field write.
  */
 export function countChanges(operations: RecordedOperation[]): {
   count: number;
@@ -82,7 +81,6 @@ export function countChanges(operations: RecordedOperation[]): {
     const { operation } = recorded;
     switch (operation.type) {
       case "update_nodes":
-      case "update_edges":
         for (const update of updatesOf(recorded))
           fields.add(changedKey(update));
         break;

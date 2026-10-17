@@ -1,4 +1,8 @@
+import editorCases from "../../../../../lfx-native/fixtures/editor_cases.json";
+import type { FlowOperation } from "../apply";
 import { edgeFixes, fixesForEdges } from "../edge-fixes";
+
+type JsonObject = Record<string, unknown>;
 
 const handles = (output: string, field: string) => ({
   sourceHandle: { name: output },
@@ -30,63 +34,75 @@ describe("edgeFixes", () => {
     ).toEqual([{ type: "delete_edges", ids: ["e2"] }]);
   });
 
-  it("rewrites the handles the preview rewrote, in both forms", () => {
+  it("deletes and adds again an edge whose handles the preview rewrote", () => {
     const read = edge("e1", "out", "text");
     const shown = edge("e1", "out", "input_value");
 
     expect(edgeFixes([read], [shown])).toEqual([
-      {
-        type: "update_edges",
-        updates: [
-          {
-            id: "e1",
-            op: "set_field",
-            path: ["targetHandle"],
-            value: shown.targetHandle,
-          },
-          {
-            id: "e1",
-            op: "set_field",
-            path: ["data", "targetHandle"],
-            value: { fieldName: "input_value" },
-          },
-        ],
-      },
+      { type: "delete_edges", ids: ["e1"] },
+      { type: "add_edges", edges: [shown] },
     ]);
   });
 
-  it("writes the data of an edge read without it whole", () => {
+  it("gives an edge read without data a data object with its handles", () => {
     const { data: _data, ...read } = edge("e1", "out", "text");
     const shown = edge("e1", "out", "text");
 
     expect(edgeFixes([read], [shown])).toEqual([
-      {
-        type: "update_edges",
-        updates: [
-          {
-            id: "e1",
-            op: "set_field",
-            path: ["data"],
-            value: handles("out", "text"),
-          },
-        ],
-      },
+      { type: "delete_edges", ids: ["e1"] },
+      { type: "add_edges", edges: [{ ...read, data: handles("out", "text") }] },
     ]);
+  });
+
+  it("keeps the other keys of the edge as read", () => {
+    const read = { ...edge("e1", "out", "text"), animated: true };
+    const shown = edge("e1", "out", "input_value");
+
+    expect(edgeFixes([read], [shown])).toEqual([
+      { type: "delete_edges", ids: ["e1"] },
+      { type: "add_edges", edges: [{ ...shown, animated: true }] },
+    ]);
+  });
+
+  it("removes a handle the shown edge lacks", () => {
+    const read = edge("e1", "out", "text");
+    const { targetHandle: _targetHandle, ...shown } = edge("e1", "out", "text");
+
+    expect(edgeFixes([read], [shown])).toStrictEqual([
+      { type: "delete_edges", ids: ["e1"] },
+      { type: "add_edges", edges: [shown] },
+    ]);
+  });
+
+  it.each(editorCases.edge_fixes)("$name", (testCase) => {
+    expect(
+      edgeFixes(testCase.read as JsonObject[], testCase.shown as JsonObject[]),
+    ).toEqual(testCase.fixes);
   });
 });
 
 describe("fixesForEdges", () => {
   it("keeps only the fixes for the given edges, dropping operations left empty", () => {
     const fixes = [
-      { type: "delete_edges", ids: ["a", "b"] },
-      {
-        type: "update_edges",
-        updates: [{ id: "c", op: "set_field", path: ["data"], value: {} }],
-      },
+      { type: "delete_edges", ids: ["a", "b", "c"] },
+      { type: "add_edges", edges: [edge("c", "out", "text")] },
     ];
 
     expect(fixesForEdges(fixes, new Set(["b"]))).toEqual([
       { type: "delete_edges", ids: ["b"] },
     ]);
+    expect(fixesForEdges(fixes, new Set(["c"]))).toEqual([
+      { type: "delete_edges", ids: ["c"] },
+      { type: "add_edges", edges: [edge("c", "out", "text")] },
+    ]);
+  });
+
+  it.each(editorCases.fixes_for_edges)("$name", (testCase) => {
+    expect(
+      fixesForEdges(
+        testCase.fixes as FlowOperation[],
+        new Set(testCase.edge_ids),
+      ),
+    ).toEqual(testCase.expected);
   });
 });
