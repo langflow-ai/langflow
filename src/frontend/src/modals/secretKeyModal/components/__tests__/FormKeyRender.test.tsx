@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { format } from "date-fns";
 import { FormKeyRender } from "../form-key-render";
 
 // These values match the en.json translations that the global i18n mock resolves.
@@ -68,7 +69,8 @@ describe("FormKeyRender", () => {
     const setExpiresAt = jest.fn();
     const d = new Date();
     d.setDate(d.getDate() + 7);
-    const activeDate = d.toISOString().split("T")[0];
+    // The picker stores a local calendar date; UTC can be a different day.
+    const activeDate = format(d, "yyyy-MM-dd");
     render(
       <FormKeyRender {...makeProps({ expiresAt: activeDate, setExpiresAt })} />,
     );
