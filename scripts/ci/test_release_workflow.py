@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 WORKFLOWS_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
 WORKFLOW_PATH = WORKFLOWS_DIR / "release.yml"
 RELEASE_INVENTORY_WORKFLOW_PATH = WORKFLOWS_DIR / "release-inventory-gate.yml"
@@ -183,6 +185,21 @@ def test_release_docker_builds_consume_built_wheels() -> None:
     assert "release_artifacts: ${{ needs.build-base.result == 'success' }}" in base_docker_job
     assert "pattern: dist-*" in docker_workflow
     assert "path: .release-artifacts" in docker_workflow
+
+
+def test_release_docker_jobs_are_not_skipped_by_skipped_ancestors() -> None:
+    # Without a status function GitHub adds an implicit success(). It is false when any transitive
+    # ancestor was skipped, and build-sdk is skipped whenever the SDK version is unchanged.
+    jobs = yaml.safe_load(WORKFLOW_PATH.read_text(encoding="utf-8"))["jobs"]
+    docker_jobs = {name: job for name, job in jobs.items() if name.startswith("call_docker_build_")}
+
+    assert {"call_docker_build_main_backend", "call_docker_build_main_frontend"} <= docker_jobs.keys()
+    for name, job in docker_jobs.items():
+        condition = " ".join(str(job.get("if", "")).strip().removeprefix("${{").removesuffix("}}").split())
+        assert condition.startswith("always() && !cancelled() &&"), name
+        assert "needs.reserve-final-release.result == 'success'" in condition, name
+        if "call_docker_build_main" in job["needs"]:
+            assert "needs.call_docker_build_main.result == 'success'" in condition, name
 
 
 def test_base_wheel_gate_checks_the_public_langflow_entry_point() -> None:
