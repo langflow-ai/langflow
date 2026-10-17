@@ -119,19 +119,6 @@ class UpdateNodesOp(BaseModel):
     updates: list[UpdateNodeEntry]
 
 
-class UpdateEdgesOp(BaseModel):
-    """Field writes to existing edges, addressed by edge id.
-
-    A path may not start with ``id``, ``source`` or ``target``: connecting
-    different nodes is a different edge, so it is a delete and an add.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    type: Literal["update_edges"]
-    updates: list[UpdateNodeEntry]
-
-
 class DeleteNodesOp(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -161,9 +148,8 @@ class UpdateMetadataOp(BaseModel):
     delete_keys: list[str] = Field(default_factory=list)
 
 
-FlowOperation = (
-    AddNodesOp | UpdateNodesOp | DeleteNodesOp | AddEdgesOp | UpdateEdgesOp | DeleteEdgesOp | UpdateMetadataOp
-)
+# An edge never changes in place: a change to an edge is a delete and an add.
+FlowOperation = AddNodesOp | UpdateNodesOp | DeleteNodesOp | AddEdgesOp | DeleteEdgesOp | UpdateMetadataOp
 
 GRAPH_COLLECTION_KEYS = frozenset({"nodes", "edges"})
 
@@ -197,8 +183,6 @@ def parse_flow_operation(operation: dict[str, Any]) -> FlowOperation:
             return DeleteNodesOp.model_validate(operation)
         if operation_type == "add_edges":
             return AddEdgesOp.model_validate(operation)
-        if operation_type == "update_edges":
-            return UpdateEdgesOp.model_validate(operation)
         if operation_type == "delete_edges":
             return DeleteEdgesOp.model_validate(operation)
         if operation_type == "update_metadata":

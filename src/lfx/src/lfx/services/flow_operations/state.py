@@ -40,8 +40,6 @@ class GraphState:
     edge_ids_by_node_id: defaultdict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
     # Node ids read from base_flow["nodes"] before applying operations.
     base_flow_node_ids: set[str] = field(default_factory=set)
-    # The same set for edges.
-    base_flow_edge_ids: set[str] = field(default_factory=set)
     # Containers this call made, and so may change, by identity. Everything else
     # is shared with the base flow and is never changed. Holding the containers
     # keeps their identities from being reused.
@@ -136,14 +134,6 @@ class GraphState:
         self.connections_by_node_id.pop(node_id, None)
         return set(self.edge_ids_by_node_id.get(node_id, ()))
 
-    def forget_handles(self, edge: dict[str, Any]) -> None:
-        """Drop what is indexed about an edge's handles before they are rewritten."""
-        self._unindex_connections(edge)
-
-    def reindex_handles(self, edge: dict[str, Any]) -> None:
-        """Index an edge's handles again after they were rewritten and checked."""
-        self._index_connections(edge)
-
     def _index_connections(self, edge: dict[str, Any]) -> None:
         for node_id in {edge["source"], edge["target"]}:
             connections = self.connections_by_node_id.get(node_id)
@@ -195,7 +185,6 @@ def build_graph_state(base_flow: dict[str, Any]) -> GraphState:
             msg = f"flow.data.edges: duplicate edge id: {edge_id!r}"
             raise FlowDataValidationError(msg)
         state.edges_by_id[edge_id] = edge
-        state.base_flow_edge_ids.add(edge_id)
         state.edge_ids_by_node_id[source].add(edge_id)
         state.edge_ids_by_node_id[target].add(edge_id)
 
@@ -221,13 +210,6 @@ def writable_node(state: GraphState, node_id: str) -> dict[str, Any]:
     node = state.own(state.nodes_by_id[node_id])
     state.nodes_by_id[node_id] = node
     return node
-
-
-def writable_edge(state: GraphState, edge_id: str) -> dict[str, Any]:
-    """Return the edge to write to: one this call owns (``GraphState.own``)."""
-    edge = state.own(state.edges_by_id[edge_id])
-    state.edges_by_id[edge_id] = edge
-    return edge
 
 
 def require_node_id(
