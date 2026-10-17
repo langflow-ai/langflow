@@ -368,6 +368,14 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
       langflow-postgres:
     ```
 
+    On Linux, if `./langflow-data` doesn't exist, Docker creates it owned by `root`, and Langflow fails to start with a `PermissionError`.
+    Before you start Langflow, create the directory next to the Compose file, and make the Langflow user (UID `1000`) its owner:
+
+    ```bash
+    mkdir -p langflow-data
+    sudo chown -R 1000:0 langflow-data
+    ```
+
    For additional examples, see the [Docker Compose configuration](#docker-compose) and the [docker_example compose file](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml).
 
 2. Pull the new image and update the image tag in your `docker-compose.yml` or `docker run` command.
@@ -436,8 +444,10 @@ To keep this data, copy it to a volume before you remove the container:
 2. Stop the container, so SQLite writes all pending changes to the database file:
 
     ```bash
-    docker stop OLD_CONTAINER
+    docker stop -t 60 OLD_CONTAINER
     ```
+
+    The `-t 60` option gives Langflow up to 60 seconds to shut down before Docker kills it.
 
 3. Copy the config directory, which is the directory that contains `secret_key`, and the database file to a backup directory on the host.
 Use the paths from step 1:
@@ -450,6 +460,16 @@ Use the paths from step 1:
 
     If step 1 listed only the database file, skip the first `docker cp` command.
     The backup contains your secret key, so keep it private.
+
+    Then copy the `langflow.db-wal` and `langflow.db-shm` files from the same directory as the database file.
+    These files exist only if Langflow didn't shut down cleanly, and they can hold changes that aren't in `langflow.db` yet:
+
+    ```bash
+    docker cp OLD_CONTAINER:/app/.venv/lib/python3.14/site-packages/langflow/langflow.db-wal langflow-backup/
+    docker cp OLD_CONTAINER:/app/.venv/lib/python3.14/site-packages/langflow/langflow.db-shm langflow-backup/
+    ```
+
+    If Docker reports `Could not find the file`, the database file already holds all changes.
 
 4. Copy the backup into the volume, and make the Langflow user (UID `1000`) the owner of the files:
 
