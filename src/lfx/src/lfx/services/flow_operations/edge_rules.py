@@ -11,10 +11,11 @@ escaped JSON string (``œ`` stands for ``"``). Both forms must be present and
 agree. Nothing is exempt: group nodes are checked like any node, and an edge
 may not touch a note, which has no handles.
 
-The rules apply only to the edges a write adds or rewires. A stored edge that
-breaks them stays until something touches it; but an edge whose handles a
-rule must read, to see whether a field is taken or which edges a removed
-output carries, is read strictly too.
+An edge never changes in place: a write deletes it and adds it again. The
+rules apply only to the edges a write adds. A stored edge that breaks them
+stays until something touches it; but an edge whose handles a rule must read,
+to see whether a field is taken or which edges a removed output carries, is
+read strictly too.
 """
 
 from __future__ import annotations
