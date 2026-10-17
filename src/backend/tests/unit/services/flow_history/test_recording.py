@@ -152,7 +152,7 @@ async def test_first_graph_edit_starts_history_and_records_attributed_operations
     assert row.request_ids == [history["request_id"]]
 
 
-async def test_an_edge_changed_in_place_records_update_edges(client: AsyncClient, logged_in_headers):
+async def test_a_changed_edge_records_a_delete_and_an_add(client: AsyncClient, logged_in_headers):
     edge = _edge("e", "a", "b")
     flow = await _create_flow(client, logged_in_headers, _graph(_node("a"), _node("b"), edges=[edge]))
     changed = {**edge, "data": {**edge["data"], "note": "rewired"}}
@@ -161,8 +161,8 @@ async def test_an_edge_changed_in_place_records_update_edges(client: AsyncClient
 
     assert response.status_code == status.HTTP_200_OK, response.text
     (row,) = await _rows(flow["id"])
-    (operation,) = decode_row(row)
-    assert operation.operation.type == "update_edges"
+    operations = decode_row(row)
+    assert [operation.operation.type for operation in operations] == ["delete_edges", "add_edges"]
 
 
 async def test_every_revision_reconstructs_its_graph(client: AsyncClient, logged_in_headers):
