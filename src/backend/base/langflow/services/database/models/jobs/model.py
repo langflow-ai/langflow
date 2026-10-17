@@ -97,9 +97,16 @@ class Job(JobBase, table=True):  # type: ignore[call-arg]
     # duration window. Without these each tick's cost grows
     # with the whole job history rather than with the work in flight. The all-time
     # outcome aggregate still scans history and is collected less frequently.
+    # The scaled backend's claim poll (claim_next_queued_lease) filters on
+    # status + type and sorts by created_timestamp on every worker poll, and the
+    # watchdog scans status + type on its interval. ix_job_status_created cannot
+    # serve those: the type filter sits between the two sorted columns, so
+    # without the composite below the hottest query in the fleet degrades into a
+    # scan+sort over every row retention has not yet removed.
     __table_args__ = (
         Index("ix_job_status_created", "status", "created_timestamp"),
         Index("ix_job_finished_timestamp", "finished_timestamp"),
+        Index("ix_job_claim_scan", "status", "type", "created_timestamp"),
     )
 
 
