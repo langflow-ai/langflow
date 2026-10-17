@@ -63,6 +63,7 @@
       "extends": "python-base",
       "required_distributions_add": [
         "langflow",
+        "lfx-acedatacloud",
         "lfx-amazon",
         "lfx-anthropic",
         "lfx-azure",
@@ -99,6 +100,7 @@
       "forbidden_distribution_prefixes": [],
       "entry_points": {
         "langflow.extensions": [
+          "lfx-acedatacloud",
           "lfx-amazon",
           "lfx-anthropic",
           "lfx-azure",
@@ -158,6 +160,15 @@
         "lfx-toolguard": [
           "lfx_toolguard/extension.json",
           "lfx_toolguard/components/models_and_agents/policies_component.py"
+        ],
+        "lfx-acedatacloud": [
+          "lfx_acedatacloud/extension.json",
+          "lfx_acedatacloud/components/acedatacloud/gpt_image.py",
+          "lfx_acedatacloud/provider.py",
+          "lfx_acedatacloud/components/acedatacloud/suno.py",
+          "lfx_acedatacloud/components/acedatacloud/seedance.py",
+          "lfx_acedatacloud/components/acedatacloud/happy_horse.py",
+          "lfx_acedatacloud/components/acedatacloud/nano_banana.py"
         ]
       },
       "module_checks": [
@@ -230,6 +241,7 @@
       ],
       "entry_points": {
         "langflow.extensions": [
+          "lfx-acedatacloud",
           "lfx-amazon",
           "lfx-anthropic",
           "lfx-arxiv",
@@ -372,6 +384,15 @@
         "lfx-bundles": [
           "lfx_bundles/mongodb/mongodb_atlas.py",
           "lfx_bundles/youtube/starter_projects/Youtube Analysis.json"
+        ],
+        "lfx-acedatacloud": [
+          "lfx_acedatacloud/extension.json",
+          "lfx_acedatacloud/components/acedatacloud/gpt_image.py",
+          "lfx_acedatacloud/provider.py",
+          "lfx_acedatacloud/components/acedatacloud/suno.py",
+          "lfx_acedatacloud/components/acedatacloud/seedance.py",
+          "lfx_acedatacloud/components/acedatacloud/happy_horse.py",
+          "lfx_acedatacloud/components/acedatacloud/nano_banana.py"
         ]
       },
       "module_checks": [
