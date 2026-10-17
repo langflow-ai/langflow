@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
+from lfx.inputs.validators import validate_boolean
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.services.deps import get_storage_service
@@ -640,7 +641,12 @@ class ParameterHandler:
                     case bool():
                         params[field_name] = val
                     case str():
-                        params[field_name] = bool(val)
+                        # Text reaches a bool field from API tweaks and resolved variables;
+                        # bool("false") is True, so parse it like BoolInput does.
+                        try:
+                            params[field_name] = validate_boolean(val.strip().lower())
+                        except ValueError:
+                            params[field_name] = bool(val)
             case "table" | "tools":
                 if isinstance(val, list) and all(isinstance(item, dict) for item in val):
                     params[field_name] = pd.DataFrame(val)
