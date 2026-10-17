@@ -3070,8 +3070,6 @@
   "flowHistory.op.movedRows_other": "{{name}}의 {{field}}에서 행 {{count}}개 이동",
   "flowHistory.op.hidOutput": "{{name}}의 출력 숨김: {{output}}",
   "flowHistory.op.showedOutput": "{{name}}의 출력 표시: {{output}}",
-  "flowHistory.op.updatedConnection": "연결 업데이트: {{source}} → {{target}}",
-  "flowHistory.op.updatedAConnection": "연결 하나 업데이트",
   "flowHistory.op.noChanges": "변경 사항 없음",
   "flowHistory.summaryWithMore_one": "{{summary}} 외 변경 {{count}}건",
   "flowHistory.summaryWithMore_other": "{{summary}} 외 변경 {{count}}건",

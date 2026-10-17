@@ -3070,8 +3070,6 @@
   "flowHistory.op.movedRows_other": "移动了 {{name}} 的 {{field}} 中的 {{count}} 行",
   "flowHistory.op.hidOutput": "隐藏了 {{name}} 的输出 {{output}}",
   "flowHistory.op.showedOutput": "显示了 {{name}} 的输出 {{output}}",
-  "flowHistory.op.updatedConnection": "更新了连接 {{source}} → {{target}}",
-  "flowHistory.op.updatedAConnection": "更新了一个连接",
   "flowHistory.op.noChanges": "无更改",
   "flowHistory.summaryWithMore_one": "{{summary}}，以及另外 {{count}} 项更改",
   "flowHistory.summaryWithMore_other": "{{summary}}，以及另外 {{count}} 项更改",

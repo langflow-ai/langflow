@@ -113,11 +113,6 @@ export function changesFrom(
           edges.set(edge.id, actor);
         }
         break;
-      case "update_edges":
-        for (const update of operation.updates as FieldUpdate[]) {
-          edges.set(update.id, actor);
-        }
-        break;
       case "delete_edges":
         for (const id of operation.ids as string[]) {
           edges.delete(id);

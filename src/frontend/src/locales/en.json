@@ -3070,8 +3070,6 @@
   "flowHistory.op.movedRows_other": "Moved {{count}} rows in {{field}} on {{name}}",
   "flowHistory.op.hidOutput": "Hid output {{output}} on {{name}}",
   "flowHistory.op.showedOutput": "Showed output {{output}} on {{name}}",
-  "flowHistory.op.updatedConnection": "Updated connection {{source}} → {{target}}",
-  "flowHistory.op.updatedAConnection": "Updated a connection",
   "flowHistory.op.noChanges": "No changes",
   "flowHistory.summaryWithMore_one": "{{summary}} and {{count}} more change",
   "flowHistory.summaryWithMore_other": "{{summary}} and {{count}} more changes",

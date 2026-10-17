@@ -71,7 +71,6 @@ export class GraphState {
   readonly edges = new Map<string, JsonObject>();
   readonly edgeIdsByNode = new Map<string, Set<string>>();
   readonly baseNodeIds = new Set<string>();
-  readonly baseEdgeIds = new Set<string>();
   // Containers this call made, and so may change. Everything else is shared
   // with the base graph and is never changed.
   private readonly owned = new WeakSet<object>();
@@ -97,7 +96,6 @@ export class GraphState {
     for (const edge of graph.edges) {
       this.edges.set(edge.id as string, edge);
       this.attach(edge);
-      this.baseEdgeIds.add(edge.id as string);
     }
   }
 
@@ -117,12 +115,6 @@ export class GraphState {
     const node = this.own(this.nodes.get(id)!);
     this.nodes.set(id, node);
     return node;
-  }
-
-  writableEdge(id: string): JsonObject {
-    const edge = this.own(this.edges.get(id)!);
-    this.edges.set(id, edge);
-    return edge;
   }
 
   /** The index of `items`, built the first time the list is addressed. */
@@ -190,16 +182,6 @@ export class GraphState {
     this.nodes.delete(nodeId);
     this.connectionsById.delete(nodeId);
     return new Set(this.edgeIdsByNode.get(nodeId) ?? []);
-  }
-
-  /** Drop what is indexed about an edge's handles before they are rewritten. */
-  forgetHandles(edge: JsonObject): void {
-    this.unindexConnections(edge);
-  }
-
-  /** Index an edge's handles again after they were rewritten and checked. */
-  reindexHandles(edge: JsonObject): void {
-    this.indexConnections(edge);
   }
 
   finalize(): FlowGraph {

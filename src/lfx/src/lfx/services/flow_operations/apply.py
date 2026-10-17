@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from lfx.services.flow_operations.canonical import json_type, values_equal
-from lfx.services.flow_operations.edge_rules import HANDLE_KEYS, OUTPUTS_PATH, check_edge, handle_forms, node_outputs
+from lfx.services.flow_operations.edge_rules import OUTPUTS_PATH, check_edge, node_outputs
 from lfx.services.flow_operations.exceptions import FlowOperationPreconditionError, FlowOperationValidationError
 from lfx.services.flow_operations.keyed_lists import ListIndex
 from lfx.services.flow_operations.ops import (
@@ -25,7 +25,6 @@ from lfx.services.flow_operations.ops import (
     KeySelector,
     NodeFieldPath,
     SetNodeFieldUpdate,
-    UpdateEdgesOp,
     UpdateMetadataOp,
     UpdateNodeEntry,
     UpdateNodesOp,
@@ -41,7 +40,6 @@ from lfx.services.flow_operations.state import (
     require_edge_endpoints,
     require_node_id,
     require_node_objects,
-    writable_edge,
     writable_node,
 )
 from lfx.services.flow_operations.validation import validate_flow_data
@@ -99,8 +97,6 @@ def _apply_operation(state: GraphState, op: FlowOperation) -> tuple[list[FlowOpe
         return _apply_delete_nodes(state, op.ids)
     if isinstance(op, AddEdgesOp):
         return _apply_add_edges(state, op.edges), []
-    if isinstance(op, UpdateEdgesOp):
-        return _apply_update_edges(state, op.updates), []
     if isinstance(op, DeleteEdgesOp):
         return _apply_delete_edges(state, op.ids), []
     if isinstance(op, UpdateMetadataOp):
@@ -149,10 +145,6 @@ FORBIDDEN_WHOLE_NODE_UPDATE_PATHS: frozenset[NodeFieldPath] = frozenset(
 FORBIDDEN_WHOLE_NODE_UPDATE_PATHS_ERROR_LABEL = ", ".join(
     ".".join(root_path) for root_path in sorted(FORBIDDEN_WHOLE_NODE_UPDATE_PATHS)
 )
-# An edge's endpoints are its identity: connecting other nodes is another edge.
-FORBIDDEN_EDGE_UPDATE_ROOTS = frozenset({"id", "source", "target"})
-# Writes under these edge keys can change which output or input the edge connects.
-EDGE_HANDLE_ROOTS = frozenset({*HANDLE_KEYS, "data"})
 
 _TEMPLATE_PATH = ("data", "node", "template")
 
@@ -229,49 +221,6 @@ def _outputs_by_name(outputs: Any, *, node_id: str) -> dict[str, dict[str, Any]]
         raise FlowOperationValidationError(msg)
     keyed = load_node_schema().keyed_list_at({}, OUTPUTS_PATH)
     return ListIndex(keyed, outputs, context=f"node {node_id!r}: data.node.outputs").by_key
-
-
-def _apply_update_edges(state: GraphState, updates: list[UpdateNodeEntry]) -> list[FlowOperation]:
-    if not updates:
-        return []
-
-    _validate_update_entries(updates, kind="update_edges")
-    applied: list[UpdateNodeEntry] = []
-    # The handles of each edge the batch writes under a handle key, as they were before.
-    handles_before: dict[str, dict[str, Any]] = {}
-    for index, update in enumerate(updates):
-        edge_id = update.id
-        context = f"update_edges[{index}]"
-        if edge_id not in state.edges_by_id:
-            msg = f"update_edges: edge does not exist: {edge_id!r}"
-            raise FlowOperationValidationError(msg)
-        if edge_id not in state.base_flow_edge_ids:
-            msg = f"update_edges: cannot update edge that does not exist in the original flow: {edge_id!r}"
-            raise FlowOperationValidationError(msg)
-        root = update.path[0]
-        if root in FORBIDDEN_EDGE_UPDATE_ROOTS:
-            msg = (
-                f"{context}.path: cannot modify an edge's {root}; "
-                "connecting different nodes is a different edge, so delete it and add another"
-            )
-            raise FlowOperationValidationError(msg)
-        edge = writable_edge(state, edge_id)
-        if root in EDGE_HANDLE_ROOTS and edge_id not in handles_before:
-            handles_before[edge_id] = handle_forms(edge)
-        if _changed(update, _apply_field_update(state, edge, None, update, context=context)):
-            applied.append(update)
-
-    # An edge whose handles the batch changed is rewired, so it is checked like a new one.
-    for edge_id, before in handles_before.items():
-        edge = state.edges_by_id[edge_id]
-        if not values_equal(handle_forms(edge), before):
-            state.forget_handles(edge)
-            check_edge(state, edge)
-            state.reindex_handles(edge)
-
-    if not applied:
-        return []
-    return [UpdateEdgesOp(type="update_edges", updates=copy.deepcopy(applied))]
 
 
 def _changed(update: UpdateNodeEntry, before: Any) -> bool:

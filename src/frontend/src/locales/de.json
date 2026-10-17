@@ -3071,8 +3071,6 @@
   "flowHistory.op.movedRows_other": "{{count}} Zeilen in {{field}} in {{name}} verschoben",
   "flowHistory.op.hidOutput": "Ausgabe {{output}} in {{name}} ausgeblendet",
   "flowHistory.op.showedOutput": "Ausgabe {{output}} in {{name}} eingeblendet",
-  "flowHistory.op.updatedConnection": "Verbindung {{source}} → {{target}} aktualisiert",
-  "flowHistory.op.updatedAConnection": "Eine Verbindung aktualisiert",
   "flowHistory.op.noChanges": "Keine Änderungen",
   "flowHistory.summaryWithMore_one": "{{summary}} und {{count}} weitere Änderung",
   "flowHistory.summaryWithMore_other": "{{summary}} und {{count}} weitere Änderungen",

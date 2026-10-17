@@ -3071,8 +3071,6 @@
   "flowHistory.op.movedRows_other": "{{count}} lignes déplacées dans {{field}} de {{name}}",
   "flowHistory.op.hidOutput": "Sortie {{output}} masquée dans {{name}}",
   "flowHistory.op.showedOutput": "Sortie {{output}} affichée dans {{name}}",
-  "flowHistory.op.updatedConnection": "Connexion {{source}} → {{target}} mise à jour",
-  "flowHistory.op.updatedAConnection": "Une connexion mise à jour",
   "flowHistory.op.noChanges": "Aucune modification",
   "flowHistory.summaryWithMore_one": "{{summary}} et {{count}} autre modification",
   "flowHistory.summaryWithMore_other": "{{summary}} et {{count}} autres modifications",

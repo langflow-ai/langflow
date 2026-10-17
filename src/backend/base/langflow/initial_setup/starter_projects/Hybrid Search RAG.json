@@ -1258,11 +1258,11 @@
                 "dependencies": [
                   {
                     "name": "astrapy",
-                    "version": "2.3.1"
+                    "version": null
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.5.1"
+                    "version": null
                   },
                   {
                     "name": "lfx_datastax",
@@ -1274,7 +1274,7 @@
                   },
                   {
                     "name": "langchain_astradb",
-                    "version": "1.0.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 5
@@ -3280,11 +3280,11 @@
                 "dependencies": [
                   {
                     "name": "astrapy",
-                    "version": "2.3.1"
+                    "version": null
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.5.1"
+                    "version": null
                   },
                   {
                     "name": "lfx_datastax",
@@ -3296,7 +3296,7 @@
                   },
                   {
                     "name": "langchain_astradb",
-                    "version": "1.0.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 5
