@@ -113,6 +113,32 @@ def _grouped_stream_graph(*, expose_stream: bool):
     return graph
 
 
+def _flat_stream_graph():
+    from lfx.graph import Graph
+
+    node = {
+        "id": "model",
+        "type": "genericNode",
+        "data": {
+            "id": "model",
+            "type": "Generic",
+            "node": {
+                "template": {
+                    "_type": "Generic",
+                    "stream": {"name": "stream", "type": "bool", "value": False, "show": True, "advanced": False},
+                    "headers": {"name": "headers", "type": "dict", "value": {"a": "1"}, "show": True},
+                },
+                "base_classes": [],
+                "display_name": "Model",
+                "outputs": [],
+            },
+        },
+    }
+    graph = Graph(flow_id="flow-id", instantiate_components=False)
+    graph.add_nodes_and_edges([node], [])
+    return graph
+
+
 def test_warm_graph_has_a_clean_import_path() -> None:
     """Importing the low-level helper must not initialize the v1 router package."""
     repo_root = Path(__file__).resolve().parents[5]
@@ -454,3 +480,39 @@ async def test_v2_sync_run_requests_a_non_streaming_warm_copy(monkeypatch: pytes
         "session_id": "v2-session",
         "stream": False,
     }
+
+
+async def test_warm_copies_of_a_flat_flow_keep_each_run_apart(monkeypatch) -> None:
+    """A warm copy is deep-copied once; its stream mode and in-place edits stay in that run."""
+    from langflow.services import deps
+    from langflow.services.warm_registry import service as registry_service
+    from lfx.graph import Graph
+
+    monkeypatch.setattr(Graph, "_instantiate_components_in_vertices", lambda _graph: None)
+    template = _flat_stream_graph()
+    pristine = deepcopy(template.raw_graph_data)
+    registry = SimpleNamespace(get=lambda _flow_id: (template, "v1"))
+    monkeypatch.setattr(warm_graph, "is_warm_registry_enabled", lambda _settings: True)
+    monkeypatch.setattr(deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace()))
+    monkeypatch.setattr(registry_service, "get_warm_registry", lambda: registry)
+
+    first = await warm_graph.warm_deepcopy(
+        "flow-id", expected_version="v1", user_id="user-1", session_id="session-1", stream=True
+    )
+    assert first is not None
+    first_vertex = first.get_vertex("model")
+    # A component that edits its dict input in place while the first run is still going.
+    first_vertex.params["headers"]["added"] = "by run 1"
+    second = await warm_graph.warm_deepcopy(
+        "flow-id", expected_version="v1", user_id="user-2", session_id="session-2", stream=False
+    )
+    assert second is not None
+    second_vertex = second.get_vertex("model")
+
+    assert first_vertex.full_data["data"] is first.raw_graph_data["nodes"][0]["data"]
+    assert first_vertex.raw_params["stream"] is True
+    assert second_vertex.raw_params["stream"] is False
+    assert second_vertex.params["headers"] == {"a": "1"}
+    assert template.raw_graph_data == pristine
+    assert template.get_vertex("model").raw_params["stream"] is False
+    assert template.get_vertex("model").params["headers"] == {"a": "1"}
