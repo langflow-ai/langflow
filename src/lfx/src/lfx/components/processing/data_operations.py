@@ -1,5 +1,6 @@
 import ast
 import json
+import re
 from typing import TYPE_CHECKING, Any
 
 from json_repair import repair_json
@@ -90,7 +91,8 @@ class DataOperationsComponent(Component):
         paths = []
         if isinstance(obj, dict):
             for k, v in obj.items():
-                new_path = f"{path}.{k}" if path else f".{k}"
+                key = k if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", k) else json.dumps(k)
+                new_path = f"{path}.{key}" if path else f".{key}"
                 paths.append(new_path)
                 paths.extend(DataOperationsComponent.extract_all_paths(v, new_path))
         elif isinstance(obj, list) and obj:

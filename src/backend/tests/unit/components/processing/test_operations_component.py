@@ -8,6 +8,7 @@ Values" operation.
 """
 
 import copy
+import json
 
 import pandas as pd
 import pytest
@@ -58,6 +59,30 @@ class TestOperationsComponent(ComponentTestBaseWithoutClient):
 )
 def test_legacy_operations_components_point_to_unified_replacement(legacy_component):
     assert legacy_component.replacement == ["processing.Operations"]
+
+
+@pytest.mark.parametrize("component_class", [OperationsComponent, DataOperationsComponent])
+@pytest.mark.parametrize(
+    "key", ["ordinary", "document.id", "full name", 'a"b', r"path\name", "0id", "", "中文", r"\(1 + 1)"]
+)
+def test_generated_json_paths_select_literal_keys(component_class, key):
+    """Paths advertised by the picker must select literal keys through real jq."""
+    payload = {key: [{"value": 42}], "document": {"id": [{"value": -1}]}}
+    kwargs = (
+        {"input_type": "JSON", "operation": [{"name": "Path Selection"}]}
+        if component_class is OperationsComponent
+        else {"operations": [{"name": "Path Selection"}]}
+    )
+    component = component_class(data=Data(data=payload), **kwargs)
+    config = component.update_build_config(
+        dotdict({"selected_key": {"options": [], "show": False}}), json.dumps(payload), "mapped_json_display"
+    )
+    assert config["selected_key"]["show"] is True
+    selected = config["selected_key"]["options"][2]
+    if key == "ordinary":
+        assert selected == ".ordinary[0].value"
+    component.set(selected_key=selected)
+    assert component.as_data().data == {"result": 42}
 
 
 class TestOperationCatalog:
