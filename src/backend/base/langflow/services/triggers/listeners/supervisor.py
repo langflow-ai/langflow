@@ -46,10 +46,12 @@ from lfx.integrations.errors import (
     AuthExpiredError,
     ConnectionNotAuthorizedError,
     ConnectionUnresolvedError,
+    RateLimitedError,
     ScopeMissingError,
 )
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.log.logger import logger
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from pydantic import ValidationError
 from sqlmodel import col, select, update
 
@@ -349,6 +351,28 @@ class ListenerSupervisor:
 
     async def reconcile(self) -> None:
         """One pass toward agreement between the table and the held set."""
+        if not FEATURE_FLAGS.instance_migration:
+            await self._reconcile()
+            return
+        # Loaded only where an instance can be paused, so the listener process carries none of the API otherwise.
+        from langflow.api.utils.migration_pause import writing
+
+        # A paused instance takes no events: a listener that starts during a pause announces and
+        # claims nothing until it ends. The place is held for the pass, so a pause that is written
+        # meanwhile waits for it and then finds this listener's lease.
+        with writing(name="trigger_listener") as let_in:
+            if let_in:
+                await self._reconcile()
+            elif self.last_reconcile_at is not None:
+                # A listener that was already running still holds its connections, and a pause finds it by
+                # its lease. A pause that is tried again and again stays written for longer than a lease
+                # lasts, so the lease is renewed here and nothing else is done.
+                async with session_scope() as session:
+                    await replicas.announce(
+                        session, holder=self.holder, ttl_s=get_settings_service().settings.listener_lease_ttl_s
+                    )
+
+    async def _reconcile(self) -> None:
         settings = get_settings_service().settings
         async with session_scope() as session:
             desired = await load_desired_state(session)
@@ -696,6 +720,8 @@ class ListenerSupervisor:
             settings.listener_backoff_base_s * (2 ** (worker.consecutive_failures - 1)),
             settings.listener_backoff_cap_s,
         )
+        if isinstance(exc, RateLimitedError) and exc.retry_after is not None:
+            delay = max(delay, exc.retry_after)
         delay *= random.uniform(0.85, 1.15)  # noqa: S311 - jitter, not crypto
         worker.next_attempt_at = _now() + timedelta(seconds=delay)
         # A flapping provider is a warning, not an error - backing off and

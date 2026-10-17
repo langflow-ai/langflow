@@ -27,6 +27,7 @@ export const CHROMA_CLOUD_VARIABLES = {
 } as const;
 
 export type DBProviderId =
+  | "sqlite"
   | "chroma"
   | "chroma_cloud"
   | "opensearch"
@@ -36,8 +37,13 @@ export type DBProviderId =
 
 export type AvailableDBProviderId = Extract<
   DBProviderId,
-  "chroma" | "chroma_cloud" | "opensearch" | "postgres"
+  "sqlite" | "opensearch" | "postgres"
 >;
+
+export type StoredDBProviderId =
+  | AvailableDBProviderId
+  | "chroma"
+  | "chroma_cloud";
 
 export interface DBProviderTextField {
   kind?: "text";
@@ -66,59 +72,21 @@ export interface DBProviderOption {
   label: string;
   description: string;
   icon: string;
-  status: "available" | "coming_soon";
+  status: "available" | "coming_soon" | "retired";
   defaultEnabled?: boolean;
   configFields: DBProviderConfigField[];
 }
 
 export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
   {
-    id: "chroma",
-    label: "Chroma Local",
+    id: "sqlite",
+    label: "SQLite Local",
     description:
       "Local vector storage bundled with Langflow. No additional configuration required.",
-    icon: "Chroma",
+    icon: "database",
     status: "available",
     defaultEnabled: true,
     configFields: [],
-  },
-  {
-    id: "chroma_cloud",
-    label: "Chroma Cloud",
-    description: "Managed Chroma Cloud vector storage via api.trychroma.com.",
-    icon: "Chroma",
-    status: "available",
-    configFields: [
-      {
-        label: "API Key",
-        variableKey: CHROMA_CLOUD_VARIABLES.API_KEY,
-        required: true,
-        isSecret: true,
-        placeholder: "ck-…",
-      },
-      {
-        label: "Tenant",
-        variableKey: CHROMA_CLOUD_VARIABLES.TENANT,
-        required: false,
-        isSecret: false,
-        placeholder: "default-tenant",
-      },
-      {
-        label: "Database",
-        variableKey: CHROMA_CLOUD_VARIABLES.DATABASE,
-        required: false,
-        isSecret: false,
-        placeholder: "default-database",
-      },
-      {
-        label: "Region",
-        variableKey: CHROMA_CLOUD_VARIABLES.REGION,
-        required: false,
-        isSecret: false,
-        placeholder: "us-east-1",
-        defaultValue: "us-east-1",
-      },
-    ],
   },
   {
     id: "opensearch",
@@ -226,7 +194,7 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
     // Environment-driven: pgVector is configured from the server's
     // PGVECTOR_CONNECTION_STRING, not from the UI. No editable fields — the
     // card only reflects whether it's reachable (via test-connection) and lets
-    // the user make it active, exactly like Chroma Local.
+    // the user make it active, exactly like SQLite Local.
     id: "postgres",
     label: "Postgres pgVector",
     description:
@@ -289,9 +257,23 @@ export function parseBooleanGlobalVariable(
   return defaultValue;
 }
 
+/** Preserve the environment configuration signal from servers that expose only their default. */
+function isEnvProvisionedDefault(
+  providerType: StoredDBProviderId,
+  serverDefaultBackend: string | undefined,
+): boolean {
+  return (
+    (providerType === "opensearch" || providerType === "postgres") &&
+    serverDefaultBackend === providerType
+  );
+}
+
+/** Resolve the selected provider from saved preferences and server configuration. */
 export function getActiveDBProvider(
   variables: GlobalVariable[],
   localVectorStoreAvailable = true,
+  serverDefaultBackend?: string,
+  configuredBackends: readonly string[] = [],
 ): AvailableDBProviderId {
   const configuredProvider = getGlobalVariableValue(
     variables,
@@ -299,26 +281,53 @@ export function getActiveDBProvider(
   );
   if (
     (configuredProvider === "opensearch" ||
-      configuredProvider === "chroma_cloud" ||
       configuredProvider === "postgres") &&
     isDBProviderConfigured(
       configuredProvider,
       variables,
       localVectorStoreAvailable,
+      serverDefaultBackend,
+      configuredBackends,
     )
   )
     return configuredProvider;
-  // Local Chroma writes vectors to the serving box's own disk, which the
+  // An operator who pinned local SQLite on a deployment that allows it keeps it.
+  if (configuredProvider === "sqlite" && localVectorStoreAvailable)
+    return "sqlite";
+  // Nothing usable was activated in DB Providers: follow the backend the server
+  // resolves for a create request that names none, so the UI never offers a
+  // store the deployment did not provision (e.g. pgVector on an OpenSearch-only
+  // deployment).
+  if (
+    serverDefaultBackend === "postgres" ||
+    serverDefaultBackend === "opensearch"
+  )
+    return serverDefaultBackend;
+  // SQLite writes vectors to the serving box's own disk, which the
   // production profile refuses. When it's unavailable, fall back to the
-  // environment-driven pgVector rather than a Chroma the create endpoint would
+  // environment-driven pgVector rather than a local store the create endpoint would
   // reject with 422 (pgVector's own connectivity is re-validated server-side).
   if (!localVectorStoreAvailable) return "postgres";
-  return "chroma";
+  return "sqlite";
 }
 
 export function getDBProviderOption(
   providerId: DBProviderId | string | undefined,
 ): DBProviderOption {
+  if (providerId === "chroma" || providerId === "chroma_cloud") {
+    return {
+      id: providerId,
+      label:
+        providerId === "chroma_cloud"
+          ? "Chroma Cloud (migration required)"
+          : "Chroma Local (migration required)",
+      description:
+        "This provider was retired in 1.13. Check upgrade migration status before using this store.",
+      icon: "database",
+      status: "retired",
+      configFields: [],
+    };
+  }
   return (
     DB_PROVIDER_OPTIONS.find((provider) => provider.id === providerId) ??
     DB_PROVIDER_OPTIONS[0]
@@ -327,22 +336,39 @@ export function getDBProviderOption(
 
 export type DBProviderConfigValue = string | boolean;
 
-export function getDBProviderConfig(
-  providerType: AvailableDBProviderId,
+/**
+ * OpenSearch TLS toggles for ``backend_config``. A toggle the operator saved
+ * always wins. Otherwise it defaults to ``true`` for a URL stored as a Langflow
+ * variable, but is *omitted* when the URL is not a variable (it comes from the
+ * ``OPENSEARCH_URL`` environment variable): the UI cannot see that scheme, and
+ * the backend derives SSL from it, whereas a hard-coded ``true`` would force
+ * HTTPS onto an ``http://`` cluster.
+ */
+function booleanToggles(
   variables: GlobalVariable[],
 ): Record<string, DBProviderConfigValue> {
-  if (providerType === "chroma_cloud") {
-    return {
-      mode: "cloud",
-      tenant_variable: CHROMA_CLOUD_VARIABLES.TENANT,
-      database_variable: CHROMA_CLOUD_VARIABLES.DATABASE,
-      api_key_variable: CHROMA_CLOUD_VARIABLES.API_KEY,
-      cloud_region:
-        getGlobalVariableValue(variables, CHROMA_CLOUD_VARIABLES.REGION) ??
-        "us-east-1",
-    };
+  const urlFromVariable =
+    getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.URL) !== undefined;
+  const toggles: Record<string, DBProviderConfigValue> = {};
+  for (const [key, variableName] of [
+    ["use_ssl", OPENSEARCH_VARIABLES.USE_SSL],
+    ["verify_certs", OPENSEARCH_VARIABLES.VERIFY_CERTS],
+  ] as const) {
+    if (
+      urlFromVariable ||
+      getGlobalVariableValue(variables, variableName) !== undefined
+    ) {
+      toggles[key] = parseBooleanGlobalVariable(variables, variableName, true);
+    }
   }
+  return toggles;
+}
 
+/** Build provider config while preserving environment-derived OpenSearch TLS defaults. */
+export function getDBProviderConfig(
+  providerType: StoredDBProviderId,
+  variables: GlobalVariable[],
+): Record<string, DBProviderConfigValue> {
   if (providerType !== "opensearch") {
     return {};
   }
@@ -367,16 +393,7 @@ export function getDBProviderConfig(
     // Resolve booleans on the client so the backend always sees real
     // ``bool`` values; otherwise ``bool("false")`` evaluates to ``True``
     // in Python and silently flips the toggle.
-    use_ssl: parseBooleanGlobalVariable(
-      variables,
-      OPENSEARCH_VARIABLES.USE_SSL,
-      true,
-    ),
-    verify_certs: parseBooleanGlobalVariable(
-      variables,
-      OPENSEARCH_VARIABLES.VERIFY_CERTS,
-      true,
-    ),
+    ...booleanToggles(variables),
   };
 }
 
@@ -385,7 +402,7 @@ export function getDBProviderConfig(
  * string. ``"chroma_cloud"`` maps to ``"chroma"`` because the backend
  * disambiguates local vs. cloud via ``backend_config["mode"]``.
  */
-export function toAPIBackendType(frontendId: AvailableDBProviderId): string {
+export function toAPIBackendType(frontendId: StoredDBProviderId): string {
   return frontendId === "chroma_cloud" ? "chroma" : frontendId;
 }
 
@@ -398,7 +415,8 @@ export function toAPIBackendType(frontendId: AvailableDBProviderId): string {
 export function resolveUIBackendType(
   backendType: string | undefined,
   backendConfig: Record<string, unknown> | undefined,
-): AvailableDBProviderId {
+): StoredDBProviderId {
+  if (backendType === "sqlite") return "sqlite";
   if (backendType === "opensearch") return "opensearch";
   if (backendType === "postgres") return "postgres";
   // Already a frontend UI ID — pass through directly.
@@ -409,22 +427,28 @@ export function resolveUIBackendType(
   return "chroma";
 }
 
+/** Check whether deployment policy, saved credentials and activation permit this provider. */
 export function isDBProviderConfigured(
-  providerType: AvailableDBProviderId,
+  providerType: StoredDBProviderId,
   variables: GlobalVariable[],
   localVectorStoreAvailable = true,
+  serverDefaultBackend?: string,
+  configuredBackends: readonly string[] = [],
 ): boolean {
-  if (providerType === "chroma") {
-    // Local Chroma is only a usable target when the deployment allows local
+  if (providerType === "chroma" || providerType === "chroma_cloud")
+    return false;
+  if (providerType === "sqlite") {
+    // SQLite is only a usable target when the deployment allows local
     // vector storage. On the production profile it isn't, so report it as
     // unconfigured — pickers then disable it and create-time validation blocks
     // it (instead of the server rejecting the request with a 422).
     return localVectorStoreAvailable;
   }
 
-  // pgVector has no UI fields. It becomes explicitly selectable only after the
-  // DB Providers panel has successfully tested and activated it; the server
-  // still re-validates connectivity during creation.
+  if (configuredBackends.includes(providerType)) return true;
+  if (isEnvProvisionedDefault(providerType, serverDefaultBackend)) return true;
+
+  // Older servers can still enable pgVector through explicit activation.
   if (providerType === "postgres") {
     return (
       getGlobalVariableValue(variables, ACTIVE_DB_PROVIDER_VARIABLE) ===
@@ -448,14 +472,22 @@ export function isDBProviderConfigured(
     });
 }
 
+/** Resolve a new base's default provider and variable-backed configuration. */
 export function getDefaultDBProviderConfig(
   variables: GlobalVariable[],
   localVectorStoreAvailable = true,
+  serverDefaultBackend?: string,
+  configuredBackends: readonly string[] = [],
 ): {
   backendType: AvailableDBProviderId;
   backendConfig: Record<string, DBProviderConfigValue>;
 } {
-  const backendType = getActiveDBProvider(variables, localVectorStoreAvailable);
+  const backendType = getActiveDBProvider(
+    variables,
+    localVectorStoreAvailable,
+    serverDefaultBackend,
+    configuredBackends,
+  );
   return {
     backendType,
     backendConfig: getDBProviderConfig(backendType, variables),

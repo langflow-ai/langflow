@@ -31,6 +31,9 @@ const mockRegistrations = {
 };
 const mockTypesState = { data: {} };
 const mockPoll = { data: undefined };
+const mockResolveRegistrationId = jest.fn<string | null, []>(
+  () => "google-demo",
+);
 
 jest.mock("@/controllers/API/queries/connections", () => ({
   ...jest.requireActual("@/controllers/API/queries/connections"),
@@ -65,7 +68,7 @@ jest.mock("@/stores/alertStore", () => ({
 
 jest.mock("@/customization/components/custom-connection-authorization", () => ({
   openAuthorizationUrl: jest.fn(),
-  resolveRegistrationId: () => "google-demo",
+  resolveRegistrationId: () => mockResolveRegistrationId(),
 }));
 
 jest.mock("@/components/common/genericIconComponent", () => ({
@@ -112,6 +115,8 @@ const fillDetails = async (user: ReturnType<typeof userEvent.setup>) => {
 describe("AddConnectionDialog ownership", () => {
   beforeEach(() => {
     mockCreate.mockReset();
+    mockRegistrations.isSuccess = true;
+    mockResolveRegistrationId.mockReturnValue("google-demo");
     // Consent opens in a popup the dialog creates on the click itself.
     jest.spyOn(window, "open").mockReturnValue({
       close: jest.fn(),
@@ -122,6 +127,105 @@ describe("AddConnectionDialog ownership", () => {
   afterEach(async () => {
     jest.restoreAllMocks();
     await act(() => i18n.changeLanguage("en"));
+  });
+
+  it("explains an empty provider list instead of blaming the OAuth registration", () => {
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[]}
+        canCreateInstance={false}
+      />,
+    );
+    expect(screen.getByTestId("connection-no-providers")).toHaveTextContent(
+      /administrator controls/i,
+    );
+    expect(screen.queryByTestId("connection-provider")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("connection-setup-help"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/No OAuth registration is configured/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("reports a missing registration up front when re-authorizing a provider policy removed", () => {
+    // Every render resolves again, so a one-off return value is not enough.
+    mockResolveRegistrationId.mockReturnValue(null);
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[]}
+        canCreateInstance={false}
+        reauthorize={createdRow("user")}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /No OAuth registration is configured/i,
+    );
+    expect(screen.getByTestId("connection-authorize")).toBeDisabled();
+    expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
+      "href",
+      "https://docs.langflow.org/connection-oauth#customer-owned-google-registration",
+    );
+    expect(
+      screen.getByText(/LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS/),
+    ).toBeVisible();
+    expect(screen.getByTestId("connection-callback-url")).toHaveTextContent(
+      "/oauth/google/callback",
+    );
+  });
+
+  it("updates setup instructions when the selected provider changes", async () => {
+    mockResolveRegistrationId.mockReturnValue(null);
+    const user = userEvent.setup();
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[
+          google,
+          {
+            ...google,
+            provider_id: "microsoft",
+            display_name: "Microsoft 365",
+          },
+        ]}
+        canCreateInstance={false}
+      />,
+    );
+    await user.selectOptions(
+      screen.getByTestId("connection-provider"),
+      "microsoft",
+    );
+    expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
+      "href",
+      "https://docs.langflow.org/entra-app-registration",
+    );
+    expect(screen.getByTestId("connection-callback-url")).toHaveTextContent(
+      "/oauth/microsoft/callback",
+    );
+    expect(screen.getByTestId("connection-continue")).toBeDisabled();
+  });
+
+  it("does not call a registration missing before discovery succeeds", () => {
+    mockResolveRegistrationId.mockReturnValue(null);
+    mockRegistrations.isSuccess = false;
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[google]}
+        canCreateInstance={false}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Setup guide" })).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("connection-callback-url"),
+    ).not.toBeInTheDocument();
   });
 
   it.each([

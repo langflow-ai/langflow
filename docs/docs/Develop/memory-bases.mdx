@@ -13,8 +13,9 @@ Unlike a [knowledge base](/knowledge), which you populate manually with files, a
 
 Memory bases and knowledge bases share the same vector-store backends.
 Configure those backends in **Settings → DB Providers**.
-By default, new memory bases use local [Chroma](https://docs.trychroma.com/docs/overview/introduction).
-You can also use [Chroma Cloud](/knowledge#chroma-cloud), [OpenSearch](/knowledge#opensearch), or [Postgres pgvector](/knowledge#postgres-pgvector), depending on which providers you have configured.
+By default, new memory bases use local SQLite with sqlite-vec.
+For existing Chroma stores, read [Upgrade Knowledge and Memory storage](./knowledge-storage-upgrade.mdx).
+You can also use [OpenSearch](/knowledge#opensearch), or [Postgres pgvector](/knowledge#postgres-pgvector), depending on which providers you have configured.
 For setup steps, see [Configure vector database providers](/knowledge#configure-vector-database-providers).
 
 After a memory base is created, you can include its knowledge in a flow by adding the [**Memory Base** component](../Components/memory-base.mdx).
@@ -118,7 +119,7 @@ Create one from within the visual editor.
 
 4. Click **Create Memory**.
 Langflow creates the memory base and provisions storage on the selected vector database.
-For local Chroma, that includes an on-disk directory; for remote providers such as Chroma Cloud, OpenSearch, or Postgres pgvector, vectors are stored in the configured cluster or database.
+For local SQLite, that includes an on-disk directory; for remote providers such as OpenSearch or Postgres pgvector, vectors are stored in the configured cluster or database.
 A new memory base's status is **Empty** until the first ingestion job completes.
 
 ## Use a memory base in a flow
@@ -168,17 +169,10 @@ To delete the memory, click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
 The memory base vectors storage location depends on the [DB Provider](/knowledge#configure-vector-database-providers) you selected when you created it.
 Backend and embedding settings for each memory base are stored on its backing knowledge base record in the Langflow database.
 
-For **local Chroma**, memory bases use the same on-disk layout as [knowledge bases](/knowledge).
-The default storage location depends on your operating system and installation method:
-
-- **Langflow Desktop**:
-    - **macOS**: `/Users/<username>/.langflow/knowledge_bases`
-    - **Windows**: `C:\Users\<name>\AppData\Roaming\com.LangflowDesktop\knowledge_bases`
-- **Langflow OSS**:
-    - **macOS/Windows/Linux/WSL with `uv pip install`**: `<path_to_venv>/lib/python3.12/site-packages/langflow/knowledge_bases`
-    - **macOS/Windows/Linux/WSL with `git clone`**: `<path_to_clone>/src/backend/base/langflow/knowledge_bases`
-
-If you set the `LANGFLOW_CONFIG_DIR` environment variable, the `knowledge_bases` subdirectory is created relative to that path.
+For **local SQLite**, memory bases use the same on-disk layout as [knowledge bases](/knowledge).
+Each generation uses `<knowledge_bases_root>/sqlite/<owner UUID>/<KB UUID>/<generation>/vectors.sqlite3`.
+The default root is `~/.langflow/knowledge_bases`.
+Keep SQLite storage on local disk on one host.
 
 To change the default directory, set `LANGFLOW_KNOWLEDGE_BASES_DIR`:
 
@@ -186,7 +180,7 @@ To change the default directory, set `LANGFLOW_KNOWLEDGE_BASES_DIR`:
 export LANGFLOW_KNOWLEDGE_BASES_DIR="/path/to/parent/directory"
 ```
 
-For **remote providers** such as Chroma Cloud, OpenSearch, or Postgres pgvector, vectors are stored in the configured cluster or database, not under the local `knowledge_bases` directory.
+For **remote providers** such as OpenSearch or Postgres pgvector, vectors are stored in the configured cluster or database, not under the local `knowledge_bases` directory.
 Configure those providers in **Settings → DB Providers**.
 For setup steps, see [Configure vector database providers](/knowledge#configure-vector-database-providers).
 

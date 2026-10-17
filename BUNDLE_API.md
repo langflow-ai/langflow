@@ -224,6 +224,41 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Google Workspace network diagnostics (2026-10-15).** `lfx.integrations` exports
+  `IntegrationNetworkError` with the additive `network-error` code. Google transport
+  failures report a fixed reason and API hostname, with server-network guidance in
+  the visible message. They are non-retryable and use HTTP 504 for timeouts or 502
+  for other connectivity failures. HTTP provider failures retain their existing
+  codes. No existing symbol or signature changes, so `BUNDLE_API_VERSION` remains `1`.
+  The stable `lfx-google` wheel requires `lfx>=1.13.0,<2.0.0`, excluding older
+  prereleases that lack this export. Publish the compatible LFX release before
+  the Google bundle. Nightly and RC builds restamp the bundle to a prerelease
+  with a matching LFX requirement instead of weakening the stable wheel's
+  requirement. Nightlies pin LFX exactly so older RCs cannot satisfy the dependency.
+
+- **Output artifact previews.** `Component.custom_repr()` derives automatic
+  previews from the current output's `status` without storing them in
+  `repr_value`. Explicitly configured non-empty `repr_value` overrides remain
+  supported. Public signatures and `BUNDLE_API_VERSION = 1` remain unchanged.
+
+- **Knowledge storage provider defaults.** `DBProviderInput` defaults to the
+  application-provided SQLite backend. Its public name, fields and signature
+  remain unchanged, so `BUNDLE_API_VERSION` remains `1`. Recognized historical
+  Knowledge and Memory sources resolve to current implementations without
+  loading the retired Chroma SDKs. Custom component source remains untouched.
+  Extension backends that implement only `add_documents` retain their guarded
+  ingestion path. Writing precomputed embeddings remains optional for ordinary
+  ingestion and required for migration imports.
+
+### 2026-09-24 — Async file loader dispatch
+
+Graph outputs and the Read File tool now await `@delegates_to` coroutine methods
+directly. `BaseFileComponent` provides `aload_files_*` and `aprocess_files` for
+native async loaders; existing sync overrides still run in worker threads. Bundle
+coroutines should await these methods instead of calling their sync wrappers on
+the event loop. The public sync method signatures remain unchanged, and
+`BUNDLE_API_VERSION` remains `1`.
+
 ### 2026-09-23 — Slack sources for triggers (TRG-5)
 
 - `ConnectionNotAuthorizedError`'s `reason` additionally accepts

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -45,6 +47,7 @@ import {
 } from "../helpers/scopes";
 import { useSlackTokenConnection } from "../hooks/useSlackTokenConnection";
 import AuthorizeStatus, { type AuthorizeState } from "./AuthorizeStatus";
+import ConnectionSetupHelp from "./ConnectionSetupHelp";
 import RegistrationSelect from "./RegistrationSelect";
 import ScopeChecklist from "./ScopeChecklist";
 import SlackTokenFields, { ConnectionMethodSelect } from "./SlackTokenFields";
@@ -110,12 +113,11 @@ export function AddConnectionDialog({
   const create = useCreateConnectionMutation();
   const startOAuth = useStartOAuthMutation();
   const remove = useDeleteConnectionMutation();
-  const poll = usePendingConnectionPoll(
-    authorize?.kind === "waiting" ? baseline : null,
-  );
+  const isAwaitingConsent =
+    authorize?.kind === "waiting" || authorize?.kind === "untracked";
+  const poll = usePendingConnectionPoll(isAwaitingConsent ? baseline : null);
   const slackToken = useSlackTokenConnection({
     providerId,
-    provider,
     deploymentContext,
     reauthorizing: !!reauthorize,
     create: create.mutateAsync,
@@ -132,6 +134,9 @@ export function AddConnectionDialog({
       ),
     [registrations.data, providerId, identity],
   );
+  // Policy can leave a user with no provider at all; that is not a missing
+  // OAuth registration, so it gets its own explanation instead of the form.
+  const noProviders = !reauthorize && providers.length === 0;
   const resolvedRegistration = resolveRegistrationId({
     provider: providerId,
     identity,
@@ -139,7 +144,11 @@ export function AddConnectionDialog({
     preferredId: registrationId,
   });
   // A listed backend that offers nothing for this provider cannot start consent.
+  // Keyed on providerId, not provider: re-authorizing a connection whose
+  // provider policy has since removed must still report the missing
+  // registration up front.
   const noRegistration =
+    providerId !== "" &&
     registrations.data !== null &&
     registrations.isSuccess &&
     resolvedRegistration === null;
@@ -202,17 +211,48 @@ export function AddConnectionDialog({
     [reauthorize, requestable, ceiling],
   );
 
+  const reauthorizeId = reauthorize?.id;
+  const initializedReauthorization = useRef<{
+    connectionId: string;
+    registrationId: string;
+  } | null>(null);
+
   useEffect(() => {
-    if (!reauthorizeList) return;
-    setSelectedScopes(new Set(reauthorizeList.granted));
-  }, [reauthorizeList]);
+    if (!reauthorizeId || !reauthorizeList) {
+      initializedReauthorization.current = null;
+      return;
+    }
+    if (registrations.isLoading || !resolvedRegistration) return;
+    // Refetches may change the available scopes without changing the user's
+    // choices. Apply defaults only for a new connection or registration.
+    if (
+      initializedReauthorization.current?.connectionId === reauthorizeId &&
+      initializedReauthorization.current?.registrationId ===
+        resolvedRegistration
+    ) {
+      return;
+    }
+    initializedReauthorization.current = {
+      connectionId: reauthorizeId,
+      registrationId: resolvedRegistration,
+    };
+    setSelectedScopes(new Set(reauthorizeList.defaultSelected));
+  }, [
+    reauthorizeId,
+    reauthorizeList,
+    registrations.isLoading,
+    resolvedRegistration,
+  ]);
 
   // Consent lands on the server: only a row that moved on from the state it had
   // when consent started carries this authorization's outcome.
   useEffect(() => {
-    if (authorize?.kind !== "waiting") return;
+    if (!isAwaitingConsent) return;
     if (hasConsentLanded(poll.data, baseline)) {
       const row = poll.data as ConnectionRead;
+      // Polling stops on failure. Retain that outcome so a retry's baseline
+      // cannot mistake the cached failed callback for the new attempt.
+      setPendingRow(row);
       if (row.status_reason?.startsWith("oauth-")) {
         const message =
           row.status_reason === "oauth-denied"
@@ -230,24 +270,28 @@ export function AddConnectionDialog({
       }
       return;
     }
-    if (Date.now() - startedAt.current > CONSENT_TIMEOUT_MS) {
-      setAuthorize({ kind: "failed", message: t("connections.add.expired") });
-    }
-  }, [authorize, poll.data, baseline, t]);
+  }, [isAwaitingConsent, poll.data, baseline, t]);
 
-  // The window closing without a change is a cancellation, not a failure to retry.
+  // A provider's Cross-Origin-Opener-Policy can make an open popup report
+  // `closed`. Keep polling the server and avoid inferring user cancellation.
   useEffect(() => {
-    if (authorize?.kind !== "waiting") return;
+    if (!isAwaitingConsent) return;
     const timer = window.setInterval(() => {
-      if (popupRef.current?.closed && !hasConsentLanded(poll.data, baseline)) {
+      if (hasConsentLanded(poll.data, baseline)) return;
+      if (Date.now() - startedAt.current >= CONSENT_TIMEOUT_MS) {
         setAuthorize({
           kind: "failed",
-          message: t("connections.add.cancelled"),
+          message: t("connections.add.expired"),
         });
+      } else if (
+        authorize?.kind === "waiting" &&
+        (!popupRef.current || popupRef.current.closed)
+      ) {
+        setAuthorize({ kind: "untracked" });
       }
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [authorize, poll.data, baseline, t]);
+  }, [isAwaitingConsent, authorize?.kind, poll.data, baseline, t]);
 
   const beginAuthorize = useCallback(
     async (connection: ConnectionRead, scopes: string[]) => {
@@ -348,7 +392,7 @@ export function AddConnectionDialog({
     displayName.trim().length > 0 &&
     (usesToken ? slackToken.tokenKind !== null : !noRegistration);
 
-  /** A pasted token is stored as-is: no consent window, nothing to wait for. */
+  /** The server validates pasted tokens before returning the connection. */
   const onCreateWithToken = async () => {
     try {
       const row = await slackToken.createWithToken({
@@ -429,7 +473,23 @@ export function AddConnectionDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {step === "details" && (
+        {step === "details" && noProviders && (
+          <div
+            className="flex flex-col gap-4"
+            data-testid="connection-no-providers"
+          >
+            <p className="text-sm text-muted-foreground">
+              {t("connections.noProviders")}
+            </p>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => close(false)}>
+                {t("connections.add.cancel")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "details" && !noProviders && (
           <div className="flex min-h-0 flex-col gap-4">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
               <div className="flex flex-col gap-1.5">
@@ -465,11 +525,40 @@ export function AddConnectionDialog({
                 />
               )}
 
+              <ConnectionSetupHelp
+                key={`${providerId}:${usesToken}`}
+                providerId={providerId}
+                noRegistration={noRegistration}
+                usesToken={usesToken}
+              />
+
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="connection-name">
-                    {t("connections.add.handle")}
-                  </Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="connection-name">
+                      {t("connections.add.handle")}
+                    </Label>
+                    <ShadTooltip
+                      content={t("connections.add.handleTooltip", {
+                        example: `${providerId}/work`,
+                      })}
+                      side="top"
+                      avoidCollisions
+                    >
+                      <button
+                        type="button"
+                        aria-label={t("connections.add.handleHelpLabel")}
+                        className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        data-testid="connection-handle-help"
+                      >
+                        <ForwardedIconComponent
+                          name="Info"
+                          className="h-3.5 w-3.5 text-muted-foreground"
+                          ariaHidden
+                        />
+                      </button>
+                    </ShadTooltip>
+                  </div>
                   <Input
                     id="connection-name"
                     value={name}
@@ -498,9 +587,29 @@ export function AddConnectionDialog({
                   </p>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="connection-display-name">
-                    {t("connections.add.displayName")}
-                  </Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="connection-display-name">
+                      {t("connections.add.displayName")}
+                    </Label>
+                    <ShadTooltip
+                      content={t("connections.add.displayNameTooltip")}
+                      side="top"
+                      avoidCollisions
+                    >
+                      <button
+                        type="button"
+                        aria-label={t("connections.add.displayNameHelpLabel")}
+                        className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        data-testid="connection-display-name-help"
+                      >
+                        <ForwardedIconComponent
+                          name="Info"
+                          className="h-3.5 w-3.5 text-muted-foreground"
+                          ariaHidden
+                        />
+                      </button>
+                    </ShadTooltip>
+                  </div>
                   <Input
                     id="connection-display-name"
                     value={displayName}
@@ -522,9 +631,6 @@ export function AddConnectionDialog({
                   onAllowBackgroundRunsChange={
                     slackToken.setAllowBackgroundRuns
                   }
-                  botTokenScopes={slackToken.botTokenScopes}
-                  tokenScopes={slackToken.tokenScopes}
-                  onToggleTokenScope={slackToken.toggleTokenScope}
                 />
               )}
 
@@ -577,12 +683,14 @@ export function AddConnectionDialog({
                     </span>
                   )}
                   <ScopeChecklist
+                    providerId={providerId}
+                    requirements={requirements}
                     scopes={requestable}
                     selected={selectedScopes}
                     onToggle={toggleScope}
                   />
                   {unavailable.length > 0 && (
-                    <span className="text-xs text-warning-foreground">
+                    <span className="text-xs text-accent-amber-foreground">
                       {t("connections.add.scopesOutsideCeiling", {
                         scopes: unavailable.map(shortScope).join(", "),
                       })}
@@ -591,11 +699,6 @@ export function AddConnectionDialog({
                 </div>
               )}
 
-              {!usesToken && noRegistration && (
-                <p className="text-xs text-destructive" role="alert">
-                  {t("connections.add.noRegistration")}
-                </p>
-              )}
               {fieldError && (
                 <p className="text-xs text-destructive" role="alert">
                   {fieldError}
@@ -620,6 +723,11 @@ export function AddConnectionDialog({
         {step === "scopes" && (
           <div className="flex min-h-0 flex-col gap-4">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+              <ConnectionSetupHelp
+                key={providerId}
+                providerId={providerId}
+                noRegistration={noRegistration}
+              />
               {registrationSelect}
 
               <div className="flex flex-col gap-2">
@@ -632,25 +740,21 @@ export function AddConnectionDialog({
                     : t("connections.add.reauthorizeHint")}
                 </span>
                 <ScopeChecklist
+                  providerId={providerId}
+                  requirements={requirements}
                   scopes={reauthorizeOptions}
                   selected={selectedScopes}
                   onToggle={toggleScope}
                   granted={grantedOptions}
                 />
                 {notRequestable.length > 0 && (
-                  <span className="text-xs text-warning-foreground">
+                  <span className="text-xs text-accent-amber-foreground">
                     {t("connections.add.scopesOutsideCeiling", {
                       scopes: notRequestable.map(shortScope).join(", "),
                     })}
                   </span>
                 )}
               </div>
-
-              {noRegistration && (
-                <p className="text-xs text-destructive" role="alert">
-                  {t("connections.add.noRegistration")}
-                </p>
-              )}
             </div>
             <div className="flex shrink-0 justify-end gap-2">
               <Button variant="ghost" onClick={() => close(true)}>
@@ -670,16 +774,24 @@ export function AddConnectionDialog({
         {step === "authorize" && (
           <div className="flex flex-col gap-4">
             <AuthorizeStatus state={authorize} />
+            {authorize?.kind === "untracked" && (
+              <ConnectionSetupHelp
+                providerId={providerId}
+                noRegistration={false}
+              />
+            )}
             <div className="flex justify-end gap-2">
-              {authorize?.kind === "failed" && pendingRow && (
-                <Button
-                  variant="outline"
-                  onClick={onTryAgain}
-                  data-testid="connection-try-again"
-                >
-                  {t("connections.add.tryAgain")}
-                </Button>
-              )}
+              {(authorize?.kind === "failed" ||
+                authorize?.kind === "untracked") &&
+                pendingRow && (
+                  <Button
+                    variant="outline"
+                    onClick={onTryAgain}
+                    data-testid="connection-try-again"
+                  >
+                    {t("connections.add.tryAgain")}
+                  </Button>
+                )}
               <Button
                 onClick={() => close(authorize?.kind !== "connected")}
                 data-testid="connection-done"

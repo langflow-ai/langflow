@@ -26,6 +26,12 @@ def _matrix_actions() -> dict[str, dict]:
     return {action["action_id"]: action for action in matrix["actions"] if action["decision"] == "include"}
 
 
+def _action_capabilities():
+    return [
+        capability for capability in load_manifest().capabilities if not capability.id.startswith("microsoft.trigger.")
+    ]
+
+
 requires_matrix = pytest.mark.skipif(
     not MATRIX_PATH.exists(),
     reason="design matrix is only present in the langflow monorepo checkout",
@@ -89,14 +95,16 @@ def test_offline_access_is_never_a_per_action_scope() -> None:
 def test_manifest_covers_exactly_the_matrix_include_set() -> None:
     actions = _matrix_actions()
     manifest = load_manifest()
-    assert {capability.id for capability in manifest.capabilities} == set(actions)
-    assert len(manifest.capabilities) == 8
+    assert {capability.id for capability in _action_capabilities()} == set(actions)
+    assert {
+        capability.id for capability in manifest.capabilities if capability.id.startswith("microsoft.trigger.")
+    } == {"microsoft.trigger.mail", "microsoft.trigger.calendar", "microsoft.trigger.file"}
 
 
 @requires_matrix
 def test_display_names_and_classes_match_the_matrix_verbatim() -> None:
     actions = _matrix_actions()
-    for capability in load_manifest().capabilities:
+    for capability in _action_capabilities():
         action = actions[capability.id]
         assert capability.display_name == action["display_name"]
         assert capability.component_ref == action["component_class"]
@@ -108,7 +116,7 @@ def test_display_names_and_classes_match_the_matrix_verbatim() -> None:
 @requires_matrix
 def test_scopes_match_the_matrix_minus_offline_access() -> None:
     actions = _matrix_actions()
-    for capability in load_manifest().capabilities:
+    for capability in _action_capabilities():
         scopes = actions[capability.id]["scopes"]
         expected_required = {
             entry["scope"] for entry in scopes if entry["role"] == "required" and entry["scope"] != "offline_access"

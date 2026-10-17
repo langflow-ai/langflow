@@ -10,7 +10,7 @@ import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-ins
 
 This page describes the components that are available in the **Slack** bundle.
 
-Every Slack action runs on the [Slack Web API](https://docs.slack.dev/reference/methods/) and takes its credential from a Langflow [connection](../Develop/connection-oauth.mdx) rather than from a token pasted into the flow. The two [Slack triggers](#slack-triggers) run a flow when something happens in Slack.
+Every Slack component runs on the [Slack Web API](https://docs.slack.dev/reference/methods/) and takes its credential from a Langflow [connection](./connections) rather than from a token pasted into the flow.
 
 <GraduatedBundleInstall packageName="slack" />
 
@@ -29,9 +29,11 @@ A headless connection supplied through `LF_CONNECTION__SLACK__<NAME>` has no rec
 
 Langflow Desktop cannot install a bot through Slack sign-in, because Slack desktop redirects use PKCE and [may not request bot scopes](https://docs.slack.dev/authentication/using-pkce/). On Desktop, install your own Slack app to the workspace, copy its **Bot User OAuth Token** (`xoxb-`), and add it under **Settings** > **Connections** > **Add connection** > **Paste a token**.
 
+Langflow checks pasted bot tokens with Slack before saving and records the scopes Slack reports. **Check credential** checks the token with Slack again. If Slack rejects a pasted bot token during a check or a flow run, the connection becomes expired and unhealthy. App-level Socket Mode tokens (`xapp-`) are checked only by the listener when it opens a socket, so their credential health remains unknown in Settings.
+
 ## Prerequisites
 
-* A Slack app installed in the target workspace, and a Langflow connection for it. See [Configure connection OAuth](../Develop/connection-oauth.mdx) for the registration steps, the redirect URLs, and the per-action scope tables.
+* A Slack app installed in the target workspace, and a Langflow connection for it. See [Connections](./connections) to connect the account, and [Configure connection OAuth](./connection-oauth) for the registration steps, the redirect URLs, and the per-action scope tables.
 * For bot components, the app's bot user must be a member of the channel it acts on.
 
 ## Slack: Search (as user)

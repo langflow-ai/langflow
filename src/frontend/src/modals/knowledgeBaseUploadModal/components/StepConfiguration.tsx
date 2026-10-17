@@ -22,8 +22,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type {
-  AvailableDBProviderId,
   DBProviderConfigValue,
+  StoredDBProviderId,
 } from "@/constants/dbProviderConstants";
 import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
@@ -58,9 +58,9 @@ interface StepConfigurationProps {
   onFieldChange?: () => void;
   columnConfig: ColumnConfigRow[];
   onColumnConfigChange: (value: ColumnConfigRow[]) => void;
-  backendType: AvailableDBProviderId;
+  backendType: StoredDBProviderId;
   onBackendChange: (
-    type: AvailableDBProviderId,
+    type: StoredDBProviderId,
     config: Record<string, DBProviderConfigValue>,
   ) => void;
   globalVariables: GlobalVariable[];

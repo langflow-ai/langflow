@@ -131,6 +131,25 @@ class RuntimeSettings(BaseModel):
     """How often the scaled worker's periodic watchdog scans for orphaned leases
     (a dead worker's in-flight job) and reconciles them WITHOUT requiring a
     restart. Must be > 0."""
+    background_retention_days: int = Field(default=0, ge=0)
+    """How many days to keep TERMINAL job rows (and their events, signals and
+    checkpoints) before deleting them. ``0``, the default, disables retention
+    entirely and keeps every row forever.
+
+    Enable this on any long-lived deployment: the job table records every flow
+    run (v1 runs and playground builds, v2 workflow runs, knowledge-base and
+    memory ingestion, trigger firings) and nothing else ever deletes those rows,
+    while ``job_events`` grows a row per durable milestone of a background run.
+    Live runs are never deleted at any age: QUEUED, IN_PROGRESS and SUSPENDED
+    rows are excluded (a suspended run is waiting on a human who may answer
+    weeks later). Jobs awaiting trigger reconciliation and ingestion jobs
+    referenced by memory workflow runs are also retained, preserving trigger
+    outcomes and memory auto-capture state. Referenced ingestion jobs can
+    outlive this window until the memory tracking rows are removed.
+
+    Cleanup first runs after about five minutes, then hourly (both jittered).
+    A request ``idempotency_key`` blocks a duplicate run only while the original
+    job row exists, so once that row is purged the same key starts a new run."""
     # Triggers (TRG-2): the leased dispatcher, the schedule tick producer, and
     # the ledger retention windows.
     trigger_dispatcher_enabled: bool = True
@@ -139,6 +158,17 @@ class RuntimeSettings(BaseModel):
     ``trigger_lease`` row, so N replicas still produce one tick per schedule and
     one run per event. Turn it off on replicas that must never execute triggers
     (and when TRG-3's dedicated listener process hosts the loops instead)."""
+    data_subject_response_days: int = Field(default=30, ge=1, le=90)
+    """Days an administrator has to approve or refuse a data subject request
+    (LANGFLOW_DATA_SUBJECT_RESPONSE_DAYS). Sets the due date of each new request;
+    open requests keep the due date they were created with. GDPR Art. 12(3)
+    allows one month, extendable by two, hence the 90-day ceiling."""
+    data_subject_auto_erase_on_expiry: bool = False
+    """Approve and erase every deletion request still waiting for review once its
+    due date passes (LANGFLOW_DATA_SUBJECT_AUTO_ERASE_ON_EXPIRY). Off by default:
+    nothing is erased until an administrator approves. The same guards as a
+    manual approval apply, so a blocked request stays open for an administrator.
+    Requires LANGFLOW_FEATURE_DATA_SUBJECT_REQUESTS."""
     trigger_dispatcher_poll_interval_s: float = Field(default=5.0, gt=0)
     """How often the dispatcher scans the ledger for claimable events. The lower
     bound on scheduling latency for an event that arrives just after a scan."""
@@ -329,6 +359,16 @@ class RuntimeSettings(BaseModel):
 
     max_file_size_upload: int = 1024
     """The maximum file size for the upload in MB."""
+
+    url_component_max_response_bytes: int = Field(default=10 * 1024 * 1024, gt=0)
+    """Maximum encoded or decoded size, in bytes, of a single response body the URL component
+    will read (LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES). Bounds memory use against a huge or
+    endless page; raise it only if legitimate pages are being rejected."""
+
+    url_component_max_total_bytes: int = Field(default=100 * 1024 * 1024, gt=0)
+    """Maximum total bytes the URL component may read across every URL and crawled link of one
+    fetch (LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES). Each response counts the larger of its
+    encoded and decoded sizes, including rejected responses. The crawl stops once this budget is spent."""
 
     max_ingestion_timeout_secs: int = 600
 

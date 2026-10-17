@@ -34,7 +34,7 @@ def custom_agent_flow(monkeypatch):
     saved = deepcopy(registry["models_and_agents"]["Agent"])
     saved["template"]["code"]["value"] += "\n# QA customized method body\n"
     data = {"nodes": [{"id": "Agent-qa", "data": {"id": "Agent-qa", "type": "Agent", "node": saved}}], "edges": []}
-    return SimpleNamespace(id=uuid4(), name="Policy test", data=data)
+    return SimpleNamespace(id=uuid4(), user_id=uuid4(), name="Policy test", data=data)
 
 
 @pytest.mark.parametrize("inline", [False, True], ids=["stored", "inline"])
@@ -48,7 +48,7 @@ def test_warning_survives_caller_aware_sanitization(custom_agent_flow, inline, i
     parsed = ParsedWorkflowRun(flow_id=str(flow.id), data=flow.data if inline else None)
 
     gated = _validate_flow_data_for_execution(
-        parsed, flow, SimpleNamespace(is_superuser=is_superuser), expose_error_details=True
+        parsed, flow, SimpleNamespace(id=flow.user_id, is_superuser=is_superuser), expose_error_details=True
     )
 
     assert "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false" in gated.component_substitution_warning
@@ -65,7 +65,7 @@ def test_execute_only_warning_omits_component_names(custom_agent_flow):
     gated = _validate_flow_data_for_execution(
         ParsedWorkflowRun(flow_id=str(custom_agent_flow.id)),
         custom_agent_flow,
-        SimpleNamespace(is_superuser=False),
+        SimpleNamespace(id=custom_agent_flow.user_id, is_superuser=False),
         expose_error_details=False,
     )
     assert gated.component_substitution_warning is not None
@@ -79,7 +79,7 @@ async def test_sync_response_preserves_warning_without_changing_status(custom_ag
     from langflow.services import deps
 
     flow = custom_agent_flow
-    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    user = SimpleNamespace(id=flow.user_id, is_superuser=False)
     if outcome == "unmodified":
         flow.data["nodes"][0]["data"]["node"] = deepcopy(
             components.component_cache.all_types_dict["models_and_agents"]["Agent"]
@@ -129,7 +129,7 @@ async def test_completed_status_preserves_warning(custom_agent_flow, monkeypatch
     from langflow.api.v2 import workflow
 
     flow = custom_agent_flow
-    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    user = SimpleNamespace(id=flow.user_id, is_superuser=False)
     flow.user_id = user.id
     warning = "Custom components are disabled. This run uses the server's component code."
     metadata = {
@@ -166,7 +166,7 @@ async def test_background_worker_preserves_the_warning_after_serialization(custo
     from langflow.api.v2 import workflow
 
     flow = custom_agent_flow
-    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    user = SimpleNamespace(id=flow.user_id, is_superuser=False)
     parsed = _validate_flow_data_for_execution(
         ParsedWorkflowRun(flow_id=str(flow.id), mode="background"), flow, user, expose_error_details=True
     )
@@ -190,7 +190,7 @@ async def test_warning_is_streamed_before_success(custom_agent_flow, monkeypatch
     from langflow.services import deps
 
     flow = custom_agent_flow
-    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    user = SimpleNamespace(id=flow.user_id, is_superuser=False)
     parsed = _validate_flow_data_for_execution(
         ParsedWorkflowRun(flow_id=str(flow.id)), flow, user, expose_error_details=True
     )

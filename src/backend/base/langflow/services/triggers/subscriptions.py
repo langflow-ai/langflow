@@ -73,7 +73,6 @@ _FAILURE_KEYS = frozenset({_FAILURE_COUNT_KEY, _FAILURE_REASON_KEY, _FAILURE_AT_
 _DEFERRED_AUDITS_KEY = "trigger_subscription_deferred_audits"
 
 _NEEDS_RECONNECT_REASON = "The provider subscription needs to be re-authorized. Reconnect the connection."
-_REMOVED_REASON = "The provider deleted this subscription. Re-enable the trigger to subscribe again."
 
 
 def _now() -> datetime:
@@ -117,6 +116,16 @@ _RENEWERS: dict[str, SubscriptionRenewer] = {}
 _REVOKERS: dict[str, SubscriptionRevoker] = {}
 
 
+def _ensure_source_handlers(provider: str) -> None:
+    """Install the built-in source handlers after import cycles have settled."""
+    if provider not in {"microsoft", "google"}:
+        return
+    from langflow.services.triggers.source_subscription import renew_source, revoke_source
+
+    _RENEWERS.setdefault(provider, renew_source)
+    _REVOKERS.setdefault(provider, revoke_source)
+
+
 def register_renewer(provider: str, renewer: SubscriptionRenewer) -> None:
     """Register a provider's renewal call. TRG-6 supplies the wave-1 ones."""
     _RENEWERS[provider] = renewer
@@ -152,6 +161,12 @@ async def _revoke_remote(session: AsyncSession, row: TriggerSubscription) -> Non
     regardless, so Langflow stops acting on the subscription immediately, but
     the provider may keep delivering until its TTL runs out.
     """
+    if row.provider in {"microsoft", "google"}:
+        from langflow.services.triggers.source_cleanup import enqueue_cleanup
+
+        await enqueue_cleanup(session, row)
+        return
+    _ensure_source_handlers(row.provider)
     revoker = _REVOKERS.get(row.provider)
     if revoker is None:
         return
@@ -228,9 +243,10 @@ async def apply_lifecycle(session: AsyncSession, *, trigger_id: UUID, subscripti
 
     Graph sends these instead of - not alongside - the notification you were
     expecting, so ignoring them means a trigger that has stopped firing looks
-    healthy. ``reauthorizationRequired`` and ``subscriptionRemoved`` both need a
-    human, so both move the trigger to ``needs_reconnect``; ``missed`` is a
-    resync hint recorded on the subscription for the provider adapter to use.
+    healthy. ``reauthorizationRequired`` schedules a renewal, which also
+    reauthorizes the subscription with a fresh access token. A removed
+    subscription is marked expired and queued for replacement; ``missed``
+    requests a source resync.
 
     ``trigger_id`` is the trigger whose ``clientState`` verified the delivery.
     The subscription id comes from the body, so without that scope a delivery
@@ -251,18 +267,21 @@ async def apply_lifecycle(session: AsyncSession, *, trigger_id: UUID, subscripti
         return True
 
     if event == LIFECYCLE_REAUTHORIZATION_REQUIRED:
-        await _set_trigger_state(
-            session, trigger_id=row.trigger_id, state=TriggerState.NEEDS_RECONNECT.value, reason=_NEEDS_RECONNECT_REASON
-        )
+        # Graph can send this when an access token is about to expire. A PATCH
+        # renewal reauthorizes the subscription with the refreshed credential;
+        # a user reconnect is only needed if the connection actually fails.
+        row.renew_after = _now()
+        session.add(row)
+        await session.flush()
         return True
 
     if event == LIFECYCLE_SUBSCRIPTION_REMOVED:
         row.state = TriggerSubscriptionState.EXPIRED.value
         row.updated_at = _now()
         session.add(row)
-        await _set_trigger_state(
-            session, trigger_id=row.trigger_id, state=TriggerState.NEEDS_RECONNECT.value, reason=_REMOVED_REASON
-        )
+        # A removed subscription is not evidence that consent was revoked.
+        # The ingress route enqueues a durable resubscribe hint; leave the
+        # trigger active so its dispatcher can process that work.
         return True
 
     return False
@@ -283,7 +302,7 @@ async def revoke_for_trigger(session: AsyncSession, *, trigger_id: UUID) -> int:
         session.add(row)
     if rows:
         await session.flush()
-        await _audit_subscription(AUDIT_SUBSCRIPTION_REVOKE, trigger_id=trigger_id, count=len(rows))
+        await _audit_subscription(AUDIT_SUBSCRIPTION_REVOKE, trigger_id=trigger_id, count=len(rows), session=session)
     return len(rows)
 
 
@@ -369,9 +388,8 @@ async def _refresh_claim(session: AsyncSession, *, subscription_id: UUID, owner:
 
     Rows are claimed together at the start of a pass but renewed one provider
     call at a time, so a slow pass can outlive the claims on its later rows and
-    another replica can reclaim them. Guarded on ``lease_owner`` alone, like the
-    dispatcher's re-check: an expired claim nobody took is still ours to use,
-    a reclaimed one is not.
+    another replica can reclaim them. Accounting requires a matching owner
+    and a live claim; a late response cannot revive an expired claim.
     """
     from sqlmodel import update
 
@@ -381,9 +399,11 @@ async def _refresh_claim(session: AsyncSession, *, subscription_id: UUID, owner:
         .where(
             TriggerSubscription.id == subscription_id,
             TriggerSubscription.lease_owner == owner,
+            TriggerSubscription.lease_until > _now(),
             TriggerSubscription.state == TriggerSubscriptionState.ACTIVE.value,
         )
         .values(lease_until=_now() + timedelta(seconds=ttl_s))
+        .execution_options(synchronize_session=False)
     )
     result = await session.exec(guard)  # type: ignore[call-overload]
     return result.rowcount == 1
@@ -394,8 +414,8 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str)
 
     A row whose claim was taken over by another replica is left alone, so a
     provider never sees two renewals of one subscription from one pass each.
-    The claim is refreshed for one lease TTL before the provider call, so a
-    renewer must answer inside ``trigger_lease_ttl_s``.
+    The pass heartbeats claims during provider I/O. Accounting checks that
+    this claim is still live before committing any returned metadata.
 
     A provider with no registered renewer is left exactly as it was - claimed,
     then released - because "no bundle installed" is not the same as "renewal
@@ -405,11 +425,10 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str)
     Audits are deferred onto the session and written by :func:`run_renewal_pass`
     once the transaction has committed.
     """
-    if not await _refresh_claim(session, subscription_id=subscription_id, owner=owner):
-        return False
     row = await session.get(TriggerSubscription, subscription_id)
-    if row is None:
+    if row is None or row.lease_owner != owner or row.state != TriggerSubscriptionState.ACTIVE.value:
         return False
+    _ensure_source_handlers(row.provider)
     renewer = _RENEWERS.get(row.provider)
     if renewer is None:
         row.lease_owner = None
@@ -420,12 +439,29 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str)
     try:
         expires_at = await renewer(session, row)
     except Exception as exc:  # noqa: BLE001 - a provider failure is retried, not raised
+        with session.no_autoflush:
+            if not await _refresh_claim(session, subscription_id=subscription_id, owner=owner):
+                await session.rollback()
+                return False
         await _record_renewal_failure(session, row=row, exc=exc)
         return False
 
+    # Provider I/O finishes before taking any write lock. Suppress autoflush
+    # until the conditional ownership check has accepted the returned changes.
+    with session.no_autoflush:
+        if not await _refresh_claim(session, subscription_id=subscription_id, owner=owner):
+            from langflow.services.triggers.lease_guard import LeaseLostError
+
+            msg = "Subscription ownership changed during renewal."
+
+            raise LeaseLostError(msg)
     expires_at = _as_aware(expires_at) or _now()
     row.expires_at = expires_at
-    row.renew_after = renew_after_for(created_at=_now(), expires_at=expires_at)
+    row.renew_after = (
+        _now() + timedelta(days=1)
+        if (row.provider_state or {}).get("kind") == "gmail"
+        else renew_after_for(created_at=_now(), expires_at=expires_at)
+    )
     row.state = TriggerSubscriptionState.ACTIVE.value
     row.provider_state = {key: value for key, value in (row.provider_state or {}).items() if key not in _FAILURE_KEYS}
     row.lease_owner = None
@@ -535,6 +571,36 @@ async def run_renewal_pass(*, owner: str) -> int:
     if not held:
         return 0
 
+    from sqlmodel import update
+
+    from langflow.services.triggers.lease_guard import LeaseLostError, run_guarded
+
+    async def heartbeat(session, *, now, ttl_s):
+        await session.exec(
+            update(TriggerSubscription)
+            .where(
+                TriggerSubscription.state == TriggerSubscriptionState.ACTIVE.value,
+                TriggerSubscription.lease_owner == owner,
+                TriggerSubscription.lease_until > now,
+            )
+            .values(lease_until=now + timedelta(seconds=ttl_s))
+        )
+
+    try:
+        return await run_guarded(
+            _renew_claimed(owner=owner),
+            name=SUBSCRIPTION_LEASE_NAME,
+            owner=owner,
+            ttl_s=settings.trigger_lease_ttl_s,
+            heartbeat=heartbeat,
+        )
+    except LeaseLostError:
+        await logger.awarning("Subscription renewal stopped after losing its lease")
+        return 0
+
+
+async def _renew_claimed(*, owner: str) -> int:
+    settings = get_settings_service().settings
     async with session_scope() as session:
         await revoke_unusable_connections(session)
         claimed = await claim_due(
@@ -546,13 +612,10 @@ async def run_renewal_pass(*, owner: str) -> int:
 
     renewed = 0
     for subscription_id in claimed:
-        # Heartbeat the pass lease per row: a pass of provider calls can outlive
-        # one TTL, and another replica that took the lease meanwhile is running
-        # its own pass. Stop rather than race it.
+        # Independent heartbeats maintain the lease; this check never revives
+        # an expired lease when a provider returns late.
         async with session_scope() as session:
-            held = await leases.acquire(
-                session, name=SUBSCRIPTION_LEASE_NAME, owner=owner, ttl_s=settings.trigger_lease_ttl_s
-            )
+            held = await leases.holder(session, name=SUBSCRIPTION_LEASE_NAME) == owner
         if not held:
             break
         # One transaction per subscription: a provider that fails on one must
@@ -572,9 +635,20 @@ def _defer_audit(session: AsyncSession, action: str, *, trigger_id: UUID, count:
     session.info.setdefault(_DEFERRED_AUDITS_KEY, []).append((action, trigger_id, count, result))
 
 
-async def _audit_subscription(action: str, *, trigger_id: UUID, count: int, result: str = "allow") -> None:
-    from langflow.services.authorization.audit import audit_decision
+async def _audit_subscription(
+    action: str, *, trigger_id: UUID, count: int, result: str = "allow", session: AsyncSession | None = None
+) -> None:
+    from langflow.services.authorization.audit import audit_decision, stage_audit_decision
 
+    if session is not None and stage_audit_decision(
+        session=session,
+        user_id=None,
+        action=action,
+        obj=f"trigger:{trigger_id}",
+        result=result,
+        details={"subscriptions": count},
+    ):
+        return
     await audit_decision(
         user_id=None,
         action=action,

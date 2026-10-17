@@ -151,6 +151,7 @@ async def test_overlapping_dispatchers_cannot_insert_two_jobs_for_one_event(make
         event, _ = await ledger.append_event(session, trigger_id=trigger_id, dedupe_key="overlap")
         event.state = "claimed"
         event.lease_owner = "replica"
+        event.lease_expires_at = datetime.now(timezone.utc) + timedelta(seconds=60)
         session.add(event)
         event_id = event.id
     service = BackgroundExecutionService(get_settings_service())
@@ -172,7 +173,11 @@ async def test_overlapping_dispatchers_cannot_insert_two_jobs_for_one_event(make
         async with session_scope() as session:
             await dispatcher.dispatch_event(session, await session.get(TriggerEvent, event_id))
 
-    await asyncio.gather(submit(), submit())
+    from langflow.services.triggers.lease_guard import LeaseLostError
+
+    outcomes = await asyncio.gather(submit(), submit(), return_exceptions=True)
+    assert all(outcome is None or isinstance(outcome, LeaseLostError) for outcome in outcomes)
+    assert any(outcome is None for outcome in outcomes)
     async with session_scope() as session:
         event = await session.get(TriggerEvent, event_id)
         jobs = (await session.exec(select(Job).where(Job.dedupe_key == f"trg:{event_id}"))).all()

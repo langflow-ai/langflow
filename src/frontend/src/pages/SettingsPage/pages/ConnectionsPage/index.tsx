@@ -16,6 +16,7 @@ import {
   useUpdateConnectionMutation,
 } from "@/controllers/API/queries/connections";
 import CustomConnectionsTabs from "@/customization/components/custom-connections-tabs";
+import SettingsPageHeader from "@/pages/SettingsPage/components/SettingsPageHeader";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import AddConnectionDialog from "./components/AddConnectionDialog";
@@ -35,6 +36,7 @@ export default function ConnectionsPage() {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const userData = useAuthStore((state) => state.userData);
   const isSuperuser = Boolean(userData?.is_superuser);
 
@@ -73,6 +75,11 @@ export default function ConnectionsPage() {
   );
 
   const connections = connectionsQuery.data ?? EMPTY_CONNECTIONS;
+  // Integration policy can leave nothing to connect; say so rather than open
+  // a dialog with an empty provider list.
+  const noProviders =
+    integrationsQuery.isSuccess &&
+    (integrationsQuery.data?.providers ?? []).length === 0;
 
   // A superuser lists every user's connections, so "not instance-owned" is not
   // the same as "mine" for them: the rest belong to other people and are only
@@ -109,15 +116,19 @@ export default function ConnectionsPage() {
     return t("connections.emptyTab");
   };
 
-  const run = async (
+  const run = async <T,>(
     connection: ConnectionRead,
-    action: () => Promise<unknown>,
-    success: string,
+    action: () => Promise<T>,
+    success: string | ((result: T) => void),
   ) => {
     setBusyId(connection.id);
     try {
-      await action();
-      setSuccessData({ title: success });
+      const result = await action();
+      if (typeof success === "string") {
+        setSuccessData({ title: success });
+      } else {
+        success(result);
+      }
     } catch (error) {
       setErrorData({
         title: t("connections.errors.actionFailed"),
@@ -171,7 +182,19 @@ export default function ConnectionsPage() {
       run(
         connection,
         () => revoke.mutateAsync(connection.id),
-        t("connections.toast.revoked"),
+        (result) => {
+          if (result.provider_revocation === "revoked") {
+            setSuccessData({ title: t("connections.toast.revoked") });
+          } else {
+            setNoticeData({
+              title: t(
+                result.provider_revocation === "failed"
+                  ? "connections.toast.revokeFailed"
+                  : "connections.toast.revokedLocally",
+              ),
+            });
+          }
+        },
       ),
     onDelete: (connection: ConnectionRead) =>
       run(
@@ -227,24 +250,39 @@ export default function ConnectionsPage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
-      <div className="flex w-full items-start justify-between gap-4">
-        <div className="flex flex-col">
-          <h2 className="text-lg font-semibold">{t("connections.title")}</h2>
-          <p className="text-sm text-muted-foreground">
-            {t("connections.subtitle")}
-          </p>
-        </div>
+      <SettingsPageHeader
+        title={t("connections.title")}
+        description={t("connections.subtitle")}
+      >
         <Button
+          size="sm"
           onClick={() => {
             setReauthorizing(undefined);
             setDialogOpen(true);
           }}
+          // Until the provider list has loaded, the dialog would open with
+          // no providers and blame policy for a slow or failed request.
+          disabled={!integrationsQuery.isSuccess || noProviders}
           data-testid="add-connection"
         >
-          <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
+          <ForwardedIconComponent name="Plus" className="h-4 w-4" />
           {t("connections.add.title")}
         </Button>
-      </div>
+      </SettingsPageHeader>
+
+      {/* Always mounted: a status region inserted with its text already in
+          place is not reliably announced. */}
+      <p
+        className={
+          noProviders
+            ? "rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground"
+            : "sr-only"
+        }
+        data-testid="connections-no-providers"
+        role="status"
+      >
+        {noProviders ? t("connections.noProviders") : ""}
+      </p>
 
       {/*
         Every trigger needs a TabsContent with the matching value: Radix points

@@ -63,11 +63,6 @@ jest.mock("@/customization/hooks/use-custom-primary-loading", () => ({
   useCustomPrimaryLoading: () => ({ isFetched: true }),
 }));
 
-jest.mock("@/stores/darkStore", () => ({
-  useDarkStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({ refreshStars: jest.fn(), refreshDiscordCount: jest.fn() }),
-}));
-
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
   default: (selector: (state: Record<string, unknown>) => unknown) =>

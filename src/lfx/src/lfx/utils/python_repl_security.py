@@ -306,11 +306,11 @@ class CodeExecutionDisabledError(ValueError):
 
 
 def ensure_code_execution_enabled() -> None:
-    """Refuse to run Python code when either server code-execution policy disables it.
+    """Refuse Python code execution when the server policy denies the caller.
 
     Registered code-execution components run user- or model-supplied Python. They honor
-    both ``allow_custom_components`` and ``block_code_interpreter_components`` so a
-    component cannot bypass either policy through direct or tool-mode execution.
+    ``allow_custom_components``, ``block_code_interpreter_components`` and
+    ``custom_component_admin_only`` apply to direct and tool-mode execution.
 
     Failure handling is deliberately asymmetric so the gate can never be
     silently bypassed:
@@ -353,6 +353,16 @@ def ensure_code_execution_enabled() -> None:
             "Set LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=false to enable this component."
         )
         raise CodeExecutionDisabledError(msg)
+    if getattr(settings_service.settings, "custom_component_admin_only", False) is True:
+        from lfx.services.model_provider_policy import current_model_provider_policy_context
+
+        # The execution host binds this principal from the authenticated user.
+        # Do not infer administrator privilege from graph input fields or the flow
+        # owner's identity. Missing context must fail closed, including direct calls.
+        principal = current_model_provider_policy_context()
+        if principal is None or principal.user_id is None or principal.attributes.get("is_superuser") is not True:
+            msg = "Python code execution is restricted to administrators because custom_component_admin_only is True."
+            raise CodeExecutionDisabledError(msg)
 
 
 def safe_builtins() -> dict:

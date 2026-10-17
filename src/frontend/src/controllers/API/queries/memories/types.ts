@@ -15,6 +15,9 @@ export interface MemoryApiDTO {
   // "opensearch"). Surfaced in the Memory Base Control Center config dropdown.
   // ``backend_config`` distinguishes Chroma Local from Cloud (both are
   // "chroma"; the discriminator is ``backend_config.mode === "cloud"``).
+  storage_state?: string;
+  storage_kb_id?: string | null;
+  active_migration_id?: string | null;
   backend_type?: string;
   backend_config?: Record<string, unknown>;
 }
@@ -49,6 +52,9 @@ export interface MemoryInfo {
   // Vector-store backend of the backing knowledge base (e.g. "chroma",
   // "opensearch"), surfaced in the config dropdown. ``backend_config``
   // distinguishes Chroma Local vs Cloud via its ``mode`` flag.
+  storage_state?: string;
+  storage_kb_id?: string | null;
+  active_migration_id?: string | null;
   backend_type?: string;
   backend_config?: Record<string, unknown>;
 }
@@ -91,6 +97,9 @@ export interface CreateMemoryPayload {
   // the API form (`chroma` for both local and Chroma Cloud — the server
   // discriminates via `backend_config.mode`); `backend_config` carries the
   // per-provider settings (variable-name references, index name, etc.).
+  storage_state?: string;
+  storage_kb_id?: string | null;
+  active_migration_id?: string | null;
   backend_type?: string;
   backend_config?: Record<string, unknown>;
 }

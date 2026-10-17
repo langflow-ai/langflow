@@ -171,12 +171,27 @@ def _coerce_ai_message_blocks(content: Any) -> list[dict[str, Any]]:
     ``{"type": "text", "text": str}``. Anything we don't recognise is
     skipped — the on_tool_start fallback in handle_on_tool_start will
     still pick up tool calls if a provider routes them outside .content.
+
+    A stream that mixes string and text-dict chunks aggregates into a list
+    holding both, e.g. ``[{"type": "text", "text": "Echo: hello m"},
+    "cp"]``. Plain strings are text too, and adjacent text pieces are
+    joined into one block: they are fragments of the same answer, and the
+    renderer paints each TextContent on its own.
     """
     if isinstance(content, str):
         return [{"type": "text", "text": content}] if content else []
     if not isinstance(content, list):
         return []
-    return [item for item in content if isinstance(item, dict) and item.get("type") in {"text", "tool_use"}]
+    blocks: list[dict[str, Any]] = []
+    for item in content:
+        block = {"type": "text", "text": item} if isinstance(item, str) else item
+        if not isinstance(block, dict) or block.get("type") not in {"text", "tool_use"}:
+            continue
+        if block["type"] == "text" and blocks and blocks[-1]["type"] == "text":
+            blocks[-1] = {**blocks[-1], "text": (blocks[-1].get("text") or "") + (block.get("text") or "")}
+        else:
+            blocks.append(block)
+    return blocks
 
 
 async def handle_on_chat_model_end(
