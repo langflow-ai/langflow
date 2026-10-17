@@ -6,7 +6,9 @@ import pytest
 from lfx.components.processing.data_operations import ACTION_CONFIG, DataOperationsComponent
 from lfx.custom.utils import build_custom_component_template
 from lfx.graph.graph.base import Graph
+from lfx.inputs.inputs import instantiate_input
 from lfx.schema import Data
+from lfx.schema.dotdict import dotdict
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -301,14 +303,16 @@ class TestUpdateFrontendNodeRestoresVisibility:
         assert self._visibility(template) == self._visibility(saved["template"])
         assert template["data"]["show"] is True
         assert template["operations"]["show"] is True
-        assert template["data"]["is_list"] is ACTION_CONFIG[operation]["is_list"]
+        assert template["data"]["list"] is (operation == "Combine")
+        assert "is_list" not in template["data"]
         assert template["operations"]["value"] == [{"name": operation}]
 
     async def test_saved_select_keys_value_survives(self):
         template = (await self._update(self._saved_node("Select Keys", select_keys_input=["text"])))["template"]
         assert template["select_keys_input"]["show"] is True
         assert template["select_keys_input"]["value"] == ["text"]
-        assert template["data"]["is_list"] is False
+        assert template["data"]["list"] is False
+        assert "is_list" not in template["data"]
 
     async def test_no_operation_hides_all_operation_fields(self):
         template = (await self._update(self._saved_node(None)))["template"]
@@ -356,3 +360,47 @@ class TestUpdateFrontendNodeRestoresVisibility:
 
         assert self._run(saved, data).data == expected
         assert self._run(updated, data).data == expected
+
+
+class TestDataListFlagOnSerializedTemplate:
+    """Only Combine lets the JSON input take several edges, checked on the template the canvas reads.
+
+    The serialized template stores ``Input.is_list`` under ``list``. The canvas
+    (``isValidConnection``) and the graph (``ParameterHandler``) read that key to
+    decide whether ``data`` accepts more than one edge. The component used to
+    write ``is_list`` instead, so ``list`` kept its class default (``True``) for
+    every operation and the stray key was saved into flows.
+    """
+
+    @staticmethod
+    def _template() -> dotdict:
+        node, _ = build_custom_component_template(DataOperationsComponent(), user_id="test-user")
+        return dotdict(node["template"])
+
+    def test_serialized_data_field_uses_list_key(self):
+        data_field = self._template()["data"]
+        assert data_field["list"] is True
+        assert "is_list" not in data_field
+
+    @pytest.mark.parametrize("action", sorted(ACTION_CONFIG))
+    def test_only_combine_accepts_many_edges(self, action):
+        result = DataOperationsComponent().update_build_config(self._template(), [{"name": action}], "operations")
+        assert result["data"]["list"] is (action == "Combine")
+        assert "is_list" not in result["data"]
+
+    def test_stray_is_list_from_an_earlier_save_is_dropped(self):
+        template = self._template()
+        template["data"]["is_list"] = False
+        result = DataOperationsComponent().update_build_config(template, [{"name": "Combine"}], "operations")
+        assert result["data"]["list"] is True
+        assert "is_list" not in result["data"]
+
+    @pytest.mark.parametrize(("action", "expected"), [("Combine", True), ("Select Keys", False)])
+    def test_updated_data_field_rebuilds_as_input_with_matching_flag(self, action, expected):
+        """The flag reaches the input model, and no stray key breaks rebuilding the field."""
+        template = self._template()
+        template["data"]["is_list"] = not expected
+        result = DataOperationsComponent().update_build_config(template, [{"name": action}], "operations")
+        field = copy.deepcopy(dict(result["data"]))
+        rebuilt = instantiate_input(field.pop("_input_type"), {**field, "name": "data"})
+        assert rebuilt.is_list is expected

@@ -694,9 +694,12 @@ class OperationsComponent(Component):
         if main_input and main_input in build_config:
             build_config[main_input]["show"] = True
             build_config[main_input]["required"] = True
-            # The JSON "Combine" operation consumes a list of Data objects.
+            # The JSON "Combine" operation consumes a list of Data objects. The
+            # serialized template stores Input.is_list under "list", which the
+            # canvas and the graph read to decide whether "data" takes many edges.
             if main_input == "data":
-                build_config["data"]["is_list"] = operation == "Combine"
+                build_config["data"]["list"] = operation == "Combine"
+                build_config["data"].pop("is_list", None)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         # Path Selection: refresh the available JSON paths from the pasted JSON.
