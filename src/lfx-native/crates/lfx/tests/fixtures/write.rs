@@ -12,7 +12,7 @@ use crate::support::{assert_json_eq, assert_json_matches, cases, error_json, loa
 
 fn restore(case: &Value) -> Result<(), Failed> {
     let fixes =
-        Operation::list_from_json(case["fixes"].clone()).map_err(|error| error.to_string())?;
+        Operation::list_from_value(case["fixes"].clone()).map_err(|error| error.to_string())?;
     let actual = match apply_restore_fixes(&case["revision"], &case["stored"], fixes) {
         Ok(graph) => json!({"expected": graph}),
         Err(error) => json!({"error": error_json(&error)}),
@@ -54,7 +54,7 @@ fn write(case: &Value) -> Result<(), Failed> {
             "stored_repaired": prepared.stored_repaired,
             "target": prepared.target,
             "repairs": prepared.repairs_json(),
-            "operations": prepared.operations.iter().map(Operation::to_json).collect::<Vec<_>>(),
+            "operations": prepared.operations.iter().map(Operation::to_value).collect::<Vec<_>>(),
             "rows": prepared.rows.iter().map(|row| json!({
                 "start_revision": row.start_revision,
                 "end_revision": row.end_revision,
@@ -65,7 +65,7 @@ fn write(case: &Value) -> Result<(), Failed> {
         }}),
         Err(WriteError::InvalidGraph { role, violations }) => json!({"error": {
             "graph": role.as_str(),
-            "violations": violations.iter().map(Violation::to_json).collect::<Vec<_>>(),
+            "violations": violations.iter().map(Violation::to_value).collect::<Vec<_>>(),
         }}),
         Err(WriteError::Engine(error)) => {
             json!({"engine_error": error_json(&error), "message": error.message})

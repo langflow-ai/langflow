@@ -14,11 +14,12 @@
 //!   with a unique `_id` and a numeric `_pos`. Their order in the array is
 //!   not state, so it is never checked, and legacy tables without row ids
 //!   stay valid until someone edits them;
-//! - edge rules: every edge the write adds or rewires must carry valid
-//!   handles that name an output and an input that exist, must not take an
-//!   input that is already taken, and must not touch a note. They are the
-//!   same checks the engine makes when it applies `add_edges` and
-//!   `update_edges`, so validation and apply never disagree.
+//! - edge rules: every edge the write adds must carry valid handles that
+//!   name an output and an input that exist, must not take an input that is
+//!   already taken, and must not touch a note. An edge that changed counts as
+//!   added, since a write deletes it and adds it again. They are the same
+//!   checks the engine makes when it applies `add_edges`, so validation and
+//!   apply never disagree.
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -27,18 +28,14 @@ use indexmap::IndexMap;
 use serde_json::{Map, Value};
 
 use crate::ops::canonical::{is_finite_number, is_row_position, values_equal};
-use crate::ops::edges::{EdgeIndex, GraphRead, check_edge, edge_id, endpoint, handle_forms};
+use crate::ops::edges::{EdgeIndex, GraphRead, check_edge, edge_changed, endpoint};
+use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, ErrorCode, ErrorKind, Result};
-use crate::ops::schema::NODE_SCHEMA;
-
-/// The paths of the objects every node carries for its whole lifetime:
-/// `data`, `data.node` and `data.node.template`.
-pub const NODE_OBJECT_PATHS: [&[&str]; 3] =
-    [&["data"], &["data", "node"], &["data", "node", "template"]];
+use crate::ops::schema::{NODE_OBJECT_PATHS, NODE_SCHEMA, field_value_path};
 
 /// The stable code of a graph rule.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[allow(missing_docs)]
+#[expect(missing_docs, reason = "each variant's name says the rule it codes")]
 pub enum ViolationCode {
     FlowDataNotObject,
     CollectionNotList,
@@ -68,30 +65,6 @@ pub enum ViolationCode {
 }
 
 impl ViolationCode {
-    /// Every code.
-    pub const ALL: [Self; 20] = [
-        Self::FlowDataNotObject,
-        Self::CollectionNotList,
-        Self::NodeNotObject,
-        Self::EdgeNotObject,
-        Self::NodeIdMissing,
-        Self::NodeIdDuplicate,
-        Self::EdgeIdMissing,
-        Self::EdgeIdDuplicate,
-        Self::EdgeEndpointInvalid,
-        Self::NodeDataNotObject,
-        Self::NonFiniteNumber,
-        Self::TableRowNotObject,
-        Self::TableRowIdMissing,
-        Self::TableRowIdDuplicate,
-        Self::TableRowPosInvalid,
-        Self::EdgeHandleFormMissing,
-        Self::EdgeHandleInvalid,
-        Self::EdgeHandleNotFound,
-        Self::EdgeTargetOccupied,
-        Self::EdgeTouchesNote,
-    ];
-
     /// The code as it crosses the API.
     #[must_use]
     pub fn as_str(self) -> &'static str {
@@ -119,14 +92,47 @@ impl ViolationCode {
         }
     }
 
-    /// Who fixes a violation of this rule.
+    /// The fix for a direct violation, or `None` for one the client fixes.
+    ///
+    /// A direct rule without a fix would leave a flow that can neither be saved
+    /// nor repaired, so every code is either fixed here or left to the client.
+    #[must_use]
+    pub fn repair_action(self) -> Option<&'static str> {
+        use ViolationCode as Code;
+        Some(match self {
+            Code::FlowDataNotObject => "replaced with an empty flow",
+            Code::CollectionNotList => "replaced with an empty list",
+            Code::NodeNotObject | Code::EdgeNotObject => "dropped the entry",
+            Code::NodeIdMissing | Code::EdgeIdMissing | Code::EdgeIdDuplicate => {
+                "assigned a generated id"
+            }
+            Code::NodeIdDuplicate => {
+                "assigned a generated id; the first node keeps the id and its edges"
+            }
+            Code::EdgeEndpointInvalid | Code::EdgeTouchesNote => "dropped the edge",
+            Code::NodeDataNotObject => "replaced with an empty object",
+            Code::NonFiniteNumber => "replaced with null",
+            Code::TableRowNotObject => "dropped the row",
+            Code::TableRowIdMissing => "assigned a generated row id",
+            Code::TableRowIdDuplicate => "assigned a generated row id; the first row keeps the id",
+            Code::TableRowPosInvalid => "assigned a position that keeps the row where it is stored",
+            Code::EdgeHandleFormMissing => {
+                "derived the missing form of the handle from the one present"
+            }
+            Code::EdgeHandleInvalid | Code::EdgeHandleNotFound | Code::EdgeTargetOccupied => {
+                return None;
+            }
+        })
+    }
+
+    /// Who fixes a violation of this rule: repair when the rule has a fix,
+    /// the client otherwise.
     #[must_use]
     pub fn resolution(self) -> Resolution {
-        match self {
-            Self::EdgeHandleInvalid | Self::EdgeHandleNotFound | Self::EdgeTargetOccupied => {
-                Resolution::Manual
-            }
-            _ => Resolution::Auto,
+        if self.repair_action().is_some() {
+            Resolution::Auto
+        } else {
+            Resolution::Manual
         }
     }
 }
@@ -135,6 +141,16 @@ impl fmt::Display for ViolationCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
+}
+
+/// Whether validation walks every value for numbers that are not finite.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Numbers {
+    /// Walk every value. A graph from outside is checked this way.
+    Check,
+    /// Skip the walk. Stored values were checked when they were written, so
+    /// indexing and replay stay proportional to the number of nodes and edges.
+    Skip,
 }
 
 /// How a violation is fixed.
@@ -179,7 +195,8 @@ impl From<usize> for PathPart {
 }
 
 impl PathPart {
-    fn to_json(&self) -> Value {
+    /// The part as JSON: a string key or an integer index.
+    pub(crate) fn to_value(&self) -> Value {
         match self {
             Self::Key(key) => Value::from(key.as_str()),
             Self::Index(index) => Value::from(*index),
@@ -234,12 +251,12 @@ impl Violation {
 
     /// The violation as the API reports it.
     #[must_use]
-    pub fn to_json(&self) -> Value {
+    pub fn to_value(&self) -> Value {
         let mut object = Map::new();
         object.insert("code".into(), Value::from(self.code.as_str()));
         object.insert(
             "path".into(),
-            Value::Array(self.path.iter().map(PathPart::to_json).collect()),
+            Value::Array(self.path.iter().map(PathPart::to_value).collect()),
         );
         object.insert("message".into(), Value::from(self.message.as_str()));
         object.insert(
@@ -255,14 +272,12 @@ impl Violation {
 
 /// Every rule `flow` breaks, in document order.
 ///
-/// `check_values` also walks every value for numbers that are not finite as
-/// JavaScript reads them. Replay skips it, since stored values were checked
-/// when they were written, so replay stays proportional to the number of
-/// nodes and edges rather than to the size of the flow.
+/// With [`Numbers::Check`], it also walks every value for numbers that are
+/// not finite as JavaScript reads them.
 ///
 /// `base` is the stored graph a write replaces. When it is given, every table
 /// value `flow` adds or changes relative to it is checked too, and so is every
-/// edge it adds or rewires, once the graph's structure is sound. Pass an empty
+/// edge it adds, once the graph's structure is sound. Pass an empty
 /// graph for a flow that has no stored graph yet.
 ///
 /// # Errors
@@ -271,7 +286,7 @@ impl Violation {
 /// a violation of the edge being checked.
 pub fn find_graph_violations(
     flow: &Value,
-    check_values: bool,
+    numbers: Numbers,
     base: Option<&Value>,
 ) -> Result<Vec<Violation>> {
     let Value::Object(graph) = flow else {
@@ -327,7 +342,7 @@ pub fn find_graph_violations(
             violations.extend(find_edge_violations(base, flow)?);
         }
     }
-    if check_values {
+    if numbers == Numbers::Check {
         non_finite_violations(flow, &mut Vec::new(), &mut violations);
     }
     Ok(violations)
@@ -341,11 +356,11 @@ pub fn find_graph_violations(
 /// [`find_graph_violations`] fails with.
 pub fn validate_flow_data(
     flow: &Value,
-    check_values: bool,
+    numbers: Numbers,
     context: &str,
     base: Option<&Value>,
 ) -> Result<()> {
-    let violations = find_graph_violations(flow, check_values, base)?;
+    let violations = find_graph_violations(flow, numbers, base)?;
     let Some(first) = violations.first() else {
         return Ok(());
     };
@@ -370,12 +385,6 @@ pub fn validate_flow_data(
     ))
 }
 
-fn non_empty_str(value: Option<&Value>) -> Option<&str> {
-    value
-        .and_then(Value::as_str)
-        .filter(|value| !value.is_empty())
-}
-
 fn node_violations<'a>(
     node: &'a Value,
     path: &[PathPart],
@@ -390,7 +399,7 @@ fn node_violations<'a>(
         ));
         return;
     };
-    match non_empty_str(node.get("id")) {
+    match node.non_empty_str("id") {
         None => violations.push(Violation::new(
             ViolationCode::NodeIdMissing,
             path_of(path, &["id"]),
@@ -440,7 +449,7 @@ fn edge_violations<'a>(
         ));
         return;
     };
-    match non_empty_str(edge.get("id")) {
+    match edge.non_empty_str("id") {
         None => violations.push(Violation::new(
             ViolationCode::EdgeIdMissing,
             path_of(path, &["id"]),
@@ -454,7 +463,7 @@ fn edge_violations<'a>(
         Some(_) => {}
     }
     for end in ["source", "target"] {
-        let message = match non_empty_str(edge.get(end)) {
+        let message = match edge.non_empty_str(end) {
             None => format!("edge must have a non-empty string {end}"),
             Some(node_id) if !node_ids.contains(node_id) => {
                 format!("edge {end} node does not exist")
@@ -494,9 +503,10 @@ fn non_finite_violations(value: &Value, path: &mut GraphPath, violations: &mut V
     }
 }
 
-// --- Edges a write adds or rewires ----------------------------------------------------
+// --- Edges a write adds ------------------------------------------------------------------
 
 /// A structurally valid graph, indexed for the edge rules without copying it.
+#[derive(Debug)]
 pub(crate) struct GraphView<'a> {
     nodes: HashMap<&'a str, &'a Map<String, Value>>,
     edges: HashMap<&'a str, &'a Map<String, Value>>,
@@ -512,10 +522,10 @@ impl<'a> GraphView<'a> {
             edges_at: HashMap::new(),
         };
         for node in list(graph, "nodes").iter().filter_map(Value::as_object) {
-            view.nodes.insert(edge_id(node), node);
+            view.nodes.insert(node.id(), node);
         }
         for edge in list(graph, "edges").iter().filter_map(Value::as_object) {
-            let id = edge_id(edge);
+            let id = edge.id();
             view.edges.insert(id, edge);
             let (source, target) = (endpoint(edge, "source"), endpoint(edge, "target"));
             view.edges_at.entry(source).or_default().push(id);
@@ -545,44 +555,39 @@ fn list<'a>(graph: &'a Value, key: &str) -> &'a [Value] {
     graph
         .get(key)
         .and_then(Value::as_array)
-        .map_or(&[], Vec::as_slice)
+        .map(Vec::as_slice)
+        .unwrap_or_default()
 }
 
-/// The indexes of the edges `target` adds or rewires relative to `base`.
-///
-/// An edge is rewired when it connects other nodes or either form of a
-/// handle changed.
+/// The indexes of the edges `target` adds relative to `base`: new edges,
+/// and edges that changed ([`edge_changed`]), which a write deletes and adds again.
 ///
 /// # Errors
 ///
-/// A compared handle holds a number that is not finite.
-pub fn changed_edges(base: &Value, target: &Value) -> Result<Vec<usize>> {
+/// A compared value holds a number that is not finite.
+pub fn added_edges(base: &Value, target: &Value) -> Result<Vec<usize>> {
     let stored: HashMap<&str, &Map<String, Value>> = list(base, "edges")
         .iter()
         .filter_map(Value::as_object)
         .filter_map(|edge| Some((edge.get("id")?.as_str()?, edge)))
         .collect();
-    let mut changed = Vec::new();
+    let mut indexes = Vec::new();
     for (index, edge) in list(target, "edges").iter().enumerate() {
         let Some(edge) = edge.as_object() else {
             continue;
         };
-        let rewired = match stored.get(edge_id(edge)) {
+        let added = match stored.get(edge.id()) {
             None => true,
-            Some(before) => {
-                before.get("source") != edge.get("source")
-                    || before.get("target") != edge.get("target")
-                    || !values_equal(&handle_forms(before), &handle_forms(edge))?
-            }
+            Some(before) => edge_changed(before, edge)?,
         };
-        if rewired {
-            changed.push(index);
+        if added {
+            indexes.push(index);
         }
     }
-    Ok(changed)
+    Ok(indexes)
 }
 
-/// The edge rules broken by the edges `target` adds or rewires relative to `base`.
+/// The edge rules broken by the edges `target` adds relative to `base`.
 ///
 /// `target` must be structurally sound: unique ids, and edges whose endpoints
 /// exist. Checking one edge reads the other edges into its input, so it can
@@ -593,7 +598,7 @@ pub fn changed_edges(base: &Value, target: &Value) -> Result<Vec<usize>> {
 ///
 /// A check failed in a way that is not an edge rule.
 pub fn find_edge_violations(base: &Value, target: &Value) -> Result<Vec<Violation>> {
-    let indexes = changed_edges(base, target)?;
+    let indexes = added_edges(base, target)?;
     if indexes.is_empty() {
         return Ok(Vec::new());
     }
@@ -603,7 +608,7 @@ pub fn find_edge_violations(base: &Value, target: &Value) -> Result<Vec<Violatio
     let index_of: HashMap<&str, usize> = edges
         .iter()
         .enumerate()
-        .filter_map(|(index, edge)| Some((edge.as_object().map(edge_id)?, index)))
+        .filter_map(|(index, edge)| Some((edge.as_object().map(EntryExt::id)?, index)))
         .collect();
     let mut violations: IndexMap<String, Violation> = IndexMap::new();
     for index in indexes {
@@ -643,19 +648,16 @@ pub fn find_edge_violations(base: &Value, target: &Value) -> Result<Vec<Violatio
 // --- Table rows ------------------------------------------------------------------------
 
 /// A table value a write adds or changes, and where it is.
+#[derive(Debug)]
 pub struct ChangedTable<'a> {
     /// Where the table value is: `nodes.<index>.data.node.template.<field>.value`.
     pub path: GraphPath,
-    /// The node's id.
+    /// `None` when the node has no string id.
     pub node_id: Option<&'a str>,
-    /// The field's name.
+    /// The name of the template field that holds the table.
     pub field: &'a str,
-    /// The rows.
+    #[expect(missing_docs, reason = "the name says what it is")]
     pub rows: &'a [Value],
-}
-
-fn template(node: &Value) -> Option<&Map<String, Value>> {
-    node.get("data")?.get("node")?.get("template")?.as_object()
 }
 
 /// The table values `target` adds or changes relative to `base`, in document order.
@@ -666,14 +668,15 @@ fn template(node: &Value) -> Option<&Map<String, Value>> {
 pub fn changed_tables<'a>(base: &Value, target: &'a Value) -> Result<Vec<ChangedTable<'a>>> {
     let mut stored: HashMap<&str, &Map<String, Value>> = HashMap::new();
     for node in list(base, "nodes") {
-        if let (Some(template), Some(id)) = (template(node), node.get("id").and_then(Value::as_str))
+        if let (Some(template), Some(id)) =
+            (node.template(), node.get("id").and_then(Value::as_str))
         {
             stored.entry(id).or_insert(template);
         }
     }
     let mut tables = Vec::new();
     for (index, node) in list(target, "nodes").iter().enumerate() {
-        let Some(fields) = template(node) else {
+        let Some(fields) = node.template() else {
             continue;
         };
         let node_id = node.get("id").and_then(Value::as_str);
@@ -684,7 +687,7 @@ pub fn changed_tables<'a>(base: &Value, target: &'a Value) -> Result<Vec<Changed
                 continue;
             };
             // Only tables: a natural-key list (tool actions) is not one, even under a table-typed field.
-            if !NODE_SCHEMA.is_table_at(node, &["data", "node", "template", name, "value"]) {
+            if !NODE_SCHEMA.is_table_at(node, &field_value_path(name)) {
                 continue;
             }
             let stored_value = stored_fields
@@ -731,8 +734,7 @@ pub fn find_table_violations(base: &Value, target: &Value) -> Result<Vec<Violati
 /// The row rules one table value breaks.
 #[must_use]
 pub fn table_row_violations(rows: &[Value], path: &[PathPart]) -> Vec<Violation> {
-    let id_key = NODE_SCHEMA.table.id_key().unwrap_or_default();
-    let position_key = NODE_SCHEMA.table.position.as_deref().unwrap_or_default();
+    let (id_key, position_key) = (&NODE_SCHEMA.table_keys.id, &NODE_SCHEMA.table_keys.position);
     let mut violations = Vec::new();
     let mut seen = HashSet::new();
     for (index, row) in rows.iter().enumerate() {
@@ -745,7 +747,7 @@ pub fn table_row_violations(rows: &[Value], path: &[PathPart]) -> Vec<Violation>
             ));
             continue;
         };
-        match non_empty_str(row.get(id_key)) {
+        match row.non_empty_str(id_key) {
             None => violations.push(Violation::new(
                 ViolationCode::TableRowIdMissing,
                 path_of(&row_path, &[id_key]),

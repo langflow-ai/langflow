@@ -17,12 +17,12 @@ pub fn trials() -> Vec<Trial> {
                 let actual = match repair_flow_data(&flow, case.get("base")) {
                     Ok(repaired) => json!({
                         "expected": repaired.flow_data,
-                        "fixes": repaired.fixes.iter().map(Fix::to_json).collect::<Vec<_>>(),
+                        "fixes": repaired.fixes.iter().map(Fix::to_value).collect::<Vec<_>>(),
                     }),
                     Err(error) => {
                         let mut recorded = error_json(&error);
                         recorded["violations"] =
-                            error.violations.iter().map(Violation::to_json).collect();
+                            error.violations.iter().map(Violation::to_value).collect();
                         json!({"error": recorded})
                     }
                 };

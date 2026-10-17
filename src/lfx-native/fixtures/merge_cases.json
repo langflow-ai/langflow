@@ -925,26 +925,28 @@
       }
     },
     {
-      "name": "updating an edge whose field someone removed fails",
+      "name": "re-adding an edge into a field someone removed fails",
       "transactions": {
         "A": [{"type": "update_nodes", "updates": [{"id": "Model-1", "op": "delete_field", "path": ["data", "node", "template", "input_value"]}]}],
         "B": [
+          {"type": "delete_edges", "ids": ["e-chat-model"]},
           {
-            "type": "update_edges",
-            "updates": [
+            "type": "add_edges",
+            "edges": [
               {
                 "id": "e-chat-model",
-                "op": "set_field",
-                "path": ["data", "targetHandle"],
-                "value": {"fieldName": "input_value", "inputTypes": ["Message", "Data"]}
-              },
-              {"id": "e-chat-model", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œinput_valueœ,œinputTypesœ:[œMessageœ,œDataœ]}"}
+                "source": "ChatInput-1",
+                "target": "Model-1",
+                "data": {"sourceHandle": {"name": "message"}, "targetHandle": {"fieldName": "input_value", "inputTypes": ["Message", "Data"]}},
+                "sourceHandle": "{œnameœ:œmessageœ}",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œinputTypesœ:[œMessageœ,œDataœ]}"
+              }
             ]
           }
         ]
       },
       "order": ["A", "B"],
-      "outcomes": {"A": "applied", "B": {"error": "FlowOperationValidationError", "code": "FLOW_OPERATION_INVALID"}},
+      "outcomes": {"A": "applied", "B": {"error": "FlowOperationValidationError", "code": "EDGE_HANDLE_NOT_FOUND"}},
       "expected": {
         "nodes": [
           {

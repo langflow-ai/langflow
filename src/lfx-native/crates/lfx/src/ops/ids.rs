@@ -5,6 +5,8 @@
 //! never changes its id, and no code may parse one. Existing ids are kept as
 //! they are.
 
+use std::collections::HashSet;
+
 /// The editor's id characters: short-unique-id's default alphanumeric dictionary.
 const ALPHANUMERIC: &[u8; 62] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const EDGE_ID_PREFIX: &str = "e-";
@@ -47,6 +49,16 @@ pub fn new_edge_id() -> String {
 #[must_use]
 pub fn new_table_row_id() -> String {
     random_alphanumeric(TABLE_ROW_ID_LENGTH)
+}
+
+/// A new id from `new_id` that `used` does not hold yet.
+pub(crate) fn unused_id(used: &HashSet<String>, new_id: fn() -> String) -> String {
+    loop {
+        let id = new_id();
+        if !used.contains(&id) {
+            return id;
+        }
+    }
 }
 
 #[cfg(test)]

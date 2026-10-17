@@ -12,6 +12,7 @@ pub mod apply;
 pub mod canonical;
 pub mod diff;
 pub mod edges;
+pub(crate) mod entry;
 pub mod envelope;
 pub mod error;
 pub mod ids;

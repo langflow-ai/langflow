@@ -2,8 +2,8 @@
 
 use lfx::ops::Operation;
 use lfx::ops::envelope::{
-    Corruption, PackedRow, RecordedOperation, RowLimits, StoredRow, decode_row, distinct_actor_ids,
-    encode_envelope, pack_rows, request_ids_in_order, sequence,
+    Corruption, PackedRow, RecordedOperation, Request, RowLimits, StoredRow, decode_row,
+    distinct_actor_ids, encode_envelope, pack_rows, request_ids_in_order, sequence,
 };
 use lfx::ops::replay::{replay, verify_checkpoint};
 use libtest_mimic::{Failed, Trial};
@@ -32,7 +32,7 @@ fn recorded_json(operation: &RecordedOperation) -> Value {
         "revision": operation.revision,
         "actor_user_id": operation.actor_user_id,
         "request_id": operation.request_id,
-        "operation": operation.operation.to_json(),
+        "operation": operation.operation.to_value(),
     });
     if let Some(cause) = &operation.cause {
         recorded["cause"] = json!(cause);
@@ -78,7 +78,7 @@ fn encode(case: &Value) -> Result<(), Failed> {
                     .as_str()
                     .unwrap_or_default()
                     .to_owned(),
-                operation: Operation::from_json(recorded["operation"].clone())
+                operation: Operation::try_from(recorded["operation"].clone())
                     .map_err(|error| error.to_string())?,
                 cause: recorded
                     .get("cause")
@@ -97,8 +97,8 @@ fn encode(case: &Value) -> Result<(), Failed> {
 }
 
 fn pack(case: &Value) -> Result<(), Failed> {
-    let operations =
-        Operation::list_from_json(case["operations"].clone()).map_err(|error| error.to_string())?;
+    let operations = Operation::list_from_value(case["operations"].clone())
+        .map_err(|error| error.to_string())?;
     let limits = RowLimits {
         ops: usize::try_from(number(&case["limits"]["ops"]))?,
         bytes: usize::try_from(number(&case["limits"]["bytes"]))?,
@@ -106,8 +106,10 @@ fn pack(case: &Value) -> Result<(), Failed> {
     let recorded = sequence(
         operations,
         number(&case["latest_revision"]),
-        case["actor_user_id"].as_str().unwrap_or_default(),
-        case["request_id"].as_str().unwrap_or_default(),
+        Request {
+            request_id: case["request_id"].as_str().unwrap_or_default(),
+            actor_user_id: case["actor_user_id"].as_str().unwrap_or_default(),
+        },
         case.get("cause").and_then(Value::as_str),
         limits.bytes,
     );

@@ -39,7 +39,7 @@ fn diff_case(case: &Value) -> Result<(), Failed> {
     let (base, target) = (&case["base"], &case["target"]);
     let operations =
         diff_flow_data(base, target).map_err(|error| format!("diff failed: {error}"))?;
-    let dumped = Value::Array(operations.iter().map(Operation::to_json).collect());
+    let dumped = Value::Array(operations.iter().map(Operation::to_value).collect());
     assert_json_eq("operations", &dumped, &case["operations"])?;
     let derived = derive_flow_operations(base.clone(), target)
         .map_err(|error| format!("derive failed: {error}"))?;
@@ -48,8 +48,8 @@ fn diff_case(case: &Value) -> Result<(), Failed> {
 
 /// Applying the recorded operations one at a time from the base gives the target.
 fn replay_recorded(case: &Value) -> Result<(), Failed> {
-    let operations =
-        Operation::list_from_json(case["operations"].clone()).map_err(|error| error.to_string())?;
+    let operations = Operation::list_from_value(case["operations"].clone())
+        .map_err(|error| error.to_string())?;
     let mut state = GraphState::new(case["base"].clone()).map_err(|error| error.to_string())?;
     for operation in operations {
         state

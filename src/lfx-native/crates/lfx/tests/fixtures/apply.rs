@@ -46,7 +46,7 @@ pub fn trials() -> Vec<Trial> {
 }
 
 fn parse(operations: &Value) -> Result<Vec<Operation>, lfx::ops::Error> {
-    Operation::list_from_json(operations.clone())
+    Operation::list_from_value(operations.clone())
 }
 
 fn apply_case(case: &Value) -> Result<(), Failed> {
@@ -83,7 +83,7 @@ fn apply_case(case: &Value) -> Result<(), Failed> {
         &ignoring_row_order(&state.to_value()),
         &ignoring_row_order(&case["expected"]),
     )?;
-    let forward = Value::Array(applied.forward.iter().map(Operation::to_json).collect());
+    let forward = Value::Array(applied.forward.iter().map(Operation::to_value).collect());
     let expected_forward = case
         .get("forward_operations")
         .unwrap_or(&case["operations"]);
@@ -115,7 +115,7 @@ fn inverse_round_trip(case: &Value) -> Result<(), Failed> {
     };
     for inverse in applied.inverse.into_iter().rev() {
         let shown = compact(&Value::Array(
-            inverse.iter().map(Operation::to_json).collect(),
+            inverse.iter().map(Operation::to_value).collect(),
         ));
         state
             .apply(inverse, restoring)

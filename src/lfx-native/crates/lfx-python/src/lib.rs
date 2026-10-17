@@ -65,6 +65,7 @@ fn run<T: Send>(py: Python<'_>, work: impl FnOnce() -> ApiResult<T> + Send) -> P
 /// Replay, history playback and rebase apply many batches to one graph and
 /// read it once. A refused batch changes nothing.
 #[pyclass(module = "lfx_native")]
+#[derive(Debug)]
 struct GraphState {
     state: lfx::ops::GraphState,
 }
@@ -108,7 +109,7 @@ impl GraphState {
     /// The graph as JSON text.
     fn to_json(&self, py: Python<'_>) -> String {
         let state = &self.state;
-        py.detach(|| state.to_json())
+        py.detach(|| state.to_string())
     }
 }
 

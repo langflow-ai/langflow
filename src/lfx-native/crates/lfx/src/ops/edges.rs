@@ -11,10 +11,11 @@
 //! agree. Nothing is exempt: group nodes are checked like any node, and an
 //! edge may not touch a note, which has no handles.
 //!
-//! The rules apply only to the edges a write adds or rewires. A stored edge
-//! that breaks them stays until something touches it; but an edge whose
-//! handles a rule must read, to see whether a field is taken or which edges a
-//! removed output carries, is read strictly too.
+//! An edge never changes in place: a write deletes it and adds it again. The
+//! rules apply only to the edges a write adds. A stored edge that breaks them
+//! stays until something touches it; but an edge whose handles a rule must
+//! read, to see whether a field is taken or which edges a removed output
+//! carries, is read strictly too.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -23,15 +24,14 @@ use indexmap::IndexSet;
 use serde_json::{Map, Value};
 
 use crate::ops::canonical::{HANDLE_KEYS, HANDLE_QUOTE, parse_handle, values_equal};
-use crate::ops::error::{Error, Result, quoted};
+use crate::ops::entry::EntryExt;
+use crate::ops::error::{Error, Result, bail, invalid, quoted};
 use crate::ops::keyed::ListIndex;
-use crate::ops::schema::{KeyedList, NODE_SCHEMA};
+use crate::ops::schema::{KeyedList, NODE_SCHEMA, OUTPUTS_PATH};
 use crate::ops::validate::ViolationCode;
 
 /// The type of a note node.
 pub const NOTE_NODE_TYPE: &str = "noteNode";
-/// The path of a node's outputs.
-pub const OUTPUTS_PATH: [&str; 3] = ["data", "node", "outputs"];
 
 static OUTPUTS_LIST: LazyLock<&'static KeyedList> = LazyLock::new(|| {
     NODE_SCHEMA
@@ -50,7 +50,7 @@ pub enum InputKind {
     /// A template field, named by `targetHandle.fieldName`.
     Field,
     /// A loop output, named by `targetHandle.name`.
-    Output,
+    LoopOutput,
 }
 
 /// The input an edge enters at its target.
@@ -90,11 +90,6 @@ pub(crate) trait GraphRead {
     fn edge_ids_at(&self, node_id: &str) -> impl Iterator<Item = &str>;
 }
 
-/// The id of an edge that passed structural validation.
-pub(crate) fn edge_id(edge: &Map<String, Value>) -> &str {
-    edge.get("id").and_then(Value::as_str).unwrap_or_default()
-}
-
 /// The source or target of an edge that passed structural validation.
 pub(crate) fn endpoint<'e>(edge: &'e Map<String, Value>, end: &str) -> &'e str {
     edge.get(end).and_then(Value::as_str).unwrap_or_default()
@@ -111,7 +106,7 @@ pub(crate) struct EdgeIndex {
 impl EdgeIndex {
     /// An edge's handles, read strictly the first time.
     pub fn handles(&mut self, edge: &Map<String, Value>) -> Result<Handles> {
-        let id = edge_id(edge);
+        let id = edge.id();
         if let Some(handles) = self.handles.get(id) {
             return Ok(handles.clone());
         }
@@ -127,7 +122,7 @@ impl EdgeIndex {
             for id in graph.edge_ids_at(node_id) {
                 let edge = graph
                     .edge(id)
-                    .ok_or_else(|| Error::invalid(format!("edge {} does not exist", quoted(id))))?;
+                    .ok_or_else(|| invalid!("edge {} does not exist", quoted(id)))?;
                 let handles = self.handles(edge)?;
                 connect(&mut connections, node_id, edge, &handles);
             }
@@ -136,7 +131,7 @@ impl EdgeIndex {
         Ok(&self.connections[node_id])
     }
 
-    /// Index a new or rewired edge at the nodes whose connections are built.
+    /// Index a new edge at the nodes whose connections are built.
     ///
     /// An edge whose handles do not read (which only an inverse puts back)
     /// leaves those nodes to be indexed again when something asks.
@@ -163,7 +158,7 @@ impl EdgeIndex {
 
     /// Drop what is indexed about an edge, before it is removed or its handles are rewritten.
     pub fn forget(&mut self, edge: &Map<String, Value>) {
-        let Some(handles) = self.handles.remove(edge_id(edge)) else {
+        let Some(handles) = self.handles.remove(edge.id()) else {
             return;
         };
         for end in [endpoint(edge, "source"), endpoint(edge, "target")] {
@@ -191,7 +186,7 @@ fn connect(
     edge: &Map<String, Value>,
     handles: &Handles,
 ) {
-    let id = edge_id(edge).to_owned();
+    let id = edge.id().to_owned();
     if endpoint(edge, "target") == node_id {
         connections
             .inputs
@@ -214,7 +209,7 @@ fn disconnect(
     edge: &Map<String, Value>,
     handles: &Handles,
 ) {
-    let id = edge_id(edge);
+    let id = edge.id();
     if endpoint(edge, "target") == node_id
         && let Some(ids) = connections.inputs.get_mut(&handles.input)
     {
@@ -228,7 +223,7 @@ fn disconnect(
 }
 
 fn error(edge: &Map<String, Value>, code: ViolationCode, reason: impl std::fmt::Display) -> Error {
-    Error::edge(edge_id(edge), code, reason)
+    Error::edge(edge.id(), code, reason)
 }
 
 /// Read an edge's handles strictly: both forms present, the string parsing to the object.
@@ -261,7 +256,7 @@ pub fn read_handles(edge: &Map<String, Value>) -> Result<Handles> {
     let (kind, key) = if names_field {
         (InputKind::Field, "fieldName")
     } else {
-        (InputKind::Output, "name")
+        (InputKind::LoopOutput, "name")
     };
     match target.get(key) {
         Some(Value::String(name)) if !name.is_empty() => Ok(Handles {
@@ -340,27 +335,37 @@ fn handle<'e>(edge: &'e Map<String, Value>, key: &str) -> Result<&'e Map<String,
     }
 }
 
-/// Both forms of an edge's handles, whatever their shape, to tell whether a write changed them.
-#[must_use]
-pub fn handle_forms(edge: &Map<String, Value>) -> Value {
-    let strings: Map<String, Value> = HANDLE_KEYS
-        .iter()
-        .filter_map(|key| Some(((*key).to_owned(), edge.get(*key)?.clone())))
+/// Whether an edge changed between two graphs. View state is not a change,
+/// and neither is another spelling of the same handle. A changed edge is
+/// deleted and added again, so the edge rules check it like a new one.
+///
+/// # Errors
+///
+/// A compared value holds a number that is not finite.
+pub fn edge_changed(before: &Map<String, Value>, after: &Map<String, Value>) -> Result<bool> {
+    let keys: IndexSet<&String> = before
+        .keys()
+        .chain(after.keys())
+        .filter(|key| !NODE_SCHEMA.edge_view_state.contains(key.as_str()))
         .collect();
-    let data = match edge.get("data") {
-        Some(Value::Object(data)) => Value::Object(
-            HANDLE_KEYS
-                .iter()
-                .filter_map(|key| Some(((*key).to_owned(), data.get(*key)?.clone())))
-                .collect(),
-        ),
-        Some(other) => other.clone(),
-        None => Value::Null,
-    };
-    let mut forms = Map::new();
-    forms.insert("strings".into(), Value::Object(strings));
-    forms.insert("data".into(), data);
-    Value::Object(forms)
+    for key in keys {
+        let same = match (before.get(key), after.get(key)) {
+            (Some(old), Some(new)) if HANDLE_KEYS.contains(&key.as_str()) => {
+                values_equal(&handle_value(old), &handle_value(new))?
+            }
+            (Some(old), Some(new)) => values_equal(old, new)?,
+            _ => false,
+        };
+        if !same {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+/// A handle string compares by the object it encodes.
+fn handle_value(handle: &Value) -> Value {
+    parse_handle(handle).map_or_else(|| handle.clone(), Value::Object)
 }
 
 /// A handle's string form: compact JSON with `œ` standing for `"`.
@@ -401,6 +406,7 @@ pub(crate) fn node_body(node: &Map<String, Value>) -> Result<&Map<String, Value>
 }
 
 /// A node's outputs, indexed by name.
+#[derive(Debug)]
 pub(crate) struct Outputs<'g> {
     items: &'g [Value],
     index: ListIndex,
@@ -421,10 +427,7 @@ impl Outputs<'_> {
 /// Index an outputs list, which follows the keyed-list rules.
 pub(crate) fn index_outputs<'g>(items: &'g Value, node_id: &str) -> Result<Outputs<'g>> {
     let Value::Array(items) = items else {
-        return Err(Error::invalid(format!(
-            "node {}: data.node.outputs must be a list",
-            quoted(node_id)
-        )));
+        bail!("node {}: data.node.outputs must be a list", quoted(node_id));
     };
     let index = ListIndex::build(
         outputs_list(),
@@ -441,20 +444,20 @@ pub(crate) fn node_outputs<'g>(
 ) -> Result<Option<Outputs<'g>>> {
     let node = graph
         .node(node_id)
-        .ok_or_else(|| Error::invalid(format!("node {} does not exist", quoted(node_id))))?;
+        .ok_or_else(|| invalid!("node {} does not exist", quoted(node_id)))?;
     let Some(outputs) = node_body(node)?.get("outputs") else {
         return Ok(None);
     };
     if !outputs.is_array() {
-        return Err(Error::graph(
-            format!("node {}: data.node.outputs must be a list", quoted(node_id)),
-            Vec::new(),
-        ));
+        return Err(Error::graph_message(format!(
+            "node {}: data.node.outputs must be a list",
+            quoted(node_id)
+        )));
     }
     index_outputs(outputs, node_id).map(Some)
 }
 
-/// Check an edge a write adds or rewires, and return its handles.
+/// Check an edge a write adds, and return its handles.
 ///
 /// The edge must not touch a note, its handles must be valid and name an
 /// output of its source and an input of its target, and a single input must
@@ -488,12 +491,9 @@ enum Takes {
 fn check_no_note(graph: &impl GraphRead, edge: &Map<String, Value>) -> Result<()> {
     for end in ["source", "target"] {
         let node_id = endpoint(edge, end);
-        let node = graph.node(node_id).ok_or_else(|| {
-            Error::invalid(format!(
-                "edge {}: {end} node does not exist",
-                quoted(edge_id(edge))
-            ))
-        })?;
+        let node = graph
+            .node(node_id)
+            .ok_or_else(|| invalid!("edge {}: {end} node does not exist", quoted(edge.id())))?;
         if node.get("type").and_then(Value::as_str) == Some(NOTE_NODE_TYPE) {
             return Err(error(
                 edge,
@@ -564,7 +564,7 @@ fn check_target_input(
                 Takes::One
             })
         }
-        InputKind::Output => {
+        InputKind::LoopOutput => {
             let allows_loop = node_outputs(graph, target)?.and_then(|outputs| {
                 outputs
                     .get(name)
@@ -593,7 +593,7 @@ fn check_input_free(
     edge: &Map<String, Value>,
     handles: &Handles,
 ) -> Result<()> {
-    let id = edge_id(edge);
+    let id = edge.id();
     let target = endpoint(edge, "target");
     let taken = index
         .connections(graph, target)?
@@ -605,7 +605,7 @@ fn check_input_free(
     };
     let kind = match handles.input.kind {
         InputKind::Field => "field",
-        InputKind::Output => "output",
+        InputKind::LoopOutput => "output",
     };
     Err(error(
         edge,

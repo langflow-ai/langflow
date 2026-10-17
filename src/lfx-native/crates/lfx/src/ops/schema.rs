@@ -8,11 +8,42 @@ use std::sync::LazyLock;
 
 use serde_json::{Map, Value};
 
+use crate::ops::state::resolve;
+use crate::ops::validate::PathPart;
+
 /// The schema file, as shipped with the engine.
 pub const NODE_SCHEMA_JSON: &str = include_str!("node_schema.json");
 
 /// A path segment that matches any object key.
 const WILDCARD: &str = "*";
+
+/// The path of a node's template.
+pub const TEMPLATE_PATH: [&str; 3] = ["data", "node", "template"];
+/// The path of a node's outputs.
+pub const OUTPUTS_PATH: [&str; 3] = ["data", "node", "outputs"];
+/// The paths of the objects every node carries for its whole lifetime:
+/// `data`, `data.node` and `data.node.template`.
+pub const NODE_OBJECT_PATHS: [&[&str]; 3] = [&["data"], &["data", "node"], &TEMPLATE_PATH];
+
+/// The path of a template field's value.
+#[must_use]
+pub fn field_value_path(field: &str) -> [&str; 5] {
+    ["data", "node", "template", field, "value"]
+}
+
+/// Whether two paths of object keys are the same.
+pub(crate) fn same_keys<A: AsRef<str>, B: AsRef<str>>(left: &[A], right: &[B]) -> bool {
+    left.len() == right.len() && starts_with_keys(left, right)
+}
+
+/// Whether a path of object keys starts with `prefix`.
+pub(crate) fn starts_with_keys<A: AsRef<str>, B: AsRef<str>>(path: &[A], prefix: &[B]) -> bool {
+    path.len() >= prefix.len()
+        && path
+            .iter()
+            .zip(prefix)
+            .all(|(key, other)| key.as_ref() == other.as_ref())
+}
 
 /// How the items of a keyed list are addressed and ordered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,21 +56,24 @@ pub enum ListKind {
     Table,
 }
 
-/// One step of the path to an item's key inside the item.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum KeyPart {
-    Key(String),
-    Index(usize),
-}
-
 /// A list whose items are addressed by a key instead of an index.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyedList {
     /// How items are addressed and ordered.
     pub kind: ListKind,
-    key: Vec<KeyPart>,
+    /// The path from an item to its key.
+    key: Vec<PathPart>,
     /// The key of a table row's position; `None` for a natural list.
     pub position: Option<String>,
+}
+
+/// The two keys every table row carries.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TableKeys {
+    /// The row id key, `_id`.
+    pub id: String,
+    /// The row position key, `_pos`.
+    pub position: String,
 }
 
 impl KeyedList {
@@ -55,23 +89,7 @@ impl KeyedList {
     /// An item's key, or `None` when the item has no string key.
     #[must_use]
     pub fn key_of<'a>(&self, item: &'a Value) -> Option<&'a str> {
-        let mut value = item;
-        for part in &self.key {
-            value = match part {
-                KeyPart::Key(key) => value.as_object()?.get(key)?,
-                KeyPart::Index(index) => value.as_array()?.get(*index)?,
-            };
-        }
-        value.as_str()
-    }
-
-    /// The key that holds an item's key, when that is one object key (a table row's `_id`).
-    #[must_use]
-    pub fn id_key(&self) -> Option<&str> {
-        match self.key.as_slice() {
-            [KeyPart::Key(key)] => Some(key),
-            _ => None,
-        }
+        resolve(item, &self.key)?.as_str()
     }
 }
 
@@ -103,91 +121,98 @@ pub struct NodeSchema {
     table_when_field: Vec<Map<String, Value>>,
     /// The table list, which every table field's value is.
     pub table: KeyedList,
+    /// The keys of a table row, the same ones `table` reads.
+    pub table_keys: TableKeys,
 }
 
 /// The engine's node schema.
 pub static NODE_SCHEMA: LazyLock<NodeSchema> = LazyLock::new(|| {
     let raw: Value =
         serde_json::from_str(NODE_SCHEMA_JSON).expect("node_schema.json is valid JSON");
-    NodeSchema::from_json(&raw).expect("node_schema.json has the expected shape")
+    NodeSchema::parse(&raw).unwrap_or_else(|error| panic!("node_schema.json: {error}"))
 });
 
 impl NodeSchema {
-    fn from_json(raw: &Value) -> Option<Self> {
-        let view_state = raw.get("view_state")?;
-        let keyed_lists = raw.get("keyed_lists")?;
-        let tables = keyed_lists.get("tables")?;
-        let strings = |value: &Value| -> Option<Vec<String>> {
-            value
-                .as_array()?
-                .iter()
-                .map(|item| item.as_str().map(str::to_owned))
-                .collect()
+    /// Read the schema file. The error names the first key that is missing
+    /// or has the wrong shape.
+    fn parse(raw: &Value) -> Result<Self, String> {
+        let view_state = key(raw, "", "view_state")?;
+        let view_set = |name: &str| -> Result<HashSet<String>, String> {
+            let path = format!("view_state.{name}");
+            Ok(strings(key(view_state, "view_state", name)?, &path)?
+                .into_iter()
+                .collect())
         };
-        let set = |value: &Value| strings(value).map(|items| items.into_iter().collect());
-        let paths = |value: &Value| -> Option<Vec<Vec<String>>> {
-            value.as_array()?.iter().map(strings).collect()
+        let field_units = key(raw, "", "field_units")?;
+        let keyed_lists = key(raw, "", "keyed_lists")?;
+        let tables = key(keyed_lists, "keyed_lists", "tables")?;
+        let table_keys = TableKeys {
+            id: string(
+                key(tables, "keyed_lists.tables", "id")?,
+                "keyed_lists.tables.id",
+            )?,
+            position: string(
+                key(tables, "keyed_lists.tables", "position")?,
+                "keyed_lists.tables.position",
+            )?,
         };
-        let node_data_view_state = paths(view_state.get("node_paths")?)?
-            .into_iter()
-            .filter_map(|path| match path.as_slice() {
-                [data, node, key] if data == "data" && node == "node" => Some(key.clone()),
-                _ => None,
-            })
-            .collect();
-        let natural_lists = keyed_lists
-            .get("natural")?
-            .as_array()?
+        let node_data_view_state = paths(
+            key(view_state, "view_state", "node_paths")?,
+            "view_state.node_paths",
+        )?
+        .into_iter()
+        .filter_map(|path| match path.as_slice() {
+            [data, node, key] if data == "data" && node == "node" => Some(key.clone()),
+            _ => None,
+        })
+        .collect();
+        let natural = key(keyed_lists, "keyed_lists", "natural")?;
+        let natural_lists = natural
+            .as_array()
+            .ok_or("keyed_lists.natural must be a list")?
             .iter()
-            .map(|entry| {
-                let path = strings(entry.get("path")?)?;
-                let key = entry
-                    .get("key")?
-                    .as_array()?
-                    .iter()
-                    .map(|part| match part {
-                        Value::String(key) => Some(KeyPart::Key(key.clone())),
-                        Value::Number(index) => index
-                            .as_u64()
-                            .and_then(|index| usize::try_from(index).ok())
-                            .map(KeyPart::Index),
-                        _ => None,
-                    })
-                    .collect::<Option<Vec<_>>>()?;
-                Some((
-                    path,
-                    KeyedList {
-                        kind: ListKind::Natural,
-                        key,
-                        position: None,
-                    },
-                ))
-            })
-            .collect::<Option<Vec<_>>>()?;
-        Some(Self {
-            version: raw.get("version")?.as_u64()?,
-            flow_view_state: set(view_state.get("flow")?)?,
-            node_view_state: set(view_state.get("node")?)?,
+            .enumerate()
+            .map(|(index, entry)| natural_list(entry, &format!("keyed_lists.natural[{index}]")))
+            .collect::<Result<_, _>>()?;
+        let when_field = key(tables, "keyed_lists.tables", "when_field")?;
+        let table_when_field = when_field
+            .as_array()
+            .and_then(|conditions| conditions.iter().map(|c| c.as_object().cloned()).collect())
+            .ok_or("keyed_lists.tables.when_field must be a list of objects")?;
+        Ok(Self {
+            version: key(raw, "", "version")?
+                .as_u64()
+                .ok_or("version must be a non-negative integer")?,
+            flow_view_state: view_set("flow")?,
+            node_view_state: view_set("node")?,
             node_data_view_state,
-            template_view_state: set(view_state.get("template")?)?,
-            field_view_state: set(view_state.get("template_field")?)?,
-            edge_view_state: set(view_state.get("edge")?)?,
-            value_unit: strings(raw.get("field_units")?.get("value")?)?,
-            toggles: strings(raw.get("field_units")?.get("toggles")?)?,
-            recursed_paths: paths(raw.get("whole_values")?.get("recursed")?)?,
+            template_view_state: view_set("template")?,
+            field_view_state: view_set("template_field")?,
+            edge_view_state: view_set("edge")?,
+            value_unit: strings(
+                key(field_units, "field_units", "value")?,
+                "field_units.value",
+            )?,
+            toggles: strings(
+                key(field_units, "field_units", "toggles")?,
+                "field_units.toggles",
+            )?,
+            recursed_paths: paths(
+                key(key(raw, "", "whole_values")?, "whole_values", "recursed")?,
+                "whole_values.recursed",
+            )?,
             natural_lists,
-            table_path: strings(tables.get("path")?)?,
-            table_when_field: tables
-                .get("when_field")?
-                .as_array()?
-                .iter()
-                .map(|condition| condition.as_object().cloned())
-                .collect::<Option<Vec<_>>>()?,
+            table_path: strings(
+                key(tables, "keyed_lists.tables", "path")?,
+                "keyed_lists.tables.path",
+            )?,
+            table_when_field,
             table: KeyedList {
                 kind: ListKind::Table,
-                key: vec![KeyPart::Key(tables.get("id")?.as_str()?.to_owned())],
-                position: Some(tables.get("position")?.as_str()?.to_owned()),
+                key: vec![PathPart::Key(table_keys.id.clone())],
+                position: Some(table_keys.position.clone()),
             },
+            table_keys,
         })
     }
 
@@ -209,9 +234,7 @@ impl NodeSchema {
     /// The keyed list a template field's `value` is, given the field itself.
     #[must_use]
     pub fn field_value_list(&self, name: &str, field: &Map<String, Value>) -> Option<&KeyedList> {
-        self.keyed_list_where(&["data", "node", "template", name, "value"], |_| {
-            Some(field)
-        })
+        self.keyed_list_where(&field_value_path(name), |_| Some(field))
     }
 
     /// The keyed list at `path`, reading the template field a table pattern
@@ -224,7 +247,7 @@ impl NodeSchema {
         if let Some((_, keyed)) = self
             .natural_lists
             .iter()
-            .find(|(list_path, _)| same_path(list_path, path))
+            .find(|(list_path, _)| same_keys(list_path, path))
         {
             return Some(keyed);
         }
@@ -261,8 +284,73 @@ impl NodeSchema {
     }
 }
 
-fn same_path<S: AsRef<str>>(left: &[String], right: &[S]) -> bool {
-    left.len() == right.len() && left.iter().zip(right).all(|(a, b)| a == b.as_ref())
+/// The value at `parent.name` of the schema file.
+fn key<'v>(value: &'v Value, parent: &str, name: &str) -> Result<&'v Value, String> {
+    value.get(name).ok_or_else(|| {
+        if parent.is_empty() {
+            format!("{name} is missing")
+        } else {
+            format!("{parent}.{name} is missing")
+        }
+    })
+}
+
+fn string(value: &Value, path: &str) -> Result<String, String> {
+    value
+        .as_str()
+        .map(str::to_owned)
+        .ok_or_else(|| format!("{path} must be a string"))
+}
+
+fn strings(value: &Value, path: &str) -> Result<Vec<String>, String> {
+    value
+        .as_array()
+        .and_then(|items| {
+            items
+                .iter()
+                .map(|item| item.as_str().map(str::to_owned))
+                .collect()
+        })
+        .ok_or_else(|| format!("{path} must be a list of strings"))
+}
+
+fn paths(value: &Value, path: &str) -> Result<Vec<Vec<String>>, String> {
+    value
+        .as_array()
+        .ok_or_else(|| format!("{path} must be a list of paths"))?
+        .iter()
+        .enumerate()
+        .map(|(index, item)| strings(item, &format!("{path}[{index}]")))
+        .collect()
+}
+
+/// A natural list's path and its key: object keys and list indexes.
+fn natural_list(entry: &Value, path: &str) -> Result<(Vec<String>, KeyedList), String> {
+    let list_path = strings(key(entry, path, "path")?, &format!("{path}.path"))?;
+    let key = key(entry, path, "key")?
+        .as_array()
+        .and_then(|parts| {
+            parts
+                .iter()
+                .map(|part| match part {
+                    Value::String(key) => Some(PathPart::Key(key.clone())),
+                    Value::Number(index) => index
+                        .as_u64()
+                        .and_then(|index| usize::try_from(index).ok())
+                        .map(PathPart::Index),
+                    _ => None,
+                })
+                .collect()
+        })
+        .ok_or_else(|| format!("{path}.key must be a list of keys and indexes"))?;
+    Ok((
+        list_path,
+        KeyedList {
+            kind: ListKind::Natural,
+            key,
+            position: None,
+        },
+    ))
 }
 
 #[cfg(test)]
@@ -272,10 +360,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_broken_schema_names_the_bad_key() {
+        let mut raw: Value = serde_json::from_str(NODE_SCHEMA_JSON).unwrap();
+        raw["view_state"].as_object_mut().unwrap().remove("flow");
+        assert_eq!(
+            NodeSchema::parse(&raw).unwrap_err(),
+            "view_state.flow is missing"
+        );
+        raw["view_state"]["flow"] = json!([1]);
+        assert_eq!(
+            NodeSchema::parse(&raw).unwrap_err(),
+            "view_state.flow must be a list of strings"
+        );
+    }
+
+    #[test]
     fn the_embedded_schema_loads() {
         assert_eq!(NODE_SCHEMA.version, 1);
         assert!(NODE_SCHEMA.node_data_view_state.contains("last_updated"));
-        assert_eq!(NODE_SCHEMA.table.id_key(), Some("_id"));
+        assert_eq!(NODE_SCHEMA.table_keys.id, "_id");
+        assert_eq!(NODE_SCHEMA.table_keys.position, "_pos");
     }
 
     #[test]

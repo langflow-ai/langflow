@@ -16,11 +16,12 @@ use std::collections::{HashMap, HashSet};
 use serde_json::Value;
 
 use crate::ops::canonical::{
-    as_double, is_finite_number, is_row_position, ordered_rows, values_equal,
+    as_double, is_finite_number, is_integer_text, is_row_position, ordered_rows, values_equal,
 };
-use crate::ops::error::{Error, Result, quoted};
-use crate::ops::ids::new_table_row_id;
-use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA};
+use crate::ops::entry::EntryExt;
+use crate::ops::error::{Result, bail, invalid, quoted};
+use crate::ops::ids::{new_table_row_id, unused_id};
+use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, field_value_path};
 
 /// The slot of every item of one keyed list, by key.
 #[derive(Debug, Clone)]
@@ -54,14 +55,9 @@ impl ListIndex {
         for (slot, item) in items.iter().enumerate() {
             let key = index.require_key(item, context)?;
             if index.slots.contains_key(key) {
-                return Err(Error::invalid(format!(
-                    "{context}: two items have the key {}",
-                    quoted(key)
-                )));
+                bail!("{context}: two items have the key {}", quoted(key));
             }
-            if keyed.kind == ListKind::Table {
-                index.require_position(item, context)?;
-            }
+            index.require_position(item, context)?;
             index.slots.insert(key.to_owned(), slot);
         }
         Ok(index)
@@ -92,43 +88,40 @@ impl ListIndex {
     pub fn require_key<'v>(&self, item: &'v Value, context: &str) -> Result<&'v str> {
         match self.keyed.key_of(item) {
             Some(key) if !key.is_empty() => Ok(key),
-            _ => Err(Error::invalid(format!(
+            _ => Err(invalid!(
                 "{context}: every item of this list needs a non-empty string {}",
                 self.keyed.selector_name()
-            ))),
+            )),
         }
     }
 
-    /// Check that a table row carries a finite numeric position.
+    /// Check that an item of a table carries a finite numeric position. An
+    /// item of a natural list has no position, so it always passes.
     ///
     /// # Errors
     ///
     /// The row's position is missing, not a number, or not finite.
     pub fn require_position(&self, row: &Value, context: &str) -> Result<()> {
-        let key = self.keyed.position.as_deref().unwrap_or_default();
-        if row.get(key).is_some_and(is_row_position) {
-            Ok(())
-        } else {
-            Err(Error::invalid(format!(
+        match self.keyed.position.as_deref() {
+            Some(key) if !row.get(key).is_some_and(is_row_position) => Err(invalid!(
                 "{context}: a table row's {key} must be a finite number"
-            )))
+            )),
+            _ => Ok(()),
         }
     }
 
     /// Append an item whose key is not in the list yet.
     pub(crate) fn add(&mut self, items: &mut Vec<Value>, item: Value, context: &str) -> Result<()> {
         let key = self.require_key(&item, context)?.to_owned();
-        if self.keyed.kind == ListKind::Table {
-            self.require_position(&item, context)?;
-        }
+        self.require_position(&item, context)?;
         self.slots.insert(key, items.len());
         items.push(item);
         Ok(())
     }
 
-    /// Remove the item with `key`, which must exist, and say how it left.
-    pub(crate) fn remove(&mut self, items: &mut Vec<Value>, key: &str) -> (Value, Removal) {
-        let slot = self.slots.remove(key).unwrap_or_default();
+    /// Remove the item with `key` and say how it left, or `None` when no item has it.
+    pub(crate) fn remove(&mut self, items: &mut Vec<Value>, key: &str) -> Option<(Value, Removal)> {
+        let slot = self.slots.remove(key)?;
         if self.keyed.kind == ListKind::Natural {
             // Natural lists are short (a component's outputs or tool actions), and their order is kept.
             let item = items.remove(slot);
@@ -137,7 +130,7 @@ impl ListIndex {
                     *later -= 1;
                 }
             }
-            return (item, Removal::Shifted { slot });
+            return Some((item, Removal::Shifted { slot }));
         }
         let item = items.swap_remove(slot);
         if let Some(moved) = items.get(slot)
@@ -145,21 +138,18 @@ impl ListIndex {
         {
             self.slots.insert(moved_key.to_owned(), slot);
         }
-        (item, Removal::Swapped { slot })
+        Some((item, Removal::Swapped { slot }))
     }
 
-    /// Replace the item with `key` by `item`, which carries the same key, and return the old item.
+    /// Replace the item at `slot` by `item`, which carries the same key, and return the old item.
     pub(crate) fn replace(
-        &mut self,
+        &self,
         items: &mut [Value],
-        key: &str,
+        slot: usize,
         item: Value,
         context: &str,
     ) -> Result<Value> {
-        if self.keyed.kind == ListKind::Table {
-            self.require_position(&item, context)?;
-        }
-        let slot = self.slots.get(key).copied().unwrap_or_default();
+        self.require_position(&item, context)?;
         Ok(std::mem::replace(&mut items[slot], item))
     }
 }
@@ -186,19 +176,15 @@ pub enum Renumber {
 }
 
 fn row_id_key() -> &'static str {
-    NODE_SCHEMA.table.id_key().unwrap_or("_id")
+    &NODE_SCHEMA.table_keys.id
 }
 
 fn row_position_key() -> &'static str {
-    NODE_SCHEMA.table.position.as_deref().unwrap_or("_pos")
+    &NODE_SCHEMA.table_keys.position
 }
 
 fn is_row_key(key: &str) -> bool {
     key == row_id_key() || key == row_position_key()
-}
-
-fn valid_id(value: Option<&Value>) -> Option<&str> {
-    value.and_then(Value::as_str).filter(|id| !id.is_empty())
 }
 
 /// A row without `_id` and `_pos`; a value that is not an object is returned as is.
@@ -231,17 +217,14 @@ pub fn strip_row_keys(rows: &Value) -> Value {
 /// The names of a node's template fields whose value is a table list.
 #[must_use]
 pub fn table_fields(node: &Value) -> Vec<String> {
-    let Some(template) = node
-        .pointer("/data/node/template")
-        .and_then(Value::as_object)
-    else {
+    let Some(template) = node.template() else {
         return Vec::new();
     };
     template
         .iter()
         .filter(|(name, field)| {
             field.get("value").is_some_and(Value::is_array)
-                && NODE_SCHEMA.is_table_at(node, &["data", "node", "template", name, "value"])
+                && NODE_SCHEMA.is_table_at(node, &field_value_path(name))
         })
         .map(|(name, _)| name.clone())
         .collect()
@@ -286,7 +269,8 @@ pub fn strip_flow_table_row_keys(flow: &mut Value) {
 pub fn has_table_row_ids(rows: &[Value]) -> bool {
     let mut seen = HashSet::new();
     rows.iter().all(|row| {
-        valid_id(row.get(row_id_key())).is_some_and(|id| seen.insert(id))
+        row.non_empty_str(row_id_key())
+            .is_some_and(|id| seen.insert(id))
             && row.get(row_position_key()).is_some_and(is_row_position)
     })
 }
@@ -333,7 +317,7 @@ pub fn match_row_ids(rows: &mut [Value], previous: Option<&Value>) -> Result<()>
     let mut used: HashSet<String> = HashSet::new();
     let mut need_id = Vec::new();
     for (index, row) in rows.iter().enumerate() {
-        match valid_id(row.get(id_key)) {
+        match row.non_empty_str(id_key) {
             Some(id) if !used.contains(id) => {
                 used.insert(id.to_owned());
             }
@@ -344,13 +328,13 @@ pub fn match_row_ids(rows: &mut [Value], previous: Option<&Value>) -> Result<()>
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
-        .filter(|row| row.is_object() && valid_id(row.get(id_key)).is_some())
+        .filter(|row| row.is_object() && row.non_empty_str(id_key).is_some())
         .collect();
     for index in need_id {
         let content = without_row_keys(&rows[index]);
         let mut matched = None;
         for candidate in &candidates {
-            let id = valid_id(candidate.get(id_key)).unwrap_or_default();
+            let id = candidate.non_empty_str(id_key).unwrap_or_default();
             if !used.contains(id) && values_equal(&without_row_keys(candidate), &content)? {
                 matched = Some(*candidate);
                 break;
@@ -366,13 +350,9 @@ pub fn match_row_ids(rows: &mut [Value], previous: Option<&Value>) -> Result<()>
             {
                 row.insert(position_key.to_owned(), position.clone());
             }
-            valid_id(matched.get(id_key)).unwrap_or_default().to_owned()
+            matched.non_empty_str(id_key).unwrap_or_default().to_owned()
         } else {
-            let mut id = new_table_row_id();
-            while used.contains(&id) {
-                id = new_table_row_id();
-            }
-            id
+            unused_id(&used, new_table_row_id)
         };
         used.insert(new_id.clone());
         if let Some(row) = row.as_object_mut() {
@@ -389,17 +369,22 @@ struct Position {
     integer: bool,
 }
 
-impl Position {
-    fn of(value: &Value) -> Option<Self> {
-        let Value::Number(number) = value else {
-            return None;
-        };
-        is_finite_number(number).then(|| Self {
-            value: as_double(number),
-            integer: !number.as_str().contains(['.', 'e', 'E']),
-        })
-    }
+/// The position a value holds, when it is a finite number.
+impl TryFrom<&Value> for Position {
+    type Error = ();
 
+    fn try_from(value: &Value) -> Result<Self, ()> {
+        match value {
+            Value::Number(number) if is_finite_number(number) => Ok(Self {
+                value: as_double(number),
+                integer: is_integer_text(number),
+            }),
+            _ => Err(()),
+        }
+    }
+}
+
+impl Position {
     fn integer(value: f64) -> Self {
         Self {
             value,
@@ -414,7 +399,7 @@ impl Position {
         clippy::float_cmp,
         reason = "converts an integral double to an integer and checks that it was exact"
     )]
-    fn to_json(self) -> Value {
+    fn to_value(self) -> Value {
         let whole = self.value as i64;
         if self.integer && whole as f64 == self.value {
             Value::from(whole)
@@ -435,7 +420,11 @@ impl Position {
 /// order instead. Returns the indexes of the rows it gave a position.
 pub fn fill_missing_positions(rows: &mut [Value], renumber: Renumber) -> Vec<usize> {
     let key = row_position_key();
-    let position_at = |rows: &[Value], index: usize| rows[index].get(key).and_then(Position::of);
+    let position_at = |rows: &[Value], index: usize| {
+        rows[index]
+            .get(key)
+            .and_then(|value| Position::try_from(value).ok())
+    };
     let mut filled = Vec::new();
     let mut index = 0;
     while index < rows.len() {
@@ -520,7 +509,7 @@ fn fits_between(positions: &[Position], before: Option<Position>, after: Option<
 
 fn set_position(row: &mut Value, key: &str, position: Position) {
     if let Some(row) = row.as_object_mut() {
-        row.insert(key.to_owned(), position.to_json());
+        row.insert(key.to_owned(), position.to_value());
     }
 }
 
@@ -558,20 +547,13 @@ pub fn assign_changed_node_table_row_ids(
         .map(|previous| {
             table_fields(previous)
                 .into_iter()
-                .filter_map(|field| {
-                    let value = previous.pointer(&format!(
-                        "/data/node/template/{}/value",
-                        escape_pointer(&field)
-                    ))?;
-                    Some((field, value))
-                })
+                .filter_map(|field| Some((field.clone(), previous.field_value(&field)?)))
                 .collect()
         })
         .unwrap_or_default();
     for field in table_fields(node) {
         let previous_value = stored.get(&field).copied();
-        let pointer = format!("/data/node/template/{}/value", escape_pointer(&field));
-        if let (Some(previous_value), Some(value)) = (previous_value, node.pointer(&pointer))
+        if let (Some(previous_value), Some(value)) = (previous_value, node.field_value(&field))
             && values_equal(previous_value, value)?
         {
             continue;
@@ -586,8 +568,7 @@ pub fn assign_changed_node_table_row_ids(
 /// Give row ids and positions to the table values `target` adds or changes
 /// relative to `base`, in place.
 ///
-/// This is what a writer that is not the editor (the assistant) does before
-/// saving, so its write passes the table rules: tables of new nodes get ids,
+/// Afterwards the write passes the table rules: tables of new nodes get ids,
 /// a changed table keeps the ids of rows it still holds, and a table equal to
 /// the stored one is left as it is, ids or not.
 ///
@@ -643,31 +624,26 @@ pub fn append_table_rows(rows: &mut Vec<Value>, new_rows: &[Value]) -> Result<()
     let (id_key, position_key) = (row_id_key(), row_position_key());
     let mut used: HashSet<String> = rows
         .iter()
-        .filter_map(|row| valid_id(row.get(id_key)).map(str::to_owned))
+        .filter_map(|row| row.non_empty_str(id_key).map(str::to_owned))
         .collect();
     let mut last = rows
         .iter()
-        .filter_map(|row| row.get(position_key).and_then(Position::of))
+        .filter_map(|row| {
+            row.get(position_key)
+                .and_then(|value| Position::try_from(value).ok())
+        })
         .map(|position| position.value)
         .fold(0.0, f64::max);
     for row in new_rows {
         let mut fresh = without_row_keys(row);
-        let mut id = new_table_row_id();
-        while used.contains(&id) {
-            id = new_table_row_id();
-        }
+        let id = unused_id(&used, new_table_row_id);
         used.insert(id.clone());
         last = last.floor() + 1.0;
         if let Some(fresh) = fresh.as_object_mut() {
             fresh.insert(id_key.to_owned(), Value::String(id));
-            fresh.insert(position_key.to_owned(), Position::integer(last).to_json());
+            fresh.insert(position_key.to_owned(), Position::integer(last).to_value());
         }
         rows.push(fresh);
     }
     Ok(())
-}
-
-/// A JSON pointer token for an object key.
-fn escape_pointer(key: &str) -> String {
-    key.replace('~', "~0").replace('/', "~1")
 }

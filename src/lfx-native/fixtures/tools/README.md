@@ -11,6 +11,8 @@ The fixture files are the specification of the engine. Their expected outputs co
 
 The other files (`apply_cases.json`, `diff_cases.json`, `merge_cases.json`, `property_cases.json`) were moved from the lfx tests unchanged.
 
+`update_edges` is not an operation. An edge changes by being deleted and added again, so no batch can make two edges swap inputs through an occupied state. The cases about changing an edge, in `apply_cases.json`, `inverse_cases.json`, `merge_cases.json`, `diff_cases.json`, `editor_cases.json` and `restore_cases.json`, follow that rule, and the docs decide their expectations, as they do for `limit_cases.json`. The reference engines still have `update_edges`, so do not regenerate these files from them. `property_cases.json` comes from `property_cases.py` in the lfx tests on `oplog-history-ui`, which changes edges the same way.
+
 The reference for both engines is `ad19da0df4` on `oplog-history-ui`.
 
 ## Conventions

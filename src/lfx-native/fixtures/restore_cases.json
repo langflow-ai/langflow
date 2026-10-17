@@ -66,13 +66,41 @@
         "edges": []
       },
       "fixes": [
-        {"type": "update_edges", "updates": [{"id": "bad", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œfœ}"}]},
-        {"type": "update_edges", "updates": [{"id": "bad", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "f"}}]}
+        {"type": "delete_edges", "ids": ["bad"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "bad",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        }
       ],
-      "error": {"error": "RestoreFixNotAllowedError", "code": "EDGE_HANDLE_INVALID"}
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "bad",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      }
     },
     {
-      "name": "setting data on an edge that has none",
+      "name": "giving data to an edge without it is not a fix: repair derives the missing form",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -90,44 +118,25 @@
         "edges": []
       },
       "fixes": [
+        {"type": "delete_edges", "ids": ["bad"]},
         {
-          "type": "update_edges",
-          "updates": [{"id": "bad", "op": "set_field", "path": ["data"], "value": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}}]
-        },
-        {"type": "update_edges", "updates": [{"id": "bad", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œfœ}"}]}
-      ],
-      "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
-    },
-    {
-      "name": "setting data with another key is an edit",
-      "revision": {
-        "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
-          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
-          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
-        ],
-        "edges": [{"id": "bad", "source": "a", "target": "b", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œmissingœ}"}]
-      },
-      "stored": {
-        "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
-          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
-          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
-        ],
-        "edges": []
-      },
-      "fixes": [
-        {
-          "type": "update_edges",
-          "updates": [
-            {"id": "bad", "op": "set_field", "path": ["data"], "value": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}, "x": 1}}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "bad",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
           ]
         }
       ],
       "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
     },
     {
-      "name": "setting data on an edge that has it is an edit",
+      "name": "re-adding an edge with another key in its data is an edit",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -154,12 +163,74 @@
         "edges": []
       },
       "fixes": [
+        {"type": "delete_edges", "ids": ["bad"]},
         {
-          "type": "update_edges",
-          "updates": [{"id": "bad", "op": "set_field", "path": ["data"], "value": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}}]
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "bad",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}, "x": 1}
+            }
+          ]
         }
       ],
       "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
+    },
+    {
+      "name": "an edge whose data is null may get data that holds only its handles",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [{"id": "bad", "source": "a", "target": "b", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œmissingœ}", "data": null}]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {"type": "delete_edges", "ids": ["bad"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "bad",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "bad",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      }
     },
     {
       "name": "deleting either edge into an occupied input",
@@ -288,7 +359,7 @@
       }
     },
     {
-      "name": "rewriting an edge into an occupied input is not a fix",
+      "name": "re-adding an edge into an occupied input with other handles is not a fix",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -331,7 +402,22 @@
           }
         ]
       },
-      "fixes": [{"type": "update_edges", "updates": [{"id": "e2", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œmanyœ}"}]}],
+      "fixes": [
+        {"type": "delete_edges", "ids": ["e2"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ],
       "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
     },
     {
@@ -395,7 +481,7 @@
       "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
     },
     {
-      "name": "a delete_field is not a handle rewrite",
+      "name": "re-adding an edge without one handle form fails the edge rules",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -421,11 +507,25 @@
         ],
         "edges": []
       },
-      "fixes": [{"type": "update_edges", "updates": [{"id": "bad", "op": "delete_field", "path": ["targetHandle"]}]}],
-      "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
+      "fixes": [
+        {"type": "delete_edges", "ids": ["bad"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "bad",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        }
+      ],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "EDGE_HANDLE_FORM_MISSING"}
     },
     {
-      "name": "a rewrite of another key is not a handle rewrite",
+      "name": "a change to another key is not a handle rewrite",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -451,7 +551,23 @@
         ],
         "edges": []
       },
-      "fixes": [{"type": "update_edges", "updates": [{"id": "bad", "op": "set_field", "path": ["label"], "value": "x"}]}],
+      "fixes": [
+        {"type": "delete_edges", "ids": ["bad"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "bad",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmissingœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}},
+              "label": "x"
+            }
+          ]
+        }
+      ],
       "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
     },
     {
@@ -481,8 +597,23 @@
         ],
         "edges": []
       },
-      "fixes": [{"type": "update_edges", "updates": [{"id": "bad", "op": "set_field", "path": ["targetHandle"], "value": 5}]}],
-      "error": {"error": "RestoreFixNotAllowedError", "code": "FIELD_TYPE_CHANGE_UNDECLARED"}
+      "fixes": [
+        {"type": "delete_edges", "ids": ["bad"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "bad",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": 5,
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        }
+      ],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "EDGE_HANDLE_INVALID"}
     },
     {
       "name": "no fixes",
@@ -529,6 +660,50 @@
           }
         ]
       }
+    },
+    {
+      "name": "adding an edge back without deleting it first is not a fix",
+      "revision": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "bad",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "bad",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        }
+      ],
+      "error": {"error": "RestoreFixNotAllowedError", "code": "RESTORE_FIX_NOT_ALLOWED"}
     }
   ]
 }

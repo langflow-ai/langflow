@@ -1,6 +1,6 @@
 //! `validation_cases.json`: every rule a graph breaks.
 
-use lfx::ops::validate::{Violation, find_graph_violations};
+use lfx::ops::validate::{Numbers, Violation, find_graph_violations};
 use libtest_mimic::Trial;
 use serde_json::{Value, json};
 
@@ -13,9 +13,13 @@ pub fn trials() -> Vec<Trial> {
         .map(|(name, case)| {
             Trial::test(format!("validation_cases::{name}"), move || {
                 let flow = graph_of(&case, "flow");
-                let check_values = case.get("check_values").and_then(Value::as_bool).unwrap_or(true);
-                let actual = match find_graph_violations(&flow, check_values, case.get("base")) {
-                    Ok(violations) => json!({"violations": violations.iter().map(Violation::to_json).collect::<Vec<_>>()}),
+                let numbers = if case.get("check_values").and_then(Value::as_bool).unwrap_or(true) {
+                    Numbers::Check
+                } else {
+                    Numbers::Skip
+                };
+                let actual = match find_graph_violations(&flow, numbers, case.get("base")) {
+                    Ok(violations) => json!({"violations": violations.iter().map(Violation::to_value).collect::<Vec<_>>()}),
                     Err(error) => json!({"error": error_json(&error)}),
                 };
                 let expected = match case.get("error") {

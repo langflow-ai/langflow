@@ -12,17 +12,19 @@
 
 use std::collections::HashSet;
 
-use indexmap::{IndexMap, IndexSet};
+use indexmap::IndexSet;
 use serde_json::{Map, Value};
 
-use crate::ops::canonical::{is_row_position, json_type, values_equal};
-use crate::ops::edges::{
-    Input, InputKind, OUTPUTS_PATH, check_edge, handle_forms, index_outputs, node_outputs,
+use crate::ops::canonical::{JsonType, is_row_position, values_equal};
+use crate::ops::edges::{Input, InputKind, check_edge, index_outputs, node_outputs};
+use crate::ops::entry::EntryExt;
+use crate::ops::error::{Error, ErrorCode, Result, bail, invalid, quoted};
+use crate::ops::ops::{Change, Expect, FieldUpdate, Operation, Path, PathExt, Segment, path_label};
+use crate::ops::schema::{
+    KeyedList, ListKind, NODE_OBJECT_PATHS, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH,
 };
-use crate::ops::error::{Error, ErrorCode, Result, quoted};
-use crate::ops::ops::{Change, Expect, FieldUpdate, Operation, Path, Segment, path_label};
-use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA};
-use crate::ops::state::{FieldUndo, GraphState, Owner, Step, resolve, resolve_mut};
+use crate::ops::state::{Copies, FieldUndo, Graph, GraphState, Lists, resolve, resolve_mut};
+use crate::ops::validate::PathPart;
 use crate::ops::validate::missing_node_object;
 
 /// How a batch is applied.
@@ -62,16 +64,60 @@ pub struct Applied {
     pub changed_edges: Vec<String>,
 }
 
-/// The node paths a write may not replace whole: every node keeps its
-/// `data`, `data.node` and `data.node.template` objects, and operations patch
-/// inside them.
-const FORBIDDEN_NODE_PATHS: [&[&str]; 3] =
-    [&["data"], &["data", "node"], &["data", "node", "template"]];
-/// An edge's endpoints are its identity: connecting other nodes is another edge.
-const FORBIDDEN_EDGE_ROOTS: [&str; 3] = ["id", "source", "target"];
-/// Writes under these edge keys can change which output or input the edge connects.
-const EDGE_HANDLE_ROOTS: [&str; 3] = ["sourceHandle", "targetHandle", "data"];
-const TEMPLATE_PATH: [&str; 3] = ["data", "node", "template"];
+/// The options of a batch, and what it reports as it applies.
+///
+/// Apply keeps two kinds of record, and they are different things. This
+/// report keeps the forward operations and the inverses for the caller, and
+/// only when the options ask for them. The rollback journal in `state` is
+/// always kept, inside the engine, to put the graph back when a batch fails.
+#[derive(Debug)]
+struct Report {
+    options: ApplyOptions,
+    applied: Applied,
+    /// The inverses of the operation being applied, so far.
+    inverse: Vec<Operation>,
+}
+
+impl Report {
+    fn new(options: ApplyOptions) -> Self {
+        Self {
+            options,
+            applied: Applied::default(),
+            inverse: Vec::new(),
+        }
+    }
+
+    /// Record an operation as the engine normalized it. Kept only with `forward`.
+    fn record(&mut self, operation: Operation) {
+        if self.options.forward {
+            self.applied.forward.push(operation);
+        }
+    }
+
+    /// Record an operation that undoes part of the operation being applied.
+    /// Kept only with `inverse`.
+    fn record_inverse(&mut self, operation: Operation) {
+        if self.options.inverse {
+            self.inverse.push(operation);
+        }
+    }
+
+    /// Whether removals keep copies of what they remove, for the inverses.
+    fn copies(&self) -> Copies {
+        if self.options.inverse {
+            Copies::Keep
+        } else {
+            Copies::Discard
+        }
+    }
+
+    /// End the operation being applied: its inverses are complete.
+    fn end_operation(&mut self) {
+        if self.options.inverse {
+            self.applied.inverse.push(std::mem::take(&mut self.inverse));
+        }
+    }
+}
 
 impl GraphState {
     /// Apply a batch of operations in order. On an error nothing is applied.
@@ -81,13 +127,14 @@ impl GraphState {
     /// An operation is invalid for the graph, or an expectation fails.
     pub fn apply(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
         self.begin();
-        let mut applied = Applied::default();
+        let mut report = Report::new(options);
         for operation in operations {
-            if let Err(error) = self.apply_operation(operation, options, &mut applied) {
+            if let Err(error) = self.apply_operation(operation, &mut report) {
                 self.rollback();
                 return Err(error);
             }
         }
+        let mut applied = report.applied;
         applied.changed_nodes = std::mem::take(&mut self.batch.changed_nodes)
             .into_iter()
             .collect();
@@ -98,165 +145,122 @@ impl GraphState {
         Ok(applied)
     }
 
-    fn apply_operation(
-        &mut self,
-        operation: Operation,
-        options: ApplyOptions,
-        out: &mut Applied,
-    ) -> Result<()> {
-        let mut inverse = Vec::new();
+    fn apply_operation(&mut self, operation: Operation, report: &mut Report) -> Result<()> {
         match operation {
-            Operation::AddNodes(nodes) => self.add_nodes(nodes, options, out, &mut inverse)?,
-            Operation::UpdateNodes(updates) => {
-                self.update_nodes(updates, options, out, &mut inverse)?;
-            }
-            Operation::DeleteNodes(ids) => self.delete_nodes(&ids, options, out, &mut inverse)?,
-            Operation::AddEdges(edges) => self.add_edges(edges, options, out, &mut inverse)?,
-            Operation::UpdateEdges(updates) => {
-                self.update_edges(updates, options, out, &mut inverse)?;
-            }
-            Operation::DeleteEdges(ids) => self.delete_edges(&ids, options, out, &mut inverse),
+            Operation::AddNodes(nodes) => self.add_nodes(nodes, report)?,
+            Operation::UpdateNodes(updates) => self.update_nodes(updates, report)?,
+            Operation::DeleteNodes(ids) => self.delete_nodes(&ids, report)?,
+            Operation::AddEdges(edges) => self.add_edges(edges, report)?,
+            Operation::DeleteEdges(ids) => self.delete_edges(&ids, report),
             Operation::UpdateMetadata {
                 fields,
                 delete_keys,
-            } => {
-                self.update_metadata(fields, &delete_keys, options, out, &mut inverse)?;
-            }
+            } => self.update_metadata(fields, &delete_keys, report)?,
         }
-        if options.inverse {
-            out.inverse.push(inverse);
-        }
+        report.end_operation();
         Ok(())
     }
 
     // --- Nodes -------------------------------------------------------------------------
 
-    fn add_nodes(
-        &mut self,
-        nodes: Vec<Map<String, Value>>,
-        options: ApplyOptions,
-        out: &mut Applied,
-        inverse: &mut Vec<Operation>,
-    ) -> Result<()> {
+    fn add_nodes(&mut self, nodes: Vec<Map<String, Value>>, report: &mut Report) -> Result<()> {
         if nodes.is_empty() {
             return Ok(());
         }
-        let mut seen = IndexSet::new();
+        let mut added = IndexSet::new();
         let mut payloads = Vec::new();
         for (index, node) in nodes.into_iter().enumerate() {
             let context = format!("add_nodes[{index}]");
-            let Some(id) = non_empty_id(&node, "id") else {
-                return Err(Error::invalid(format!(
-                    "{context}: node must have a non-empty string id"
-                )));
+            let Some(id) = node.non_empty_str("id").map(str::to_owned) else {
+                bail!("{context}: node must have a non-empty string id");
             };
             if let Some(path) = missing_node_object(&node) {
-                return Err(Error::invalid(format!(
-                    "{context}: node {} must be an object",
-                    path.join(".")
-                )));
+                bail!("{context}: node {} must be an object", path.join("."));
             }
-            if seen.contains(&id) {
-                return Err(Error::invalid(format!(
-                    "add_nodes: duplicate node id in request: {}",
-                    quoted(&id)
-                )));
+            if added.contains(&id) {
+                bail!("add_nodes: duplicate node id in request: {}", quoted(&id));
             }
             if self.graph.nodes.contains_key(&id) {
-                return Err(Error::invalid(format!(
-                    "add_nodes: node id already exists: {}",
-                    quoted(&id)
-                )));
+                bail!("add_nodes: node id already exists: {}", quoted(&id));
             }
-            seen.insert(id.clone());
-            if options.forward {
+            added.insert(id.clone());
+            if report.options.forward {
                 payloads.push(node.clone());
             }
             self.insert_node(id, Value::Object(node));
         }
-        if options.forward {
-            out.forward.push(Operation::AddNodes(payloads));
-        }
-        inverse.push(Operation::DeleteNodes(seen.into_iter().collect()));
+        report.record(Operation::AddNodes(payloads));
+        report.record_inverse(Operation::DeleteNodes(added.into_iter().collect()));
         Ok(())
     }
 
-    fn update_nodes(
-        &mut self,
-        updates: Vec<FieldUpdate>,
-        options: ApplyOptions,
-        out: &mut Applied,
-        inverse: &mut Vec<Operation>,
-    ) -> Result<()> {
+    fn update_nodes(&mut self, updates: Vec<FieldUpdate>, report: &mut Report) -> Result<()> {
         if updates.is_empty() {
             return Ok(());
         }
         reject_repeated_paths(&updates, "update_nodes")?;
-        let mut inverses = options.inverse.then(FieldInverses::default);
+        let mut inverses = report.options.inverse.then(FieldInverses::default);
         let mut applied = Vec::new();
         let mut detached = IndexSet::new();
         for (index, mut update) in updates.into_iter().enumerate() {
             let context = format!("update_nodes[{index}]");
             if !self.graph.nodes.contains_key(&update.id) {
-                return Err(Error::invalid(format!(
-                    "update_nodes: node does not exist: {}",
-                    quoted(&update.id)
-                )));
+                bail!("update_nodes: node does not exist: {}", quoted(&update.id));
             }
             if !self.is_base_node(&update.id) {
-                return Err(Error::invalid(format!(
+                bail!(
                     "update_nodes: cannot update node that does not exist in the original flow: {}",
                     quoted(&update.id)
-                )));
+                );
             }
             check_node_path(&update.path, &format!("{context}.path"))?;
-            let existed = self.apply_field_update(
-                Owner::Node,
-                &mut update,
-                &context,
-                options,
-                inverses.as_mut(),
-            )?;
-            if !options.restoring {
-                detached.extend(self.detached_edges(&update, existed)?);
+            let had_value =
+                self.apply_field_update(&mut update, &context, report.options, inverses.as_mut())?;
+            if !report.options.restoring {
+                detached.extend(self.detached_edges(&update, had_value)?);
             }
-            if options.forward && (existed || !update.is_delete()) {
+            // A delete that found nothing is not recorded.
+            if report.options.forward && (had_value || !update.is_delete()) {
                 applied.push(update);
             }
         }
-        if options.forward && !applied.is_empty() {
-            out.forward.push(Operation::UpdateNodes(applied));
+        if !applied.is_empty() {
+            report.record(Operation::UpdateNodes(applied));
         }
         if let Some(inverses) = inverses {
-            inverse.extend(inverses.operations(Operation::UpdateNodes));
+            for operation in inverses.operations(Operation::UpdateNodes) {
+                report.record_inverse(operation);
+            }
         }
-        self.remove_cascaded(detached.iter().map(String::as_str), options, out, inverse);
+        self.remove_cascaded(detached.iter().map(String::as_str), report);
         Ok(())
     }
 
     /// The edges a write left without an end: into a removed template field,
     /// or from or into a removed output.
-    fn detached_edges(&mut self, update: &FieldUpdate, existed: bool) -> Result<IndexSet<String>> {
+    fn detached_edges(
+        &mut self,
+        update: &FieldUpdate,
+        had_value: bool,
+    ) -> Result<IndexSet<String>> {
         let path = &update.path;
-        if !existed {
+        if !had_value {
             return Ok(IndexSet::new());
         }
         let node_id = update.id.as_str();
         if update.is_delete()
             && path.len() == TEMPLATE_PATH.len() + 1
-            && starts_with(path, &TEMPLATE_PATH)
+            && path.starts_with_keys(&TEMPLATE_PATH)
+            && let Segment::Key(field) = &path[TEMPLATE_PATH.len()]
         {
             let input = Input {
                 kind: InputKind::Field,
-                name: path[TEMPLATE_PATH.len()]
-                    .as_key()
-                    .unwrap_or_default()
-                    .to_owned(),
+                name: field.clone(),
             };
             let connections = self.edge_index.connections(&self.graph, node_id)?;
             return Ok(connections.inputs.get(&input).cloned().unwrap_or_default());
         }
-        if !starts_with(path, &OUTPUTS_PATH) {
+        if !path.starts_with_keys(&OUTPUTS_PATH) {
             return Ok(IndexSet::new());
         }
         let removed: Vec<String> = if path.len() == OUTPUTS_PATH.len() + 1 && update.is_delete() {
@@ -290,7 +294,7 @@ impl GraphState {
                 detached.extend(ids.iter().cloned());
             }
             let input = Input {
-                kind: InputKind::Output,
+                kind: InputKind::LoopOutput,
                 name,
             };
             if let Some(ids) = connections.inputs.get(&input) {
@@ -300,23 +304,17 @@ impl GraphState {
         Ok(detached)
     }
 
-    fn delete_nodes(
-        &mut self,
-        ids: &[String],
-        options: ApplyOptions,
-        out: &mut Applied,
-        inverse: &mut Vec<Operation>,
-    ) -> Result<()> {
+    fn delete_nodes(&mut self, ids: &[String], report: &mut Report) -> Result<()> {
         let ids: IndexSet<&str> = ids.iter().map(String::as_str).collect();
         if ids.is_empty() {
             return Ok(());
         }
         for id in &ids {
             if !self.is_base_node(id) {
-                return Err(Error::invalid(format!(
+                bail!(
                     "delete_nodes: cannot delete node that does not exist in the original flow: {}",
                     quoted(id)
-                )));
+                );
             }
         }
         let mut removed = Vec::new();
@@ -327,198 +325,80 @@ impl GraphState {
                 continue;
             }
             incident.extend(self.graph.edges_at(id).cloned());
-            let node = self.remove_node(id);
-            if options.inverse
-                && let Some(Value::Object(node)) = node
-            {
-                removed_nodes.push(node.clone());
+            if let Some(node) = self.remove_node(id, report.copies()) {
+                removed_nodes.push(node);
             }
             removed.push(id.to_owned());
         }
         if removed.is_empty() {
             return Ok(());
         }
-        if options.forward {
-            out.forward.push(Operation::DeleteNodes(removed));
-        }
-        inverse.push(Operation::AddNodes(removed_nodes));
-        self.remove_cascaded(incident.iter().map(String::as_str), options, out, inverse);
+        report.record(Operation::DeleteNodes(removed));
+        report.record_inverse(Operation::AddNodes(removed_nodes));
+        self.remove_cascaded(incident.iter().map(String::as_str), report);
         Ok(())
     }
 
     /// Remove the edges an operation took with it, recording them as a `delete_edges`.
-    fn remove_cascaded<'i>(
-        &mut self,
-        ids: impl IntoIterator<Item = &'i str>,
-        options: ApplyOptions,
-        out: &mut Applied,
-        inverse: &mut Vec<Operation>,
-    ) {
-        let (removed, edges) = self.remove_edges(ids, options.inverse);
+    fn remove_cascaded<'i>(&mut self, ids: impl IntoIterator<Item = &'i str>, report: &mut Report) {
+        let (removed, edges) = self.remove_edges(ids, report.copies());
         if removed.is_empty() {
             return;
         }
-        out.deleted_edges.extend(removed.iter().cloned());
-        if options.forward {
-            out.forward.push(Operation::DeleteEdges(removed));
-        }
-        inverse.push(Operation::AddEdges(edges));
+        report.applied.deleted_edges.extend(removed.iter().cloned());
+        report.record(Operation::DeleteEdges(removed));
+        report.record_inverse(Operation::AddEdges(edges));
     }
 
     // --- Edges -------------------------------------------------------------------------
 
-    fn add_edges(
-        &mut self,
-        edges: Vec<Map<String, Value>>,
-        options: ApplyOptions,
-        out: &mut Applied,
-        inverse: &mut Vec<Operation>,
-    ) -> Result<()> {
+    fn add_edges(&mut self, edges: Vec<Map<String, Value>>, report: &mut Report) -> Result<()> {
         if edges.is_empty() {
             return Ok(());
         }
-        let mut seen = IndexSet::new();
+        let mut added = IndexSet::new();
         let mut payloads = Vec::new();
         for (index, edge) in edges.into_iter().enumerate() {
             let context = format!("add_edges[{index}]");
             let field = |key: &str| {
-                non_empty_id(&edge, key).ok_or_else(|| {
-                    Error::invalid(format!(
-                        "{context}: edge must have a non-empty string {key}"
-                    ))
-                })
+                edge.non_empty_str(key)
+                    .map(str::to_owned)
+                    .ok_or_else(|| invalid!("{context}: edge must have a non-empty string {key}"))
             };
             let (id, source, target) = (field("id")?, field("source")?, field("target")?);
-            if seen.contains(&id) {
-                return Err(Error::invalid(format!(
-                    "add_edges: duplicate edge id in request: {}",
-                    quoted(&id)
-                )));
+            if added.contains(&id) {
+                bail!("add_edges: duplicate edge id in request: {}", quoted(&id));
             }
             if self.graph.edges.contains_key(&id) {
-                return Err(Error::invalid(format!(
-                    "add_edges: edge id already exists: {}",
-                    quoted(&id)
-                )));
+                bail!("add_edges: edge id already exists: {}", quoted(&id));
             }
             if !self.graph.nodes.contains_key(&source) {
-                return Err(Error::invalid(format!(
-                    "add_edges: source node does not exist: {}",
-                    quoted(&source)
-                )));
+                bail!("add_edges: source node does not exist: {}", quoted(&source));
             }
             if !self.graph.nodes.contains_key(&target) {
-                return Err(Error::invalid(format!(
-                    "add_edges: target node does not exist: {}",
-                    quoted(&target)
-                )));
+                bail!("add_edges: target node does not exist: {}", quoted(&target));
             }
-            seen.insert(id.clone());
-            if !options.restoring {
+            added.insert(id.clone());
+            if !report.options.restoring {
                 check_edge(&self.graph, &mut self.edge_index, &edge)?;
             }
-            if options.forward {
+            if report.options.forward {
                 payloads.push(edge.clone());
             }
             self.insert_edge(id, Value::Object(edge));
         }
-        if options.forward {
-            out.forward.push(Operation::AddEdges(payloads));
-        }
-        inverse.push(Operation::DeleteEdges(seen.into_iter().collect()));
+        report.record(Operation::AddEdges(payloads));
+        report.record_inverse(Operation::DeleteEdges(added.into_iter().collect()));
         Ok(())
     }
 
-    fn update_edges(
-        &mut self,
-        updates: Vec<FieldUpdate>,
-        options: ApplyOptions,
-        out: &mut Applied,
-        inverse: &mut Vec<Operation>,
-    ) -> Result<()> {
-        if updates.is_empty() {
-            return Ok(());
-        }
-        reject_repeated_paths(&updates, "update_edges")?;
-        let mut inverses = options.inverse.then(FieldInverses::default);
-        let mut applied = Vec::new();
-        // The handles of each edge the batch writes under a handle key, as they were before.
-        let mut handles_before: IndexMap<String, Value> = IndexMap::new();
-        for (index, mut update) in updates.into_iter().enumerate() {
-            let context = format!("update_edges[{index}]");
-            let Some(edge) = self.graph.edges.get(&update.id) else {
-                return Err(Error::invalid(format!(
-                    "update_edges: edge does not exist: {}",
-                    quoted(&update.id)
-                )));
-            };
-            if !self.is_base_edge(&update.id) {
-                return Err(Error::invalid(format!(
-                    "update_edges: cannot update edge that does not exist in the original flow: {}",
-                    quoted(&update.id)
-                )));
-            }
-            let root = update.path[0].as_key();
-            if let Some(root) = root.filter(|root| FORBIDDEN_EDGE_ROOTS.contains(root)) {
-                return Err(Error::invalid(format!(
-                    "{context}.path: cannot modify an edge's {root}; connecting different nodes is a different edge, so delete it and add another"
-                )));
-            }
-            if root.is_some_and(|root| EDGE_HANDLE_ROOTS.contains(&root))
-                && !handles_before.contains_key(&update.id)
-                && let Some(edge) = edge.as_object()
-            {
-                handles_before.insert(update.id.clone(), handle_forms(edge));
-            }
-            let existed = self.apply_field_update(
-                Owner::Edge,
-                &mut update,
-                &context,
-                options,
-                inverses.as_mut(),
-            )?;
-            if options.forward && (existed || !update.is_delete()) {
-                applied.push(update);
-            }
-        }
-        // An edge whose handles the batch changed is rewired, so it is checked like a new one.
-        for (id, before) in handles_before {
-            let Some(edge) = self.graph.edges.get(&id).and_then(Value::as_object) else {
-                continue;
-            };
-            if values_equal(&handle_forms(edge), &before)? {
-                continue;
-            }
-            self.edge_index.forget(edge);
-            if !options.restoring {
-                check_edge(&self.graph, &mut self.edge_index, edge)?;
-            }
-            self.edge_index.insert(edge);
-        }
-        if options.forward && !applied.is_empty() {
-            out.forward.push(Operation::UpdateEdges(applied));
-        }
-        if let Some(inverses) = inverses {
-            inverse.extend(inverses.operations(Operation::UpdateEdges));
-        }
-        Ok(())
-    }
-
-    fn delete_edges(
-        &mut self,
-        ids: &[String],
-        options: ApplyOptions,
-        out: &mut Applied,
-        inverse: &mut Vec<Operation>,
-    ) {
-        let (removed, edges) = self.remove_edges(ids.iter().map(String::as_str), options.inverse);
+    fn delete_edges(&mut self, ids: &[String], report: &mut Report) {
+        let (removed, edges) = self.remove_edges(ids.iter().map(String::as_str), report.copies());
         if removed.is_empty() {
             return;
         }
-        if options.forward {
-            out.forward.push(Operation::DeleteEdges(removed));
-        }
-        inverse.push(Operation::AddEdges(edges));
+        report.record(Operation::DeleteEdges(removed));
+        report.record_inverse(Operation::AddEdges(edges));
     }
 
     // --- Metadata ------------------------------------------------------------------------
@@ -527,24 +407,22 @@ impl GraphState {
         &mut self,
         fields: Map<String, Value>,
         delete_keys: &[String],
-        options: ApplyOptions,
-        out: &mut Applied,
-        inverse: &mut Vec<Operation>,
+        report: &mut Report,
     ) -> Result<()> {
         for key in fields.keys() {
             if is_collection_key(key) {
-                return Err(Error::invalid(format!(
+                bail!(
                     "update_metadata: cannot set graph collection key {}",
                     quoted(key)
-                )));
+                );
             }
         }
         for key in delete_keys {
             if is_collection_key(key) {
-                return Err(Error::invalid(format!(
+                bail!(
                     "update_metadata: cannot delete graph collection key {}",
                     quoted(key)
-                )));
+                );
             }
         }
         let delete_keys: Vec<String> = delete_keys
@@ -556,7 +434,8 @@ impl GraphState {
         if fields.is_empty() && delete_keys.is_empty() {
             return Ok(());
         }
-        if options.inverse {
+        if report.options.inverse {
+            // The inverse puts back each key as it is now, or deletes it if it is new.
             let mut restore = Map::new();
             let mut remove = Vec::new();
             let keys: IndexSet<&String> = fields.keys().chain(&delete_keys).collect();
@@ -568,12 +447,12 @@ impl GraphState {
                     None => remove.push(key.clone()),
                 }
             }
-            inverse.push(Operation::UpdateMetadata {
+            report.record_inverse(Operation::UpdateMetadata {
                 fields: restore,
                 delete_keys: remove,
             });
         }
-        let forward = options.forward.then(|| fields.clone());
+        let forward = report.options.forward.then(|| fields.clone());
         for (key, value) in fields {
             self.set_root(&key, value);
         }
@@ -581,7 +460,7 @@ impl GraphState {
             self.delete_root(key);
         }
         if let Some(fields) = forward {
-            out.forward.push(Operation::UpdateMetadata {
+            report.record(Operation::UpdateMetadata {
                 fields,
                 delete_keys,
             });
@@ -591,74 +470,79 @@ impl GraphState {
 
     // --- Field writes ----------------------------------------------------------------------
 
-    /// Apply one `set_field` or `delete_field` to a node or an edge.
+    /// Apply one `set_field` or `delete_field` to a node.
     ///
     /// Returns whether the path held a value before the write. Without
     /// `forward`, a set's value moves into the graph instead of being copied.
     fn apply_field_update(
         &mut self,
-        owner: Owner,
         update: &mut FieldUpdate,
         context: &str,
         options: ApplyOptions,
         inverses: Option<&mut FieldInverses>,
     ) -> Result<bool> {
-        let walk = self.walk(owner, update, context)?;
-        let last_step = match walk.missing_at {
-            Some(_) => None,
-            None => self.read_last(owner, update, &walk, context)?,
-        };
-        {
-            let root = self.graph.owner(owner, &update.id).unwrap_or(&Value::Null);
-            let parent = resolve(root, &walk.physical);
-            let current = last_step
-                .as_ref()
-                .and_then(|step| resolve(parent?, std::slice::from_ref(step)));
-            check_expectation(update, current, context)?;
-            if let Some(missing) = walk.missing_at {
-                return Err(Error::invalid(match &update.path[missing] {
-                    Segment::Key(key) => format!(
-                        "{context}.path[{missing}]: object path part must be an existing string key: {}",
-                        quoted(key)
-                    ),
-                    selector => format!(
-                        "{context}.path[{missing}]: list item does not exist: {}",
-                        quoted(selector.selector_key().unwrap_or_default())
-                    ),
-                }));
-            }
-            if let Some(inverses) = inverses {
-                inverses.record(root, update, parent, current);
-            }
-        }
-
+        let walk = self.check_field_update(&FieldWrite { update, context }, inverses)?;
         let value = match &mut update.change {
             Change::Set { value, .. } if !options.forward => std::mem::take(value),
             Change::Set { value, .. } => value.clone(),
             Change::Delete => Value::Null,
         };
-        let existed = self.write_last(owner, update, &walk, value, context, options)?;
+        let write = FieldWrite { update, context };
+        let had_value = self.write_last(&write, &walk, value, options)?;
+        self.check_list_keys_kept(&write, &walk)?;
+        Ok(had_value)
+    }
 
-        // A write inside a keyed list item must leave its key alone, and a table row its position.
-        let root = self.graph.owner(owner, &update.id).unwrap_or(&Value::Null);
-        for step in walk.items.iter().rev() {
-            let item = resolve(root, &walk.physical[..step.depth]).unwrap_or(&Value::Null);
-            if step.keyed.key_of(item) != Some(step.key.as_str()) {
-                return Err(Error::invalid(format!(
+    /// Check a field update before it writes anything: its path must exist
+    /// up to the last segment, and its expectation must hold. Record its
+    /// inverse, and return its path resolved.
+    fn check_field_update(
+        &mut self,
+        write: &FieldWrite<'_>,
+        inverses: Option<&mut FieldInverses>,
+    ) -> Result<Walk> {
+        let walk = self.walk(write)?;
+        let last_step = match walk.missing_at {
+            Some(_) => None,
+            None => self.read_last(write, &walk)?,
+        };
+        let root = written(&self.graph, write);
+        let parent = resolve(root, &walk.steps);
+        let current = last_step
+            .as_ref()
+            .and_then(|step| resolve(parent?, std::slice::from_ref(step)));
+        check_expectation(write.update, current, write.context)?;
+        if let Some(missing) = walk.missing_at {
+            return Err(missing_segment(write, missing));
+        }
+        if let Some(inverses) = inverses {
+            inverses.record(root, write.update, parent, current);
+        }
+        Ok(walk)
+    }
+
+    /// Check that a write inside a keyed list item left the item's key alone,
+    /// and a table row its position.
+    fn check_list_keys_kept(&self, write: &FieldWrite<'_>, walk: &Walk) -> Result<()> {
+        let context = write.context;
+        let root = written(&self.graph, write);
+        for item in walk.list_items.iter().rev() {
+            let value = resolve(root, &walk.steps[..item.depth]);
+            if value.and_then(|value| item.keyed.key_of(value)) != Some(item.key.as_str()) {
+                bail!(
                     "{context}: cannot change a list item's {}",
-                    step.keyed.selector_name()
-                )));
+                    item.keyed.selector_name()
+                );
             }
-            if step.keyed.kind == ListKind::Table {
-                let position = step.keyed.position.as_deref().unwrap_or_default();
-                if !item.get(position).is_some_and(is_row_position) {
-                    return Err(Error::invalid(format!(
-                        "{context}: a table row's {position} must be a finite number"
-                    )));
-                }
+            if let Some(position) = item.keyed.position.as_deref()
+                && !value
+                    .and_then(|value| value.get(position))
+                    .is_some_and(is_row_position)
+            {
+                bail!("{context}: a table row's {position} must be a finite number");
             }
         }
-        Ok(existed)
+        Ok(())
     }
 
     /// Follow `path[..last]` from the node or edge, once.
@@ -667,181 +551,130 @@ impl GraphState {
     /// the first segment that does not exist. A segment that does not fit the
     /// value it reads, such as a key of a list, is an error rather than a
     /// missing value.
-    fn walk(&mut self, owner: Owner, update: &FieldUpdate, context: &str) -> Result<Walk> {
-        let path = &update.path;
+    fn walk(&mut self, write: &FieldWrite<'_>) -> Result<Walk> {
+        let (path, context) = (&write.update.path, write.context);
         let mut walk = Walk::default();
-        let root = self.graph.owner(owner, &update.id).unwrap_or(&Value::Null);
+        let root = written(&self.graph, write);
         let mut value = root;
         for (index, part) in path[..path.len() - 1].iter().enumerate() {
-            if let Segment::Key(key) = part {
-                let Value::Object(map) = value else {
-                    return Err(Error::invalid(format!(
-                        "{context}.path[{index}]: {} reads a key of a value that is not an object",
-                        quoted(key)
-                    )));
-                };
-                let Some(child) = map.get(key) else {
-                    walk.missing_at = Some(index);
-                    return Ok(walk);
-                };
-                walk.physical.push(Step::Key(key.clone()));
-                value = child;
-                continue;
-            }
-            let keyed = keyed_list(owner, root, path, index, value, context)?;
-            let items = value.as_array().map_or(&[][..], Vec::as_slice);
-            let key = part.selector_key().unwrap_or_default();
-            let slot = self
-                .lists
-                .index(
-                    &update.id,
-                    &string_prefix(path, index),
-                    keyed,
-                    items,
-                    &format!("{context}.path[{index}]"),
-                )?
-                .slot(key);
+            let key = match part {
+                Segment::Key(key) => {
+                    let Value::Object(map) = value else {
+                        bail!(
+                            "{context}.path[{index}]: {} reads a key of a value that is not an object",
+                            quoted(key)
+                        );
+                    };
+                    let Some(child) = map.get(key) else {
+                        walk.missing_at = Some(index);
+                        return Ok(walk);
+                    };
+                    walk.steps.push(PathPart::Key(key.clone()));
+                    value = child;
+                    continue;
+                }
+                Segment::ById(key) | Segment::ByKey(key) => key,
+            };
+            let (keyed, slot) = list_slot(&mut self.lists, write, root, index, value, key)?;
             let Some(slot) = slot else {
                 walk.missing_at = Some(index);
                 return Ok(walk);
             };
-            walk.physical.push(Step::Index(slot));
-            walk.items.push(ItemStep {
+            walk.steps.push(PathPart::Index(slot));
+            walk.list_items.push(ListItemOnPath {
                 keyed,
-                key: key.to_owned(),
-                depth: walk.physical.len(),
+                key: key.clone(),
+                depth: walk.steps.len(),
             });
-            value = &items[slot];
+            value = &value[slot];
         }
         Ok(walk)
     }
 
     /// The step from the value holding the last segment to the value the path
     /// names, or `None` when there is none.
-    fn read_last(
-        &mut self,
-        owner: Owner,
-        update: &FieldUpdate,
-        walk: &Walk,
-        context: &str,
-    ) -> Result<Option<Step>> {
-        let path = &update.path;
+    fn read_last(&mut self, write: &FieldWrite<'_>, walk: &Walk) -> Result<Option<PathPart>> {
+        let (path, context) = (&write.update.path, write.context);
         let last = path.len() - 1;
-        let root = self.graph.owner(owner, &update.id).unwrap_or(&Value::Null);
-        let parent = resolve(root, &walk.physical).unwrap_or(&Value::Null);
-        match &path[last] {
+        let root = written(&self.graph, write);
+        let parent = resolve(root, &walk.steps).expect("the walk resolved these steps");
+        let key = match &path[last] {
             Segment::Key(key) => {
                 let Value::Object(map) = parent else {
-                    return Err(Error::invalid(format!(
+                    bail!(
                         "{context}.path[{last}]: {} reads a key of a value that is not an object",
                         quoted(key)
-                    )));
+                    );
                 };
-                Ok(map.contains_key(key).then(|| Step::Key(key.clone())))
+                return Ok(map.contains_key(key).then(|| PathPart::Key(key.clone())));
             }
-            selector => {
-                let keyed = keyed_list(owner, root, path, last, parent, context)?;
-                let items = parent.as_array().map_or(&[][..], Vec::as_slice);
-                let slot = self
-                    .lists
-                    .index(
-                        &update.id,
-                        &string_prefix(path, last),
-                        keyed,
-                        items,
-                        &format!("{context}.path[{last}]"),
-                    )?
-                    .slot(selector.selector_key().unwrap_or_default());
-                Ok(slot.map(Step::Index))
-            }
-        }
+            Segment::ById(key) | Segment::ByKey(key) => key,
+        };
+        let (_, slot) = list_slot(&mut self.lists, write, root, last, parent, key)?;
+        Ok(slot.map(PathPart::Index))
     }
 
     /// Write or delete the last segment of the path. Returns whether it held a value.
     fn write_last(
         &mut self,
-        owner: Owner,
-        update: &FieldUpdate,
+        write: &FieldWrite<'_>,
         walk: &Walk,
         value: Value,
-        context: &str,
         options: ApplyOptions,
     ) -> Result<bool> {
-        let path = &update.path;
-        let id = update.id.as_str();
+        let (id, path) = (write.update.id.as_str(), &write.update.path);
         let undo = match &path[path.len() - 1] {
-            Segment::Key(key) => {
-                self.write_key(owner, update, walk, key, value, context, options)?
-            }
-            selector => {
-                let key = selector.selector_key().unwrap_or_default();
-                self.write_item(owner, update, walk, key, value, context, options)?
+            Segment::Key(key) => self.write_key(write, walk, key, value, options)?,
+            Segment::ById(key) | Segment::ByKey(key) => {
+                self.write_item(write, walk, key, value, options)?
             }
         };
         let Some(undo) = undo else {
             return Ok(false);
         };
-        let existed = !matches!(
+        let had_value = !matches!(
             undo,
             FieldUndo::KeySet { old: None, .. } | FieldUndo::ItemAdded
         );
         // A whole value replaced or removed takes the lists indexed under it with it.
-        if owner == Owner::Node
-            && let Some(keys) = path
-                .iter()
-                .map(Segment::as_key)
-                .collect::<Option<Vec<&str>>>()
+        if let Some(keys) = path
+            .iter()
+            .map(Segment::as_key)
+            .collect::<Option<Vec<&str>>>()
         {
             self.lists.forget_under(id, &keys);
         }
-        self.record_field(owner, id, walk.physical.clone(), undo);
-        Ok(existed)
+        self.record_field(id, walk.steps.clone(), undo);
+        Ok(had_value)
     }
 
-    /// The object the path's last segment is a key of, to write it.
-    fn parent_mut(
-        &mut self,
-        owner: Owner,
-        id: &str,
-        walk: &Walk,
-        context: &str,
-    ) -> Result<&mut Value> {
+    /// The value that holds the path's last segment, to write it.
+    fn parent_mut(&mut self, write: &FieldWrite<'_>, walk: &Walk) -> Option<&mut Value> {
         self.graph
-            .owner_mut(owner, id)
-            .and_then(|root| resolve_mut(root, &walk.physical))
-            .ok_or_else(|| {
-                Error::invalid(format!(
-                    "{context}: path must end at an object property or a keyed list item"
-                ))
-            })
+            .nodes
+            .get_mut(&write.update.id)
+            .and_then(|node| resolve_mut(node, &walk.steps))
     }
 
     /// Write or delete an object key. Returns how to undo it, or `None` for a
     /// delete that found nothing.
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "one write's inputs, passed through from write_last"
-    )]
     fn write_key(
         &mut self,
-        owner: Owner,
-        update: &FieldUpdate,
+        write: &FieldWrite<'_>,
         walk: &Walk,
         key: &str,
         value: Value,
-        context: &str,
         options: ApplyOptions,
     ) -> Result<Option<FieldUndo>> {
-        let Value::Object(map) = self.parent_mut(owner, &update.id, walk, context)? else {
-            return Err(Error::invalid(format!(
-                "{context}: path must end at an object property or a keyed list item"
-            )));
+        let (update, context) = (write.update, write.context);
+        let Some(Value::Object(map)) = self.parent_mut(write, walk) else {
+            bail!("{context}: path must end at an object property or a keyed list item");
         };
         if update.is_delete() {
             let Some(index) = map.keys().position(|existing| existing == key) else {
                 return Ok(None);
             };
-            let old = map.shift_remove(key).unwrap_or_default();
+            let old = map.shift_remove(key).expect("the key was found just above");
             return Ok(Some(FieldUndo::KeyDeleted {
                 key: key.to_owned(),
                 index,
@@ -858,54 +691,45 @@ impl GraphState {
 
     /// Write or delete a keyed list item. Returns how to undo it, or `None`
     /// for a delete that found nothing.
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "one write's inputs, passed through from write_last"
-    )]
     fn write_item(
         &mut self,
-        owner: Owner,
-        update: &FieldUpdate,
+        write: &FieldWrite<'_>,
         walk: &Walk,
         key: &str,
         value: Value,
-        context: &str,
         options: ApplyOptions,
     ) -> Result<Option<FieldUndo>> {
+        let (update, context) = (write.update, write.context);
         let path = &update.path;
         let last = path.len() - 1;
-        let id = update.id.as_str();
-        let keyed = {
-            let root = self.graph.owner(owner, id).unwrap_or(&Value::Null);
-            let parent = resolve(root, &walk.physical).unwrap_or(&Value::Null);
-            keyed_list(owner, root, path, last, parent, context)?
+        let (keyed, prefix) = {
+            let root = written(&self.graph, write);
+            let parent = resolve(root, &walk.steps).expect("the walk resolved these steps");
+            keyed_list(root, path, last, parent, context)?
         };
         let list_context = format!("{context}.path[{last}]");
         let parent = self
             .graph
-            .owner_mut(owner, id)
-            .and_then(|root| resolve_mut(root, &walk.physical));
+            .nodes
+            .get_mut(&update.id)
+            .and_then(|node| resolve_mut(node, &walk.steps));
         let Some(Value::Array(items)) = parent else {
-            return Err(Error::invalid(format!(
-                "{list_context}: selector on a value that is not a list"
-            )));
+            bail!("{list_context}: selector on a value that is not a list");
         };
-        let index =
-            self.lists
-                .index(id, &string_prefix(path, last), keyed, items, &list_context)?;
-        let slot = index.slot(key);
+        let index = self
+            .lists
+            .index(&update.id, &prefix, keyed, items, &list_context)?;
         if update.is_delete() {
-            if slot.is_none() {
-                return Ok(None);
-            }
-            let (old, removal) = index.remove(items, key);
-            return Ok(Some(FieldUndo::ItemRemoved { removal, old }));
+            return Ok(index
+                .remove(items, key)
+                .map(|(old, removal)| FieldUndo::ItemRemoved { removal, old }));
         }
+        let slot = index.slot(key);
         if keyed.key_of(&value) != Some(key) {
-            return Err(Error::invalid(format!(
+            bail!(
                 "{context}: a list item written at a selector must carry the same key: {}",
                 quoted(key)
-            )));
+            );
         }
         check_type_change(
             slot.map(|slot| &items[slot]),
@@ -915,7 +739,7 @@ impl GraphState {
             options,
         )?;
         if let Some(slot) = slot {
-            let old = index.replace(items, key, value, context)?;
+            let old = index.replace(items, slot, value, context)?;
             return Ok(Some(FieldUndo::ItemReplaced { slot, old }));
         }
         index.add(items, value, context)?;
@@ -923,86 +747,114 @@ impl GraphState {
     }
 }
 
-/// The keyed list items a path passes through, and where the path leads.
+/// The node a field write goes to. `update_nodes` checks that it exists
+/// before it writes.
+fn written<'g>(graph: &'g Graph, write: &FieldWrite<'_>) -> &'g Value {
+    graph
+        .nodes
+        .get(&write.update.id)
+        .expect("update_nodes checks that the node exists")
+}
+
+/// One field update on its way into a node.
+#[derive(Debug)]
+struct FieldWrite<'w> {
+    update: &'w FieldUpdate,
+    /// Where the update is in its operation, for messages.
+    context: &'w str,
+}
+
+/// Where a field update's path leads, resolved up to its last segment.
 #[derive(Debug, Default)]
 struct Walk {
-    /// The resolved steps to the value holding the last segment.
-    physical: Vec<Step>,
-    /// The keyed list items passed through.
-    items: Vec<ItemStep>,
+    /// The resolved steps to the value that holds the last segment.
+    steps: Vec<PathPart>,
+    /// The keyed list items the path passes through.
+    list_items: Vec<ListItemOnPath>,
     /// The index of the first segment that does not exist.
     missing_at: Option<usize>,
 }
 
 /// A keyed list item a path passes through.
 #[derive(Debug)]
-struct ItemStep {
+struct ListItemOnPath {
     keyed: &'static KeyedList,
     key: String,
     /// How many resolved steps lead to the item.
     depth: usize,
 }
 
-/// The keyed list `path[index]` selects from, checking that the selector fits it.
-fn keyed_list(
-    owner: Owner,
+/// The error for the first segment of a path that does not exist.
+fn missing_segment(write: &FieldWrite<'_>, missing: usize) -> Error {
+    let context = write.context;
+    match &write.update.path[missing] {
+        Segment::Key(key) => invalid!(
+            "{context}.path[{missing}]: object path part must be an existing string key: {}",
+            quoted(key)
+        ),
+        Segment::ById(key) | Segment::ByKey(key) => invalid!(
+            "{context}.path[{missing}]: list item does not exist: {}",
+            quoted(key)
+        ),
+    }
+}
+
+/// The keyed list `path[index]` selects from, and the slot of the item with
+/// `key`, or `None` when there is no such item.
+fn list_slot(
+    lists: &mut Lists,
+    write: &FieldWrite<'_>,
+    root: &Value,
+    index: usize,
+    list: &Value,
+    key: &str,
+) -> Result<(&'static KeyedList, Option<usize>)> {
+    let (path, context) = (&write.update.path, write.context);
+    let (keyed, prefix) = keyed_list(root, path, index, list, context)?;
+    let items = list.as_array().map(Vec::as_slice).unwrap_or_default();
+    let slot = lists
+        .index(
+            &write.update.id,
+            &prefix,
+            keyed,
+            items,
+            &format!("{context}.path[{index}]"),
+        )?
+        .slot(key);
+    Ok((keyed, slot))
+}
+
+/// The keyed list `path[index]` selects from, and its address: the object
+/// keys that lead to it. Checks that the selector fits the list.
+fn keyed_list<'p>(
     node: &Value,
-    path: &Path,
+    path: &'p Path,
     index: usize,
     value: &Value,
     context: &str,
-) -> Result<&'static KeyedList> {
-    let prefix: Option<Vec<&str>> = path[..index].iter().map(Segment::as_key).collect();
-    let keyed = match (owner, prefix) {
-        (Owner::Node, Some(prefix)) => NODE_SCHEMA.keyed_list_at(node, &prefix),
-        _ => None,
-    };
-    let Some(keyed) = keyed else {
-        return Err(Error::invalid(format!(
-            "{context}.path[{index}]: selector on a list the node schema does not declare keyed"
-        )));
+) -> Result<(&'static KeyedList, Vec<&'p str>)> {
+    let prefix = path[..index].keys();
+    let Some((keyed, prefix)) = prefix.and_then(|prefix| {
+        NODE_SCHEMA
+            .keyed_list_at(node, &prefix)
+            .map(|keyed| (keyed, prefix))
+    }) else {
+        bail!("{context}.path[{index}]: selector on a list the node schema does not declare keyed");
     };
     let fits = matches!(
         (keyed.kind, &path[index]),
         (ListKind::Table, Segment::ById(_)) | (ListKind::Natural, Segment::ByKey(_))
     );
     if !fits {
-        return Err(Error::invalid(format!(
+        bail!(
             "{context}.path[{index}]: items of this list are selected with {{{}: ...}}",
             quoted(keyed.selector_name())
-        )));
+        );
     }
     if !value.is_array() {
-        return Err(Error::invalid(format!(
-            "{context}.path[{index}]: selector on a value that is not a list"
-        )));
+        bail!("{context}.path[{index}]: selector on a value that is not a list");
     }
-    Ok(keyed)
-}
-
-/// The object keys of `path[..index]`, which a keyed list's address is.
-fn string_prefix(path: &Path, index: usize) -> Vec<String> {
-    path[..index]
-        .iter()
-        .filter_map(Segment::as_key)
-        .map(str::to_owned)
-        .collect()
-}
-
-fn starts_with(path: &Path, prefix: &[&str]) -> bool {
-    path.len() >= prefix.len()
-        && path
-            .iter()
-            .zip(prefix)
-            .all(|(segment, key)| segment.as_key() == Some(*key))
-}
-
-fn non_empty_id(object: &Map<String, Value>, key: &str) -> Option<String> {
-    object
-        .get(key)
-        .and_then(Value::as_str)
-        .filter(|value| !value.is_empty())
-        .map(str::to_owned)
+    Ok((keyed, prefix))
 }
 
 fn is_collection_key(key: &str) -> bool {
@@ -1011,18 +863,17 @@ fn is_collection_key(key: &str) -> bool {
 
 fn check_node_path(path: &Path, context: &str) -> Result<()> {
     if path[0].as_key() == Some("id") {
-        return Err(Error::invalid(format!(
-            "{context}: cannot modify node identity"
-        )));
+        bail!("{context}: cannot modify node identity");
     }
-    let forbidden = FORBIDDEN_NODE_PATHS
+    // Every node keeps these objects, and operations patch inside them.
+    let forbidden = NODE_OBJECT_PATHS
         .iter()
-        .any(|forbidden| path.len() == forbidden.len() && starts_with(path, forbidden));
+        .any(|object_path| path.is_keys(object_path));
     if forbidden {
-        return Err(Error::invalid(format!(
+        bail!(
             "{context}: cannot update entire node data objects at path {}; forbidden paths are: data, data.node, data.node.template",
             path_label(path)
-        )));
+        );
     }
     Ok(())
 }
@@ -1032,11 +883,11 @@ fn reject_repeated_paths(updates: &[FieldUpdate], kind: &str) -> Result<()> {
     let mut seen = HashSet::new();
     for update in updates {
         if !seen.insert((update.id.as_str(), update.path.as_slice())) {
-            return Err(Error::invalid(format!(
+            bail!(
                 "{kind}: multiple field updates for one id and path: {} {}",
                 quoted(&update.id),
                 path_label(&update.path)
-            )));
+            );
         }
     }
     Ok(())
@@ -1091,24 +942,24 @@ fn check_type_change(
         return Ok(());
     };
     match (from_type, current) {
-        (None, Some(current)) if json_type(current) != json_type(value) => {
+        (None, Some(current)) if JsonType::from(current) != JsonType::from(value) => {
             Err(Error::invalid_with(
                 ErrorCode::FieldTypeChangeUndeclared,
                 format!(
                     "{context}: set_field changes a {} to a {} without declaring from_type",
-                    json_type(current).as_str(),
-                    json_type(value).as_str()
+                    JsonType::from(current).as_str(),
+                    JsonType::from(value).as_str()
                 ),
             ))
         }
         (None, _) => Ok(()),
-        (Some(from_type), Some(current)) if json_type(current) == *from_type => Ok(()),
+        (Some(from_type), Some(current)) if JsonType::from(current) == *from_type => Ok(()),
         (Some(from_type), current) => Err(Error::invalid_with(
             ErrorCode::FieldTypePreconditionFailed,
             format!(
                 "{context}: set_field expected to replace a {} but found {}",
                 from_type.as_str(),
-                current.map_or("nothing", |current| json_type(current).as_str())
+                current.map_or("nothing", |current| JsonType::from(current).as_str())
             ),
         )),
     }
@@ -1144,8 +995,9 @@ impl FieldInverses {
             // Removing a natural-list item that is not last cannot be undone by
             // a selector write, which appends; the whole list is written back.
             // A table's order is its rows' positions, so its rows need no such care.
-            let prefix = string_prefix(path, last);
-            let keyed = NODE_SCHEMA.keyed_list_at(root, &prefix);
+            let keyed = path[..last]
+                .keys()
+                .and_then(|prefix| NODE_SCHEMA.keyed_list_at(root, &prefix));
             let is_last = items.last().is_some_and(|item| {
                 keyed.and_then(|keyed| keyed.key_of(item)) == Some(key.as_str())
             });
@@ -1168,9 +1020,9 @@ impl FieldInverses {
         let mut entry = FieldUpdate::set(&update.id, path.clone(), current.clone());
         if let (Change::Set { value, .. }, Change::Set { from_type, .. }) =
             (&update.change, &mut entry.change)
-            && json_type(current) != json_type(value)
+            && JsonType::from(current) != JsonType::from(value)
         {
-            *from_type = Some(json_type(value));
+            *from_type = Some(JsonType::from(value));
         }
         self.entries.push(entry);
     }
@@ -1209,4 +1061,56 @@ pub fn apply_flow_operations(
     let mut state = GraphState::new(base)?;
     let applied = state.apply(operations, options)?;
     Ok((state.into_value(), applied))
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::{Value, json};
+
+    use super::*;
+    use crate::ops::edges::escape_handle;
+
+    fn target_handle(field: &str) -> Value {
+        json!({"fieldName": field, "id": "T", "inputTypes": ["Message"], "type": "str"})
+    }
+
+    fn edge(id: &str, field: &str) -> Value {
+        let source =
+            json!({"dataType": "X", "id": "S", "name": "out", "output_types": ["Message"]});
+        json!({
+            "id": id, "source": "S", "target": "T",
+            "sourceHandle": escape_handle(&source),
+            "targetHandle": escape_handle(&target_handle(field)),
+            "data": {"sourceHandle": source, "targetHandle": target_handle(field)},
+        })
+    }
+
+    fn operations(value: Value) -> Vec<Operation> {
+        Operation::list_from_value(value).unwrap()
+    }
+
+    #[test]
+    fn a_held_state_swaps_two_edges_by_deleting_and_adding_them() {
+        let field = json!({"type": "str", "value": ""});
+        let graph = json!({
+            "nodes": [
+                {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+                {"id": "T", "data": {"node": {"template": {"A": field, "B": field, "C": field}}}},
+            ],
+            "edges": [edge("e1", "B"), edge("e2", "A")],
+        });
+        let mut state = GraphState::new(graph).unwrap();
+        // This batch indexes the connections of T, which the next batch reuses.
+        let add = json!([{"type": "add_edges", "edges": [edge("e3", "C")]}]);
+        state
+            .apply(operations(add), ApplyOptions::default())
+            .unwrap();
+        let swap = json!([
+            {"type": "delete_edges", "ids": ["e1", "e2"]},
+            {"type": "add_edges", "edges": [edge("e1", "A"), edge("e2", "B")]},
+        ]);
+        state
+            .apply(operations(swap), ApplyOptions::default())
+            .unwrap();
+    }
 }
