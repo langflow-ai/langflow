@@ -22,9 +22,14 @@ preserving Langflow's security floor on the Python pgvector client; released
 
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import json
+import os
 import re
 import uuid
+import weakref
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from langchain_core.documents import Document
@@ -49,11 +54,63 @@ if TYPE_CHECKING:
 # Single env var that configures pgVector for the whole deployment.
 DEFAULT_CONNECTION_STRING_VARIABLE = "PGVECTOR_CONNECTION_STRING"
 
-# Advisory-lock key serializing per-collection DDL (table + index creation) so
-# concurrent ingests don't race the bootstrap. Postgres advisory locks are
-# database-wide; this one constant key covers every collection, so bootstraps
-# across all collections on a database briefly serialize against each other.
-_ADVISORY_LOCK_KEY = 1573678846307946496
+# Collection tables (with their indexes) this process has verified as fully
+# provisioned, keyed by (connection string, table, dimension). Writes check the
+# catalog only on a miss, so steady-state ingestion runs no DDL and takes no lock.
+# An entry is dropped when the table is dropped here, and when a write finds the
+# table missing or retyped (dropped or recreated by another process).
+_READY_TABLES: set[tuple[str, str, int]] = set()
+
+# One async engine (one connection pool) per event loop, process and connection
+# string, shared by every backend instance. Ingestion creates a backend per job;
+# sharing the engine lets those jobs reuse pooled connections. ``max_overflow=-1``
+# puts no limit on concurrent connections, and up to ``pool_size`` idle
+# connections stay open for reuse.
+#
+# Backends run on the caller's event loop. The KB API, ingestion jobs and flow
+# runs in the server (including the Knowledge component as an agent tool) all
+# await them on the server loop, so each server process keeps one pool. A flow
+# run from a temporary loop (``run_until_complete``, ``asyncio.run`` or
+# ``Graph.start`` in a script) gets its own engine and pool. Once that loop is
+# closed and collected its entry is dropped, and the garbage collector closes its
+# connections without ``dispose()``. The server disposes its loop's engines at
+# shutdown with ``dispose_shared_engines``; a synchronous caller that owns a
+# loop awaits it before closing that loop.
+_ENGINES: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, dict[tuple[int, str], Any]] = weakref.WeakKeyDictionary()
+_ENGINE_POOL_SIZE = 5
+
+
+def _shared_engine(connection_string: str):
+    """Return this event loop's engine for ``connection_string``, creating it once."""
+    try:
+        from sqlalchemy.ext.asyncio import create_async_engine
+    except ImportError as exc:  # pragma: no cover
+        msg = "PostgresBackend requires SQLAlchemy async support (install the pgvector extra)."
+        raise RuntimeError(msg) from exc
+
+    loop = asyncio.get_running_loop()
+    engines = _ENGINES.setdefault(loop, {})
+    key = (os.getpid(), connection_string)  # a forked child must not reuse the parent's sockets
+    engine = engines.get(key)
+    if engine is None:
+        engine = create_async_engine(
+            connection_string, pool_pre_ping=True, pool_size=_ENGINE_POOL_SIZE, max_overflow=-1
+        )
+        engines[key] = engine
+    return engine
+
+
+async def dispose_shared_engines() -> None:
+    """Dispose this process's shared engines for the running event loop.
+
+    The server calls this at shutdown, so pooled connections close cleanly
+    instead of waiting for the garbage collector.
+    """
+    engines = _ENGINES.pop(asyncio.get_running_loop(), {})
+    for key, engine in tuple(engines.items()):
+        if key[0] == os.getpid():
+            await engine.dispose()
+
 
 # Collection tables are always ``lf_`` + 24 lowercase hex chars derived from a
 # sha256 of the owner id + KB name (see ``collection_name``). The value is never
@@ -139,6 +196,55 @@ def _drop_table_sql(table: str) -> str:
 def _iter_documents_sql(table: str, *, include_embeddings: bool) -> str:
     columns = "id, document, cmetadata" + (", embedding" if include_embeddings else "")
     return f"SELECT {columns} FROM {_validate_table_name(table)}"  # noqa: S608 — table name validated above
+
+
+def _ddl_lock_key(table: str) -> int:
+    """Advisory-lock key that serializes DDL for one collection table.
+
+    Only concurrent bootstraps of the *same* table need to be serialized (two
+    ``CREATE TABLE IF NOT EXISTS`` of one name can race in the catalog), so each
+    table gets its own key and different collections never wait on each other.
+    """
+    digest = hashlib.sha256(f"langflow-kb-ddl:{_validate_table_name(table)}".encode()).digest()
+    return int.from_bytes(digest[:8], "big", signed=True)
+
+
+# One round trip that reports everything the bootstrap needs. ``to_regclass``
+# resolves names through ``search_path``, matching where the DDL creates them.
+_CATALOG_STATE_SQL = (
+    "SELECT "
+    "(SELECT extversion FROM pg_extension WHERE extname = 'vector') AS extversion, "
+    "(SELECT format_type(a.atttypid, a.atttypmod) FROM pg_attribute a "
+    "WHERE a.attrelid = to_regclass(:table) AND a.attname = 'embedding' "
+    "AND a.attnum > 0 AND NOT a.attisdropped) AS embedding_type, "
+    "to_regclass(:table) IS NOT NULL AS has_table, "
+    "to_regclass(:gin_index) IS NOT NULL AS has_gin_index, "
+    "to_regclass(:hnsw_index) IS NOT NULL AS has_hnsw_index"
+)
+
+
+@dataclass(frozen=True)
+class _CatalogState:
+    """What already exists for one collection table."""
+
+    extversion: str | None
+    has_table: bool
+    existing_dim: int | None
+    has_gin_index: bool
+    has_hnsw_index: bool
+
+
+def _is_stale_table_error(exc: BaseException) -> bool:
+    """True when a write failed because the table changed since it was verified.
+
+    ``42P01`` (undefined_table) means it was dropped; pgvector's
+    ``expected N dimensions`` means it was recreated for another model.
+    """
+    orig = getattr(exc, "orig", None)
+    sqlstate = getattr(orig, "sqlstate", None)
+    if sqlstate == "42P01":
+        return True
+    return bool(re.search(r"expected \d+ dimensions, not \d+", str(orig if orig is not None else exc)))
 
 
 def _parse_vector_dim(type_str: str | None) -> int | None:
@@ -341,7 +447,13 @@ class PostgresBackend(BaseVectorStoreBackend):
         return _validate_table_name(self.collection_name)
 
     def _ensure_async_engine(self):
-        """Lazily build the sidecar async engine used for count/scan/delete/ping."""
+        """Return the async engine used for writes, count/scan/delete and ping.
+
+        This is the process-wide engine for the running event loop and
+        connection string, so jobs reuse pooled connections instead of building
+        and disposing an engine each. Every caller is a coroutine, so a loop is
+        always running here.
+        """
         engine = getattr(self, "_pg_engine", None)
         if engine is not None:
             return engine
@@ -349,14 +461,20 @@ class PostgresBackend(BaseVectorStoreBackend):
         if not connection_string:
             msg = "PostgresBackend.ensure_ready() must be awaited before touching the database."
             raise RuntimeError(msg)
-        try:
-            from sqlalchemy.ext.asyncio import create_async_engine
-        except ImportError as exc:  # pragma: no cover
-            msg = "PostgresBackend requires SQLAlchemy async support (install the pgvector extra)."
-            raise RuntimeError(msg) from exc
-        engine = create_async_engine(connection_string, pool_pre_ping=True)
+        engine = _shared_engine(connection_string)
         self._pg_engine = engine
         return engine
+
+    async def _execute_write(self, statement: Any) -> None:
+        """Run one write statement on its own, without an explicit transaction.
+
+        A single statement is atomic in autocommit mode, and the database never
+        holds the connection idle in a transaction while the client is busy.
+        """
+        engine = self._ensure_async_engine()
+        async with engine.connect() as conn:
+            autocommit = await conn.execution_options(isolation_level="AUTOCOMMIT")
+            await autocommit.execute(statement)
 
     def _require_pgvector(self) -> None:
         """Raise a friendly RuntimeError when the optional pgvector extra is absent."""
@@ -391,29 +509,59 @@ class PostgresBackend(BaseVectorStoreBackend):
             Column("cmetadata", JSONB, nullable=True),
         )
 
-    async def _existing_embedding_dim(self, conn: AsyncConnection) -> int | None:
-        """Return the dimension of an existing collection table, or None if absent."""
+    def _ready_key(self, dim: int) -> tuple[str, str, int]:
+        return (getattr(self, "_resolved_connection_string", "") or "", self.table_name, int(dim))
+
+    def _forget_ready_table(self) -> None:
+        """Drop every memo entry for this collection table (any dimension)."""
+        connection_string = getattr(self, "_resolved_connection_string", "") or ""
+        table = self.table_name
+        for key in [key for key in _READY_TABLES if key[0] == connection_string and key[1] == table]:
+            _READY_TABLES.discard(key)
+
+    async def _catalog_state(self, conn: AsyncConnection) -> _CatalogState:
+        """Read the extension, table, column type and both indexes in one query."""
         from sqlalchemy import text
 
-        # Resolve the relation with ``to_regclass`` (search_path-aware) so this
-        # agrees with ``_table_exists``; a bare ``pg_class.relname`` match could
-        # pick a same-named table in a different schema.
-        type_str = await conn.scalar(
-            text(
-                "SELECT format_type(a.atttypid, a.atttypmod) "
-                "FROM pg_attribute a "
-                "WHERE a.attrelid = to_regclass(:name) AND a.attname = 'embedding' "
-                "AND a.attnum > 0 AND NOT a.attisdropped"
-            ),
-            {"name": self.table_name},
+        table = self.table_name
+        row = (
+            await conn.execute(
+                text(_CATALOG_STATE_SQL),
+                {"table": table, "gin_index": f"{table}_cmeta_gin", "hnsw_index": f"{table}_hnsw"},
+            )
+        ).one()
+        return _CatalogState(
+            extversion=row.extversion,
+            has_table=bool(row.has_table),
+            existing_dim=_parse_vector_dim(row.embedding_type),
+            has_gin_index=bool(row.has_gin_index),
+            has_hnsw_index=bool(row.has_hnsw_index),
         )
-        return _parse_vector_dim(type_str)
+
+    def _check_catalog_state(self, state: _CatalogState, dim: int) -> bool:
+        """Raise on an unusable database or table; return True when nothing is missing."""
+        # Operator owns the extension; Langflow verifies, never creates it.
+        if not state.extversion:
+            raise BackendConfigurationError(MISSING_EXTENSION_MESSAGE)
+        # ``CREATE TABLE IF NOT EXISTS`` never alters an existing table, so a
+        # model whose dimension differs from the one this KB was created with
+        # would fail obscurely on INSERT. Surface it clearly instead.
+        if state.has_table and state.existing_dim is not None and state.existing_dim != dim:
+            raise BackendConfigurationError(
+                _dimension_mismatch_message(self.kb_name, existing_dim=state.existing_dim, model_dim=dim)
+            )
+        return state.has_table and state.has_gin_index and (state.has_hnsw_index or dim > _HNSW_MAX_DIM)
 
     async def _ensure_embedding_table(self, dim: int) -> None:
-        """Create this collection's typed, indexed table (idempotent).
+        """Make sure this collection's typed, indexed table exists (idempotent).
 
-        Runs under a database-wide advisory lock so concurrent first-ingests of
-        the same (or different) collections don't race the DDL. The HNSW and GIN
+        Once a process has verified a (table, dimension) it skips the database
+        entirely. Otherwise one lock-free catalog query checks the table, its
+        column type and both indexes; only when something is missing does it
+        take this table's advisory lock, re-check, and create what is missing.
+        ``CREATE INDEX IF NOT EXISTS`` takes a SHARE lock on the table before it
+        checks for the index, so it would wait for in-flight inserts; it is
+        therefore only issued for an index that does not exist. The HNSW and GIN
         indexes are built at creation time while the table is empty, which is
         cheap and avoids ``CREATE INDEX CONCURRENTLY``'s no-transaction rule.
 
@@ -428,44 +576,48 @@ class PostgresBackend(BaseVectorStoreBackend):
             raise ValueError(msg)
         table = self.table_name
         self._require_pgvector()
+        ready_key = self._ready_key(dim)
+        if ready_key in _READY_TABLES:
+            return
         from sqlalchemy import text
 
         engine = self._ensure_async_engine()
+        async with engine.connect() as conn:
+            if self._check_catalog_state(await self._catalog_state(conn), dim):
+                _READY_TABLES.add(ready_key)
+                return
+
         async with engine.begin() as conn:
-            await conn.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _ADVISORY_LOCK_KEY})
-            # Operator owns the extension; Langflow verifies, never creates it.
-            if not await self._vector_extension_installed(conn):
-                raise BackendConfigurationError(MISSING_EXTENSION_MESSAGE)
-            await conn.execute(
-                text(
-                    f'CREATE TABLE IF NOT EXISTS "{table}" ('
-                    "id VARCHAR PRIMARY KEY, "
-                    f"embedding vector({dim}), "
-                    "document VARCHAR, "
-                    "cmetadata JSONB)"
-                )
-            )
-            # ``CREATE TABLE IF NOT EXISTS`` never alters an existing table, so a
-            # model whose dimension differs from the one this KB was created with
-            # would fail obscurely on INSERT. Surface it clearly instead.
-            existing_dim = await self._existing_embedding_dim(conn)
-            if existing_dim is not None and existing_dim != dim:
-                raise BackendConfigurationError(
-                    _dimension_mismatch_message(self.kb_name, existing_dim=existing_dim, model_dim=dim)
-                )
-            await conn.execute(
-                text(
-                    f'CREATE INDEX IF NOT EXISTS "{table}_cmeta_gin" ON "{table}" USING gin (cmetadata jsonb_path_ops)'
-                )
-            )
-            if dim <= _HNSW_MAX_DIM:
+            await conn.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _ddl_lock_key(table)})
+            # Another process may have finished the bootstrap while we waited.
+            state = await self._catalog_state(conn)
+            self._check_catalog_state(state, dim)
+            if not state.has_table:
                 await conn.execute(
                     text(
-                        f'CREATE INDEX IF NOT EXISTS "{table}_hnsw" ON "{table}" '
-                        "USING hnsw (embedding vector_cosine_ops)"
+                        f'CREATE TABLE IF NOT EXISTS "{table}" ('
+                        "id VARCHAR PRIMARY KEY, "
+                        f"embedding vector({dim}), "
+                        "document VARCHAR, "
+                        "cmetadata JSONB)"
                     )
                 )
-            else:
+            if not state.has_gin_index:
+                await conn.execute(
+                    text(
+                        f'CREATE INDEX IF NOT EXISTS "{table}_cmeta_gin" ON "{table}" '
+                        "USING gin (cmetadata jsonb_path_ops)"
+                    )
+                )
+            if dim <= _HNSW_MAX_DIM:
+                if not state.has_hnsw_index:
+                    await conn.execute(
+                        text(
+                            f'CREATE INDEX IF NOT EXISTS "{table}_hnsw" ON "{table}" '
+                            "USING hnsw (embedding vector_cosine_ops)"
+                        )
+                    )
+            elif not state.has_table:
                 await logger.awarning(
                     "pgvector cannot HNSW-index %d-dimensional embeddings (max %d) for %s; "
                     "similarity search will use an exact scan.",
@@ -473,16 +625,13 @@ class PostgresBackend(BaseVectorStoreBackend):
                     _HNSW_MAX_DIM,
                     self.kb_name,
                 )
+        _READY_TABLES.add(ready_key)
 
     async def _table_exists(self, conn: AsyncConnection) -> bool:
         """Check whether the configured PostgreSQL vector table exists."""
         from sqlalchemy import text
 
         return (await conn.scalar(text("SELECT to_regclass(:name)"), {"name": self.table_name})) is not None
-
-    async def _vector_extension_installed(self, conn: AsyncConnection) -> bool:
-        """Return True iff the pgvector ``vector`` extension exists on this database."""
-        return bool(await self._pgvector_extversion(conn))
 
     async def _pgvector_extversion(self, conn: AsyncConnection) -> str | None:
         """Return the installed pgvector ``extversion`` (e.g. ``"0.8.0"``) or None."""
@@ -575,35 +724,41 @@ class PostgresBackend(BaseVectorStoreBackend):
     ) -> None:
         """Upsert rows keyed by id. Shared by the embedding and precomputed-vector writes."""
         # The embedding dimension is only knowable once we have real vectors, so
-        # the typed, indexed table is provisioned lazily on first write. Memoize
-        # per (backend instance, dimension): a large ingest batches through one
-        # backend, and re-running the advisory-lock + extension + DDL probes on
-        # every batch would serialize all collections deployment-wide (the lock
-        # key is one constant) for no benefit once the table is known ready.
+        # the typed, indexed table is provisioned lazily on first write. After
+        # the first verification this process skips the catalog entirely.
         dim = len(vectors[0])
-        if getattr(self, "_table_ready_dim", None) != dim:
-            await self._ensure_embedding_table(dim)
-            self._table_ready_dim = dim
+        await self._ensure_embedding_table(dim)
 
         embedding = self._embedding_table()
         from sqlalchemy.dialects.postgresql import insert
 
-        engine = self._ensure_async_engine()
-        async with engine.begin() as conn:
-            rows = [
-                {"id": row_id, "embedding": vector, "document": content, "cmetadata": metadata}
-                for row_id, content, metadata, vector in zip(ids, contents, metadatas, vectors, strict=True)
-            ]
-            statement = insert(embedding).values(rows)
-            statement = statement.on_conflict_do_update(
-                index_elements=[embedding.c.id],
-                set_={
-                    "embedding": statement.excluded.embedding,
-                    "document": statement.excluded.document,
-                    "cmetadata": statement.excluded.cmetadata,
-                },
-            )
-            await conn.execute(statement)
+        rows = [
+            {"id": row_id, "embedding": vector, "document": content, "cmetadata": metadata}
+            for row_id, content, metadata, vector in zip(ids, contents, metadatas, vectors, strict=True)
+        ]
+        statement = insert(embedding).values(rows)
+        statement = statement.on_conflict_do_update(
+            index_elements=[embedding.c.id],
+            set_={
+                "embedding": statement.excluded.embedding,
+                "document": statement.excluded.document,
+                "cmetadata": statement.excluded.cmetadata,
+            },
+        )
+
+        try:
+            # Autocommit is safe here: the upsert is one statement, so it is atomic on its own.
+            # A write that needs several statements to apply together must use a transaction.
+            await self._execute_write(statement)
+        except Exception as exc:
+            # The memo can be stale when another process dropped the table or
+            # recreated it for another model. Re-verify (which recreates a
+            # missing table or reports the dimension change) and retry once.
+            if not _is_stale_table_error(exc):
+                raise
+            self._forget_ready_table()
+            await self._ensure_embedding_table(dim)
+            await self._execute_write(statement)
 
     async def _similarity_search(
         self,
@@ -758,6 +913,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         try:
             async with engine.begin() as conn:  # drops the table + its indexes
                 await conn.execute(text(_drop_table_sql(self.table_name)))
+            self._forget_ready_table()
         except Exception as exc:
             await logger.awarning("Postgres delete_collection failed for %s: %s", self.kb_name, exc)
             raise
@@ -823,14 +979,10 @@ class PostgresBackend(BaseVectorStoreBackend):
         )
 
     async def teardown(self) -> None:
-        """Dispose PostgreSQL resources and clear cached table provisioning state."""
-        engine = getattr(self, "_pg_engine", None)
-        if engine is not None:
-            try:
-                await engine.dispose()
-            except Exception as exc:  # noqa: BLE001
-                await logger.awarning("Postgres engine.dispose failed for %s: %s", self.kb_name, exc)
+        """Release this backend's engine reference and drop its vector-store facade.
+
+        The engine is shared by every backend on this event loop, so it stays
+        open; ``dispose_shared_engines`` closes the pools at shutdown.
+        """
         self._pg_engine = None
         self._vector_store = None
-        # Drop the bootstrap memo: a reused instance must re-verify its table.
-        self._table_ready_dim = None
