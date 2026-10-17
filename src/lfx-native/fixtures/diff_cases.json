@@ -455,7 +455,7 @@
       ]
     },
     {
-      "name": "an edge's handles change in place, both forms together",
+      "name": "an edge whose handles change is deleted and added again",
       "base": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -490,23 +490,25 @@
         ]
       },
       "operations": [
+        {"type": "delete_edges", "ids": ["e"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e", "path": ["targetHandle"], "op": "set_field", "value": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ,œinputTypesœ:[œDataœ]}"},
+          "type": "add_edges",
+          "edges": [
             {
               "id": "e",
-              "path": ["data"],
-              "op": "set_field",
-              "value": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str", "inputTypes": ["Data"]}}
-            },
-            {"id": "e", "path": ["type"], "op": "set_field", "value": "x"}
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ,œinputTypesœ:[œDataœ]}",
+              "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str", "inputTypes": ["Data"]}},
+              "type": "x"
+            }
           ]
         }
       ]
     },
     {
-      "name": "an edge key that disappears is deleted",
+      "name": "an edge that loses a key is deleted and added again",
       "base": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -540,7 +542,22 @@
           }
         ]
       },
-      "operations": [{"type": "update_edges", "updates": [{"id": "e", "path": ["style"], "op": "delete_field"}]}]
+      "operations": [
+        {"type": "delete_edges", "ids": ["e"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œtypeœ:œstrœ}",
+              "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b", "type": "str"}}
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "an edge reconnected to another node is deleted and added",

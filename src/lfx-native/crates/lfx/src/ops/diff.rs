@@ -12,7 +12,7 @@
 //! record the same history:
 //!
 //! - at most one operation of each type, in the order `delete_edges`,
-//!   `delete_nodes`, `add_nodes`, `update_nodes`, `update_edges`, `add_edges`,
+//!   `delete_nodes`, `add_nodes`, `update_nodes`, `add_edges`,
 //!   `update_metadata`, each listing every item it applies to: deletions in
 //!   the order the stored graph lists them, everything else in the order the
 //!   target lists it. Nothing is sorted;
@@ -29,8 +29,7 @@
 //!   selector, and per key inside an item. A natural-key list whose order
 //!   changed, and a table that is not keyed by row ids on both sides, is
 //!   written whole;
-//! - an edge that still connects the same two nodes is updated in place, key
-//!   by key; one whose source or target changed is deleted and added again;
+//! - an edge that changed in any way is deleted and added again;
 //! - view state is never recorded, and two spellings of one handle are not a
 //!   change.
 
@@ -40,13 +39,13 @@ use indexmap::IndexMap;
 use serde_json::{Map, Value};
 
 use crate::ops::apply::{ApplyOptions, apply_flow_operations};
-use crate::ops::canonical::{
-    HANDLE_KEYS, graphs_equal, is_row_position, json_type, parse_handle, values_equal,
-};
+use crate::ops::canonical::{JsonType, graphs_equal, is_row_position, values_equal};
+use crate::ops::edges::edge_changed;
+use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result};
-use crate::ops::ops::{Change, FieldUpdate, Operation, Path, Segment};
-use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA};
-use crate::ops::validate::validate_flow_data;
+use crate::ops::ops::{Change, FieldUpdate, Operation, Path, PathExt, Segment};
+use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
+use crate::ops::validate::{Numbers, validate_flow_data};
 
 /// The keys of a template field that decide whether its value is a secret,
 /// recorded with every write inside the field.
@@ -58,10 +57,6 @@ pub const TEMPLATE_FIELD_METADATA_KEYS: [&str; 6] = [
     "_input_type",
     "table_schema",
 ];
-
-const TEMPLATE_PATH: [&str; 3] = ["data", "node", "template"];
-const OUTPUTS_PATH: [&str; 3] = ["data", "node", "outputs"];
-const EDGE_IDENTITY_KEYS: [&str; 3] = ["id", "source", "target"];
 
 /// Operations that turn one graph into another, verified by replay.
 #[derive(Debug, Clone, PartialEq)]
@@ -83,33 +78,30 @@ pub struct Derived {
 ///
 /// A graph breaks the rules.
 pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
-    validate_flow_data(base, false, "flow.data", None)?;
-    validate_flow_data(target, true, "target flow.data", None)?;
+    validate_flow_data(base, Numbers::Skip, "flow.data", None)?;
+    validate_flow_data(target, Numbers::Check, "target flow.data", None)?;
 
     let base_nodes = by_id(base, "nodes");
     let target_nodes = by_id(target, "nodes");
     let base_edges = by_id(base, "edges");
     let target_edges = by_id(target, "edges");
 
-    let ends =
-        |edge: &Map<String, Value>| (edge.get("source").cloned(), edge.get("target").cloned());
-    let reconnected: HashSet<&str> = target_edges
-        .iter()
-        .filter(|(id, edge)| {
-            base_edges
-                .get(*id)
-                .is_some_and(|before| ends(before) != ends(edge))
-        })
-        .map(|(id, _)| *id)
-        .collect();
+    let mut changed_edges = HashSet::new();
+    for (id, edge) in &target_edges {
+        if let Some(before) = base_edges.get(id)
+            && edge_changed(before, edge)?
+        {
+            changed_edges.insert(*id);
+        }
+    }
     let deleted_edges: Vec<String> = base_edges
         .keys()
-        .filter(|id| !target_edges.contains_key(*id) || reconnected.contains(*id))
+        .filter(|id| !target_edges.contains_key(*id) || changed_edges.contains(*id))
         .map(|id| (*id).to_owned())
         .collect();
     let added_edges: Vec<Map<String, Value>> = target_edges
         .iter()
-        .filter(|(id, _)| !base_edges.contains_key(*id) || reconnected.contains(*id))
+        .filter(|(id, _)| !base_edges.contains_key(*id) || changed_edges.contains(*id))
         .map(|(_, edge)| without(edge, |key| NODE_SCHEMA.edge_view_state.contains(key)))
         .collect();
     let deleted_nodes: Vec<String> = base_nodes
@@ -129,14 +121,6 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
             NodeDiff::new(id, node, &mut node_updates).object(before, node, &[])?;
         }
     }
-    let mut edge_updates = Vec::new();
-    for (id, edge) in &target_edges {
-        if let Some(before) = base_edges.get(id)
-            && !reconnected.contains(id)
-        {
-            diff_edge(id, before, edge, &mut edge_updates)?;
-        }
-    }
 
     let mut operations = Vec::new();
     if !deleted_edges.is_empty() {
@@ -150,9 +134,6 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
     }
     if !node_updates.is_empty() {
         operations.push(Operation::UpdateNodes(node_updates));
-    }
-    if !edge_updates.is_empty() {
-        operations.push(Operation::UpdateEdges(edge_updates));
     }
     if !added_edges.is_empty() {
         operations.push(Operation::AddEdges(added_edges));
@@ -209,21 +190,6 @@ fn without(map: &Map<String, Value>, hidden: impl Fn(&str) -> bool) -> Map<Strin
         .collect()
 }
 
-fn key_path(path: &[Segment], key: &str) -> Path {
-    path.iter()
-        .cloned()
-        .chain([Segment::Key(key.to_owned())])
-        .collect()
-}
-
-fn is_path(path: &[Segment], expected: &[&str]) -> bool {
-    path.len() == expected.len()
-        && path
-            .iter()
-            .zip(expected)
-            .all(|(segment, key)| segment.as_key() == Some(*key))
-}
-
 /// A `set_field` of `value`, declaring a type change from `previous`.
 fn set(
     id: &str,
@@ -233,8 +199,8 @@ fn set(
     template_field: Option<Map<String, Value>>,
 ) -> FieldUpdate {
     let from_type = previous
-        .filter(|previous| json_type(previous) != json_type(value))
-        .map(json_type);
+        .filter(|previous| JsonType::from(*previous) != JsonType::from(value))
+        .map(JsonType::from);
     FieldUpdate {
         id: id.to_owned(),
         path,
@@ -247,55 +213,10 @@ fn set(
     }
 }
 
-// --- Edges ---------------------------------------------------------------------------
-
-fn diff_edge(
-    id: &str,
-    base: &Map<String, Value>,
-    target: &Map<String, Value>,
-    updates: &mut Vec<FieldUpdate>,
-) -> Result<()> {
-    let skip =
-        |key: &str| EDGE_IDENTITY_KEYS.contains(&key) || NODE_SCHEMA.edge_view_state.contains(key);
-    for (key, value) in target {
-        if skip(key) {
-            continue;
-        }
-        let Some(previous) = base.get(key) else {
-            updates.push(set(id, vec![Segment::Key(key.clone())], value, None, None));
-            continue;
-        };
-        let unchanged = if HANDLE_KEYS.contains(&key.as_str()) {
-            values_equal(&handle_value(previous), &handle_value(value))?
-        } else {
-            values_equal(previous, value)?
-        };
-        if !unchanged {
-            updates.push(set(
-                id,
-                vec![Segment::Key(key.clone())],
-                value,
-                Some(previous),
-                None,
-            ));
-        }
-    }
-    for key in base.keys() {
-        if !target.contains_key(key) && !skip(key) {
-            updates.push(FieldUpdate::delete(id, vec![Segment::Key(key.clone())]));
-        }
-    }
-    Ok(())
-}
-
-/// A handle string compares by the object it encodes, so two spellings of one handle are the same value.
-fn handle_value(handle: &Value) -> Value {
-    parse_handle(handle).map_or_else(|| handle.clone(), Value::Object)
-}
-
 // --- Nodes ---------------------------------------------------------------------------
 
 /// The writes that turn one node into another.
+#[derive(Debug)]
 struct NodeDiff<'a> {
     id: &'a str,
     /// The target node's template, whose fields' metadata writes inside a field record.
@@ -305,11 +226,7 @@ struct NodeDiff<'a> {
 
 impl<'a> NodeDiff<'a> {
     fn new(id: &'a str, target: &'a Map<String, Value>, updates: &'a mut Vec<FieldUpdate>) -> Self {
-        let template = target
-            .get("data")
-            .and_then(|data| data.get("node"))
-            .and_then(|node| node.get("template"))
-            .and_then(Value::as_object);
+        let template = target.template();
         Self {
             id,
             template,
@@ -324,7 +241,7 @@ impl<'a> NodeDiff<'a> {
     /// so only writes strictly inside one field need it recorded.
     fn field_metadata(&self, path: &[Segment]) -> Option<Map<String, Value>> {
         let depth = TEMPLATE_PATH.len();
-        if path.len() <= depth + 1 || !is_path(&path[..depth], &TEMPLATE_PATH) {
+        if path.len() <= depth + 1 || !path.starts_with_keys(&TEMPLATE_PATH) {
             return None;
         }
         let field = self.template?.get(path[depth].as_key()?)?.as_object()?;
@@ -349,9 +266,9 @@ impl<'a> NodeDiff<'a> {
     fn skipped(path: &[Segment], key: &str) -> bool {
         if path.is_empty() {
             key == "id" || NODE_SCHEMA.node_view_state.contains(key)
-        } else if is_path(path, &["data", "node"]) {
+        } else if path.is_keys(&["data", "node"]) {
             NODE_SCHEMA.node_data_view_state.contains(key)
-        } else if is_path(path, &TEMPLATE_PATH) {
+        } else if path.is_keys(&TEMPLATE_PATH) {
             NODE_SCHEMA.template_view_state.contains(key)
         } else {
             false
@@ -369,12 +286,12 @@ impl<'a> NodeDiff<'a> {
             if Self::skipped(path, key) {
                 continue;
             }
-            let child_path = key_path(path, key);
+            let child_path = path.child(key);
             let Some(previous) = base.get(key) else {
                 self.set(child_path, value, None);
                 continue;
             };
-            if self.child(previous, value, &child_path)? {
+            if self.split(previous, value, &child_path)? {
                 continue;
             }
             if !values_equal(previous, value)? {
@@ -383,21 +300,18 @@ impl<'a> NodeDiff<'a> {
         }
         for key in base.keys() {
             if !target.contains_key(key) && !Self::skipped(path, key) {
-                self.delete(key_path(path, key));
+                self.delete(path.child(key));
             }
         }
         Ok(())
     }
 
     /// Diff a value the schema splits further. Returns false when it is written whole.
-    fn child(&mut self, base: &Value, target: &Value, path: &[Segment]) -> Result<bool> {
-        let recursed = NODE_SCHEMA.recursed_paths.iter().any(|recursed| {
-            path.len() == recursed.len()
-                && path
-                    .iter()
-                    .zip(recursed)
-                    .all(|(a, b)| a.as_key() == Some(b))
-        });
+    fn split(&mut self, base: &Value, target: &Value, path: &[Segment]) -> Result<bool> {
+        let recursed = NODE_SCHEMA
+            .recursed_paths
+            .iter()
+            .any(|recursed| path.is_keys(recursed));
         if recursed {
             // Validation keeps the node's data, data.node and template objects.
             if let (Value::Object(base), Value::Object(target)) = (base, target) {
@@ -406,12 +320,10 @@ impl<'a> NodeDiff<'a> {
             }
             return Ok(false);
         }
-        if path.len() == TEMPLATE_PATH.len() + 1
-            && is_path(&path[..TEMPLATE_PATH.len()], &TEMPLATE_PATH)
-        {
+        if path.len() == TEMPLATE_PATH.len() + 1 && path.starts_with_keys(&TEMPLATE_PATH) {
             return self.field(base, target, path);
         }
-        if is_path(path, &OUTPUTS_PATH) {
+        if path.is_keys(&OUTPUTS_PATH) {
             let keyed = NODE_SCHEMA
                 .keyed_list_at(&Value::Null, &OUTPUTS_PATH)
                 .ok_or_else(|| Error::invalid("node_schema.json declares no outputs list"))?;
@@ -439,35 +351,11 @@ impl<'a> NodeDiff<'a> {
 
     /// Diff a template field unit by unit. Returns false for a key that is not a field.
     fn field(&mut self, base: &Value, target: &Value, path: &[Segment]) -> Result<bool> {
-        let (Value::Object(base), Value::Object(target_field)) = (base, target) else {
+        let (Value::Object(base_field), Value::Object(target_field)) = (base, target) else {
             return Ok(false);
         };
-        let hidden = |key: &str| NODE_SCHEMA.field_view_state.contains(key);
-        let base: IndexMap<&str, &Value> = base
-            .iter()
-            .filter(|(key, _)| !hidden(key))
-            .map(|(k, v)| (k.as_str(), v))
-            .collect();
-        let target: IndexMap<&str, &Value> = target_field
-            .iter()
-            .filter(|(key, _)| !hidden(key))
-            .map(|(k, v)| (k.as_str(), v))
-            .collect();
-        let changed = |key: &str| -> Result<bool> {
-            Ok(match (base.get(key), target.get(key)) {
-                (Some(a), Some(b)) => !values_equal(a, b)?,
-                (None, None) => false,
-                _ => true,
-            })
-        };
-        let any_changed = |keys: &mut dyn Iterator<Item = &str>| -> Result<bool> {
-            for key in keys {
-                if changed(key)? {
-                    return Ok(true);
-                }
-            }
-            Ok(false)
-        };
+        let base = visible_field_keys(base_field);
+        let target = visible_field_keys(target_field);
         let all_keys: Vec<&str> = base
             .keys()
             .chain(target.keys().filter(|key| !base.contains_key(*key)))
@@ -475,24 +363,27 @@ impl<'a> NodeDiff<'a> {
             .collect();
         let in_value = |key: &str| NODE_SCHEMA.value_unit.iter().any(|unit| unit == key);
         let is_toggle = |key: &str| NODE_SCHEMA.toggles.iter().any(|toggle| toggle == key);
-
         let mut written: HashSet<&str> = HashSet::new();
+
+        // The definition is every key outside the value and the toggles, written together.
         let definition: Vec<&str> = all_keys
             .iter()
             .copied()
             .filter(|key| !in_value(key) && !is_toggle(key))
             .collect();
-        if any_changed(&mut definition.iter().copied())? {
+        if any_changed(&base, &target, &definition)? {
             written.extend(&definition);
         }
-        for key in all_keys.iter().copied().filter(|key| is_toggle(key)) {
-            if changed(key)? {
+        // Each toggle is a unit of its own.
+        for &key in all_keys.iter().filter(|key| is_toggle(key)) {
+            if key_changed(&base, &target, key)? {
                 written.insert(key);
             }
         }
-
+        // The value is `value` with the keys that qualify it. A keyed list
+        // value is written item by item instead, when both sides allow it.
         let field_name = path[TEMPLATE_PATH.len()].as_key().unwrap_or_default();
-        let value_path = key_path(path, "value");
+        let value_path = path.child("value");
         let keyed = NODE_SCHEMA.field_value_list(field_name, target_field);
         let mut item_writes = Vec::new();
         let per_item = match (keyed, base.get("value"), target.get("value")) {
@@ -510,10 +401,11 @@ impl<'a> NodeDiff<'a> {
             .copied()
             .filter(|key| in_value(key) && !(per_item && *key == "value"))
             .collect();
-        if any_changed(&mut value_keys.iter().copied())? {
+        if any_changed(&base, &target, &value_keys)? {
             written.extend(&value_keys);
         }
 
+        // Write in the target's key order, the item writes where `value` stands.
         let mut item_writes = Some(item_writes);
         for (key, value) in &target {
             if *key == "value" && per_item {
@@ -521,19 +413,56 @@ impl<'a> NodeDiff<'a> {
                     self.write_all(writes);
                 }
             } else if written.contains(key) {
-                self.set(key_path(path, key), value, base.get(key).copied());
+                self.set(path.child(key), value, base.get(key).copied());
             }
         }
         for key in base.keys() {
             if !target.contains_key(key) && written.contains(key) {
-                self.delete(key_path(path, key));
+                self.delete(path.child(key));
             }
         }
         Ok(true)
     }
 }
 
+/// A template field's keys and values, without its display-only keys.
+fn visible_field_keys(field: &Map<String, Value>) -> IndexMap<&str, &Value> {
+    field
+        .iter()
+        .filter(|(key, _)| !NODE_SCHEMA.field_view_state.contains(key.as_str()))
+        .map(|(key, value)| (key.as_str(), value))
+        .collect()
+}
+
+/// Whether `key` is added, removed or changed between two fields.
+fn key_changed(
+    base: &IndexMap<&str, &Value>,
+    target: &IndexMap<&str, &Value>,
+    key: &str,
+) -> Result<bool> {
+    Ok(match (base.get(key), target.get(key)) {
+        (Some(before), Some(after)) => !values_equal(before, after)?,
+        (None, None) => false,
+        _ => true,
+    })
+}
+
+/// Whether any of `keys` is added, removed or changed between two fields.
+fn any_changed(
+    base: &IndexMap<&str, &Value>,
+    target: &IndexMap<&str, &Value>,
+    keys: &[&str],
+) -> Result<bool> {
+    for key in keys {
+        if key_changed(base, target, key)? {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 /// One write the keyed-list diff found, before the node diff records it.
+#[derive(Debug)]
 enum Write<'v> {
     Set {
         path: Path,
@@ -595,7 +524,7 @@ fn keyed_list<'v>(
             };
             if !unchanged {
                 writes.push(Write::Set {
-                    path: key_path(&item_path(key), item_key),
+                    path: item_path(key).child(item_key),
                     value,
                     previous: before,
                 });
@@ -604,7 +533,7 @@ fn keyed_list<'v>(
         for item_key in previous.keys() {
             if !item_map.contains_key(item_key) {
                 writes.push(Write::Delete {
-                    path: key_path(&item_path(key), item_key),
+                    path: item_path(key).child(item_key),
                 });
             }
         }
@@ -635,10 +564,8 @@ fn items_by_key<'v>(keyed: &KeyedList, items: &'v Value) -> Option<IndexMap<&'v 
         if by_key.contains_key(key) {
             return None;
         }
-        if keyed.kind == ListKind::Table
-            && !map
-                .get(keyed.position.as_deref()?)
-                .is_some_and(is_row_position)
+        if let Some(position) = keyed.position.as_deref()
+            && !map.get(position).is_some_and(is_row_position)
         {
             return None;
         }

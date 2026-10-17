@@ -80,13 +80,13 @@ impl fmt::Display for ErrorCode {
 
 /// An engine error: its kind, its code, a message without graph values, and
 /// for an edge rule the edge that broke it.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Error {
-    /// What went wrong.
+    /// Who can fix it.
     pub kind: ErrorKind,
-    /// The stable code.
+    /// The code clients match on; it does not change between releases.
     pub code: ErrorCode,
-    /// What went wrong, for people.
+    /// What went wrong, for people. It holds no graph values.
     pub message: String,
     /// The edge that broke an edge rule. Checking one edge can find another
     /// one broken, so it is not always the edge being checked.
@@ -97,6 +97,22 @@ pub struct Error {
 
 /// The engine's result type.
 pub type Result<T, E = Error> = std::result::Result<T, E>;
+
+/// An invalid-operation [`Error`] with a `format!` message.
+macro_rules! invalid {
+    ($($message:tt)+) => {
+        $crate::ops::error::Error::invalid(format!($($message)+))
+    };
+}
+
+/// Return an invalid-operation [`Error`] with a `format!` message.
+macro_rules! bail {
+    ($($message:tt)+) => {
+        return Err($crate::ops::error::invalid!($($message)+))
+    };
+}
+
+pub(crate) use {bail, invalid};
 
 impl Error {
     /// A malformed operation, or one that breaks a graph rule.
@@ -143,6 +159,29 @@ impl Error {
         }
     }
 
+    /// A graph that is not a graph at all, such as text that is not JSON.
+    pub fn graph_message(message: impl Into<String>) -> Self {
+        Self::graph(message, Vec::new())
+    }
+
+    /// A restore fix that addresses no violation the restore would hit.
+    pub fn restore_not_allowed(message: impl Into<String>) -> Self {
+        Self {
+            kind: ErrorKind::RestoreFixNotAllowed,
+            ..Self::invalid_with(ErrorCode::RestoreFixNotAllowed, message)
+        }
+    }
+
+    /// A restore fix the engine cannot apply. It keeps the engine's code.
+    #[must_use]
+    pub fn restore_fix_failed(error: Self) -> Self {
+        Self {
+            kind: ErrorKind::RestoreFixNotAllowed,
+            message: format!("A fix cannot be applied: {}", error.message),
+            ..error
+        }
+    }
+
     /// Derived operations that do not replay to their target.
     pub fn replay(message: impl Into<String>) -> Self {
         Self {
@@ -153,9 +192,8 @@ impl Error {
 
     /// A value that is not a valid JSON number as JavaScript reads it.
     pub(crate) fn non_finite() -> Self {
-        Self::graph(
+        Self::graph_message(
             "NaN, Infinity and integers too large for a double are not valid JSON numbers",
-            Vec::new(),
         )
     }
 }

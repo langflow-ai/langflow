@@ -30,12 +30,13 @@
 //! Decoding validates all of it; a row that does not match is corruption.
 
 use std::collections::{BTreeSet, HashSet};
-use std::fmt;
+use std::{fmt, io};
 
 use serde_json::{Map, Value};
 
-use crate::ops::error::{Error, Result};
-use crate::ops::ops::Operation;
+use crate::ops::canonical::{as_double, is_integer_text};
+use crate::ops::error::{Result, bail};
+use crate::ops::ops::{FieldUpdate, Operation};
 
 /// The envelope version this engine reads and writes.
 pub const ENVELOPE_VERSION: u64 = 1;
@@ -84,12 +85,19 @@ impl Damage {
     }
 }
 
+impl fmt::Display for Damage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Damage found in a stored history, and the revision it was found at.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Corruption {
-    /// What is damaged.
+    #[expect(missing_docs, reason = "the type says what it is")]
     pub damage: Damage,
-    /// Where.
+    /// The revision replay found the damage at; `None` when the damage is
+    /// not tied to one revision.
     pub revision: Option<u64>,
 }
 
@@ -108,9 +116,9 @@ impl fmt::Display for Corruption {
             Some(revision) => write!(
                 f,
                 "history is damaged at revision {revision}: {}",
-                self.damage.as_str()
+                self.damage
             ),
-            None => write!(f, "history is damaged: {}", self.damage.as_str()),
+            None => write!(f, "history is damaged: {}", self.damage),
         }
     }
 }
@@ -135,23 +143,32 @@ pub struct RecordedOperation {
 impl RecordedOperation {
     /// The operation's element inside its request's batch.
     #[must_use]
-    pub fn to_json(&self) -> Value {
+    pub fn to_value(&self) -> Value {
         let mut element = Map::new();
         element.insert("revision".into(), Value::from(self.revision));
         if let Some(cause) = &self.cause {
             element.insert("cause".into(), Value::from(cause.as_str()));
         }
-        element.insert("operation".into(), self.operation.to_json());
+        element.insert("operation".into(), self.operation.to_value());
         Value::Object(element)
     }
 }
 
+/// The request a batch comes from, and the authenticated user who sent it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Request<'a> {
+    /// The request, as a UUID.
+    pub request_id: &'a str,
+    /// The authenticated user, as a UUID.
+    pub actor_user_id: &'a str,
+}
+
 /// An empty batch for one request.
 #[must_use]
-pub fn batch_header(request_id: &str, actor_user_id: &str) -> Value {
+pub fn batch_header(request: Request<'_>) -> Value {
     let mut batch = Map::new();
-    batch.insert("request_id".into(), Value::from(request_id));
-    batch.insert("actor_user_id".into(), Value::from(actor_user_id));
+    batch.insert("request_id".into(), Value::from(request.request_id));
+    batch.insert("actor_user_id".into(), Value::from(request.actor_user_id));
     batch.insert("operations".into(), Value::Array(Vec::new()));
     Value::Object(batch)
 }
@@ -162,36 +179,34 @@ pub fn batch_header(request_id: &str, actor_user_id: &str) -> Value {
 ///
 /// A request's operations name two actors.
 pub fn encode_envelope(operations: &[RecordedOperation]) -> Result<Value> {
-    let mut batches: Vec<Value> = Vec::new();
-    for operation in operations {
-        let same_request = batches
-            .last()
-            .is_some_and(|batch| batch["request_id"] == operation.request_id.as_str());
-        if !same_request {
-            batches.push(batch_header(
-                &operation.request_id,
-                &operation.actor_user_id,
-            ));
-        } else if batches
-            .last()
-            .is_some_and(|batch| batch["actor_user_id"] != operation.actor_user_id.as_str())
+    let mut batches = Vec::new();
+    for request in by_request(operations) {
+        let first = &request[0];
+        if request
+            .iter()
+            .any(|operation| operation.actor_user_id != first.actor_user_id)
         {
-            return Err(Error::invalid(format!(
+            bail!(
                 "request {} has operations from two actors",
-                operation.request_id
-            )));
+                first.request_id
+            );
         }
-        if let Some(Value::Array(elements)) = batches
-            .last_mut()
-            .and_then(|batch| batch.get_mut("operations"))
-        {
-            elements.push(operation.to_json());
-        }
+        let mut batch = batch_header(Request {
+            request_id: &first.request_id,
+            actor_user_id: &first.actor_user_id,
+        });
+        batch["operations"] = request.iter().map(RecordedOperation::to_value).collect();
+        batches.push(batch);
     }
     let mut envelope = Map::new();
     envelope.insert("version".into(), Value::from(ENVELOPE_VERSION));
     envelope.insert("batches".into(), Value::Array(batches));
     Ok(Value::Object(envelope))
+}
+
+/// The runs of consecutive operations that one request carried.
+fn by_request(operations: &[RecordedOperation]) -> impl Iterator<Item = &[RecordedOperation]> {
+    operations.chunk_by(|a, b| a.request_id == b.request_id)
 }
 
 /// The row's distinct actors, sorted so the list is deterministic.
@@ -207,13 +222,9 @@ pub fn distinct_actor_ids(operations: &[RecordedOperation]) -> Vec<String> {
 /// One entry per request in the row, in revision order.
 #[must_use]
 pub fn request_ids_in_order(operations: &[RecordedOperation]) -> Vec<String> {
-    let mut request_ids: Vec<String> = Vec::new();
-    for operation in operations {
-        if request_ids.last() != Some(&operation.request_id) {
-            request_ids.push(operation.request_id.clone());
-        }
-    }
-    request_ids
+    by_request(operations)
+        .map(|request| request[0].request_id.clone())
+        .collect()
 }
 
 /// A stored `flow_operation` row: its revision range and its envelope.
@@ -311,10 +322,8 @@ pub fn decode_row(row: &StoredRow) -> Result<Vec<RecordedOperation>, Corruption>
             }
             let operation = element
                 .get("operation")
-                .cloned()
-                .ok_or(())
-                .and_then(|operation| Operation::from_json(operation).map_err(|_| ()))
-                .map_err(|()| Corruption::at(Damage::MalformedOperation, expected))?;
+                .and_then(|operation| Operation::try_from(operation.clone()).ok())
+                .ok_or_else(|| Corruption::at(Damage::MalformedOperation, expected))?;
             let cause = match element.get("cause") {
                 None | Some(Value::Null) => None,
                 Some(Value::String(cause)) => Some(cause.clone()),
@@ -345,16 +354,16 @@ fn is_integer(value: &Value, expected: u64) -> bool {
     let Value::Number(number) = value else {
         return false;
     };
-    number.as_u64() == Some(expected) || {
-        #[expect(
-            clippy::cast_precision_loss,
-            clippy::float_cmp,
-            reason = "Python compares the float exactly"
-        )]
-        let equal = number.as_str().contains(['.', 'e', 'E'])
-            && crate::ops::canonical::as_double(number) == expected as f64;
-        equal
+    if number.as_u64() == Some(expected) {
+        return true;
     }
+    #[expect(
+        clippy::cast_precision_loss,
+        clippy::float_cmp,
+        reason = "Python compares the float exactly"
+    )]
+    let float_equal = !is_integer_text(number) && as_double(number) == expected as f64;
+    float_equal
 }
 
 // --- Packing operations into rows --------------------------------------------------------
@@ -383,8 +392,30 @@ pub struct PackedRow {
     pub request_ids: Vec<String>,
 }
 
+/// Counts the bytes written to it, so a size is measured without building the text.
+#[derive(Debug, Default)]
+struct ByteCount(usize);
+
+impl io::Write for ByteCount {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.0 += bytes.len();
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+/// The size of what `write` writes, as compact JSON.
+fn measured(write: impl FnOnce(&mut ByteCount) -> serde_json::Result<()>) -> usize {
+    let mut count = ByteCount::default();
+    write(&mut count).expect("JSON values and strings always serialize");
+    count.0
+}
+
 fn json_size(value: &Value) -> usize {
-    value.to_string().len()
+    measured(|out| serde_json::to_writer(out, value))
 }
 
 const NIL_UUID: &str = "00000000-0000-0000-0000-000000000000";
@@ -395,7 +426,11 @@ fn envelope_overhead() -> usize {
 
 /// Request and actor ids are UUIDs, so every batch header has the same size.
 fn batch_overhead() -> usize {
-    json_size(&batch_header(NIL_UUID, NIL_UUID)) + 1
+    let request = Request {
+        request_id: NIL_UUID,
+        actor_user_id: NIL_UUID,
+    };
+    json_size(&batch_header(request)) + 1
 }
 
 /// Split operations to fit the row size limit, and number them from `latest_revision`.
@@ -403,8 +438,7 @@ fn batch_overhead() -> usize {
 pub fn sequence(
     operations: Vec<Operation>,
     latest_revision: u64,
-    actor_user_id: &str,
-    request_id: &str,
+    request: Request<'_>,
     cause: Option<&str>,
     bytes_limit: usize,
 ) -> Vec<RecordedOperation> {
@@ -416,8 +450,8 @@ pub fn sequence(
             revision += 1;
             recorded.push(RecordedOperation {
                 revision,
-                actor_user_id: actor_user_id.to_owned(),
-                request_id: request_id.to_owned(),
+                actor_user_id: request.actor_user_id.to_owned(),
+                request_id: request.request_id.to_owned(),
                 operation: part,
                 cause: cause.map(str::to_owned),
             });
@@ -440,7 +474,7 @@ pub fn pack_rows(operations: Vec<RecordedOperation>, limits: RowLimits) -> Resul
     let mut current: Vec<RecordedOperation> = Vec::new();
     let mut size = envelope_overhead();
     for operation in operations {
-        let element_size = json_size(&operation.to_json()) + 1;
+        let element_size = json_size(&operation.to_value()) + 1;
         let starts_batch = current
             .last()
             .is_none_or(|last| last.request_id != operation.request_id);
@@ -475,149 +509,104 @@ pub fn pack_rows(operations: Vec<RecordedOperation>, limits: RowLimits) -> Resul
 /// operation of its own that exceeds it.
 #[must_use]
 pub fn split_to_fit(operation: Operation, budget: usize) -> Vec<Operation> {
-    if json_size(&operation.to_json()) <= budget {
+    if json_size(&operation.to_value()) <= budget {
         return vec![operation];
     }
-    let (items, rebuild) = items_of(operation);
-    if items.len() <= 1 {
-        return vec![rebuild(items)];
+    match operation {
+        Operation::AddNodes(nodes) => chunks(nodes, budget, Operation::AddNodes, entry_len),
+        Operation::AddEdges(edges) => chunks(edges, budget, Operation::AddEdges, entry_len),
+        Operation::DeleteNodes(ids) => chunks(ids, budget, Operation::DeleteNodes, |id| id_len(id)),
+        Operation::DeleteEdges(ids) => chunks(ids, budget, Operation::DeleteEdges, |id| id_len(id)),
+        Operation::UpdateNodes(updates) => {
+            chunks(updates, budget, Operation::UpdateNodes, update_len)
+        }
+        Operation::UpdateMetadata {
+            fields,
+            delete_keys,
+        } => {
+            let items = fields
+                .into_iter()
+                .map(|(key, value)| MetadataItem::Set(key, value))
+                .chain(delete_keys.into_iter().map(MetadataItem::Delete))
+                .collect();
+            chunks(items, budget, MetadataItem::operation, MetadataItem::len)
+        }
     }
-    let empty_size = json_size(&rebuild(Vec::new()).to_json());
+}
+
+/// Split `items` into runs, each built into one operation by `build`, that
+/// fit `budget`. `item_len` is an item's size as compact JSON.
+fn chunks<T>(
+    items: Vec<T>,
+    budget: usize,
+    build: fn(Vec<T>) -> Operation,
+    item_len: impl Fn(&T) -> usize,
+) -> Vec<Operation> {
+    if items.len() <= 1 {
+        return vec![build(items)];
+    }
+    let empty_size = json_size(&build(Vec::new()).to_value());
     let mut parts = Vec::new();
     let mut chunk = Vec::new();
     let mut size = empty_size;
     for item in items {
-        let item_size = json_size(&item.to_json()) + 1;
+        // One more byte for the comma.
+        let item_size = item_len(&item) + 1;
         if !chunk.is_empty() && size + item_size > budget {
-            parts.push(rebuild(std::mem::take(&mut chunk)));
+            parts.push(build(std::mem::take(&mut chunk)));
             size = empty_size;
         }
         chunk.push(item);
         size += item_size;
     }
-    parts.push(rebuild(chunk));
+    parts.push(build(chunk));
     parts
 }
 
-/// One item of a list-valued operation.
-enum Item {
-    Entry(Map<String, Value>),
-    Id(String),
-    Update(crate::ops::ops::FieldUpdate),
-    MetadataSet(String, Value),
-    MetadataDelete(String),
+fn entry_len(entry: &Map<String, Value>) -> usize {
+    measured(|out| serde_json::to_writer(out, entry))
 }
 
-impl Item {
-    fn to_json(&self) -> Value {
-        match self {
-            Self::Entry(entry) => Value::Object(entry.clone()),
-            Self::Id(id) => Value::from(id.as_str()),
-            Self::Update(update) => update.to_json(),
-            Self::MetadataSet(key, value) => Value::Array(vec![
-                Value::from("set"),
-                Value::from(key.as_str()),
-                value.clone(),
-            ]),
-            Self::MetadataDelete(key) => Value::Array(vec![
-                Value::from("delete"),
-                Value::from(key.as_str()),
-                Value::Null,
-            ]),
+fn id_len(id: &str) -> usize {
+    measured(|out| serde_json::to_writer(out, id))
+}
+
+fn update_len(update: &FieldUpdate) -> usize {
+    json_size(&update.to_value())
+}
+
+/// One key an `update_metadata` sets or deletes.
+#[derive(Debug)]
+enum MetadataItem {
+    Set(String, Value),
+    Delete(String),
+}
+
+impl MetadataItem {
+    /// The `update_metadata` that sets and deletes `items`.
+    fn operation(items: Vec<Self>) -> Operation {
+        let mut fields = Map::new();
+        let mut delete_keys = Vec::new();
+        for item in items {
+            match item {
+                Self::Set(key, value) => {
+                    fields.insert(key, value);
+                }
+                Self::Delete(key) => delete_keys.push(key),
+            }
         }
-    }
-}
-
-type Rebuild = Box<dyn Fn(Vec<Item>) -> Operation>;
-
-fn items_of(operation: Operation) -> (Vec<Item>, Rebuild) {
-    fn entries(items: Vec<Item>) -> Vec<Map<String, Value>> {
-        items
-            .into_iter()
-            .filter_map(|item| {
-                if let Item::Entry(entry) = item {
-                    Some(entry)
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-    fn ids(items: Vec<Item>) -> Vec<String> {
-        items
-            .into_iter()
-            .filter_map(|item| {
-                if let Item::Id(id) = item {
-                    Some(id)
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-    fn updates(items: Vec<Item>) -> Vec<crate::ops::ops::FieldUpdate> {
-        items
-            .into_iter()
-            .filter_map(|item| {
-                if let Item::Update(update) = item {
-                    Some(update)
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-    match operation {
-        Operation::AddNodes(nodes) => (
-            nodes.into_iter().map(Item::Entry).collect(),
-            Box::new(|items| Operation::AddNodes(entries(items))),
-        ),
-        Operation::AddEdges(edges) => (
-            edges.into_iter().map(Item::Entry).collect(),
-            Box::new(|items| Operation::AddEdges(entries(items))),
-        ),
-        Operation::DeleteNodes(list) => (
-            list.into_iter().map(Item::Id).collect(),
-            Box::new(|items| Operation::DeleteNodes(ids(items))),
-        ),
-        Operation::DeleteEdges(list) => (
-            list.into_iter().map(Item::Id).collect(),
-            Box::new(|items| Operation::DeleteEdges(ids(items))),
-        ),
-        Operation::UpdateNodes(list) => (
-            list.into_iter().map(Item::Update).collect(),
-            Box::new(|items| Operation::UpdateNodes(updates(items))),
-        ),
-        Operation::UpdateEdges(list) => (
-            list.into_iter().map(Item::Update).collect(),
-            Box::new(|items| Operation::UpdateEdges(updates(items))),
-        ),
         Operation::UpdateMetadata {
             fields,
             delete_keys,
-        } => (
-            fields
-                .into_iter()
-                .map(|(key, value)| Item::MetadataSet(key, value))
-                .chain(delete_keys.into_iter().map(Item::MetadataDelete))
-                .collect(),
-            Box::new(|items| {
-                let mut fields = Map::new();
-                let mut delete_keys = Vec::new();
-                for item in items {
-                    match item {
-                        Item::MetadataSet(key, value) => {
-                            fields.insert(key, value);
-                        }
-                        Item::MetadataDelete(key) => delete_keys.push(key),
-                        _ => {}
-                    }
-                }
-                Operation::UpdateMetadata {
-                    fields,
-                    delete_keys,
-                }
-            }),
-        ),
+        }
+    }
+
+    /// The item's size, counted as `["set", key, value]` or `["delete", key, null]`.
+    fn len(&self) -> usize {
+        let (action, key, value) = match self {
+            Self::Set(key, value) => ("set", key, value),
+            Self::Delete(key) => ("delete", key, &Value::Null),
+        };
+        measured(|out| serde_json::to_writer(out, &(action, key, value)))
     }
 }

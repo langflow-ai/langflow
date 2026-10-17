@@ -65,6 +65,7 @@ fn revision(value: f64) -> Result<u64, JsValue> {
 /// History playback and rebase apply many batches to one graph and read it
 /// once. A refused batch changes nothing.
 #[wasm_bindgen]
+#[derive(Debug)]
 pub struct GraphState {
     state: lfx::ops::GraphState,
 }
@@ -101,7 +102,7 @@ impl GraphState {
     #[wasm_bindgen(js_name = toJson)]
     #[must_use]
     pub fn to_json(&self) -> String {
-        self.state.to_json()
+        self.state.to_string()
     }
 }
 

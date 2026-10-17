@@ -6,30 +6,32 @@
 //! print its result; the bindings only call these and turn an [`ApiError`]
 //! into their language's exception.
 
+use std::fmt;
+
 use serde_json::{Map, Value, json};
 
 use crate::ops::apply::{Applied, ApplyOptions, apply_flow_operations};
 use crate::ops::canonical;
 use crate::ops::diff::{derive_flow_operations, diff_flow_data};
 use crate::ops::envelope::{
-    Corruption, PackedRow, RecordedOperation, RowLimits, StoredRow, decode_row as decode,
+    Corruption, PackedRow, RecordedOperation, Request, RowLimits, StoredRow, decode_row as decode,
     distinct_actor_ids, encode_envelope as encode, pack_rows, request_ids_in_order, sequence,
 };
-use crate::ops::error::Error;
+use crate::ops::error::{Error, invalid};
 use crate::ops::keyed::{self, Renumber};
 use crate::ops::ops::Operation;
 use crate::ops::repair::{Fix, repair_flow_data};
 use crate::ops::replay;
 use crate::ops::restore;
-use crate::ops::state::GraphState;
-use crate::ops::validate::{Violation, find_graph_violations};
+use crate::ops::state::{GraphState, parse_json};
+use crate::ops::validate::{Numbers, Violation, find_graph_violations};
 use crate::ops::write::{WriteError, WriteOptions};
 
 /// An error as it crosses the boundary: a JSON object with the error's
 /// `kind` (the matching Python exception class), `code` and `message`, and
 /// what that kind carries (`edge_id`, `violations`, `damage` and `revision`,
 /// or `graph`).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ApiError(pub Value);
 
 impl ApiError {
@@ -51,6 +53,14 @@ impl ApiError {
         self.0["message"].as_str().unwrap_or_default()
     }
 }
+
+impl fmt::Display for ApiError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.code(), self.message())
+    }
+}
+
+impl std::error::Error for ApiError {}
 
 impl From<Error> for ApiError {
     fn from(error: Error) -> Self {
@@ -83,6 +93,7 @@ impl From<Corruption> for ApiError {
 
 impl From<WriteError> for ApiError {
     fn from(error: WriteError) -> Self {
+        let message = error.to_string();
         match error {
             WriteError::InvalidGraph {
                 role,
@@ -90,7 +101,7 @@ impl From<WriteError> for ApiError {
             } => Self(json!({
                 "kind": "FlowGraphInvalidError",
                 "code": "FLOW_GRAPH_INVALID",
-                "message": format!("The {} flow graph breaks {} flow graph rule(s)", role.as_str(), found.len()),
+                "message": message,
                 "graph": role.as_str(),
                 "violations": violations(&found),
             })),
@@ -103,32 +114,27 @@ impl From<WriteError> for ApiError {
 pub type ApiResult<T = String> = Result<T, ApiError>;
 
 fn violations(violations: &[Violation]) -> Value {
-    Value::Array(violations.iter().map(Violation::to_json).collect())
+    Value::Array(violations.iter().map(Violation::to_value).collect())
 }
 
 fn operations_json(operations: &[Operation]) -> Value {
-    Value::Array(operations.iter().map(Operation::to_json).collect())
+    Value::Array(operations.iter().map(Operation::to_value).collect())
 }
 
-/// Parse a graph, or any JSON value the engine reads as data.
-fn graph(text: &str) -> ApiResult<Value> {
-    serde_json::from_str(text).map_err(|error| {
-        Error::graph(format!("flow data is not valid JSON: {error}"), Vec::new()).into()
-    })
+/// Parse a JSON input: a graph, or any other value the engine reads as data.
+fn parse(text: &str) -> ApiResult<Value> {
+    Ok(parse_json(text)?)
 }
 
 /// Parse a list of operations.
 fn operations(text: &str) -> ApiResult<Vec<Operation>> {
-    let value: Value = serde_json::from_str(text).map_err(|error| {
-        ApiError::from(Error::invalid(format!(
-            "operations are not valid JSON: {error}"
-        )))
-    })?;
-    Ok(Operation::list_from_json(value)?)
+    let value: Value = serde_json::from_str(text)
+        .map_err(|error| ApiError::from(invalid!("operations are not valid JSON: {error}")))?;
+    Ok(Operation::list_from_value(value)?)
 }
 
 fn optional(text: Option<&str>) -> ApiResult<Option<Value>> {
-    text.map(graph).transpose()
+    text.map(parse).transpose()
 }
 
 fn rows_of(value: Value) -> Vec<Value> {
@@ -185,7 +191,7 @@ pub fn applied_json(applied: &Applied, options: ApplyOptions) -> Map<String, Val
 /// The graph or the operations do not parse, or the engine refuses the batch.
 pub fn apply(flow: &str, operations_text: &str, options: ApplyOptions) -> ApiResult {
     let (flow_data, applied) =
-        apply_flow_operations(graph(flow)?, operations(operations_text)?, options)?;
+        apply_flow_operations(parse(flow)?, operations(operations_text)?, options)?;
     let mut out = applied_json(&applied, options);
     out.insert("flow_data".into(), flow_data);
     Ok(Value::Object(out).to_string())
@@ -197,7 +203,7 @@ pub fn apply(flow: &str, operations_text: &str, options: ApplyOptions) -> ApiRes
 ///
 /// The graph does not parse or breaks a structural rule.
 pub fn graph_state(flow: &str) -> ApiResult<GraphState> {
-    Ok(GraphState::new(graph(flow)?)?)
+    Ok(GraphState::new(parse(flow)?)?)
 }
 
 /// Apply a batch to a held graph; the result is what [`applied_json`] lists.
@@ -228,7 +234,7 @@ pub fn normalize_operations(operations_text: &str) -> ApiResult {
 ///
 /// A graph does not parse or breaks the rules.
 pub fn diff(base: &str, target: &str) -> ApiResult {
-    Ok(operations_json(&diff_flow_data(&graph(base)?, &graph(target)?)?).to_string())
+    Ok(operations_json(&diff_flow_data(&parse(base)?, &parse(target)?)?).to_string())
 }
 
 /// The operations that turn `base` into `target`, verified by replay: `{"operations", "flow_data"}`.
@@ -237,7 +243,7 @@ pub fn diff(base: &str, target: &str) -> ApiResult {
 ///
 /// A graph does not parse or breaks the rules, or the operations do not replay.
 pub fn derive(base: &str, target: &str) -> ApiResult {
-    let derived = derive_flow_operations(graph(base)?, &graph(target)?)?;
+    let derived = derive_flow_operations(parse(base)?, &parse(target)?)?;
     Ok(
         json!({"operations": operations_json(&derived.operations), "flow_data": derived.flow_data})
             .to_string(),
@@ -251,9 +257,14 @@ pub fn derive(base: &str, target: &str) -> ApiResult {
 /// A graph does not parse, or a check fails in a way that is not a violation.
 pub fn validate(flow: &str, base: Option<&str>, check_values: bool) -> ApiResult {
     let base = optional(base)?;
+    let numbers = if check_values {
+        Numbers::Check
+    } else {
+        Numbers::Skip
+    };
     Ok(violations(&find_graph_violations(
-        &graph(flow)?,
-        check_values,
+        &parse(flow)?,
+        numbers,
         base.as_ref(),
     )?)
     .to_string())
@@ -266,8 +277,8 @@ pub fn validate(flow: &str, base: Option<&str>, check_values: bool) -> ApiResult
 /// A graph does not parse, or a rule only the client can fix is broken.
 pub fn repair(flow: &str, base: Option<&str>) -> ApiResult {
     let base = optional(base)?;
-    let repaired = repair_flow_data(&graph(flow)?, base.as_ref())?;
-    let fixes: Vec<Value> = repaired.fixes.iter().map(Fix::to_json).collect();
+    let repaired = repair_flow_data(&parse(flow)?, base.as_ref())?;
+    let fixes: Vec<Value> = repaired.fixes.iter().map(Fix::to_value).collect();
     Ok(json!({"flow_data": repaired.flow_data, "fixes": fixes}).to_string())
 }
 
@@ -279,7 +290,7 @@ pub fn repair(flow: &str, base: Option<&str>) -> ApiResult {
 ///
 /// The graph does not parse, or holds a number that is not finite.
 pub fn graph_hash(flow: &str) -> ApiResult {
-    Ok(canonical::graph_hash(&graph(flow)?)?)
+    Ok(canonical::graph_hash(&parse(flow)?)?)
 }
 
 /// Whether two graphs are the same graph.
@@ -288,7 +299,7 @@ pub fn graph_hash(flow: &str) -> ApiResult {
 ///
 /// A graph does not parse, or a compared number is not finite.
 pub fn graphs_equal(left: &str, right: &str) -> ApiResult<bool> {
-    Ok(canonical::graphs_equal(&graph(left)?, &graph(right)?)?)
+    Ok(canonical::graphs_equal(&parse(left)?, &parse(right)?)?)
 }
 
 /// Whether two JSON values are the same value.
@@ -297,7 +308,7 @@ pub fn graphs_equal(left: &str, right: &str) -> ApiResult<bool> {
 ///
 /// A value does not parse, or a compared number is not finite.
 pub fn values_equal(left: &str, right: &str) -> ApiResult<bool> {
-    Ok(canonical::values_equal(&graph(left)?, &graph(right)?)?)
+    Ok(canonical::values_equal(&parse(left)?, &parse(right)?)?)
 }
 
 /// A JSON value in RFC 8785 canonical form.
@@ -306,17 +317,72 @@ pub fn values_equal(left: &str, right: &str) -> ApiResult<bool> {
 ///
 /// The value does not parse, or holds a number that is not finite.
 pub fn canonical_json(value: &str) -> ApiResult {
-    Ok(canonical::canonical_json(&graph(value)?)?)
+    Ok(canonical::canonical_json(&parse(value)?)?)
 }
 
 // --- History --------------------------------------------------------------------------------
 
-fn stored_row(value: &Value) -> StoredRow {
-    StoredRow {
-        start_revision: value["start_revision"].as_u64().unwrap_or_default(),
-        end_revision: value["end_revision"].as_u64().unwrap_or_default(),
-        ops: value["ops"].clone(),
+/// A JSON object of named inputs, read strictly: a required key must be
+/// present with the right type, and an optional key must be absent, null or
+/// of the right type.
+#[derive(Debug)]
+struct Fields<'v> {
+    object: &'v Value,
+    /// What the object is, for messages: `options`, `row`.
+    name: &'static str,
+}
+
+impl<'v> Fields<'v> {
+    fn new(object: &'v Value, name: &'static str) -> Self {
+        Self { object, name }
     }
+
+    fn get<T>(&self, key: &str, kind: &str, read: impl Fn(&'v Value) -> Option<T>) -> ApiResult<T> {
+        let name = self.name;
+        self.object
+            .get(key)
+            .and_then(read)
+            .ok_or_else(|| invalid!("{name}.{key} must be {kind}").into())
+    }
+
+    fn string(&self, key: &str) -> ApiResult<&'v str> {
+        self.get(key, "a string", Value::as_str)
+    }
+
+    fn optional_string(&self, key: &str) -> ApiResult<Option<&'v str>> {
+        match self.object.get(key) {
+            None | Some(Value::Null) => Ok(None),
+            Some(Value::String(text)) => Ok(Some(text)),
+            Some(_) => Err(invalid!("{}.{key} must be a string or null", self.name).into()),
+        }
+    }
+
+    fn integer(&self, key: &str) -> ApiResult<u64> {
+        self.get(key, "a non-negative integer", Value::as_u64)
+    }
+
+    fn size(&self, key: &str) -> ApiResult<usize> {
+        self.get(key, "a non-negative integer", |value| {
+            usize::try_from(value.as_u64()?).ok()
+        })
+    }
+
+    fn boolean(&self, key: &str) -> ApiResult<bool> {
+        self.get(key, "a boolean", Value::as_bool)
+    }
+
+    fn present(&self, key: &str) -> ApiResult<&'v Value> {
+        self.get(key, "present", Some)
+    }
+}
+
+fn stored_row(value: &Value) -> ApiResult<StoredRow> {
+    let row = Fields::new(value, "row");
+    Ok(StoredRow {
+        start_revision: row.integer("start_revision")?,
+        end_revision: row.integer("end_revision")?,
+        ops: row.present("ops")?.clone(),
+    })
 }
 
 fn recorded_json(operation: &RecordedOperation) -> Value {
@@ -324,7 +390,7 @@ fn recorded_json(operation: &RecordedOperation) -> Value {
         "revision": operation.revision,
         "actor_user_id": operation.actor_user_id,
         "request_id": operation.request_id,
-        "operation": operation.operation.to_json(),
+        "operation": operation.operation.to_value(),
     });
     if let Some(cause) = &operation.cause {
         out["cause"] = json!(cause);
@@ -346,23 +412,21 @@ fn packed_json(row: &PackedRow) -> Value {
 ///
 /// # Errors
 ///
-/// The row does not parse, or is damaged.
+/// The row does not parse, a row field is missing or has the wrong type, or
+/// the row is damaged.
 pub fn decode_row(row: &str) -> ApiResult {
-    let decoded = decode(&stored_row(&graph(row)?))?;
+    let decoded = decode(&stored_row(&parse(row)?)?)?;
     Ok(Value::Array(decoded.iter().map(recorded_json).collect()).to_string())
 }
 
 fn recorded(value: &Value) -> ApiResult<RecordedOperation> {
-    let text = |key: &str| value[key].as_str().unwrap_or_default().to_owned();
+    let recorded = Fields::new(value, "recorded operation");
     Ok(RecordedOperation {
-        revision: value["revision"].as_u64().unwrap_or_default(),
-        actor_user_id: text("actor_user_id"),
-        request_id: text("request_id"),
-        operation: Operation::from_json(value["operation"].clone())?,
-        cause: value
-            .get("cause")
-            .and_then(Value::as_str)
-            .map(str::to_owned),
+        revision: recorded.integer("revision")?,
+        actor_user_id: recorded.string("actor_user_id")?.to_owned(),
+        request_id: recorded.string("request_id")?.to_owned(),
+        operation: Operation::try_from(recorded.present("operation")?.clone())?,
+        cause: recorded.optional_string("cause")?.map(str::to_owned),
     })
 }
 
@@ -372,7 +436,7 @@ fn recorded(value: &Value) -> ApiResult<RecordedOperation> {
 ///
 /// The operations do not parse, or a request names two actors.
 pub fn encode_envelope(operations_text: &str) -> ApiResult {
-    let operations: Vec<RecordedOperation> = rows_of(graph(operations_text)?)
+    let operations: Vec<RecordedOperation> = rows_of(parse(operations_text)?)
         .iter()
         .map(recorded)
         .collect::<ApiResult<_>>()?;
@@ -384,13 +448,17 @@ pub fn encode_envelope(operations_text: &str) -> ApiResult {
     .to_string())
 }
 
-fn limits(value: &Value) -> RowLimits {
-    let limit =
-        |key: &str| usize::try_from(value[key].as_u64().unwrap_or_default()).unwrap_or(usize::MAX);
-    RowLimits {
-        ops: limit("ops"),
-        bytes: limit("bytes"),
-    }
+fn limits(options: &Fields<'_>) -> ApiResult<RowLimits> {
+    let limits = Fields::new(
+        options.get("limits", "an object", |value| {
+            value.is_object().then_some(value)
+        })?,
+        "options.limits",
+    );
+    Ok(RowLimits {
+        ops: limits.size("ops")?,
+        bytes: limits.size("bytes")?,
+    })
 }
 
 /// Number operations from `latest_revision` and pack them into rows.
@@ -400,16 +468,19 @@ fn limits(value: &Value) -> RowLimits {
 ///
 /// # Errors
 ///
-/// The inputs do not parse.
+/// The inputs do not parse, or an option is missing or has the wrong type.
 pub fn pack(operations_text: &str, options: &str) -> ApiResult {
-    let options = graph(options)?;
-    let limits = limits(&options["limits"]);
+    let options = parse(options)?;
+    let options = Fields::new(&options, "options");
+    let limits = limits(&options)?;
     let recorded = sequence(
         operations(operations_text)?,
-        options["latest_revision"].as_u64().unwrap_or_default(),
-        options["actor_user_id"].as_str().unwrap_or_default(),
-        options["request_id"].as_str().unwrap_or_default(),
-        options.get("cause").and_then(Value::as_str),
+        options.integer("latest_revision")?,
+        Request {
+            request_id: options.string("request_id")?,
+            actor_user_id: options.string("actor_user_id")?,
+        },
+        options.optional_string("cause")?,
         limits.bytes,
     );
     let rows = pack_rows(recorded, limits)?;
@@ -420,10 +491,14 @@ pub fn pack(operations_text: &str, options: &str) -> ApiResult {
 ///
 /// # Errors
 ///
-/// The inputs do not parse, or the history is damaged.
+/// The inputs do not parse, a row field is missing or has the wrong type, or
+/// the history is damaged.
 pub fn replay(checkpoint: &str, checkpoint_revision: u64, rows: &str, revision: u64) -> ApiResult {
-    let rows: Vec<StoredRow> = rows_of(graph(rows)?).iter().map(stored_row).collect();
-    Ok(replay::replay(graph(checkpoint)?, checkpoint_revision, &rows, revision)?.to_string())
+    let rows: Vec<StoredRow> = rows_of(parse(rows)?)
+        .iter()
+        .map(stored_row)
+        .collect::<ApiResult<_>>()?;
+    Ok(replay::replay(parse(checkpoint)?, checkpoint_revision, &rows, revision)?.to_string())
 }
 
 /// Fail unless a checkpoint's graph hashes to its stored hash.
@@ -433,7 +508,7 @@ pub fn replay(checkpoint: &str, checkpoint_revision: u64, rows: &str, revision: 
 /// The graph does not parse, or its hash differs.
 pub fn verify_checkpoint(flow: &str, stored_hash: &str, revision: u64) -> ApiResult<()> {
     Ok(replay::verify_checkpoint(
-        &graph(flow)?,
+        &parse(flow)?,
         stored_hash,
         revision,
     )?)
@@ -446,26 +521,22 @@ pub fn verify_checkpoint(flow: &str, stored_hash: &str, revision: u64) -> ApiRes
 ///
 /// # Errors
 ///
-/// The inputs do not parse, a graph breaks the rules, or the engine fails.
+/// The inputs do not parse, an option is missing or has the wrong type, a
+/// graph breaks the rules, or the engine fails.
 pub fn prepare_write(stored: &str, target: &str, options: &str) -> ApiResult {
-    let options = graph(options)?;
-    let text = |key: &str| options[key].as_str().unwrap_or_default().to_owned();
+    let options = parse(options)?;
+    let options = Fields::new(&options, "options");
     let write_options = WriteOptions {
-        started: options["started"].as_bool().unwrap_or_default(),
-        repair_invalid_graph: options["repair_invalid_graph"]
-            .as_bool()
-            .unwrap_or_default(),
-        latest_revision: options["latest_revision"].as_u64().unwrap_or_default(),
-        actor_user_id: text("actor_user_id"),
-        request_id: text("request_id"),
-        cause: options
-            .get("cause")
-            .and_then(Value::as_str)
-            .map(str::to_owned),
-        limits: limits(&options["limits"]),
+        started: options.boolean("started")?,
+        repair_invalid_graph: options.boolean("repair_invalid_graph")?,
+        latest_revision: options.integer("latest_revision")?,
+        actor_user_id: options.string("actor_user_id")?.to_owned(),
+        request_id: options.string("request_id")?.to_owned(),
+        cause: options.optional_string("cause")?.map(str::to_owned),
+        limits: limits(&options)?,
     };
     let prepared =
-        crate::ops::write::prepare_write(graph(stored)?, graph(target)?, &write_options)?;
+        crate::ops::write::prepare_write(parse(stored)?, parse(target)?, &write_options)?;
     Ok(json!({
         "base": prepared.base,
         "stored_repaired": prepared.stored_repaired,
@@ -486,7 +557,7 @@ pub fn prepare_write(stored: &str, target: &str, options: &str) -> ApiResult {
 /// The inputs do not parse, or a fix is not allowed or does not apply.
 pub fn apply_restore_fixes(revision: &str, stored: &str, fixes: &str) -> ApiResult {
     Ok(
-        restore::apply_restore_fixes(&graph(revision)?, &graph(stored)?, operations(fixes)?)?
+        restore::apply_restore_fixes(&parse(revision)?, &parse(stored)?, operations(fixes)?)?
             .to_string(),
     )
 }
@@ -497,7 +568,7 @@ pub fn apply_restore_fixes(revision: &str, stored: &str, fixes: &str) -> ApiResu
 ///
 /// The inputs do not parse, or a compared handle holds a number that is not finite.
 pub fn edge_fixes(read: &str, shown: &str) -> ApiResult {
-    let fixes = restore::edge_fixes(&rows_of(graph(read)?), &rows_of(graph(shown)?))?;
+    let fixes = restore::edge_fixes(&rows_of(parse(read)?), &rows_of(parse(shown)?))?;
     Ok(operations_json(&fixes).to_string())
 }
 
@@ -507,7 +578,7 @@ pub fn edge_fixes(read: &str, shown: &str) -> ApiResult {
 ///
 /// The inputs do not parse.
 pub fn fixes_for_edges(fixes: &str, edge_ids: &str) -> ApiResult {
-    let ids: Vec<String> = rows_of(graph(edge_ids)?)
+    let ids: Vec<String> = rows_of(parse(edge_ids)?)
         .into_iter()
         .filter_map(|id| id.as_str().map(str::to_owned))
         .collect();
@@ -522,7 +593,7 @@ pub fn fixes_for_edges(fixes: &str, edge_ids: &str) -> ApiResult {
 ///
 /// The rows do not parse.
 pub fn strip_row_keys(rows: &str) -> ApiResult {
-    Ok(keyed::strip_row_keys(&graph(rows)?).to_string())
+    Ok(keyed::strip_row_keys(&parse(rows)?).to_string())
 }
 
 /// A flow with every top-level table ordered and stripped.
@@ -531,7 +602,7 @@ pub fn strip_row_keys(rows: &str) -> ApiResult {
 ///
 /// The flow does not parse.
 pub fn strip_flow_table_row_keys(flow: &str) -> ApiResult {
-    let mut flow = graph(flow)?;
+    let mut flow = parse(flow)?;
     keyed::strip_flow_table_row_keys(&mut flow);
     Ok(flow.to_string())
 }
@@ -542,7 +613,7 @@ pub fn strip_flow_table_row_keys(flow: &str) -> ApiResult {
 ///
 /// The inputs do not parse, or a compared row holds a number that is not finite.
 pub fn assign_row_ids(rows: &str, previous: Option<&str>, editor: bool) -> ApiResult {
-    let mut rows = rows_of(graph(rows)?);
+    let mut rows = rows_of(parse(rows)?);
     keyed::assign_row_ids(&mut rows, optional(previous)?.as_ref(), renumber(editor))?;
     Ok(Value::Array(rows).to_string())
 }
@@ -553,7 +624,7 @@ pub fn assign_row_ids(rows: &str, previous: Option<&str>, editor: bool) -> ApiRe
 ///
 /// The node does not parse, or a compared row holds a number that is not finite.
 pub fn assign_table_row_ids(node: &str, editor: bool) -> ApiResult {
-    let mut node = graph(node)?;
+    let mut node = parse(node)?;
     keyed::assign_table_row_ids(&mut node, renumber(editor))?;
     Ok(node.to_string())
 }
@@ -565,8 +636,8 @@ pub fn assign_table_row_ids(node: &str, editor: bool) -> ApiResult {
 ///
 /// The graphs do not parse, or a compared row holds a number that is not finite.
 pub fn assign_changed_table_row_ids(base: &str, target: &str, editor: bool) -> ApiResult {
-    let mut target = graph(target)?;
-    keyed::assign_changed_table_row_ids(&graph(base)?, &mut target, renumber(editor))?;
+    let mut target = parse(target)?;
+    keyed::assign_changed_table_row_ids(&parse(base)?, &mut target, renumber(editor))?;
     Ok(target.to_string())
 }
 
@@ -576,8 +647,8 @@ pub fn assign_changed_table_row_ids(base: &str, target: &str, editor: bool) -> A
 ///
 /// The inputs do not parse, or a compared row holds a number that is not finite.
 pub fn append_table_rows(rows: &str, new_rows: &str) -> ApiResult {
-    let mut rows = rows_of(graph(rows)?);
-    keyed::append_table_rows(&mut rows, &rows_of(graph(new_rows)?))?;
+    let mut rows = rows_of(parse(rows)?);
+    keyed::append_table_rows(&mut rows, &rows_of(parse(new_rows)?))?;
     Ok(Value::Array(rows).to_string())
 }
 
@@ -592,7 +663,7 @@ pub fn assign_changed_node_table_row_ids(
     previous: Option<&str>,
     editor: bool,
 ) -> ApiResult {
-    let mut node = graph(node)?;
+    let mut node = parse(node)?;
     keyed::assign_changed_node_table_row_ids(
         &mut node,
         optional(previous)?.as_ref(),
@@ -607,7 +678,7 @@ pub fn assign_changed_node_table_row_ids(
 ///
 /// The node does not parse.
 pub fn table_fields(node: &str) -> ApiResult {
-    Ok(json!(keyed::table_fields(&graph(node)?)).to_string())
+    Ok(json!(keyed::table_fields(&parse(node)?)).to_string())
 }
 
 /// A new opaque edge id in the editor's format.
@@ -634,7 +705,7 @@ pub fn node_schema() -> &'static str {
 ///
 /// The rows do not parse.
 pub fn ordered_rows(rows: &str) -> ApiResult {
-    let rows = rows_of(graph(rows)?);
+    let rows = rows_of(parse(rows)?);
     Ok(Value::Array(
         canonical::ordered_rows(&rows)
             .into_iter()

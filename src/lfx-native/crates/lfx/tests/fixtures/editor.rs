@@ -39,8 +39,8 @@ fn unordered(operations: &Value) -> Value {
 fn inverse_case(case: &Value) -> Result<(), Failed> {
     let base = &case["base"];
     let mut state = GraphState::new(base.clone()).map_err(|error| error.to_string())?;
-    let operations =
-        Operation::list_from_json(case["operations"].clone()).map_err(|error| error.to_string())?;
+    let operations = Operation::list_from_value(case["operations"].clone())
+        .map_err(|error| error.to_string())?;
     let options = ApplyOptions {
         inverse: true,
         ..ApplyOptions::default()
@@ -51,7 +51,7 @@ fn inverse_case(case: &Value) -> Result<(), Failed> {
     let inverse: Value = applied
         .inverse
         .iter()
-        .map(|list| Value::Array(list.iter().map(Operation::to_json).collect()))
+        .map(|list| Value::Array(list.iter().map(Operation::to_value).collect()))
         .collect();
     assert_json_matches(
         "inverse operations",
@@ -105,13 +105,13 @@ fn assign_nodes(case: &Value) -> Result<(), Failed> {
 fn fixes(case: &Value) -> Result<(), Failed> {
     let fixes =
         edge_fixes(&rows(case, "read"), &rows(case, "shown")).map_err(|error| error.to_string())?;
-    let fixes = Value::Array(fixes.iter().map(Operation::to_json).collect());
+    let fixes = Value::Array(fixes.iter().map(Operation::to_value).collect());
     assert_json_matches("fixes", &fixes, &case["fixes"])
 }
 
 fn for_edges(case: &Value) -> Result<(), Failed> {
     let all =
-        Operation::list_from_json(case["fixes"].clone()).map_err(|error| error.to_string())?;
+        Operation::list_from_value(case["fixes"].clone()).map_err(|error| error.to_string())?;
     let ids: Vec<String> = rows(case, "edge_ids")
         .iter()
         .filter_map(|id| id.as_str().map(str::to_owned))
@@ -119,7 +119,7 @@ fn for_edges(case: &Value) -> Result<(), Failed> {
     let kept = Value::Array(
         fixes_for_edges(&all, &ids)
             .iter()
-            .map(Operation::to_json)
+            .map(Operation::to_value)
             .collect(),
     );
     assert_json_matches("fixes", &kept, &case["expected"])

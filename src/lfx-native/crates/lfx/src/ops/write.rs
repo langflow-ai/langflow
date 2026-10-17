@@ -6,14 +6,16 @@
 //! database: request deduplication, the version check, the lock, the stored
 //! graph's projection check, and the inserts.
 
+use std::fmt;
+
 use serde_json::{Map, Value};
 
 use crate::ops::diff::derive_flow_operations;
-use crate::ops::envelope::{PackedRow, RowLimits, pack_rows, sequence};
+use crate::ops::envelope::{PackedRow, Request, RowLimits, pack_rows, sequence};
 use crate::ops::error::{Error, ErrorKind};
 use crate::ops::ops::Operation;
 use crate::ops::repair::{Fix, repair_flow_data};
-use crate::ops::validate::{Violation, find_graph_violations};
+use crate::ops::validate::{Numbers, Violation, find_graph_violations};
 
 /// Fill in a graph that is missing entirely or lacks its collections.
 ///
@@ -106,7 +108,7 @@ impl PreparedWrite {
                 .map(|(role, fix)| {
                     let mut entry = Map::new();
                     entry.insert("graph".into(), Value::from(role.as_str()));
-                    if let Value::Object(fix) = fix.to_json() {
+                    if let Value::Object(fix) = fix.to_value() {
                         entry.extend(fix);
                     }
                     Value::Object(entry)
@@ -117,7 +119,7 @@ impl PreparedWrite {
 }
 
 /// Why a save cannot be prepared.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WriteError {
     /// A graph breaks the rules, and repair was not asked for or cannot fix it.
     InvalidGraph {
@@ -129,6 +131,29 @@ pub enum WriteError {
     /// The engine failed. After both graphs pass the rules, this is a defect
     /// in the diff or the engine.
     Engine(Error),
+}
+
+impl fmt::Display for WriteError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidGraph { role, violations } => write!(
+                f,
+                "The {} flow graph breaks {} flow graph rule(s)",
+                role.as_str(),
+                violations.len()
+            ),
+            Self::Engine(error) => error.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for WriteError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Engine(error) => Some(error),
+            Self::InvalidGraph { .. } => None,
+        }
+    }
 }
 
 impl From<Error> for WriteError {
@@ -154,7 +179,7 @@ pub fn prepare_write(
         stored
     } else {
         let base = normalize_absent_graph(stored);
-        let violations = find_graph_violations(&base, true, None)?;
+        let violations = find_graph_violations(&base, Numbers::Check, None)?;
         if violations.is_empty() {
             base
         } else if !options.repair_invalid_graph {
@@ -174,7 +199,7 @@ pub fn prepare_write(
     let mut target = normalize_absent_graph(target);
     // Against the stored graph, so the table and edge rules apply to what this
     // write adds or changes, while what it leaves alone is accepted as stored.
-    let violations = find_graph_violations(&target, true, Some(&base))?;
+    let violations = find_graph_violations(&target, Numbers::Check, Some(&base))?;
     if !violations.is_empty() {
         if !options.repair_invalid_graph {
             return Err(WriteError::InvalidGraph {
@@ -192,8 +217,10 @@ pub fn prepare_write(
     let recorded = sequence(
         derived.operations.clone(),
         options.latest_revision,
-        &options.actor_user_id,
-        &options.request_id,
+        Request {
+            request_id: &options.request_id,
+            actor_user_id: &options.actor_user_id,
+        },
         options.cause.as_deref(),
         options.limits.bytes,
     );

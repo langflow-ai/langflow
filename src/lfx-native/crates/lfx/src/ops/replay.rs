@@ -78,6 +78,7 @@ pub fn replay(
 }
 
 /// The graph replay holds: the checkpoint as read, until an operation needs it indexed.
+#[derive(Debug)]
 enum Replayed {
     Checkpoint(Value),
     State(Box<GraphState>),
