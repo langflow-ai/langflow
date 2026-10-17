@@ -961,8 +961,8 @@ class KnowledgeComponent(Component):
         embedding_function,
         *,
         job_id: uuid.UUID | None = None,
-    ) -> BaseVectorStoreBackend:
-        """Create vector store using the configured DB provider."""
+    ) -> tuple[BaseVectorStoreBackend, set[int]]:
+        """Create the vector store and return the input row positions actually stored."""
         from langflow.api.utils.kb_helpers import backend_for_name
 
         owner_id = self._user_uuid
@@ -984,7 +984,7 @@ class KnowledgeComponent(Component):
         embedding_function,
         *,
         job_id: uuid.UUID | None = None,
-    ) -> BaseVectorStoreBackend:
+    ) -> tuple[BaseVectorStoreBackend, set[int]]:
         await backend.ensure_ready()
 
         from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
@@ -1000,18 +1000,24 @@ class KnowledgeComponent(Component):
                             if doc_id:
                                 existing_ids.add(doc_id)
 
-        data_objects = await self._convert_df_to_data_objects(df_source, config_list, existing_ids=existing_ids)
+        # Keep row positions through both duplicate checks so run history can
+        # distinguish stored rows from rows skipped before or after embedding.
+        data_objects = await self._convert_df_to_data_objects(df_source, config_list)
 
         user_metadata_tag = self._resolve_user_metadata_tag()
 
         documents = []
-        for data_obj in data_objects:
+        row_indices = []
+        for row_index, data_obj in enumerate(data_objects):
+            if not self.allow_duplicates and data_obj.data["_id"] in existing_ids:
+                continue
             doc = data_obj.to_lc_document()
             if user_metadata_tag:
                 doc.metadata["source_metadata"] = user_metadata_tag
             documents.append(doc)
+            row_indices.append(row_index)
         if not documents:
-            return backend
+            return backend, set()
 
         # No storage lease may surround the provider call. The write lease
         # below rechecks routing and IDs after concurrent operations finish.
@@ -1022,8 +1028,8 @@ class KnowledgeComponent(Component):
             msg = "Embedding provider returned an incorrect number of vectors"
             raise BackendConfigurationError(msg)
         embedded = [
-            IngestedDocument(doc.page_content, doc.metadata, vector, id=doc.id)
-            for doc, vector in zip(documents, vectors, strict=True)
+            (row_index, IngestedDocument(doc.page_content, doc.metadata, vector, id=doc.id))
+            for row_index, doc, vector in zip(row_indices, documents, vectors, strict=True)
         ]
         async with operation(record):
             # A cancel that landed after the embeddings returned must still
@@ -1035,20 +1041,20 @@ class KnowledgeComponent(Component):
                     async for batch in batches:
                         current_ids.update(doc.metadata["_id"] for doc in batch if doc.metadata.get("_id"))
                 unique = []
-                for doc in embedded:
+                for row_index, doc in embedded:
                     doc_id = doc.metadata.get("_id")
                     if doc_id and doc_id in current_ids:
                         continue
                     if doc_id:
                         current_ids.add(doc_id)
-                    unique.append(doc)
+                    unique.append((row_index, doc))
                 embedded = unique
 
             if embedded:
-                await backend.add_embedded_documents(embedded)
+                await backend.add_embedded_documents([doc for _, doc in embedded])
                 self.log(f"Added {len(embedded)} documents to vector store '{self.knowledge_base}'")
 
-        return backend
+        return backend, {row_index for row_index, _ in embedded}
 
     async def _embed_unless_job_cancelled(
         self, embedding_function, texts: list[str], job_id: uuid.UUID | None
@@ -1340,7 +1346,7 @@ class KnowledgeComponent(Component):
             if kb_record_id is not None:
                 await self._record_kb_status(kb_record_id, "ingesting")
 
-            backend = await self._create_vector_store(
+            backend, stored_rows = await self._create_vector_store(
                 df_source, config_list, embedding_function=embedding_function, job_id=run_job_id
             )
 
@@ -1364,9 +1370,11 @@ class KnowledgeComponent(Component):
                 await _finish_despite_cancellation(backend.teardown())
 
             meta: dict[str, Any] = {
-                "kb_id": str(uuid.uuid4()),
+                "kb_id": str(kb_record_id) if kb_record_id is not None else None,
                 "kb_name": self.knowledge_base,
                 "rows": len(df_source),
+                "chunks_created": len(stored_rows),
+                "skipped": len(df_source) - len(stored_rows),
                 "column_metadata": column_metadata,
                 "path": str(kb_path),
                 "config_columns": len(config_list),
@@ -1374,20 +1382,25 @@ class KnowledgeComponent(Component):
             }
 
             if run_summary is not None:
-                run_summary.record_item(
-                    IngestionItemResult(
-                        item_id=self.knowledge_base,
-                        display_name=f"{self.knowledge_base} ({len(df_source)} rows)",
-                        status=IngestionItemStatus.SUCCEEDED,
-                        chunks_created=len(df_source),
-                    ),
-                )
+                for row_index in range(len(df_source)):
+                    stored = row_index in stored_rows
+                    run_summary.record_item(
+                        IngestionItemResult(
+                            item_id=f"{self.knowledge_base}:{row_index}",
+                            display_name=f"{self.knowledge_base} (row {row_index + 1})",
+                            status=IngestionItemStatus.SUCCEEDED if stored else IngestionItemStatus.SKIPPED,
+                            chunks_created=int(stored),
+                        ),
+                    )
 
             if kb_record_id is not None:
                 # Stats were already refreshed straight from the backend above.
                 await self._record_kb_status(kb_record_id, "ready")
 
-            self.status = f"✅ KB **{self.knowledge_base}** saved · {len(df_source)} chunks."
+            self.status = (
+                f"✅ KB **{self.knowledge_base}** saved · {len(stored_rows)} chunks "
+                f"· {len(df_source) - len(stored_rows)} rows skipped."
+            )
 
             return Data(data=meta)
 
@@ -1457,6 +1470,7 @@ class KnowledgeComponent(Component):
         job_id: uuid.UUID | None = None
         run_id: uuid.UUID | None = None
         summary: IngestionSummary | None = None
+        kb_record_id: uuid.UUID | None = None
         try:
             kb_record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
             kb_record_id = kb_record.id if kb_record is not None else None
@@ -1483,6 +1497,8 @@ class KnowledgeComponent(Component):
                 source_config=source.describe().get("config") or {},
                 user_metadata=user_metadata,
             )
+            # Inserted running and already heartbeated, so an orphan sweep in
+            # another worker never sees this live run without a heartbeat.
             await job_service.create_job(
                 job_id=job_id,
                 flow_id=flow_id_uuid,
@@ -1490,8 +1506,9 @@ class KnowledgeComponent(Component):
                 asset_id=kb_record_id,
                 asset_type="knowledge_base",
                 user_id=user_uuid,
+                status=JobStatus.IN_PROGRESS,
+                heartbeat=True,
             )
-            await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
 
             run_id = await ingestion_run_service.create_run(
                 kb_name=self.knowledge_base,
@@ -1506,6 +1523,8 @@ class KnowledgeComponent(Component):
             await ingestion_run_service.mark_running(run_id)
 
             self.log(f"Started ingestion run job_id={job_id} kb_name={self.knowledge_base} kb_id={kb_record_id}")
+            # Keeps the job heartbeated until _finalize_ingestion_run stops it.
+            await job_service.start_keep_alive(job_id)
         except asyncio.CancelledError:
             # The caller has not received the run ID yet, so it cannot finalize
             # a cancellation that arrives while tracking is being initialized.
@@ -1522,7 +1541,7 @@ class KnowledgeComponent(Component):
             raise
         except Exception as exc:  # noqa: BLE001 — telemetry must never abort ingestion
             self.log(f"Could not begin ingestion-run tracking: {exc}")
-            return None, None, None, None
+            return None, None, None, kb_record_id
         else:
             return run_id, job_id, summary, kb_record_id
 
@@ -1545,6 +1564,9 @@ class KnowledgeComponent(Component):
             return
 
         try:
+            if job_id is not None:
+                # The heartbeat also rewrites job_metadata, so it stops first.
+                await get_job_service().stop_keep_alive(job_id)
             await ingestion_run_service.finalize_run(
                 run_id,
                 summary=summary,

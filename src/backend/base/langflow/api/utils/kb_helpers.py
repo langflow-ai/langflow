@@ -636,6 +636,10 @@ class KBIngestionHelper:
         encoded_metadata_tag = json.dumps(source_metadata) if source_metadata else ""
         source_extension_tags: set[str] = set()
         try:
+            # Heartbeat until finalize_run, so another worker's orphan sweep
+            # cannot fail this live run. It stops first, since both rewrite
+            # job_metadata.
+            await job_service.start_keep_alive(task_job_id)
             embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, current_user)
             backend = await backend_for_name(
                 owner.id, kb_name, embedding_function=embeddings, expected_record=kb_record
@@ -872,9 +876,16 @@ class KBIngestionHelper:
                 except Exception as status_exc:  # noqa: BLE001
                     await logger.awarning("KB status update to FAILED lagged for %s: %s", kb_name, status_exc)
             raise
+        except asyncio.CancelledError:
+            # A shutdown or a system cancel interrupted the run. Without this the
+            # finally would record it as the SUCCEEDED it was initialized to.
+            final_status = IngestionRunStatus.FAILED
+            final_error = "Ingestion was interrupted before it finished."
+            raise
         finally:
             if backend is not None:
                 await backend.teardown()
+            await job_service.stop_keep_alive(task_job_id)
             await ingestion_run_service.finalize_run(
                 run_id,
                 summary=summary,

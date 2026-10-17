@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
 import { NEW_SESSION_NAME } from "@/constants/constants";
 import { getMessages } from "@/controllers/API/queries/messages";
 import { useBulkDeleteSessions } from "@/controllers/API/queries/messages/use-bulk-delete-sessions";
@@ -16,10 +17,6 @@ interface UseSessionManagerProps {
 }
 
 const NO_SESSIONS: string[] = [];
-
-// The server returns at most this many sessions (newest first), so a full list
-// may be truncated.
-const SESSION_LIST_LIMIT = 100;
 
 // Candidates step by doubling (see createSession), so 21 checks reach names up
 // to 2^19 (524,288) above the first candidate before giving up.
@@ -48,8 +45,8 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
   const removeSession = useSessionManagerStore((s) => s.removeSession);
   const renameSessionInStore = useSessionManagerStore((s) => s.renameSession);
   const syncFromServer = useSessionManagerStore((s) => s.syncFromServer);
-  const getOrderedSessionIds = useSessionManagerStore(
-    (s) => s.getOrderedSessionIds,
+  const sessions = useSessionManagerStore(
+    useShallow((s) => s.getOrderedSessionIds()),
   );
   const activeSessionIdFromStore = useSessionManagerStore(
     (s) => s.activeSessionId,
@@ -62,13 +59,11 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const sessionsQuery = useGetSessionsFromFlowQuery({ id: flowId });
-  const fetchedSessions = sessionsQuery.data?.sessions ?? NO_SESSIONS;
-  // A full list may be truncated by the server's cap, so only a shorter one is
-  // known to be complete.
+  const fetchedSessions = sessionsQuery.data ?? NO_SESSIONS;
   const allSessionsLoaded =
     sessionsQuery.isSuccess &&
     !sessionsQuery.isPlaceholderData &&
-    fetchedSessions.length < SESSION_LIST_LIMIT;
+    !sessionsQuery.hasNextPage;
   // Each attempt has its own identity so a stale lookup cannot complete or
   // release the guard for a newer attempt, even for the same flow.
   const creatingSessionFor = useRef<{ flowId: string } | null>(null);
@@ -91,18 +86,19 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     };
   }, [flowId, initialize]);
 
-  // Sync server sessions into store (include flowId in deps to avoid stale
-  // data from keepPreviousData during flow switches)
+  // Sync server sessions into the store. While the query shows the previous
+  // flow's list as placeholder data (keepPreviousData), there is nothing to
+  // sync for this flow yet.
+  const isPlaceholderSessions = sessionsQuery.isPlaceholderData;
   useEffect(() => {
-    if (!flowId) return;
+    if (!flowId || isPlaceholderSessions) return;
     syncFromServer(fetchedSessions);
-  }, [flowId, fetchedSessions, syncFromServer]);
+  }, [flowId, fetchedSessions, isPlaceholderSessions, syncFromServer]);
 
-  const sessions = getOrderedSessionIds();
   const activeSessionId = activeSessionIdFromStore ?? flowId;
 
   // Names the session "New Session N" after the highest N in the list. While
-  // the list may be truncated, an unloaded session may already use that name,
+  // older pages are not loaded, an unloaded session may already use that name,
   // and reusing a session id reopens its conversation (and the model's memory),
   // so candidates are checked on the server first: N, N+1, N+2, N+4, N+8, ...
   // and the first free one wins (e.g. 0..29 taken: 0, 1, 2, 4, 8, 16, 32).
@@ -113,7 +109,7 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
       setActiveSessionId(sessionId);
       clearSessionMessages(sessionId, flowId);
     };
-    const firstNumber = nextNewSessionNumber(getOrderedSessionIds());
+    const firstNumber = nextNewSessionNumber(sessions);
     if (allSessionsLoaded) {
       startSession(`${NEW_SESSION_NAME} ${firstNumber}`);
       return;
@@ -149,7 +145,7 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     }
   }, [
     flowId,
-    getOrderedSessionIds,
+    sessions,
     allSessionsLoaded,
     addSession,
     setActiveSessionId,
@@ -232,9 +228,16 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     (sessionIds: string[], onSuccess?: () => void) => {
       if (!flowId || sessionIds.length === 0) return;
 
-      // Separate local-only sessions from server sessions
-      const serverSessions = sessionIds.filter((sessionId) =>
-        fetchedSessions.includes(sessionId),
+      // Separate local-only sessions from server sessions. Ask the store, not
+      // the loaded pages: the open session can be saved but outside them.
+      const localIds = new Set(
+        useSessionManagerStore
+          .getState()
+          .sessions.filter((s) => s.isLocal)
+          .map((s) => s.id),
+      );
+      const serverSessions = sessionIds.filter(
+        (sessionId) => !localIds.has(sessionId),
       );
 
       // Perform local cleanup for all sessions
@@ -258,7 +261,6 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     },
     [
       flowId,
-      fetchedSessions,
       bulkDeleteSessionsApi,
       deleteSessionFromMessagesStore,
       notifyDeleteSessionError,
@@ -270,6 +272,7 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     activeSessionId,
     sessions,
     fetchedSessions,
+    sessionsPagination: sessionsQuery,
     createSession,
     deleteSession,
     deleteSessionLocalOnly,

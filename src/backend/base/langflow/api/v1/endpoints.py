@@ -48,6 +48,7 @@ from lfx.workflow.end_user_identity import (
     end_user_required_detail,
     resolve_serving_scope,
 )
+from pydantic import ValidationError
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -64,6 +65,7 @@ from langflow.api.utils.execution_principal import (
     execution_principal_for,
     stamp_execution_principal,
 )
+from langflow.api.utils.migration_pause import writing_on
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
     enforce_catalog_policy_for_component_type,
@@ -88,6 +90,7 @@ from langflow.api.v1.schemas import (
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
+from langflow.api.validation_errors import redact_validation_errors
 from langflow.api.warm_graph import try_warm_run_graph
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
@@ -251,6 +254,10 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
         if body:
             body_data = orjson.loads(body)
             return SimplifiedAPIRequest(**body_data)
+        return SimplifiedAPIRequest()
+    except ValidationError as exc:
+        # Pydantic's own text quotes the submitted values. Log which field failed and why.
+        logger.warning(f"Failed to parse request body: {redact_validation_errors(exc.errors())}")
         return SimplifiedAPIRequest()
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"Failed to parse request body: {exc}")
@@ -586,6 +593,9 @@ async def simple_run_flow(
                 # getattr: the warm-run path may hand back a lightweight graph stand-in without
                 # this attribute, matching every other end_user_id read in the codebase.
                 end_user_id=getattr(graph, "end_user_id", None),
+                # Live from insert, then kept alive by execute_with_status, so an orphan
+                # sweep cannot fail it mid-run. The run writes no job_metadata of its own.
+                heartbeat=True,
             )
             # The funnel default. Binding is outermost-wins, so a caller that already named its
             # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands
@@ -594,6 +604,7 @@ async def simple_run_flow(
                 task_result, session_id = await _job_svc.execute_with_status(
                     run_id_uuid,
                     run_graph_internal,
+                    keep_alive=True,
                     graph=graph,
                     flow_id=flow_id_str,
                     session_id=effective_session_id,
@@ -1512,6 +1523,9 @@ async def webhook_run_flow(
         )
         # Fire-and-forget: log exceptions but don't block
         background_task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
+        # The run goes on after this request has answered, so it holds a place of its own among the
+        # changes a migration pause waits for.
+        writing_on(background_task, name="webhook_run")
     except Exception as exc:
         error_msg = str(exc)
         raise HTTPException(status_code=500, detail=error_msg) from exc
@@ -1911,7 +1925,9 @@ async def custom_component(
     try:
         component = Component(_code=effective_code)
 
-        built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
+        built_frontend_node, component_instance = build_custom_component_template(
+            component, user_id=user.id, class_name=raw_code.get_class_name()
+        )
         type_ = get_instance_name(component_instance)
         enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
         # Posting the source of a blocked integration component must not
@@ -2016,6 +2032,7 @@ async def custom_component_update(
         component_node, cc_instance = build_custom_component_template(
             component,
             user_id=user.id,
+            class_name=code_request.get_class_name(),
         )
         component_type = get_instance_name(cc_instance)
         enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
