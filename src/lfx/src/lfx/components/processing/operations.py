@@ -694,9 +694,12 @@ class OperationsComponent(Component):
         if main_input and main_input in build_config:
             build_config[main_input]["show"] = True
             build_config[main_input]["required"] = True
-            # The JSON "Combine" operation consumes a list of Data objects.
+            # The JSON "Combine" operation consumes a list of Data objects. The
+            # serialized template stores Input.is_list under "list", which the
+            # canvas and the graph read to decide whether "data" takes many edges.
             if main_input == "data":
-                build_config["data"]["is_list"] = operation == "Combine"
+                build_config["data"]["list"] = operation == "Combine"
+                build_config["data"].pop("is_list", None)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         # Path Selection: refresh the available JSON paths from the pasted JSON.
@@ -831,6 +834,8 @@ class OperationsComponent(Component):
         if operation in JSON_OPERATIONS:
             handler = self._json_handlers().get(operation)
             if handler:
+                if operation != "Combine":
+                    self.validate_data_edges(operation)
                 try:
                     return handler()
                 except Exception as e:
@@ -926,6 +931,23 @@ class OperationsComponent(Component):
         """Validate that the operation is being performed on a single data object."""
         if self.data_is_list():
             msg = f"{operation} operation is not supported for multiple data objects."
+            raise ValueError(msg)
+
+    def validate_data_edges(self, operation: str) -> None:
+        """Fail when several JSON edges feed an operation that takes one input.
+
+        A node keeps its edges when its operation changes, and for every operation but Combine the
+        ``data`` field takes one edge, so the graph would pass only the last edge's data. Count the
+        edges instead of trusting the value.
+        """
+        vertex = getattr(self, "_vertex", None)
+        if vertex is None:
+            return
+        if sum(1 for edge in vertex.incoming_edges if edge.target_param == "data") > 1:
+            msg = (
+                f"{operation} operation is not supported for multiple data objects. "
+                "Connect one JSON input, or use Combine."
+            )
             raise ValueError(msg)
 
     def select_keys(self) -> Data:
