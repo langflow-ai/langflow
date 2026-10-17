@@ -439,6 +439,45 @@ class DataOperationsComponent(Component):
 
         return build_config
 
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:
+        """Keep the saved operation's fields visible when the node is updated.
+
+        The rebuilt template carries class-default ``show`` flags, which the generic merge does not
+        restore, so visibility is re-derived here from the saved operation without touching saved values.
+        """
+        await super().update_frontend_node(new_frontend_node, current_frontend_node)
+
+        template = new_frontend_node.get("template", {})
+        operations_value = template.get("operations", {}).get("value") or []
+        selected_actions = [
+            action["name"]
+            for action in (operations_value if isinstance(operations_value, list) else [])
+            if isinstance(action, dict) and "name" in action
+        ]
+        action = selected_actions[0] if len(selected_actions) == 1 else None
+        if action not in ACTION_CONFIG:
+            action = None
+
+        # Re-apply visibility. Unlike update_build_config, keep saved values.
+        visible_fields = self.actions_data.get(action, []) if action else []
+        for field in self.ALL_OPERATION_FIELDS:
+            if field in template:
+                template[field]["show"] = field in visible_fields
+        if action and "data" in template:
+            template["data"]["is_list"] = ACTION_CONFIG[action]["is_list"]
+
+        # The merge restores only values, so rebuild Path Selection's dropdown from the saved JSON.
+        if action == "Path Selection" and "selected_key" in template:
+            mapped_json = template.get("mapped_json_display", {}).get("value")
+            if mapped_json:
+                try:
+                    template["selected_key"]["options"] = self.extract_all_paths(json.loads(mapped_json))
+                except (json.JSONDecodeError, TypeError, ValueError, RecursionError) as e:
+                    logger.warning(f"Error parsing saved mapped JSON: {e}")
+                    template["selected_key"]["show"] = False
+
+        return new_frontend_node
+
     def json_path(self) -> Data:
         try:
             import jq
