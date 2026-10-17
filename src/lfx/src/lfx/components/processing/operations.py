@@ -834,6 +834,8 @@ class OperationsComponent(Component):
         if operation in JSON_OPERATIONS:
             handler = self._json_handlers().get(operation)
             if handler:
+                if operation != "Combine":
+                    self.validate_data_edges(operation)
                 try:
                     return handler()
                 except Exception as e:
@@ -929,6 +931,23 @@ class OperationsComponent(Component):
         """Validate that the operation is being performed on a single data object."""
         if self.data_is_list():
             msg = f"{operation} operation is not supported for multiple data objects."
+            raise ValueError(msg)
+
+    def validate_data_edges(self, operation: str) -> None:
+        """Fail when several JSON edges feed an operation that takes one input.
+
+        A node keeps its edges when its operation changes, and for every operation but Combine the
+        ``data`` field takes one edge, so the graph would pass only the last edge's data. Count the
+        edges instead of trusting the value.
+        """
+        vertex = getattr(self, "_vertex", None)
+        if vertex is None:
+            return
+        if sum(1 for edge in vertex.incoming_edges if edge.target_param == "data") > 1:
+            msg = (
+                f"{operation} operation is not supported for multiple data objects. "
+                "Connect one JSON input, or use Combine."
+            )
             raise ValueError(msg)
 
     def select_keys(self) -> Data:

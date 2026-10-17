@@ -277,6 +277,23 @@ class DataOperationsComponent(Component):
             msg = f"{operation} operation is not supported for multiple data objects."
             raise ValueError(msg)
 
+    def validate_data_edges(self, operation: str) -> None:
+        """Fail when several JSON edges feed an operation that takes one input.
+
+        A node keeps its edges when its operation changes, and for every operation but Combine the
+        ``data`` field takes one edge, so the graph would pass only the last edge's data. Count the
+        edges instead of trusting the value.
+        """
+        vertex = getattr(self, "_vertex", None)
+        if vertex is None:
+            return
+        if sum(1 for edge in vertex.incoming_edges if edge.target_param == "data") > 1:
+            msg = (
+                f"{operation} operation is not supported for multiple data objects. "
+                "Connect one JSON input, or use Combine."
+            )
+            raise ValueError(msg)
+
     def operation_exception(self, operations: list[str]) -> None:
         """Raise exception for incompatible operations."""
         msg = f"{operations} operations are not supported in combination with each other."
@@ -540,6 +557,8 @@ class DataOperationsComponent(Component):
                 "Update this flow to use the Operations component."
             )
             raise ValueError(msg)
+        if action_name != "Combine":
+            self.validate_data_edges(action_name)
         try:
             return handler()
         except Exception as e:
