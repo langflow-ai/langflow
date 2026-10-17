@@ -277,6 +277,23 @@ class DataOperationsComponent(Component):
             msg = f"{operation} operation is not supported for multiple data objects."
             raise ValueError(msg)
 
+    def validate_data_edges(self, operation: str) -> None:
+        """Fail when several JSON edges feed an operation that takes one input.
+
+        A node keeps its edges when its operation changes, and for every operation but Combine the
+        ``data`` field takes one edge, so the graph would pass only the last edge's data. Count the
+        edges instead of trusting the value.
+        """
+        vertex = getattr(self, "_vertex", None)
+        if vertex is None:
+            return
+        if sum(1 for edge in vertex.incoming_edges if edge.target_param == "data") > 1:
+            msg = (
+                f"{operation} operation is not supported for multiple data objects. "
+                "Connect one JSON input, or use Combine."
+            )
+            raise ValueError(msg)
+
     def operation_exception(self, operations: list[str]) -> None:
         """Raise exception for incompatible operations."""
         msg = f"{operations} operations are not supported in combination with each other."
@@ -399,6 +416,16 @@ class DataOperationsComponent(Component):
 
         return Data(data=data_filtered)
 
+    @staticmethod
+    def _set_data_list_flag(template: dict, action: str) -> None:
+        """Let the JSON input take several edges only for operations that consume a list (Combine).
+
+        The serialized template stores ``Input.is_list`` under ``list``; the canvas and the graph read
+        that key to decide whether ``data`` takes many edges. Drop any ``is_list`` an earlier save left.
+        """
+        template["data"]["list"] = ACTION_CONFIG[action]["is_list"]
+        template["data"].pop("is_list", None)
+
     # Configuration and execution methods
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name == "operations":
@@ -416,7 +443,7 @@ class DataOperationsComponent(Component):
             if len(selected_actions) == 1 and selected_actions[0] in ACTION_CONFIG:
                 action = selected_actions[0]
                 config = ACTION_CONFIG[action]
-                build_config["data"]["is_list"] = config["is_list"]
+                self._set_data_list_flag(build_config, action)
                 logger.info(config["log_msg"])
                 return set_current_fields(
                     build_config=build_config,
@@ -464,7 +491,7 @@ class DataOperationsComponent(Component):
             if field in template:
                 template[field]["show"] = field in visible_fields
         if action and "data" in template:
-            template["data"]["is_list"] = ACTION_CONFIG[action]["is_list"]
+            self._set_data_list_flag(template, action)
 
         # The merge restores only values, so rebuild Path Selection's dropdown from the saved JSON.
         if action == "Path Selection" and "selected_key" in template:
@@ -530,6 +557,8 @@ class DataOperationsComponent(Component):
                 "Update this flow to use the Operations component."
             )
             raise ValueError(msg)
+        if action_name != "Combine":
+            self.validate_data_edges(action_name)
         try:
             return handler()
         except Exception as e:
