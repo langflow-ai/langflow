@@ -2147,7 +2147,7 @@ class Graph:
         )
         if has_listen_or_notify_component:
             for vertex in self.vertices:
-                vertex.apply_on_outputs(lambda output_object: setattr(output_object, "cache", False))
+                vertex.disable_output_cache()
 
     def _set_cache_to_vertices_in_cycle(self) -> None:
         """Sets the cache to the vertices in cycle."""
@@ -2155,7 +2155,7 @@ class Graph:
         cycle_vertices = set(find_cycle_vertices(edges))
         for vertex in self.vertices:
             if vertex.id in cycle_vertices:
-                vertex.apply_on_outputs(lambda output_object: setattr(output_object, "cache", False))
+                vertex.disable_output_cache()
 
     def _instantiate_components_in_vertices(self) -> None:
         """Instantiates the components in the vertices."""

@@ -1,0 +1,1213 @@
+{
+ "data": {
+  "nodes": [
+   {
+    "data": {
+     "node": {
+      "template": {
+       "_type": "Component",
+       "files": {
+        "tool_mode": false,
+        "trace_as_metadata": true,
+        "file_path": "",
+        "fileTypes": [
+         "csv",
+         "json",
+         "pdf",
+         "txt",
+         "md",
+         "mdx",
+         "yaml",
+         "yml",
+         "xml",
+         "html",
+         "htm",
+         "docx",
+         "py",
+         "sh",
+         "sql",
+         "js",
+         "ts",
+         "tsx",
+         "jpg",
+         "jpeg",
+         "png",
+         "bmp",
+         "image"
+        ],
+        "temp_file": true,
+        "list": true,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "files",
+        "value": "",
+        "display_name": "Files",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": false,
+        "info": "Files to be sent with the message.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "file",
+        "_input_type": "FileInput"
+       },
+       "code": {
+        "type": "code",
+        "required": true,
+        "placeholder": "",
+        "list": false,
+        "show": true,
+        "multiline": true,
+        "value": "from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom lfx.schema.image import get_file_paths\nfrom lfx.schema.message import Message\nfrom lfx.services.deps import get_settings_service\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\nfrom lfx.utils.file_path_security import (\n    component_file_access_scopes,\n    enforce_local_file_access,\n    is_local_file_access_restricted,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        # Ensure files is a list and filter out empty/None values\n        files = self.files if self.files else []\n        if files and not isinstance(files, list):\n            files = [files]\n        # Filter out None/empty values\n        files = [f for f in files if f is not None and f != \"\"]\n\n        # Build endpoints inject caller-controlled file references directly into\n        # ChatInput. Resolve and validate local references before the Message can\n        # later read them while constructing model attachment content.\n        if files:\n            settings_service = get_settings_service()\n            storage_type = getattr(getattr(settings_service, \"settings\", None), \"storage_type\", \"local\")\n            # The storage factory falls back to local storage for unsupported\n            # values, so only the explicitly configured S3 backend may bypass\n            # filesystem containment.\n            if str(storage_type).lower() != \"s3\" and is_local_file_access_restricted():\n                scope_ids = list(component_file_access_scopes(self))\n                # Public executions replace graph.flow_id with a per-visitor\n                # virtual ID. Only the server-populated source provenance may\n                # restore the already-validated public attachment namespace.\n                source_flow_id = getattr(self.graph, \"source_flow_id\", None)\n                if source_flow_id:\n                    scope_ids.append(source_flow_id)\n                for file_path in get_file_paths(files):\n                    enforce_local_file_access(file_path, scope_ids=scope_ids)\n\n        session_id = self.session_id or self.graph.session_id or \"\"\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=session_id,\n            context_id=self.context_id,\n            files=files,\n        )\n        if session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n",
+        "fileTypes": [],
+        "file_path": "",
+        "password": false,
+        "name": "code",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": true,
+        "info": "",
+        "load_from_db": false,
+        "title_case": false
+       },
+       "context_id": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "context_id",
+        "value": "",
+        "display_name": "Context ID",
+        "advanced": true,
+        "api_editable": false,
+        "input_types": [
+         "Message"
+        ],
+        "dynamic": false,
+        "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "str",
+        "_input_type": "MessageTextInput"
+       },
+       "input_value": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "multiline": true,
+        "ai_enabled": false,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "input_value",
+        "value": "alpha\nbeta\ngamma\ndelta",
+        "display_name": "Input Text",
+        "advanced": false,
+        "api_editable": false,
+        "input_types": [],
+        "dynamic": false,
+        "info": "Message to be passed as input.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "copy_field": false,
+        "password": false,
+        "type": "str",
+        "_input_type": "MultilineInput"
+       },
+       "sender": {
+        "tool_mode": false,
+        "trace_as_metadata": true,
+        "options": [
+         "Machine",
+         "User"
+        ],
+        "options_metadata": [],
+        "combobox": false,
+        "dialog_inputs": {},
+        "toggle": false,
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "sender",
+        "value": "User",
+        "display_name": "Sender Type",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": false,
+        "info": "Type of sender.",
+        "title_case": false,
+        "track_in_telemetry": true,
+        "external_options": {},
+        "type": "str",
+        "_input_type": "DropdownInput"
+       },
+       "sender_name": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "sender_name",
+        "value": "User",
+        "display_name": "Sender Name",
+        "advanced": true,
+        "api_editable": false,
+        "input_types": [
+         "Message"
+        ],
+        "dynamic": false,
+        "info": "Name of the sender.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "str",
+        "_input_type": "MessageTextInput"
+       },
+       "session_id": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "session_id",
+        "value": "",
+        "display_name": "Session ID",
+        "advanced": true,
+        "api_editable": false,
+        "input_types": [
+         "Message"
+        ],
+        "dynamic": false,
+        "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "str",
+        "_input_type": "MessageTextInput"
+       },
+       "should_store_message": {
+        "tool_mode": false,
+        "trace_as_metadata": true,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "should_store_message",
+        "value": false,
+        "display_name": "Store Messages",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": false,
+        "info": "Store the message in the history.",
+        "title_case": false,
+        "track_in_telemetry": true,
+        "type": "bool",
+        "_input_type": "BoolInput"
+       }
+      },
+      "description": "Get chat inputs from the Playground.",
+      "icon": "MessagesSquare",
+      "base_classes": [
+       "Message"
+      ],
+      "display_name": "Chat Input",
+      "documentation": "https://docs.langflow.org/chat-input-and-output",
+      "minimized": true,
+      "custom_fields": {},
+      "output_types": [],
+      "pinned": false,
+      "conditional_paths": [],
+      "frozen": false,
+      "outputs": [
+       {
+        "types": [
+         "Message"
+        ],
+        "selected": "Message",
+        "name": "message",
+        "display_name": "Chat Message",
+        "method": "message_response",
+        "value": "__UNDEFINED__",
+        "cache": true,
+        "allows_loop": false,
+        "group_outputs": false,
+        "tool_mode": true
+       }
+      ],
+      "field_order": [],
+      "beta": false,
+      "legacy": false,
+      "edited": false,
+      "metadata": {},
+      "tool_mode": false
+     },
+     "type": "ChatInput",
+     "id": "ChatInput-cyc1"
+    },
+    "id": "ChatInput-cyc1",
+    "position": {
+     "x": 0,
+     "y": 0
+    },
+    "type": "genericNode"
+   },
+   {
+    "data": {
+     "node": {
+      "template": {
+       "_type": "Component",
+       "input_value": {
+        "trace_as_metadata": true,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": true,
+        "placeholder": "",
+        "show": true,
+        "name": "input_value",
+        "value": "",
+        "display_name": "Inputs",
+        "advanced": false,
+        "api_editable": false,
+        "input_types": [
+         "Data",
+         "JSON",
+         "DataFrame",
+         "Table",
+         "Message"
+        ],
+        "dynamic": false,
+        "info": "Message to be passed as output.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "other",
+        "_input_type": "HandleInput"
+       },
+       "clean_data": {
+        "tool_mode": false,
+        "trace_as_metadata": true,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "clean_data",
+        "value": true,
+        "display_name": "Basic Clean Data",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": false,
+        "info": "Whether to clean data before converting to string.",
+        "title_case": false,
+        "track_in_telemetry": true,
+        "type": "bool",
+        "_input_type": "BoolInput"
+       },
+       "code": {
+        "type": "code",
+        "required": true,
+        "placeholder": "",
+        "list": false,
+        "show": true,
+        "multiline": true,
+        "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.schema.properties import Source\nfrom lfx.template.field.base import Output\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"JSON\", \"DataFrame\", \"Table\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            advanced=True,\n            info=\"Whether to clean data before converting to string.\",\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, _, display_name, source_id = self.get_properties_from_source_component()\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message) and not self.is_connected_to_chat_input():\n            message = self.input_value\n            # Update message properties\n            message.text = text\n            # Preserve existing session_id from the incoming message if it exists\n            existing_session_id = message.session_id\n        else:\n            message = Message(text=text)\n            existing_session_id = None\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        # Preserve session_id from incoming message, or use component/graph session_id\n        message.session_id = (\n            self.session_id or existing_session_id or (self.graph.session_id if hasattr(self, \"graph\") else None) or \"\"\n        )\n        message.context_id = self.context_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n\n        # Store message if needed\n        if message.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        # Set accumulated token usage from all upstream LLM vertices.\n        # This must happen AFTER send_message() because streaming captures\n        # usage from chunks and would overwrite accumulated totals.\n        if hasattr(self, \"_vertex\") and self._vertex is not None:\n            accumulated_usage = self._vertex._accumulate_upstream_token_usage()  # noqa: SLF001\n            if accumulated_usage:\n                message.properties.usage = accumulated_usage\n                if self.should_store_message and message.get_id():\n                    message = await self._update_stored_message(message)\n                    await self._send_message_event(message, id_=message.get_id())\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        clean_data: bool = getattr(self, \"clean_data\", False)\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value, clean_data=clean_data)\n",
+        "fileTypes": [],
+        "file_path": "",
+        "password": false,
+        "name": "code",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": true,
+        "info": "",
+        "load_from_db": false,
+        "title_case": false
+       },
+       "context_id": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "context_id",
+        "value": "",
+        "display_name": "Context ID",
+        "advanced": true,
+        "api_editable": false,
+        "input_types": [
+         "Message"
+        ],
+        "dynamic": false,
+        "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "str",
+        "_input_type": "MessageTextInput"
+       },
+       "data_template": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "data_template",
+        "value": "{text}",
+        "display_name": "Data Template",
+        "advanced": true,
+        "api_editable": false,
+        "input_types": [
+         "Message"
+        ],
+        "dynamic": false,
+        "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "str",
+        "_input_type": "MessageTextInput"
+       },
+       "sender": {
+        "tool_mode": false,
+        "trace_as_metadata": true,
+        "options": [
+         "Machine",
+         "User"
+        ],
+        "options_metadata": [],
+        "combobox": false,
+        "dialog_inputs": {},
+        "toggle": false,
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "sender",
+        "value": "Machine",
+        "display_name": "Sender Type",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": false,
+        "info": "Type of sender.",
+        "title_case": false,
+        "track_in_telemetry": true,
+        "external_options": {},
+        "type": "str",
+        "_input_type": "DropdownInput"
+       },
+       "sender_name": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "sender_name",
+        "value": "AI",
+        "display_name": "Sender Name",
+        "advanced": true,
+        "api_editable": false,
+        "input_types": [
+         "Message"
+        ],
+        "dynamic": false,
+        "info": "Name of the sender.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "str",
+        "_input_type": "MessageTextInput"
+       },
+       "session_id": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "session_id",
+        "value": "",
+        "display_name": "Session ID",
+        "advanced": true,
+        "api_editable": false,
+        "input_types": [
+         "Message"
+        ],
+        "dynamic": false,
+        "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "str",
+        "_input_type": "MessageTextInput"
+       },
+       "should_store_message": {
+        "tool_mode": false,
+        "trace_as_metadata": true,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "should_store_message",
+        "value": false,
+        "display_name": "Store Messages",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": false,
+        "info": "Store the message in the history.",
+        "title_case": false,
+        "track_in_telemetry": true,
+        "type": "bool",
+        "_input_type": "BoolInput"
+       }
+      },
+      "description": "Display a chat message in the Playground.",
+      "icon": "MessagesSquare",
+      "base_classes": [
+       "Message"
+      ],
+      "display_name": "Chat Output",
+      "documentation": "https://docs.langflow.org/chat-input-and-output",
+      "minimized": true,
+      "custom_fields": {},
+      "output_types": [],
+      "pinned": false,
+      "conditional_paths": [],
+      "frozen": false,
+      "outputs": [
+       {
+        "types": [
+         "Message"
+        ],
+        "selected": "Message",
+        "name": "message",
+        "display_name": "Output Message",
+        "method": "message_response",
+        "value": "__UNDEFINED__",
+        "cache": true,
+        "allows_loop": false,
+        "group_outputs": false,
+        "tool_mode": true
+       }
+      ],
+      "field_order": [],
+      "beta": false,
+      "legacy": false,
+      "edited": false,
+      "metadata": {},
+      "tool_mode": false
+     },
+     "type": "ChatOutput",
+     "id": "ChatOutput-cyc1"
+    },
+    "id": "ChatOutput-cyc1",
+    "position": {
+     "x": 1600,
+     "y": 0
+    },
+    "type": "genericNode"
+   },
+   {
+    "data": {
+     "node": {
+      "template": {
+       "_type": "Component",
+       "data": {
+        "trace_as_metadata": true,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "data",
+        "value": "",
+        "display_name": "Data",
+        "advanced": false,
+        "api_editable": false,
+        "input_types": [
+         "DataFrame",
+         "Data"
+        ],
+        "dynamic": false,
+        "info": "",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "other",
+        "_input_type": "HandleInput"
+       },
+       "code": {
+        "type": "code",
+        "required": true,
+        "placeholder": "",
+        "list": false,
+        "show": true,
+        "multiline": true,
+        "value": "from lfx.custom import Component\nfrom lfx.io import HandleInput, Output\nfrom lfx.schema import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\n\n\nclass CycleLoopComponent(Component):\n    display_name = \"Cycle Loop\"\n    description = \"Iterates by sending one item per pass through a graph cycle and collecting what comes back.\"\n    icon = \"infinity\"\n\n    inputs = [\n        HandleInput(name=\"data\", display_name=\"Data\", input_types=[\"DataFrame\", \"Data\"]),\n    ]\n\n    outputs = [\n        Output(display_name=\"Item\", name=\"item\", method=\"item_output\", allows_loop=True, loop_types=[\"Message\"]),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\"),\n    ]\n\n    def initialize_data(self) -> None:\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n        data = self.data\n        if isinstance(data, DataFrame):\n            data = data.to_data_list()\n        elif isinstance(data, Data):\n            data = [data]\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def evaluate_stop_loop(self) -> bool:\n        current_index = self.ctx.get(f\"{self._id}_index\", 0)\n        return current_index > len(self.ctx.get(f\"{self._id}_data\", []))\n\n    def item_output(self) -> Data:\n        self.initialize_data()\n        current_item = Data(text=\"\")\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n        else:\n            data_list = self.ctx.get(f\"{self._id}_data\", [])\n            current_index = self.ctx.get(f\"{self._id}_index\", 0)\n            if current_index < len(data_list):\n                current_item = data_list[current_index]\n            self.aggregated_output()\n            self.update_ctx({f\"{self._id}_index\": current_index + 1})\n        return current_item\n\n    def done_output(self) -> Message:\n        self.initialize_data()\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            self.start(\"done\")\n            aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n            return Message(text=\" | \".join(getattr(item, \"text\", str(item)) for item in aggregated))\n        self.stop(\"done\")\n        return Message(text=\"\")\n\n    def aggregated_output(self) -> list:\n        self.initialize_data()\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n        aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n        if self.item is not None and not isinstance(self.item, str) and len(aggregated) <= len(data_list):\n            aggregated.append(self.item)\n            self.update_ctx({f\"{self._id}_aggregated\": aggregated})\n        return aggregated\n",
+        "fileTypes": [],
+        "file_path": "",
+        "password": false,
+        "name": "code",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": true,
+        "info": "",
+        "load_from_db": false,
+        "title_case": false
+       }
+      },
+      "description": "Iterates by sending one item per pass through a graph cycle and collecting what comes back.",
+      "icon": "infinity",
+      "base_classes": [
+       "JSON",
+       "Message"
+      ],
+      "display_name": "Cycle Loop",
+      "documentation": "",
+      "minimized": false,
+      "custom_fields": {},
+      "output_types": [],
+      "pinned": false,
+      "conditional_paths": [],
+      "frozen": false,
+      "outputs": [
+       {
+        "types": [
+         "JSON"
+        ],
+        "selected": "JSON",
+        "name": "item",
+        "display_name": "Item",
+        "method": "item_output",
+        "value": "__UNDEFINED__",
+        "cache": true,
+        "allows_loop": true,
+        "loop_types": [
+         "Message"
+        ],
+        "group_outputs": false,
+        "tool_mode": true
+       },
+       {
+        "types": [
+         "Message"
+        ],
+        "selected": "Message",
+        "name": "done",
+        "display_name": "Done",
+        "method": "done_output",
+        "value": "__UNDEFINED__",
+        "cache": true,
+        "allows_loop": false,
+        "group_outputs": false,
+        "tool_mode": true
+       }
+      ],
+      "field_order": [],
+      "beta": false,
+      "legacy": false,
+      "edited": false,
+      "metadata": {},
+      "tool_mode": false
+     },
+     "type": "CustomComponent",
+     "id": "CycleLoopComponent-cyc1"
+    },
+    "id": "CycleLoopComponent-cyc1",
+    "position": {
+     "x": 800,
+     "y": 0
+    },
+    "type": "genericNode"
+   },
+   {
+    "data": {
+     "node": {
+      "template": {
+       "_type": "Component",
+       "data_inputs": {
+        "trace_as_metadata": true,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": true,
+        "placeholder": "",
+        "show": true,
+        "name": "data_inputs",
+        "value": "",
+        "display_name": "Input",
+        "advanced": false,
+        "api_editable": false,
+        "input_types": [
+         "Data",
+         "JSON",
+         "DataFrame",
+         "Table",
+         "Message"
+        ],
+        "dynamic": false,
+        "info": "The data with texts to split in chunks.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "other",
+        "_input_type": "HandleInput"
+       },
+       "chunk_overlap": {
+        "tool_mode": false,
+        "trace_as_metadata": true,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "chunk_overlap",
+        "value": 0,
+        "display_name": "Chunk Overlap",
+        "advanced": false,
+        "api_editable": false,
+        "dynamic": false,
+        "info": "Number of characters to overlap between chunks.",
+        "title_case": false,
+        "track_in_telemetry": true,
+        "type": "int",
+        "_input_type": "IntInput"
+       },
+       "chunk_size": {
+        "tool_mode": false,
+        "trace_as_metadata": true,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "chunk_size",
+        "value": 5,
+        "display_name": "Chunk Size",
+        "advanced": false,
+        "api_editable": false,
+        "dynamic": false,
+        "info": "The maximum length of each chunk. Text is first split by separator, then chunks are merged up to this size. Individual splits larger than this won't be further divided.",
+        "title_case": false,
+        "track_in_telemetry": true,
+        "type": "int",
+        "_input_type": "IntInput"
+       },
+       "clean_output": {
+        "tool_mode": false,
+        "trace_as_metadata": true,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "clean_output",
+        "value": false,
+        "display_name": "Clean Output",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": false,
+        "info": "When enabled, only the text column is included in the output. Metadata columns are removed.",
+        "title_case": false,
+        "track_in_telemetry": true,
+        "type": "bool",
+        "_input_type": "BoolInput"
+       },
+       "code": {
+        "type": "code",
+        "required": true,
+        "placeholder": "",
+        "list": false,
+        "show": true,
+        "multiline": true,
+        "value": "from langchain_text_splitters import CharacterTextSplitter\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, Output\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.utils.util import unescape_string\n\n\nclass SplitTextComponent(Component):\n    display_name: str = \"Split Text\"\n    description: str = \"Split text into chunks based on specified criteria.\"\n    documentation: str = \"https://docs.langflow.org/split-text\"\n    icon = \"scissors-line-dashed\"\n    name = \"SplitText\"\n\n    inputs = [\n        HandleInput(\n            name=\"data_inputs\",\n            display_name=\"Input\",\n            info=\"The data with texts to split in chunks.\",\n            input_types=[\"Data\", \"JSON\", \"DataFrame\", \"Table\", \"Message\"],\n            required=True,\n        ),\n        IntInput(\n            name=\"chunk_overlap\",\n            display_name=\"Chunk Overlap\",\n            info=\"Number of characters to overlap between chunks.\",\n            value=200,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            info=(\n                \"The maximum length of each chunk. Text is first split by separator, \"\n                \"then chunks are merged up to this size. \"\n                \"Individual splits larger than this won't be further divided.\"\n            ),\n            value=1000,\n        ),\n        MessageTextInput(\n            name=\"separator\",\n            display_name=\"Separator\",\n            info=(\n                \"The character to split on. Use \\\\n for newline. \"\n                \"Examples: \\\\n\\\\n for paragraphs, \\\\n for lines, . for sentences\"\n            ),\n            value=\"\\n\",\n        ),\n        MessageTextInput(\n            name=\"text_key\",\n            display_name=\"Text Key\",\n            info=\"The key to use for the text column.\",\n            value=\"text\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"keep_separator\",\n            display_name=\"Keep Separator\",\n            info=\"Whether to keep the separator in the output chunks and where to place it.\",\n            options=[\"False\", \"True\", \"Start\", \"End\"],\n            value=\"False\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_output\",\n            display_name=\"Clean Output\",\n            info=\"When enabled, only the text column is included in the output. Metadata columns are removed.\",\n            value=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Chunks\", name=\"dataframe\", method=\"split_text\"),\n    ]\n\n    def _docs_to_data(self, docs, *, clean: bool = False) -> list[Data]:\n        return [\n            Data(text=doc.page_content) if clean else Data(text=doc.page_content, data=doc.metadata) for doc in docs\n        ]\n\n    def _fix_separator(self, separator: str) -> str:\n        \"\"\"Fix common separator issues and convert to proper format.\"\"\"\n        if separator == \"/n\":\n            return \"\\n\"\n        if separator == \"/t\":\n            return \"\\t\"\n        return separator\n\n    def split_text_base(self):\n        separator = self._fix_separator(self.separator)\n        separator = unescape_string(separator)\n\n        if isinstance(self.data_inputs, DataFrame):\n            if not len(self.data_inputs):\n                msg = \"DataFrame is empty\"\n                raise TypeError(msg)\n\n            self.data_inputs.text_key = self.text_key\n            try:\n                documents = self.data_inputs.to_lc_documents()\n            except Exception as e:\n                msg = f\"Error converting DataFrame to documents: {e}\"\n                raise TypeError(msg) from e\n        elif isinstance(self.data_inputs, Message):\n            self.data_inputs = [self.data_inputs.to_data()]\n            return self.split_text_base()\n        else:\n            if not self.data_inputs:\n                msg = \"No data inputs provided\"\n                raise TypeError(msg)\n\n            documents = []\n            if isinstance(self.data_inputs, Data):\n                self.data_inputs.text_key = self.text_key\n                documents = [self.data_inputs.to_lc_document()]\n            else:\n                try:\n                    documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, Data)]\n                    if not documents:\n                        msg = f\"No valid Data inputs found in {type(self.data_inputs)}\"\n                        raise TypeError(msg)\n                except AttributeError as e:\n                    msg = f\"Invalid input type in collection: {e}\"\n                    raise TypeError(msg) from e\n        try:\n            # Convert string 'False'/'True' to boolean\n            keep_sep = self.keep_separator\n            if isinstance(keep_sep, str):\n                if keep_sep.lower() == \"false\":\n                    keep_sep = False\n                elif keep_sep.lower() == \"true\":\n                    keep_sep = True\n                # 'start' and 'end' are kept as strings\n\n            splitter = CharacterTextSplitter(\n                chunk_overlap=self.chunk_overlap,\n                chunk_size=self.chunk_size,\n                separator=separator,\n                keep_separator=keep_sep,\n            )\n            return splitter.split_documents(documents)\n        except Exception as e:\n            msg = f\"Error splitting text: {e}\"\n            raise TypeError(msg) from e\n\n    def split_text(self) -> DataFrame:\n        docs = self.split_text_base()\n        df = DataFrame(self._docs_to_data(docs, clean=self.clean_output))\n        return df if self.clean_output else df.smart_column_order()\n",
+        "fileTypes": [],
+        "file_path": "",
+        "password": false,
+        "name": "code",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": true,
+        "info": "",
+        "load_from_db": false,
+        "title_case": false
+       },
+       "keep_separator": {
+        "tool_mode": false,
+        "trace_as_metadata": true,
+        "options": [
+         "False",
+         "True",
+         "Start",
+         "End"
+        ],
+        "options_metadata": [],
+        "combobox": false,
+        "dialog_inputs": {},
+        "toggle": false,
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "keep_separator",
+        "value": "False",
+        "display_name": "Keep Separator",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": false,
+        "info": "Whether to keep the separator in the output chunks and where to place it.",
+        "title_case": false,
+        "track_in_telemetry": true,
+        "external_options": {},
+        "type": "str",
+        "_input_type": "DropdownInput"
+       },
+       "separator": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "separator",
+        "value": "\n",
+        "display_name": "Separator",
+        "advanced": false,
+        "api_editable": false,
+        "input_types": [
+         "Message"
+        ],
+        "dynamic": false,
+        "info": "The character to split on. Use \\n for newline. Examples: \\n\\n for paragraphs, \\n for lines, . for sentences",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "str",
+        "_input_type": "MessageTextInput"
+       },
+       "text_key": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "text_key",
+        "value": "text",
+        "display_name": "Text Key",
+        "advanced": true,
+        "api_editable": false,
+        "input_types": [
+         "Message"
+        ],
+        "dynamic": false,
+        "info": "The key to use for the text column.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "str",
+        "_input_type": "MessageTextInput"
+       }
+      },
+      "description": "Split text into chunks based on specified criteria.",
+      "icon": "scissors-line-dashed",
+      "base_classes": [
+       "Table"
+      ],
+      "display_name": "Split Text",
+      "documentation": "https://docs.langflow.org/split-text",
+      "minimized": false,
+      "custom_fields": {},
+      "output_types": [],
+      "pinned": false,
+      "conditional_paths": [],
+      "frozen": false,
+      "outputs": [
+       {
+        "types": [
+         "Table"
+        ],
+        "selected": "Table",
+        "name": "dataframe",
+        "display_name": "Chunks",
+        "method": "split_text",
+        "value": "__UNDEFINED__",
+        "cache": true,
+        "allows_loop": false,
+        "group_outputs": false,
+        "tool_mode": true
+       }
+      ],
+      "field_order": [],
+      "beta": false,
+      "legacy": false,
+      "edited": false,
+      "metadata": {},
+      "tool_mode": false
+     },
+     "type": "SplitText",
+     "id": "SplitText-cyc1"
+    },
+    "id": "SplitText-cyc1",
+    "position": {
+     "x": 400,
+     "y": 0
+    },
+    "type": "genericNode"
+   },
+   {
+    "data": {
+     "node": {
+      "template": {
+       "_type": "Component",
+       "input_data": {
+        "trace_as_metadata": true,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": true,
+        "placeholder": "",
+        "show": true,
+        "name": "input_data",
+        "value": "",
+        "display_name": "JSON or Table",
+        "advanced": false,
+        "api_editable": false,
+        "input_types": [
+         "DataFrame",
+         "Table",
+         "Data",
+         "JSON"
+        ],
+        "dynamic": false,
+        "info": "Accepts a DataFrame, a Data object, or a list of Data objects.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "other",
+        "_input_type": "HandleInput"
+       },
+       "code": {
+        "type": "code",
+        "required": true,
+        "placeholder": "",
+        "list": false,
+        "show": true,
+        "multiline": true,
+        "value": "from lfx.custom.custom_component.component import Component\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, HandleInput, MessageTextInput, MultilineInput, TabInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass _DefaultDict(dict):\n    def __init__(self, data_item: Data):\n        super().__init__(data_item.data)\n        self.default_value = data_item.default_value\n\n    def __missing__(self, key):\n        return self.default_value if self.default_value is not None else \"\"\n\n\nclass ParserComponent(Component):\n    display_name = \"Parser\"\n    description = \"Extracts text using a template.\"\n    documentation: str = \"https://docs.langflow.org/parser\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"JSON or Table\",\n            input_types=[\"DataFrame\", \"Table\", \"Data\", \"JSON\"],\n            info=\"Accepts a DataFrame, a Data object, or a list of Data objects.\",\n            required=True,\n        ),\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"Parser\", \"Stringify\"],\n            value=\"Parser\",\n            info=\"Convert into raw string instead of using a template.\",\n            real_time_refresh=True,\n        ),\n        MultilineInput(\n            name=\"pattern\",\n            display_name=\"Template\",\n            info=(\n                \"Use variables within curly brackets to extract column values for DataFrames \"\n                \"or key values for Data.\"\n                \"For example: `Name: {Name}, Age: {Age}, Country: {Country}`\"\n            ),\n            value=\"Text: {text}\",  # Example default\n            dynamic=True,\n            show=True,\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"sep\",\n            display_name=\"Separator\",\n            advanced=True,\n            value=\"\\n\",\n            info=\"String used to separate rows/items.\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Parsed Text\",\n            name=\"parsed_text\",\n            info=\"Formatted text output.\",\n            method=\"parse_combined_text\",\n        ),\n    ]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        \"\"\"Dynamically hide/show `template` and enforce requirement based on `stringify`.\"\"\"\n        if field_name == \"mode\":\n            build_config[\"pattern\"][\"show\"] = self.mode == \"Parser\"\n            build_config[\"pattern\"][\"required\"] = self.mode == \"Parser\"\n            if field_value:\n                clean_data = BoolInput(\n                    name=\"clean_data\",\n                    display_name=\"Clean Data\",\n                    info=(\n                        \"Enable to clean the data by removing empty rows and lines \"\n                        \"in each cell of the DataFrame/ Data object.\"\n                    ),\n                    value=True,\n                    advanced=True,\n                    required=False,\n                )\n                build_config[\"clean_data\"] = clean_data.to_dict()\n            else:\n                build_config.pop(\"clean_data\", None)\n\n        return build_config\n\n    def _clean_args(self) -> tuple[DataFrame | None, Data | list[Data] | None]:\n        \"\"\"Prepare arguments based on input type.\"\"\"\n        input_data = self.input_data\n\n        match input_data:\n            case list() if all(isinstance(item, Data) for item in input_data):\n                return None, input_data\n            case DataFrame():\n                return input_data, None\n            case Data():\n                return None, input_data\n            case dict() if \"data\" in input_data:\n                try:\n                    if \"columns\" in input_data:  # Likely a DataFrame\n                        return DataFrame.from_dict(input_data), None\n                    # Likely a Data object\n                    return None, Data(**input_data)\n                except (TypeError, ValueError, KeyError) as e:\n                    msg = f\"Invalid structured input provided: {e!s}\"\n                    raise ValueError(msg) from e\n            case _:\n                msg = f\"Unsupported input type: {type(input_data)}. Expected DataFrame, Data, or list[Data].\"\n                raise ValueError(msg)\n\n    def parse_combined_text(self) -> Message:\n        \"\"\"Parse all rows/items into a single text or convert input to string if `stringify` is enabled.\"\"\"\n        # Early return for stringify option\n        if self.mode == \"Stringify\":\n            return self.convert_to_string()\n\n        df, data = self._clean_args()\n\n        lines = []\n        if df is not None:\n            for _, row in df.iterrows():\n                formatted_text = self.pattern.format(**row.to_dict())\n                lines.append(formatted_text)\n        elif data is not None:\n            data_items = data if isinstance(data, list) else [data]\n            for data_item in data_items:\n                formatted_text = self.pattern.format_map(_DefaultDict(data_item))\n                lines.append(formatted_text)\n\n        combined_text = self.sep.join(lines)\n        self.status = combined_text\n        return Message(text=combined_text)\n\n    def convert_to_string(self) -> Message:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        clean_data = getattr(self, \"clean_data\", False)\n        if isinstance(self.input_data, list):\n            result = \"\\n\".join(safe_convert(item, clean_data=clean_data) for item in self.input_data)\n        else:\n            result = safe_convert(self.input_data, clean_data=clean_data)\n        self.log(f\"Converted to string with length: {len(result)}\")\n\n        message = Message(text=result)\n        self.status = message\n        return message\n",
+        "fileTypes": [],
+        "file_path": "",
+        "password": false,
+        "name": "code",
+        "advanced": true,
+        "api_editable": false,
+        "dynamic": true,
+        "info": "",
+        "load_from_db": false,
+        "title_case": false
+       },
+       "mode": {
+        "tool_mode": false,
+        "trace_as_metadata": true,
+        "options": [
+         "Parser",
+         "Stringify"
+        ],
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "mode",
+        "value": "Parser",
+        "display_name": "Mode",
+        "advanced": false,
+        "api_editable": false,
+        "dynamic": false,
+        "info": "Convert into raw string instead of using a template.",
+        "real_time_refresh": true,
+        "title_case": false,
+        "track_in_telemetry": true,
+        "type": "tab",
+        "_input_type": "TabInput"
+       },
+       "pattern": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "multiline": true,
+        "ai_enabled": false,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": true,
+        "placeholder": "",
+        "show": true,
+        "name": "pattern",
+        "value": "item: {text}",
+        "display_name": "Template",
+        "advanced": false,
+        "api_editable": false,
+        "input_types": [
+         "Message"
+        ],
+        "dynamic": true,
+        "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "copy_field": false,
+        "password": false,
+        "type": "str",
+        "_input_type": "MultilineInput"
+       },
+       "sep": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "sep",
+        "value": "\n",
+        "display_name": "Separator",
+        "advanced": true,
+        "api_editable": false,
+        "input_types": [
+         "Message"
+        ],
+        "dynamic": false,
+        "info": "String used to separate rows/items.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "str",
+        "_input_type": "MessageTextInput"
+       }
+      },
+      "description": "Extracts text using a template.",
+      "icon": "braces",
+      "base_classes": [
+       "Message"
+      ],
+      "display_name": "Parser",
+      "documentation": "https://docs.langflow.org/parser",
+      "minimized": false,
+      "custom_fields": {},
+      "output_types": [],
+      "pinned": false,
+      "conditional_paths": [],
+      "frozen": false,
+      "outputs": [
+       {
+        "types": [
+         "Message"
+        ],
+        "selected": "Message",
+        "name": "parsed_text",
+        "display_name": "Parsed Text",
+        "method": "parse_combined_text",
+        "value": "__UNDEFINED__",
+        "cache": true,
+        "allows_loop": false,
+        "group_outputs": false,
+        "tool_mode": true
+       }
+      ],
+      "field_order": [],
+      "beta": false,
+      "legacy": false,
+      "edited": false,
+      "metadata": {},
+      "tool_mode": false
+     },
+     "type": "ParserComponent",
+     "id": "ParserComponent-cyc1"
+    },
+    "id": "ParserComponent-cyc1",
+    "position": {
+     "x": 1200,
+     "y": 200
+    },
+    "type": "genericNode"
+   }
+  ],
+  "edges": [
+   {
+    "source": "ParserComponent-cyc1",
+    "target": "CycleLoopComponent-cyc1",
+    "data": {
+     "sourceHandle": {
+      "dataType": "ParserComponent",
+      "id": "ParserComponent-cyc1",
+      "name": "parsed_text",
+      "output_types": [
+       "Message"
+      ]
+     },
+     "targetHandle": {
+      "dataType": "CycleLoopComponent",
+      "id": "CycleLoopComponent-cyc1",
+      "name": "item",
+      "output_types": [
+       "Data",
+       "Message"
+      ]
+     }
+    }
+   },
+   {
+    "source": "SplitText-cyc1",
+    "target": "CycleLoopComponent-cyc1",
+    "data": {
+     "sourceHandle": {
+      "dataType": "SplitText",
+      "id": "SplitText-cyc1",
+      "name": "dataframe",
+      "output_types": [
+       "Table"
+      ]
+     },
+     "targetHandle": {
+      "fieldName": "data",
+      "id": "CycleLoopComponent-cyc1",
+      "inputTypes": [
+       "DataFrame",
+       "Data"
+      ],
+      "type": "other"
+     }
+    }
+   },
+   {
+    "source": "ChatInput-cyc1",
+    "target": "SplitText-cyc1",
+    "data": {
+     "sourceHandle": {
+      "dataType": "ChatInput",
+      "id": "ChatInput-cyc1",
+      "name": "message",
+      "output_types": [
+       "Message"
+      ]
+     },
+     "targetHandle": {
+      "fieldName": "data_inputs",
+      "id": "SplitText-cyc1",
+      "inputTypes": [
+       "Data",
+       "JSON",
+       "DataFrame",
+       "Table",
+       "Message"
+      ],
+      "type": "other"
+     }
+    }
+   },
+   {
+    "source": "CycleLoopComponent-cyc1",
+    "target": "ParserComponent-cyc1",
+    "data": {
+     "sourceHandle": {
+      "dataType": "CycleLoopComponent",
+      "id": "CycleLoopComponent-cyc1",
+      "name": "item",
+      "output_types": [
+       "JSON"
+      ]
+     },
+     "targetHandle": {
+      "fieldName": "input_data",
+      "id": "ParserComponent-cyc1",
+      "inputTypes": [
+       "DataFrame",
+       "Table",
+       "Data",
+       "JSON"
+      ],
+      "type": "other"
+     }
+    }
+   },
+   {
+    "source": "CycleLoopComponent-cyc1",
+    "target": "ChatOutput-cyc1",
+    "data": {
+     "sourceHandle": {
+      "dataType": "CycleLoopComponent",
+      "id": "CycleLoopComponent-cyc1",
+      "name": "done",
+      "output_types": [
+       "Message"
+      ]
+     },
+     "targetHandle": {
+      "fieldName": "input_value",
+      "id": "ChatOutput-cyc1",
+      "inputTypes": [
+       "Data",
+       "JSON",
+       "DataFrame",
+       "Table",
+       "Message"
+      ],
+      "type": "other"
+     }
+    }
+   }
+  ]
+ },
+ "is_component": false,
+ "name": "Cycle loop",
+ "description": "A custom component iterates over four lines through a graph cycle; no model or API key needed."
+}
