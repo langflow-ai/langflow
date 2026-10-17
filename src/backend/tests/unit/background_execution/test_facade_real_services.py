@@ -207,11 +207,22 @@ def _echo_input_factory(*, request, **_kwargs):
 class _RecordingBackend:
     """Scaled-backend stand-in that records durable job ids without running them."""
 
+    external_workers = True
+
     def __init__(self) -> None:
         self.enqueued: list[str] = []
 
+    async def start(self) -> None:
+        """Nothing to start: no workers behind the double."""
+
+    async def teardown(self) -> None:
+        """Nothing to close."""
+
     async def enqueue(self, job_id: str) -> None:
         self.enqueued.append(job_id)
+
+    async def dispatch(self, job_id, *, flow_id, request, user) -> None:  # noqa: ARG002
+        await self.enqueue(str(job_id))
 
 
 def _capture_request_factory(captured: list[dict]):
