@@ -20,13 +20,12 @@ read strictly too.
 
 from __future__ import annotations
 
-import copy
 import json
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from lfx.services.flow_operations.canonical import parse_handle, values_equal
+from lfx.services.flow_operations.canonical import EDGE_VIEW_STATE_KEYS, parse_handle, values_equal
 from lfx.services.flow_operations.codes import GraphViolationCode
 from lfx.services.flow_operations.exceptions import FlowDataValidationError, FlowOperationValidationError
 from lfx.services.flow_operations.schema import load_node_schema
@@ -105,15 +104,28 @@ def _handle(edge: dict[str, Any], key: str) -> dict[str, Any]:
     raise _error(edge, GraphViolationCode.EDGE_HANDLE_INVALID, f"edge has no {key}")
 
 
-def handle_forms(edge: dict[str, Any]) -> dict[str, Any]:
-    """Return a copy of both forms of an edge's handles, whatever their shape, to tell whether a write changed them."""
-    data = edge.get("data")
-    return copy.deepcopy(
-        {
-            "strings": {key: edge[key] for key in HANDLE_KEYS if key in edge},
-            "data": {key: data[key] for key in HANDLE_KEYS if key in data} if isinstance(data, dict) else data,
-        }
-    )
+def edge_changed(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    """Return whether an edge changed between two graphs.
+
+    View state is not a change, and neither is another spelling of the same
+    handle. A changed edge is deleted and added again, so the edge rules check
+    it like a new one.
+    """
+    for key in (before.keys() | after.keys()) - EDGE_VIEW_STATE_KEYS:
+        if key not in before or key not in after:
+            return True
+        old, new = before[key], after[key]
+        if key in HANDLE_KEYS:
+            old, new = _handle_value(old), _handle_value(new)
+        if not values_equal(old, new):
+            return True
+    return False
+
+
+def _handle_value(handle: Any) -> Any:
+    """Compare a handle string by the object it encodes."""
+    parsed = parse_handle(handle)
+    return parsed if parsed is not None else handle
 
 
 def derive_missing_handle_forms(edge: dict[str, Any]) -> None:
