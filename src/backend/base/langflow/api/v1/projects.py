@@ -70,6 +70,7 @@ from langflow.services.audit.operations import (
     stage_flow_succeeded,
     stage_project_succeeded,
 )
+from langflow.services.audit.writer import batch_audit_events, flush_audit_event_batch
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import (
     FlowAction,
@@ -100,6 +101,7 @@ from langflow.services.database.lock_retry import (
     sanitize_database_error,
 )
 from langflow.services.database.models.api_key.policy import ApiKeyIssuanceDeniedError
+from langflow.services.database.models.audit_event.model import AuditEvent
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
     remap_flow_guard_for_project_delete,
@@ -877,7 +879,11 @@ def _deny_to_404_with_code(exc: HTTPException, *, detail: str, code: str) -> HTT
     mapped = deny_to_404(exc, detail=detail)
     if mapped.status_code != status.HTTP_404_NOT_FOUND:
         return mapped
-    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail, headers={ERROR_CODE_HEADER: code})
+    # Keep the permission-denial marker when returning 404 instead of 403.
+    # The audit wrapper uses it to distinguish denied requests from failed mutations.
+    mapped.detail = detail
+    mapped.headers = {**(mapped.headers or {}), ERROR_CODE_HEADER: code}
+    return mapped
 
 
 async def _lock_replacement_operation(session: DbSession, project_id: UUID) -> str:
@@ -948,12 +954,14 @@ async def _authorize_replacement_receipt_project_only(
             headers={ERROR_CODE_HEADER: denied_error_code},
         )
     try:
-        await ensure_project_permission(
-            current_user,
-            project_action,
-            project_id=project_id,
-            project_user_id=project_user_id,
-            workspace_id=workspace_id,
+        await audited_permission(
+            ensure_project_permission(
+                current_user,
+                project_action,
+                project_id=project_id,
+                project_user_id=project_user_id,
+                workspace_id=workspace_id,
+            ),
         )
     except HTTPException as exc:
         raise _deny_to_404_with_code(exc, detail=denied_detail, code=denied_error_code) from exc
@@ -970,6 +978,8 @@ async def _authorize_replacement_result(
     denied_error_code: str,
 ) -> None:
     """Authorize the saved projection, including full graph bodies in receipts."""
+    if (audited := current_operation()) is not None:
+        audited.identify(resource_name=result.project.name)
     await _authorize_replacement_receipt_project_only(
         current_user=current_user,
         project_id=result.project.id,
@@ -1018,6 +1028,13 @@ async def _read_replacement_receipt(
     response_model=ProjectReplacementResult,
     status_code=status.HTTP_200_OK,
 )
+@audited_route(
+    audit_vocab.AuditResourceType.PROJECT,
+    audit_vocab.PROJECT_WRITE,
+    audit_vocab.AuditOperation.REPLACE,
+    resource_id_param="project_id",
+    describe=describe_project_body("request_body"),
+)
 async def replace_project_operation(
     *,
     session: DbSession,
@@ -1028,18 +1045,24 @@ async def replace_project_operation(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Replace a project's full flow set and persist an immutable retry receipt."""
+    if request_body.project_name is not None and (audited := current_operation()) is not None:
+        audited.identify(
+            action=audit_vocab.PROJECT_CREATE,
+            operation=audit_vocab.AuditOperation.CREATE,
+        )
     for attempt in range(_REPLACEMENT_MAX_ATTEMPTS):
         try:
             # Save helpers mutate the body. Each aborted transaction must start
             # from the original graph and its original receipt digest.
-            return await _replace_project_operation_once(
-                session=session,
-                project_id=project_id,
-                operation_id=operation_id,
-                request_body=request_body.model_copy(deep=True),
-                current_user=current_user,
-                storage_service=storage_service,
-            )
+            with batch_audit_events(session):
+                return await _replace_project_operation_once(
+                    session=session,
+                    project_id=project_id,
+                    operation_id=operation_id,
+                    request_body=request_body.model_copy(deep=True),
+                    current_user=current_user,
+                    storage_service=storage_service,
+                )
         except DBAPIError as exc:
             # Replacement locks the project's Folder row and then its existing
             # Flow rows (see the ``with_for_update()`` loads below). A concurrent
@@ -1108,6 +1131,32 @@ async def _replace_project_operation_once(
                     denied_detail="Project not found",
                     denied_error_code=_REPLACEMENT_PROJECT_NOT_FOUND_CODE,
                 )
+                if (audited := current_operation()) is not None:
+                    name = (
+                        await session.exec(
+                            select(Folder.name).where(
+                                Folder.id == project_id, Folder.user_id == receipt.project_user_id
+                            )
+                        )
+                    ).first()
+                    if name is None:
+                        # The receipt can outlive the project. Reuse a committed
+                        # audit name rather than the retry's caller-supplied name.
+                        name = (
+                            await session.exec(
+                                select(AuditEvent.resource_name)
+                                .where(
+                                    AuditEvent.resource_type == audit_vocab.AuditResourceType.PROJECT.value,
+                                    AuditEvent.resource_id == project_id,
+                                    AuditEvent.user_id == receipt.project_user_id,
+                                    AuditEvent.result == audit_vocab.AuditResult.SUCCEEDED.value,
+                                    AuditEvent.resource_name.is_not(None),
+                                )
+                                .order_by(AuditEvent.timestamp.desc(), AuditEvent.id.desc())
+                                .limit(1)
+                            )
+                        ).first()
+                    audited.identify(resource_name=name)
                 raise HTTPException(
                     status_code=status.HTTP_410_GONE,
                     detail=REPLACEMENT_RECEIPT_EXPIRED_DETAIL,
@@ -1177,7 +1226,9 @@ async def _replace_project_operation_once(
                     headers={ERROR_CODE_HEADER: "replacement_flows_span_multiple_workspaces"},
                 )
             workspace_id = next(iter(workspace_ids), None)
-            await ensure_project_permission(current_user, ProjectAction.CREATE, workspace_id=workspace_id)
+            await audited_permission(
+                ensure_project_permission(current_user, ProjectAction.CREATE, workspace_id=workspace_id),
+            )
             await enforce_pre_creation(
                 PreCreationContext(
                     resource=RESOURCE_PROJECT,
@@ -1244,12 +1295,15 @@ async def _replace_project_operation_once(
                     )
         else:
             try:
-                await ensure_project_permission(
-                    current_user,
-                    ProjectAction.WRITE,
-                    project_id=project_id,
-                    project_user_id=project.user_id,
-                    workspace_id=project.workspace_id,
+                await audited_permission(
+                    ensure_project_permission(
+                        current_user,
+                        ProjectAction.WRITE,
+                        project_id=project_id,
+                        project_user_id=project.user_id,
+                        workspace_id=project.workspace_id,
+                    ),
+                    resource_name=project.name,
                 )
             except HTTPException as exc:
                 raise _deny_to_404_with_code(
@@ -1332,6 +1386,7 @@ async def _replace_project_operation_once(
             )
 
         existing_by_id = {flow.id: flow for flow in existing_flows}
+        membership_before = {flow.id: flow.name for flow in existing_flows}
         requested_id_set = set(requested_ids)
         stale_flows = [flow for flow in existing_flows if flow.id not in requested_id_set]
         updated_flows = [existing_by_id[flow_id] for flow_id in requested_ids if flow_id in existing_by_id]
@@ -1612,7 +1667,32 @@ async def _replace_project_operation_once(
                 .values(result=null())
             )
 
+        for stale_flow in stale_flows:
+            await stage_flow_succeeded(
+                session,
+                action=audit_vocab.FLOW_DELETE,
+                operation=audit_vocab.AuditOperation.DELETE,
+                flow_id=stale_flow.id,
+                flow_name=membership_before[stale_flow.id],
+                project_before=project_id,
+            )
+        await stage_project_succeeded(
+            session,
+            action=audit_vocab.PROJECT_CREATE if newly_created_project is not None else audit_vocab.PROJECT_WRITE,
+            operation=(
+                audit_vocab.AuditOperation.CREATE
+                if newly_created_project is not None
+                else audit_vocab.AuditOperation.REPLACE
+            ),
+            project_id=project_id,
+            project_name=result.project.name,
+            description=result.project.description,
+            flows_before=membership_before,
+            flows_after={flow.id: flow.name for flow in result_flows},
+        )
+        await flush_audit_event_batch(session)
         await session.commit()
+        mark_committed()
     except (HTTPException, DBAPIError):
         raise
     except Exception as exc:
