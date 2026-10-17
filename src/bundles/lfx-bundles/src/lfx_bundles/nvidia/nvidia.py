@@ -265,6 +265,6 @@ class NVIDIAModelComponent(LCModelComponent):
             model=model_name,
             base_url=self.base_url,
             api_key=api_key,
-            temperature=temperature or 0.1,
+            temperature=0.1 if temperature is None else temperature,
             seed=seed,
         )

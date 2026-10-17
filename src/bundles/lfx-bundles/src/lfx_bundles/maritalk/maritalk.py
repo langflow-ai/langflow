@@ -47,5 +47,5 @@ class MaritalkModelComponent(LCModelComponent):
             max_tokens=max_tokens,
             model=model_name,
             api_key=api_key,
-            temperature=temperature or 0.1,
+            temperature=0.1 if temperature is None else temperature,
         )
