@@ -1,0 +1,189 @@
+[
+  {
+    "source": "google_search",
+    "component_class": "FlashDataGoogleSearchComponent",
+    "module": "google_search",
+    "primary": "query",
+    "model": "GoogleInput",
+    "title": "Google Search",
+    "description": "Find web evidence for an AI research agent. Search snippets are not fetched page content. Omitted count and locale are not filled in by the SDK. FlashData API calls use paid Credits.",
+    "tool": "flashdata_google_search",
+    "action": "query"
+  },
+  {
+    "source": "google_news",
+    "component_class": "FlashDataGoogleNewsComponent",
+    "module": "google_news",
+    "primary": "query",
+    "model": "GoogleInput",
+    "title": "Google News",
+    "description": "Prepare a dated news briefing. Returns news search results, not article full text. FlashData API calls use paid Credits.",
+    "tool": "flashdata_google_news",
+    "action": "query"
+  },
+  {
+    "source": "google_images",
+    "component_class": "FlashDataGoogleImagesComponent",
+    "module": "google_images",
+    "primary": "query",
+    "model": "GoogleInput",
+    "title": "Google Images",
+    "description": "Build an image research shortlist. Does not download images or establish image reuse rights. FlashData API calls use paid Credits.",
+    "tool": "flashdata_google_images",
+    "action": "query"
+  },
+  {
+    "source": "google_shopping",
+    "component_class": "FlashDataGoogleShoppingComponent",
+    "module": "google_shopping",
+    "primary": "query",
+    "model": "GoogleInput",
+    "title": "Google Shopping",
+    "description": "Prepare a product offer comparison. Prices are search snapshots; inventory and checkout price are not guaranteed. FlashData API calls use paid Credits.",
+    "tool": "flashdata_google_shopping",
+    "action": "query"
+  },
+  {
+    "source": "google_videos",
+    "component_class": "FlashDataGoogleVideosComponent",
+    "module": "google_videos",
+    "primary": "query",
+    "model": "GoogleInput",
+    "title": "Google Videos",
+    "description": "Find video references across websites. Search discovers videos; it does not return video files or transcripts. FlashData API calls use paid Credits.",
+    "tool": "flashdata_google_videos",
+    "action": "query"
+  },
+  {
+    "source": "google_places",
+    "component_class": "FlashDataGooglePlacesComponent",
+    "module": "google_places",
+    "primary": "query",
+    "model": "GoogleInput",
+    "title": "Google Places",
+    "description": "Shortlist local businesses for a planning assistant. Contact details may be missing; verify current hours and availability with the business. FlashData API calls use paid Credits.",
+    "tool": "flashdata_google_places",
+    "action": "query"
+  },
+  {
+    "source": "youtube_search",
+    "component_class": "FlashDataYouTubeSearchComponent",
+    "module": "youtube_search",
+    "primary": "query",
+    "model": "YouTubeSearchInput",
+    "title": "YouTube Search",
+    "description": "Find YouTube tutorials for a learning agent. The requested count is a ceiling, not a guaranteed result count. FlashData API calls use paid Credits.",
+    "tool": "flashdata_youtube_search",
+    "action": "query"
+  },
+  {
+    "source": "youtube_search_extended",
+    "component_class": "FlashDataYouTubeSearchExtendedComponent",
+    "module": "youtube_search_extended",
+    "primary": "query",
+    "model": "YouTubeExtendedSearchInput",
+    "title": "YouTube Search Extended",
+    "description": "Build a larger YouTube research candidate set. This is a distinct source with a separate higher rate than standard search. Requested count is not guaranteed. FlashData API calls use paid Credits.",
+    "tool": "flashdata_youtube_search_extended",
+    "action": "query"
+  },
+  {
+    "source": "youtube_metadata",
+    "component_class": "FlashDataYouTubeMetadataComponent",
+    "module": "youtube_metadata",
+    "primary": "video_id",
+    "model": "YouTubeMetadataInput",
+    "title": "YouTube Metadata",
+    "description": "Inspect a video before adding it to a knowledge base. Metadata is not media download. Chapters and optional fields may be absent. FlashData API calls use paid Credits.",
+    "tool": "flashdata_youtube_metadata",
+    "action": "query"
+  },
+  {
+    "source": "youtube_transcript",
+    "component_class": "FlashDataYouTubeTranscriptComponent",
+    "module": "youtube_transcript",
+    "primary": "video_id",
+    "model": "YouTubeTranscriptInput",
+    "title": "YouTube Transcript",
+    "description": "Prepare timestamped video evidence for an agent. Reads an existing track. No ASR, translation, or automatic fallback to uploader captions. FlashData API calls use paid Credits.",
+    "tool": "flashdata_youtube_transcript",
+    "action": "query"
+  },
+  {
+    "source": "youtube_captions",
+    "component_class": "FlashDataYouTubeCaptionsComponent",
+    "module": "youtube_captions",
+    "primary": "video_id",
+    "model": "YouTubeCaptionsInput",
+    "title": "YouTube Captions",
+    "description": "Review uploader captions for a content brief. Defaults to uploader captions. No ASR, translation, or automatic fallback to generated captions. FlashData API calls use paid Credits.",
+    "tool": "flashdata_youtube_captions",
+    "action": "query"
+  },
+  {
+    "source": "youtube_trainability",
+    "component_class": "FlashDataYouTubeTrainabilityComponent",
+    "module": "youtube_trainability",
+    "primary": "video_id",
+    "model": "YouTubeTrainabilityInput",
+    "title": "YouTube License Labels",
+    "description": "Record a YouTube license-label signal. permitted is a license-label signal, not legal training permission or creator third-party training settings. FlashData API calls use paid Credits.",
+    "tool": "flashdata_youtube_trainability",
+    "action": "query"
+  },
+  {
+    "source": "youtube_channel",
+    "component_class": "FlashDataYouTubeChannelComponent",
+    "module": "youtube_channel",
+    "primary": "handle",
+    "model": "YouTubeChannelInput",
+    "title": "YouTube Channel",
+    "description": "Prepare a channel and recent-video briefing. A recent-video snapshot is not the complete channel archive. FlashData API calls use paid Credits.",
+    "tool": "flashdata_youtube_channel",
+    "action": "query"
+  },
+  {
+    "source": "youtube_suggestions",
+    "component_class": "FlashDataYouTubeSuggestionsComponent",
+    "module": "youtube_suggestions",
+    "primary": "query",
+    "model": "YouTubeSuggestionsInput",
+    "title": "YouTube Suggestions",
+    "description": "Expand topic ideas with YouTube autocomplete. Suggestions are not keyword volume or popularity measurements. FlashData API calls use paid Credits.",
+    "tool": "flashdata_youtube_suggestions",
+    "action": "query"
+  },
+  {
+    "source": "youtube_download",
+    "component_class": "FlashDataYouTubeDownloadSubmitComponent",
+    "module": "youtube_download_submit",
+    "primary": "video_id",
+    "model": "YouTubeDownloadInput",
+    "title": "YouTube Download Submit",
+    "description": "Track a YouTube delivery to customer cloud storage. Paid asynchronous job. Requires customer storage. Save the receipt; never submit again to poll. Result JSON expires after 24 hours; media retention depends on storage. FlashData API calls use paid Credits.",
+    "tool": "flashdata_youtube_download_submit",
+    "action": "submit"
+  },
+  {
+    "source": "youtube_download",
+    "component_class": "FlashDataYouTubeDownloadStatusComponent",
+    "module": "youtube_download_status",
+    "primary": "job_id",
+    "model": "DownloadJobInput",
+    "title": "YouTube Download Status",
+    "description": "Read a saved YouTube download job. Never submits, polls, or writes customer storage.",
+    "tool": "flashdata_youtube_download_status",
+    "action": "status"
+  },
+  {
+    "source": "youtube_download",
+    "component_class": "FlashDataYouTubeDownloadResultComponent",
+    "module": "youtube_download_result",
+    "primary": "job_id",
+    "model": "DownloadJobInput",
+    "title": "YouTube Download Result",
+    "description": "Read a saved YouTube download job. Never submits, polls, or writes customer storage.",
+    "tool": "flashdata_youtube_download_result",
+    "action": "result"
+  }
+]

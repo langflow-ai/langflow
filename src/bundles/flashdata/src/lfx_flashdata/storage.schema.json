@@ -1,0 +1,87 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "storage_type",
+    "storage_url"
+  ],
+  "description": "Customer-owned destination, using the same fields as Download API params.storage. Supply credentials from your configured storage; do not invent values or display secrets. GCS uses service_account; Azure uses account_name and a container SAS with write permission; other providers use access_key/secret_key and provider endpoint/region as needed.",
+  "properties": {
+    "storage_type": {
+      "type": "string",
+      "enum": [
+        "azure",
+        "bos",
+        "cos",
+        "gcs",
+        "oss",
+        "s3",
+        "s3_compatible",
+        "tos"
+      ]
+    },
+    "storage_url": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Bucket name (Azure: container name). Not a local path or a full object URL."
+    },
+    "object_prefix": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 513,
+      "description": "Optional object folder prefix. Use a distinct prefix when keeping multiple versions of a video."
+    },
+    "access_key": {
+      "type": "string",
+      "maxLength": 4096
+    },
+    "secret_key": {
+      "type": "string",
+      "maxLength": 4096
+    },
+    "endpoint_url": {
+      "type": "string",
+      "maxLength": 4096,
+      "description": "Provider endpoint, required for S3-compatible storage. Must be reachable from the download Worker."
+    },
+    "region": {
+      "type": "string",
+      "maxLength": 4096
+    },
+    "account_name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]{3,24}$"
+    },
+    "sas_token": {
+      "type": "string",
+      "maxLength": 4097,
+      "description": "Azure container SAS with write permission; never return this secret to the user in output."
+    },
+    "service_account": {
+      "type": "object",
+      "required": [
+        "project_id",
+        "client_email",
+        "private_key"
+      ],
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "client_email": {
+          "type": "string",
+          "minLength": 1
+        },
+        "private_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,49 @@
+---
+title: FlashData
+slug: /bundles-flashdata
+---
+
+The FlashData bundle supplies Google and YouTube research data for Langflow flows and Agents.
+It includes 15 source capabilities, with separate submit, status, and result components for asynchronous YouTube delivery.
+
+## Install and configure
+
+This bundle is under development and has not been submitted for review or released to PyPI.
+In a Langflow 1.13 development checkout containing this contribution, install from source:
+
+```bash
+uv pip install -e src/bundles/flashdata
+lfx extension validate src/bundles/flashdata/src/lfx_flashdata
+```
+
+Restart Langflow, then open **Bundles → FlashData**.
+Get an API key from [FlashData](https://flashdata.dev) and save it as a **Credential** global variable.
+API requests use paid FlashData Credits. Installation is free; API usage is not.
+
+Each component has a fixed source, an agent-compatible primary input, optional source parameters, and a JSON output.
+Use **Parser** with template `{text}` to turn the response into a Message for **Chat Output**.
+In **Tool Mode**, connect the Tool output to an Agent; its model is configured and billed separately.
+
+## Tasks
+
+- [Find web evidence for an AI research agent](./flashdata-google-search.mdx) — Google Search
+- [Prepare a dated news briefing](./flashdata-google-news.mdx) — Google News
+- [Build an image research shortlist](./flashdata-google-images.mdx) — Google Images
+- [Compare product offer snapshots](./flashdata-google-shopping.mdx) — Google Shopping
+- [Find video references across websites](./flashdata-google-videos.mdx) — Google Videos
+- [Shortlist local businesses for a planning assistant](./flashdata-google-places.mdx) — Google Places
+- [Find YouTube tutorials for a learning agent](./flashdata-youtube-search.mdx) — YouTube Search
+- [Build a larger YouTube research candidate set](./flashdata-youtube-search-extended.mdx) — YouTube Extended Search
+- [Inspect a video before adding it to a knowledge base](./flashdata-youtube-metadata.mdx) — YouTube Metadata
+- [Prepare timestamped video evidence for an agent](./flashdata-youtube-transcript.mdx) — YouTube Transcript
+- [Review uploader captions for a content brief](./flashdata-youtube-captions.mdx) — YouTube Captions
+- [Record a YouTube license-label signal](./flashdata-youtube-trainability.mdx) — YouTube License Metadata
+- [Prepare a channel and recent-video briefing](./flashdata-youtube-channel.mdx) — YouTube Channel
+- [Expand topic ideas with YouTube autocomplete](./flashdata-youtube-suggestions.mdx) — YouTube Autocomplete
+- [Track delivery of YouTube media to your cloud storage](./flashdata-youtube-download.mdx) — YouTube Download to Cloud Storage
+
+## Errors and billing
+
+Invalid parameters are rejected before the request. API errors identify authentication, Credits, permission, and rate-limit failures without returning raw response bodies.
+No request is retried automatically. A timeout after submission can mean a job was accepted and charged; inspect Jobs before submitting again.
+Download Submit requires a separate customer-storage credential and explicit permission to submit. Status and Result only inspect the saved job.
