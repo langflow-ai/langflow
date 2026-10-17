@@ -55,9 +55,9 @@ def _check(revision: dict, fixes: list[dict]) -> None:
     check_restore_fixes(revision, STORED, parse_flow_operations(fixes))
 
 
-def _rewrite(edge_id: str, *paths_and_values: tuple[list, object]) -> list[dict]:
-    updates = [{"id": edge_id, "op": "set_field", "path": path, "value": value} for path, value in paths_and_values]
-    return [{"type": "update_edges", "updates": updates}]
+def _readd(edge: dict, **changes: object) -> list[dict]:
+    """A fix that deletes ``edge`` and adds it back with ``changes``: an edge never changes in place."""
+    return [{"type": "delete_edges", "ids": [edge["id"]]}, {"type": "add_edges", "edges": [{**edge, **changes}]}]
 
 
 def test_an_edge_with_broken_handles_may_be_deleted():
@@ -68,23 +68,20 @@ def test_an_edge_with_broken_handles_may_have_them_rewritten():
     handles = {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
     _check(
         _revision(_legacy_edge("old")),
-        _rewrite(
-            "old",
-            (["sourceHandle"], _handle(handles["sourceHandle"])),
-            (["targetHandle"], _handle(handles["targetHandle"])),
-            (["data"], handles),
+        _readd(
+            _legacy_edge("old"),
+            sourceHandle=_handle(handles["sourceHandle"]),
+            targetHandle=_handle(handles["targetHandle"]),
+            data=handles,
         ),
     )
 
 
 def test_an_edge_naming_a_missing_output_may_be_reconnected():
+    edge = _edge("e", "a", output="gone")
     _check(
-        _revision(_edge("e", "a", output="gone")),
-        _rewrite(
-            "e",
-            (["sourceHandle"], _handle({"name": "other"})),
-            (["data", "sourceHandle"], {"name": "other"}),
-        ),
+        _revision(edge),
+        _readd(edge, sourceHandle=_handle({"name": "other"}), data={**edge["data"], "sourceHandle": {"name": "other"}}),
     )
 
 
@@ -105,28 +102,23 @@ def test_either_edge_into_an_input_taken_twice_may_be_deleted():
         ),
         pytest.param(
             _revision(_legacy_edge("old")),
-            _rewrite("old", (["animated"], True)),
-            id="write something other than a handle",
-        ),
-        pytest.param(
-            _revision(_edge("e", "a", output="gone")),
-            _rewrite("e", (["data"], {"sourceHandle": {"name": "other"}, "targetHandle": {"fieldName": "text"}})),
-            id="replace data the edge already has",
+            _readd(_legacy_edge("old"), animated=True),
+            id="change something other than a handle",
         ),
         pytest.param(
             _revision(_legacy_edge("old")),
-            _rewrite("old", (["data"], {"sourceHandle": {}, "targetHandle": {}, "label": "x"})),
-            id="set data holding more than the handles",
+            _readd(_legacy_edge("old"), data={"sourceHandle": {}, "targetHandle": {}, "label": "x"}),
+            id="add data holding more than the handles",
         ),
         pytest.param(
             _revision(_edge("first", "a"), _edge("second", "c")),
-            _rewrite("second", (["data", "targetHandle"], {"fieldName": "other"})),
+            _readd(_edge("second", "c"), data={**_edge("second", "c")["data"], "targetHandle": {"fieldName": "other"}}),
             id="rewrite an edge into a taken input",
         ),
         pytest.param(
             _revision(_legacy_edge("old")),
-            [{"type": "update_edges", "updates": [{"id": "old", "op": "delete_field", "path": ["sourceHandle"]}]}],
-            id="delete a handle",
+            [{"type": "add_edges", "edges": [_legacy_edge("old")]}],
+            id="add an edge back without deleting it first",
         ),
     ],
 )
