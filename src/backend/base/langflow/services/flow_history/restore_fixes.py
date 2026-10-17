@@ -5,9 +5,12 @@ resent with fixes (see ops-history, "Repair"). The fixes are operations, and
 each one must address a violation the restore would hit, in the way that
 violation's client action allows:
 
-- an edge whose handles are invalid or name nothing may be deleted, or have
-  its handles rewritten;
+- an edge whose handles are invalid or name nothing may be deleted, or
+  deleted and added again with other handles;
 - of the edges into an input that takes one, any may be deleted.
+
+An edge never changes in place, so a handle rewrite is a ``delete_edges`` and
+an ``add_edges`` of the same edge.
 
 Anything else is an edit, which takes the save path.
 """
@@ -17,34 +20,33 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from lfx.services.flow_operations import (
+    AddEdgesOp,
     DeleteEdgesOp,
     FlowOperationError,
     GraphViolationCode,
     Resolution,
-    SetNodeFieldUpdate,
-    UpdateEdgesOp,
     apply_flow_operations,
     find_graph_violations,
     resolution_of,
+    values_equal,
 )
 from lfx.services.flow_operations.edge_rules import HANDLE_KEYS, read_handles
 from pydantic import Field
 
 from langflow.services.flow_history.errors import RestoreFixNotAllowedError
 
-# One fix a restore takes: an edge delete or a handle rewrite.
-RestoreFix = Annotated[DeleteEdgesOp | UpdateEdgesOp, Field(discriminator="type")]
+# One fix a restore takes: an edge delete, or an edge added back with other handles.
+RestoreFix = Annotated[DeleteEdgesOp | AddEdgesOp, Field(discriminator="type")]
 RESTORE_FIXES_DESCRIPTION = (
-    "The client's fixes for a restore refused with manual violations: edge deletes and handle rewrites, "
-    "each addressing one of those violations, applied before the restored flow is saved."
+    "The client's fixes for a restore refused with manual violations: edge deletes, and edges added back "
+    "with other handles, each addressing one of those violations, applied before the restored flow is saved."
 )
 
 _REWRITABLE = frozenset({GraphViolationCode.EDGE_HANDLE_INVALID, GraphViolationCode.EDGE_HANDLE_NOT_FOUND})
-_HANDLE_PATHS = frozenset({(key,) for key in HANDLE_KEYS} | {("data", key) for key in HANDLE_KEYS})
 
 
 def apply_restore_fixes(
-    revision: dict[str, Any], stored: dict[str, Any], fixes: list[DeleteEdgesOp | UpdateEdgesOp]
+    revision: dict[str, Any], stored: dict[str, Any], fixes: list[DeleteEdgesOp | AddEdgesOp]
 ) -> dict[str, Any]:
     """Return ``revision`` with ``fixes`` applied, after checking each one (``check_restore_fixes``).
 
@@ -60,7 +62,7 @@ def apply_restore_fixes(
 
 
 def check_restore_fixes(
-    revision: dict[str, Any], stored: dict[str, Any], fixes: list[DeleteEdgesOp | UpdateEdgesOp]
+    revision: dict[str, Any], stored: dict[str, Any], fixes: list[DeleteEdgesOp | AddEdgesOp]
 ) -> None:
     """Raise ``RestoreFixNotAllowedError`` unless every fix addresses a violation restoring ``revision`` would hit.
 
@@ -80,19 +82,25 @@ def check_restore_fixes(
         elif violation.code is GraphViolationCode.EDGE_TARGET_OCCUPIED:
             deletable |= _edges_into_the_same_input(edges, by_id[violation.edge_id])
 
+    deleted: set[str] = set()
     for fix in fixes:
         if isinstance(fix, DeleteEdgesOp):
             for edge_id in fix.ids:
                 if edge_id not in deletable:
                     msg = f"edge {edge_id!r} breaks no edge rule the client may fix by deleting it"
                     raise RestoreFixNotAllowedError(msg)
+            deleted.update(fix.ids)
             continue
-        for update in fix.updates:
-            if update.id not in rewritable:
-                msg = f"edge {update.id!r} has no handles the client may rewrite"
+        for edge in fix.edges:
+            edge_id = edge.get("id")
+            if edge_id not in rewritable:
+                msg = f"edge {edge_id!r} has no handles the client may rewrite"
                 raise RestoreFixNotAllowedError(msg)
-            if not _rewrites_handles(update, by_id[update.id]):
-                msg = f"edge {update.id!r}: a fix may only set the edge's handles"
+            if edge_id not in deleted:
+                msg = f"edge {edge_id!r}: a fix adds an edge only after it deletes it"
+                raise RestoreFixNotAllowedError(msg)
+            if not _only_handles_differ(by_id[edge_id], edge):
+                msg = f"edge {edge_id!r}: a fix may only change the edge's handles"
                 raise RestoreFixNotAllowedError(msg)
 
 
@@ -112,16 +120,20 @@ def _edges_into_the_same_input(edges: list[dict[str, Any]], edge: dict[str, Any]
     return same
 
 
-def _rewrites_handles(update: Any, edge: dict[str, Any]) -> bool:
-    """Return whether ``update`` sets one of the edge's handles, or its whole ``data`` when it has none."""
-    if not isinstance(update, SetNodeFieldUpdate):
-        return False
-    path = tuple(update.path)
-    if path in _HANDLE_PATHS:
-        return True
-    return (
-        path == ("data",)
-        and not isinstance(edge.get("data"), dict)
-        and isinstance(update.value, dict)
-        and set(update.value) <= set(HANDLE_KEYS)
-    )
+def _only_handles_differ(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    """Return whether two versions of an edge differ only in their handles, in either form.
+
+    An edge without a ``data`` object may gain one that holds only handles.
+    """
+    return values_equal(_without_handles(before), _without_handles(after))
+
+
+def _without_handles(edge: dict[str, Any]) -> dict[str, Any]:
+    """Return an edge without its handles, and without a ``data`` that is not an object or holds nothing else."""
+    rest = {key: value for key, value in edge.items() if key not in HANDLE_KEYS}
+    data = rest.pop("data", None)
+    if isinstance(data, dict):
+        data = {key: value for key, value in data.items() if key not in HANDLE_KEYS}
+        if data:
+            rest["data"] = data
+    return rest

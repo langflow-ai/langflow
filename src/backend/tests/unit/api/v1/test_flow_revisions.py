@@ -224,15 +224,14 @@ def _with_output(node: dict) -> dict:
     return node
 
 
-def _handle_fixes(edge_id: str, output: str, field: str) -> list[dict]:
-    """An ``update_edges`` fix that rewrites both forms of an edge's handles."""
+def _handle_fixes(edge: dict, output: str, field: str) -> list[dict]:
+    """Fixes that delete an edge and add it back with both forms of other handles."""
     handles = {"sourceHandle": {"name": output}, "targetHandle": {"fieldName": field}}
-    updates = [
-        {"id": edge_id, "op": "set_field", "path": [key], "value": json.dumps(value).replace('"', "œ")}
-        for key, value in handles.items()
+    strings = {key: json.dumps(value).replace('"', "œ") for key, value in handles.items()}
+    return [
+        {"type": "delete_edges", "ids": [edge["id"]]},
+        {"type": "add_edges", "edges": [{**edge, **strings, "data": handles}]},
     ]
-    updates.append({"id": edge_id, "op": "set_field", "path": ["data"], "value": handles})
-    return [{"type": "update_edges", "updates": updates}]
 
 
 async def _refused_legacy_flow(client: AsyncClient, headers: dict) -> tuple[dict, str]:
@@ -281,7 +280,9 @@ async def test_a_fix_can_reconnect_an_edge(client: AsyncClient, logged_in_header
     flow, url = await _refused_legacy_flow(client, logged_in_headers)
 
     response = await client.post(
-        f"{url}/restore", json={"fixes": _handle_fixes("legacy-edge", "out", "text")}, headers=logged_in_headers
+        f"{url}/restore",
+        json={"fixes": _handle_fixes(_legacy_edge("a", "b"), "out", "text")},
+        headers=logged_in_headers,
     )
 
     assert response.status_code == status.HTTP_200_OK, response.text
@@ -294,7 +295,9 @@ async def test_a_fix_that_does_not_apply_is_refused_and_keeps_nothing(client: As
     before = await _stored(flow)
 
     response = await client.post(
-        f"{url}/restore", json={"fixes": _handle_fixes("legacy-edge", "missing", "text")}, headers=logged_in_headers
+        f"{url}/restore",
+        json={"fixes": _handle_fixes(_legacy_edge("a", "b"), "missing", "text")},
+        headers=logged_in_headers,
     )
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
