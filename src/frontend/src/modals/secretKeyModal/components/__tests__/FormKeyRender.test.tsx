@@ -28,6 +28,10 @@ describe("FormKeyRender", () => {
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("renders the name input with label from modalProps", () => {
     render(<FormKeyRender {...makeProps()} />);
     expect(screen.getByText("Key name")).toBeInTheDocument();
@@ -65,7 +69,8 @@ describe("FormKeyRender", () => {
   });
 
   it("calls setExpiresAt with empty string when the active preset is clicked again", async () => {
-    const user = userEvent.setup();
+    jest.useFakeTimers({ now: new Date("2026-10-17T02:00:00Z") });
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     const setExpiresAt = jest.fn();
     const d = new Date();
     d.setDate(d.getDate() + 7);
