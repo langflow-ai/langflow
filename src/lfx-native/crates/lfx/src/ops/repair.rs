@@ -19,7 +19,7 @@
 //! - the rows of every table: it assigns missing row ids, regenerates
 //!   duplicate ids, and gives rows without a position one that keeps them
 //!   where they are stored;
-//! - every edge it adds or rewires: it derives a handle's missing form from
+//! - every edge it adds: it derives a handle's missing form from
 //!   the one present, and drops an edge that touches a note.
 
 use std::collections::{HashMap, HashSet};
@@ -29,50 +29,19 @@ use sha2::{Digest, Sha256};
 
 use crate::ops::canonical::{canonical_json, is_finite_number, is_row_position};
 use crate::ops::edges::derive_missing_handle_forms;
+use crate::ops::entry::EntryExt;
 use crate::ops::error::Result;
-use crate::ops::ids::new_edge_id;
+use crate::ops::ids::{new_edge_id, unused_id};
 use crate::ops::keyed::{Renumber, fill_missing_positions, match_row_ids};
-use crate::ops::schema::NODE_SCHEMA;
+use crate::ops::schema::{NODE_OBJECT_PATHS, NODE_SCHEMA};
+use crate::ops::state::resolve_mut;
 use crate::ops::validate::{
-    GraphPath, NODE_OBJECT_PATHS, PathPart, Resolution, ViolationCode, changed_tables,
-    find_edge_violations, validate_flow_data,
+    GraphPath, Numbers, PathPart, Resolution, ViolationCode, changed_tables, find_edge_violations,
+    validate_flow_data,
 };
 
 const GENERATED_ID_LENGTH: usize = 5;
 const ID_ALPHABET: &[u8; 62] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-
-/// The fix for a direct violation, or `None` for one the client fixes.
-///
-/// A direct rule without a fix would leave a flow that can neither be saved
-/// nor repaired, so every code is either fixed here or left to the client.
-#[must_use]
-pub fn repair_action(code: ViolationCode) -> Option<&'static str> {
-    use ViolationCode as Code;
-    Some(match code {
-        Code::FlowDataNotObject => "replaced with an empty flow",
-        Code::CollectionNotList => "replaced with an empty list",
-        Code::NodeNotObject | Code::EdgeNotObject => "dropped the entry",
-        Code::NodeIdMissing | Code::EdgeIdMissing | Code::EdgeIdDuplicate => {
-            "assigned a generated id"
-        }
-        Code::NodeIdDuplicate => {
-            "assigned a generated id; the first node keeps the id and its edges"
-        }
-        Code::EdgeEndpointInvalid | Code::EdgeTouchesNote => "dropped the edge",
-        Code::NodeDataNotObject => "replaced with an empty object",
-        Code::NonFiniteNumber => "replaced with null",
-        Code::TableRowNotObject => "dropped the row",
-        Code::TableRowIdMissing => "assigned a generated row id",
-        Code::TableRowIdDuplicate => "assigned a generated row id; the first row keeps the id",
-        Code::TableRowPosInvalid => "assigned a position that keeps the row where it is stored",
-        Code::EdgeHandleFormMissing => {
-            "derived the missing form of the handle from the one present"
-        }
-        Code::EdgeHandleInvalid | Code::EdgeHandleNotFound | Code::EdgeTargetOccupied => {
-            return None;
-        }
-    })
-}
 
 /// One change repair made, at the path the violation was found.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,20 +57,12 @@ pub struct Fix {
 impl Fix {
     /// The fix as the API reports it.
     #[must_use]
-    pub fn to_json(&self) -> Value {
+    pub fn to_value(&self) -> Value {
         let mut object = Map::new();
         object.insert("code".into(), Value::from(self.code.as_str()));
         object.insert(
             "path".into(),
-            Value::Array(
-                self.path
-                    .iter()
-                    .map(|part| match part {
-                        PathPart::Key(key) => Value::from(key.as_str()),
-                        PathPart::Index(index) => Value::from(*index),
-                    })
-                    .collect(),
-            ),
+            Value::Array(self.path.iter().map(PathPart::to_value).collect()),
         );
         object.insert("action".into(), Value::from(self.action));
         Value::Object(object)
@@ -117,22 +78,20 @@ pub struct Repaired {
     pub fixes: Vec<Fix>,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct Fixes(Vec<Fix>);
 
 impl Fixes {
     fn add(&mut self, code: ViolationCode, path: GraphPath) {
-        let action = repair_action(code).unwrap_or_default();
+        let action = code
+            .repair_action()
+            .expect("repair records only violations it has a fix for");
         self.0.push(Fix { code, path, action });
     }
 }
 
 fn path(parts: impl IntoIterator<Item = PathPart>) -> GraphPath {
     parts.into_iter().collect()
-}
-
-fn valid_id(value: Option<&Value>) -> Option<&str> {
-    value.and_then(Value::as_str).filter(|id| !id.is_empty())
 }
 
 /// A copy of `flow` with every direct violation fixed, and the fixes applied.
@@ -173,7 +132,7 @@ pub fn repair_flow_data(flow: &Value, base: Option<&Value>) -> Result<Repaired> 
     let nodes = repair_nodes(nodes, &mut fixes)?;
     let node_ids: HashSet<String> = nodes
         .iter()
-        .filter_map(|node| valid_id(node.get("id")).map(str::to_owned))
+        .filter_map(|node| node.non_empty_str("id").map(str::to_owned))
         .collect();
     graph.insert("nodes".into(), Value::Array(nodes));
     let edges = take_array(graph, "edges");
@@ -184,11 +143,11 @@ pub fn repair_flow_data(flow: &Value, base: Option<&Value>) -> Result<Repaired> 
 
     if let Some(base) = base {
         repair_tables(&mut repaired, base, &mut fixes)?;
-        repair_changed_edges(&mut repaired, base, &mut fixes)?;
+        repair_added_edges(&mut repaired, base, &mut fixes)?;
     }
 
     // Repair must never return a graph the strict path would refuse.
-    validate_flow_data(&repaired, true, "repaired flow.data", base)?;
+    validate_flow_data(&repaired, Numbers::Check, "repaired flow.data", base)?;
     Ok(Repaired {
         flow_data: repaired,
         fixes: fixes.0,
@@ -241,13 +200,6 @@ fn replace_non_finite(value: &mut Value, fixes: &mut Fixes) {
     }
 }
 
-fn resolve_mut<'v>(value: &'v mut Value, parts: &[PathPart]) -> Option<&'v mut Value> {
-    parts.iter().try_fold(value, |value, part| match part {
-        PathPart::Key(key) => value.as_object_mut()?.get_mut(key),
-        PathPart::Index(index) => value.as_array_mut()?.get_mut(*index),
-    })
-}
-
 fn repair_nodes(nodes: Vec<Value>, fixes: &mut Fixes) -> Result<Vec<Value>> {
     let mut kept: Vec<(usize, Map<String, Value>)> = Vec::new();
     for (index, node) in nodes.into_iter().enumerate() {
@@ -263,14 +215,14 @@ fn repair_nodes(nodes: Vec<Value>, fixes: &mut Fixes) -> Result<Vec<Value>> {
     }
     let mut used: HashSet<String> = kept
         .iter()
-        .filter_map(|(_, node)| valid_id(node.get("id")).map(str::to_owned))
+        .filter_map(|(_, node)| node.non_empty_str("id").map(str::to_owned))
         .collect();
     let mut seen = HashSet::new();
     for (index, node) in &mut kept {
         let old_id = node.get("id").cloned();
-        let valid = valid_id(old_id.as_ref());
-        if let Some(id) = valid
-            && seen.insert(id.to_owned())
+        let valid = node.non_empty_str("id").map(str::to_owned);
+        if let Some(id) = &valid
+            && seen.insert(id.clone())
         {
             continue;
         }
@@ -347,11 +299,11 @@ fn repair_edges(edges: Vec<Value>, node_ids: &HashSet<String>, fixes: &mut Fixes
     }
     let mut used: HashSet<String> = kept
         .iter()
-        .filter_map(|(_, edge)| valid_id(edge.get("id")).map(str::to_owned))
+        .filter_map(|(_, edge)| edge.non_empty_str("id").map(str::to_owned))
         .collect();
     let mut seen = HashSet::new();
     for (index, edge) in &mut kept {
-        let valid = valid_id(edge.get("id")).map(str::to_owned);
+        let valid = edge.non_empty_str("id").map(str::to_owned);
         if let Some(id) = &valid
             && seen.insert(id.clone())
         {
@@ -364,10 +316,7 @@ fn repair_edges(edges: Vec<Value>, node_ids: &HashSet<String>, fixes: &mut Fixes
         };
         fixes.add(code, path(["edges".into(), (*index).into(), "id".into()]));
         // An opaque id like the editor's newEdgeId(), never derived from the handles.
-        let mut new_id = new_edge_id();
-        while used.contains(&new_id) {
-            new_id = new_edge_id();
-        }
+        let new_id = unused_id(&used, new_edge_id);
         used.insert(new_id.clone());
         seen.insert(new_id.clone());
         edge.insert("id".into(), Value::String(new_id));
@@ -377,8 +326,8 @@ fn repair_edges(edges: Vec<Value>, node_ids: &HashSet<String>, fixes: &mut Fixes
         .collect()
 }
 
-/// Fix the direct edge rules broken by the edges `graph` adds or rewires relative to `base`.
-fn repair_changed_edges(graph: &mut Value, base: &Value, fixes: &mut Fixes) -> Result<()> {
+/// Fix the direct edge rules broken by the edges `graph` adds relative to `base`.
+fn repair_added_edges(graph: &mut Value, base: &Value, fixes: &mut Fixes) -> Result<()> {
     let mut dropped = HashSet::new();
     for violation in find_edge_violations(base, graph)? {
         if violation.code.resolution() == Resolution::Manual {
@@ -441,11 +390,8 @@ fn stored_tables(base: &Value) -> HashMap<(&str, &str), &Value> {
         .into_iter()
         .flatten()
     {
-        let (Some(id), Some(template)) = (
-            node.get("id").and_then(Value::as_str),
-            node.pointer("/data/node/template")
-                .and_then(Value::as_object),
-        ) else {
+        let (Some(id), Some(template)) = (node.get("id").and_then(Value::as_str), node.template())
+        else {
             continue;
         };
         for (name, field) in template {
@@ -464,8 +410,7 @@ fn repair_table(
     previous: Option<&Value>,
     fixes: &mut Fixes,
 ) -> Result<()> {
-    let id_key = NODE_SCHEMA.table.id_key().unwrap_or("_id");
-    let position_key = NODE_SCHEMA.table.position.as_deref().unwrap_or("_pos");
+    let (id_key, position_key) = (&NODE_SCHEMA.table_keys.id, &NODE_SCHEMA.table_keys.position);
     let row_path = |index: usize, key: Option<&str>| {
         path(
             table_path
@@ -487,7 +432,7 @@ fn repair_table(
         .collect();
     let mut seen = HashSet::new();
     for (index, row) in rows.iter_mut().enumerate() {
-        let valid = valid_id(row.get(id_key)).map(str::to_owned);
+        let valid = row.non_empty_str(id_key).map(str::to_owned);
         if let Some(id) = &valid
             && seen.insert(id.clone())
         {
@@ -530,13 +475,14 @@ fn generate_node_id(
         .filter(|kind| !kind.is_empty())
         .unwrap_or("node");
     let seed = format!("{index}:{}", canonical_json(&Value::Object(node.clone()))?);
-    for attempt in 0.. {
+    let mut attempt = 0u64;
+    loop {
         let candidate = format!("{prefix}-{}", short_digest(&format!("{seed}:{attempt}")));
         if !used.contains(&candidate) {
             return Ok(candidate);
         }
+        attempt += 1;
     }
-    unreachable!("some attempt yields an unused id")
 }
 
 fn short_digest(seed: &str) -> String {

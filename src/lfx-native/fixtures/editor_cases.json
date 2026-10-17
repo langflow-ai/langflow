@@ -296,11 +296,18 @@
         }
       ],
       "fixes": [
+        {"type": "delete_edges", "ids": ["e1"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œgœ}"},
-            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "g"}}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œgœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "g"}}
+            }
           ]
         }
       ]
@@ -319,9 +326,19 @@
         }
       ],
       "fixes": [
+        {"type": "delete_edges", "ids": ["e1"]},
         {
-          "type": "update_edges",
-          "updates": [{"id": "e1", "op": "set_field", "path": ["data"], "value": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}}]
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
         }
       ]
     },
@@ -339,9 +356,19 @@
         }
       ],
       "fixes": [
+        {"type": "delete_edges", "ids": ["e1"]},
         {
-          "type": "update_edges",
-          "updates": [{"id": "e1", "op": "set_field", "path": ["data"], "value": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}}]
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
         }
       ]
     },
@@ -374,19 +401,45 @@
     {
       "name": "only the fixes of the flagged edges are kept",
       "fixes": [
-        {"type": "delete_edges", "ids": ["e1", "e2"]},
+        {"type": "delete_edges", "ids": ["e1", "e2", "e3"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e2", "op": "set_field", "path": ["targetHandle"], "value": "x"},
-            {"id": "e3", "op": "set_field", "path": ["targetHandle"], "value": "y"}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œxœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "x"}}
+            },
+            {
+              "id": "e3",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "y"}}
+            }
           ]
         }
       ],
       "edge_ids": ["e2"],
       "expected": [
         {"type": "delete_edges", "ids": ["e2"]},
-        {"type": "update_edges", "updates": [{"id": "e2", "op": "set_field", "path": ["targetHandle"], "value": "x"}]}
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œxœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "x"}}
+            }
+          ]
+        }
       ]
     },
     {"name": "fixes for no flagged edge are dropped", "fixes": [{"type": "delete_edges", "ids": ["e1"]}], "edge_ids": ["e9"], "expected": []}

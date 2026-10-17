@@ -11,31 +11,27 @@
 //! changed rather than to the size of the graph.
 
 use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::str::FromStr;
 
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Map, Value};
 
 use crate::ops::edges::{EdgeIndex, GraphRead, endpoint};
+use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result};
 use crate::ops::keyed::{ListIndex, Removal};
-use crate::ops::schema::KeyedList;
-use crate::ops::validate::validate_flow_data;
+use crate::ops::schema::{KeyedList, same_keys, starts_with_keys};
+use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
 
-/// One step of a resolved path: an object key or an array slot.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum Step {
-    Key(String),
-    Index(usize),
-}
-
-/// The node or edge a field write goes to.
+/// Whether a removal returns copies of what it removed, which inverses need.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Owner {
-    Node,
-    Edge,
+pub(crate) enum Copies {
+    Keep,
+    Discard,
 }
 
-/// How to undo one change inside a node or an edge.
+/// How to undo one change inside a node.
 #[derive(Debug)]
 pub(crate) enum FieldUndo {
     /// A key was set; put back the value it held, or remove it if it was new.
@@ -79,9 +75,8 @@ enum Undo {
         old: Value,
     },
     Field {
-        owner: Owner,
-        id: String,
-        container: Vec<Step>,
+        node_id: String,
+        container: Vec<PathPart>,
         undo: FieldUndo,
     },
 }
@@ -118,21 +113,6 @@ impl Graph {
     /// The ids of the edges at a node.
     pub fn edges_at(&self, node_id: &str) -> impl Iterator<Item = &String> {
         self.edges_at.get(node_id).into_iter().flatten()
-    }
-
-    /// The value a field write goes into.
-    pub fn owner(&self, owner: Owner, id: &str) -> Option<&Value> {
-        match owner {
-            Owner::Node => self.nodes.get(id),
-            Owner::Edge => self.edges.get(id),
-        }
-    }
-
-    pub fn owner_mut(&mut self, owner: Owner, id: &str) -> Option<&mut Value> {
-        match owner {
-            Owner::Node => self.nodes.get_mut(id),
-            Owner::Edge => self.edges.get_mut(id),
-        }
     }
 }
 
@@ -173,28 +153,29 @@ impl Lists {
     pub fn index(
         &mut self,
         node_id: &str,
-        path: &[String],
+        path: &[&str],
         keyed: &'static KeyedList,
         items: &[Value],
         context: &str,
     ) -> Result<&mut ListIndex> {
         let lists = self.by_node.entry(node_id.to_owned()).or_default();
-        let position =
-            if let Some(position) = lists.iter().position(|(list_path, _)| list_path == path) {
-                position
-            } else {
-                lists.push((path.to_vec(), ListIndex::build(keyed, items, context)?));
-                lists.len() - 1
-            };
+        let position = if let Some(position) = lists
+            .iter()
+            .position(|(list_path, _)| same_keys(list_path, path))
+        {
+            position
+        } else {
+            let owned = path.iter().map(|key| (*key).to_owned()).collect();
+            lists.push((owned, ListIndex::build(keyed, items, context)?));
+            lists.len() - 1
+        };
         Ok(&mut lists[position].1)
     }
 
     /// Forget the indexes of the lists at or under `path`, which a write replaced or removed.
     pub fn forget_under(&mut self, node_id: &str, path: &[&str]) {
         if let Some(lists) = self.by_node.get_mut(node_id) {
-            lists.retain(|(list_path, _)| {
-                list_path.len() < path.len() || !list_path.iter().zip(path).all(|(a, b)| a == b)
-            });
+            lists.retain(|(list_path, _)| !starts_with_keys(list_path, path));
         }
     }
 
@@ -209,16 +190,14 @@ pub(crate) struct Batch {
     journal: Vec<Undo>,
     added_nodes: HashSet<String>,
     removed_base_nodes: HashSet<String>,
-    added_edges: HashSet<String>,
-    removed_base_edges: HashSet<String>,
     pub changed_nodes: IndexSet<String>,
     pub changed_edges: IndexSet<String>,
 }
 
 /// A flow graph, indexed for applying operations.
 ///
-/// It holds the graph between calls: replay, history playback and rebase
-/// apply many batches to one state and read the result once.
+/// It keeps the graph and its indexes between batches, so applying many
+/// batches costs the batches, not one indexing of the graph per batch.
 #[derive(Debug)]
 pub struct GraphState {
     /// The flow's top-level object; `nodes` and `edges` hold placeholders.
@@ -240,17 +219,17 @@ impl GraphState {
     ///
     /// The graph breaks a structural rule.
     pub fn new(flow: Value) -> Result<Self> {
-        validate_flow_data(&flow, false, "flow.data", None)?;
+        validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
         let Value::Object(mut root) = flow else {
-            return Err(Error::graph("flow data must be an object", Vec::new()));
+            return Err(Error::graph_message("flow data must be an object"));
         };
         let mut graph = Graph::default();
         for node in take_list(&mut root, "nodes") {
-            let id = entry_id(&node);
+            let id = node.id().to_owned();
             graph.nodes.insert(id, node);
         }
         for edge in take_list(&mut root, "edges") {
-            let id = entry_id(&edge);
+            let id = edge.id().to_owned();
             graph.attach(&id, &edge);
             graph.edges.insert(id, edge);
         }
@@ -261,15 +240,6 @@ impl GraphState {
             lists: Lists::default(),
             batch: Batch::default(),
         })
-    }
-
-    /// Parse and index a flow graph given as JSON text.
-    ///
-    /// # Errors
-    ///
-    /// The text is not JSON, or the graph breaks a structural rule.
-    pub fn from_json(text: &str) -> Result<Self> {
-        Self::new(parse_json(text)?)
     }
 
     /// The graph as a JSON value.
@@ -302,12 +272,6 @@ impl GraphState {
             Value::Array(graph.edges.into_values().collect()),
         );
         Value::Object(root)
-    }
-
-    /// The graph as JSON text.
-    #[must_use]
-    pub fn to_json(&self) -> String {
-        self.to_value().to_string()
     }
 
     /// The flow's top-level object, without `nodes` and `edges`.
@@ -361,15 +325,15 @@ impl GraphState {
                 self.root.shift_insert(index, key, old);
             }
             Undo::Field {
-                owner,
-                id,
+                node_id,
                 container,
                 undo,
             } => {
                 let container = self
                     .graph
-                    .owner_mut(owner, &id)
-                    .and_then(|root| resolve_mut(root, &container));
+                    .nodes
+                    .get_mut(&node_id)
+                    .and_then(|node| resolve_mut(node, &container));
                 if let Some(container) = container {
                     undo_field(container, undo);
                 }
@@ -386,15 +350,6 @@ impl GraphState {
         }
     }
 
-    /// Whether the edge existed when the batch started.
-    pub(crate) fn is_base_edge(&self, id: &str) -> bool {
-        if self.batch.added_edges.contains(id) {
-            self.batch.removed_base_edges.contains(id)
-        } else {
-            self.graph.edges.contains_key(id) || self.batch.removed_base_edges.contains(id)
-        }
-    }
-
     // --- Changes that record their undo ---------------------------------------------------
 
     pub(crate) fn insert_node(&mut self, id: String, node: Value) {
@@ -404,8 +359,9 @@ impl GraphState {
         self.graph.nodes.insert(id, node);
     }
 
-    /// Remove a node and return it. Its edges stay; the caller removes them.
-    pub(crate) fn remove_node(&mut self, id: &str) -> Option<&Value> {
+    /// Remove a node, if it exists, and with [`Copies::Keep`] return a copy of
+    /// it. Its edges stay; the caller removes them.
+    pub(crate) fn remove_node(&mut self, id: &str, copies: Copies) -> Option<Map<String, Value>> {
         let base = self.is_base_node(id);
         let (index, id, node) = self.graph.nodes.shift_remove_full(id)?;
         self.edge_index.forget_node(&id);
@@ -414,13 +370,14 @@ impl GraphState {
             self.batch.removed_base_nodes.insert(id.clone());
         }
         self.batch.changed_nodes.insert(id.clone());
+        let kept = match copies {
+            Copies::Keep => node.as_object().cloned(),
+            Copies::Discard => None,
+        };
         self.batch
             .journal
             .push(Undo::NodeRemoved { index, id, node });
-        match self.batch.journal.last() {
-            Some(Undo::NodeRemoved { node, .. }) => Some(node),
-            _ => None,
-        }
+        kept
     }
 
     pub(crate) fn insert_edge(&mut self, id: String, edge: Value) {
@@ -428,18 +385,17 @@ impl GraphState {
         if let Some(map) = edge.as_object() {
             self.edge_index.insert(map);
         }
-        self.batch.added_edges.insert(id.clone());
         self.batch.changed_edges.insert(id.clone());
         self.batch.journal.push(Undo::EdgeAdded(id.clone()));
         self.graph.edges.insert(id, edge);
     }
 
     /// Remove the edges that exist among `ids`, each once. Return their ids,
-    /// and with `keep`, copies of the edges.
+    /// and with [`Copies::Keep`], copies of the edges.
     pub(crate) fn remove_edges<'i>(
         &mut self,
         ids: impl IntoIterator<Item = &'i str>,
-        keep: bool,
+        copies: Copies,
     ) -> (Vec<String>, Vec<Map<String, Value>>) {
         let mut removed = Vec::new();
         let mut kept = Vec::new();
@@ -448,20 +404,16 @@ impl GraphState {
             if !seen.insert(id) {
                 continue;
             }
-            let base = self.is_base_edge(id);
             let Some((index, id, edge)) = self.graph.edges.shift_remove_full(id) else {
                 continue;
             };
             if let Some(map) = edge.as_object() {
                 self.edge_index.forget(map);
-                if keep {
+                if copies == Copies::Keep {
                     kept.push(map.clone());
                 }
             }
             self.graph.detach(&id, &edge);
-            if base {
-                self.batch.removed_base_edges.insert(id.clone());
-            }
             self.batch.changed_edges.insert(id.clone());
             removed.push(id.clone());
             self.batch
@@ -492,21 +444,16 @@ impl GraphState {
         }
     }
 
-    /// Record how to undo a change made inside a node or an edge.
+    /// Record how to undo a change made inside a node.
     pub(crate) fn record_field(
         &mut self,
-        owner: Owner,
-        id: &str,
-        container: Vec<Step>,
+        node_id: &str,
+        container: Vec<PathPart>,
         undo: FieldUndo,
     ) {
-        match owner {
-            Owner::Node => self.batch.changed_nodes.insert(id.to_owned()),
-            Owner::Edge => self.batch.changed_edges.insert(id.to_owned()),
-        };
+        self.batch.changed_nodes.insert(node_id.to_owned());
         self.batch.journal.push(Undo::Field {
-            owner,
-            id: id.to_owned(),
+            node_id: node_id.to_owned(),
             container,
             undo,
         });
@@ -527,6 +474,22 @@ impl GraphState {
     }
 }
 
+/// Parse and index a flow graph given as JSON text.
+impl FromStr for GraphState {
+    type Err = Error;
+
+    fn from_str(text: &str) -> Result<Self> {
+        Self::new(parse_json(text)?)
+    }
+}
+
+/// The graph as JSON text.
+impl fmt::Display for GraphState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_value())
+    }
+}
+
 fn take_list(root: &mut Map<String, Value>, key: &str) -> Vec<Value> {
     match root.get_mut(key) {
         Some(value) => match std::mem::take(value) {
@@ -537,33 +500,25 @@ fn take_list(root: &mut Map<String, Value>, key: &str) -> Vec<Value> {
     }
 }
 
-fn entry_id(entry: &Value) -> String {
-    entry
-        .get("id")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .to_owned()
-}
-
 /// Parse JSON text, reporting a parse failure as an invalid graph.
 pub(crate) fn parse_json(text: &str) -> Result<Value> {
     serde_json::from_str(text)
-        .map_err(|error| Error::graph(format!("flow data is not valid JSON: {error}"), Vec::new()))
+        .map_err(|error| Error::graph_message(format!("flow data is not valid JSON: {error}")))
 }
 
 /// The value at a resolved path.
-pub(crate) fn resolve<'v>(root: &'v Value, steps: &[Step]) -> Option<&'v Value> {
+pub(crate) fn resolve<'v>(root: &'v Value, steps: &[PathPart]) -> Option<&'v Value> {
     steps.iter().try_fold(root, |value, step| match step {
-        Step::Key(key) => value.as_object()?.get(key),
-        Step::Index(index) => value.as_array()?.get(*index),
+        PathPart::Key(key) => value.as_object()?.get(key),
+        PathPart::Index(index) => value.as_array()?.get(*index),
     })
 }
 
 /// The value at a resolved path, to change it.
-pub(crate) fn resolve_mut<'v>(root: &'v mut Value, steps: &[Step]) -> Option<&'v mut Value> {
+pub(crate) fn resolve_mut<'v>(root: &'v mut Value, steps: &[PathPart]) -> Option<&'v mut Value> {
     steps.iter().try_fold(root, |value, step| match step {
-        Step::Key(key) => value.as_object_mut()?.get_mut(key),
-        Step::Index(index) => value.as_array_mut()?.get_mut(*index),
+        PathPart::Key(key) => value.as_object_mut()?.get_mut(key),
+        PathPart::Index(index) => value.as_array_mut()?.get_mut(*index),
     })
 }
 

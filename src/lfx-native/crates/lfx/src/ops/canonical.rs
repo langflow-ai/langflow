@@ -27,12 +27,13 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
+use std::str::FromStr;
 
 use serde_json::{Map, Number, Value};
 use sha2::{Digest, Sha256};
 
 use crate::ops::error::{Error, Result};
-use crate::ops::schema::NODE_SCHEMA;
+use crate::ops::schema::{NODE_SCHEMA, TableKeys, field_value_path};
 
 /// The quote character of an edge handle's string form.
 pub const HANDLE_QUOTE: char = 'œ';
@@ -47,18 +48,13 @@ const MIN_PLAIN_EXPONENT: i32 = -6;
 
 /// The six JSON types. Integer versus float is not a type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[expect(missing_docs, reason = "each variant is the JSON type it names")]
 pub enum JsonType {
-    /// An object.
     Object,
-    /// An array.
     Array,
-    /// A string.
     String,
-    /// A number.
     Number,
-    /// `true` or `false`.
     Boolean,
-    /// `null`.
     Null,
 }
 
@@ -75,32 +71,40 @@ impl JsonType {
             Self::Null => "null",
         }
     }
+}
 
-    /// The type a name names, if it names one.
-    #[must_use]
-    pub fn from_name(name: &str) -> Option<Self> {
-        Some(match name {
+/// The type a name such as `"number"` names.
+impl FromStr for JsonType {
+    type Err = UnknownJsonType;
+
+    fn from_str(name: &str) -> Result<Self, UnknownJsonType> {
+        Ok(match name {
             "object" => Self::Object,
             "array" => Self::Array,
             "string" => Self::String,
             "number" => Self::Number,
             "boolean" => Self::Boolean,
             "null" => Self::Null,
-            _ => return None,
+            _ => return Err(UnknownJsonType),
         })
     }
 }
 
+/// A name that is not one of the six JSON types.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UnknownJsonType;
+
 /// The JSON type of a value.
-#[must_use]
-pub fn json_type(value: &Value) -> JsonType {
-    match value {
-        Value::Null => JsonType::Null,
-        Value::Bool(_) => JsonType::Boolean,
-        Value::Number(_) => JsonType::Number,
-        Value::String(_) => JsonType::String,
-        Value::Array(_) => JsonType::Array,
-        Value::Object(_) => JsonType::Object,
+impl From<&Value> for JsonType {
+    fn from(value: &Value) -> Self {
+        match value {
+            Value::Null => Self::Null,
+            Value::Bool(_) => Self::Boolean,
+            Value::Number(_) => Self::Number,
+            Value::String(_) => Self::String,
+            Value::Array(_) => Self::Array,
+            Value::Object(_) => Self::Object,
+        }
     }
 }
 
@@ -121,6 +125,13 @@ pub fn is_finite_number(number: &Number) -> bool {
     as_double(number).is_finite()
 }
 
+/// Whether a number is written as an integer, with no fraction and no
+/// exponent, which is how Python tells an `int` from a `float`.
+#[must_use]
+pub fn is_integer_text(number: &Number) -> bool {
+    !number.as_str().contains(['.', 'e', 'E'])
+}
+
 /// Whether a value is a valid table row position: a finite number.
 #[must_use]
 pub fn is_row_position(value: &Value) -> bool {
@@ -139,10 +150,9 @@ fn finite_double(number: &Number) -> Result<f64> {
 /// Print a number as RFC 8785 does, which is JavaScript's `Number::toString`.
 fn format_number(number: &Number, out: &mut String) -> Result<()> {
     let double = finite_double(number)?;
-    let text = number.as_str();
-    if !text.contains(['.', 'e', 'E']) {
+    if is_integer_text(number) {
         // An integer prints exactly while JavaScript holds it exactly.
-        if let Ok(integer) = text.parse::<i128>()
+        if let Ok(integer) = number.as_str().parse::<i128>()
             && integer.abs() <= MAX_SAFE_INTEGER
         {
             write!(out, "{integer}").ok();
@@ -215,28 +225,16 @@ fn write_canonical(value: &Value, out: &mut String) -> Result<()> {
         Value::Number(number) => format_number(number, out)?,
         Value::String(string) => write_string(string, out),
         Value::Array(items) => {
-            out.push('[');
-            for (index, item) in items.iter().enumerate() {
-                if index > 0 {
-                    out.push(',');
-                }
-                write_canonical(item, out)?;
-            }
-            out.push(']');
+            write_list(out, ('[', ']'), items, write_canonical)?;
         }
         Value::Object(map) => {
             let mut keys: Vec<&String> = map.keys().collect();
             keys.sort_by(|a, b| utf16_cmp(a, b));
-            out.push('{');
-            for (index, key) in keys.into_iter().enumerate() {
-                if index > 0 {
-                    out.push(',');
-                }
+            write_list(out, ('{', '}'), keys, |key, out| {
                 write_string(key, out);
                 out.push(':');
-                write_canonical(&map[key], out)?;
-            }
-            out.push('}');
+                write_canonical(&map[key], out)
+            })?;
         }
     }
     Ok(())
@@ -321,10 +319,10 @@ pub fn parse_handle(handle: &Value) -> Option<Map<String, Value>> {
 /// units, as the editor sorts them.
 #[must_use]
 pub fn ordered_rows(rows: &[Value]) -> Vec<&Value> {
-    let table = &NODE_SCHEMA.table;
-    let (Some(id_key), Some(position_key)) = (table.id_key(), table.position.as_deref()) else {
-        return rows.iter().collect();
-    };
+    let TableKeys {
+        id: id_key,
+        position: position_key,
+    } = &NODE_SCHEMA.table_keys;
     let keys: Option<Vec<(f64, &str)>> = rows
         .iter()
         .map(|row| {
@@ -352,6 +350,7 @@ pub fn ordered_rows(rows: &[Value]) -> Vec<&Value> {
 // --- The canonical form of a graph --------------------------------------------------------
 
 /// A graph's canonical form, sharing every value it does not change.
+#[derive(Debug)]
 enum Canon<'a> {
     /// A value taken as it is.
     Raw(&'a Value),
@@ -365,7 +364,7 @@ enum Canon<'a> {
 
 /// Whether the canonical form keys collections by id, for comparison, or
 /// keeps them as lists ordered by id, for serialization.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Mode {
     Keyed,
     Ordered,
@@ -476,11 +475,11 @@ fn canonical_field<'a>(node: &'a Value, key: &str, field: &'a Value, mode: Mode)
     };
     let mut canon = without(field_map, |key| NODE_SCHEMA.field_view_state.contains(key));
     if let Some(Value::Array(rows)) = field_map.get("value")
-        && NODE_SCHEMA.is_table_at(node, &["data", "node", "template", key, "value"])
+        && NODE_SCHEMA.is_table_at(node, &field_value_path(key))
     {
         match mode {
             Mode::Keyed => {
-                let id_key = NODE_SCHEMA.table.id_key().unwrap_or("_id");
+                let id_key = NODE_SCHEMA.table_keys.id.as_str();
                 // A legacy table without unique row ids keeps its array, which is its order.
                 if let keyed @ Canon::Object(_) =
                     by_id(rows.iter().map(Canon::Raw).collect(), id_key)
@@ -510,73 +509,89 @@ fn canonical_edge(edge: &Value) -> Canon<'_> {
     Canon::Object(canon)
 }
 
-/// One position in a canonical form: a canonical node, or a plain value.
-#[derive(Clone, Copy)]
-enum Node<'c, 'a> {
-    Canon(&'c Canon<'a>),
+/// A read-only view of one position in a canonical form.
+///
+/// `'c` is the lifetime of the canonical form, and `'a` that of the graph it borrows from.
+#[derive(Debug, Clone, Copy)]
+enum View<'c, 'a> {
+    /// An object the canonical form rebuilt, or a collection keyed by id.
+    Object(&'c HashMap<&'a str, Canon<'a>>),
+    /// A collection the canonical form ordered for serialization.
+    Array(&'c [Canon<'a>]),
+    /// A value the canonical form shares with the graph, or a handle's object.
     Value(&'c Value),
 }
 
-impl<'c, 'a> Node<'c, 'a> {
+impl<'c, 'a> View<'c, 'a> {
     fn of(canon: &'c Canon<'a>) -> Self {
         match canon {
             Canon::Raw(value) => Self::Value(value),
             Canon::Handle(value) => Self::Value(value),
-            other => Self::Canon(other),
+            Canon::Object(map) => Self::Object(map),
+            Canon::Array(items) => Self::Array(items),
         }
     }
 
     fn json_type(self) -> JsonType {
         match self {
-            Self::Canon(Canon::Object(_)) => JsonType::Object,
-            Self::Canon(_) => JsonType::Array,
-            Self::Value(value) => json_type(value),
+            Self::Object(_) => JsonType::Object,
+            Self::Array(_) => JsonType::Array,
+            Self::Value(value) => JsonType::from(value),
         }
     }
 
     fn len(self) -> usize {
         match self {
-            Self::Canon(Canon::Object(map)) => map.len(),
-            Self::Canon(Canon::Array(items)) => items.len(),
+            Self::Object(map) => map.len(),
+            Self::Array(items) => items.len(),
             Self::Value(Value::Object(map)) => map.len(),
             Self::Value(Value::Array(items)) => items.len(),
-            _ => 0,
+            Self::Value(_) => 0,
         }
     }
 
     fn member(self, key: &str) -> Option<Self> {
         match self {
-            Self::Canon(Canon::Object(map)) => map.get(key).map(Self::of),
+            Self::Object(map) => map.get(key).map(Self::of),
             Self::Value(Value::Object(map)) => map.get(key).map(Self::Value),
-            _ => None,
+            Self::Array(_) | Self::Value(_) => None,
         }
     }
 
-    fn members(self) -> Vec<(&'c str, Self)> {
+    fn item(self, index: usize) -> Option<Self> {
         match self {
-            Self::Canon(Canon::Object(map)) => map
-                .iter()
-                .map(|(key, value)| (*key, Self::of(value)))
-                .collect(),
-            Self::Value(Value::Object(map)) => map
-                .iter()
-                .map(|(key, value)| (key.as_str(), Self::Value(value)))
-                .collect(),
-            _ => Vec::new(),
+            Self::Array(items) => items.get(index).map(Self::of),
+            Self::Value(Value::Array(items)) => items.get(index).map(Self::Value),
+            Self::Object(_) | Self::Value(_) => None,
         }
     }
 
-    fn items(self) -> Vec<Self> {
+    /// Whether `check` holds for every member of an object, stopping at the
+    /// first member it fails for.
+    fn all_members(self, mut check: impl FnMut(&str, Self) -> Result<bool>) -> Result<bool> {
         match self {
-            Self::Canon(Canon::Array(items)) => items.iter().map(Self::of).collect(),
-            Self::Value(Value::Array(items)) => items.iter().map(Self::Value).collect(),
-            _ => Vec::new(),
+            Self::Object(map) => {
+                for (key, value) in map {
+                    if !check(key, Self::of(value))? {
+                        return Ok(false);
+                    }
+                }
+            }
+            Self::Value(Value::Object(map)) => {
+                for (key, value) in map {
+                    if !check(key, Self::Value(value))? {
+                        return Ok(false);
+                    }
+                }
+            }
+            Self::Array(_) | Self::Value(_) => {}
         }
+        Ok(true)
     }
 }
 
-fn canon_equal(left: Node<'_, '_>, right: Node<'_, '_>) -> Result<bool> {
-    if let (Node::Value(left), Node::Value(right)) = (left, right) {
+fn canon_equal(left: View<'_, '_>, right: View<'_, '_>) -> Result<bool> {
+    if let (View::Value(left), View::Value(right)) = (left, right) {
         return values_equal(left, right);
     }
     let kind = left.json_type();
@@ -584,52 +599,54 @@ fn canon_equal(left: Node<'_, '_>, right: Node<'_, '_>) -> Result<bool> {
         return Ok(false);
     }
     if kind == JsonType::Object {
-        for (key, value) in left.members() {
-            match right.member(key) {
-                Some(other) if canon_equal(value, other)? => {}
-                _ => return Ok(false),
-            }
-        }
-    } else {
-        for (a, b) in left.items().into_iter().zip(right.items()) {
-            if !canon_equal(a, b)? {
-                return Ok(false);
-            }
+        return left.all_members(|key, value| match right.member(key) {
+            Some(other) => canon_equal(value, other),
+            None => Ok(false),
+        });
+    }
+    for index in 0..left.len() {
+        match (left.item(index), right.item(index)) {
+            (Some(a), Some(b)) if canon_equal(a, b)? => {}
+            _ => return Ok(false),
         }
     }
     Ok(true)
 }
 
-fn write_canon(node: Node<'_, '_>, out: &mut String) -> Result<()> {
-    match node {
-        Node::Value(value) => write_canonical(value, out),
-        Node::Canon(Canon::Object(map)) => {
+fn write_canon(view: View<'_, '_>, out: &mut String) -> Result<()> {
+    match view {
+        View::Value(value) => write_canonical(value, out),
+        View::Object(map) => {
             let mut keys: Vec<&&str> = map.keys().collect();
             keys.sort_by(|a, b| utf16_cmp(a, b));
-            out.push('{');
-            for (index, key) in keys.into_iter().enumerate() {
-                if index > 0 {
-                    out.push(',');
-                }
+            write_list(out, ('{', '}'), keys, |key, out| {
                 write_string(key, out);
                 out.push(':');
-                write_canon(Node::of(&map[key]), out)?;
-            }
-            out.push('}');
-            Ok(())
+                write_canon(View::of(&map[key]), out)
+            })
         }
-        Node::Canon(_) => {
-            out.push('[');
-            for (index, item) in node.items().into_iter().enumerate() {
-                if index > 0 {
-                    out.push(',');
-                }
-                write_canon(item, out)?;
-            }
-            out.push(']');
-            Ok(())
-        }
+        View::Array(items) => write_list(out, ('[', ']'), items, |item, out| {
+            write_canon(View::of(item), out)
+        }),
     }
+}
+
+/// Write `items` between `open` and `close`, separated by commas.
+fn write_list<T>(
+    out: &mut String,
+    (open, close): (char, char),
+    items: impl IntoIterator<Item = T>,
+    mut write_item: impl FnMut(T, &mut String) -> Result<()>,
+) -> Result<()> {
+    out.push(open);
+    for (index, item) in items.into_iter().enumerate() {
+        if index > 0 {
+            out.push(',');
+        }
+        write_item(item, out)?;
+    }
+    out.push(close);
+    Ok(())
 }
 
 /// Serialize flow data in canonical graph form, as RFC 8785 text.
@@ -640,7 +657,7 @@ fn write_canon(node: Node<'_, '_>, out: &mut String) -> Result<()> {
 pub fn canonical_graph_json(flow: &Value) -> Result<String> {
     let canon = canonical_graph(flow, Mode::Ordered);
     let mut out = String::new();
-    write_canon(Node::of(&canon), &mut out)?;
+    write_canon(View::of(&canon), &mut out)?;
     Ok(out)
 }
 
@@ -666,7 +683,7 @@ pub fn graph_hash(flow: &Value) -> Result<String> {
 pub fn graphs_equal(left: &Value, right: &Value) -> Result<bool> {
     let left = canonical_graph(left, Mode::Keyed);
     let right = canonical_graph(right, Mode::Keyed);
-    canon_equal(Node::of(&left), Node::of(&right))
+    canon_equal(View::of(&left), View::of(&right))
 }
 
 #[cfg(test)]

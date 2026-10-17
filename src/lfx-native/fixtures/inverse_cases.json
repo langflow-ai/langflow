@@ -859,7 +859,7 @@
       ]
     },
     {
-      "name": "apply case: update_edges: writes an edge's handles in place, both forms together",
+      "name": "apply case: edge change: an edge's handles change by deleting and adding it, both forms together",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -877,28 +877,42 @@
         ]
       },
       "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "one", "inputTypes": ["Message"]}},
-            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œoneœ,œinputTypesœ:[œMessageœ]}"}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ,œinputTypesœ:[œMessageœ]}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one", "inputTypes": ["Message"]}}
+            }
           ]
         }
       ],
       "inverse": [
         [
           {
-            "type": "update_edges",
-            "updates": [
-              {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œoneœ}"},
-              {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "one"}}
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e1",
+                "source": "s",
+                "target": "d",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œoneœ}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+              }
             ]
           }
-        ]
+        ],
+        [{"type": "delete_edges", "ids": ["e1"]}]
       ]
     },
     {
-      "name": "apply case: update_edges: moving an edge onto a free field applies",
+      "name": "apply case: edge change: re-adding an edge onto a free field applies",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -916,54 +930,39 @@
         ]
       },
       "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "many"}},
-            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œmanyœ}"}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
           ]
         }
       ],
       "inverse": [
         [
           {
-            "type": "update_edges",
-            "updates": [
-              {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œoneœ}"},
-              {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "one"}}
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e1",
+                "source": "s",
+                "target": "d",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œoneœ}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+              }
             ]
           }
-        ]
-      ]
-    },
-    {
-      "name": "apply case: update_edges: a write beside the handles leaves a stale edge alone",
-      "base": {
-        "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
         ],
-        "edges": [
-          {
-            "id": "e1",
-            "source": "s",
-            "target": "d",
-            "sourceHandle": "{œnameœ:œoutœ}",
-            "targetHandle": "{œfieldNameœ:œoneœ}",
-            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
-          },
-          {
-            "id": "e-stale",
-            "source": "s",
-            "target": "d",
-            "sourceHandle": "{œnameœ:œoutœ}",
-            "targetHandle": "{œfieldNameœ:œremovedœ}",
-            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed"}}
-          }
-        ]
-      },
-      "operations": [{"type": "update_edges", "updates": [{"id": "e-stale", "op": "set_field", "path": ["data", "note"], "value": "kept"}]}],
-      "inverse": [[{"type": "update_edges", "updates": [{"id": "e-stale", "op": "delete_field", "path": ["data", "note"]}]}]]
+        [{"type": "delete_edges", "ids": ["e1"]}]
+      ]
     },
     {
       "name": "apply case: edge rules: a list field takes several connections",
@@ -1342,7 +1341,7 @@
       ]
     },
     {
-      "name": "apply case: cascade: an edge rewired earlier in the batch goes with its new field",
+      "name": "apply case: cascade: an edge re-added earlier in the batch goes with its new field",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1360,11 +1359,18 @@
         ]
       },
       "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "many"}},
-            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œmanyœ}"}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
           ]
         },
         {"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "many"]}]}
@@ -1372,13 +1378,20 @@
       "inverse": [
         [
           {
-            "type": "update_edges",
-            "updates": [
-              {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œoneœ}"},
-              {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "one"}}
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e1",
+                "source": "s",
+                "target": "d",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œoneœ}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+              }
             ]
           }
         ],
+        [{"type": "delete_edges", "ids": ["e1"]}],
         [
           {
             "type": "update_nodes",
@@ -2857,7 +2870,7 @@
       "inverse": [[{"type": "update_metadata", "fields": {"name": "flow"}, "delete_keys": ["added", "absent"]}]]
     },
     {
-      "name": "rewiring an edge's handles puts them back",
+      "name": "re-adding an edge with other handles puts it back",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2915,24 +2928,38 @@
         ]
       },
       "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
         {
-          "type": "update_edges",
-          "updates": [
-            {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œmanyœ}"},
-            {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "many"}}
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
           ]
         }
       ],
       "inverse": [
         [
           {
-            "type": "update_edges",
-            "updates": [
-              {"id": "e1", "op": "set_field", "path": ["data", "targetHandle"], "value": {"fieldName": "f"}},
-              {"id": "e1", "op": "set_field", "path": ["targetHandle"], "value": "{œfieldNameœ:œfœ}"}
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e1",
+                "source": "a",
+                "target": "b",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œfœ}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+              }
             ]
           }
-        ]
+        ],
+        [{"type": "delete_edges", "ids": ["e1"]}]
       ]
     },
     {

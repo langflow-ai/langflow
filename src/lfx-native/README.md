@@ -40,6 +40,7 @@ The modules of `lfx::ops`:
 | `validate` | graph rules and violations, with codes and resolutions |
 | `repair` | the direct repairs |
 | `edges` | edge rules and handle reading |
+| `entry` | what the engine reads from untyped nodes, edges and rows: ids, templates |
 | `keyed` | keyed lists and table rows |
 | `schema` | the node schema (`node_schema.json`, embedded) |
 | `canonical` | canonical form, number printing, `graph_hash` |
