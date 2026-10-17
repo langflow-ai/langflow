@@ -1,6 +1,6 @@
 [project]
 name = "lfx-google"
-version = "0.3.3"
+version = "0.3.3.dev45"
 description = "Google and Gemini components as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -16,7 +16,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "google", "gemini"]
 # relying on the opt-in lfx-bundles metapackage.
 dependencies = [
     # Requires the shared IntegrationNetworkError added for 1.13.0.
-    "lfx>=1.13.0,<2.0.0",
+    "lfx==1.13.0.dev45",
     "google-api-python-client~=2.161",
     "google-auth>=2.38.0,<3.0.0",
     "google-auth-oauthlib>=1.2.0,<2.0.0",
