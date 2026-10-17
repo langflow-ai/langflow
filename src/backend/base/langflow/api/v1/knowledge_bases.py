@@ -2110,8 +2110,11 @@ async def cancel_ingestion(
             raise HTTPException(status_code=400, detail=f"Cannot cancel job with status '{job_status}'")
 
         revoked = await task_service.revoke_task(job.job_id)
-        # Update status immediately so background task can see it
-        await job_service.update_job_status(job.job_id, JobStatus.CANCELLED)
+        # Update status immediately so background task can see it. Stamp the
+        # finish time with it: retention dates an unstamped terminal row from
+        # its creation, which deletes a long-running job the moment it is
+        # cancelled instead of after the configured window.
+        await job_service.update_job_status(job.job_id, JobStatus.CANCELLED, finished_timestamp=True)
 
         # Clean up any partially ingested chunks from this job. Forward the KB's
         # configured backend and its owner's id: remote backends name their
