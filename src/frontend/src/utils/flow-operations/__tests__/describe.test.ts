@@ -78,20 +78,26 @@ describe("describeOperation", () => {
     ).toEqual(["Removed a connection"]);
   });
 
-  it("describes a connection's own changes", () => {
-    const update = (id: string) => ({
-      id,
-      op: "set_field",
-      path: ["data", "targetHandle", "inputTypes"],
-      value: ["Data"],
-    });
+  it("describes a changed connection as removed and added again", () => {
+    const changed = [
+      recorded({ type: "delete_edges", ids: ["e"] }),
+      recorded({
+        type: "add_edges",
+        edges: [
+          {
+            id: "e",
+            source: "b",
+            target: "a",
+            data: { targetHandle: { inputTypes: ["Data"] } },
+          },
+        ],
+      }),
+    ];
     expect(
-      describeOperation(
-        recorded({ type: "update_edges", updates: [update("e"), update("x")] }),
-        t,
-        { names },
+      changed.flatMap((operation) =>
+        describeOperation(operation, t, { names }),
       ),
-    ).toEqual(["Updated connection Prompt → OpenAI", "Updated a connection"]);
+    ).toEqual(["Disconnected Prompt → OpenAI", "Connected Prompt → OpenAI"]);
   });
 
   it("describes table rows, cells and outputs addressed by selectors", () => {

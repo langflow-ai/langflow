@@ -304,3 +304,68 @@ describe("applyFlowOperations while restoring", () => {
     ).toHaveLength(1);
   });
 });
+
+describe("applyFlowOperations changes an edge only by delete and add", () => {
+  const edge = (field: string) => ({
+    id: "e",
+    source: "s",
+    target: "d",
+    sourceHandle: "{œnameœ:œoutœ}",
+    targetHandle: `{œfieldNameœ:œ${field}œ}`,
+    data: {
+      sourceHandle: { name: "out" },
+      targetHandle: { fieldName: field },
+    },
+  });
+  const graph = () => ({
+    nodes: [
+      { id: "s", data: { node: { template: {}, outputs: [{ name: "out" }] } } },
+      {
+        id: "d",
+        data: {
+          node: { template: { one: { type: "str" }, two: { type: "str" } } },
+        },
+      },
+    ],
+    edges: [edge("one")],
+  });
+
+  it("refuses update_edges as an unsupported operation type", () => {
+    const error = caught(() =>
+      applyFlowOperations(graph(), [
+        {
+          type: "update_edges",
+          updates: [
+            {
+              id: "e",
+              op: "set_field",
+              path: ["data", "targetHandle"],
+              value: { fieldName: "two" },
+            },
+          ],
+        },
+      ]),
+    );
+
+    expect(error.name).toBe("FlowOperationValidationError");
+    expect(error.code).toBe("FLOW_OPERATION_INVALID");
+    expect(error.message).toBe("Unsupported operation type: update_edges");
+  });
+
+  it("moves an edge to another input with a delete and an add of the same id", () => {
+    const { flowData, inverseOperations } = applyFlowOperations(
+      graph(),
+      [
+        { type: "delete_edges", ids: ["e"] },
+        { type: "add_edges", edges: [edge("two")] },
+      ],
+      { inverse: true },
+    );
+
+    expect(flowData.edges).toEqual([edge("two")]);
+    expect(inverseOperations).toEqual([
+      [{ type: "add_edges", edges: [edge("one")] }],
+      [{ type: "delete_edges", ids: ["e"] }],
+    ]);
+  });
+});
