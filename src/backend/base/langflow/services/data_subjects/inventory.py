@@ -75,4 +75,5 @@ TABLE_POLICY: dict[str, str] = {
     "user": "deleted last, through the identity-mutation protocol",
     "variable": BUILDER_ROWS,
     "vertex_build": END_USER_ROWS,
+    "worker_registry": NOT_PERSONAL,
 }

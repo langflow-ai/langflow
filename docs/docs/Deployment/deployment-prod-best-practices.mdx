@@ -107,6 +107,7 @@ Effective monitoring ensures Langflow operates reliably and performs well under 
     To change the port, set `LANGFLOW_PROMETHEUS_PORT`.
 
     With Prometheus enabled, Langflow also exports background job metrics prefixed with `langflow_bg_`: counts of queued, running, and suspended jobs, the age of the oldest queued job, cumulative started, completed, and failed totals, and p50 and p95 submission-to-finish times for jobs finished over the last five minutes.
+    With the scaled backend, it also exports the worker fleet: `langflow_bg_workers_online` and `langflow_bg_workers` split by a `state` label of `idle` or `busy`. A worker counts as online while its heartbeat is within `LANGFLOW_BACKGROUND_LEASE_TTL_S`, so raising that setting widens the window on both sides. The default backend runs no worker processes, so these read zero there rather than going missing.
     These durations include queue wait and time suspended on human input. The percentile gauges use a fixed window and cannot be combined into a percentile over a different window or across independent databases.
     Only the process that serves the Prometheus port collects them. Gauges refresh every 15 seconds by default; to change that interval, set `LANGFLOW_BACKGROUND_METRICS_INTERVAL` to a number of seconds greater than zero.
     All-time totals refresh on the first tick and then on the first tick at least five minutes after the previous successful refresh, reducing full-history scans. Use rate windows longer than this refresh cadence.
