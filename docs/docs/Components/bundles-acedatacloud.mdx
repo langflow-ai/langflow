@@ -9,7 +9,7 @@ import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-ins
 
 Until `lfx-acedatacloud` is published on PyPI, install the [public v0.1.2 GitHub wheel](https://github.com/AceDataCloud/LangflowAceDataCloud/releases/tag/v0.1.2) in the same Python environment as Langflow.
 
-The **Ace Data Cloud** Extension Bundle adds a named chat model provider and independent image, video, audio, search, and face service components. It uses one `ace_data_cloud` bundle. Installing the package makes the components available under **Components → Ace Data Cloud** after a Langflow restart. It is not part of the default curated installation.
+The **Ace Data Cloud** Extension Bundle adds a named chat model provider and independent image, video, audio, search, and face service components. It uses one `ace_data_cloud` bundle. Installing the package makes the components available under **Components → Ace Data Cloud** after a Langflow restart. The default `langflow` distribution includes this package; an engine-only `lfx` install can add it separately. The separately published v0.1.2 GitHub wheel still requires manual installation.
 
 ## Get your API key
 
@@ -28,6 +28,16 @@ The **Ace Data Cloud** Extension Bundle adds a named chat model provider and ind
 After installation, open **Settings → Model Providers → Ace Data Cloud**. Create an application API key in the [Ace Data Cloud Console](https://platform.acedata.cloud/console/applications?utm_source=langflow&utm_medium=referral&utm_campaign=evergreen&utm_content=langflow_bundle_docs_api_key), then save it as a Langflow **Credential** global variable named `ACEDATACLOUD_API_KEY`. The provider uses Ace Data Cloud's fixed OpenAI-compatible endpoint and intersects the current public chat catalog with the models visible to your key. New text models can appear without updating the bundle; image-generation variants are excluded. Select a model your account may use; availability and price can change. Agent tool calling is not advertised because the catalog does not declare per-model support.
 
 The [no-key chat model flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/main/examples/chat_model.json) selects `gpt-4.1-mini` and connects Language Model to Chat Output. Configure the Credential variable before running it.
+
+## Find a service by name
+
+Use the component search directly: **suno**, **seedance**, **happyhorse**, **gpt image**, or **nano banana**. Each result names the service first and says **by Ace Data Cloud**; Generate and Retrieve Task are separate nodes. These integrations are provided by Ace Data Cloud and do not claim to be the service owners’ official plugins.
+
+- [Suno by Ace Data Cloud](./acedatacloud-suno.mdx): music and audio.
+- [Seedance by Ace Data Cloud](./acedatacloud-seedance.mdx): text-to-video.
+- [Happy Horse by Ace Data Cloud](./acedatacloud-happy-horse.mdx): text-to-video.
+- [GPT Image by Ace Data Cloud](./acedatacloud-gpt-image.mdx): image generation.
+- [Nano Banana by Ace Data Cloud](./acedatacloud-nano-banana.mdx): image generation.
 
 ## Service components
 

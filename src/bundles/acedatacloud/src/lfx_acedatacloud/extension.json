@@ -3,7 +3,7 @@
   "id": "lfx-acedatacloud",
   "version": "0.1.3",
   "name": "Ace Data Cloud",
-  "description": "Ace Data Cloud chat models and independent image, video, music, audio, search, and face service components.",
+  "description": "Ace Data Cloud model provider plus Suno music, Seedance and Happy Horse video, GPT Image and Nano Banana images, and other service components.",
   "lfx": {"compat": ["1"]},
   "bundles": [{"name": "ace_data_cloud", "path": "components/acedatacloud", "display_name": "Ace Data Cloud", "icon": "Bot"}],
   "providers": [{

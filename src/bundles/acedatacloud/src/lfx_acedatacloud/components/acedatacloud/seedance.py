@@ -4,8 +4,9 @@ from lfx_acedatacloud.components.base import AceGenerationComponent, generation_
 
 
 class SeedanceGenerateComponent(AceGenerationComponent):
-    display_name = "Seedance Generate"
-    description = "Run the Ace Data Cloud Seedance first-run API action."
-    icon = "Bot"
+    display_name = "Seedance Generate by Ace Data Cloud"
+    description = "Generate Seedance videos through Ace Data Cloud."
+    icon = "Clapperboard"
+    documentation = "https://docs.langflow.org/acedatacloud-seedance"
     service_name = "seedance"
     inputs = generation_inputs("seedance")

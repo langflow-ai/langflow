@@ -4,8 +4,9 @@ from lfx_acedatacloud.components.base import AceGenerationComponent, generation_
 
 
 class HappyHorseGenerateComponent(AceGenerationComponent):
-    display_name = "Happy Horse Generate"
-    description = "Run the Ace Data Cloud Happy Horse first-run API action."
-    icon = "Bot"
+    display_name = "Happy Horse Generate by Ace Data Cloud"
+    description = "Generate Happy Horse (HappyHorse) videos through Ace Data Cloud."
+    icon = "Clapperboard"
+    documentation = "https://docs.langflow.org/acedatacloud-happy-horse"
     service_name = "happy_horse"
     inputs = generation_inputs("happy_horse")

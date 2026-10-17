@@ -63,6 +63,7 @@
       "extends": "python-base",
       "required_distributions_add": [
         "langflow",
+        "lfx-acedatacloud",
         "lfx-amazon",
         "lfx-anthropic",
         "lfx-azure",
@@ -81,7 +82,6 @@
         "lfx-vllm"
       ],
       "forbidden_distributions_add": [
-        "lfx-acedatacloud",
         "lfx-arxiv",
         "lfx-confluent",
         "lfx-duckduckgo",
@@ -100,6 +100,7 @@
       "forbidden_distribution_prefixes": [],
       "entry_points": {
         "langflow.extensions": [
+          "lfx-acedatacloud",
           "lfx-amazon",
           "lfx-anthropic",
           "lfx-azure",
@@ -159,6 +160,15 @@
         "lfx-toolguard": [
           "lfx_toolguard/extension.json",
           "lfx_toolguard/components/models_and_agents/policies_component.py"
+        ],
+        "lfx-acedatacloud": [
+          "lfx_acedatacloud/extension.json",
+          "lfx_acedatacloud/components/acedatacloud/gpt_image.py",
+          "lfx_acedatacloud/provider.py",
+          "lfx_acedatacloud/components/acedatacloud/suno.py",
+          "lfx_acedatacloud/components/acedatacloud/seedance.py",
+          "lfx_acedatacloud/components/acedatacloud/happy_horse.py",
+          "lfx_acedatacloud/components/acedatacloud/nano_banana.py"
         ]
       },
       "module_checks": [
@@ -202,7 +212,6 @@
     "python-full": {
       "extends": "python-default",
       "required_distributions_add": [
-        "lfx-acedatacloud",
         "lfx-arxiv",
         "lfx-bundles",
         "lfx-confluent",
@@ -217,7 +226,6 @@
         "lfx-valkey"
       ],
       "forbidden_distributions_remove": [
-        "lfx-acedatacloud",
         "lfx-arxiv",
         "lfx-bundles",
         "lfx-confluent",
@@ -344,10 +352,6 @@
         "langflow-base": [
           "langflow/initial_setup/starter_projects/Basic Prompting.json"
         ],
-        "lfx-acedatacloud": [
-          "lfx_acedatacloud/extension.json",
-          "lfx_acedatacloud/components/acedatacloud/gpt_image.py"
-        ],
         "lfx-openai": [
           "lfx_openai/extension.json",
           "lfx_openai/components/openai/openai_chat_model.py"
@@ -380,6 +384,15 @@
         "lfx-bundles": [
           "lfx_bundles/mongodb/mongodb_atlas.py",
           "lfx_bundles/youtube/starter_projects/Youtube Analysis.json"
+        ],
+        "lfx-acedatacloud": [
+          "lfx_acedatacloud/extension.json",
+          "lfx_acedatacloud/components/acedatacloud/gpt_image.py",
+          "lfx_acedatacloud/provider.py",
+          "lfx_acedatacloud/components/acedatacloud/suno.py",
+          "lfx_acedatacloud/components/acedatacloud/seedance.py",
+          "lfx_acedatacloud/components/acedatacloud/happy_horse.py",
+          "lfx_acedatacloud/components/acedatacloud/nano_banana.py"
         ]
       },
       "module_checks": [

@@ -7669,6 +7669,7 @@ version = "1.13.0"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base" },
+    { name = "lfx-acedatacloud" },
     { name = "lfx-amazon" },
     { name = "lfx-anthropic" },
     { name = "lfx-azure" },
@@ -7693,7 +7694,6 @@ audio = [
     { name = "langflow-base", extra = ["audio"] },
 ]
 bundles = [
-    { name = "lfx-acedatacloud" },
     { name = "lfx-arxiv" },
     { name = "lfx-bundles", extra = ["all-no-torch"] },
     { name = "lfx-confluent" },
@@ -7802,7 +7802,7 @@ requires-dist = [
     { name = "langflow-base", extras = ["pgvector"], marker = "extra == 'pgvector'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["sandbox"], marker = "extra == 'sandbox'", editable = "src/backend/base" },
-    { name = "lfx-acedatacloud", marker = "extra == 'bundles'", editable = "src/bundles/acedatacloud" },
+    { name = "lfx-acedatacloud", editable = "src/bundles/acedatacloud" },
     { name = "lfx-amazon", editable = "src/bundles/amazon" },
     { name = "lfx-anthropic", editable = "src/bundles/anthropic" },
     { name = "lfx-arxiv", marker = "extra == 'bundles'", editable = "src/bundles/arxiv" },

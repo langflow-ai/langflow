@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -53,11 +54,53 @@ def test_manifest_has_provider_and_bundle() -> None:
     assert manifest.bundles[0].name == "ace_data_cloud"
 
 
+def test_named_provider_is_available_in_the_native_model_selector() -> None:
+    from lfx.base.models import provider_registry
+    from lfx.base.models.unified_models import get_llm, get_model_providers
+
+    provider_registry.clear()
+    try:
+        loaded = load_extension(ROOT)
+        assert not loaded.errors
+        assert "Ace Data Cloud" in get_model_providers()
+        assert provider_registry.provider_id_for("Ace Data Cloud") == "acedatacloud"
+        model = get_llm(
+            [{"name": "gpt-4.1-mini", "provider": "Ace Data Cloud"}],
+            user_id=None,
+            api_key="test-only",
+        )
+        assert isinstance(model, ChatAceDataCloud)
+        assert str(model.openai_api_base).rstrip("/") == API_BASE
+        assert model.max_retries == 0
+    finally:
+        provider_registry.clear()
+
+
+def test_service_search_fixture_matches_the_real_component_forms() -> None:
+    expected = json.loads((ROOT.parents[1] / "tests" / "fixtures" / "service-search.json").read_text())
+    loaded = load_extension(ROOT)
+    top_services = {"suno", "seedance", "happy_horse", "gpt_image", "nano_banana"}
+    actual = {}
+    for component in loaded.components:
+        if component.klass.service_name not in top_services:
+            continue
+        form, _ = create_component_template(component_extractor=component.klass())
+        assert form["display_name"].endswith("by Ace Data Cloud")
+        assert form["icon"] in {"Music", "Clapperboard", "Image"}
+        assert form["documentation"].startswith("https://docs.langflow.org/acedatacloud-")
+        actual[component.namespaced_id] = {
+            **{key: form[key] for key in ("display_name", "description", "icon", "documentation")},
+            "metadata": {"component_class_name": component.class_name},
+        }
+    assert len(actual) == 10
+    assert expected == {"ace_data_cloud": actual}
+
+
 def test_ui_templates_keep_generation_and_retrieval_forms_separate() -> None:
     generated, _ = create_component_template(component_extractor=GPTImageGenerateComponent())
     retrieved, _ = create_component_template(component_extractor=GPTImageRetrieveTaskComponent())
-    assert generated["display_name"] == "GPT Image Generate"
-    assert retrieved["display_name"] == "GPT Image Retrieve Task"
+    assert generated["display_name"] == "GPT Image Generate by Ace Data Cloud"
+    assert retrieved["display_name"] == "GPT Image Retrieve Task by Ace Data Cloud"
     assert "prompt" in generated["field_order"]
     assert "task_id" not in generated["field_order"]
     assert "task_id" in retrieved["field_order"]

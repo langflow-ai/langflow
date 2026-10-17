@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
 authors = [{name = "Ace Data Cloud", email = "dev@acedata.cloud"}]
-keywords = ["langflow", "lfx", "extension", "bundle", "acedatacloud"]
+keywords = ["langflow", "lfx", "acedatacloud", "suno", "seedance", "happyhorse", "gpt-image", "nano-banana"]
 dependencies = [
   "lfx>=1.13.0.dev0,<2.0.0",
   "langchain-openai>=1.1.6",
