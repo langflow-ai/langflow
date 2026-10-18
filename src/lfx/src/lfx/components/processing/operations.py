@@ -694,9 +694,12 @@ class OperationsComponent(Component):
         if main_input and main_input in build_config:
             build_config[main_input]["show"] = True
             build_config[main_input]["required"] = True
-            # The JSON "Combine" operation consumes a list of Data objects.
+            # The JSON "Combine" operation consumes a list of Data objects. The
+            # serialized template stores Input.is_list under "list", which the
+            # canvas and the graph read to decide whether "data" takes many edges.
             if main_input == "data":
-                build_config["data"]["is_list"] = operation == "Combine"
+                build_config["data"]["list"] = operation == "Combine"
+                build_config["data"].pop("is_list", None)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         # Path Selection: refresh the available JSON paths from the pasted JSON.
@@ -780,7 +783,11 @@ class OperationsComponent(Component):
         return frontend_node
 
     async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:
-        """Keep the operation options and outputs in sync with the saved input type on load."""
+        """Keep the operation options, outputs and field visibility in sync with the saved values on load.
+
+        The rebuilt template carries class-default ``show``/``required`` flags, which the generic merge
+        does not restore, so visibility is re-derived here without touching saved field values.
+        """
         await super().update_frontend_node(new_frontend_node, current_frontend_node)
 
         template = new_frontend_node.get("template", {})
@@ -799,6 +806,23 @@ class OperationsComponent(Component):
         else:
             self.update_outputs(new_frontend_node, "input_type", input_type)
 
+        # Re-apply visibility. Unlike _reset_operation_fields, keep saved values.
+        operation = self._extract_operation_name(operation_value)
+        self._show_main_input(template, input_type, operation)
+        for field in self.ALL_OPERATION_FIELDS:
+            if field in template:
+                template[field]["show"] = field in self.OPERATION_FIELDS.get(operation, [])
+
+        # The merge restores only values, so rebuild Path Selection's dropdown from the saved JSON.
+        if operation == "Path Selection" and "selected_key" in template:
+            mapped_json = template.get("mapped_json_display", {}).get("value")
+            if mapped_json:
+                try:
+                    template["selected_key"]["options"] = self.extract_all_paths(json.loads(mapped_json))
+                except (json.JSONDecodeError, TypeError, ValueError, RecursionError) as e:
+                    logger.warning(f"Error parsing saved mapped JSON: {e}")
+                    template["selected_key"]["show"] = False
+
         return new_frontend_node
 
     # ==================================================================
@@ -810,6 +834,8 @@ class OperationsComponent(Component):
         if operation in JSON_OPERATIONS:
             handler = self._json_handlers().get(operation)
             if handler:
+                if operation != "Combine":
+                    self.validate_data_edges(operation)
                 try:
                     return handler()
                 except Exception as e:
@@ -907,6 +933,23 @@ class OperationsComponent(Component):
             msg = f"{operation} operation is not supported for multiple data objects."
             raise ValueError(msg)
 
+    def validate_data_edges(self, operation: str) -> None:
+        """Fail when several JSON edges feed an operation that takes one input.
+
+        A node keeps its edges when its operation changes, and for every operation but Combine the
+        ``data`` field takes one edge, so the graph would pass only the last edge's data. Count the
+        edges instead of trusting the value.
+        """
+        vertex = getattr(self, "_vertex", None)
+        if vertex is None:
+            return
+        if sum(1 for edge in vertex.incoming_edges if edge.target_param == "data") > 1:
+            msg = (
+                f"{operation} operation is not supported for multiple data objects. "
+                "Connect one JSON input, or use Combine."
+            )
+            raise ValueError(msg)
+
     def select_keys(self) -> Data:
         """Select specific keys from the data dictionary."""
         self.validate_single_data("Select Keys")
@@ -996,7 +1039,7 @@ class OperationsComponent(Component):
         data_filtered = self.get_normalized_data()
         for key, value in self.append_update_data.items():
             data_filtered[key] = value
-        return Data(**data_filtered)
+        return Data(data=data_filtered)
 
     def json_path(self) -> Data:
         """Extract a value from the data using the selected JQ path."""

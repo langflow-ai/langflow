@@ -1851,15 +1851,14 @@ class Component(CustomComponent):
             self.tracing_service.set_outputs(self.trace_name, results)
 
     def custom_repr(self):
-        if self.repr_value == "":
-            self.repr_value = self.status
-        if isinstance(self.repr_value, dict):
-            return yaml.dump(self.repr_value)
-        if isinstance(self.repr_value, str):
-            return self.repr_value
-        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Data):
-            return str(self.repr_value)
-        return self.repr_value
+        repr_value = self.status if self.repr_value == "" else self.repr_value
+        if isinstance(repr_value, dict):
+            return yaml.dump(repr_value)
+        if isinstance(repr_value, str):
+            return repr_value
+        if isinstance(repr_value, BaseModel) and not isinstance(repr_value, Data):
+            return str(repr_value)
+        return repr_value
 
     def build_inputs(self):
         """Builds the inputs for the custom component.
