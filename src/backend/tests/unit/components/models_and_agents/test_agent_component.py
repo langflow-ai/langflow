@@ -652,6 +652,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         # turn, which defeats provider prompt caching (OpenAI automatic,
         # DeepSeek, Gemini implicit, Anthropic cache_control).
         import re
+
         date_match = re.search(r"Today is (\d{4}-\d{2}-\d{2})\.", result)
         assert date_match is not None, f"expected a YYYY-MM-DD date, got: {result!r}"
 
