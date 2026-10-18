@@ -467,6 +467,38 @@ class TestTextOperations:
         assert result["name"].tolist() == ["Alice", "Bob"]
         assert result["age"].tolist() == [30, 25]
 
+    @pytest.mark.parametrize(
+        ("table", "separator", "expected"),
+        [
+            (
+                "| first | middle | last |\n|---|---|---|\n||Alice||\n|x|Bob|z|",
+                "|",
+                [["", "Alice", ""], ["x", "Bob", "z"]],
+            ),
+            (
+                "| first | middle | last |\n|---|---|---|\n||||\n|x|Bob|z|",
+                "|",
+                [["", "", ""], ["x", "Bob", "z"]],
+            ),
+            (
+                "name::note\n:Alice::suffix:\nBob::prefix",
+                "::",
+                [[":Alice", "suffix:"], ["Bob", "prefix"]],
+            ),
+        ],
+    )
+    def test_text_to_dataframe_preserves_cell_boundaries(self, table, separator, expected):
+        component = OperationsComponent(
+            text_input=table,
+            operation=[{"name": "Text to DataFrame"}],
+            table_separator=separator,
+            has_header=True,
+        )
+
+        result = component.as_dataframe()
+
+        assert result.to_numpy().tolist() == expected
+
     def test_text_to_dataframe_preserves_headerless_delimiter_like_rows(self):
         component = OperationsComponent(
             text_input="Alice|30\n---|:--\nBob|25",
