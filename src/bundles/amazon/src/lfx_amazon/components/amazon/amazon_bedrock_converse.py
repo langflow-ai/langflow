@@ -15,6 +15,10 @@ from lfx.io import DictInput, DropdownInput
 # this set can still opt in explicitly through Additional Model Fields.
 TOP_K_PROVIDERS = frozenset({"anthropic"})
 
+# Providers whose current models reject a call that sets both temperature and top_p
+# ("`temperature` and `top_p` cannot both be specified" for Claude Sonnet 4.5 and later).
+TEMPERATURE_OR_TOP_P_PROVIDERS = frozenset({"anthropic"})
+
 # Inference profile ids are prefixed with the geography, e.g. "us.anthropic...";
 # "global" is the worldwide-routing profile. Mirrors MODEL_ID_GEO_PREFIXES in
 # langchain_aws.utils: ChatBedrockConverse strips exactly these before resolving the
@@ -47,7 +51,7 @@ class AmazonBedrockConverseComponent(LCModelComponent):
             name="model_id",
             display_name="Model ID",
             options=AWS_MODEL_IDs,
-            value="anthropic.claude-3-5-sonnet-20241022-v2:0",
+            value="global.anthropic.claude-sonnet-4-6",
             info="List of available model IDs to choose from.",
         ),
         SecretStrInput(
@@ -116,7 +120,8 @@ class AmazonBedrockConverseComponent(LCModelComponent):
             name="top_p",
             display_name="Top P",
             value=0.9,
-            info="Nucleus sampling parameter. Controls diversity of output.",
+            info="Nucleus sampling parameter. Controls diversity of output. "
+            "Not sent to Anthropic models while Temperature is set, since they accept only one of the two.",
             advanced=True,
         ),
         IntInput(
@@ -175,7 +180,9 @@ class AmazonBedrockConverseComponent(LCModelComponent):
         if hasattr(self, "max_tokens") and self.max_tokens is not None:
             init_params["max_tokens"] = self.max_tokens
         if hasattr(self, "top_p") and self.top_p is not None:
-            init_params["top_p"] = self.top_p
+            temperature_set = init_params.get("temperature") is not None
+            if not (temperature_set and _model_provider(self.model_id) in TEMPERATURE_OR_TOP_P_PROVIDERS):
+                init_params["top_p"] = self.top_p
 
         # Handle streaming - only disable if explicitly requested
         if hasattr(self, "disable_streaming") and self.disable_streaming:

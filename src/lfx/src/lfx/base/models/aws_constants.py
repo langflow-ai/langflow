@@ -13,6 +13,10 @@ AWS_MODELS_DETAILED = [
         provider="Amazon Bedrock", name="amazon.titan-text-premier-v1:0", icon="Amazon", tool_calling=True
     ),
     # Anthropic Models - Claude 4.x
+    # Global cross-region inference profile: current Claude models can't be invoked on demand by model id
+    create_model_metadata(
+        provider="Amazon Bedrock", name="global.anthropic.claude-sonnet-4-6", icon="Amazon", tool_calling=True
+    ),
     create_model_metadata(
         provider="Amazon Bedrock", name="anthropic.claude-opus-4-7", icon="Amazon", tool_calling=True
     ),
