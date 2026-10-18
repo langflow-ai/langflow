@@ -3,11 +3,11 @@
 //! Flows stored before the engine enforced its rules, imported flows, and
 //! flows edited directly in the database can break them, and such a flow
 //! cannot take any edit until it is repaired. [`repair_flow_data`] fixes every
-//! direct violation, the ones with exactly one fix, and lists what it
-//! changed. It never touches an intent-dependent violation (an edge that
-//! names an output that does not exist, or a second edge into a single
-//! input): fixing one means choosing what the person meant, so the client
-//! does.
+//! violation that has exactly one fix, and lists what it changed. It never
+//! touches a violation that has more than one correct way to fix it (an
+//! edge that names an output that does not exist, or a second edge into a
+//! single input): fixing one means choosing what the person meant, so the
+//! client does.
 //!
 //! Repair is never implicit: callers invoke it only when a request asks for
 //! it, and they keep the original first, so even a fix that discards a value
@@ -94,11 +94,11 @@ fn path(parts: impl IntoIterator<Item = PathPart>) -> GraphPath {
     parts.into_iter().collect()
 }
 
-/// A copy of `flow` with every direct violation fixed, and the fixes applied.
+/// A copy of `flow` with every violation that has one fix fixed, and the fixes applied.
 ///
 /// Generated node ids are derived from the node's content and position, so
 /// repairing the same graph twice gives the same nodes. Generated edge ids
-/// are opaque and random, like the editor's. With `base`, the table rows the
+/// are random, like the editor's. With `base`, the table rows the
 /// write adds or changes are repaired too: a row without an id takes the id
 /// of an identical stored row, so a table written back without ids keeps the
 /// rows it already held, and only new rows get new random ids.
@@ -146,7 +146,7 @@ pub fn repair_flow_data(flow: &Value, base: Option<&Value>) -> Result<Repaired> 
         repair_added_edges(&mut repaired, base, &mut fixes)?;
     }
 
-    // Repair must never return a graph the strict path would refuse.
+    // Repair must never return a graph that the normal checks would refuse.
     validate_flow_data(&repaired, Numbers::Check, "repaired flow.data", base)?;
     Ok(Repaired {
         flow_data: repaired,
@@ -315,7 +315,7 @@ fn repair_edges(edges: Vec<Value>, node_ids: &HashSet<String>, fixes: &mut Fixes
             ViolationCode::EdgeIdMissing
         };
         fixes.add(code, path(["edges".into(), (*index).into(), "id".into()]));
-        // An opaque id like the editor's newEdgeId(), never derived from the handles.
+        // A random id like the editor's newEdgeId(), never derived from the handles.
         let new_id = unused_id(&used, new_edge_id);
         used.insert(new_id.clone());
         seen.insert(new_id.clone());
@@ -326,7 +326,7 @@ fn repair_edges(edges: Vec<Value>, node_ids: &HashSet<String>, fixes: &mut Fixes
         .collect()
 }
 
-/// Fix the direct edge rules broken by the edges `graph` adds relative to `base`.
+/// Fix the edge rule violations that have one fix, in the edges `graph` adds relative to `base`.
 fn repair_added_edges(graph: &mut Value, base: &Value, fixes: &mut Fixes) -> Result<()> {
     let mut dropped = HashSet::new();
     for violation in find_edge_violations(base, graph)? {

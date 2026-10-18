@@ -1,4 +1,4 @@
-//! Opaque ids for things code adds to a flow, in the editor's formats.
+//! Random ids for things code adds to a flow, in the editor's formats.
 //!
 //! An id names an entry and nothing else: it is never derived from what the
 //! entry connects or contains, so changing an edge's handles or a row's cells

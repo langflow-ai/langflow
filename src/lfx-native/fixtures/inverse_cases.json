@@ -441,7 +441,7 @@
       "inverse": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "hi"}]}]]
     },
     {
-      "name": "apply case: selector: set_field edits one table cell by row id",
+      "name": "apply case: list item: set_field edits one table cell by row id",
       "base": {
         "nodes": [
           {
@@ -474,7 +474,7 @@
       ]
     },
     {
-      "name": "apply case: selector: set_field at a new row id appends the row",
+      "name": "apply case: list item: set_field at a new row id appends the row",
       "base": {
         "nodes": [
           {
@@ -504,7 +504,7 @@
       ]
     },
     {
-      "name": "apply case: selector: setting a row's _pos changes only its position",
+      "name": "apply case: list item: setting a row's _pos changes only its position",
       "base": {
         "nodes": [
           {
@@ -537,7 +537,7 @@
       ]
     },
     {
-      "name": "apply case: selector: two rows may share a position",
+      "name": "apply case: list item: two rows may share a position",
       "base": {
         "nodes": [
           {
@@ -565,7 +565,7 @@
       ]
     },
     {
-      "name": "apply case: selector: delete_field removes a table row by id",
+      "name": "apply case: list item: delete_field removes a table row by id",
       "base": {
         "nodes": [
           {
@@ -597,7 +597,7 @@
       ]
     },
     {
-      "name": "apply case: selector: deleting a row lets the last row take its slot",
+      "name": "apply case: list item: deleting a row lets the last row take its slot",
       "base": {
         "nodes": [
           {
@@ -632,7 +632,7 @@
       ]
     },
     {
-      "name": "apply case: selector: delete_field of a missing row changes and records nothing",
+      "name": "apply case: list item: delete_field of a missing row changes and records nothing",
       "base": {
         "nodes": [
           {
@@ -655,7 +655,7 @@
       "inverse": [[]]
     },
     {
-      "name": "apply case: selector: set_field edits an output selected by name",
+      "name": "apply case: list item: set_field edits an output selected by name",
       "base": {
         "nodes": [
           {
@@ -676,7 +676,7 @@
       "inverse": [[{"type": "update_nodes", "updates": [{"id": "k", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "b"}, "hidden"]}]}]]
     },
     {
-      "name": "apply case: selector: set_field at a new output name appends it",
+      "name": "apply case: list item: set_field at a new output name appends it",
       "base": {
         "nodes": [
           {
@@ -697,7 +697,7 @@
       "inverse": [[{"type": "update_nodes", "updates": [{"id": "k", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "c"}]}]}]]
     },
     {
-      "name": "apply case: selector: a tool action is selected by its first tag",
+      "name": "apply case: list item: a tool action is selected by its first tag",
       "base": {
         "nodes": [
           {
@@ -730,7 +730,7 @@
       ]
     },
     {
-      "name": "apply case: selector: a table stored out of position order is accepted",
+      "name": "apply case: list item: a table stored out of position order is accepted",
       "base": {
         "nodes": [
           {
@@ -2139,7 +2139,7 @@
       ]
     },
     {
-      "name": "deleting the last output is undone by a selector write",
+      "name": "deleting the last output is undone by a write at its key",
       "base": {
         "name": "flow",
         "nodes": [

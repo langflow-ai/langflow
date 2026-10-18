@@ -13,7 +13,7 @@ The other files (`apply_cases.json`, `diff_cases.json`, `merge_cases.json`, `pro
 
 `update_edges` is not an operation. An edge changes by being deleted and added again, so no batch can make two edges swap inputs through an occupied state. The cases about changing an edge, in `apply_cases.json`, `inverse_cases.json`, `merge_cases.json`, `diff_cases.json`, `editor_cases.json` and `restore_cases.json`, follow that rule, and the docs decide their expectations, as they do for `limit_cases.json`. The reference engines still have `update_edges`, so do not regenerate these files from them. `property_cases.json` comes from `property_cases.py` in the lfx tests on `oplog-history-ui`, which changes edges the same way.
 
-A selector is `{"key": ...}` on every keyed list: a table row's key is its `_id`. The reference engines still select table rows with `{"id": ...}`, so the selectors in `apply_cases.json`, `diff_cases.json`, `inverse_cases.json`, `merge_cases.json` and `property_cases.json` follow the docs instead, and the case that refused `{"key": ...}` on a table row is gone. Do not regenerate these files from the reference engines.
+A path names a list item with `{"key": ...}` on every keyed list: a table row's key is its `_id`. The reference engines still name table rows with `{"id": ...}`, so the list item keys in `apply_cases.json`, `diff_cases.json`, `inverse_cases.json`, `merge_cases.json` and `property_cases.json` follow the docs instead, and the case that refused `{"key": ...}` on a table row is gone. Do not regenerate these files from the reference engines.
 
 The reference for both engines is `ad19da0df4` on `oplog-history-ui`.
 

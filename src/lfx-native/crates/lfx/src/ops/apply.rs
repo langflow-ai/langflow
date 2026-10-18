@@ -1,9 +1,9 @@
 //! Applying operations to a flow graph.
 //!
 //! A batch applies in order, and all of it or none of it: on an error the
-//! state is as it was before the batch. Each operation is normalized as it
-//! applies: a delete that finds nothing is not recorded, and the edges a
-//! delete takes with it are recorded as a `delete_edges` of their own.
+//! state is as it was before the batch. Apply records each operation as the
+//! history stores it: a delete that finds nothing is not recorded, and the
+//! edges a delete takes with it are recorded as a `delete_edges` of their own.
 //!
 //! With `inverse`, apply also returns, for each operation, the operations
 //! that undo it, read from the state each write replaces. History playback
@@ -31,7 +31,7 @@ use crate::ops::validate::missing_node_object;
 #[derive(Debug, Clone, Copy, Default)]
 #[expect(clippy::struct_excessive_bools, reason = "four independent switches")]
 pub struct ApplyOptions {
-    /// Return the operations as the engine normalized them.
+    /// Return the operations as the engine records them.
     pub forward: bool,
     /// Return, for each operation, the operations that undo it.
     pub inverse: bool,
@@ -50,7 +50,7 @@ pub struct ApplyOptions {
 /// What a batch did.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Applied {
-    /// The operations as the engine normalized them, with `forward`.
+    /// The operations as the engine records them, with `forward`.
     pub forward: Vec<Operation>,
     /// With `inverse`: for each operation applied, the operations that undo
     /// it. Undo the last operation first, each list in a call of its own,
@@ -68,7 +68,7 @@ pub struct Applied {
 ///
 /// Apply keeps two kinds of record, and they are different things. This
 /// report keeps the forward operations and the inverses for the caller, and
-/// only when the options ask for them. The rollback journal in `state` is
+/// only when the options ask for them. The undo list in `state` (`undos`) is
 /// always kept, inside the engine, to put the graph back when a batch fails.
 #[derive(Debug)]
 struct Report {
@@ -87,7 +87,7 @@ impl Report {
         }
     }
 
-    /// Record an operation as the engine normalized it. Kept only with `forward`.
+    /// Keep an operation as the engine records it. Kept only with `forward`.
     fn record(&mut self, operation: Operation) {
         if self.options.forward {
             self.applied.forward.push(operation);
@@ -124,7 +124,7 @@ impl GraphState {
     ///
     /// # Errors
     ///
-    /// An operation is invalid for the graph, or an expectation fails.
+    /// An operation is invalid for the graph, or an `expect` does not hold.
     pub fn apply(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
         self.begin();
         let mut report = Report::new(options);
@@ -494,8 +494,8 @@ impl GraphState {
     }
 
     /// Check a field update before it writes anything: its path must exist
-    /// up to the last segment, and its expectation must hold. Record its
-    /// inverse, and return its path resolved.
+    /// up to the last segment, and its `expect` must hold. Record its
+    /// inverse, and return its path as object keys and array indexes.
     fn check_field_update(
         &mut self,
         write: &FieldWrite<'_>,
@@ -511,7 +511,7 @@ impl GraphState {
         let current = last_step
             .as_ref()
             .and_then(|step| resolve(parent?, std::slice::from_ref(step)));
-        check_expectation(write.update, current, write.context)?;
+        check_expect(write.update, current, write.context)?;
         if let Some(missing) = walk.missing_at {
             return Err(missing_segment(write, missing));
         }
@@ -544,7 +544,7 @@ impl GraphState {
 
     /// Follow `path[..last]` from the node or edge, once.
     ///
-    /// Returns the resolved steps, the keyed list items passed through, and
+    /// Returns the path as object keys and array indexes, the keyed list items passed through, and
     /// the first segment that does not exist. A segment that does not fit the
     /// value it reads, such as a key of a list, is an error rather than a
     /// missing value.
@@ -705,7 +705,7 @@ impl GraphState {
             .get_mut(&update.id)
             .and_then(|node| resolve_mut(node, &walk.steps));
         let Some(Value::Array(items)) = parent else {
-            bail!("{list_context}: selector on a value that is not a list");
+            bail!("{list_context}: list item key on a value that is not a list");
         };
         let index = self
             .lists
@@ -718,7 +718,7 @@ impl GraphState {
         let slot = index.slot(key);
         if keyed.key_of(&value) != Some(key) {
             bail!(
-                "{context}: a list item written at a selector must carry the same key: {}",
+                "{context}: a list item written at its key must carry the same key: {}",
                 quoted(key)
             );
         }
@@ -755,10 +755,10 @@ struct FieldWrite<'w> {
     context: &'w str,
 }
 
-/// Where a field update's path leads, resolved up to its last segment.
+/// Where a field update's path leads, as object keys and array indexes, up to its last segment.
 #[derive(Debug, Default)]
 struct Walk {
-    /// The resolved steps to the value that holds the last segment.
+    /// The steps to the value that holds the last segment.
     steps: Vec<PathPart>,
     /// The keyed list items the path passes through.
     list_items: Vec<ListItemOnPath>,
@@ -771,7 +771,7 @@ struct Walk {
 struct ListItemOnPath {
     keyed: &'static KeyedList,
     key: String,
-    /// How many resolved steps lead to the item.
+    /// How many steps lead to the item.
     depth: usize,
 }
 
@@ -790,7 +790,7 @@ fn missing_segment(write: &FieldWrite<'_>, missing: usize) -> Error {
     }
 }
 
-/// The keyed list `path[index]` selects from, and the slot of the item with
+/// The keyed list `path[index]` names an item of, and the array index of the item with
 /// `key`, or `None` when there is no such item.
 fn list_slot(
     lists: &mut Lists,
@@ -815,8 +815,8 @@ fn list_slot(
     Ok((keyed, slot))
 }
 
-/// The keyed list `path[index]` selects from, and its address: the object
-/// keys that lead to it. Checks that the schema declares the list keyed.
+/// The keyed list whose item `path[index]` names, and its address: the
+/// object keys that lead to it. Checks that the list is keyed.
 fn keyed_list<'p>(
     node: &Value,
     path: &'p Path,
@@ -830,10 +830,12 @@ fn keyed_list<'p>(
             .keyed_list_at(node, &prefix)
             .map(|keyed| (keyed, prefix))
     }) else {
-        bail!("{context}.path[{index}]: selector on a list the node schema does not declare keyed");
+        bail!(
+            "{context}.path[{index}]: list item key on a list the node schema does not declare keyed"
+        );
     };
     if !value.is_array() {
-        bail!("{context}.path[{index}]: selector on a value that is not a list");
+        bail!("{context}.path[{index}]: list item key on a value that is not a list");
     }
     Ok((keyed, prefix))
 }
@@ -874,7 +876,7 @@ fn reject_repeated_paths(updates: &[FieldUpdate], kind: &str) -> Result<()> {
     Ok(())
 }
 
-fn check_expectation(update: &FieldUpdate, current: Option<&Value>, context: &str) -> Result<()> {
+fn check_expect(update: &FieldUpdate, current: Option<&Value>, context: &str) -> Result<()> {
     let exists = current.is_some();
     match &update.expect {
         Some(Expect::Absent) if exists => Err(Error::precondition(format!(
@@ -907,8 +909,8 @@ fn check_expectation(update: &FieldUpdate, current: Option<&Value>, context: &st
 /// Refuse a `set_field` that silently changes a value's JSON type.
 ///
 /// A type change must be declared with `from_type` naming the type being
-/// replaced, which also makes it a precondition: the write only applies to
-/// the value it was derived from.
+/// replaced. So `from_type` is also a check: the write applies only while
+/// the value still has that type.
 fn check_type_change(
     current: Option<&Value>,
     update: &FieldUpdate,
@@ -978,7 +980,7 @@ impl FieldInverses {
             && keyed.kind == ListKind::Natural
         {
             // Removing a natural-list item that is not last cannot be undone by
-            // a selector write, which appends; the whole list is written back.
+            // a write at the item's key, which appends; the whole list is written back.
             // A table's order is its rows' positions, so its rows need no such care.
             let is_last = items
                 .last()
@@ -1034,7 +1036,7 @@ impl FieldInverses {
 /// # Errors
 ///
 /// The graph breaks a structural rule, an operation is invalid for it, or an
-/// expectation fails.
+/// `expect` does not hold.
 pub fn apply_flow_operations(
     base: Value,
     operations: Vec<Operation>,

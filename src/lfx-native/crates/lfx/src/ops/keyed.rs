@@ -9,7 +9,7 @@
 //! Natural lists keep the order writes leave them in. A table's order is its
 //! rows' `(_pos, _id)`, not their places in the array: readers sort rows when
 //! they strip the row keys, so the engine never sorts a table. A new row is
-//! appended, and a deleted row's slot is taken by the last row.
+//! appended, and the last row moves into a deleted row's place.
 
 use std::collections::{HashMap, HashSet};
 
@@ -23,7 +23,7 @@ use crate::ops::error::{Result, bail, invalid, quoted};
 use crate::ops::ids::{new_table_row_id, unused_id};
 use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, field_value_path};
 
-/// The slot of every item of one keyed list, by key.
+/// The array index of every item of one keyed list, by key.
 #[derive(Debug, Clone)]
 pub struct ListIndex {
     /// The list's kind and keys.
@@ -63,7 +63,7 @@ impl ListIndex {
         Ok(index)
     }
 
-    /// The slot of the item with `key`.
+    /// The array index of the item with `key`.
     #[must_use]
     pub fn slot(&self, key: &str) -> Option<usize> {
         self.slots.get(key).copied()
@@ -158,8 +158,8 @@ impl ListIndex {
 // Every row of a table value stored in a flow carries a stable `_id` and a
 // numeric position `_pos`, so concurrent edits address rows instead of
 // indexes. The table's order is its rows' `(_pos, _id)`, not their places in
-// the stored array, which nothing keeps sorted. Both keys are bookkeeping for
-// the flow's history, not data: components never see them, so every place
+// the stored array, which nothing keeps sorted. Both keys exist for the
+// flow's history and are not data: components never see them, so every place
 // that hands a stored table to anything outside the engine strips them first,
 // and puts the rows in order as it does.
 

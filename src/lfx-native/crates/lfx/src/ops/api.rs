@@ -1,6 +1,6 @@
-//! JSON in, JSON out: the surface the Python and browser bindings expose.
+//! JSON in, JSON out: the functions the Python and browser bindings call.
 //!
-//! Graphs, operations and results cross the boundary as JSON text, so the
+//! Graphs, operations and results pass to and from the bindings as JSON text, so the
 //! engine parses each graph once and keeps every number's original text.
 //! Each function here does no more than parse its inputs, call the engine and
 //! print its result; the bindings only call these and turn an [`ApiError`]
@@ -27,7 +27,7 @@ use crate::ops::state::{GraphState, parse_json};
 use crate::ops::validate::{Numbers, Violation, find_graph_violations};
 use crate::ops::write::{WriteError, WriteOptions};
 
-/// An error as it crosses the boundary: a JSON object with the error's
+/// An error as the bindings receive it: a JSON object with the error's
 /// `kind` (the matching Python exception class), `code` and `message`, and
 /// what that kind carries (`edge_id`, `violations`, `damage` and `revision`,
 /// or `graph`).
@@ -197,7 +197,7 @@ pub fn apply(flow: &str, operations_text: &str, options: ApplyOptions) -> ApiRes
     Ok(Value::Object(out).to_string())
 }
 
-/// Index a graph for many batches.
+/// Load a graph into a [`GraphState`], to apply many batches to it.
 ///
 /// # Errors
 ///
@@ -206,7 +206,7 @@ pub fn graph_state(flow: &str) -> ApiResult<GraphState> {
     Ok(GraphState::new(parse(flow)?)?)
 }
 
-/// Apply a batch to a held graph; the result is what [`applied_json`] lists.
+/// Apply a batch to a [`GraphState`]; the result is what [`applied_json`] lists.
 ///
 /// # Errors
 ///
@@ -596,7 +596,7 @@ pub fn strip_row_keys(rows: &str) -> ApiResult {
     Ok(keyed::strip_row_keys(&parse(rows)?).to_string())
 }
 
-/// A flow with every top-level table ordered and stripped.
+/// A flow whose top-level tables have their rows in order and without `_id` and `_pos`.
 ///
 /// # Errors
 ///
@@ -681,13 +681,13 @@ pub fn table_fields(node: &str) -> ApiResult {
     Ok(json!(keyed::table_fields(&parse(node)?)).to_string())
 }
 
-/// A new opaque edge id in the editor's format.
+/// A new random edge id in the editor's format.
 #[must_use]
 pub fn new_edge_id() -> String {
     crate::ops::ids::new_edge_id()
 }
 
-/// A new opaque table row id in the editor's format.
+/// A new random table row id in the editor's format.
 #[must_use]
 pub fn new_table_row_id() -> String {
     crate::ops::ids::new_table_row_id()

@@ -1,4 +1,4 @@
-//! The indexed graph that apply works on, and that a handle keeps between calls.
+//! [`GraphState`]: the indexed graph that apply works on, kept between batches.
 //!
 //! Nodes and edges are indexed by id, and edges by the nodes they touch.
 //! Indexes that only some writes need are built the first time a write asks
@@ -149,7 +149,7 @@ pub(crate) struct Lists {
 }
 
 impl Lists {
-    /// The index of the list `items` at `path` of a node, built the first time it is addressed.
+    /// The index of the list `items` at `path` of a node, built the first time a write reaches it.
     pub fn index(
         &mut self,
         node_id: &str,
@@ -187,7 +187,7 @@ impl Lists {
 /// What one batch did, so it can be undone and reported.
 #[derive(Debug, Default)]
 pub(crate) struct Batch {
-    journal: Vec<Undo>,
+    undos: Vec<Undo>,
     added_nodes: HashSet<String>,
     removed_base_nodes: HashSet<String>,
     pub changed_nodes: IndexSet<String>,
@@ -196,8 +196,8 @@ pub(crate) struct Batch {
 
 /// A flow graph, indexed for applying operations.
 ///
-/// It keeps the graph and its indexes between batches, so applying many
-/// batches costs the batches, not one indexing of the graph per batch.
+/// It keeps the graph and its indexes between batches, so the graph is
+/// indexed once, and each batch costs only what it changes.
 #[derive(Debug)]
 pub struct GraphState {
     /// The flow's top-level object; `nodes` and `edges` hold placeholders.
@@ -209,7 +209,7 @@ pub struct GraphState {
 }
 
 impl GraphState {
-    /// Index a flow graph, after checking its structure.
+    /// Load a flow graph and build its indexes, after checking its structure.
     ///
     /// Values are not walked for numbers that are not finite: that check
     /// belongs to whoever accepts a graph from outside, and skipping it keeps
@@ -288,7 +288,7 @@ impl GraphState {
 
     /// Undo everything the current batch changed, and drop the indexes it touched.
     pub(crate) fn rollback(&mut self) {
-        while let Some(undo) = self.batch.journal.pop() {
+        while let Some(undo) = self.batch.undos.pop() {
             self.undo(undo);
         }
         self.edge_index.clear();
@@ -355,7 +355,7 @@ impl GraphState {
     pub(crate) fn insert_node(&mut self, id: String, node: Value) {
         self.batch.added_nodes.insert(id.clone());
         self.batch.changed_nodes.insert(id.clone());
-        self.batch.journal.push(Undo::NodeAdded(id.clone()));
+        self.batch.undos.push(Undo::NodeAdded(id.clone()));
         self.graph.nodes.insert(id, node);
     }
 
@@ -374,9 +374,7 @@ impl GraphState {
             Copies::Keep => node.as_object().cloned(),
             Copies::Discard => None,
         };
-        self.batch
-            .journal
-            .push(Undo::NodeRemoved { index, id, node });
+        self.batch.undos.push(Undo::NodeRemoved { index, id, node });
         kept
     }
 
@@ -386,7 +384,7 @@ impl GraphState {
             self.edge_index.insert(map);
         }
         self.batch.changed_edges.insert(id.clone());
-        self.batch.journal.push(Undo::EdgeAdded(id.clone()));
+        self.batch.undos.push(Undo::EdgeAdded(id.clone()));
         self.graph.edges.insert(id, edge);
     }
 
@@ -416,16 +414,14 @@ impl GraphState {
             self.graph.detach(&id, &edge);
             self.batch.changed_edges.insert(id.clone());
             removed.push(id.clone());
-            self.batch
-                .journal
-                .push(Undo::EdgeRemoved { index, id, edge });
+            self.batch.undos.push(Undo::EdgeRemoved { index, id, edge });
         }
         (removed, kept)
     }
 
     pub(crate) fn set_root(&mut self, key: &str, value: Value) {
         let old = self.root.insert(key.to_owned(), value);
-        self.batch.journal.push(Undo::RootSet {
+        self.batch.undos.push(Undo::RootSet {
             key: key.to_owned(),
             old,
         });
@@ -436,7 +432,7 @@ impl GraphState {
             return;
         };
         if let Some(old) = self.root.shift_remove(key) {
-            self.batch.journal.push(Undo::RootDeleted {
+            self.batch.undos.push(Undo::RootDeleted {
                 key: key.to_owned(),
                 index,
                 old,
@@ -452,7 +448,7 @@ impl GraphState {
         undo: FieldUndo,
     ) {
         self.batch.changed_nodes.insert(node_id.to_owned());
-        self.batch.journal.push(Undo::Field {
+        self.batch.undos.push(Undo::Field {
             node_id: node_id.to_owned(),
             container,
             undo,
@@ -461,7 +457,7 @@ impl GraphState {
 
     /// The value the last recorded field change replaced or removed.
     pub(crate) fn last_replaced(&self) -> Option<&Value> {
-        match self.batch.journal.last()? {
+        match self.batch.undos.last()? {
             Undo::Field { undo, .. } => match undo {
                 FieldUndo::KeySet { old, .. } => old.as_ref(),
                 FieldUndo::KeyDeleted { old, .. }
@@ -474,7 +470,7 @@ impl GraphState {
     }
 }
 
-/// Parse and index a flow graph given as JSON text.
+/// Parse a flow graph given as JSON text, and load it into a [`GraphState`].
 impl FromStr for GraphState {
     type Err = Error;
 
@@ -506,7 +502,7 @@ pub(crate) fn parse_json(text: &str) -> Result<Value> {
         .map_err(|error| Error::graph_message(format!("flow data is not valid JSON: {error}")))
 }
 
-/// The value at a resolved path.
+/// The value at a path of object keys and array indexes.
 pub(crate) fn resolve<'v>(root: &'v Value, steps: &[PathPart]) -> Option<&'v Value> {
     steps.iter().try_fold(root, |value, step| match step {
         PathPart::Key(key) => value.as_object()?.get(key),
@@ -514,7 +510,7 @@ pub(crate) fn resolve<'v>(root: &'v Value, steps: &[PathPart]) -> Option<&'v Val
     })
 }
 
-/// The value at a resolved path, to change it.
+/// The value at a path of object keys and array indexes, to change it.
 pub(crate) fn resolve_mut<'v>(root: &'v mut Value, steps: &[PathPart]) -> Option<&'v mut Value> {
     steps.iter().try_fold(root, |value, step| match step {
         PathPart::Key(key) => value.as_object_mut()?.get_mut(key),

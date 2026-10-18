@@ -56,7 +56,7 @@ pub enum ErrorCode {
 }
 
 impl ErrorCode {
-    /// The code as it crosses the API.
+    /// The code as the API reports it.
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
@@ -142,7 +142,7 @@ impl Error {
         }
     }
 
-    /// A write's expectation that does not hold.
+    /// A write whose `expect` does not hold.
     pub fn precondition(message: impl Into<String>) -> Self {
         Self {
             kind: ErrorKind::PreconditionFailed,

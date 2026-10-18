@@ -135,7 +135,7 @@ const INVERSE_CASES = [
   ["a delete of an existing key puts it back", [node("b", [del([...TEMPLATE, "f", "type"])])]],
   ["a delete that finds nothing has no inverse", [node("b", [del([...TEMPLATE, "f", "missing"])])]],
   ["deleting a field puts back the edges into it", [node("b", [del([...TEMPLATE, "f"])])]],
-  ["deleting the last output is undone by a selector write", [node("a", [del([...OUTPUTS, { key: "loop" }])])]],
+  ["deleting the last output is undone by a write at its key", [node("a", [del([...OUTPUTS, { key: "loop" }])])]],
   ["deleting an output that is not last writes the list back", [node("a", [del([...OUTPUTS, { key: "mid" }])])]],
   [
     "deleting two outputs that are not last splits the inverse",

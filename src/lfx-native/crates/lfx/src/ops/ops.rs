@@ -1,9 +1,10 @@
 //! Operation types and their strict parser.
 //!
 //! The parser accepts exactly the shapes the operation protocol defines: no
-//! unknown keys, no missing fields, no wrong types. A list item is addressed
-//! by a selector, never by an index. Dumping leaves optional fields out when
-//! they are unset, so a parsed and dumped operation reads as it was sent.
+//! unknown keys, no missing fields, no wrong types. A path names a list item
+//! by its key, never by its index. Printing an operation as JSON leaves out
+//! the optional fields that are unset, so an operation that is parsed and
+//! printed again reads as it was sent.
 
 use serde_json::{Map, Value};
 
@@ -15,9 +16,9 @@ use crate::ops::error::{Error, Result, bail, invalid, quoted};
 pub enum Segment {
     /// An object key.
     Key(String),
-    /// An item of a keyed list, selected by its key: `{"key": ...}`. A table
-    /// row's key is its `_id`; any other item's is the field the node schema
-    /// names, such as an output's `name`.
+    /// An item of a keyed list, named by its key: `{"key": ...}` in JSON. A
+    /// table row's key is its `_id`. Any other item's key is the field that
+    /// the node schema names, such as an output's `name`.
     Item(String),
 }
 
@@ -31,7 +32,7 @@ impl Segment {
         }
     }
 
-    /// The key of the item a selector names, if this segment is a selector.
+    /// The list item's key, if this segment names a list item.
     #[must_use]
     pub fn item(&self) -> Option<&str> {
         match self {
@@ -51,13 +52,13 @@ impl Segment {
 /// A field path.
 pub type Path = Vec<Segment>;
 
-/// Questions about a field path, asked in object keys.
+/// Checks on a field path that compare its object keys.
 pub(crate) trait PathExt {
     /// Whether the path is exactly the object keys `keys`.
     fn is_keys<S: AsRef<str>>(&self, keys: &[S]) -> bool;
     /// Whether the path starts with the object keys `keys`.
     fn starts_with_keys<S: AsRef<str>>(&self, keys: &[S]) -> bool;
-    /// The path's object keys, or `None` when it has a selector.
+    /// The path's object keys, or `None` when it names a list item.
     fn keys(&self) -> Option<Vec<&str>>;
     /// The path with one more object key.
     fn child(&self, key: &str) -> Path;
@@ -88,7 +89,7 @@ impl PathExt for [Segment] {
     }
 }
 
-/// The JSON label of a path, for messages.
+/// A path as JSON text, for error messages.
 #[must_use]
 pub fn path_label(path: &[Segment]) -> String {
     Value::Array(path.iter().map(Segment::to_value).collect()).to_string()
@@ -501,9 +502,9 @@ fn parse_segment(segment: Value, context: &str) -> Result<Segment> {
     match segment {
         Value::String(key) => Ok(Segment::Key(key)),
         Value::Number(_) | Value::Bool(_) => Err(invalid!(
-            "{context}: path segments must be object keys or selectors; integer list indexes are not allowed"
+            "{context}: path segments must be object keys or list item keys; integer list indexes are not allowed"
         )),
-        Value::Object(selector) if selector.len() == 1 => match selector.into_iter().next() {
+        Value::Object(item) if item.len() == 1 => match item.into_iter().next() {
             Some((name, Value::String(key))) if !key.is_empty() && name == "key" => {
                 Ok(Segment::Item(key))
             }
