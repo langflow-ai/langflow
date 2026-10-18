@@ -24,16 +24,16 @@ pub enum Segment {
 impl Segment {
     /// The object key, if this segment is one.
     #[must_use]
-    pub fn as_key(&self) -> Option<&str> {
+    pub fn key(&self) -> Option<&str> {
         match self {
             Self::Key(key) => Some(key),
             Self::Item(_) => None,
         }
     }
 
-    /// The key a selector names, or `None` for an object key.
+    /// The key of the item a selector names, if this segment is a selector.
     #[must_use]
-    pub fn selector_key(&self) -> Option<&str> {
+    pub fn item(&self) -> Option<&str> {
         match self {
             Self::Key(_) => None,
             Self::Item(key) => Some(key),
@@ -73,11 +73,11 @@ impl PathExt for [Segment] {
             && self
                 .iter()
                 .zip(keys)
-                .all(|(segment, key)| segment.as_key() == Some(key.as_ref()))
+                .all(|(segment, key)| segment.key() == Some(key.as_ref()))
     }
 
     fn keys(&self) -> Option<Vec<&str>> {
-        self.iter().map(Segment::as_key).collect()
+        self.iter().map(Segment::key).collect()
     }
 
     fn child(&self, key: &str) -> Path {

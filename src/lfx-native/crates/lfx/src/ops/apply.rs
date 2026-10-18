@@ -265,7 +265,7 @@ impl GraphState {
         }
         let removed: Vec<String> = if path.len() == OUTPUTS_PATH.len() + 1 && update.is_delete() {
             path[OUTPUTS_PATH.len()]
-                .selector_key()
+                .item()
                 .map(str::to_owned)
                 .into_iter()
                 .collect()
@@ -632,11 +632,7 @@ impl GraphState {
             FieldUndo::KeySet { old: None, .. } | FieldUndo::ItemAdded
         );
         // A whole value replaced or removed takes the lists indexed under it with it.
-        if let Some(keys) = path
-            .iter()
-            .map(Segment::as_key)
-            .collect::<Option<Vec<&str>>>()
-        {
+        if let Some(keys) = path.keys() {
             self.lists.forget_under(id, &keys);
         }
         self.record_field(id, walk.steps.clone(), undo);
@@ -847,7 +843,7 @@ fn is_collection_key(key: &str) -> bool {
 }
 
 fn check_node_path(path: &Path, context: &str) -> Result<()> {
-    if path[0].as_key() == Some("id") {
+    if path[0].key() == Some("id") {
         bail!("{context}: cannot modify node identity");
     }
     // Every node keeps these objects, and operations patch inside them.
