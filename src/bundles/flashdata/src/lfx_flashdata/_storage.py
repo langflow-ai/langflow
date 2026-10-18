@@ -27,6 +27,7 @@ def storage_config(raw: str) -> dict[str, Any]:
         raise FlashDataError(msg)
     kind = storage["storage_type"]
     bucket = storage["storage_url"].strip()
+    # Match the FlashData API contract, which currently rejects underscores even for GCS.
     if not re.fullmatch(r"[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]", bucket) or ".." in bucket:
         msg = "storage_url must be a bucket/container name; put folders in object_prefix."
         raise FlashDataError(msg)

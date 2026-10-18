@@ -1,7 +1,6 @@
 ---
 title: YouTube Download to Cloud Storage with FlashData
 slug: /flashdata-youtube-download
-description: Track delivery of YouTube media to your cloud storage in Langflow, using source-specific FlashData JSON results.
 ---
 
 ## Track delivery of YouTube media to your cloud storage
@@ -33,6 +32,7 @@ Inputs: Submit takes `video_id` plus optional `download_type`, `video_quality`, 
 
 Audio-only downloads accept `m4a`, `mp3`, or `opus`; video downloads accept `mp4`, `webm`, or `mkv`. Without an explicit `yt_dlp_format`, video quality/FPS do not apply to audio-only requests, and audio language does not apply to video-only requests. Audio quality is only valid for audio-only requests. Clip timestamps must be within 12 hours, with the end later than the start. Invalid combinations are rejected before submission.
 Storage providers include S3, S3-compatible destinations, GCS, Azure, OSS, COS, BOS, and TOS, with provider-specific credentials.
+FlashData currently accepts GCS bucket names containing lowercase letters, digits, dots, and hyphens, but not underscores. Although GCS itself supports underscores, the FlashData API does not currently accept them; choose a compatible existing bucket before submitting.
 Credentials and the authorization switch are not exposed as Agent tool arguments.
 For an Agent that only tracks an existing delivery, give it the Status and Result tools and the saved Job ID:
 
@@ -60,7 +60,7 @@ For invalid keys, insufficient Credits, source permissions, or rate limits, corr
 ## Run the source example without a model
 
 The development checkout includes `src/bundles/flashdata/examples/youtube_download.py`.
-Configure `FLASHDATA_API_KEY` in the process environment, then run:
+Configure `FLASHDATA_API_KEY` and `FLASHDATA_DOWNLOAD_JOB_ID` in the process environment. The job ID must identify an already submitted download. Then run:
 
 ```bash
 lfx run src/bundles/flashdata/examples/youtube_download.py

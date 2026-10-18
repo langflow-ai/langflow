@@ -1,8 +1,8 @@
 """Run YouTube Download to Cloud Storage through a Langflow JSON-to-Message flow.
 
 Run with: lfx run youtube_download.py
-Set FLASHDATA_API_KEY in the process environment. Execution uses FlashData
-Credits for query examples; the download example only reads an existing job.
+Set FLASHDATA_API_KEY and FLASHDATA_DOWNLOAD_JOB_ID in the process environment.
+FLASHDATA_DOWNLOAD_JOB_ID must identify an existing job. This example only reads its status.
 No language model is called. This is a source example, not a Gallery template.
 """
 

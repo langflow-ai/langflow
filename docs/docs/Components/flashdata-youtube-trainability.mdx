@@ -1,7 +1,6 @@
 ---
 title: YouTube License Metadata with FlashData
 slug: /flashdata-youtube-trainability
-description: Record a YouTube license-label signal in Langflow, using source-specific FlashData JSON results.
 ---
 
 ## Record a YouTube license-label signal
@@ -19,8 +18,7 @@ The component calls only the `youtube_trainability` source; choosing another Fla
 4. Run the component once and inspect **JSON**. Running the API request uses FlashData Credits.
 5. Connect **JSON → Parser → Chat Output**. Set Parser to **Parser** mode with template `{text}` to display the JSON response as a Message. This path needs no language model.
 
-Inputs: video_id (11 characters).
-This component takes only the video ID or URL; it has no Advanced Parameters field.
+Input: `video_id` accepts an 11-character YouTube video ID or a supported YouTube video URL. This component has no Advanced Parameters field.
 
 ## Use it as an Agent tool
 
