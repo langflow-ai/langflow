@@ -7,11 +7,17 @@ slug: /acedatacloud-gpt-image
 
 ## 1. Install and find the nodes
 
-For a currently available installation, ask the Langflow administrator to follow the [public installation instructions](https://github.com/AceDataCloud/LangflowAceDataCloud#1-install-the-extension) and install the [public v0.1.2 GitHub wheel](https://github.com/AceDataCloud/LangflowAceDataCloud/releases/tag/v0.1.2) in the same Python environment, then restart. The branded 0.1.3 node labels described below are still a candidate, so v0.1.2 installation does not prove those labels have shipped. Default inclusion is proposed in [the open Langflow PR](https://github.com/langflow-ai/langflow/pull/15659). The [proposed official bundle page](./bundles-acedatacloud.mdx) becomes an installation entry only after acceptance and publication; the public URL may return404 before then. A local installation does not prove official publication.
+The [0.1.3 release](https://github.com/AceDataCloud/LangflowAceDataCloud/releases/tag/v0.1.3) provides six independent wheel/source distributions. To install only GPT Image, use its public wheel in Langflow's Python environment and restart:
 
-After installation and restart, search **gpt image** under Components, or open **Components → Ace Data Cloud**. Import the [no-key GPT Image flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/main/examples/gpt_image.json) if you prefer ready connections.
+```bash
+python -m pip install "https://github.com/AceDataCloud/LangflowAceDataCloud/releases/download/v0.1.3/lfx_acedatacloud_gpt_image-0.1.3-py3-none-any.whl"
+```
 
-A **service-only 0.1.3 source candidate** is also available for review in [Ace package PR #6](https://github.com/AceDataCloud/LangflowAceDataCloud/pull/6). Check out that exact head, then run `python -m pip install ./packages/gpt-image` from its repository root in Langflow's Python environment. Restart and open the service's **by Ace Data Cloud** category. The package registers just Generate and Retrieve Task, without installing the aggregate or adding another chat provider. It is not yet a published package listing. Use its bundled `examples/` JSONs; these have service-specific IDs, while the aggregate examples below retain their existing IDs. All five service packages can coexist. If the aggregate is installed too, both categories remain visible for saved-flow compatibility.
+Open **Components → GPT Image by Ace Data Cloud** or search the service name. This package registers just Generate and Retrieve Task, without adding a chat provider or installing the aggregate. Its Python package `examples/` directory contains matching no-key generation and retrieve-only flows. The [versioned service guide](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/v0.1.3/guides/gpt-image.md) explains the package scope and credentials.
+
+For all services and the native chat provider, install the [published aggregate](https://pypi.org/project/lfx-acedatacloud/0.1.3/) with `python -m pip install "lfx-acedatacloud==0.1.3"`. The root [generation flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/v0.1.3/examples/gpt_image.json) and [retrieve-only flow](https://github.com/AceDataCloud/LangflowAceDataCloud/blob/v0.1.3/examples/retrieve_only/gpt_image.json) use the aggregate's existing IDs. Service-only packages have distinct bundle IDs; all five can coexist, and installing alongside the aggregate retains both categories for saved-flow compatibility.
+
+The aggregate, GPT Image, HappyHorse and Nano Banana are also published on PyPI. Creation of the Suno and Seedance PyPI projects is temporarily rate-limited; their versioned GitHub wheels above are available now. Package publication is separate from official Langflow default inclusion and documentation acceptance.
 
 ## 2. Get an application API Token
 
