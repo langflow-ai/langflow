@@ -83,11 +83,14 @@ class BackgroundJob:
         Raises:
             LangflowTimeoutError: If *timeout* elapses before the run finishes.
             Exception: Any exception raised by the underlying flow run is
-                re-raised as-is.
+                re-raised as-is, including its own ``TimeoutError``.
         """
         try:
             return await asyncio.wait_for(asyncio.shield(self._task), timeout=timeout)
         except asyncio.TimeoutError as exc:
+            if self._task.done():
+                # The job itself may have raised TimeoutError.
+                return self._task.result()
             msg = (
                 f"Background job did not complete within {timeout}s. "
                 "The run is still in flight — call wait_for_completion() again "
