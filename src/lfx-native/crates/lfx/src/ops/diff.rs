@@ -4,9 +4,9 @@
 //! [`diff_flow_data`] expresses the change from the stored graph as the
 //! operations a client would have sent for it, and
 //! [`derive_flow_operations`] proves they are right by replaying them and
-//! requiring the canonical result to equal the target exactly. There is no
-//! whole-graph replacement fallback: every valid transition is expressible in
-//! the vocabulary, so a mismatch is a bug and the save must fail.
+//! requiring the canonical result to equal the target exactly. The diff
+//! never falls back to replacing the whole graph: operations can express
+//! every valid change, so a mismatch is a bug and the save fails.
 //!
 //! Shape of the result, so whole-flow saves and future operation submissions
 //! record the same history:
@@ -25,8 +25,8 @@
 //!   that qualify it), its definition (every other key), and each toggle.
 //!   When any key of a unit changes, the whole unit is written. A new field
 //!   is one write, a removed field one delete;
-//! - keyed lists (outputs, tool actions, table rows) are written per item by
-//!   selector, and per key inside an item. A natural-key list whose order
+//! - keyed lists (outputs, tool actions, table rows) are written per item, at
+//!   the item's key, and per key inside an item. A natural-key list whose order
 //!   changed, and a table that is not keyed by row ids on both sides, is
 //!   written whole;
 //! - an edge that changed in any way is deleted and added again;
@@ -61,7 +61,7 @@ pub const TEMPLATE_FIELD_METADATA_KEYS: [&str; 6] = [
 /// Operations that turn one graph into another, verified by replay.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Derived {
-    /// The operations as the engine normalized them, which is what gets recorded.
+    /// The operations, as the engine records them.
     pub operations: Vec<Operation>,
     /// The graph the operations replay to.
     pub flow_data: Value,
@@ -146,8 +146,8 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
 
 /// Diff two graphs and prove the result replays exactly.
 ///
-/// Returns the operations as the engine normalized them, which is what gets
-/// recorded, together with the replayed graph.
+/// Returns the operations, as the engine records them, together with the
+/// replayed graph.
 ///
 /// # Errors
 ///

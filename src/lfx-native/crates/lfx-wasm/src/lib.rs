@@ -60,7 +60,7 @@ fn revision(value: f64) -> Result<u64, JsValue> {
     Err(Error::new("a revision must be a whole number from 0 up").into())
 }
 
-/// A flow graph held by the engine, for many batches.
+/// A flow graph that the engine keeps loaded, to apply many batches to it.
 ///
 /// History playback and rebase apply many batches to one graph and read it
 /// once. A refused batch changes nothing.
@@ -72,7 +72,7 @@ pub struct GraphState {
 
 #[wasm_bindgen]
 impl GraphState {
-    /// Index a graph given as JSON text.
+    /// Load a graph given as JSON text.
     ///
     /// # Errors
     ///
@@ -347,7 +347,7 @@ pub fn strip_row_keys(rows: &str) -> Result<String, JsValue> {
     run(api::strip_row_keys(rows))
 }
 
-/// A flow with every top-level table ordered and stripped.
+/// A flow whose top-level tables have their rows in order and without `_id` and `_pos`.
 ///
 /// # Errors
 ///
@@ -450,14 +450,14 @@ pub fn table_fields(node: &str) -> Result<String, JsValue> {
     run(api::table_fields(node))
 }
 
-/// A new opaque edge id in the editor's format.
+/// A new random edge id in the editor's format.
 #[wasm_bindgen(js_name = newEdgeId)]
 #[must_use]
 pub fn new_edge_id() -> String {
     api::new_edge_id()
 }
 
-/// A new opaque table row id in the editor's format.
+/// A new random table row id in the editor's format.
 #[wasm_bindgen(js_name = newTableRowId)]
 #[must_use]
 pub fn new_table_row_id() -> String {

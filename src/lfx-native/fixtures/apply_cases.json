@@ -1118,7 +1118,7 @@
       "code": "FLOW_GRAPH_INVALID"
     },
     {
-      "name": "selector: set_field edits one table cell by row id",
+      "name": "list item: set_field edits one table cell by row id",
       "base": {
         "nodes": [
           {
@@ -1159,7 +1159,7 @@
       }
     },
     {
-      "name": "selector: set_field at a new row id appends the row",
+      "name": "list item: set_field at a new row id appends the row",
       "base": {
         "nodes": [
           {
@@ -1205,7 +1205,7 @@
       }
     },
     {
-      "name": "selector: setting a row's _pos changes only its position",
+      "name": "list item: setting a row's _pos changes only its position",
       "base": {
         "nodes": [
           {
@@ -1246,7 +1246,7 @@
       }
     },
     {
-      "name": "selector: two rows may share a position",
+      "name": "list item: two rows may share a position",
       "base": {
         "nodes": [
           {
@@ -1287,7 +1287,7 @@
       }
     },
     {
-      "name": "selector: delete_field removes a table row by id",
+      "name": "list item: delete_field removes a table row by id",
       "base": {
         "nodes": [
           {
@@ -1318,7 +1318,7 @@
       }
     },
     {
-      "name": "selector: deleting a row lets the last row take its slot",
+      "name": "list item: deleting a row lets the last row take its slot",
       "base": {
         "nodes": [
           {
@@ -1359,7 +1359,7 @@
       }
     },
     {
-      "name": "selector: delete_field of a missing row changes and records nothing",
+      "name": "list item: delete_field of a missing row changes and records nothing",
       "base": {
         "nodes": [
           {
@@ -1398,7 +1398,7 @@
       "forward_operations": []
     },
     {
-      "name": "selector: editing a cell of a missing row fails",
+      "name": "list item: editing a cell of a missing row fails",
       "base": {
         "nodes": [
           {
@@ -1425,7 +1425,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a row written at an id must carry that id",
+      "name": "list item: a row written at an id must carry that id",
       "base": {
         "nodes": [
           {
@@ -1452,7 +1452,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a row's _id cannot be changed",
+      "name": "list item: a row's _id cannot be changed",
       "base": {
         "nodes": [
           {
@@ -1479,7 +1479,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a selector needs a list the schema declares keyed",
+      "name": "list item: an item key needs a list the schema declares keyed",
       "base": {
         "nodes": [
           {
@@ -1506,7 +1506,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: set_field edits an output selected by name",
+      "name": "list item: set_field edits an output selected by name",
       "base": {
         "nodes": [
           {
@@ -1540,7 +1540,7 @@
       }
     },
     {
-      "name": "selector: set_field at a new output name appends it",
+      "name": "list item: set_field at a new output name appends it",
       "base": {
         "nodes": [
           {
@@ -1574,7 +1574,7 @@
       }
     },
     {
-      "name": "selector: items are not selected by id",
+      "name": "list item: items are not selected by id",
       "base": {
         "nodes": [
           {
@@ -1596,7 +1596,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: an output's name cannot be changed through its selector",
+      "name": "list item: an output's name cannot be changed at its key",
       "base": {
         "nodes": [
           {
@@ -1618,7 +1618,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a tool action is selected by its first tag",
+      "name": "list item: a tool action is selected by its first tag",
       "base": {
         "nodes": [
           {
@@ -1657,7 +1657,7 @@
       }
     },
     {
-      "name": "selector: a table stored out of position order is accepted",
+      "name": "list item: a table stored out of position order is accepted",
       "base": {
         "nodes": [
           {
@@ -1684,7 +1684,7 @@
       }
     },
     {
-      "name": "selector: a table with two rows of one id is rejected",
+      "name": "list item: a table with two rows of one id is rejected",
       "base": {
         "nodes": [
           {
@@ -1704,7 +1704,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a row written without a numeric _pos is rejected",
+      "name": "list item: a row written without a numeric _pos is rejected",
       "base": {
         "nodes": [
           {
@@ -1726,7 +1726,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a row written with a _pos too large for a double is rejected",
+      "name": "list item: a row written with a _pos too large for a double is rejected",
       "base": {
         "nodes": [
           {
@@ -1757,7 +1757,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: a row's _pos cannot be deleted",
+      "name": "list item: a row's _pos cannot be deleted",
       "base": {
         "nodes": [
           {
@@ -1774,7 +1774,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "selector: an output without a name cannot be selected around",
+      "name": "list item: when one output has no name, no output can be written by key",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"display_name": "unnamed"}]}}}], "edges": []},
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "n", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}, "hidden"], "value": true}]}

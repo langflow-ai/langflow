@@ -32,13 +32,13 @@ The modules of `lfx::ops`:
 
 | Module | What it holds |
 | --- | --- |
-| `api` | JSON in, JSON out: the surface the bindings expose |
+| `api` | JSON in, JSON out: the functions the bindings call |
 | `ops` | operation types, the strict parser, and the dump |
-| `state` | `GraphState`, the indexed graph a handle keeps between batches |
+| `state` | `GraphState`, the indexed graph that apply works on, kept between batches |
 | `apply` | apply, with inverses |
-| `diff` | diff, and the derive check |
+| `diff` | diff, and the check that its operations replay to the target |
 | `validate` | graph rules and violations, with codes and resolutions |
-| `repair` | the direct repairs |
+| `repair` | the repairs of violations that have one fix |
 | `edges` | edge rules and handle reading |
 | `entry` | what the engine reads from untyped nodes, edges and rows: ids, templates |
 | `keyed` | keyed lists and table rows |
@@ -62,7 +62,7 @@ This table maps each part of the engine to its callers today, in the Python engi
 | Apply operations | `apply`, `GraphState.apply` | `apply`, `GraphState.apply` | replay (`flow_history/replay.py`), restore fixes (`flow_history/restore_fixes.py`) | history playback (`flow-operations/history.ts`) |
 | Assign row ids to a table | `assign_row_ids`, `assign_changed_table_row_ids` | `assignRowIds`, `assignChangedTableRowIds`, `assignChangedNodeTableRowIds` | the assistant (`agentic/utils/assistant_runner.py`, `flow_component.py`), the MCP patch (`lfx/mcp/server.py`) | `flowStore.ts`, `use-add-flow.ts`, template hooks, `mutate-template.ts`, `TableNodeComponent` |
 | Strip row ids and order rows | `strip_row_keys`, `strip_flow_table_row_keys`, `ordered_rows` | `stripRowKeys`, `stripFlowTableRowKeys`, `orderedRows` | flow export (`api/utils/core.py`), MCP export, the component run (`lfx/graph/vertex/param_handler.py`), the refresh endpoint (`api/v1/endpoints.py`) | download and export (`reactflowUtils.ts`), `TableNodeComponent` |
-| Canonical equality | `graphs_equal`, `values_equal` | `graphsEqual`, `valuesEqual` | the save's no-op and projection checks (`flow_history/recorder.py`) | inside the editor's engine only |
+| Canonical equality | `graphs_equal`, `values_equal` | `graphsEqual`, `valuesEqual` | the save's no-op check and the check that the stored graph matches its latest revision (`flow_history/recorder.py`) | inside the editor's engine only |
 | Node schema | `table_fields`, `node_schema` | `tableFields`, `nodeSchema` | the refresh endpoint finds table fields (`api/v1/endpoints.py`) | inside the editor's engine only |
 
 ### Used only by the backend
@@ -71,7 +71,7 @@ This table maps each part of the engine to its callers today, in the Python engi
 | --- | --- | --- |
 | The save: validate, repair, derive, pack | `prepare_write`, or `validate`, `repair`, `derive`, `pack` | `flow_history/recorder.py` (every graph write: PATCH, PUT, import, version activation, the assistant, file sync) |
 | Diff | `diff` | through `derive` in the recorder |
-| Graph hash | `graph_hash` | checkpoints and the projection check (`recorder.py`), replay |
+| Graph hash | `graph_hash` | checkpoints and the check that the stored graph matches its latest revision (`recorder.py`), replay |
 | Stored envelope | `decode_row`, `encode_envelope`, `pack` | recorder, replay, timeline (`flow_history/timeline.py`) |
 | Replay and checkpoint checks | `replay`, `verify_checkpoint` | revision reads (`api/v1/flow_revisions.py`), maintenance (`flow_history/maintenance.py`) |
 | Restore fix check | `apply_restore_fixes` | revision restore (`api/v1/flow_revisions.py`), version restore (`api/v1/flow_version.py`) |

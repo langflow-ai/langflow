@@ -3,8 +3,8 @@
 //! A save checks the graphs, repairs them when the request asks for it,
 //! derives the operations, checks that they replay, and packs them into rows.
 //! [`prepare_write`] does all of that. The caller keeps what needs the
-//! database: request deduplication, the version check, the lock, the stored
-//! graph's projection check, and the inserts.
+//! database: request deduplication, the version check, the lock, the check
+//! that the stored graph matches its latest revision, and the inserts.
 
 use std::fmt;
 
@@ -235,7 +235,7 @@ pub fn prepare_write(
     })
 }
 
-/// What repair leaves needs the person's intent, so the client fixes it.
+/// What repair leaves needs the person's choice, so the client fixes it.
 fn invalid(role: Role, error: Error) -> WriteError {
     if error.kind == ErrorKind::InvalidGraph && !error.violations.is_empty() {
         WriteError::InvalidGraph {

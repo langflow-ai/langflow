@@ -60,7 +60,7 @@ fn run<T: Send>(py: Python<'_>, work: impl FnOnce() -> ApiResult<T> + Send) -> P
     py.detach(work).map_err(|error| engine_error(py, &error))
 }
 
-/// A flow graph held by the engine, for many batches.
+/// A flow graph that the engine keeps loaded, to apply many batches to it.
 ///
 /// Replay, history playback and rebase apply many batches to one graph and
 /// read it once. A refused batch changes nothing.
@@ -333,7 +333,7 @@ fn ordered_rows(py: Python<'_>, rows: &Bound<'_, PyAny>) -> PyResult<String> {
     run(py, || api::ordered_rows(rows))
 }
 
-/// A flow with every top-level table ordered and stripped.
+/// A flow whose top-level tables have their rows in order and without `_id` and `_pos`.
 #[pyfunction]
 fn strip_flow_table_row_keys(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<String> {
     let flow = text(flow)?;
@@ -409,13 +409,13 @@ fn table_fields(py: Python<'_>, node: &Bound<'_, PyAny>) -> PyResult<String> {
     run(py, || api::table_fields(node))
 }
 
-/// A new opaque edge id in the editor's format.
+/// A new random edge id in the editor's format.
 #[pyfunction]
 fn new_edge_id() -> String {
     api::new_edge_id()
 }
 
-/// A new opaque table row id in the editor's format.
+/// A new random table row id in the editor's format.
 #[pyfunction]
 fn new_table_row_id() -> String {
     api::new_table_row_id()

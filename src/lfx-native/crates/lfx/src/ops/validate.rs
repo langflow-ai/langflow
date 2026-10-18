@@ -1,6 +1,6 @@
 //! The rules every stored flow graph follows.
 //!
-//! These rules are the flow's write contract. The engine checks them on the
+//! A write must keep these rules. The engine checks them on the
 //! graph it starts from, and the diff checks them on the graph a save asks
 //! for. Each rule has a stable code, so a refused write can name what is
 //! wrong and where, and each violation says who fixes it: `repair`, or the
@@ -11,8 +11,8 @@
 //! touches it:
 //!
 //! - table rows: every table value the write adds or changes must have rows
-//!   with a unique `_id` and a numeric `_pos`. Their order in the array is
-//!   not state, so it is never checked, and legacy tables without row ids
+//!   with a unique `_id` and a numeric `_pos`. Their order in the array
+//!   is not state, so it is never checked, and legacy tables without row ids
 //!   stay valid until someone edits them;
 //! - edge rules: every edge the write adds must carry valid handles that
 //!   name an output and an input that exist, must not take an input that is
@@ -65,7 +65,7 @@ pub enum ViolationCode {
 }
 
 impl ViolationCode {
-    /// The code as it crosses the API.
+    /// The code as the API reports it.
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
@@ -92,10 +92,11 @@ impl ViolationCode {
         }
     }
 
-    /// The fix for a direct violation, or `None` for one the client fixes.
+    /// The fix for a violation that has one fix, or `None` for one the client fixes.
     ///
-    /// A direct rule without a fix would leave a flow that can neither be saved
-    /// nor repaired, so every code is either fixed here or left to the client.
+    /// A rule that has one fix but no code for it here would leave a flow that
+    /// can neither be saved nor repaired, so every code is either fixed here or
+    /// left to the client.
     #[must_use]
     pub fn repair_action(self) -> Option<&'static str> {
         use ViolationCode as Code;
@@ -163,7 +164,7 @@ pub enum Resolution {
 }
 
 impl Resolution {
-    /// The resolution as it crosses the API.
+    /// The resolution as the API reports it.
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
@@ -270,7 +271,7 @@ impl Violation {
     }
 }
 
-/// Every rule `flow` breaks, in document order.
+/// Every rule `flow` breaks, in the order the graph lists them.
 ///
 /// With [`Numbers::Check`], it also walks every value for numbers that are
 /// not finite as JavaScript reads them.
@@ -514,7 +515,7 @@ pub(crate) struct GraphView<'a> {
 }
 
 impl<'a> GraphView<'a> {
-    /// Index a graph that passed structural validation.
+    /// Build the indexes of a graph that passed structural validation.
     pub fn new(graph: &'a Value) -> Self {
         let mut view = Self {
             nodes: HashMap::new(),
@@ -660,7 +661,7 @@ pub struct ChangedTable<'a> {
     pub rows: &'a [Value],
 }
 
-/// The table values `target` adds or changes relative to `base`, in document order.
+/// The table values `target` adds or changes relative to `base`, in the order the graph lists them.
 ///
 /// # Errors
 ///

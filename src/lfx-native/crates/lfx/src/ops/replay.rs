@@ -4,7 +4,7 @@
 //! one revision at a time, so every revision is reachable, including one in
 //! the middle of a row. It requires every revision to appear exactly once and
 //! in order; anything else is corruption, reported with the revision and
-//! kind of damage and never silently papered over with the nearest state.
+//! kind of damage, and never silently replaced with the nearest revision.
 //! Replay holds one graph and applies each operation to it, so it costs one
 //! pass over the graph, not one per operation.
 
