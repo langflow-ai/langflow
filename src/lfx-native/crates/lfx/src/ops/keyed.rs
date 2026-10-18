@@ -89,8 +89,7 @@ impl ListIndex {
         match self.keyed.key_of(item) {
             Some(key) if !key.is_empty() => Ok(key),
             _ => Err(invalid!(
-                "{context}: every item of this list needs a non-empty string {}",
-                self.keyed.selector_name()
+                "{context}: every item of this list needs a non-empty string key"
             )),
         }
     }

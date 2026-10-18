@@ -97,7 +97,7 @@
             ]
           }
         ],
-        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r2"}]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}]}]}],
         [
           {"type": "delete_edges", "ids": ["e1"]},
           {
@@ -182,7 +182,7 @@
         [
           {
             "type": "update_nodes",
-            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r2"}, "v"], "value": "dQpP"}]
+            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": "dQpP"}]
           }
         ],
         [
@@ -230,7 +230,7 @@
         [
           {
             "type": "update_nodes",
-            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "_pos"], "value": 0}]
+            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "_pos"], "value": 0}]
           }
         ],
         [
@@ -264,7 +264,7 @@
               {
                 "id": "dst",
                 "op": "set_field",
-                "path": ["data", "node", "template", "rows", "value", {"id": "r2"}, "v"],
+                "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"],
                 "value": "zFRF",
                 "expect": {"value": "y"}
               }
@@ -461,7 +461,7 @@
               {
                 "id": "dst",
                 "op": "set_field",
-                "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "v"],
+                "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"],
                 "value": "eRil",
                 "expect": {"value": "x"}
               }
@@ -594,7 +594,7 @@
               {
                 "id": "dst",
                 "op": "set_field",
-                "path": ["data", "node", "template", "legacy", "value", {"id": "row-p3"}],
+                "path": ["data", "node", "template", "legacy", "value", {"key": "row-p3"}],
                 "value": {"_id": "row-p3", "_pos": 1.5, "name": "yW"}
               }
             ]
@@ -975,7 +975,7 @@
         [
           {
             "type": "update_nodes",
-            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "v"], "value": "pUxc"}]
+            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "pUxc"}]
           }
         ]
       ],
@@ -995,7 +995,7 @@
         [
           {
             "type": "update_nodes",
-            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r2"}, "v"], "value": "ES"}]
+            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": "ES"}]
           }
         ],
         [
@@ -1066,7 +1066,7 @@
           }
         ],
         [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}, "hidden"], "value": true}]}],
-        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}],
         [
           {
             "type": "add_nodes",
@@ -1237,7 +1237,7 @@
     {
       "name": "sequence 27",
       "transactions": [
-        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r2"}]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}]}]}],
         [
           {
             "type": "add_edges",

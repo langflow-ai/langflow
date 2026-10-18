@@ -529,10 +529,7 @@ impl GraphState {
         for item in walk.list_items.iter().rev() {
             let value = resolve(root, &walk.steps[..item.depth]);
             if value.and_then(|value| item.keyed.key_of(value)) != Some(item.key.as_str()) {
-                bail!(
-                    "{context}: cannot change a list item's {}",
-                    item.keyed.selector_name()
-                );
+                bail!("{context}: cannot change a list item's key");
             }
             if let Some(position) = item.keyed.position.as_deref()
                 && !value
@@ -573,7 +570,7 @@ impl GraphState {
                     value = child;
                     continue;
                 }
-                Segment::ById(key) | Segment::ByKey(key) => key,
+                Segment::Item(key) => key,
             };
             let (keyed, slot) = list_slot(&mut self.lists, write, root, index, value, key)?;
             let Some(slot) = slot else {
@@ -608,7 +605,7 @@ impl GraphState {
                 };
                 return Ok(map.contains_key(key).then(|| PathPart::Key(key.clone())));
             }
-            Segment::ById(key) | Segment::ByKey(key) => key,
+            Segment::Item(key) => key,
         };
         let (_, slot) = list_slot(&mut self.lists, write, root, last, parent, key)?;
         Ok(slot.map(PathPart::Index))
@@ -625,9 +622,7 @@ impl GraphState {
         let (id, path) = (write.update.id.as_str(), &write.update.path);
         let undo = match &path[path.len() - 1] {
             Segment::Key(key) => self.write_key(write, walk, key, value, options)?,
-            Segment::ById(key) | Segment::ByKey(key) => {
-                self.write_item(write, walk, key, value, options)?
-            }
+            Segment::Item(key) => self.write_item(write, walk, key, value, options)?,
         };
         let Some(undo) = undo else {
             return Ok(false);
@@ -792,7 +787,7 @@ fn missing_segment(write: &FieldWrite<'_>, missing: usize) -> Error {
             "{context}.path[{missing}]: object path part must be an existing string key: {}",
             quoted(key)
         ),
-        Segment::ById(key) | Segment::ByKey(key) => invalid!(
+        Segment::Item(key) => invalid!(
             "{context}.path[{missing}]: list item does not exist: {}",
             quoted(key)
         ),
@@ -825,7 +820,7 @@ fn list_slot(
 }
 
 /// The keyed list `path[index]` selects from, and its address: the object
-/// keys that lead to it. Checks that the selector fits the list.
+/// keys that lead to it. Checks that the schema declares the list keyed.
 fn keyed_list<'p>(
     node: &Value,
     path: &'p Path,
@@ -841,16 +836,6 @@ fn keyed_list<'p>(
     }) else {
         bail!("{context}.path[{index}]: selector on a list the node schema does not declare keyed");
     };
-    let fits = matches!(
-        (keyed.kind, &path[index]),
-        (ListKind::Table, Segment::ById(_)) | (ListKind::Natural, Segment::ByKey(_))
-    );
-    if !fits {
-        bail!(
-            "{context}.path[{index}]: items of this list are selected with {{{}: ...}}",
-            quoted(keyed.selector_name())
-        );
-    }
     if !value.is_array() {
         bail!("{context}.path[{index}]: selector on a value that is not a list");
     }
@@ -989,18 +974,19 @@ impl FieldInverses {
         let path = &update.path;
         let last = path.len() - 1;
         if update.is_delete()
-            && let (Segment::ByKey(key), Some(Value::Array(items)), Some(_)) =
+            && let (Segment::Item(key), Some(Value::Array(items)), Some(_)) =
                 (&path[last], parent, current)
+            && let Some(keyed) = path[..last]
+                .keys()
+                .and_then(|prefix| NODE_SCHEMA.keyed_list_at(root, &prefix))
+            && keyed.kind == ListKind::Natural
         {
             // Removing a natural-list item that is not last cannot be undone by
             // a selector write, which appends; the whole list is written back.
             // A table's order is its rows' positions, so its rows need no such care.
-            let keyed = path[..last]
-                .keys()
-                .and_then(|prefix| NODE_SCHEMA.keyed_list_at(root, &prefix));
-            let is_last = items.last().is_some_and(|item| {
-                keyed.and_then(|keyed| keyed.key_of(item)) == Some(key.as_str())
-            });
+            let is_last = items
+                .last()
+                .is_some_and(|item| keyed.key_of(item) == Some(key.as_str()));
             if !is_last {
                 self.entries.push(FieldUpdate::set(
                     &update.id,

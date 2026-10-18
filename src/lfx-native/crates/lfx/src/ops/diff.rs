@@ -499,11 +499,12 @@ fn keyed_list<'v>(
             return Ok(false);
         }
     }
-    let selector = |key: &str| match keyed.kind {
-        ListKind::Table => Segment::ById(key.to_owned()),
-        ListKind::Natural => Segment::ByKey(key.to_owned()),
+    let item_path = |key: &str| -> Path {
+        path.iter()
+            .cloned()
+            .chain([Segment::Item(key.to_owned())])
+            .collect()
     };
-    let item_path = |key: &str| -> Path { path.iter().cloned().chain([selector(key)]).collect() };
     for (key, item) in &target_items {
         let Some(previous) = base_items.get(key) else {
             writes.push(Write::Set {

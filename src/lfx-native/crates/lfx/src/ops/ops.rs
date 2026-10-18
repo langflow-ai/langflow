@@ -15,10 +15,10 @@ use crate::ops::error::{Error, Result, bail, invalid, quoted};
 pub enum Segment {
     /// An object key.
     Key(String),
-    /// A table row, selected by its `_id`: `{"id": ...}`.
-    ById(String),
-    /// A natural-list item, selected by its key: `{"key": ...}`.
-    ByKey(String),
+    /// An item of a keyed list, selected by its key: `{"key": ...}`. A table
+    /// row's key is its `_id`; any other item's is the field the node schema
+    /// names, such as an output's `name`.
+    Item(String),
 }
 
 impl Segment {
@@ -27,7 +27,7 @@ impl Segment {
     pub fn as_key(&self) -> Option<&str> {
         match self {
             Self::Key(key) => Some(key),
-            _ => None,
+            Self::Item(_) => None,
         }
     }
 
@@ -36,15 +36,14 @@ impl Segment {
     pub fn selector_key(&self) -> Option<&str> {
         match self {
             Self::Key(_) => None,
-            Self::ById(key) | Self::ByKey(key) => Some(key),
+            Self::Item(key) => Some(key),
         }
     }
 
     fn to_value(&self) -> Value {
         match self {
             Self::Key(key) => Value::from(key.as_str()),
-            Self::ById(id) => single("id", Value::from(id.as_str())),
-            Self::ByKey(key) => single("key", Value::from(key.as_str())),
+            Self::Item(key) => single("key", Value::from(key.as_str())),
         }
     }
 }
@@ -505,11 +504,8 @@ fn parse_segment(segment: Value, context: &str) -> Result<Segment> {
             "{context}: path segments must be object keys or selectors; integer list indexes are not allowed"
         )),
         Value::Object(selector) if selector.len() == 1 => match selector.into_iter().next() {
-            Some((name, Value::String(key))) if !key.is_empty() && name == "id" => {
-                Ok(Segment::ById(key))
-            }
             Some((name, Value::String(key))) if !key.is_empty() && name == "key" => {
-                Ok(Segment::ByKey(key))
+                Ok(Segment::Item(key))
             }
             _ => Err(invalid!("{context}: invalid path segment")),
         },
@@ -546,9 +542,9 @@ mod tests {
             json!({"type": "update_metadata", "fields": {"name": 1.0}}),
             json!({"type": "update_metadata", "delete_keys": ["x"]}),
             json!({"type": "update_nodes", "updates": [
-                {"id": "a", "path": ["data", {"key": "out"}], "expect": {"absent": true}, "op": "set_field",
+                {"id": "a", "path": ["data", "node", "outputs", {"key": "out"}], "expect": {"absent": true}, "op": "set_field",
                  "value": null, "from_type": "string", "template_field": {"name": "x"}},
-                {"id": "a", "path": ["x", {"id": "r"}], "expect": {"value": [1]}, "op": "delete_field"},
+                {"id": "a", "path": ["data", "node", "template", "rows", "value", {"key": "r"}], "expect": {"value": [1]}, "op": "delete_field"},
             ]}),
         ] {
             let parsed = Operation::try_from(operation.clone()).unwrap();
@@ -587,7 +583,8 @@ mod tests {
             json!({"type": "update_nodes", "updates": [{"id": "", "op": "delete_field", "path": ["x"]}]}),
             json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": []}]}),
             json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x", 0]}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"id": ""}]}]}),
+            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"key": ""}]}]}),
+            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"id": "r"}]}]}),
             json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"id": "r", "key": "k"}]}]}),
             json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x"], "expect": {}}]}),
             json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x"], "expect": {"absent": false}}]}),
