@@ -28,7 +28,7 @@
           "info": "Create a key in Ace Data Cloud Console → Applications."
         }
       }],
-      "api_docs_url": "https://platform.acedata.cloud/models",
+      "api_docs_url": "https://platform.acedata.cloud/console/applications?utm_source=langflow&utm_medium=referral&utm_campaign=evergreen&utm_content=langflow_provider_api_key",
       "mapping": {"model_class": "ChatAceDataCloud", "model_param": "model"}
     },
     "model_class": {"module": "lfx_acedatacloud.provider", "attr": "ChatAceDataCloud"},
