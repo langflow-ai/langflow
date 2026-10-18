@@ -244,7 +244,7 @@ impl<'a> NodeDiff<'a> {
         if path.len() <= depth + 1 || !path.starts_with_keys(&TEMPLATE_PATH) {
             return None;
         }
-        let field = self.template?.get(path[depth].as_key()?)?.as_object()?;
+        let field = self.template?.get(path[depth].key()?)?.as_object()?;
         let metadata: Map<String, Value> = TEMPLATE_FIELD_METADATA_KEYS
             .iter()
             .filter_map(|key| Some(((*key).to_owned(), field.get(*key)?.clone())))
@@ -382,7 +382,7 @@ impl<'a> NodeDiff<'a> {
         }
         // The value is `value` with the keys that qualify it. A keyed list
         // value is written item by item instead, when both sides allow it.
-        let field_name = path[TEMPLATE_PATH.len()].as_key().unwrap_or_default();
+        let field_name = path[TEMPLATE_PATH.len()].key().unwrap_or_default();
         let value_path = path.child("value");
         let keyed = NODE_SCHEMA.field_value_list(field_name, target_field);
         let mut item_writes = Vec::new();
