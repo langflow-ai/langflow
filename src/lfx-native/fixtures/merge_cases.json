@@ -43,13 +43,13 @@
         "A": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "xml"}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "v"], "value": "xml"}]
           }
         ],
         "B": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r2"}, "v"], "value": "X-Auth"}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r2"}, "v"], "value": "X-Auth"}]
           }
         ]
       },
@@ -98,13 +98,13 @@
         "A": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "from A"}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "v"], "value": "from A"}]
           }
         ],
         "B": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "from B"}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "v"], "value": "from B"}]
           }
         ]
       },
@@ -153,13 +153,13 @@
         "A": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "from A"}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "v"], "value": "from A"}]
           }
         ],
         "B": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "from B"}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "v"], "value": "from B"}]
           }
         ]
       },
@@ -206,12 +206,17 @@
       "name": "an edit to a row someone deleted fails",
       "transactions": {
         "A": [
-          {"type": "update_nodes", "updates": [{"id": "Model-1", "op": "delete_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}]}]}
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "delete_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}]}]
+          }
         ],
         "B": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "late edit"}]
+            "updates": [
+              {"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "v"], "value": "late edit"}
+            ]
           }
         ]
       },
@@ -257,11 +262,14 @@
         "A": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "v"], "value": "edit"}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "v"], "value": "edit"}]
           }
         ],
         "B": [
-          {"type": "update_nodes", "updates": [{"id": "Model-1", "op": "delete_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}]}]}
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "Model-1", "op": "delete_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}]}]
+          }
         ]
       },
       "order": ["A", "B"],
@@ -306,13 +314,13 @@
         "A": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "_pos"], "value": 4}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "_pos"], "value": 4}]
           }
         ],
         "B": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r3"}, "_pos"], "value": 0}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r3"}, "_pos"], "value": 0}]
           }
         ]
       },
@@ -361,13 +369,13 @@
         "A": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "_pos"], "value": 4}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "_pos"], "value": 4}]
           }
         ],
         "B": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"id": "r1"}, "_pos"], "value": 2.5}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "_pos"], "value": 2.5}]
           }
         ]
       },
@@ -420,7 +428,7 @@
               {
                 "id": "Model-1",
                 "op": "set_field",
-                "path": ["data", "node", "template", "headers", "value", {"id": "rB"}],
+                "path": ["data", "node", "template", "headers", "value", {"key": "rB"}],
                 "value": {"_id": "rB", "_pos": 1.5, "v": "b"}
               }
             ]
@@ -433,7 +441,7 @@
               {
                 "id": "Model-1",
                 "op": "set_field",
-                "path": ["data", "node", "template", "headers", "value", {"id": "rA"}],
+                "path": ["data", "node", "template", "headers", "value", {"key": "rA"}],
                 "value": {"_id": "rA", "_pos": 1.5, "v": "a"}
               }
             ]

@@ -461,14 +461,14 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r2"}, "v"], "value": "w"}]
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": "w"}]
         }
       ],
       "inverse": [
         [
           {
             "type": "update_nodes",
-            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r2"}, "v"], "value": "y"}]
+            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": "y"}]
           }
         ]
       ]
@@ -495,12 +495,12 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r3"}], "value": {"_id": "r3", "_pos": 1.5, "v": "z"}}
+            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}], "value": {"_id": "r3", "_pos": 1.5, "v": "z"}}
           ]
         }
       ],
       "inverse": [
-        [{"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r3"}]}]}]
+        [{"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}]}]}]
       ]
     },
     {
@@ -524,14 +524,14 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "_pos"], "value": 3}]
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "_pos"], "value": 3}]
         }
       ],
       "inverse": [
         [
           {
             "type": "update_nodes",
-            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "_pos"], "value": 1}]
+            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "_pos"], "value": 1}]
           }
         ]
       ]
@@ -557,11 +557,11 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r0"}], "value": {"_id": "r0", "_pos": 2}}]
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r0"}], "value": {"_id": "r0", "_pos": 2}}]
         }
       ],
       "inverse": [
-        [{"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r0"}]}]}]
+        [{"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r0"}]}]}]
       ]
     },
     {
@@ -583,14 +583,14 @@
         "edges": []
       },
       "operations": [
-        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}]}]}
+        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}
       ],
       "inverse": [
         [
           {
             "type": "update_nodes",
             "updates": [
-              {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}], "value": {"_id": "r1", "_pos": 1, "v": "x"}}
+              {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}], "value": {"_id": "r1", "_pos": 1, "v": "x"}}
             ]
           }
         ]
@@ -618,14 +618,14 @@
         "edges": []
       },
       "operations": [
-        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}]}]}
+        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}
       ],
       "inverse": [
         [
           {
             "type": "update_nodes",
             "updates": [
-              {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}], "value": {"_id": "r1", "_pos": 1, "v": "x"}}
+              {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}], "value": {"_id": "r1", "_pos": 1, "v": "x"}}
             ]
           }
         ]
@@ -650,7 +650,7 @@
         "edges": []
       },
       "operations": [
-        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "gone"}]}]}
+        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "gone"}]}]}
       ],
       "inverse": [[]]
     },
@@ -743,14 +743,14 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "v"], "value": "z"}]
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "z"}]
         }
       ],
       "inverse": [
         [
           {
             "type": "update_nodes",
-            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "v"], "value": "x"}]
+            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "x"}]
           }
         ]
       ]
@@ -777,7 +777,7 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "v"], "value": "q", "expect": {"value": "x"}}
+            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "q", "expect": {"value": "x"}}
           ]
         },
         {
@@ -786,7 +786,7 @@
             {
               "id": "t",
               "op": "set_field",
-              "path": ["data", "node", "template", "rows", "value", {"id": "r2"}],
+              "path": ["data", "node", "template", "rows", "value", {"key": "r2"}],
               "value": {"_id": "r2", "_pos": 2, "v": 2},
               "expect": {"value": {"v": "y", "_pos": 2, "_id": "r2"}}
             }
@@ -795,7 +795,7 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r2"}, "v"], "value": 3, "expect": {"value": 2}}
+            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": 3, "expect": {"value": 2}}
           ]
         }
       ],
@@ -803,21 +803,21 @@
         [
           {
             "type": "update_nodes",
-            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}, "v"], "value": "x"}]
+            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "x"}]
           }
         ],
         [
           {
             "type": "update_nodes",
             "updates": [
-              {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r2"}], "value": {"_id": "r2", "_pos": 2, "v": "y"}}
+              {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}], "value": {"_id": "r2", "_pos": 2, "v": "y"}}
             ]
           }
         ],
         [
           {
             "type": "update_nodes",
-            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r2"}, "v"], "value": 2}]
+            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": 2}]
           }
         ]
       ]
@@ -847,7 +847,7 @@
             {
               "id": "t",
               "op": "set_field",
-              "path": ["data", "node", "template", "rows", "value", {"id": "r3"}],
+              "path": ["data", "node", "template", "rows", "value", {"key": "r3"}],
               "value": {"_id": "r3", "_pos": 1.5, "v": "z"},
               "expect": {"absent": true}
             }
@@ -855,7 +855,7 @@
         }
       ],
       "inverse": [
-        [{"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r3"}]}]}]
+        [{"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}]}]}]
       ]
     },
     {
@@ -2588,12 +2588,12 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r4"}], "value": {"_id": "r4", "_pos": 4, "k": "four"}}
+            {"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r4"}], "value": {"_id": "r4", "_pos": 4, "k": "four"}}
           ]
         }
       ],
       "inverse": [
-        [{"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r4"}]}]}]
+        [{"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r4"}]}]}]
       ]
     },
     {
@@ -2655,14 +2655,19 @@
         ]
       },
       "operations": [
-        {"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}]}]}
+        {"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}
       ],
       "inverse": [
         [
           {
             "type": "update_nodes",
             "updates": [
-              {"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r1"}], "value": {"_id": "r1", "_pos": 1, "k": "one"}}
+              {
+                "id": "b",
+                "op": "set_field",
+                "path": ["data", "node", "template", "rows", "value", {"key": "r1"}],
+                "value": {"_id": "r1", "_pos": 1, "k": "one"}
+              }
             ]
           }
         ]
@@ -2729,14 +2734,14 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r3"}, "_pos"], "value": 0.5}]
+          "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}, "_pos"], "value": 0.5}]
         }
       ],
       "inverse": [
         [
           {
             "type": "update_nodes",
-            "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"id": "r3"}, "_pos"], "value": 3}]
+            "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}, "_pos"], "value": 3}]
           }
         ]
       ]

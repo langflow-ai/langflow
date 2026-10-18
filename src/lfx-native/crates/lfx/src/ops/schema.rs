@@ -48,11 +48,11 @@ pub(crate) fn starts_with_keys<A: AsRef<str>, B: AsRef<str>>(path: &[A], prefix:
 /// How the items of a keyed list are addressed and ordered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ListKind {
-    /// Outputs and tool actions: selected with `{"key": ...}`, in the order
+    /// Outputs and tool actions: keyed by a field of their own, in the order
     /// writes leave them.
     Natural,
-    /// Table rows: selected with `{"id": ...}`, ordered by their numeric
-    /// position, then id. Their place in the array is not state.
+    /// Table rows: keyed by their `_id`, ordered by their numeric position,
+    /// then id. Their place in the array is not state.
     Table,
 }
 
@@ -77,15 +77,6 @@ pub struct TableKeys {
 }
 
 impl KeyedList {
-    /// The selector key that addresses an item: `"id"` for tables, `"key"` otherwise.
-    #[must_use]
-    pub fn selector_name(&self) -> &'static str {
-        match self.kind {
-            ListKind::Table => "id",
-            ListKind::Natural => "key",
-        }
-    }
-
     /// An item's key, or `None` when the item has no string key.
     #[must_use]
     pub fn key_of<'a>(&self, item: &'a Value) -> Option<&'a str> {

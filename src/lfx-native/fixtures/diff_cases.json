@@ -371,7 +371,7 @@
           "updates": [
             {
               "id": "n",
-              "path": ["data", "node", "template", "t", "value", {"id": "r2"}, "v"],
+              "path": ["data", "node", "template", "t", "value", {"key": "r2"}, "v"],
               "op": "set_field",
               "value": "z",
               "template_field": {"type": "table"}
@@ -418,19 +418,19 @@
           "updates": [
             {
               "id": "n",
-              "path": ["data", "node", "template", "t", "value", {"id": "r1"}, "_pos"],
+              "path": ["data", "node", "template", "t", "value", {"key": "r1"}, "_pos"],
               "op": "set_field",
               "value": 3,
               "template_field": {"type": "table"}
             },
             {
               "id": "n",
-              "path": ["data", "node", "template", "t", "value", {"id": "r4"}],
+              "path": ["data", "node", "template", "t", "value", {"key": "r4"}],
               "op": "set_field",
               "value": {"_id": "r4", "_pos": 4, "v": "w"},
               "template_field": {"type": "table"}
             },
-            {"id": "n", "path": ["data", "node", "template", "t", "value", {"id": "r3"}], "op": "delete_field"}
+            {"id": "n", "path": ["data", "node", "template", "t", "value", {"key": "r3"}], "op": "delete_field"}
           ]
         }
       ]
