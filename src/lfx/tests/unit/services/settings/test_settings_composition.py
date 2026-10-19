@@ -173,6 +173,7 @@ EXPECTED_FIELDS = {
     "evals_csv_max_bytes",
     "evals_abort_after_identical_failures",
     # FlowHistorySettings
+    "flow_history_enabled",
     "flow_op_log_row_ops_limit",
     "flow_op_log_row_bytes_limit",
     "flow_revision_checkpoint_cadence",

@@ -35,13 +35,25 @@ from langflow.services.deps import get_catalog_policy_service, get_storage_servi
 from langflow.services.flow_history.envelope import RESTORE_CAUSE
 from langflow.services.flow_history.errors import FlowHistoryError
 from langflow.services.flow_history.maintenance import purge_history
+from langflow.services.flow_history.recorder import flow_history_enabled
 from langflow.services.flow_history.replay import reconstruct_graph
 from langflow.services.flow_history.restore_fixes import RESTORE_FIXES_DESCRIPTION, RestoreFix, apply_restore_fixes
 from langflow.services.flow_history.secrets import strip_graph_secrets
 from langflow.services.flow_history.timeline import TimelineEntry, read_timeline
 from langflow.services.storage.service import StorageService
 
-router = APIRouter(prefix="/flows/{flow_id}/revisions", tags=["Flow History"])
+
+def _require_flow_history() -> None:
+    """Hide the history API while flow history is off: nothing is recorded then."""
+    if not flow_history_enabled():
+        raise HTTPException(status_code=404, detail="Flow history is not enabled")
+
+
+router = APIRouter(
+    prefix="/flows/{flow_id}/revisions",
+    tags=["Flow History"],
+    dependencies=[Depends(_require_flow_history)],
+)
 
 MAX_PAGE_SIZE = 200
 
