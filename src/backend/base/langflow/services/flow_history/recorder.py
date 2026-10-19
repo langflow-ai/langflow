@@ -10,11 +10,10 @@ The caller must hold the flow's row lock (``lock_flow_for_update``) before it
 reads or changes the flow, and keep it until commit: the lock is what makes
 the revision head safe to extend across workers.
 
-1. A retry of a request already recorded returns that request's revisions and
-   writes nothing.
-   Then multi-edit safety's ``If-Match`` check runs against the locked flow:
-   a stale token is refused with a conflict, unless the submitted graph
-   already equals the stored one, which loses nothing and writes nothing.
+1. Multi-edit safety's ``If-Match`` check runs against the locked flow: a
+   stale token is refused with a conflict, unless the submitted graph already
+   equals the stored one, which loses nothing and writes nothing. That is
+   also what makes a retried save safe: its graph is already stored.
 2. The stored graph must be the graph its revision replays to. Otherwise the
    write is refused, or with ``repair_revision_mismatch`` the stored graph is
    reset to the latest recorded revision first.
