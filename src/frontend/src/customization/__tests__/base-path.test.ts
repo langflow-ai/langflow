@@ -1,23 +1,17 @@
 import { normalizeBasePath } from "../base-path";
 
 describe("frontend URL prefix", () => {
-  const originalBasePath = Reflect.get(globalThis, "__LANGFLOW_BASE_PATH__");
-
   afterEach(() => {
-    if (originalBasePath === undefined)
-      Reflect.deleteProperty(globalThis, "__LANGFLOW_BASE_PATH__");
-    else Reflect.set(globalThis, "__LANGFLOW_BASE_PATH__", originalBasePath);
+    document.querySelector("base")?.remove();
     jest.resetModules();
   });
 
   it.each(["/", "/langflow/", "/tools/langflow/"])(
     "uses %s for API requests, health checks, and copied URLs",
     (baseUrl) => {
-      Reflect.set(
-        globalThis,
-        "__LANGFLOW_BASE_PATH__",
-        baseUrl.replace(/\/$/, ""),
-      );
+      const base = document.createElement("base");
+      base.href = baseUrl;
+      document.head.appendChild(base);
       jest.resetModules();
       const prefix = baseUrl.replace(/\/$/, "");
       const config = require("../config-constants");

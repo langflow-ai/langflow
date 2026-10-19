@@ -6,7 +6,6 @@ test(
   async ({ request, baseURL }) => {
     const root = `${baseURL!.replace(/\/+$/, "")}/`;
     const prefix = new URL(root).pathname;
-    expect(prefix).not.toBe("/");
     const response = await request.get(root);
     expect(response.ok()).toBe(true);
     const html = await response.text();
@@ -16,8 +15,9 @@ test(
     ].map((match) => match[1]);
     expect(assets.length).toBeGreaterThan(0);
     for (const asset of assets) {
-      expect(asset.startsWith(prefix)).toBe(true);
-      const assetResponse = await request.get(new URL(asset, root).href);
+      const assetUrl = new URL(asset, root);
+      expect(assetUrl.pathname.startsWith(prefix)).toBe(true);
+      const assetResponse = await request.get(assetUrl.href);
       expect(assetResponse.ok()).toBe(true);
       expect(assetResponse.headers()["content-type"]).not.toContain(
         "text/html",

@@ -1,8 +1,13 @@
-declare const __LANGFLOW_BASE_PATH__: string;
+import { normalizeBasePath } from "./base-path";
 
-// Node tooling also imports this module, without Vite's build definitions.
-export const BASENAME =
-  typeof __LANGFLOW_BASE_PATH__ === "undefined" ? "" : __LANGFLOW_BASE_PATH__;
+// The backend sets the base element before any frontend modules execute.
+const documentBase =
+  typeof document === "undefined"
+    ? undefined
+    : document.querySelector("base")?.getAttribute("href");
+export const BASENAME = documentBase?.startsWith("/")
+  ? normalizeBasePath(documentBase)
+  : "";
 export const PORT = 3000;
 export const PROXY_TARGET = "http://localhost:7860";
 export const API_ROUTES = ["^/api/v1/", "^/api/v2/", "/health"];

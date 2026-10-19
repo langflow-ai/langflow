@@ -14,7 +14,7 @@ import {
 } from "./src/customization/config-constants";
 import { createAccessTokenExpireSecondsDefinition } from "./vite-env-definitions";
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
   const envLangflowResult = dotenv.config({
@@ -48,12 +48,12 @@ export default defineConfig(({ mode }) => {
   }, {});
 
   return {
-    base: `${basePath}/`,
+    // Relative build assets allow the backend to select the prefix at startup.
+    base: command === "serve" ? `${basePath}/` : "./",
     build: {
       outDir: "build",
     },
     define: {
-      __LANGFLOW_BASE_PATH__: JSON.stringify(basePath),
       ...createAccessTokenExpireSecondsDefinition(
         envLangflow.ACCESS_TOKEN_EXPIRE_SECONDS,
       ),
@@ -85,6 +85,16 @@ export default defineConfig(({ mode }) => {
       ),
     },
     plugins: [
+      {
+        name: "langflow-dev-base",
+        apply: "serve",
+        transformIndexHtml(html) {
+          return html.replace(
+            '<base href="/" />',
+            `<base href="${basePath}/" />`,
+          );
+        },
+      },
       react(),
       svgr(),
       tsconfigPaths(),

@@ -183,19 +183,17 @@ Replace **DOMAIN_NAME** with your actual domain name, such as `langflow.example.
 
 ## Host Langflow under a URL prefix
 
-To serve the UI and API at `https://example.com/langflow/`, build the frontend with that prefix and configure the backend and proxy to match.
-This requires a custom frontend build from a checkout that includes this feature.
-Setting `LANGFLOW_ROOT_PATH` on a stock image alone does not change frontend redirects or asset URLs.
+To serve the UI and API at `https://example.com/langflow/`, set `LANGFLOW_ROOT_PATH=/langflow` when starting Langflow and configure the proxy to remove that prefix.
+The backend reads the environment variable at startup and sets the frontend's document base before the browser loads the application.
+The router, assets, API requests, health checks, and copied URLs use that prefix.
 
-| Setting | When it is read | Purpose |
-| --- | --- | --- |
-| `VITE_LANGFLOW_BASE_PATH=/langflow` | Frontend build or Vite dev server startup | Sets the router prefix, asset URLs, API requests, health checks, and copied URLs. |
-| `LANGFLOW_ROOT_PATH=/langflow` | Backend startup | Tells the backend which public prefix the proxy removes before forwarding requests. |
+The same frontend build or container image can run at `/`, `/langflow`, or a nested prefix such as `/tools/langflow`.
+Changing the prefix requires restarting Langflow, without rebuilding the frontend or modifying its installed files.
+An unset or empty `LANGFLOW_ROOT_PATH` serves at `/`.
+Use a URL path with ordinary letters, digits, hyphens, underscores, dots, or tildes in each segment, without a hostname, query string, fragment, or `.` and `..` segments.
 
-Both settings default to serving at `/`.
-Use the same prefix for both, including any nested segments such as `/tools/langflow`.
-Use a URL path, without a hostname, query string, or fragment.
-Changing the frontend prefix requires a rebuild.
+This behavior requires a Langflow version containing runtime frontend prefix support.
+Older images that only use `LANGFLOW_ROOT_PATH` for the API must be upgraded first.
 
 ### Build and start from source
 
@@ -203,7 +201,7 @@ From the repository root, run the following commands after installing the [devel
 
 ```bash
 npm --prefix src/frontend ci
-VITE_LANGFLOW_BASE_PATH=/langflow npm --prefix src/frontend run build
+npm --prefix src/frontend run build
 LANGFLOW_ROOT_PATH=/langflow uv run langflow run \
   --host 127.0.0.1 \
   --port 7860 \
@@ -211,18 +209,22 @@ LANGFLOW_ROOT_PATH=/langflow uv run langflow run \
 ```
 
 For local frontend development, use `VITE_LANGFLOW_BASE_PATH=/langflow npm --prefix src/frontend start` and open `http://localhost:3000/langflow/`.
-The Vite development proxy removes the prefix before forwarding API and health requests to the backend.
+This development-only setting configures the separate Vite server, whose proxy removes the prefix before forwarding API and health requests to the backend.
+Production frontend builds use relative asset URLs and obtain their prefix from the backend at runtime.
 
 Alternatively, build a custom image from the repository root.
 
 ```bash
 docker build -f docker/build_and_push.Dockerfile \
-  --build-arg VITE_LANGFLOW_BASE_PATH=/langflow \
-  -t langflow-prefixed:local .
+  -t langflow:local .
+
+docker run --rm -p 127.0.0.1:7860:7860 \
+  -e LANGFLOW_ROOT_PATH=/langflow \
+  langflow:local
 ```
 
-Set `LANGFLOW_ROOT_PATH=/langflow` in that container's runtime environment and retain your usual database, storage, and authentication configuration.
-The build argument is compiled into the frontend. Setting it only when starting the container has no effect.
+Retain your usual database, storage, and authentication configuration when starting the container.
+Reuse the same image with a different `LANGFLOW_ROOT_PATH` for another prefix.
 
 ### Configure Nginx
 
@@ -252,7 +254,8 @@ location /langflow/ {
 ```
 
 For a Kubernetes ingress, apply the equivalent prefix rewrite and forward requests to the Langflow service.
-The public prefix, frontend build setting, and backend root path must agree.
+The public prefix and `LANGFLOW_ROOT_PATH` must agree.
+The frontend uses the configured environment value, rather than trusting a request's `X-Forwarded-Prefix` header.
 
 ### Verify the deployment
 

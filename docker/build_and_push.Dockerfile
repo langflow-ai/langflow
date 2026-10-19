@@ -83,7 +83,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Build the shared web UI once for both Python distribution targets.
 ################################
 FROM builder-base AS frontend-builder
-ARG VITE_LANGFLOW_BASE_PATH=""
 
 COPY ./src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
