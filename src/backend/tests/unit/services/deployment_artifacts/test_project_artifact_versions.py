@@ -13,6 +13,7 @@ import pytest
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.deployment_artifacts import (
     ProjectArtifactError,
     ProjectArtifactLimits,
@@ -173,3 +174,37 @@ async def test_picks_resolve_on_every_page(async_session) -> None:
     for index, (flow, version) in enumerate(zip(flows, versions, strict=True)):
         assert entries[flow.id].version_id == version.id
         assert entries[flow.id].required_variables == (f"SAVED_{index}",)
+
+
+@pytest.mark.asyncio
+async def test_dependencies_resolve_from_the_version_graph(async_session) -> None:
+    user, project, picked, _other, version = await _project(async_session)
+    # The version still uses a Knowledge Base the live draft has dropped.
+    kb = KnowledgeBaseRecord(
+        name="docs",
+        user_id=user.id,
+        backend_type="opensearch",
+        backend_config={"index_name": "d"},
+        model_selection={"provider": "Ollama", "name": "nomic-embed-text"},
+    )
+    version.data = {"nodes": [{"data": {"node": {"template": {"knowledge_base": {"value": "docs"}}}}}], "edges": []}
+    async_session.add_all([kb, version])
+    await async_session.commit()
+
+    with patch(f"{MODULE}.ensure_knowledge_base_permission", new_callable=AsyncMock):
+        artifact = await _build(async_session, user, project, flow_versions={picked.id: version.id})
+        live = await _build(async_session, user, project)
+
+    assert [k["name"] for k in artifact.dependencies["knowledgeBases"]] == ["docs"]
+    assert live.dependencies == {}
+
+
+@pytest.mark.asyncio
+async def test_an_invalid_live_graph_is_a_packaging_error(async_session) -> None:
+    user, project, picked, _other, _version = await _project(async_session)
+    picked.data = {"foo": 1}
+    async_session.add(picked)
+    await async_session.commit()
+
+    with pytest.raises(ProjectArtifactError, match=rf"flow {picked.id} is not a valid flow: .*Flow must have nodes"):
+        await _build(async_session, user, project)

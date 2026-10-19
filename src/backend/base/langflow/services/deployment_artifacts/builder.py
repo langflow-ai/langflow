@@ -1142,17 +1142,16 @@ def _snapshot_rows(
             max_bytes=limits.max_flow_bytes,
             max_items=_MAX_JSON_ITEMS,
         )
-        if version_id is None:
-            payload = FlowRead.model_validate(flow, from_attributes=True).model_dump(mode="json")
-        else:
-            # The version's graph is validated as a live one would be, and the live graph is never copied.
-            try:
-                payload = FlowRead.model_validate({**flow.model_dump(exclude={"data"}), "data": graph}).model_dump(
-                    mode="json"
-                )
-            except ValidationError as exc:
-                msg = f"flow version {version_id} is not a valid flow: {exc.errors()[0]['msg']}"
-                raise ProjectArtifactError(msg) from exc
+        # The graph that ships is validated as the live one always was; a picked
+        # flow's live graph is never validated or copied.
+        try:
+            payload = FlowRead.model_validate({**flow.model_dump(exclude={"data"}), "data": graph}).model_dump(
+                mode="json"
+            )
+        except ValidationError as exc:
+            source = f"flow version {version_id}" if version_id else f"flow {flow.id}"
+            msg = f"{source} is not a valid flow: {exc.errors()[0]['msg']}"
+            raise ProjectArtifactError(msg) from exc
         flow_size, flow_items = _preflight_json_value(
             payload,
             flow_id=flow.id,
@@ -1908,7 +1907,7 @@ async def _prepare_project_snapshot_data(
 
     ordered_revisions = tuple(sorted(revision_rows, key=lambda revision: str(revision[0])))
     ordered_flow_ids = tuple(flow_id for flow_id, _flow_user_id, _updated_at in ordered_revisions)
-    picks = dict(flow_versions or {})
+    picks = flow_versions or {}
     if not picks.keys() <= set(ordered_flow_ids):
         msg = "one or more flows with a picked version are not among the flows being packaged"
         raise ProjectArtifactNotFoundError(msg)
