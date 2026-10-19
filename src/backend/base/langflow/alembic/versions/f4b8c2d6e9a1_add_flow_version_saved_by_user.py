@@ -5,7 +5,8 @@ Revises: e3a7b9c1d5f2
 Create Date: 2026-09-28
 
 Phase: EXPAND
-Safe to rollback: YES (one nullable column; downgrade drops it).
+Safe to rollback: YES (one nullable column; downgrade moves each version's author
+back into ``user_id`` and drops it).
 Services compatible: All versions. Older services never read the column.
 
 ``flow_version.user_id`` is the owner of the parent flow and scopes version
@@ -60,6 +61,9 @@ def upgrade() -> None:
 def downgrade() -> None:
     conn = op.get_bind()
     if migration.column_exists(table_name="flow_version", column_name="saved_by_user_id", conn=conn):
+        # Before this revision ``user_id`` named whoever saved the version, so
+        # give it back that author rather than lose who saved each version.
+        conn.execute(sa.text("UPDATE flow_version SET user_id = saved_by_user_id WHERE saved_by_user_id IS NOT NULL"))
         with op.batch_alter_table("flow_version", schema=None) as batch_op:
             batch_op.drop_index(_INDEX)
             batch_op.drop_constraint(_FOREIGN_KEY, type_="foreignkey")
