@@ -1,8 +1,8 @@
 """Row identity in table values.
 
-Every row of a table value stored in a flow carries a stable ``_id`` and a
-numeric position ``_pos``, so that concurrent edits address rows instead of
-indexes. The table's order is its rows' ``(_pos, _id)``, not their places in
+Every row of a table value stored in a flow carries a stable ``__id__`` and a
+numeric position ``__pos__``, so that concurrent edits address rows instead of
+indexes. The table's order is its rows' ``(__pos__, __id__)``, not their places in
 the stored array, which nothing keeps sorted. Both keys are bookkeeping for the
 flow's history, not data: components never see them, so every place that
 hands a stored table to anything outside the engine strips them first, and
@@ -23,7 +23,10 @@ ROW_KEYS = frozenset({ROW_ID_KEY, ROW_POSITION_KEY})
 
 
 def strip_row_keys(rows: Any) -> Any:
-    """Return table rows in order and without ``_id`` and ``_pos``; a value that is not a list is returned as is."""
+    """Return table rows in order and without ``__id__`` and ``__pos__``.
+
+    A value that is not a list is returned as is.
+    """
     if not isinstance(rows, list):
         return rows
     return [
@@ -33,7 +36,7 @@ def strip_row_keys(rows: Any) -> Any:
 
 
 def strip_node_table_row_keys(node: Any) -> Any:
-    """Order the rows of every table value of a flow node and strip ``_id`` and ``_pos``, in place.
+    """Order the rows of every table value of a flow node and strip ``__id__`` and ``__pos__``, in place.
 
     Returns the node.
     """
@@ -52,7 +55,7 @@ def strip_flow_table_row_keys(flow_data: Any) -> Any:
 def assign_row_ids(rows: list[Any], previous: Any = None) -> list[Any]:
     """Give one table value's rows the ids and positions a write needs, in place, and return them.
 
-    Rows that already have a unique ``_id`` keep it, and rows with a position
+    Rows that already have a unique ``__id__`` keep it, and rows with a position
     keep it. A row without an id that equals a not yet matched row of
     ``previous`` (the stored value, apart from ids and positions) takes that
     row's id and position; the others get a new random id. Rows still without
@@ -68,7 +71,7 @@ def assign_row_ids(rows: list[Any], previous: Any = None) -> list[Any]:
 
 
 def match_row_ids(rows: list[dict[str, Any]], previous: Any = None) -> None:
-    """Give every row without a unique ``_id`` one, in place, keeping stored ids.
+    """Give every row without a unique ``__id__`` one, in place, keeping stored ids.
 
     A row that equals a not yet matched row of ``previous`` (the stored value,
     apart from ids and positions) takes that row's id, and its position when it

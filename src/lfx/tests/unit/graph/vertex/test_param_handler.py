@@ -282,25 +282,25 @@ class TestParameterHandlerTableRowIdentity:
     def test_handle_table_field_strips_row_ids_and_positions_and_orders_rows(self):
         # Stored rows are in no particular order; their positions are the order.
         rows = [
-            {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"},
-            {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"},
+            {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"},
+            {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"},
         ]
 
         params = self.handler._handle_table_field("table_field", rows, {})
 
         assert params["table_field"] == [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
-        assert rows[0]["_id"] == "r2"
+        assert rows[0]["__id__"] == "r2"
 
     def test_table_branch_of_other_direct_types_strips_row_ids_and_positions(self):
-        rows = [{"_id": "r1", "_pos": 1, "name": "x"}]
+        rows = [{"__id__": "r1", "__pos__": 1, "name": "x"}]
 
         params = self.handler._handle_other_direct_types("table_field", {"type": "table"}, rows, {})
 
         assert list(params["table_field"].columns) == ["name"]
 
     def test_tools_rows_are_passed_through(self):
-        rows = [{"name": "search", "tags": ["search"], "_id": "kept"}]
+        rows = [{"name": "search", "tags": ["search"], "__id__": "kept"}]
 
         params = self.handler._handle_other_direct_types("tools", {"type": "tools"}, rows, {})
 
-        assert "_id" in params["tools"].columns
+        assert "__id__" in params["tools"].columns

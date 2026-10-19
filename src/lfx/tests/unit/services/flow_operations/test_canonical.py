@@ -231,7 +231,7 @@ def _table_graph(rows: list[dict]) -> dict:
 
 
 def test_table_row_order_is_not_state():
-    rows = [{"_id": "a", "_pos": 1, "v": "x"}, {"_id": "b", "_pos": 2, "v": "y"}]
+    rows = [{"__id__": "a", "__pos__": 1, "v": "x"}, {"__id__": "b", "__pos__": 2, "v": "y"}]
     reordered = _table_graph(list(reversed(rows)))
 
     assert graphs_equal(_table_graph(rows), reordered)

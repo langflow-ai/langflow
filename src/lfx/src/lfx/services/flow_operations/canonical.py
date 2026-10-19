@@ -10,7 +10,7 @@ is not state keyed by id:
   ``0.0`` that comes back from the editor as ``0`` must not count as an edit.
 - ``nodes``, ``edges`` and table rows are collections keyed by id. Their array
   order is not state, so a save that only reorders them changes nothing; a
-  table's order is its rows' ``(_pos, _id)``.
+  table's order is its rows' ``(__pos__, __id__)``.
 - View state is everything ``node_schema.json`` declares display-only: one
   person's view of the canvas (pan and zoom, selection, drag and resize flags,
   sizes), stamps the editor refreshes on its own (``last_updated``,
@@ -179,7 +179,7 @@ def is_row_position(value: Any) -> bool:
 
 
 def ordered_rows(rows: list[Any]) -> list[Any]:
-    """Return a table's rows in order: by ``(_pos, _id)``, or as stored for a legacy table without them.
+    """Return a table's rows in order: by ``(__pos__, __id__)``, or as stored for a legacy table without them.
 
     A table's order is its rows' positions, not their places in the array.
     Positions compare as the doubles JavaScript holds and ids by UTF-16 code
@@ -282,7 +282,7 @@ def canonical_graph(flow_data: dict[str, Any], *, keyed: bool = True) -> dict[st
 
     With ``keyed``, nodes, edges and table rows whose ids are unique become
     mappings from id to entry, for comparison. Without it they stay lists,
-    ordered by id (rows by ``(_pos, _id)``), for serialization. The result
+    ordered by id (rows by ``(__pos__, __id__)``), for serialization. The result
     shares nested values with ``flow_data``; it is meant to be compared or
     serialized, not mutated.
     """
