@@ -16,13 +16,14 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.flow_history import history_http_error
 from langflow.api.v1.authz_route_dependencies import AuthorizedReadFlow, AuthorizedWriteFlow
+from langflow.api.v1.flow_conflict import parse_if_match
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.flows_helpers import _export_variable_names, _patch_flow
 from langflow.services.database.models.flow.guards import lock_flow_for_read, lock_flow_for_update
@@ -175,6 +176,7 @@ async def restore_revision(
     revision: int,
     current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
     body: RevisionRestore | None = None,
 ) -> FlowWriteRead:
     """Make the graph at ``revision`` the flow's current graph, recorded as new revisions.
@@ -188,9 +190,13 @@ async def restore_revision(
     and handle rewrites, each of which must address one of those violations
     (``restore_fixes``). They are applied to the rebuilt revision, which keeps
     its secrets, the result takes the normal save path, and the unfixed
-    revision is kept as a view-only version.
+    revision is kept as a view-only version when the restore records a change.
+
+    ``If-Match`` names the version token the client reviewed, as for every
+    graph write: a restore over newer work is refused with 409.
     """
     options = body or RevisionRestore()
+    expected_version_token = parse_if_match(if_match)
     await lock_flow_for_update(session, flow)
     try:
         graph = copy.deepcopy(
@@ -200,24 +206,15 @@ async def restore_revision(
         )
     except FlowHistoryError as exc:
         raise history_http_error(exc) from exc
+    unfixed = None
     if options.fixes:
         unfixed = graph
         try:
             graph = apply_restore_fixes(unfixed, flow.data or {}, options.fixes)
         except FlowHistoryError as exc:
             raise history_http_error(exc) from exc
-        # Kept in the same transaction as the write, so a refused restore keeps nothing.
-        await create_flow_version_entry(
-            session,
-            flow_id=flow.id,
-            user_id=flow.user_id,
-            data=unfixed,
-            description=f"Revision {revision} before the client fixed it for a restore",
-            view_only=True,
-            saved_by_user_id=current_user.id,
-        )
     _validate_catalog_policy_for_write(graph, snapshot=get_catalog_policy_service().snapshot)
-    return await _patch_flow(
+    written = await _patch_flow(
         session=session,
         db_flow=flow,
         flow=FlowUpdate(
@@ -227,7 +224,21 @@ async def restore_revision(
         ),
         user_id=current_user.id,
         storage_service=storage_service,
+        expected_version_token=expected_version_token,
     )
+    if unfixed is not None and written.history is not None and written.history.start_revision is not None:
+        # In the same transaction as the write, so a refused restore keeps
+        # nothing, and a restore that changed nothing keeps no second copy.
+        await create_flow_version_entry(
+            session,
+            flow_id=flow.id,
+            user_id=flow.user_id,
+            data=unfixed,
+            description=f"Revision {revision} before the client fixed it for a restore",
+            view_only=True,
+            saved_by_user_id=current_user.id,
+        )
+    return written
 
 
 async def _usernames(session: DbSession, entries: list[TimelineEntry]) -> dict[UUID, str]:
