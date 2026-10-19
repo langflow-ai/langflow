@@ -170,6 +170,18 @@ async def purge_history(session: AsyncSession, flow: Flow) -> None:
     """
     if flow.latest_revision == 0 and not await has_anchor(session, flow.id):
         return
+    if flow.history_paused:
+        # Nothing recorded matches the stored graph, and the next recorded
+        # write starts the history again from it, so all of the history goes.
+        await delete_history_rows(session, delete(FlowOperation).where(FlowOperation.flow_id == flow.id))
+        await session.exec(
+            delete(FlowVersion).where(
+                FlowVersion.flow_id == flow.id,
+                col(FlowVersion.version_number).is_(None),
+                col(FlowVersion.retained).is_(False),
+            )
+        )
+        return
     checkpoint = (
         await session.exec(
             anchors_of(flow.id).where(

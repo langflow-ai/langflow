@@ -556,6 +556,15 @@ def deactivate_tracing(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def record_flow_history(monkeypatch):
+    # Flow history is off by default. Tests run with it on, as the history
+    # tests expect; the tests of the off path turn it off themselves.
+    monkeypatch.setenv("LANGFLOW_FLOW_HISTORY_ENABLED", "true")
+    yield
+    monkeypatch.undo()
+
+
+@pytest.fixture(autouse=True)
 def disable_telemetry_writer(monkeypatch):
     # Tests assert on freshly-written transactions / vertex_builds rows. The
     # batched writer is a production optimization; in tests we want the

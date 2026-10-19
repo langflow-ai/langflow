@@ -145,6 +145,7 @@ EXPECTED_FIELDS = {
     "audit_exclude_events",
     "max_flow_version_entries_per_flow",
     # FlowHistorySettings
+    "flow_history_enabled",
     "flow_op_log_row_ops_limit",
     "flow_op_log_row_bytes_limit",
     "flow_revision_checkpoint_cadence",

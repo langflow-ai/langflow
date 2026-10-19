@@ -493,6 +493,9 @@ class ConfigResponse(BaseConfigResponse):
     # Mirrors LANGFLOW_AGENTIC_EXPERIENCE (default on) so the Assistant panel
     # can explain, rather than 404, when the experience is disabled server-side.
     agentic_experience: bool = True
+    # Mirrors LANGFLOW_FLOW_HISTORY_ENABLED (default off): the version sidebar shows
+    # the history timeline only when graph writes are recorded.
+    flow_history_enabled: bool = False
     # Mirrors LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH so the Assistant composer enforces the same
     # cap the API does. A UI-only constant drifted below the API's and silently truncated long
     # prompts before they were ever sent.
@@ -576,6 +579,7 @@ class ConfigResponse(BaseConfigResponse):
             custom_component_admin_only=settings.custom_component_admin_only,
             a2a_enabled=settings.a2a_enabled,
             agentic_experience=settings.agentic_experience,
+            flow_history_enabled=settings.flow_history_enabled,
             assistant_max_message_length=settings.assistant_max_message_length,
             local_vector_store_available=settings.deployment_profile != "prod",
             default_vector_store_backend=resolve_default_kb_backend(),

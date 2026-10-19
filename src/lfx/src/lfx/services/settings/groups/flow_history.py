@@ -4,6 +4,17 @@ from pydantic import BaseModel, Field
 class FlowHistorySettings(BaseModel):
     """Operation history of flow graphs: how accepted edits are stored."""
 
+    flow_history_enabled: bool = False
+    """Record every graph write in the flow's operation history.
+
+    Off, graph writes behave as before history existed: nothing is recorded or
+    checked against the history, and the history API and timeline are hidden.
+    A flow saved while it is off starts its history again, from a new
+    checkpoint, at its first save after it is turned on; the history recorded
+    before stays readable. Turn it on only when every Langflow backend that uses
+    the database runs a version that has it: an older backend writes flows
+    without the mark.
+    """
     flow_op_log_row_ops_limit: int = Field(default=100, ge=1)
     """Maximum operations stored in one flow history row.
 
