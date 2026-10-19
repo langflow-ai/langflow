@@ -13,7 +13,9 @@
 //! - table rows: every table value the write adds or changes must have rows
 //!   with a unique `__id__` and a numeric `__pos__`. Their order in the array
 //!   is not state, so it is never checked, and legacy tables without row ids
-//!   stay valid until someone edits them;
+//!   stay valid until someone edits them. The engine owns these two keys, so
+//!   the column definition (`table_schema`) of such a table must not name a
+//!   column `__id__` or `__pos__`;
 //! - edge rules: every edge the write adds must carry valid handles that
 //!   name an output and an input that exist, must not take an input that is
 //!   already taken, and must not touch a note. An edge that changed counts as
@@ -55,6 +57,8 @@ pub enum ViolationCode {
     TableRowIdMissing,
     TableRowIdDuplicate,
     TableRowPosInvalid,
+    /// A table's column definition names a column after a row key the engine owns.
+    TableColumnReserved,
     /// A handle has one of its two forms, and the other is valid.
     EdgeHandleFormMissing,
     /// A handle is missing, is not an object, does not parse, or its forms disagree.
@@ -87,6 +91,7 @@ impl ViolationCode {
             Self::TableRowIdMissing => "TABLE_ROW_ID_MISSING",
             Self::TableRowIdDuplicate => "TABLE_ROW_ID_DUPLICATE",
             Self::TableRowPosInvalid => "TABLE_ROW_POS_INVALID",
+            Self::TableColumnReserved => "TABLE_COLUMN_RESERVED",
             Self::EdgeHandleFormMissing => "EDGE_HANDLE_FORM_MISSING",
             Self::EdgeHandleInvalid => "EDGE_HANDLE_INVALID",
             Self::EdgeHandleNotFound => "EDGE_HANDLE_NOT_FOUND",
@@ -123,7 +128,10 @@ impl ViolationCode {
             Code::EdgeHandleFormMissing => {
                 "derived the missing form of the handle from the one present"
             }
-            Code::EdgeHandleInvalid | Code::EdgeHandleNotFound | Code::EdgeTargetOccupied => {
+            Code::EdgeHandleInvalid
+            | Code::EdgeHandleNotFound
+            | Code::EdgeTargetOccupied
+            | Code::TableColumnReserved => {
                 return None;
             }
         })
@@ -754,7 +762,7 @@ pub fn find_edge_violations(base: &Value, target: &Value) -> Result<Vec<Violatio
 
 // --- Table rows ------------------------------------------------------------------------
 
-/// A table value a write adds or changes, and where it is.
+/// A table value a write adds or changes, where it is, and its field's column definition.
 #[derive(Debug)]
 pub struct ChangedTable<'a> {
     /// Where the table value is: `nodes.<index>.data.node.template.<field>.value`.
@@ -765,6 +773,8 @@ pub struct ChangedTable<'a> {
     pub field: &'a str,
     #[expect(missing_docs, reason = "the name says what it is")]
     pub rows: &'a [Value],
+    /// The field's `table_schema`, which declares its columns; `None` when it has none.
+    pub table_schema: Option<&'a Value>,
 }
 
 /// The table values `target` adds or changes relative to `base`, in the order the graph lists them.
@@ -819,13 +829,14 @@ pub fn changed_tables<'a>(base: &Value, target: &'a Value) -> Result<Vec<Changed
                 node_id,
                 field: name,
                 rows,
+                table_schema: field.get("table_schema"),
             });
         }
     }
     Ok(tables)
 }
 
-/// The row rules broken by table values `target` adds or changes relative to `base`.
+/// The column and row rules broken by table values `target` adds or changes relative to `base`.
 ///
 /// # Errors
 ///
@@ -833,9 +844,51 @@ pub fn changed_tables<'a>(base: &Value, target: &'a Value) -> Result<Vec<Changed
 pub fn find_table_violations(base: &Value, target: &Value) -> Result<Vec<Violation>> {
     let mut violations = Vec::new();
     for table in changed_tables(base, target)? {
+        if let Some(table_schema) = table.table_schema {
+            let field_path = &table.path[..table.path.len() - 1];
+            let schema_path = path_of(field_path, &["table_schema"]);
+            violations.extend(table_column_violations(table_schema, &schema_path));
+        }
         violations.extend(table_row_violations(table.rows, &table.path));
     }
     Ok(violations)
+}
+
+/// A violation for every column `table_schema` names after a row key.
+///
+/// `table_schema` is a list of columns, or an object whose `columns` is that
+/// list. `path` is where `table_schema` is. Anything else declares no columns.
+#[must_use]
+pub fn table_column_violations(table_schema: &Value, path: &[PathPart]) -> Vec<Violation> {
+    let (columns, columns_path) = match table_schema {
+        Value::Object(schema) => (schema.get("columns"), path_of(path, &["columns"])),
+        list => (Some(list), path.to_vec()),
+    };
+    let Some(Value::Array(columns)) = columns else {
+        return Vec::new();
+    };
+    let mut violations = Vec::new();
+    for (index, column) in columns.iter().enumerate() {
+        let Some(name) = column.get("name").and_then(Value::as_str) else {
+            continue;
+        };
+        if is_row_key(name) {
+            let mut name_path = columns_path.clone();
+            name_path.extend([index.into(), "name".into()]);
+            violations.push(Violation::new(
+                ViolationCode::TableColumnReserved,
+                name_path,
+                format!("table column must not be named {name}"),
+            ));
+        }
+    }
+    violations
+}
+
+/// Whether `name` is one of the two keys the engine owns in every table row.
+fn is_row_key(name: &str) -> bool {
+    let keys = &NODE_SCHEMA.table_keys;
+    name == keys.id || name == keys.position
 }
 
 /// The row rules one table value breaks.

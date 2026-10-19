@@ -204,7 +204,15 @@ def _table_graph(rows: Any, node_id: str = "api") -> dict:
     }
 
 
+def _table_with_columns(rows: Any, table_schema: Any) -> dict:
+    """A table graph whose field declares its columns in ``table_schema``."""
+    graph = _table_graph(rows)
+    graph["nodes"][0]["data"]["node"]["template"]["headers"]["table_schema"] = table_schema
+    return graph
+
+
 LEGACY_ROWS = [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
+COLUMNS = [{"name": "key", "display_name": "Header"}, {"name": "value", "display_name": "Value"}]
 KEYED_ROWS = [
     {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"},
     {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"},
@@ -619,6 +627,54 @@ def _validation_inputs() -> list[dict[str, Any]]:
         {"name": "tool actions are a keyed list, not a table", "flow": tools, "base": EMPTY},
         {"name": "a field typed table is a table", "flow": type_only, "base": EMPTY},
         {"name": "a field whose input type is TableInput is a table", "flow": input_type_only, "base": EMPTY},
+        {
+            "name": "a table with its own columns is accepted",
+            "flow": _table_with_columns(KEYED_ROWS, COLUMNS),
+            "base": EMPTY,
+        },
+        {
+            "name": "a column named __id__ is refused",
+            "flow": _table_with_columns(KEYED_ROWS, [*COLUMNS, {"name": "__id__"}]),
+            "base": EMPTY,
+        },
+        {
+            "name": "columns named __id__ and __pos__ under columns are refused",
+            "flow": _table_with_columns(KEYED_ROWS, {"columns": [{"name": "__pos__"}, *COLUMNS, {"name": "__id__"}]}),
+            "base": EMPTY,
+        },
+        {
+            "name": "a reserved column is reported with the row rules",
+            "flow": _table_with_columns(LEGACY_ROWS, [{"name": "__pos__"}]),
+            "base": EMPTY,
+        },
+        {
+            "name": "a column named _id is an ordinary column",
+            "flow": _table_with_columns(
+                [{**KEYED_ROWS[0], "_id": "a"}, {**KEYED_ROWS[1], "_id": "b"}], [*COLUMNS, {"name": "_id"}]
+            ),
+            "base": EMPTY,
+        },
+        {
+            "name": "an unchanged table with a reserved column is accepted",
+            "flow": _table_with_columns(KEYED_ROWS, [{"name": "__id__"}]),
+            "base": _table_with_columns(KEYED_ROWS, [{"name": "__id__"}]),
+        },
+        {
+            "name": "columns are not checked without a base",
+            "flow": _table_with_columns(KEYED_ROWS, [{"name": "__id__"}]),
+        },
+        {
+            "name": "a column definition without a list of columns declares no columns",
+            "flow": _table_with_columns(KEYED_ROWS, {"name": "__id__"}),
+            "base": EMPTY,
+        },
+        {
+            "name": "only a column's name is checked",
+            "flow": _table_with_columns(
+                KEYED_ROWS, [{"name": "key", "display_name": "__id__"}, "__pos__", {"name": 1}]
+            ),
+            "base": EMPTY,
+        },
     ]
     return cases
 
@@ -822,6 +878,11 @@ def _repair_inputs() -> list[dict[str, Any]]:
         {
             "name": "rows after the last position count up from it",
             "flow": _table_graph([{"__id__": "r1", "__pos__": 2.5, "key": "z"}, {"key": "x"}, {"key": "y"}]),
+            "base": EMPTY,
+        },
+        {
+            "name": "a reserved column is left to the client",
+            "flow": _table_with_columns(LEGACY_ROWS, [*COLUMNS, {"name": "__pos__"}]),
             "base": EMPTY,
         },
         {
