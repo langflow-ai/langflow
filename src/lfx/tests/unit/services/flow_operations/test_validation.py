@@ -326,3 +326,11 @@ def test_remove_cut_edges_leaves_an_unsound_target_to_the_save():
 
     assert remove_cut_edges(base, target) == []
     assert [edge["id"] for edge in target["edges"]] == ["e"]
+
+
+def test_remove_cut_edges_leaves_the_save_to_refuse_an_unsound_stored_graph():
+    base, target = _cut_graphs()
+    base["nodes"].append({"id": "c"})
+
+    assert remove_cut_edges(base, target) == []
+    assert [edge["id"] for edge in target["edges"]] == ["e"]
