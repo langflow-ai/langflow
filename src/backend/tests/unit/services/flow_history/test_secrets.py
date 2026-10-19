@@ -129,7 +129,7 @@ def test_table_cells_addressed_by_row_id_are_stripped():
     row["value"] = "Bearer sk-new"
     row["key"] = "X-Authorization"
     (update,) = _operations(base, target)
-    assert [entry["path"][-2:] for entry in update["updates"]] == [[{"id": "r1"}, "key"], [{"id": "r1"}, "value"]]
+    assert [entry["path"][-2:] for entry in update["updates"]] == [[{"key": "r1"}, "key"], [{"key": "r1"}, "value"]]
 
     stripped = strip_operation_secrets(update, KNOWN_VARIABLES)
 
@@ -145,7 +145,7 @@ def test_a_whole_table_row_is_stripped_like_a_stored_row():
             {
                 "id": "a",
                 "op": "set_field",
-                "path": ["data", "node", "template", "headers", "value", {"id": "r2"}],
+                "path": ["data", "node", "template", "headers", "value", {"key": "r2"}],
                 "value": {"_id": "r2", "_pos": 2, "key": "Authorization", "value": "Bearer sk-new"},
                 "template_field": {"name": "headers", "type": "table"},
             }
