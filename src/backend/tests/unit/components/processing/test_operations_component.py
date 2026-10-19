@@ -183,6 +183,46 @@ class TestJsonOperations:
         assert result.data["existing_key"] == "updated_value"
         assert result.data["new_key"] == "new_value"
 
+    @pytest.mark.parametrize("component_class", [OperationsComponent, DataOperationsComponent])
+    @pytest.mark.parametrize("value", ["hello", [1, 2], 3, 0.5, True, False, None])
+    def test_select_data_key_preserves_non_dict_value(self, component_class, value):
+        operation_field = "operation" if component_class is OperationsComponent else "operations"
+        component = component_class(
+            data=Data(data={"data": value, "other": "dropped"}),
+            select_keys_input=["data"],
+            **{operation_field: [{"name": "Select Keys"}]},
+        )
+
+        result = component.as_data()
+
+        assert result.data == {"data": value}
+
+    @pytest.mark.parametrize("component_class", [OperationsComponent, DataOperationsComponent])
+    @pytest.mark.parametrize("value", [{"inner": 1}, {}])
+    def test_select_data_key_unwraps_dict_value(self, component_class, value):
+        operation_field = "operation" if component_class is OperationsComponent else "operations"
+        component = component_class(
+            data=Data(data={"data": value}),
+            select_keys_input=["data"],
+            **{operation_field: [{"name": "Select Keys"}]},
+        )
+
+        result = component.as_data()
+
+        assert result.data == value
+
+    @pytest.mark.parametrize("component_class", [OperationsComponent, DataOperationsComponent])
+    def test_select_data_key_missing_raises_value_error(self, component_class):
+        operation_field = "operation" if component_class is OperationsComponent else "operations"
+        component = component_class(
+            data=Data(data={"other": 1}),
+            select_keys_input=["data"],
+            **{operation_field: [{"name": "Select Keys"}]},
+        )
+
+        with pytest.raises(ValueError, match="Select key not found in data"):
+            component.as_data()
+
     def test_select_keys_rejects_multiple_data(self):
         component = OperationsComponent(
             data=[Data(data={"key1": "value1"}), Data(data={"key2": "value2"})],
