@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { v4 as uuidv4 } from "uuid";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
@@ -41,10 +40,10 @@ export default function useRestoreRevision(flowId: string) {
     async (revision: number, options?: { onSuccess?: () => void }) => {
       setIsRestoring(true);
       const send = (fixes?: FlowOperation[]) =>
-        api.post(`${getURL("FLOWS")}/${flowId}/revisions/${revision}/restore`, {
-          request_id: uuidv4(),
-          ...(fixes ? { fixes } : {}),
-        });
+        api.post(
+          `${getURL("FLOWS")}/${flowId}/revisions/${revision}/restore`,
+          fixes ? { fixes } : {},
+        );
       let fixed: GraphViolation[] | null = null;
       try {
         let response: Awaited<ReturnType<typeof send>>;

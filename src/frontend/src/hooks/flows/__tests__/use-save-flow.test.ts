@@ -670,14 +670,12 @@ describe("useSaveFlow", () => {
       useFlowHistoryRepairStore.setState({ problem: null });
     });
 
-    it("sends a request id with every save", async () => {
+    it("sends no request id: a retried save is recognized by its graph", async () => {
       const { result } = renderHook(() => useSaveFlow());
 
       await result.current();
 
-      expect(mockMutate.mock.calls[0][0].request_id).toEqual(
-        expect.stringMatching(/^[0-9a-f-]{36}$/),
-      );
+      expect(mockMutate.mock.calls[0][0]).not.toHaveProperty("request_id");
     });
 
     it.each([
@@ -708,9 +706,6 @@ describe("useSaveFlow", () => {
 
         const resent = mockMutate.mock.calls[1][0];
         expect(resent[flag]).toBe(true);
-        expect(resent.request_id).not.toBe(
-          mockMutate.mock.calls[0][0].request_id,
-        );
       },
     );
 
