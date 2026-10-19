@@ -47,8 +47,8 @@ def _graph(rows) -> dict:
 
 LEGACY = [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
 KEYED = [
-    {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"},
-    {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"},
+    {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"},
+    {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"},
 ]
 EMPTY = {"nodes": [], "edges": []}
 
@@ -71,10 +71,10 @@ def test_an_unchanged_legacy_table_is_accepted():
 
 def test_an_added_legacy_table_is_refused():
     assert _codes(find_graph_violations(_graph(LEGACY), base=EMPTY)) == [
-        (GraphViolationCode.TABLE_ROW_ID_MISSING, (*TABLE_PATH, 0, "_id")),
-        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 0, "_pos")),
-        (GraphViolationCode.TABLE_ROW_ID_MISSING, (*TABLE_PATH, 1, "_id")),
-        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 1, "_pos")),
+        (GraphViolationCode.TABLE_ROW_ID_MISSING, (*TABLE_PATH, 0, "__id__")),
+        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 0, "__pos__")),
+        (GraphViolationCode.TABLE_ROW_ID_MISSING, (*TABLE_PATH, 1, "__id__")),
+        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 1, "__pos__")),
     ]
 
 
@@ -100,10 +100,10 @@ def test_the_first_edit_of_a_legacy_table_writes_it_whole_with_ids():
 
 
 def test_duplicate_ids_are_refused():
-    duplicate = [dict(KEYED[0]), {**KEYED[1], "_id": "r1"}]
+    duplicate = [dict(KEYED[0]), {**KEYED[1], "__id__": "r1"}]
 
     assert _codes(find_graph_violations(_graph(duplicate), base=EMPTY)) == [
-        (GraphViolationCode.TABLE_ROW_ID_DUPLICATE, (*TABLE_PATH, 1, "_id"))
+        (GraphViolationCode.TABLE_ROW_ID_DUPLICATE, (*TABLE_PATH, 1, "__id__"))
     ]
 
 
@@ -113,18 +113,18 @@ def test_the_stored_order_of_rows_is_not_checked():
 
 @pytest.mark.parametrize("position", ["a0", True, None, float("inf")])
 def test_a_position_must_be_a_finite_number(position):
-    rows = [{**KEYED[0], "_pos": position}]
+    rows = [{**KEYED[0], "__pos__": position}]
 
     assert _codes(find_graph_violations(_graph(rows), base=EMPTY, check_values=False)) == [
-        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 0, "_pos"))
+        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 0, "__pos__"))
     ]
 
 
 def test_rows_are_read_in_position_order_and_ties_by_id():
     rows = [
-        {"_id": "b", "_pos": 2, "key": "third"},
-        {"_id": "c", "_pos": 1.5, "key": "first"},
-        {"_id": "a", "_pos": 2, "key": "second"},
+        {"__id__": "b", "__pos__": 2, "key": "third"},
+        {"__id__": "c", "__pos__": 1.5, "key": "first"},
+        {"__id__": "a", "__pos__": 2, "key": "second"},
     ]
 
     assert [row["key"] for row in strip_row_keys(rows)] == ["first", "second", "third"]
@@ -164,9 +164,9 @@ def test_repair_assigns_ids_and_evenly_spaced_positions_in_row_order():
     rows = result.flow_data["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
 
     assert [row["key"] for row in rows] == ["Accept", "Auth"]
-    assert [row["_pos"] for row in rows] == [1, 2]
-    assert all(isinstance(row["_id"], str) and len(row["_id"]) == 10 for row in rows)
-    assert rows[0]["_id"] != rows[1]["_id"]
+    assert [row["__pos__"] for row in rows] == [1, 2]
+    assert all(isinstance(row["__id__"], str) and len(row["__id__"]) == 10 for row in rows)
+    assert rows[0]["__id__"] != rows[1]["__id__"]
     assert [fix.code for fix in result.fixes] == [
         GraphViolationCode.TABLE_ROW_ID_MISSING,
         GraphViolationCode.TABLE_ROW_ID_MISSING,
@@ -184,25 +184,25 @@ def test_repair_leaves_an_unchanged_legacy_table_alone():
 
 
 def test_repair_fills_a_missing_position_between_its_neighbours():
-    rows = [KEYED[0], {"_id": "r9", "key": "New"}, KEYED[1]]
+    rows = [KEYED[0], {"__id__": "r9", "key": "New"}, KEYED[1]]
     result = repair_flow_data(_graph(rows), base=EMPTY)
     repaired = result.flow_data["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
 
-    assert [row["_id"] for row in repaired] == ["r1", "r9", "r2"]
-    assert [row["_pos"] for row in repaired] == [1, 1.5, 2]
+    assert [row["__id__"] for row in repaired] == ["r1", "r9", "r2"]
+    assert [row["__pos__"] for row in repaired] == [1, 1.5, 2]
     assert [(fix.code, fix.path) for fix in result.fixes] == [
-        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 1, "_pos"))
+        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 1, "__pos__"))
     ]
 
 
 def test_repair_regenerates_duplicate_ids_and_leaves_the_stored_order():
-    rows = [{**KEYED[1]}, {**KEYED[0], "_id": "r2"}, "not a row"]
+    rows = [{**KEYED[1]}, {**KEYED[0], "__id__": "r2"}, "not a row"]
     result = repair_flow_data(_graph(rows), base=EMPTY)
     repaired = result.flow_data["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
 
     assert [row["key"] for row in repaired] == ["Auth", "Accept"]
-    assert repaired[0]["_id"] == "r2"
-    assert repaired[1]["_id"] != "r2"
+    assert repaired[0]["__id__"] == "r2"
+    assert repaired[1]["__id__"] != "r2"
     assert [row["key"] for row in strip_row_keys(repaired)] == ["Accept", "Auth"]
     assert [fix.code for fix in result.fixes] == [
         GraphViolationCode.TABLE_ROW_NOT_OBJECT,
@@ -230,8 +230,8 @@ def test_repair_gives_only_a_new_row_a_new_id():
     repaired_rows = repaired["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
 
     assert [row["key"] for row in strip_row_keys(repaired_rows)] == ["Trace", "Accept", "Auth"]
-    assert [row["_id"] for row in repaired_rows[1:]] == ["r1", "r2"]
-    assert repaired_rows[0]["_id"] not in {"r1", "r2"}
+    assert [row["__id__"] for row in repaired_rows[1:]] == ["r1", "r2"]
+    assert repaired_rows[0]["__id__"] not in {"r1", "r2"}
     assert find_graph_violations(repaired, base=_graph(KEYED)) == []
 
 
@@ -258,15 +258,15 @@ def test_assigning_ids_makes_a_new_node_pass_strict_validation_and_keeps_row_ord
     validate_flow_data(graph, base=EMPTY)
     rows = _rows(graph)
     assert strip_row_keys(rows) == LEGACY
-    assert all(re.fullmatch(r"[0-9A-Za-z]{10}", row["_id"]) for row in rows)
-    assert rows[0]["_pos"] < rows[1]["_pos"]
+    assert all(re.fullmatch(r"[0-9A-Za-z]{10}", row["__id__"]) for row in rows)
+    assert rows[0]["__pos__"] < rows[1]["__pos__"]
 
 
 def test_assigning_ids_keeps_existing_ids_and_positions_and_fills_the_gaps():
     rows = [
-        {"_id": "r1", "_pos": 1, "key": "first"},
+        {"__id__": "r1", "__pos__": 1, "key": "first"},
         {"key": "second"},
-        {"_id": "r1", "_pos": 2, "key": "duplicate id"},
+        {"__id__": "r1", "__pos__": 2, "key": "duplicate id"},
     ]
     graph = _graph(rows)
 
@@ -274,10 +274,10 @@ def test_assigning_ids_keeps_existing_ids_and_positions_and_fills_the_gaps():
 
     result = _rows(graph)
     assert [row["key"] for row in result] == ["first", "second", "duplicate id"]
-    assert result[0] == {"_id": "r1", "_pos": 1, "key": "first"}
-    assert result[2]["_pos"] == 2
-    assert 1 < result[1]["_pos"] < 2
-    assert len({row["_id"] for row in result}) == 3
+    assert result[0] == {"__id__": "r1", "__pos__": 1, "key": "first"}
+    assert result[2]["__pos__"] == 2
+    assert 1 < result[1]["__pos__"] < 2
+    assert len({row["__id__"] for row in result}) == 3
     validate_flow_data(graph, base=EMPTY)
 
 
@@ -309,10 +309,10 @@ def test_assigning_changed_tables_keeps_the_ids_of_rows_the_table_still_holds():
     assign_changed_table_row_ids(stored, target)
 
     rows = _rows(target)
-    assert [row["_id"] for row in rows[:2]] == ["r1", "r2"]
-    assert [row["_pos"] for row in rows[:2]] == [1, 2]
+    assert [row["__id__"] for row in rows[:2]] == ["r1", "r2"]
+    assert [row["__pos__"] for row in rows[:2]] == [1, 2]
     assert rows[2]["key"] == "New"
-    assert rows[2]["_pos"] > 2
+    assert rows[2]["__pos__"] > 2
     validate_flow_data(target, base=stored)
 
 
@@ -339,8 +339,8 @@ def test_assigning_changed_tables_gives_new_nodes_ids():
 def test_a_stored_table_without_numeric_positions_is_written_whole():
     # Rows with ids but no numeric positions (an older position format) are not
     # a keyed table yet, so the write that brings them within the rules replaces it.
-    stored = _graph([{"_id": "r1", "_pos": "a0", "key": "Accept", "value": "json"}])
-    target = _graph([{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}])
+    stored = _graph([{"__id__": "r1", "__pos__": "a0", "key": "Accept", "value": "json"}])
+    target = _graph([{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}])
 
     (operation,) = diff_flow_data(stored, target)
 

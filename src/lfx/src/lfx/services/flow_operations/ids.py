@@ -27,5 +27,5 @@ def new_edge_id() -> str:
 
 
 def new_table_row_id() -> str:
-    """Return a new table row ``_id``, 10 random alphanumerics, like the editor's ``newTableRowId()``."""
+    """Return a new table row ``__id__``, 10 random alphanumerics, like the editor's ``newTableRowId()``."""
     return random_alphanumeric(TABLE_ROW_ID_LENGTH)

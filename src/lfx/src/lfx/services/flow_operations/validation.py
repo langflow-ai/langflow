@@ -10,7 +10,7 @@ Two groups of rules are checked only against the stored graph a write replaces
 (``base``), so what is stored stays acceptable until someone touches it:
 
 - table rows: every table value the write adds or changes must have rows with
-  a unique ``_id`` and a numeric ``_pos``. Their order in the array is not
+  a unique ``__id__`` and a numeric ``__pos__``. Their order in the array is not
   state, so it is never checked, and legacy tables without row ids stay valid
   until someone edits them;
 - edge rules (``edge_rules.py``): every edge the write adds or rewires must
