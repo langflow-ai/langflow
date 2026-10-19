@@ -523,7 +523,7 @@ describe("mutateTemplate", () => {
 
     const template = setNodeClass.mock.calls[0][0].template;
     expect(template.headers.value).toEqual([
-      { _id: expect.any(String), _pos: 1, key: "X", value: "1" },
+      { __id__: expect.any(String), __pos__: 1, key: "X", value: "1" },
     ]);
     expect(template.query_params.value).toEqual(legacyRows);
   });

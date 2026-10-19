@@ -63,7 +63,7 @@ function ignoringIdOrder(operations: unknown[]): unknown[] {
   });
 }
 
-/** Compare table rows as a collection keyed by `_id`: a table's order is its rows' positions, not the array. */
+/** Compare table rows as a collection keyed by `__id__`: a table's order is its rows' positions, not the array. */
 function ignoringRowOrder(flowData: unknown): unknown {
   const graph = cloneDeep(flowData) as FlowGraph;
   for (const node of graph.nodes ?? []) {
@@ -75,8 +75,8 @@ function ignoringRowOrder(flowData: unknown): unknown {
         Array.isArray(field?.value) &&
         keyedListAt(node, path) === NODE_SCHEMA.table
       )
-        field.value = [...(field.value as { _id: string }[])].sort((a, b) =>
-          a._id < b._id ? -1 : a._id > b._id ? 1 : 0,
+        field.value = [...(field.value as { __id__: string }[])].sort((a, b) =>
+          a.__id__ < b.__id__ ? -1 : a.__id__ > b.__id__ ? 1 : 0,
         );
     }
   }

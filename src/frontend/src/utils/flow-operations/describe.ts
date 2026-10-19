@@ -1,13 +1,14 @@
 import type { RecordedOperation } from "@/types/flow/revision";
 import { type FlowNames, ID_NAMES } from "./names";
+import { NODE_SCHEMA } from "./schema";
 
 type TFunction = (key: string, opts?: object) => string;
 
 const TEMPLATE_PATH = ["data", "node", "template"];
 const OUTPUTS_PATH = ["data", "node", "outputs"];
-// A table row is `template.<field>.value.{"id": ...}`.
+// A table row is `template.<field>.value.{"key": ...}`.
 const ROW_INDEX = TEMPLATE_PATH.length + 2;
-const ROW_POSITION = "_pos";
+const ROW_POSITION = NODE_SCHEMA.table.position as string;
 
 type Segment = unknown;
 type Update = {

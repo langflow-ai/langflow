@@ -57,7 +57,7 @@ describe("TableNodeComponent row ids", () => {
     const rows: Row[] = modalProps.rowData;
     expect(hasTableRowIds(rows)).toBe(true);
     expect(rows.map((row) => modalProps.getRowId({ data: row }))).toEqual(
-      rows.map((row) => row._id),
+      rows.map((row) => row.__id__),
     );
   });
 
@@ -83,8 +83,8 @@ describe("TableNodeComponent row ids", () => {
 
   it("gives an added row a new id after the last row", () => {
     const rows = [
-      { _id: "r1", _pos: 1, key: "Accept", value: "json" },
-      { _id: "r2", _pos: 2, key: "Auth", value: "x" },
+      { __id__: "r1", __pos__: 1, key: "Accept", value: "json" },
+      { __id__: "r2", __pos__: 2, key: "Auth", value: "x" },
     ];
     const handleOnNewValue = renderTable(rows);
 
@@ -93,12 +93,14 @@ describe("TableNodeComponent row ids", () => {
 
     const saved: Row[] = handleOnNewValue.mock.calls[0][0].value;
     expect(saved.slice(0, 2)).toEqual(rows);
-    expect(saved[2]).toMatchObject({ _pos: 3, key: null, value: null });
-    expect(saved[2]._id).not.toMatch(/^r[12]$/);
+    expect(saved[2]).toMatchObject({ __pos__: 3, key: null, value: null });
+    expect(saved[2].__id__).not.toMatch(/^r[12]$/);
   });
 
   it("never shows the row keys as columns", () => {
-    renderTable([{ _id: "r1", _pos: 1, name: "x" }], { columns: undefined });
+    renderTable([{ __id__: "r1", __pos__: 1, name: "x" }], {
+      columns: undefined,
+    });
 
     const fields = modalProps.columnDefs.map(
       (column: { field?: string }) => column.field,

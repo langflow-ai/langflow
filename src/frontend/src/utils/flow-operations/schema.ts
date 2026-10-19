@@ -15,8 +15,9 @@ type KeyPath = (string | number)[];
 /**
  * A list whose items are addressed by a key instead of an index. Natural
  * lists (outputs, tool actions) are selected with `{key}` and keep the order
- * writes leave them in; tables are selected with `{id}`, and their order is
- * their rows' numeric `(position, id)`, not their places in the array.
+ * writes leave them in; table rows are selected with `{key}` too, where a row's
+ * key is its `__id__`. Rows are ordered by their numeric `__pos__`, then
+ * `__id__`, not by their places in the array.
  */
 export type KeyedList = {
   kind: "natural" | "table";

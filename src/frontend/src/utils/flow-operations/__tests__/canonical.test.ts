@@ -111,17 +111,21 @@ describe("parseHandle", () => {
 describe("orderedRows", () => {
   it("orders rows by position, then id", () => {
     const rows = [
-      { _id: "r2", _pos: 1 },
-      { _id: "r1", _pos: 1 },
-      { _id: "r0", _pos: 0.5 },
+      { __id__: "r2", __pos__: 1 },
+      { __id__: "r1", __pos__: 1 },
+      { __id__: "r0", __pos__: 0.5 },
     ];
 
-    expect(orderedRows(rows).map((row) => row._id)).toEqual(["r0", "r1", "r2"]);
-    expect(rows[0]._id).toBe("r2");
+    expect(orderedRows(rows).map((row) => row.__id__)).toEqual([
+      "r0",
+      "r1",
+      "r2",
+    ]);
+    expect(rows[0].__id__).toBe("r2");
   });
 
   it("keeps a legacy table as stored", () => {
-    const rows = [{ k: "b" }, { _id: "r1", _pos: 1 }];
+    const rows = [{ k: "b" }, { __id__: "r1", __pos__: 1 }];
 
     expect(orderedRows(rows)).toEqual(rows);
   });
@@ -138,8 +142,8 @@ describe("graphsEqual", () => {
     ],
     edges: [{ id: "e", source: "a", target: "b", sourceHandle: edgeHandle }],
   });
-  const r1 = { _id: "r1", _pos: 1, k: "x" };
-  const r2 = { _id: "r2", _pos: 2, k: "y" };
+  const r1 = { __id__: "r1", __pos__: 1, k: "x" };
+  const r2 = { __id__: "r2", __pos__: 2, k: "y" };
 
   it("ignores the array order of nodes, edges and table rows", () => {
     const left = graph([r1, r2], "{œnameœ:œoutœ,œidœ:œaœ}");
@@ -151,7 +155,10 @@ describe("graphsEqual", () => {
 
   it("tells a moved row apart", () => {
     expect(
-      graphsEqual(graph([r1, r2], null), graph([{ ...r1, _pos: 3 }, r2], null)),
+      graphsEqual(
+        graph([r1, r2], null),
+        graph([{ ...r1, __pos__: 3 }, r2], null),
+      ),
     ).toBe(false);
   });
 });
@@ -173,9 +180,9 @@ describe("canonicalGraphJson", () => {
                 rows: {
                   type: "table",
                   value: [
-                    { _id: "r2", _pos: 1, k: "y" },
-                    { _id: "r1", _pos: 1, k: "x" },
-                    { _id: "r0", _pos: 0.5, k: "w" },
+                    { __id__: "r2", __pos__: 1, k: "y" },
+                    { __id__: "r1", __pos__: 1, k: "x" },
+                    { __id__: "r0", __pos__: 0.5, k: "w" },
                   ],
                 },
               },
@@ -198,11 +205,11 @@ describe("canonicalGraphJson", () => {
     const json = canonicalGraphJson(graph);
 
     expect(json).toBe(
-      '{"edges":[{"id":"e","source":"a","sourceHandle":{"id":"a","name":"out"},"target":"b"}],"nodes":[{"data":{},"id":"a"},{"data":{"node":{"template":{"f":{"value":1},"rows":{"type":"table","value":[{"_id":"r0","_pos":0.5,"k":"w"},{"_id":"r1","_pos":1,"k":"x"},{"_id":"r2","_pos":1,"k":"y"}]}}}},"id":"b"}]}',
+      '{"edges":[{"id":"e","source":"a","sourceHandle":{"id":"a","name":"out"},"target":"b"}],"nodes":[{"data":{},"id":"a"},{"data":{"node":{"template":{"f":{"value":1},"rows":{"type":"table","value":[{"__id__":"r0","__pos__":0.5,"k":"w"},{"__id__":"r1","__pos__":1,"k":"x"},{"__id__":"r2","__pos__":1,"k":"y"}]}}}},"id":"b"}]}',
     );
     const hash = createHash("sha256").update(json, "utf8").digest("hex");
     const engineHash =
-      "e683ad9b0684adab86da961ac7b37d46bca3ddd1b09ae593fa56accaeb08184f"; // pragma: allowlist secret
+      "214117585ff05dbf3ee765e60a0cce700ef7f7e076bb620270116debc51923f5"; // pragma: allowlist secret
     expect(hash).toBe(engineHash);
     expect(graph.nodes[0].selected).toBe(true);
   });

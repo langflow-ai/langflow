@@ -6,7 +6,7 @@
  * the graph with its view state removed, edge handle strings replaced by the
  * objects they encode, and nodes, edges and table rows treated as collections
  * keyed by id, since their array order is not state (a table's order is its
- * rows' `(_pos, _id)`). Equality compares that form structurally and stops at
+ * rows' `(__pos__, __id__)`). Equality compares that form structurally and stops at
  * the first difference; only the hash serializes it, with collections
  * ordered, as RFC 8785 (JSON Canonicalization Scheme) text. JavaScript
  * already prints numbers and orders strings the way RFC 8785 asks, so the
@@ -129,7 +129,7 @@ export function isRowPosition(value: unknown): value is number {
 }
 
 /**
- * A table's rows in order: by `(_pos, _id)`, or as stored for a legacy table
+ * A table's rows in order: by `(__pos__, __id__)`, or as stored for a legacy table
  * without them. Ids compare by UTF-16 code units, as the engine sorts them.
  */
 export function orderedRows<T>(rows: T[]): T[] {
@@ -238,7 +238,7 @@ function idOf(entry: unknown): string {
 /**
  * Flow data in canonical form. With `keyed`, nodes, edges and table rows whose
  * ids are unique become mappings from id to entry, for comparison; without it
- * they stay lists ordered by id (rows by `(_pos, _id)`), for serialization.
+ * they stay lists ordered by id (rows by `(__pos__, __id__)`), for serialization.
  * Shares nested values with `flowData`: compare or serialize it, never change it.
  */
 export function canonicalGraph(flowData: JsonObject, keyed = true): JsonObject {

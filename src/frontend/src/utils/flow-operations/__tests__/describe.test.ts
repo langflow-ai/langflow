@@ -118,19 +118,19 @@ describe("describeOperation", () => {
               id: "a",
               op: "set_field",
               path: [...rows, { key: "r2" }],
-              value: { _id: "r2" },
+              value: { __id__: "r2" },
             },
             {
               id: "a",
               op: "set_field",
               path: [...rows, { key: "r3" }],
-              value: { _id: "r3" },
+              value: { __id__: "r3" },
             },
             { id: "a", op: "delete_field", path: [...rows, { key: "r4" }] },
             {
               id: "a",
               op: "set_field",
-              path: [...rows, { key: "r5" }, "_pos"],
+              path: [...rows, { key: "r5" }, "__pos__"],
               value: "a3",
             },
             {
