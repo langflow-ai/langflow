@@ -759,7 +759,7 @@ def _api_request_node(node_id: str) -> dict:
     }
     headers = node["data"]["node"]["template"]["headers"]
     assert headers["value"], "the API Request component has default header rows"
-    headers["value"] = [{**row, "_id": f"editor{i}", "_pos": i} for i, row in enumerate(headers["value"], 1)]
+    headers["value"] = [{**row, "__id__": f"editor{i}", "__pos__": i} for i, row in enumerate(headers["value"], 1)]
     return node
 
 
@@ -781,7 +781,7 @@ async def test_syncing_an_exported_flow_assigns_table_row_ids_and_records_a_file
     original = await _create_flow(name="ApiFlow", user_id=user_id, data=stored_data)
 
     exported = normalize_flow_for_export({"id": str(original.id), "name": "ApiFlow", "data": stored_data})
-    assert all("_id" not in row and "_pos" not in row for row in _headers(exported["data"]))
+    assert all("__id__" not in row and "__pos__" not in row for row in _headers(exported["data"]))
     exported["data"]["nodes"][0]["data"]["node"]["template"]["url_input"]["value"] = "https://example.com"
 
     async with session_scope() as session:
@@ -793,8 +793,8 @@ async def test_syncing_an_exported_flow_assigns_table_row_ids_and_records_a_file
         assert updated.data["nodes"][0]["data"]["node"]["template"]["url_input"]["value"] == "https://example.com"
         rows = _headers(updated.data)
         # The rows the file sent back are the stored rows, so they keep their ids.
-        assert [row["_id"] for row in rows] == [row["_id"] for row in _headers(stored_data)]
-        assert [{k: v for k, v in row.items() if k not in {"_id", "_pos"}} for row in rows] == _headers(
+        assert [row["__id__"] for row in rows] == [row["__id__"] for row in _headers(stored_data)]
+        assert [{k: v for k, v in row.items() if k not in {"__id__", "__pos__"}} for row in rows] == _headers(
             exported["data"]
         )
         assert await projection_matches(session, updated)
@@ -841,7 +841,7 @@ async def test_syncing_a_file_that_adds_a_row_records_only_that_row() -> None:
         updated = await session.get(Flow, original.id)
         rows = _headers(updated.data)
         assert rows[0]["key"] == "X-Trace"
-        assert [row["_id"] for row in rows[1:]] == [row["_id"] for row in _headers(stored_data)]
+        assert [row["__id__"] for row in rows[1:]] == [row["__id__"] for row in _headers(stored_data)]
     writes = [
         update
         for operation in await _operations(original.id)

@@ -1873,7 +1873,7 @@ def _raw_component_parameters(
 ) -> dict[str, Any]:
     """Parse non-secret component form values for provider preflight.
 
-    Table rows lose the ``_id`` and ``_pos`` the flow's history gives them:
+    Table rows lose the ``__id__`` and ``__pos__`` the flow's history gives them:
     components never see them.
     """
     params: dict[str, Any] = {}

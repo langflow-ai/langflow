@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from httpx import AsyncClient
 
 KEYED_ROWS = [
-    {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"},
-    {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"},
+    {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"},
+    {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"},
 ]
 PLAIN_ROWS = [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
 
@@ -104,8 +104,8 @@ async def test_component_update_never_hands_row_ids_to_the_component(client: Asy
     assert response.status_code == status.HTTP_200_OK, response.text
     seen = response.json()["template"]["seen"]["value"]
     assert "Accept" in seen
-    assert "_id" not in seen
-    assert "_pos" not in seen
+    assert "__id__" not in seen
+    assert "__pos__" not in seen
 
 
 async def test_flow_download_leaves_out_row_ids(client: AsyncClient, logged_in_headers):
