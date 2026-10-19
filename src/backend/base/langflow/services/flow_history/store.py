@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
 
-from sqlalchemy import text
 from sqlmodel import col, select
 
 from langflow.services.database.models.flow_operation import FlowOperation
@@ -61,28 +59,6 @@ async def rows_covering(session: AsyncSession, flow_id: UUID, *, after: int, thr
             col(FlowOperation.end_revision) > after,
             col(FlowOperation.start_revision) <= through,
         )
-        .order_by(col(FlowOperation.start_revision))
-    )
-    return list((await session.exec(statement)).all())
-
-
-async def rows_with_request(session: AsyncSession, flow_id: UUID, request_id: UUID) -> list[FlowOperation]:
-    """Return the retained rows holding any operation of ``request_id``, in order.
-
-    PostgreSQL answers from the GIN index on ``request_ids``. SQLite has no
-    such index and scans the flow's retained rows, which the retention window
-    bounds.
-    """
-    needle = str(request_id)
-    if session.get_bind().dialect.name == "postgresql":
-        condition = text("flow_operation.request_ids @> CAST(:needle AS jsonb)").bindparams(needle=json.dumps([needle]))
-    else:
-        condition = text(
-            "EXISTS (SELECT 1 FROM json_each(flow_operation.request_ids) WHERE json_each.value = :needle)"
-        ).bindparams(needle=needle)
-    statement = (
-        select(FlowOperation)
-        .where(FlowOperation.flow_id == flow_id, condition)
         .order_by(col(FlowOperation.start_revision))
     )
     return list((await session.exec(statement)).all())

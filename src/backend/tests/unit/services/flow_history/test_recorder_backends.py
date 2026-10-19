@@ -69,19 +69,6 @@ async def _write(engine, flow_id, actor_id, target: dict, **options):
         return result
 
 
-async def test_retry_lookup_finds_the_original_request(engine, flow_id):
-    flow_uuid, actor_id = flow_id
-    request_id = uuid4()
-
-    first = await _write(engine, flow_uuid, actor_id, _graph("one"), request_id=request_id)
-    await _write(engine, flow_uuid, actor_id, _graph("two"))
-    retry = await _write(engine, flow_uuid, actor_id, _graph("one"), request_id=request_id)
-
-    assert retry.deduplicated is True
-    assert (retry.start_revision, retry.end_revision) == (first.start_revision, first.end_revision)
-    assert retry.latest_revision == 2
-
-
 async def test_replay_matches_every_write(engine, flow_id):
     flow_uuid, actor_id = flow_id
     values = ["one", "two", "three"]
