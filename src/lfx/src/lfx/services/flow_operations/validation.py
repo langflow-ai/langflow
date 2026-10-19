@@ -12,7 +12,9 @@ Two groups of rules are checked only against the stored graph a write replaces
 - table rows: every table value the write adds or changes must have rows with
   a unique ``__id__`` and a numeric ``__pos__``. Their order in the array is not
   state, so it is never checked, and legacy tables without row ids stay valid
-  until someone edits them;
+  until someone edits them. The engine owns these two keys, so the column
+  definition (``table_schema``) of such a table must not name a column
+  ``__id__`` or ``__pos__``;
 - edge rules (``edge_rules.py``): every edge the write adds or rewires must
   carry valid handles that name an output and an input that exist, must not
   take an input that is already taken, and must not touch a note. They are
@@ -344,10 +346,11 @@ def find_edge_violations(base: Any, target: dict[str, Any]) -> list[GraphViolati
 
 @dataclass(frozen=True)
 class ChangedTable:
-    """A table value a write adds or changes, and where it is."""
+    """A table value a write adds or changes, where it is, and its field's column definition."""
 
     path: GraphPath
     rows: list[Any]
+    table_schema: Any
 
 
 def changed_tables(base: Any, target: dict[str, Any]) -> list[ChangedTable]:
@@ -377,15 +380,50 @@ def changed_tables(base: Any, target: dict[str, Any]) -> list[ChangedTable]:
                 and values_equal(stored_field["value"], field["value"])
             ):
                 continue
-            tables.append(ChangedTable(path=("nodes", index, *value_path), rows=field["value"]))
+            tables.append(
+                ChangedTable(
+                    path=("nodes", index, *value_path), rows=field["value"], table_schema=field.get("table_schema")
+                )
+            )
     return tables
 
 
 def find_table_violations(base: Any, target: Any) -> list[GraphViolation]:
-    """Return the row rules broken by table values ``target`` adds or changes relative to ``base``."""
+    """Return the column and row rules broken by table values ``target`` adds or changes relative to ``base``."""
     violations: list[GraphViolation] = []
     for table in changed_tables(base, target):
+        field_path = table.path[:-1]
+        violations.extend(table_column_violations(table.table_schema, (*field_path, "table_schema")))
         violations.extend(table_row_violations(table.rows, table.path))
+    return violations
+
+
+def table_column_violations(table_schema: Any, path: GraphPath) -> list[GraphViolation]:
+    """Return a violation for every column ``table_schema`` names after a row key.
+
+    ``table_schema`` is a list of columns, or an object whose ``columns`` is
+    that list. ``path`` is where ``table_schema`` is. Anything else declares no
+    columns.
+    """
+    table = load_node_schema().table
+    reserved = (table.key[0], table.position)
+    columns = table_schema
+    if isinstance(table_schema, dict):
+        columns = table_schema.get("columns")
+        path = (*path, "columns")
+    if not isinstance(columns, list):
+        return []
+    violations: list[GraphViolation] = []
+    for index, column in enumerate(columns):
+        name = column.get("name") if isinstance(column, dict) else None
+        if name in reserved:
+            violations.append(
+                GraphViolation(
+                    GraphViolationCode.TABLE_COLUMN_RESERVED,
+                    (*path, index, "name"),
+                    f"table column must not be named {name}",
+                )
+            )
     return violations
 
 

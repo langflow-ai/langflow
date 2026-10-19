@@ -120,6 +120,52 @@ def test_a_position_must_be_a_finite_number(position):
     ]
 
 
+SCHEMA_PATH = ("nodes", 0, "data", "node", "template", "headers", "table_schema")
+
+
+def _with_columns(rows, table_schema) -> dict:
+    graph = _graph(rows)
+    graph["nodes"][0]["data"]["node"]["template"]["headers"]["table_schema"] = table_schema
+    return graph
+
+
+@pytest.mark.parametrize("name", ["__id__", "__pos__"])
+def test_a_column_named_after_a_row_key_is_refused(name):
+    columns = [{"name": "key"}, {"name": name}]
+
+    violations = find_graph_violations(_with_columns(KEYED, columns), base=EMPTY)
+
+    assert _codes(violations) == [(GraphViolationCode.TABLE_COLUMN_RESERVED, (*SCHEMA_PATH, 1, "name"))]
+    assert violations[0].to_dict()["resolution"] == "manual"
+
+
+def test_reserved_columns_under_columns_are_refused():
+    table_schema = {"columns": [{"name": "__pos__"}, {"name": "key"}]}
+
+    assert _codes(find_graph_violations(_with_columns(KEYED, table_schema), base=EMPTY)) == [
+        (GraphViolationCode.TABLE_COLUMN_RESERVED, (*SCHEMA_PATH, "columns", 0, "name"))
+    ]
+
+
+def test_a_column_named_like_the_old_row_keys_is_ordinary():
+    rows = [{**KEYED[0], "_id": "a", "_pos": "x"}]
+
+    assert find_graph_violations(_with_columns(rows, [{"name": "_id"}, {"name": "_pos"}]), base=EMPTY) == []
+
+
+def test_an_unchanged_table_with_a_reserved_column_is_accepted():
+    graph = _with_columns(KEYED, [{"name": "__id__"}])
+
+    assert find_graph_violations(graph, base=copy.deepcopy(graph)) == []
+
+
+def test_repair_leaves_a_reserved_column_to_the_client():
+    with pytest.raises(FlowDataValidationError) as error:
+        repair_flow_data(_with_columns(LEGACY, [{"name": "__id__"}]), base=EMPTY)
+
+    assert _codes(error.value.violations) == [(GraphViolationCode.TABLE_COLUMN_RESERVED, (*SCHEMA_PATH, 0, "name"))]
+
+
 def test_rows_are_read_in_position_order_and_ties_by_id():
     rows = [
         {"__id__": "b", "__pos__": 2, "key": "third"},
