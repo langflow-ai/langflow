@@ -24,10 +24,6 @@ export type KeyedList = {
   position?: string;
 };
 
-export function selectorName(list: KeyedList): "id" | "key" {
-  return list.kind === "table" ? "id" : "key";
-}
-
 /** An item's key, or null when it has none. */
 export function keyOf(list: KeyedList, item: unknown): string | null {
   let value: unknown = item;

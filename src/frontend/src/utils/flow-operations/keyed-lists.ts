@@ -18,7 +18,7 @@
  */
 
 import { isRowPosition } from "./canonical";
-import { type KeyedList, keyOf, selectorName } from "./schema";
+import { type KeyedList, keyOf } from "./schema";
 
 type JsonObject = Record<string, unknown>;
 
@@ -48,7 +48,7 @@ export class ListIndex {
     const key = keyOf(this.list, item);
     if (!key)
       throw invalid(
-        `${context}: every item of this list needs a non-empty string ${selectorName(this.list)}`,
+        `${context}: every item of this list needs a non-empty string key`,
       );
     return key;
   }

@@ -219,7 +219,7 @@ describe("changesFrom", () => {
               "template",
               "headers",
               "value",
-              { id: "r1" },
+              { key: "r1" },
               "v",
             ],
             value: "x",

@@ -426,7 +426,7 @@ describe("inverse operations", () => {
       {
         id: "k",
         op: "set_field",
-        path: ["data", "node", "template", "rows", "value", { id: "r3" }],
+        path: ["data", "node", "template", "rows", "value", { key: "r3" }],
         value: { _id: "r3", _pos: 3, v: "z" },
       },
     ]);
@@ -448,7 +448,7 @@ describe("inverse operations", () => {
       {
         id: "k",
         op: "delete_field",
-        path: ["data", "node", "template", "rows", "value", { id: "r2" }],
+        path: ["data", "node", "template", "rows", "value", { key: "r2" }],
       },
     ]);
 
