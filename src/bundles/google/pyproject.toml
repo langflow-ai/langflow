@@ -16,7 +16,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "google", "gemini"]
 # relying on the opt-in lfx-bundles metapackage.
 dependencies = [
     # Requires the shared IntegrationNetworkError added for 1.13.0.
-    "lfx>=1.13.0,<2.0.0",
+    "lfx>=1.14.0.dev0,<2.0.0",
     "google-api-python-client~=2.161",
     "google-auth>=2.38.0,<3.0.0",
     "google-auth-oauthlib>=1.2.0,<2.0.0",

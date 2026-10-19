@@ -32,7 +32,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "slack", "integrations", "
 # Fine-grained BUNDLE_API compatibility is enforced via extension.json's
 # lfx.compat list against BUNDLE_API_VERSION.
 dependencies = [
-    "lfx>=1.13.0.dev0,<2.0.0",
+    "lfx>=1.14.0.dev0,<2.0.0",
     "slack-sdk>=3.33.0,<4.0.0",
     "aiohttp>=3.10.0,<4.0.0",
 ]
