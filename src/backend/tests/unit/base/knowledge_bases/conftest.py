@@ -34,8 +34,14 @@ def fake_opensearchpy(monkeypatch: pytest.MonkeyPatch) -> None:
             self.error = error
             self.info = info
 
+    class BulkIndexError(Exception):
+        @property
+        def errors(self) -> list[dict]:
+            return self.args[1]
+
     opensearchpy.OpenSearch = MagicMock(name="OpenSearch")
     helpers.scan = MagicMock(name="scan")
+    helpers.BulkIndexError = BulkIndexError
     exceptions.AuthenticationException = authentication_exception
     exceptions.AuthorizationException = authorization_exception
     exceptions.ConnectionError = connection_error

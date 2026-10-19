@@ -870,6 +870,167 @@ async def many_timestamped_messages(active_user):
         return await aadd_messagetables(messagetables, session)
 
 
+# ── Session lists are bounded and newest-activity first (issue #15463) ─────────
+
+_SESSIONS_URL = "api/v1/monitor/messages/sessions"
+_SESSION_BASE_TIME = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+
+async def _add_session_messages(flow_id: UUID, sessions: dict[str, list[int]]) -> None:
+    """Bulk-insert one message per (session, minute offset) pair."""
+    async with session_scope() as session:
+        session.add_all(
+            MessageTable(
+                text="m",
+                sender="User",
+                sender_name="User",
+                session_id=session_id,
+                flow_id=flow_id,
+                category="message",
+                files=[],
+                properties={},
+                content_blocks=[],
+                timestamp=_SESSION_BASE_TIME + timedelta(minutes=minute),
+            )
+            for session_id, minutes in sessions.items()
+            for minute in minutes
+        )
+
+
+@pytest.fixture
+async def session_flow_id(active_user):
+    async with session_scope() as session:
+        flow = Flow(name=f"session-list-{uuid4().hex[:8]}", user_id=active_user.id, data={"nodes": [], "edges": []})
+        session.add(flow)
+        await session.flush()
+        return flow.id
+
+
+@pytest.fixture
+async def many_sessions(session_flow_id):
+    """250 sessions where a higher index means a more recent latest message."""
+    await _add_session_messages(session_flow_id, {f"s-{i:03d}": [i] for i in range(250)})
+    return [f"s-{i:03d}" for i in reversed(range(250))]
+
+
+# The flow-scoped and the all-flows listings share one query shape and must behave alike.
+_session_scopes = pytest.mark.parametrize("scoped", [True, False], ids=["flow_id", "no_flow_id"])
+
+
+def _scope_params(*, scoped: bool, flow_id: UUID) -> dict[str, str]:
+    return {"flow_id": str(flow_id)} if scoped else {}
+
+
+@_session_scopes
+@pytest.mark.parametrize(
+    ("limit", "expected_count"),
+    [(None, monitor_api._MESSAGES_DEFAULT_LIMIT), (0, monitor_api._MESSAGES_DEFAULT_LIMIT), (7, 7), (1000, 200)],
+)
+async def test_get_sessions_is_bounded(
+    client: AsyncClient, logged_in_headers, session_flow_id, many_sessions, scoped, limit, expected_count
+):
+    params = _scope_params(scoped=scoped, flow_id=session_flow_id) | ({} if limit is None else {"limit": limit})
+    response = await client.get(_SESSIONS_URL, params=params, headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json() == many_sessions[:expected_count]
+
+
+@_session_scopes
+async def test_get_sessions_pages_cover_every_session_once(
+    client: AsyncClient, logged_in_headers, session_flow_id, many_sessions, scoped
+):
+    pages = []
+    for offset in range(0, 300, 100):
+        response = await client.get(
+            _SESSIONS_URL,
+            params=_scope_params(scoped=scoped, flow_id=session_flow_id) | {"limit": 100, "offset": offset},
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200, response.text
+        pages.append(response.json())
+
+    assert [len(page) for page in pages] == [100, 100, 50]
+    assert [session_id for page in pages for session_id in page] == many_sessions
+
+
+@_session_scopes
+async def test_get_sessions_orders_by_latest_message_with_session_id_tie_break(
+    client: AsyncClient, logged_in_headers, session_flow_id, scoped
+):
+    await _add_session_messages(
+        session_flow_id,
+        {
+            # Oldest first message, but the most recent latest message.
+            "old-start-new-end": [0, 50],
+            "middle": [20],
+            # Same latest timestamp: the greater session_id comes first.
+            "tie-a": [30],
+            "tie-b": [10, 30],
+        },
+    )
+    response = await client.get(
+        _SESSIONS_URL, params=_scope_params(scoped=scoped, flow_id=session_flow_id), headers=logged_in_headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json() == ["old-start-new-end", "tie-b", "tie-a", "middle"]
+
+
+@_session_scopes
+async def test_get_sessions_excludes_agentic_without_consuming_the_limit(
+    client: AsyncClient, logged_in_headers, session_flow_id, scoped
+):
+    await _add_session_messages(
+        session_flow_id,
+        {"agentic_1": [90], "agentic_2": [91], "real-1": [1], "real-2": [2], "real-3": [3]},
+    )
+    response = await client.get(
+        _SESSIONS_URL,
+        params=_scope_params(scoped=scoped, flow_id=session_flow_id) | {"limit": 2},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json() == ["real-3", "real-2"]
+
+
+@_session_scopes
+async def test_get_sessions_does_not_leak_other_flows_or_users(
+    client: AsyncClient,
+    logged_in_headers,
+    session_flow_id,
+    active_user,
+    scoped,
+    cross_user_messages,  # noqa: ARG001
+):
+    async with session_scope() as session:
+        sibling = Flow(name=f"sibling-{uuid4().hex[:8]}", user_id=active_user.id, data={"nodes": [], "edges": []})
+        session.add(sibling)
+        await session.flush()
+        sibling_id = sibling.id
+    await _add_session_messages(session_flow_id, {"mine": [1]})
+    await _add_session_messages(sibling_id, {"sibling": [2]})
+
+    response = await client.get(
+        _SESSIONS_URL, params=_scope_params(scoped=scoped, flow_id=session_flow_id), headers=logged_in_headers
+    )
+
+    assert response.status_code == 200, response.text
+    sessions = response.json()
+    assert "foreign-session" not in sessions
+    # The all-flows listing legitimately includes the user's other flows; the flow-scoped one must not.
+    assert ("sibling" in sessions) is (not scoped)
+    assert "mine" in sessions
+
+
+@pytest.mark.parametrize("params", [{"limit": -1}, {"offset": -1}])
+async def test_get_sessions_rejects_negative_paging(client: AsyncClient, logged_in_headers, params):
+    response = await client.get(_SESSIONS_URL, params=params, headers=logged_in_headers)
+
+    assert response.status_code == 422
+
+
 @pytest.fixture
 async def shared_virtual_flow_messages(active_user):
     """Create messages under the authenticated virtual flow id used by /messages/shared (issue #15023)."""

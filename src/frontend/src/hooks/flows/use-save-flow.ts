@@ -76,7 +76,11 @@ const useSaveFlow = () => {
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
 
   const { mutate: getFlow } = useGetFlow();
-  const { mutate } = usePatchUpdateFlow();
+  // Per-call `mutate` callbacks are dropped once the caller unmounts, and the
+  // canvas unmounts whenever Memories or Traces replaces it: the save landed
+  // but its new version token was never adopted, so the next save was refused
+  // as a conflict. The promise from `mutateAsync` settles regardless.
+  const { mutateAsync } = usePatchUpdateFlow();
 
   const registerConflict = (flowId: string, detail: ConflictDetail) => {
     const currentUserId = useAuthStore.getState().userData?.id ?? null;
@@ -224,73 +228,64 @@ const useSaveFlow = () => {
             reject(e);
           };
           const persistFlow = () => {
-            mutate(updatePayload, {
-              onSuccess: (response) => {
-                const updatedFlow = keepBuiltOnGraph(
-                  response,
-                  updatePayload,
-                  currentSavedFlow,
+            mutateAsync(updatePayload).then((response) => {
+              const updatedFlow = keepBuiltOnGraph(
+                response,
+                updatePayload,
+                currentSavedFlow,
+              );
+              const flows = useFlowsManagerStore.getState().flows;
+              setSaveLoading(false);
+              if (flows) {
+                // updates flow in state
+                setFlows(
+                  flows.map((flow) => {
+                    if (flow.id === updatedFlow.id) {
+                      return updatedFlow;
+                    }
+                    return flow;
+                  }),
                 );
-                const flows = useFlowsManagerStore.getState().flows;
-                setSaveLoading(false);
-                if (flows) {
-                  // updates flow in state
-                  setFlows(
-                    flows.map((flow) => {
-                      if (flow.id === updatedFlow.id) {
-                        return updatedFlow;
-                      }
-                      return flow;
-                    }),
+                // Only update useFlowStore.currentFlow when on the flow page.
+                // When saving from the list page (e.g., renaming via settings modal),
+                // setting this would leave stale unprocessed flow data in the store,
+                // causing a crash when the user later navigates to the flow page.
+                //
+                // The graph is adopted only when the canvas still holds the
+                // one this request carried. `currentFlow` is the baseline the
+                // next autosave diffs against, so adopting the response of a
+                // save that started before an edit makes that edit look
+                // persisted and the follow-up save is skipped — the edit is
+                // lost. The store swaps these arrays on every change, so
+                // identity is an exact "nothing moved while we were away"
+                // check.
+                const liveState = useFlowStore.getState();
+                const liveFlow = liveState.currentFlow;
+                const graphUnchanged =
+                  liveState.nodes === nodes && liveState.edges === edges;
+                if (liveState.onFlowPage && graphUnchanged) {
+                  setCurrentFlow(updatedFlow);
+                } else if (
+                  liveState.onFlowPage &&
+                  liveFlow &&
+                  liveFlow.id === updatedFlow.id
+                ) {
+                  setCurrentFlow(
+                    adoptSavedSettings(liveFlow, currentFlow, updatedFlow),
                   );
-                  // Only update useFlowStore.currentFlow when on the flow page.
-                  // When saving from the list page (e.g., renaming via settings modal),
-                  // setting this would leave stale unprocessed flow data in the store,
-                  // causing a crash when the user later navigates to the flow page.
-                  //
-                  // The graph is adopted only when the canvas still holds the
-                  // one this request carried. `currentFlow` is the baseline the
-                  // next autosave diffs against, so adopting the response of a
-                  // save that started before an edit makes that edit look
-                  // persisted and the follow-up save is skipped — the edit is
-                  // lost. The store swaps these arrays on every change, so
-                  // identity is an exact "nothing moved while we were away"
-                  // check.
-                  const liveState = useFlowStore.getState();
-                  const liveFlow = liveState.currentFlow;
-                  const graphUnchanged =
-                    liveState.nodes === nodes && liveState.edges === edges;
-                  if (liveState.onFlowPage && graphUnchanged) {
-                    setCurrentFlow(updatedFlow);
-                  } else if (
-                    liveState.onFlowPage &&
-                    liveFlow &&
-                    liveFlow.id === updatedFlow.id
-                  ) {
-                    setCurrentFlow(
-                      adoptSavedSettings(liveFlow, currentFlow, updatedFlow),
-                    );
-                  }
-                  resolve();
-                } else {
-                  reportSaveError(t("errors.flowsVariableUndefined"));
-                  reject(new Error("Flows variable undefined"));
                 }
-              },
-              onError: handleError,
-            });
+                resolve();
+              } else {
+                reportSaveError(t("errors.flowsVariableUndefined"));
+                reject(new Error("Flows variable undefined"));
+              }
+            }, handleError);
           };
 
           if (isUnlockingPersistedFlow) {
-            mutate(
-              { id, locked: false },
-              {
-                // Preserve any settings edits by applying them only after the
-                // backend has committed the unlock-only request.
-                onSuccess: persistFlow,
-                onError: handleError,
-              },
-            );
+            // Preserve any settings edits by applying them only after the
+            // backend has committed the unlock-only request.
+            mutateAsync({ id, locked: false }).then(persistFlow, handleError);
           } else {
             persistFlow();
           }

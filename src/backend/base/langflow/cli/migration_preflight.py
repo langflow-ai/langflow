@@ -5,8 +5,7 @@ questions that need a source and a target together: will the target's migrations
 run forward from the source's schema, will the target's key open the source's
 credentials, will the default superuser survive the target's first boot, and will
 the role grants be enforced once it has.
-Several of these failed silently in a rehearsal against the IBM Langflow operator,
-so each is checked here instead.
+Several of these failed silently in a rehearsal, so each is checked here instead.
 
 Read-only, like the integrity check it runs against the source.
 """
@@ -31,6 +30,8 @@ from langflow.cli.integrity import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 # How to read the revision a target image runs, for --target-revision.
@@ -53,41 +54,69 @@ _SUPERUSER_WORKAROUND = (
 async def run_preflight(
     *,
     target_revision: str | None = None,
+    target_version: str | None = None,
     target_secret_key: str | None = None,
+    on_check: Callable[[CheckResult], None] | None = None,
 ) -> IntegrityReport:
-    """Run the migration checks, then the source's own integrity checks."""
+    """Run the migration checks, then the source's own integrity checks.
+
+    ``on_check`` is called with each result as its check finishes.
+    """
     from langflow.services.deps import session_scope
 
+    report = IntegrityReport([])
+
+    def add(check: CheckResult) -> None:
+        report.checks.append(check)
+        if on_check:
+            on_check(check)
+
     async with session_scope() as session:
-        checks = [await check_version_direction(session, target_revision)]
+        version = await check_version_direction(session, target_revision, target_version)
+        add(version)
         schema = await check_schema(session)
         if schema.status != "ok":
             # The remaining checks read through this Langflow's models, which on another
             # schema would misread rows. Nothing migrates the source to make them fit.
             await session.rollback()
-            return IntegrityReport([*checks, replace(schema, name="source: schema")])
-        checks += [
-            await check_default_superuser(session, target_revision),
-            await check_target_key(session, target_secret_key),
-            await check_embedding_models(session),
-            await check_role_assignments(session),
-        ]
+            add(replace(schema, name="source: schema"))
+            return report
+        if not target_revision and target_version and version.status == "ok":
+            # A target at this version or newer holds this Langflow's migrations, so this head stands for its own.
+            target_revision = script_directory().get_current_head()
+        add(await check_default_superuser(session, target_revision))
+        add(await check_target_key(session, target_secret_key))
+        add(await check_embedding_models(session))
+        add(await check_role_assignments(session))
         await session.rollback()
-    source = await check_instance()
-    checks += [replace(check, name=f"source: {check.name}") for check in source.checks]
-    return IntegrityReport(checks)
+    await check_instance(on_check=lambda check: add(replace(check, name=f"source: {check.name}")))
+    return report
 
 
-async def check_version_direction(session: AsyncSession, target_revision: str | None) -> CheckResult:
+async def check_version_direction(
+    session: AsyncSession, target_revision: str | None, target_version: str | None = None
+) -> CheckResult:
     """Attaching runs the target's migrations, which only move forward.
 
     So the source's revision has to be one the target's image already contains.
     A source ahead of the target would need migrations run backwards, which no
     Langflow supports.
+
+    Admins know the Langflow version their target runs, so that is enough. The
+    revision is exact, so it wins when both are given: two images built from
+    different commits can carry the same version.
     """
     name = "version"
+    if not target_revision and target_version:
+        check = check_target_version(target_version)
+        # The admin gave a version and it could not be read, so the command must not end as if the check passed.
+        return replace(check, status="fail") if check.status == "warn" else check
     if not target_revision:
-        return CheckResult(name, "warn", f"not checked: pass --target-revision ({TARGET_REVISION_HINT})")
+        return CheckResult(
+            name,
+            "warn",
+            f"not checked: pass --target-version, or --target-revision ({TARGET_REVISION_HINT})",
+        )
 
     # get_heads() prints a list, such as ['<revision>']; pasted as is, it names that revision.
     target_revision = target_revision.strip("[]'\" ")
@@ -128,26 +157,102 @@ async def check_version_direction(session: AsyncSession, target_revision: str | 
     )
 
 
+def check_target_version(target_version: str) -> CheckResult:
+    """Is the target's Langflow at least the version this instance runs?
+
+    This instance's database is at this Langflow's head, or the schema check stops
+    the preflight, so its version stands for its schema.
+    """
+    from packaging.version import InvalidVersion, Version
+
+    from langflow.utils.version import get_version_info
+
+    name = "version"
+    source = Version(get_version_info()["version"])
+    try:
+        target = Version(target_version.strip())
+    except InvalidVersion:
+        return CheckResult(
+            name, "warn", f"{target_version!r} is not a Langflow version, such as {source}; the version was not checked"
+        )
+    if target < source:
+        return CheckResult(
+            name,
+            "fail",
+            f"the target runs Langflow {target}, older than this instance's {source}; "
+            "attaching would need its migrations run backwards",
+        )
+    if target == source:
+        return CheckResult(name, "ok", f"source and target both run Langflow {source}")
+    return CheckResult(
+        name,
+        "ok",
+        f"the target runs Langflow {target}, newer than this instance's {source}; attaching migrates forward. "
+        f"This instance cannot confirm that {target} was released, so check the number",
+    )
+
+
 async def check_default_superuser(session: AsyncSession, target_revision: str | None = None) -> CheckResult:
     """Will the default superuser survive the target's first boot?
 
-    With AUTO_LOGIN off, which IBM Langflow requires, Langflow deletes the default
-    superuser when it has never signed in, and on Postgres the delete takes
+    With AUTO_LOGIN off, Langflow deletes the default superuser when it has never
+    signed in, and on Postgres the delete takes
     everything that user owns with it. The fix keeps the user: it claims the account
     for LANGFLOW_SUPERUSER or deactivates it, and setting last_login_at skips both.
     A target revision that includes the fix's migration passes. Without one, nothing
     here tells which kind of target this is, so the advice covers both.
+
+    An account that has signed in is kept, with the password it has unless that
+    is the old default. While AUTO_LOGIN is on that password can be one Langflow
+    made, so the check says to set one before the move, and passes once the
+    LANGFLOW_SUPERUSER_PASSWORD it sees signs in as the account. It reads both as
+    this command sees them, so the command has to run with the server's environment.
     """
     from lfx.services.settings.constants import DEFAULT_SUPERUSER
 
     from langflow.services.database.models.user.model import User
+    from langflow.services.deps import get_settings_service
 
     name = "default superuser"
     user = (
         await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER, User.is_superuser == True))  # noqa: E712
     ).first()
-    if user is None or user.last_login_at is not None:
-        return CheckResult(name, "ok", f"no never-signed-in superuser named {DEFAULT_SUPERUSER!r}")
+    if user is None:
+        return CheckResult(name, "ok", f"no superuser named {DEFAULT_SUPERUSER!r}")
+    if user.last_login_at is not None:
+        if not get_settings_service().auth_settings.AUTO_LOGIN:
+            # What was read is said, because a run by hand without the server's variables can read it wrong.
+            return CheckResult(
+                name,
+                "ok",
+                f"{DEFAULT_SUPERUSER!r} has signed in and AUTO_LOGIN is off for this command, so the check takes its "
+                "password as known",
+            )
+        if _configured_password_signs_in(user):
+            return CheckResult(
+                name,
+                "ok",
+                f"{DEFAULT_SUPERUSER!r} has signed in and AUTO_LOGIN is on, and the LANGFLOW_SUPERUSER_PASSWORD this "
+                "command sees signs in as it; give the target that password",
+            )
+        return CheckResult(
+            name,
+            "warn",
+            f"{DEFAULT_SUPERUSER!r} has signed in and AUTO_LOGIN is on, so its password can be one that nobody knows; "
+            "a target with AUTO_LOGIN off keeps that password, and replaces it with LANGFLOW_SUPERUSER_PASSWORD only "
+            "when LANGFLOW_SUPERUSER names the account and it still has the old default password",
+            [
+                "before the move, while AUTO_LOGIN is still on, check that a password you know signs in as "
+                f"{DEFAULT_SUPERUSER!r}: send POST /api/v1/login with the form fields username and password; if none "
+                f"does, set one: send PATCH /api/v1/users/{user.id} with only the password field, with an API key or "
+                "your session's token, and check again",
+                "on the target, set LANGFLOW_SUPERUSER_PASSWORD to that password and sign in as "
+                f"{DEFAULT_SUPERUSER!r} with it",
+                "the check passes once the LANGFLOW_SUPERUSER_PASSWORD it sees signs in as "
+                f"{DEFAULT_SUPERUSER!r}; until then this warning stays while AUTO_LOGIN is on, so go on once the "
+                "sign-in works",
+            ],
+        )
 
     owned = await _rows_owned_by(session, user.id)
     if not owned:
@@ -173,8 +278,8 @@ async def check_default_superuser(session: AsyncSession, target_revision: str | 
             "stops them. Setting last_login_at on such a target skips both",
             f"otherwise, before attaching, run against the target database: {_SUPERUSER_WORKAROUND} The account "
             "stays active with its current password, so API keys minted while AUTO_LOGIN was on keep working. Set "
-            f"LANGFLOW_SUPERUSER to another name and, after the first boot, deactivate {DEFAULT_SUPERUSER!r} from "
-            "the Admin page",
+            f"LANGFLOW_SUPERUSER to another name and, after the first boot, deactivate {DEFAULT_SUPERUSER!r} as that "
+            f"superuser: send PATCH /api/v1/users/{user.id} with is_active false",
         ],
     )
 
@@ -186,12 +291,12 @@ async def check_target_key(session: AsyncSession, target_secret_key: str | None)
     target boots cleanly and every flow fails at run time.
     """
     name = "target key"
-    operator_note = (
-        "On the IBM Langflow operator, create <instance>-langflow-secret-key holding the source key before applying "
-        "the LangflowInstance; a key passed through envFrom is overridden by the one the operator generates"
+    key_note = (
+        "Give the new instance this instance's secret key before its first start; an instance that starts "
+        "without one makes its own, which cannot open these values"
     )
     if not target_secret_key:
-        return CheckResult(name, "warn", f"not checked: pass --target-secret-key-file. {operator_note}")
+        return CheckResult(name, "warn", f"not checked: pass --target-secret-key-file. {key_note}")
 
     # Tested as the file holds it, trailing newline and all: a Secret created from the
     # file with --from-file carries it to the target, which reads the key as it is.
@@ -209,7 +314,7 @@ async def check_target_key(session: AsyncSession, target_secret_key: str | None)
             "Remove it from the file, or create the Secret with --from-literal",
             result.problems,
         )
-    return CheckResult(name, "fail", f"{summary}. {operator_note}", result.problems)
+    return CheckResult(name, "fail", f"{summary}. {key_note}", result.problems)
 
 
 async def check_embedding_models(session: AsyncSession) -> CheckResult:
@@ -253,8 +358,8 @@ async def check_role_assignments(session: AsyncSession) -> CheckResult:
 
     Grants live in authz_role_assignment and move with the database, but they are
     enforced from casbin_rule, which an authorization plugin compiles from them. Some
-    IBM Langflow builds compile only when a role changes, so adopted grants do nothing
-    until a superuser asks for a sync.
+    plugins compile only when a role changes, so adopted grants do nothing until a
+    superuser asks for a sync.
     """
     from langflow.services.database.models.auth.authz import AuthzRoleAssignment
 
@@ -281,6 +386,19 @@ def _keeps_default_superuser(target_revision: str | None) -> bool:
         return any(revision.revision == _KEEPS_DEFAULT_SUPERUSER for revision in ancestry)
     except Exception:  # noqa: BLE001 - an unknown revision raises one of several alembic errors
         return False
+
+
+def _configured_password_signs_in(user) -> bool:
+    """Does the LANGFLOW_SUPERUSER_PASSWORD this command sees sign in as this account?"""
+    from lfx.services.settings.constants import LEGACY_DEFAULT_SUPERUSER_PASSWORD
+
+    from langflow.services.deps import get_auth_service, get_settings_service
+
+    configured = get_settings_service().auth_settings.SUPERUSER_PASSWORD.get_secret_value()
+    # The sign-in refuses the old default, whatever the stored hash says.
+    if not configured or configured == LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value() or not user.password:
+        return False
+    return get_auth_service().verify_password(configured, user.password)
 
 
 async def _rows_owned_by(session: AsyncSession, user_id) -> dict[str, int]:

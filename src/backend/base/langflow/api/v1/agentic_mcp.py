@@ -7,7 +7,7 @@ reach the running Langflow server without spawning a local stdio process.
 The mounted server is ``lfx.mcp.server``: the same tool definitions the local
 ``lfx-mcp`` stdio bridge ships, so there is exactly one MCP toolkit. Every tool
 call goes through the REST API in loopback with the caller's own credentials
-(taken from the request headers), so authorization is enforced by the API on
+(taken from the authenticated request), so authorization is enforced by the API on
 every operation and no tool ever touches the database directly. The ``login``
 tool is excluded over HTTP: the caller is already authenticated, and accepting
 credentials/server URLs from tool arguments would be a credential-forwarding
@@ -35,6 +35,7 @@ from mcp.server import Server
 
 from langflow.api.utils import CurrentActiveMCPUser, DbSession
 from langflow.api.v1.mcp import ResponseNoOp, StreamableHTTP
+from langflow.services.auth.utils import oauth2_login
 from langflow.services.deps import get_settings_service
 
 router = APIRouter(prefix="/agentic/mcp", tags=["agentic-mcp"], include_in_schema=False)
@@ -59,19 +60,20 @@ current_loopback_client_ctx: ContextVar[LangflowClient | None] = ContextVar("cur
 server: Server = Server("langflow-mcp")
 
 
-def _loopback_client(request: Request) -> LangflowClient:
-    """Build a REST client for this server bound to the caller's own credentials.
+async def _loopback_client(request: Request) -> LangflowClient:
+    """Build a REST client using the same credentials as MCP authentication.
 
-    The raw auth headers are forwarded verbatim, so the loopback calls carry
-    exactly the identity the route authenticated — no key minting, no
-    impersonation surface.
+    Tokens (Bearer, cookie, or external) take precedence over API keys, and
+    query API keys take precedence over header keys. Never inherit the server's
+    process API key when the request has no key of its own.
     """
-    authorization = request.headers.get("Authorization", "")
-    access_token = authorization.removeprefix("Bearer ").strip() or None
+    access_token = await oauth2_login(request)
+    api_key = None if access_token else request.query_params.get("x-api-key") or request.headers.get("x-api-key")
     return LangflowClient(
         server_url=str(request.base_url).rstrip("/"),
-        api_key=request.headers.get("x-api-key"),
+        api_key=api_key,
         access_token=access_token,
+        use_env_api_key=False,
     )
 
 
@@ -143,7 +145,7 @@ async def handle_agentic_streamable_http(
     """Dispatch one MCP request, with the caller's loopback client bound.
 
     ``current_user`` only enforces authentication -- the loopback client carries the caller's
-    own headers, so every tool call re-authenticates at the REST API.
+    own credentials, so every tool call re-authenticates at the REST API.
 
     ``db`` is the very session the auth dependency opened (same cached dependency), and FastAPI
     would hold it open for the whole request, tool call included. Every tool then issues a
@@ -156,7 +158,7 @@ async def handle_agentic_streamable_http(
     await db.close()
     # start() is idempotent; called here so the session manager only runs once the endpoint is used.
     await _streamable_http.start()
-    context_token = current_loopback_client_ctx.set(_loopback_client(request))
+    context_token = current_loopback_client_ctx.set(await _loopback_client(request))
     try:
         manager = _streamable_http.get_manager()
         await manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001

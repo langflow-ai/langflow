@@ -1,51 +1,98 @@
-"""Unit tests for MrScraper LFX components with mocked SDK calls."""
+"""MrScraper component contracts using the installed SDK and mocked HTTP."""
 
 from __future__ import annotations
 
 import builtins
 import inspect
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+import json
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+from unittest.mock import patch
+from urllib.parse import quote, quote_plus
 
+import httpx
 import pytest
-from lfx_bundles.mrscraper.mrscraper_ai_scraper import MrscraperAiScraper
-from lfx_bundles.mrscraper.mrscraper_batch_scrape import MrscraperBatchScrape
-from lfx_bundles.mrscraper.mrscraper_crawl_website import MrscraperCrawlWebsite
+from lfx_bundles import mrscraper as components
+from lfx_bundles.mrscraper.mrscraper_account import MrscraperAccount
+from lfx_bundles.mrscraper.mrscraper_common import build_client, call_sdk
 from lfx_bundles.mrscraper.mrscraper_fetch_html import MrscraperFetchHtml
-from lfx_bundles.mrscraper.mrscraper_get_result import MrscraperGetResult
-from lfx_bundles.mrscraper.mrscraper_get_results import MrscraperGetResults
-from lfx_bundles.mrscraper.mrscraper_run_ai_scraper import MrscraperRunAiScraper
-from lfx_bundles.mrscraper.mrscraper_run_manual_scraper import MrscraperRunManualScraper
+from lfx_bundles.mrscraper.mrscraper_web_search import MrscraperWebSearch
 
-# Placeholder token for SDK mocks (not a real credential).
+if TYPE_CHECKING:
+    from lfx.custom.custom_component.component import Component
+
 MOCK_MR_API_TOKEN = "test-mrscraper-sdk-token-placeholder"  # noqa: S105
+COMPONENTS = [(MrscraperAccount, "get_account"), (MrscraperFetchHtml, "fetch"), (MrscraperWebSearch, "search")]
 
 
-def envelope(data: Any) -> dict[str, Any]:
-    """Wrap a payload the way ``MrScraper._parse`` wraps every real response."""
-    return {"status_code": 200, "data": data, "headers": {"content-type": "application/json"}}
+def real_sdk():
+    """Skip transport/signature tests only when the optional SDK is absent."""
+    import mrscraper
+
+    if getattr(mrscraper, "__lfx_test_stub__", False):
+        pytest.skip("mrscraper-sdk is not installed")
+    return mrscraper
+
+
+@pytest.fixture
+def http_transport(monkeypatch):
+    """Use the real SDK with a local transport; never send provider requests."""
+    sdk = real_sdk()
+    requests = []
+    responses = []
+
+    async def handler(request):
+        requests.append(request)
+        response = responses.pop(0) if responses else httpx.Response(200, json={"ok": True})
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(
+        sdk.MrScraper, "_client", lambda _self: httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    return requests, responses
+
+
+def configure(component_class: type[Component], **values: Any) -> Component:
+    """Instantiate real Langflow inputs and defaults before executing a component."""
+    component = component_class()
+    component.set(api_token=MOCK_MR_API_TOKEN, **values)
+    return component
 
 
 @pytest.mark.unit
+def test_exactly_three_components_are_exported_and_discoverable():
+    """Both lazy exports and bundle folder discovery expose the same three tools."""
+    from lfx.extension.loader._detection import collect_component_classes
+    from lfx.extension.loader._discovery import import_bundle_module, iter_bundle_python_files
+
+    expected = {"MrscraperAccount", "MrscraperFetchHtml", "MrscraperWebSearch"}
+    assert set(components.__all__) == expected
+    bundle = Path(components.__file__).parent
+    discovered = set()
+    for path in iter_bundle_python_files(bundle):
+        module_name = f"lfx_bundles.mrscraper.{path.stem}"
+        module, error, _cause = import_bundle_module(module_name, path)
+        assert error is None
+        discovered.update(item.__name__ for item in collect_component_classes(module))
+    assert discovered == expected
+    assert MrscraperFetchHtml.name == "MrscraperFetchHtml"
+    assert {getattr(components, name).display_name for name in expected} == {
+        "MrScraper Account",
+        "MrScraper Scraper API",
+        "MrScraper Web Search",
+    }
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(("component_class", "method_name"), COMPONENTS)
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("component_class", "method_name"),
-    [
-        (MrscraperAiScraper, "run_scraper"),
-        (MrscraperBatchScrape, "batch_scrape"),
-        (MrscraperCrawlWebsite, "crawl"),
-        (MrscraperFetchHtml, "fetch"),
-        (MrscraperGetResult, "get_result"),
-        (MrscraperGetResults, "fetch_all_results"),
-        (MrscraperRunAiScraper, "rerun"),
-        (MrscraperRunManualScraper, "rerun_manual"),
-    ],
-)
-async def test_missing_sdk_error(component_class: type, method_name: str) -> None:
-    """Every component explains how to install the optional SDK."""
+async def test_missing_sdk_error(component_class, method_name):
+    """Lazy imports retain a useful installation error in minimal environments."""
     original_import = builtins.__import__
 
-    def import_without_mrscraper(name: str, *args, **kwargs):
+    def import_without_mrscraper(name, *args, **kwargs):
         if name == "mrscraper":
             msg = "No module named 'mrscraper'"
             raise ImportError(msg)
@@ -53,430 +100,341 @@ async def test_missing_sdk_error(component_class: type, method_name: str) -> Non
 
     with (
         patch("builtins.__import__", side_effect=import_without_mrscraper),
-        pytest.raises(ImportError, match="pip install mrscraper-sdk"),
+        pytest.raises(ImportError, match=r"0\.6\.0"),
     ):
-        await getattr(component_class(), method_name)()
+        await getattr(configure(component_class), method_name)()
 
 
 @pytest.mark.unit
-class TestMrscraperAiScraper:
-    """Tests for `MrscraperAiScraper`."""
-
-    def test_metadata(self) -> None:
-        """Component exposes display name, icon, and documentation."""
-        c = MrscraperAiScraper()
-        assert c.display_name == "MrScraper AI Agent Scraper"
-        assert c.icon == "MrScraper"
-        assert "docs.mrscraper.com" in c.documentation
-
-    @pytest.mark.asyncio
-    async def test_run_scraper_calls_sdk(self) -> None:
-        """`create_scraper` runs with expected arguments and returns Data."""
-        mock_client = MagicMock()
-        mock_client.create_scraper = AsyncMock(return_value=envelope({"ok": True, "id": "run-1"}))
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperAiScraper()
-            c.set(
-                api_token=MOCK_MR_API_TOKEN,
-                url="https://example.com/page",
-                message="Extract titles",
-                agent="general",
-                proxy_country="us",
-            )
-            out = await c.run_scraper()
-
-        assert out.data == {"ok": True, "id": "run-1"}
-        mock_client.create_scraper.assert_awaited_once()
-        kwargs = mock_client.create_scraper.call_args.kwargs
-        assert kwargs["url"] == "https://example.com/page"
-        assert kwargs["message"] == "Extract titles"
-        assert kwargs["agent"] == "general"
-        assert kwargs["proxy_country"] == "us"
-
-    @pytest.mark.asyncio
-    async def test_run_scraper_omits_empty_proxy_country(self) -> None:
-        """An empty proxy country is sent as ``None``, not the string ``"None"``."""
-        mock_client = MagicMock()
-        mock_client.create_scraper = AsyncMock(return_value=envelope({"ok": True}))
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperAiScraper()
-            c.set(
-                api_token=MOCK_MR_API_TOKEN,
-                url="https://example.com/page",
-                message="Extract titles",
-                agent="general",
-                proxy_country="",
-            )
-            await c.run_scraper()
-
-        assert mock_client.create_scraper.call_args.kwargs["proxy_country"] is None
+@pytest.mark.parametrize("wrapped", [True, False])
+@pytest.mark.asyncio
+async def test_account_returns_safe_summary(http_transport, wrapped):
+    """Account uses authenticated GET and excludes keys, billing, and the envelope."""
+    requests, responses = http_transport
+    details = {
+        "stripeStatus": "active",
+        "isEnterprise": True,
+        "tokenLimit": "100",
+        "tokenUsage": 25,
+        "rateLimit": 10,
+        "rateTtl": 60,
+        "isAutoRenew": True,
+        "endsAt": "2026-11-01T00:00:00Z",
+        "stripeCustomerId": "private-billing",
+        "user": {
+            "name": "Test User",
+            "email": "user@example.com",
+            "isVerified": True,
+            "latestApiToken": "private-token",
+        },
+    }
+    responses.append(httpx.Response(200, json={"data": details} if wrapped else details))
+    output = await configure(MrscraperAccount, timeout=12).get_account()
+    request = requests[0]
+    assert request.method == "GET"
+    assert str(request.url) == "https://api.app.mrscraper.com/api/v1/subscription-accounts"
+    assert request.headers["authorization"] == f"Bearer {MOCK_MR_API_TOKEN}"
+    assert request.headers["x-api-token"] == MOCK_MR_API_TOKEN
+    assert request.extensions["timeout"]["read"] == 12
+    assert output.data == {
+        "subscription_status": "active",
+        "enterprise": True,
+        "token_usage": 25,
+        "token_limit": 100,
+        "token_remaining": 75,
+        "usage_percent": 25,
+        "rate_limit": 10,
+        "rate_ttl": 60,
+        "auto_renew": True,
+        "ends_at": "2026-11-01T00:00:00Z",
+        "user": {"name": "Test User", "email": "user@example.com", "verified": True},
+    }
+    assert "private" not in json.dumps(output.data)
 
 
 @pytest.mark.unit
-class TestMrscraperBatchScrape:
-    """Tests for `MrscraperBatchScrape`."""
-
-    @pytest.mark.asyncio
-    async def test_empty_urls_raises(self) -> None:
-        """Empty URL string raises ValueError before calling the SDK."""
-        with patch("mrscraper.MrScraper"):
-            c = MrscraperBatchScrape()
-            c.set(api_token=MOCK_MR_API_TOKEN, scraper_id="s1", urls="", mode="AI")
-            with pytest.raises(ValueError, match="URLs are required"):
-                await c.batch_scrape()
-
-    @pytest.mark.asyncio
-    async def test_whitespace_only_urls_raises(self) -> None:
-        """Whitespace-only URL list raises ValueError."""
-        with patch("mrscraper.MrScraper"):
-            c = MrscraperBatchScrape()
-            c.set(api_token=MOCK_MR_API_TOKEN, scraper_id="s1", urls="  ,  \n", mode="AI")
-            with pytest.raises(ValueError, match="No valid URLs"):
-                await c.batch_scrape()
-
-    @pytest.mark.asyncio
-    async def test_ai_mode_calls_bulk_ai(self) -> None:
-        """Mode AI uses `bulk_rerun_ai_scraper`."""
-        mock_client = MagicMock()
-        mock_client.bulk_rerun_ai_scraper = AsyncMock(return_value=envelope({"batch": 1}))
-        mock_client.bulk_rerun_manual_scraper = AsyncMock()
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperBatchScrape()
-            c.set(
-                api_token=MOCK_MR_API_TOKEN,
-                scraper_id="sid",
-                urls="https://a.com,https://b.com",
-                mode="AI",
-            )
-            out = await c.batch_scrape()
-
-        assert out.data == {"batch": 1}
-        mock_client.bulk_rerun_ai_scraper.assert_awaited_once()
-        mock_client.bulk_rerun_manual_scraper.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_manual_mode_calls_bulk_manual(self) -> None:
-        """Mode Manual uses `bulk_rerun_manual_scraper`."""
-        mock_client = MagicMock()
-        mock_client.bulk_rerun_manual_scraper = AsyncMock(return_value=envelope({"batch": 2}))
-        mock_client.bulk_rerun_ai_scraper = AsyncMock()
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperBatchScrape()
-            c.set(
-                api_token=MOCK_MR_API_TOKEN,
-                scraper_id="sid",
-                urls="https://a.com",
-                mode="Manual",
-            )
-            out = await c.batch_scrape()
-
-        assert out.data == {"batch": 2}
-        mock_client.bulk_rerun_manual_scraper.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_invalid_mode_raises(self) -> None:
-        """Unsupported modes fail before either bulk API is called."""
-        mock_client = MagicMock()
-        mock_client.bulk_rerun_ai_scraper = AsyncMock()
-        mock_client.bulk_rerun_manual_scraper = AsyncMock()
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperBatchScrape()
-            c.set(
-                api_token=MOCK_MR_API_TOKEN,
-                scraper_id="sid",
-                urls="https://example.com",
-                mode="unsupported",
-            )
-            with pytest.raises(ValueError, match=r"unsupported.*sid"):
-                await c.batch_scrape()
-
-        mock_client.bulk_rerun_ai_scraper.assert_not_called()
-        mock_client.bulk_rerun_manual_scraper.assert_not_called()
+@pytest.mark.asyncio
+async def test_scraper_api_maps_all_options_without_losing_false_or_zero(http_transport):
+    """UI controls map to SDK query/body/header options, including screenshot forcing."""
+    requests, responses = http_transport
+    expected = {"html": "<html>page</html>", "markdown": "# Page", "screenshot": "base64-image"}
+    responses.append(httpx.Response(200, json=expected))
+    component = configure(
+        MrscraperFetchHtml,
+        url="https://example.com/page",
+        html=True,
+        markdown=True,
+        screenshot=True,
+        browser_rendering="Disabled",
+        super=True,
+        timeout=45,
+        geo_code="ID",
+        proxy_country="SG",
+        use_proxy=False,
+        proxy="user:pass@proxy.example:8000",
+        bypass_proxy=True,
+        block_resources=True,
+        wait_for_selector=".ready",
+        home_page=True,
+        cookie_jar="domain=example.com&country=sg",
+        headers='{"accept-language": "en-US"}',
+        max_retries=0,
+        token_cap="0",  # noqa: S106
+        stream="Disabled",
+        discard_token_secret="discard-test-value",  # noqa: S106
+    )
+    output = await component.fetch()
+    request = requests[0]
+    assert request.method == "POST"
+    assert request.url.host == "api.mrscraper.com"
+    assert json.loads(request.content) == {"url": "https://example.com/page", "maxRetries": 0, "tokenCap": 0}
+    assert dict(request.url.params) == {
+        "token": MOCK_MR_API_TOKEN,
+        "timeout": "45",
+        "geoCode": "ID",
+        "proxyCountry": "SG",
+        "browserRendering": "true",
+        "super": "true",
+        "useProxy": "false",
+        "proxy": "user:pass@proxy.example:8000",
+        "html": "true",
+        "markdown": "true",
+        "waitForSelector": ".ready",
+        "warmStart": "true",
+        "screenshot": "true",
+        "blockResources": "true",
+        "bypassProxy": "true",
+        "cookieJar": "domain=example.com&country=sg",
+        "headers": '{"accept-language": "en-US"}',
+        "stream": "false",
+    }
+    assert request.headers["x-discard-token-secret"] == "discard-test-value"
+    assert request.headers["authorization"] == f"Bearer {MOCK_MR_API_TOKEN}"
+    assert request.extensions["timeout"]["read"] == 75
+    assert output.data == expected
 
 
 @pytest.mark.unit
-class TestMrscraperCrawlWebsite:
-    """Tests for `MrscraperCrawlWebsite`."""
-
-    @pytest.mark.asyncio
-    async def test_max_depth_zero_preserved(self) -> None:
-        """`max_depth=0` must be passed through (not coerced to default 2)."""
-        mock_client = MagicMock()
-        mock_client.create_scraper = AsyncMock(return_value=envelope({"crawl": True}))
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperCrawlWebsite()
-            c.set(
-                api_token=MOCK_MR_API_TOKEN,
-                url="https://example.com/",
-                max_depth=0,
-                max_pages=10,
-                limit=100,
-                include_patterns="",
-                exclude_patterns="",
-            )
-            await c.crawl()
-
-        kwargs = mock_client.create_scraper.call_args.kwargs
-        assert kwargs["max_depth"] == 0
-        assert kwargs["agent"] == "map"
-        assert kwargs["message"] == ""
+@pytest.mark.asyncio
+async def test_scraper_defaults_and_html_output_remain_compatible(http_transport):
+    """Automatic browser fallback and unset token budget survive default Langflow inputs."""
+    requests, responses = http_transport
+    responses.append(httpx.Response(200, text="<html>plain</html>"))
+    output = await configure(MrscraperFetchHtml, url="https://example.com").fetch()
+    assert output.data == {"html": "<html>plain</html>"}
+    assert json.loads(requests[0].content) == {"url": "https://example.com", "maxRetries": 3}
+    assert "browserRendering" not in requests[0].url.params
+    assert "super" not in requests[0].url.params
+    assert "stream" not in requests[0].url.params
+    assert requests[0].url.params["html"] == "true"
+    assert requests[0].url.params["markdown"] == "false"
 
 
 @pytest.mark.unit
-class TestMrscraperFetchHtml:
-    """Tests for `MrscraperFetchHtml`."""
-
-    @pytest.mark.asyncio
-    async def test_fetch_html_calls_sdk(self) -> None:
-        """`fetch_html` receives timeout and geo settings."""
-        mock_client = MagicMock()
-        mock_client.fetch_html = AsyncMock(return_value=envelope("<html></html>"))
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperFetchHtml()
-            c.set(
-                api_token=MOCK_MR_API_TOKEN,
-                url="https://example.com/",
-                timeout=60,
-                geo_code="GB",
-                block_resources=True,
-            )
-            out = await c.fetch()
-
-        assert out.data["html"] == "<html></html>"
-        kwargs = mock_client.fetch_html.call_args.kwargs
-        assert kwargs["timeout"] == 60
-        assert kwargs["geo_code"] == "GB"
-        assert kwargs["block_resources"] is True
-
-
-@pytest.mark.unit
-class TestMrscraperGetResult:
-    """Tests for `MrscraperGetResult`."""
-
-    @pytest.mark.asyncio
-    async def test_get_result_by_id(self) -> None:
-        """Maps `result_id` to SDK `get_result_by_id`."""
-        mock_client = MagicMock()
-        mock_client.get_result_by_id = AsyncMock(return_value={"status_code": 200, "data": {"id": "r1"}, "headers": {}})
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperGetResult()
-            c.set(api_token=MOCK_MR_API_TOKEN, result_id="r1")
-            out = await c.get_result()
-
-        assert out.data == {"id": "r1"}
-        mock_client.get_result_by_id.assert_awaited_once_with(result_id="r1")
+@pytest.mark.parametrize("overrides", [{}, {"region": "id", "language": "id", "page": "2"}])
+@pytest.mark.asyncio
+async def test_web_search_normalizes_google_url(http_transport, overrides):
+    """Google URL defaults and explicit overrides are delegated to the SDK v2 API."""
+    requests, responses = http_transport
+    responses.append(httpx.Response(200, json={"organic": [{"title": "Example"}]}))
+    output = await configure(
+        MrscraperWebSearch,
+        url="https://www.google.com/search?q=running+shoes&gl=us&hl=en&start=20",
+        raw=False,
+        render_js=True,
+        **overrides,
+    ).search()
+    request = requests[0]
+    assert str(request.url) == "https://sync.scraper.mrscraper.com/api/google/serp/v2/sync"
+    assert json.loads(request.content) == {
+        "query": "running shoes",
+        "region": overrides.get("region", "us"),
+        "language": overrides.get("language", "en"),
+        "page": int(overrides.get("page", 3)),
+        "format": "json",
+        "renderJs": True,
+    }
+    assert output.data == {"organic": [{"title": "Example"}]}
 
 
 @pytest.mark.unit
-class TestMrscraperGetResults:
-    """Tests for `MrscraperGetResults`."""
-
-    @pytest.mark.asyncio
-    async def test_get_all_results_passes_filters(self) -> None:
-        """Pagination and sort params are forwarded to `get_all_results`."""
-        mock_client = MagicMock()
-        mock_client.get_all_results = AsyncMock(return_value=envelope({"rows": []}))
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperGetResults()
-            c.set(
-                api_token=MOCK_MR_API_TOKEN,
-                sort_field="createdAt",
-                sort_order="ASC",
-                page_size=25,
-                page=2,
-                search="error",
-                date_range_column="updatedAt",
-                start_at="2024-01-01",
-                end_at="2024-12-31",
-            )
-            await c.fetch_all_results()
-
-        kwargs = mock_client.get_all_results.call_args.kwargs
-        assert kwargs["sort_field"] == "createdAt"
-        assert kwargs["page"] == 2
-        assert kwargs["search"] == "error"
+@pytest.mark.asyncio
+async def test_web_search_defaults_to_raw_html(http_transport):
+    """Raw is true by SDK default and takes precedence over the JSON format field."""
+    requests, responses = http_transport
+    responses.append(httpx.Response(200, text="<html>SERP</html>"))
+    output = await configure(MrscraperWebSearch, url="example query").search()
+    assert json.loads(requests[0].content) == {"query": "example query", "format": "html", "renderJs": False}
+    assert output.data == {"result": "<html>SERP</html>"}
 
 
 @pytest.mark.unit
-class TestMrscraperRunAiScraper:
-    """Tests for `MrscraperRunAiScraper`."""
-
-    @pytest.mark.asyncio
-    async def test_rerun_preserves_zero_depth(self) -> None:
-        """`max_depth=0` is forwarded to `rerun_scraper`."""
-        mock_client = MagicMock()
-        mock_client.rerun_scraper = AsyncMock(return_value=envelope({"ok": True}))
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperRunAiScraper()
-            c.set(
-                api_token=MOCK_MR_API_TOKEN,
-                scraper_id="sid",
-                url="https://example.com/page",
-                max_depth=0,
-                max_pages=5,
-                limit=50,
-                include_patterns="",
-                exclude_patterns="",
-            )
-            await c.rerun()
-
-        kwargs = mock_client.rerun_scraper.call_args.kwargs
-        assert kwargs["max_depth"] == 0
+@pytest.mark.parametrize(
+    ("component_class", "method_name", "values", "message"),
+    [
+        (MrscraperAccount, "get_account", {"timeout": 0}, "timeout"),
+        (MrscraperFetchHtml, "fetch", {"url": "https://example.com", "timeout": 301}, "timeout"),
+        (MrscraperFetchHtml, "fetch", {"url": "https://example.com", "max_retries": -1}, "max_retries"),
+        (MrscraperFetchHtml, "fetch", {"url": "https://example.com", "token_cap": "-1"}, "token_cap"),
+        (MrscraperWebSearch, "search", {"url": "test", "page": "0"}, "page"),
+        (MrscraperWebSearch, "search", {"url": "test", "page": "1.5"}, "page"),
+        (MrscraperWebSearch, "search", {"url": "test", "timeout": 0}, "timeout"),
+        (MrscraperWebSearch, "search", {"url": " "}, "query"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_invalid_options_fail_before_http(http_transport, component_class, method_name, values, message):
+    """Invalid input is rejected rather than silently replaced by a default."""
+    requests, _responses = http_transport
+    with pytest.raises(ValueError, match=message):
+        await getattr(configure(component_class, **values), method_name)()
+    assert requests == []
 
 
 @pytest.mark.unit
-class TestMrscraperRunManualScraper:
-    """Tests for `MrscraperRunManualScraper`."""
-
-    @pytest.mark.asyncio
-    async def test_rerun_manual_calls_sdk(self) -> None:
-        """Delegates to `rerun_manual_scraper`."""
-        mock_client = MagicMock()
-        mock_client.rerun_manual_scraper = AsyncMock(return_value=envelope({"status": "done"}))
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperRunManualScraper()
-            c.set(api_token=MOCK_MR_API_TOKEN, scraper_id="mid", url="https://example.com/x")
-            out = await c.rerun_manual()
-
-        assert out.data["status"] == "done"
-        mock_client.rerun_manual_scraper.assert_awaited_once_with(
-            scraper_id="mid",
-            url="https://example.com/x",
-        )
+@pytest.mark.parametrize("status", [401, 422, 500])
+@pytest.mark.asyncio
+async def test_api_errors_propagate_without_query_token(http_transport, status):
+    """Provider errors fail the node and keep the query token out of the message."""
+    sdk = real_sdk()
+    _requests, responses = http_transport
+    responses.append(httpx.Response(status, json={"message": "request failed"}))
+    with pytest.raises(sdk.MrScraperError) as error:
+        await configure(MrscraperFetchHtml, url="https://example.com").fetch()
+    assert MOCK_MR_API_TOKEN not in str(error.value)
 
 
 @pytest.mark.unit
-class TestResponseHandling:
-    """The SDK envelope is stripped consistently across every component."""
+@pytest.mark.asyncio
+async def test_network_timeout_propagates(http_transport):
+    """A failed HTTP request is surfaced through the SDK network exception."""
+    sdk = real_sdk()
+    _requests, responses = http_transport
+    responses.append(httpx.ReadTimeout("Timed out"))
+    with pytest.raises(sdk.NetworkError, match="Timed out"):
+        await configure(MrscraperAccount).get_account()
 
-    @pytest.mark.asyncio
-    async def test_envelope_is_not_surfaced_to_flows(self) -> None:
-        """Transport metadata stays out of the component output."""
-        mock_client = MagicMock()
-        mock_client.rerun_manual_scraper = AsyncMock(return_value=envelope({"status": "done"}))
 
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperRunManualScraper()
-            c.set(api_token=MOCK_MR_API_TOKEN, scraper_id="mid", url="https://example.com/x")
-            out = await c.rerun_manual()
+@pytest.mark.unit
+@pytest.mark.parametrize("token", [None, "", "   "])
+def test_blank_token_never_uses_environment_credentials(monkeypatch, token):
+    """A component must use its configured credential, even when the SDK env var exists."""
+    monkeypatch.setenv("MRSCRAPER_API_TOKEN", MOCK_MR_API_TOKEN)
+    with pytest.raises(ValueError, match="API token is required"):
+        build_client(token)
 
-        assert out.data == {"status": "done"}
-        assert "status_code" not in out.data
-        assert "headers" not in out.data
 
-    @pytest.mark.asyncio
-    async def test_non_json_html_is_boxed(self) -> None:
-        """`fetch_html` returns text for non-JSON pages; it is boxed under `html`."""
-        mock_client = MagicMock()
-        mock_client.fetch_html = AsyncMock(return_value=envelope("<html>plain</html>"))
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_http_error_redacts_proxy_cookie_and_target_headers(http_transport):
+    """HTTP status errors include the request URL, whose optional query values may be secrets."""
+    sdk = real_sdk()
+    _requests, responses = http_transport
+    responses.append(httpx.Response(422, json={"message": "request failed"}))
+    proxy = "user:private-proxy@proxy.example:8000"
+    cookie_jar = "domain=example.com&cookie=private-cookie-value"
+    headers = json.dumps({"Authorization": 'Bearer private-header-value "quoted"'})
+    with pytest.raises(sdk.APIError) as error:
+        await configure(
+            MrscraperFetchHtml,
+            url="https://example.com",
+            proxy=proxy,
+            cookie_jar=cookie_jar,
+            headers=headers,
+        ).fetch()
+    assert error.value.status_code == 422
+    assert error.value.__cause__ is None
+    assert error.value.__suppress_context__
+    for value in (
+        MOCK_MR_API_TOKEN,
+        proxy,
+        cookie_jar,
+        headers,
+        "private-proxy",
+        "private-cookie-value",
+        "private-header-value",
+    ):
+        assert value not in str(error.value)
+    assert "422" in str(error.value)
 
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperFetchHtml()
-            c.set(api_token=MOCK_MR_API_TOKEN, url="https://example.com/")
-            out = await c.fetch()
 
-        assert out.data == {"html": "<html>plain</html>"}
-
-    @pytest.mark.asyncio
-    async def test_get_results_dataframe_rows(self) -> None:
-        """The tabular output yields one row per result, not one row per page."""
-        rows = [{"id": "r1", "status": "done"}, {"id": "r2", "status": "failed"}]
-        mock_client = MagicMock()
-        mock_client.get_all_results = AsyncMock(return_value=envelope({"results": rows, "page": 1, "total": 2}))
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperGetResults()
-            c.set(api_token=MOCK_MR_API_TOKEN)
-            frame = await c.fetch_all_results_as_dataframe()
-
-        assert len(frame) == 2
-        assert list(frame["id"]) == ["r1", "r2"]
-
-    @pytest.mark.asyncio
-    async def test_get_results_dataframe_survives_key_rename(self) -> None:
-        """A payload with no row list degrades to a single row instead of raising."""
-        mock_client = MagicMock()
-        mock_client.get_all_results = AsyncMock(return_value=envelope({"page": 1, "total": 0}))
-
-        with patch("mrscraper.MrScraper", return_value=mock_client):
-            c = MrscraperGetResults()
-            c.set(api_token=MOCK_MR_API_TOKEN)
-            frame = await c.fetch_all_results_as_dataframe()
-
-        assert len(frame) == 1
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "encoding", ["raw", "quoted", "plus", "json", "quoted_json", "plus_json", "quoted_unicode_json"]
+)
+@pytest.mark.asyncio
+async def test_network_errors_redact_all_configured_secret_variants(http_transport, encoding):
+    """Redact raw, URL-encoded, and JSON-escaped credentials while preserving the exception kind."""
+    sdk = real_sdk()
+    _requests, responses = http_transport
+    values = {
+        "proxy": "user:private-proxy value@proxy.example:8000",
+        "cookie_jar": "domain=example.com&cookie=private-cookie value",
+        "discard_token_secret": "private-discard/value",
+        "headers": json.dumps({"Authorization": 'Bearer private-header "válue"', "X-Session": "private-session/value"}),
+    }
+    secrets = [MOCK_MR_API_TOKEN, *values.values(), *json.loads(values["headers"]).values()]
+    transform = {
+        "raw": lambda value: value,
+        "quoted": lambda value: quote(value, safe=""),
+        "plus": quote_plus,
+        "json": lambda value: json.dumps(value)[1:-1],
+        "quoted_json": lambda value: quote(json.dumps(value)[1:-1], safe=""),
+        "plus_json": lambda value: quote_plus(json.dumps(value)[1:-1]),
+        "quoted_unicode_json": lambda value: quote(json.dumps(value, ensure_ascii=False)[1:-1], safe=""),
+    }[encoding]
+    variants = [transform(value) for value in secrets]
+    responses.append(httpx.ReadTimeout("Timed out with " + " | ".join(variants)))
+    with pytest.raises(sdk.NetworkError) as error:
+        await call_sdk(MOCK_MR_API_TOKEN, "scraper_api", url="https://example.com", **values)
+    assert error.value.__cause__ is None
+    assert error.value.__suppress_context__
+    assert "Timed out" in str(error.value)
+    assert "[REDACTED]" in str(error.value)
+    for value in variants:
+        assert value not in str(error.value)
 
 
 @pytest.mark.unit
 class TestSdkContract:
-    """Component call sites are checked against the installed SDK, not a mock.
+    """Check call-site keywords against the real package, independent of HTTP mocks."""
 
-    Every other test in this file patches `mrscraper.MrScraper`, so a signature
-    change in the SDK would leave them green while the components broke at
-    runtime. These assert against the real package; they skip only in a minimal
-    env where `conftest` had to register a stub.
-    """
-
-    @staticmethod
-    def _real_sdk():
-        import mrscraper
-
-        if getattr(mrscraper, "__lfx_test_stub__", False):
-            pytest.skip("mrscraper-sdk is not installed; conftest registered a stub")
-        return mrscraper
-
-    def test_client_accepts_token_kwarg(self) -> None:
-        """Components construct the client as `MrScraper(token=...)`."""
-        mrscraper = self._real_sdk()
-        assert "token" in inspect.signature(mrscraper.MrScraper).parameters
+    def test_client_accepts_token_kwarg(self):
+        assert "token" in inspect.signature(real_sdk().MrScraper).parameters
 
     @pytest.mark.parametrize(
         ("method_name", "call_site_kwargs"),
         [
+            ("account", {"timeout"}),
             (
-                "create_scraper",
+                "scraper_api",
                 {
                     "url",
-                    "message",
-                    "agent",
+                    "html",
+                    "markdown",
+                    "screenshot",
+                    "browser_rendering",
+                    "super",
+                    "timeout",
+                    "geo_code",
+                    "block_resources",
                     "proxy_country",
-                    "max_depth",
-                    "max_pages",
-                    "limit",
-                    "include_patterns",
-                    "exclude_patterns",
+                    "use_proxy",
+                    "proxy",
+                    "bypass_proxy",
+                    "wait_for_selector",
+                    "home_page",
+                    "cookie_jar",
+                    "headers",
+                    "max_retries",
+                    "token_cap",
+                    "stream",
+                    "discard_token_secret",
                 },
             ),
-            (
-                "rerun_scraper",
-                {"scraper_id", "url", "max_depth", "max_pages", "limit", "include_patterns", "exclude_patterns"},
-            ),
-            ("rerun_manual_scraper", {"scraper_id", "url"}),
-            ("bulk_rerun_ai_scraper", {"scraper_id", "urls"}),
-            ("bulk_rerun_manual_scraper", {"scraper_id", "urls"}),
-            ("fetch_html", {"url", "timeout", "geo_code", "block_resources"}),
-            (
-                "get_all_results",
-                {"sort_field", "sort_order", "page_size", "page", "search", "date_range_column", "start_at", "end_at"},
-            ),
-            ("get_result_by_id", {"result_id"}),
+            ("web_search", {"url", "raw", "format", "region", "language", "page", "render_js", "timeout"}),
         ],
     )
-    def test_call_site_kwargs_still_accepted(self, method_name: str, call_site_kwargs: set[str]) -> None:
-        """Each keyword a component passes is still a parameter of the SDK method."""
-        mrscraper = self._real_sdk()
-        method = getattr(mrscraper.MrScraper, method_name, None)
-        assert method is not None, f"MrScraper.{method_name} no longer exists"
-        accepted = set(inspect.signature(method).parameters) - {"self"}
-        dropped = call_site_kwargs - accepted
-        assert not dropped, f"MrScraper.{method_name} no longer accepts {sorted(dropped)}"
+    def test_call_site_kwargs_still_accepted(self, method_name, call_site_kwargs):
+        method = getattr(real_sdk().MrScraper, method_name)
+        assert call_site_kwargs <= set(inspect.signature(method).parameters) - {"self"}

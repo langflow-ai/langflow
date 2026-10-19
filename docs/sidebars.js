@@ -53,6 +53,11 @@ module.exports = {
           label: "Build flows"
         },
         {
+          type: "doc",
+          id: "Flows/concurrent-editing",
+          label: "Concurrent editing"
+        },
+        {
           type: "category",
           label: "Run flows",
           items: [

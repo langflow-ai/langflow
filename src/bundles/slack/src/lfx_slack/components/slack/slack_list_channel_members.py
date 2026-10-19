@@ -122,10 +122,12 @@ class SlackListChannelMembersComponent(SlackBaseComponent):
             results = [Data(data=member) for member in resolved]
         else:
             results = [Data(data={"id": member}) for member in body.get("members", []) if isinstance(member, str)]
-        self.status = f"{len(results)} member(s)"
+        self.status = results
         return results
 
     async def build_pagination(self) -> Data:
         """Return the cursor for the next page of members."""
         body = await self._members()
-        return Data(data={"next_cursor": next_cursor(body)})
+        data = Data(data={"next_cursor": next_cursor(body)})
+        self.status = data
+        return data

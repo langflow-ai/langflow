@@ -16,6 +16,7 @@ import { SessionMoreMenu } from "./session-more-menu";
 
 export function ChatHeader({
   sessions,
+  sessionsPagination,
   onNewChat,
   onSessionSelect,
   currentSessionId,
@@ -126,6 +127,7 @@ export function ChatHeader({
           <AnimatedConditional isOpen={isSessionDropdownVisible}>
             <ChatSessionsDropdown
               sessions={sessions}
+              sessionsPagination={sessionsPagination}
               onNewChat={onNewChat}
               onSessionSelect={onSessionSelect}
               currentSessionId={currentSessionId}

@@ -14,6 +14,7 @@ class FlowAction(str, Enum):
     DELETE = "delete"
     EXECUTE = "execute"
     DEPLOY = "deploy"
+    AUDIT_READ = "audit_read"
 
 
 class DeploymentAction(str, Enum):
@@ -33,6 +34,7 @@ class ProjectAction(str, Enum):
     WRITE = "write"
     CREATE = "create"
     DELETE = "delete"
+    AUDIT_READ = "audit_read"
 
 
 class KnowledgeBaseAction(str, Enum):

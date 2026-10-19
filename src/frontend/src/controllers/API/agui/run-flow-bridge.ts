@@ -139,9 +139,10 @@ export function handleAGUIEvent(event: BaseEvent, ctx: BridgeContext): boolean {
     return true;
   }
   if (event.type === EventType.RUN_ERROR) {
+    const code = (event as unknown as { code?: string }).code;
     const message =
       (event as unknown as { message?: string }).message ?? "Unknown run error";
-    ctx.onError(message);
+    ctx.onError(code ? `[${code}] ${message}` : message);
     return true;
   }
   return false;

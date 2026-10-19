@@ -268,20 +268,55 @@ async def test_error_messages_never_leak_the_token_or_a_handle(transport: SlackT
     assert "workspace" not in rendered
 
 
-async def test_an_auth_rejection_re_resolves_exactly_once(transport: SlackTransport) -> None:
+@pytest.mark.parametrize(
+    ("method", "kwargs", "fixture", "result_key", "result_value"),
+    [
+        (
+            "chat_postMessage",
+            {"channel": "C0SLACKDEMO", "text": "release is out"},
+            "chat_postmessage",
+            "ts",
+            "1700000200.000400",
+        ),
+        (
+            "canvases_create",
+            {"document_content": {"type": "markdown", "markdown": "# Release"}, "title": None},
+            "canvases_create",
+            "canvas_id",
+            "F0SLACKDOC1",
+        ),
+    ],
+)
+async def test_an_auth_rejection_re_resolves_exactly_once(
+    transport: SlackTransport, method: str, kwargs: dict, fixture: str, result_key: str, result_value: str
+) -> None:
     """Slack tokens have no expiry unless the app rotates them, so a rejection is the signal."""
     transport.enqueue(load_fixture("error_invalid_auth"))
-    transport.enqueue(load_fixture("chat_postmessage"))
+    transport.enqueue(load_fixture(fixture))
     resolver = FakeResolver(tokens=["xoxp-stale", "xoxp-rotated"])  # pragma: allowlist secret
     client = SlackClient(_lease(resolver))
 
-    body = await client.call("chat_postMessage", channel="C0SLACKDEMO", text="release is out")
+    body = await client.call(method, **kwargs)
 
-    assert body["ts"] == "1700000200.000400"
+    assert body[result_key] == result_value
     assert len(resolver.requests) == 2
     assert resolver.requests[1].rejected_token_digest is not None
     assert transport.calls[0].authorization == "Bearer xoxp-stale"
     assert transport.calls[1].authorization == "Bearer xoxp-rotated"
+    if method == "canvases_create":
+        assert all("title" not in call.req_args["json"] for call in transport.calls)
+
+
+async def test_canvas_invalid_arguments_are_normalized_without_retry(transport: SlackTransport) -> None:
+    transport.enqueue({"ok": False, "error": "invalid_arguments"})
+    client = SlackClient(_lease(FakeResolver()))
+
+    with pytest.raises(InvalidRequestError) as raised:
+        await client.call("canvases_create", document_content={"type": "markdown", "markdown": "# Release"})
+
+    assert raised.value.http_status == 400
+    assert raised.value.retryable is False
+    assert len(transport.calls) == 1
 
 
 async def test_a_second_auth_rejection_stops_instead_of_looping(transport: SlackTransport) -> None:

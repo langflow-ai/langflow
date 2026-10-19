@@ -514,7 +514,11 @@ test.describe("MCP servers route accessibility", () => {
 
       // Start from the last sidebar link so the trace covers the page body
       // rather than the whole app chrome.
-      await page.getByTestId("sidebar-nav-Messages").focus();
+      await page
+        .getByRole("navigation", { name: "Settings navigation" })
+        .getByRole("link")
+        .last()
+        .focus();
 
       const order: string[] = [];
       for (let i = 0; i < 4; i++) {
