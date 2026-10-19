@@ -24,10 +24,10 @@ KeyPath = tuple[str | int, ...]
 class KeyedList:
     """A list whose items are addressed by a key instead of an index.
 
-    ``natural`` lists (outputs, tool actions) are selected with
-    ``{"key": ...}`` and keep the order writes leave them in. ``table`` lists
-    are selected with ``{"id": ...}`` and kept in order of their numeric
-    ``position``, then ``id``.
+    Items of both kinds are selected with ``{"key": ...}``. ``natural`` lists
+    (outputs, tool actions) keep the order writes leave them in. A ``table``
+    row's key is its ``__id__``, and rows are kept in order of their numeric
+    ``__pos__``, then ``__id__``.
     """
 
     kind: Literal["natural", "table"]
