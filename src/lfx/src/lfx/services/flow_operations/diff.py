@@ -61,7 +61,6 @@ from lfx.services.flow_operations.ops import (
     DeleteNodeFieldUpdate,
     DeleteNodesOp,
     FlowOperation,
-    IdSelector,
     KeySelector,
     NodeFieldPath,
     SetNodeFieldUpdate,
@@ -288,7 +287,7 @@ def _diff_keyed_list(
             return False
 
     for key, item in target_items.items():
-        item_path = (*path, _selector(keyed, key))
+        item_path = (*path, KeySelector(key=key))
         if key not in base_items:
             updates.append(_set(node_id, item_path, item, template=template))
             continue
@@ -299,7 +298,7 @@ def _diff_keyed_list(
                 updates.append(_set(node_id, (*item_path, item_key), value, previous=before, template=template))
         removed = [item_key for item_key in previous if item_key not in item]
         updates.extend(_delete(node_id, (*item_path, item_key)) for item_key in removed)
-    updates.extend(_delete(node_id, (*path, _selector(keyed, key))) for key in base_items if key not in target_items)
+    updates.extend(_delete(node_id, (*path, KeySelector(key=key))) for key in base_items if key not in target_items)
     return True
 
 
@@ -321,10 +320,6 @@ def _items_by_key(keyed: KeyedList, items: Any) -> dict[str, dict[str, Any]] | N
             return None
         by_key[key] = item
     return by_key
-
-
-def _selector(keyed: KeyedList, key: str) -> IdSelector | KeySelector:
-    return IdSelector(id=key) if keyed.kind == "table" else KeySelector(key=key)
 
 
 # --- Entries ---------------------------------------------------------------------------
