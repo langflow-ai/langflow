@@ -209,7 +209,7 @@ fn ignoring_id_order(operations: &Value) -> Value {
     operations
 }
 
-/// Compare table rows as a collection keyed by `_id`: a table's order is its rows' positions.
+/// Compare table rows as a collection keyed by `__id__`: a table's order is its rows' positions.
 fn ignoring_row_order(flow: &Value) -> Value {
     let mut flow = flow.clone();
     for node in flow
@@ -232,7 +232,7 @@ fn ignoring_row_order(flow: &Value) -> Value {
                 is_table,
                 field.get_mut("value").and_then(Value::as_array_mut),
             ) {
-                rows.sort_by(|a, b| a["_id"].as_str().cmp(&b["_id"].as_str()));
+                rows.sort_by(|a, b| a["__id__"].as_str().cmp(&b["__id__"].as_str()));
             }
         }
     }

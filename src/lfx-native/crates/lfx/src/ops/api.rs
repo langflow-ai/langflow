@@ -587,7 +587,7 @@ pub fn fixes_for_edges(fixes: &str, edge_ids: &str) -> ApiResult {
 
 // --- Table rows -----------------------------------------------------------------------------
 
-/// Rows in order and without `_id` and `_pos`.
+/// Rows in order and without `__id__` and `__pos__`.
 ///
 /// # Errors
 ///
@@ -596,7 +596,7 @@ pub fn strip_row_keys(rows: &str) -> ApiResult {
     Ok(keyed::strip_row_keys(&parse(rows)?).to_string())
 }
 
-/// A flow whose top-level tables have their rows in order and without `_id` and `_pos`.
+/// A flow whose top-level tables have their rows in order and without `__id__` and `__pos__`.
 ///
 /// # Errors
 ///
@@ -699,7 +699,7 @@ pub fn node_schema() -> &'static str {
     crate::ops::schema::NODE_SCHEMA_JSON
 }
 
-/// Rows in order, by `(_pos, _id)`, or as stored for a legacy table.
+/// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.
 ///
 /// # Errors
 ///

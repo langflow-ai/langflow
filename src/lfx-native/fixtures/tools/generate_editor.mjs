@@ -99,9 +99,9 @@ function inverseBase() {
               rows: {
                 type: "table",
                 value: [
-                  { _id: "r1", _pos: 1, k: "one" },
-                  { _id: "r2", _pos: 2, k: "two" },
-                  { _id: "r3", _pos: 3, k: "three" },
+                  { __id__: "r1", __pos__: 1, k: "one" },
+                  { __id__: "r2", __pos__: 2, k: "two" },
+                  { __id__: "r3", __pos__: 3, k: "three" },
                 ],
               },
             },
@@ -142,9 +142,9 @@ const INVERSE_CASES = [
     [node("a", [del([...OUTPUTS, { key: "out" }]), del([...OUTPUTS, { key: "mid" }])])],
   ],
   ["replacing the outputs puts back the list and its edges", [node("a", [set(OUTPUTS, [{ name: "out" }])])]],
-  ["adding a table row is undone by deleting it", [node("b", [set([...TEMPLATE, "rows", "value", { id: "r4" }], { _id: "r4", _pos: 4, k: "four" })])]],
+  ["adding a table row is undone by deleting it", [node("b", [set([...TEMPLATE, "rows", "value", { id: "r4" }], { __id__: "r4", __pos__: 4, k: "four" })])]],
   ["deleting a table row puts it back", [node("b", [del([...TEMPLATE, "rows", "value", { id: "r1" }])])]],
-  ["moving a table row puts its position back", [node("b", [set([...TEMPLATE, "rows", "value", { id: "r3" }, "_pos"], 0.5)])]],
+  ["moving a table row puts its position back", [node("b", [set([...TEMPLATE, "rows", "value", { id: "r3" }, "__pos__"], 0.5)])]],
   [
     "two writes of one path in one batch undo in order",
     [node("b", [set([...TEMPLATE, "f", "value"], "y")]), node("b", [set([...TEMPLATE, "f", "value"], "z")])],
@@ -200,7 +200,7 @@ function placeholders(value, known) {
   if (value === null || typeof value !== "object") return value;
   const out = {};
   for (const [key, item] of Object.entries(value)) {
-    out[key] = key === "_id" && typeof item === "string" && !known.has(item) ? GENERATED_ROW_ID : placeholders(item, known);
+    out[key] = key === "__id__" && typeof item === "string" && !known.has(item) ? GENERATED_ROW_ID : placeholders(item, known);
   }
   return out;
 }
@@ -211,7 +211,7 @@ function ids(...values) {
     if (Array.isArray(value)) value.forEach(visit);
     else if (value !== null && typeof value === "object") {
       for (const [key, item] of Object.entries(value)) {
-        if (key === "_id" && typeof item === "string") known.add(item);
+        if (key === "__id__" && typeof item === "string") known.add(item);
         visit(item);
       }
     }
@@ -225,26 +225,26 @@ const LEGACY = [
   { key: "Auth", value: "token" },
 ];
 const KEYED = [
-  { _id: "r1", _pos: 1, key: "Accept", value: "json" },
-  { _id: "r2", _pos: 2, key: "Auth", value: "token" },
+  { __id__: "r1", __pos__: 1, key: "Accept", value: "json" },
+  { __id__: "r2", __pos__: 2, key: "Auth", value: "token" },
 ];
 
 const ASSIGN_CASES = [
   ["rows that have ids and positions are left as they are", KEYED, undefined],
   ["new rows get random ids and positions in order", LEGACY, undefined],
   ["a row equal to a previous row takes its id and position", LEGACY, KEYED],
-  ["a run between two positions is spread evenly", [{ _id: "a", _pos: 1 }, { k: 1 }, { k: 2 }, { _id: "b", _pos: 2 }], undefined],
-  ["a gap with no room left renumbers the table in stored order", [{ _id: "a", _pos: 1 }, { k: 1 }, { _id: "b", _pos: 1 + 2 ** -52 }], undefined],
-  ["a run before the first position counts down", [{ k: 1 }, { k: 2 }, { _id: "a", _pos: 10 }], undefined],
-  ["a run between out-of-order neighbours follows the one before", [{ _id: "a", _pos: 3 }, { k: 1 }, { _id: "b", _pos: 1 }], undefined],
-  ["a duplicate id is replaced", [{ _id: "a", _pos: 1 }, { _id: "a", _pos: 2 }], undefined],
+  ["a run between two positions is spread evenly", [{ __id__: "a", __pos__: 1 }, { k: 1 }, { k: 2 }, { __id__: "b", __pos__: 2 }], undefined],
+  ["a gap with no room left renumbers the table in stored order", [{ __id__: "a", __pos__: 1 }, { k: 1 }, { __id__: "b", __pos__: 1 + 2 ** -52 }], undefined],
+  ["a run before the first position counts down", [{ k: 1 }, { k: 2 }, { __id__: "a", __pos__: 10 }], undefined],
+  ["a run between out-of-order neighbours follows the one before", [{ __id__: "a", __pos__: 3 }, { k: 1 }, { __id__: "b", __pos__: 1 }], undefined],
+  ["a duplicate id is replaced", [{ __id__: "a", __pos__: 1 }, { __id__: "a", __pos__: 2 }], undefined],
   ["a table with a row that is not an object is left alone", [LEGACY[0], "x"], undefined],
 ];
 
 const APPEND_CASES = [
   ["rows are appended one past the last position", KEYED, [{ key: "New", value: "x" }]],
   ["a duplicated row gets a new id and position", KEYED, [KEYED[0], KEYED[1]]],
-  ["the next position follows a fractional last position", [{ _id: "a", _pos: 2.5 }], [{ k: 1 }, { k: 2 }]],
+  ["the next position follows a fractional last position", [{ __id__: "a", __pos__: 2.5 }], [{ k: 1 }, { k: 2 }]],
   ["a table without ids gets them first", LEGACY, [{ key: "New" }]],
   ["the first row of an empty table is 1", [], [{ key: "New" }]],
 ];

@@ -58,8 +58,8 @@
     "tables": {
       "path": ["data", "node", "template", "*", "value"],
       "when_field": [{"type": "table"}, {"_input_type": "TableInput"}],
-      "id": "_id",
-      "position": "_pos"
+      "id": "__id__",
+      "position": "__pos__"
     }
   }
 }

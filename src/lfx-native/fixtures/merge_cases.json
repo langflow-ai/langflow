@@ -14,7 +14,7 @@
               "input_value": {"type": "str", "value": ""},
               "headers": {
                 "type": "table",
-                "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                "value": [{"__id__": "r1", "__pos__": 1, "v": "json"}, {"__id__": "r2", "__pos__": 2, "v": "token"}, {"__id__": "r3", "__pos__": 3, "v": "en"}]
               },
               "legacy": {"type": "table", "value": [{"v": "1"}]}
             },
@@ -69,7 +69,11 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "xml"}, {"_id": "r2", "_pos": 2, "v": "X-Auth"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "v": "xml"},
+                      {"__id__": "r2", "__pos__": 2, "v": "X-Auth"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
+                    ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -124,7 +128,11 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "from B"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "v": "from B"},
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
+                    ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -179,7 +187,11 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "from A"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "v": "from A"},
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
+                    ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -234,7 +246,7 @@
                   "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
                   "temperature": {"type": "float", "value": 0.1},
                   "input_value": {"type": "str", "value": ""},
-                  "headers": {"type": "table", "value": [{"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]},
+                  "headers": {"type": "table", "value": [{"__id__": "r2", "__pos__": 2, "v": "token"}, {"__id__": "r3", "__pos__": 3, "v": "en"}]},
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
                 "outputs": [{"name": "text_output"}, {"name": "model_output"}]
@@ -286,7 +298,7 @@
                   "api_key": {"type": "str", "password": true, "value": "OPENAI_API_KEY", "load_from_db": true},
                   "temperature": {"type": "float", "value": 0.1},
                   "input_value": {"type": "str", "value": ""},
-                  "headers": {"type": "table", "value": [{"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]},
+                  "headers": {"type": "table", "value": [{"__id__": "r2", "__pos__": 2, "v": "token"}, {"__id__": "r3", "__pos__": 3, "v": "en"}]},
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
                 "outputs": [{"name": "text_output"}, {"name": "model_output"}]
@@ -314,13 +326,13 @@
         "A": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "_pos"], "value": 4}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "__pos__"], "value": 4}]
           }
         ],
         "B": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r3"}, "_pos"], "value": 0}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r3"}, "__pos__"], "value": 0}]
           }
         ]
       },
@@ -340,7 +352,11 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r3", "_pos": 0, "v": "en"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r1", "_pos": 4, "v": "json"}]
+                    "value": [
+                      {"__id__": "r3", "__pos__": 0, "v": "en"},
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r1", "__pos__": 4, "v": "json"}
+                    ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -369,13 +385,13 @@
         "A": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "_pos"], "value": 4}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "__pos__"], "value": 4}]
           }
         ],
         "B": [
           {
             "type": "update_nodes",
-            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "_pos"], "value": 2.5}]
+            "updates": [{"id": "Model-1", "op": "set_field", "path": ["data", "node", "template", "headers", "value", {"key": "r1"}, "__pos__"], "value": 2.5}]
           }
         ]
       },
@@ -395,7 +411,11 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r1", "_pos": 2.5, "v": "json"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                    "value": [
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r1", "__pos__": 2.5, "v": "json"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
+                    ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -429,7 +449,7 @@
                 "id": "Model-1",
                 "op": "set_field",
                 "path": ["data", "node", "template", "headers", "value", {"key": "rB"}],
-                "value": {"_id": "rB", "_pos": 1.5, "v": "b"}
+                "value": {"__id__": "rB", "__pos__": 1.5, "v": "b"}
               }
             ]
           }
@@ -442,7 +462,7 @@
                 "id": "Model-1",
                 "op": "set_field",
                 "path": ["data", "node", "template", "headers", "value", {"key": "rA"}],
-                "value": {"_id": "rA", "_pos": 1.5, "v": "a"}
+                "value": {"__id__": "rA", "__pos__": 1.5, "v": "a"}
               }
             ]
           }
@@ -465,11 +485,11 @@
                   "headers": {
                     "type": "table",
                     "value": [
-                      {"_id": "r1", "_pos": 1, "v": "json"},
-                      {"_id": "rA", "_pos": 1.5, "v": "a"},
-                      {"_id": "rB", "_pos": 1.5, "v": "b"},
-                      {"_id": "r2", "_pos": 2, "v": "token"},
-                      {"_id": "r3", "_pos": 3, "v": "en"}
+                      {"__id__": "r1", "__pos__": 1, "v": "json"},
+                      {"__id__": "rA", "__pos__": 1.5, "v": "a"},
+                      {"__id__": "rB", "__pos__": 1.5, "v": "b"},
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
                     ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
@@ -534,7 +554,11 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "v": "json"},
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
+                    ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -597,7 +621,11 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "v": "json"},
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
+                    ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -658,7 +686,11 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "v": "json"},
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
+                    ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -713,7 +745,11 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "v": "json"},
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
+                    ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -747,7 +783,7 @@
                 "id": "Model-1",
                 "op": "set_field",
                 "path": ["data", "node", "template", "legacy", "value"],
-                "value": [{"_id": "a1", "_pos": 1, "v": "from A"}],
+                "value": [{"__id__": "a1", "__pos__": 1, "v": "from A"}],
                 "expect": {"value": [{"v": "1"}]}
               }
             ]
@@ -761,7 +797,7 @@
                 "id": "Model-1",
                 "op": "set_field",
                 "path": ["data", "node", "template", "legacy", "value"],
-                "value": [{"_id": "b1", "_pos": 1, "v": "from B"}],
+                "value": [{"__id__": "b1", "__pos__": 1, "v": "from B"}],
                 "expect": {"value": [{"v": "1"}]}
               }
             ]
@@ -784,9 +820,13 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "v": "json"},
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
+                    ]
                   },
-                  "legacy": {"type": "table", "value": [{"_id": "a1", "_pos": 1, "v": "from A"}]}
+                  "legacy": {"type": "table", "value": [{"__id__": "a1", "__pos__": 1, "v": "from A"}]}
                 },
                 "outputs": [{"name": "text_output"}, {"name": "model_output"}]
               }
@@ -859,7 +899,11 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "v": "json"},
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
+                    ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -909,7 +953,11 @@
                   "input_value": {"type": "str", "value": ""},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "v": "json"},
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
+                    ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
@@ -968,7 +1016,11 @@
                   "temperature": {"type": "float", "value": 0.1},
                   "headers": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "json"}, {"_id": "r2", "_pos": 2, "v": "token"}, {"_id": "r3", "_pos": 3, "v": "en"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "v": "json"},
+                      {"__id__": "r2", "__pos__": 2, "v": "token"},
+                      {"__id__": "r3", "__pos__": 3, "v": "en"}
+                    ]
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },

@@ -356,7 +356,7 @@
                   "headers": {
                     "type": "table",
                     "_input_type": "TableInput",
-                    "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                    "value": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}]
                   },
                   "url": {"type": "str", "value": "http://x"}
                 }
@@ -376,7 +376,7 @@
                   "headers": {
                     "type": "table",
                     "_input_type": "TableInput",
-                    "value": [{"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}, {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}]
+                    "value": [{"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}, {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}]
                   },
                   "url": {"type": "str", "value": "http://x"}
                 }
@@ -387,8 +387,8 @@
         "edges": []
       },
       "equal": true,
-      "left_hash": "ce23a9e6af59261287ef64c00c2d1fd08bc5544463b51bc9f00ee5fb9ff2bf69",
-      "right_hash": "ce23a9e6af59261287ef64c00c2d1fd08bc5544463b51bc9f00ee5fb9ff2bf69"
+      "left_hash": "6a22ec69055ea50f6c0ae20b57108a37c0b7677b5b62bac7f7cdb9182278fc5e",
+      "right_hash": "6a22ec69055ea50f6c0ae20b57108a37c0b7677b5b62bac7f7cdb9182278fc5e"
     },
     {
       "name": "a legacy table's array order is its order",

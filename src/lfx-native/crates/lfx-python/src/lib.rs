@@ -319,21 +319,21 @@ fn fixes_for_edges(
     run(py, || api::fixes_for_edges(fixes, edge_ids))
 }
 
-/// Rows in order and without `_id` and `_pos`.
+/// Rows in order and without `__id__` and `__pos__`.
 #[pyfunction]
 fn strip_row_keys(py: Python<'_>, rows: &Bound<'_, PyAny>) -> PyResult<String> {
     let rows = text(rows)?;
     run(py, || api::strip_row_keys(rows))
 }
 
-/// Rows in order, by `(_pos, _id)`, or as stored for a legacy table.
+/// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.
 #[pyfunction]
 fn ordered_rows(py: Python<'_>, rows: &Bound<'_, PyAny>) -> PyResult<String> {
     let rows = text(rows)?;
     run(py, || api::ordered_rows(rows))
 }
 
-/// A flow whose top-level tables have their rows in order and without `_id` and `_pos`.
+/// A flow whose top-level tables have their rows in order and without `__id__` and `__pos__`.
 #[pyfunction]
 fn strip_flow_table_row_keys(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<String> {
     let flow = text(flow)?;

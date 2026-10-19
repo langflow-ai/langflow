@@ -51,7 +51,7 @@ pub enum ListKind {
     /// Outputs and tool actions: keyed by a field of their own, in the order
     /// writes leave them.
     Natural,
-    /// Table rows: keyed by their `_id`, ordered by their numeric position,
+    /// Table rows: keyed by their `__id__`, ordered by their numeric position,
     /// then id. Their place in the array is not state.
     Table,
 }
@@ -70,9 +70,9 @@ pub struct KeyedList {
 /// The two keys every table row carries.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TableKeys {
-    /// The row id key, `_id`.
+    /// The row id key, `__id__`.
     pub id: String,
-    /// The row position key, `_pos`.
+    /// The row position key, `__pos__`.
     pub position: String,
 }
 
@@ -369,8 +369,8 @@ mod tests {
     fn the_embedded_schema_loads() {
         assert_eq!(NODE_SCHEMA.version, 1);
         assert!(NODE_SCHEMA.node_data_view_state.contains("last_updated"));
-        assert_eq!(NODE_SCHEMA.table_keys.id, "_id");
-        assert_eq!(NODE_SCHEMA.table_keys.position, "_pos");
+        assert_eq!(NODE_SCHEMA.table_keys.id, "__id__");
+        assert_eq!(NODE_SCHEMA.table_keys.position, "__pos__");
     }
 
     #[test]

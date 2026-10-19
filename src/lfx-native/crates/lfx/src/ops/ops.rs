@@ -17,7 +17,7 @@ pub enum Segment {
     /// An object key.
     Key(String),
     /// An item of a keyed list, named by its key: `{"key": ...}` in JSON. A
-    /// table row's key is its `_id`. Any other item's key is the field that
+    /// table row's key is its `__id__`. Any other item's key is the field that
     /// the node schema names, such as an output's `name`.
     Item(String),
 }

@@ -3,52 +3,56 @@
   "assign": [
     {
       "name": "rows that have ids and positions are left as they are",
-      "rows": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}],
-      "expected": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+      "rows": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
+      "expected": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}]
     },
     {
       "name": "new rows get random ids and positions in order",
       "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
       "expected": [
-        {"key": "Accept", "value": "json", "_id": "<generated row id>", "_pos": 1},
-        {"key": "Auth", "value": "token", "_id": "<generated row id>", "_pos": 2}
+        {"key": "Accept", "value": "json", "__id__": "<generated row id>", "__pos__": 1},
+        {"key": "Auth", "value": "token", "__id__": "<generated row id>", "__pos__": 2}
       ]
     },
     {
       "name": "a row equal to a previous row takes its id and position",
       "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
-      "previous": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}],
-      "expected": [{"key": "Accept", "value": "json", "_pos": 1, "_id": "r1"}, {"key": "Auth", "value": "token", "_pos": 2, "_id": "r2"}]
+      "previous": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
+      "expected": [{"key": "Accept", "value": "json", "__pos__": 1, "__id__": "r1"}, {"key": "Auth", "value": "token", "__pos__": 2, "__id__": "r2"}]
     },
     {
       "name": "a run between two positions is spread evenly",
-      "rows": [{"_id": "a", "_pos": 1}, {"k": 1}, {"k": 2}, {"_id": "b", "_pos": 2}],
+      "rows": [{"__id__": "a", "__pos__": 1}, {"k": 1}, {"k": 2}, {"__id__": "b", "__pos__": 2}],
       "expected": [
-        {"_id": "a", "_pos": 1},
-        {"k": 1, "_id": "<generated row id>", "_pos": 1.3333333333333333},
-        {"k": 2, "_id": "<generated row id>", "_pos": 1.6666666666666665},
-        {"_id": "b", "_pos": 2}
+        {"__id__": "a", "__pos__": 1},
+        {"k": 1, "__id__": "<generated row id>", "__pos__": 1.3333333333333333},
+        {"k": 2, "__id__": "<generated row id>", "__pos__": 1.6666666666666665},
+        {"__id__": "b", "__pos__": 2}
       ]
     },
     {
       "name": "a gap with no room left renumbers the table in stored order",
-      "rows": [{"_id": "a", "_pos": 1}, {"k": 1}, {"_id": "b", "_pos": 1.0000000000000002}],
-      "expected": [{"_id": "a", "_pos": 1}, {"k": 1, "_id": "<generated row id>", "_pos": 2}, {"_id": "b", "_pos": 3}]
+      "rows": [{"__id__": "a", "__pos__": 1}, {"k": 1}, {"__id__": "b", "__pos__": 1.0000000000000002}],
+      "expected": [{"__id__": "a", "__pos__": 1}, {"k": 1, "__id__": "<generated row id>", "__pos__": 2}, {"__id__": "b", "__pos__": 3}]
     },
     {
       "name": "a run before the first position counts down",
-      "rows": [{"k": 1}, {"k": 2}, {"_id": "a", "_pos": 10}],
-      "expected": [{"k": 1, "_id": "<generated row id>", "_pos": 8}, {"k": 2, "_id": "<generated row id>", "_pos": 9}, {"_id": "a", "_pos": 10}]
+      "rows": [{"k": 1}, {"k": 2}, {"__id__": "a", "__pos__": 10}],
+      "expected": [
+        {"k": 1, "__id__": "<generated row id>", "__pos__": 8},
+        {"k": 2, "__id__": "<generated row id>", "__pos__": 9},
+        {"__id__": "a", "__pos__": 10}
+      ]
     },
     {
       "name": "a run between out-of-order neighbours follows the one before",
-      "rows": [{"_id": "a", "_pos": 3}, {"k": 1}, {"_id": "b", "_pos": 1}],
-      "expected": [{"_id": "a", "_pos": 3}, {"k": 1, "_id": "<generated row id>", "_pos": 4}, {"_id": "b", "_pos": 1}]
+      "rows": [{"__id__": "a", "__pos__": 3}, {"k": 1}, {"__id__": "b", "__pos__": 1}],
+      "expected": [{"__id__": "a", "__pos__": 3}, {"k": 1, "__id__": "<generated row id>", "__pos__": 4}, {"__id__": "b", "__pos__": 1}]
     },
     {
       "name": "a duplicate id is replaced",
-      "rows": [{"_id": "a", "_pos": 1}, {"_id": "a", "_pos": 2}],
-      "expected": [{"_id": "a", "_pos": 1}, {"_id": "<generated row id>", "_pos": 2}]
+      "rows": [{"__id__": "a", "__pos__": 1}, {"__id__": "a", "__pos__": 2}],
+      "expected": [{"__id__": "a", "__pos__": 1}, {"__id__": "<generated row id>", "__pos__": 2}]
     },
     {
       "name": "a table with a row that is not an object is left alone",
@@ -59,46 +63,50 @@
   "append": [
     {
       "name": "rows are appended one past the last position",
-      "rows": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}],
+      "rows": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
       "new_rows": [{"key": "New", "value": "x"}],
       "expected": [
-        {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"},
-        {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"},
-        {"key": "New", "value": "x", "_id": "<generated row id>", "_pos": 3}
+        {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"},
+        {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"},
+        {"key": "New", "value": "x", "__id__": "<generated row id>", "__pos__": 3}
       ]
     },
     {
       "name": "a duplicated row gets a new id and position",
-      "rows": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}],
-      "new_rows": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}],
+      "rows": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
+      "new_rows": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
       "expected": [
-        {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"},
-        {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"},
-        {"key": "Accept", "value": "json", "_id": "<generated row id>", "_pos": 3},
-        {"key": "Auth", "value": "token", "_id": "<generated row id>", "_pos": 4}
+        {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"},
+        {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"},
+        {"key": "Accept", "value": "json", "__id__": "<generated row id>", "__pos__": 3},
+        {"key": "Auth", "value": "token", "__id__": "<generated row id>", "__pos__": 4}
       ]
     },
     {
       "name": "the next position follows a fractional last position",
-      "rows": [{"_id": "a", "_pos": 2.5}],
+      "rows": [{"__id__": "a", "__pos__": 2.5}],
       "new_rows": [{"k": 1}, {"k": 2}],
-      "expected": [{"_id": "a", "_pos": 2.5}, {"k": 1, "_id": "<generated row id>", "_pos": 3}, {"k": 2, "_id": "<generated row id>", "_pos": 4}]
+      "expected": [
+        {"__id__": "a", "__pos__": 2.5},
+        {"k": 1, "__id__": "<generated row id>", "__pos__": 3},
+        {"k": 2, "__id__": "<generated row id>", "__pos__": 4}
+      ]
     },
     {
       "name": "a table without ids gets them first",
       "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
       "new_rows": [{"key": "New"}],
       "expected": [
-        {"key": "Accept", "value": "json", "_id": "<generated row id>", "_pos": 1},
-        {"key": "Auth", "value": "token", "_id": "<generated row id>", "_pos": 2},
-        {"key": "New", "_id": "<generated row id>", "_pos": 3}
+        {"key": "Accept", "value": "json", "__id__": "<generated row id>", "__pos__": 1},
+        {"key": "Auth", "value": "token", "__id__": "<generated row id>", "__pos__": 2},
+        {"key": "New", "__id__": "<generated row id>", "__pos__": 3}
       ]
     },
     {
       "name": "the first row of an empty table is 1",
       "rows": [],
       "new_rows": [{"key": "New"}],
-      "expected": [{"key": "New", "_id": "<generated row id>", "_pos": 1}]
+      "expected": [{"key": "New", "__id__": "<generated row id>", "__pos__": 1}]
     }
   ],
   "assign_nodes": [
@@ -128,8 +136,8 @@
                   "type": "table",
                   "_input_type": "TableInput",
                   "value": [
-                    {"key": "Accept", "value": "json", "_id": "<generated row id>", "_pos": 1},
-                    {"key": "Auth", "value": "token", "_id": "<generated row id>", "_pos": 2}
+                    {"key": "Accept", "value": "json", "__id__": "<generated row id>", "__pos__": 1},
+                    {"key": "Auth", "value": "token", "__id__": "<generated row id>", "__pos__": 2}
                   ]
                 },
                 "url": {"type": "str", "value": "http://x"}
@@ -209,7 +217,7 @@
                 "headers": {
                   "type": "table",
                   "_input_type": "TableInput",
-                  "value": [{"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"}, {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"}]
+                  "value": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}]
                 },
                 "url": {"type": "str", "value": "http://x"}
               }
@@ -227,9 +235,9 @@
                   "type": "table",
                   "_input_type": "TableInput",
                   "value": [
-                    {"key": "Accept", "value": "json", "_pos": 1, "_id": "r1"},
-                    {"key": "Auth", "value": "token", "_pos": 2, "_id": "r2"},
-                    {"key": "New", "_id": "<generated row id>", "_pos": 3}
+                    {"key": "Accept", "value": "json", "__pos__": 1, "__id__": "r1"},
+                    {"key": "Auth", "value": "token", "__pos__": 2, "__id__": "r2"},
+                    {"key": "New", "__id__": "<generated row id>", "__pos__": 3}
                   ]
                 },
                 "url": {"type": "str", "value": "http://x"}

@@ -93,7 +93,7 @@ function ignoringRowOrder(flow) {
   for (const node of copy.nodes ?? []) {
     for (const name of JSON.parse(ops.tableFields(dump(node)))) {
       const field = node.data.node.template[name];
-      field.value = [...field.value].sort((a, b) => (a._id < b._id ? -1 : a._id > b._id ? 1 : 0));
+      field.value = [...field.value].sort((a, b) => (a.__id__ < b.__id__ ? -1 : a.__id__ > b.__id__ ? 1 : 0));
     }
   }
   return copy;
@@ -209,9 +209,9 @@ for (const [section, run] of Object.entries(tableRuns)) {
 cases("table_cases.json", "fill_positions", (c) => {
   // The binding fills positions as part of assigning row ids. Rows that
   // already have unique ids show only the positions it filled.
-  const rows = c.rows.map((row, index) => ({ ...row, _id: `row${index}` }));
+  const rows = c.rows.map((row, index) => ({ ...row, __id__: `row${index}` }));
   const assigned = parse(ops.assignRowIds(dump(rows), undefined, false));
-  check(matches, "positions", assigned.map((row) => row._pos ?? null), c.expected.map((row) => row._pos ?? null));
+  check(matches, "positions", assigned.map((row) => row.__pos__ ?? null), c.expected.map((row) => row.__pos__ ?? null));
 });
 
 cases("editor_cases.json", "assign", (c) =>
