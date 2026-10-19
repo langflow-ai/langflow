@@ -6,12 +6,11 @@ import copy
 import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from lfx.services.flow_operations.canonical import json_type
-from lfx.services.flow_operations.edge_rules import OUTPUTS_PATH, check_edge, node_outputs
+from lfx.services.flow_operations.edge_rules import OUTPUTS_PATH, check_edge, node_outputs, outputs_by_name
 from lfx.services.flow_operations.exceptions import FlowOperationValidationError
-from lfx.services.flow_operations.keyed_lists import ListIndex
 from lfx.services.flow_operations.ops import (
     AddEdgesOp,
     AddNodesOp,
@@ -38,6 +37,9 @@ from lfx.services.flow_operations.state import (
     writable_node,
 )
 from lfx.services.flow_operations.validation import validate_flow_data
+
+if TYPE_CHECKING:
+    from lfx.services.flow_operations.keyed_lists import ListIndex
 
 
 @dataclass(frozen=True)
@@ -192,7 +194,7 @@ def _detached_edges(state: GraphState, node_id: str, update: UpdateNodeEntry, be
     elif len(path) == len(OUTPUTS_PATH):
         # The whole list was replaced or deleted: the outputs it no longer has are gone.
         outputs_after = node_outputs(state, node_id)
-        removed_outputs = set(_outputs_by_name(before, node_id=node_id)) - set(
+        removed_outputs = set(outputs_by_name(before, node_id=node_id)) - set(
             outputs_after.by_key if outputs_after is not None else ()
         )
     else:
@@ -205,15 +207,6 @@ def _detached_edges(state: GraphState, node_id: str, update: UpdateNodeEntry, be
         detached |= connections.outputs.get(name, set())
         detached |= connections.inputs.get(("output", name), set())
     return detached
-
-
-def _outputs_by_name(outputs: Any, *, node_id: str) -> dict[str, dict[str, Any]]:
-    """Index an outputs list a write replaced, which follows the same rules as the one that replaces it."""
-    if not isinstance(outputs, list):
-        msg = f"node {node_id!r}: data.node.outputs must be a list"
-        raise FlowOperationValidationError(msg)
-    keyed = load_node_schema().keyed_list_at({}, OUTPUTS_PATH)
-    return ListIndex(keyed, outputs, context=f"node {node_id!r}: data.node.outputs").by_key
 
 
 def _changed(update: UpdateNodeEntry, before: Any) -> bool:

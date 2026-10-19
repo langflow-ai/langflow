@@ -28,10 +28,10 @@ from typing import TYPE_CHECKING, Any
 from lfx.services.flow_operations.canonical import EDGE_VIEW_STATE_KEYS, parse_handle, values_equal
 from lfx.services.flow_operations.codes import GraphViolationCode
 from lfx.services.flow_operations.exceptions import FlowDataValidationError, FlowOperationValidationError
+from lfx.services.flow_operations.keyed_lists import ListIndex
 from lfx.services.flow_operations.schema import load_node_schema
 
 if TYPE_CHECKING:
-    from lfx.services.flow_operations.keyed_lists import ListIndex
     from lfx.services.flow_operations.state import GraphState
 
 HANDLE_KEYS = ("sourceHandle", "targetHandle")
@@ -210,6 +210,15 @@ def node_outputs(state: GraphState, node_id: str) -> ListIndex | None:
         raise FlowDataValidationError(msg)
     keyed = load_node_schema().keyed_list_at(state.nodes_by_id[node_id], OUTPUTS_PATH)
     return state.list_index(keyed, outputs, context=f"node {node_id!r}: data.node.outputs")
+
+
+def outputs_by_name(outputs: Any, *, node_id: str) -> dict[str, dict[str, Any]]:
+    """Index an outputs list that is not in a graph state, such as one a write replaced."""
+    if not isinstance(outputs, list):
+        msg = f"node {node_id!r}: data.node.outputs must be a list"
+        raise FlowOperationValidationError(msg)
+    keyed = load_node_schema().keyed_list_at({}, OUTPUTS_PATH)
+    return ListIndex(keyed, outputs, context=f"node {node_id!r}: data.node.outputs").by_key
 
 
 def _error(edge: dict[str, Any], code: GraphViolationCode, reason: str) -> FlowOperationValidationError:

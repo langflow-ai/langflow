@@ -71,6 +71,7 @@ from lfx.services.flow_operations.validation import (
     GraphViolation,
     find_graph_violations,
     find_table_violations,
+    remove_cut_edges,
     validate_flow_data,
 )
 
@@ -136,6 +137,7 @@ __all__ = [
     "parse_flow_operation",
     "parse_flow_operations",
     "parse_handle",
+    "remove_cut_edges",
     "repair_flow_data",
     "resolution_of",
     "strip_flow_table_row_keys",
