@@ -69,6 +69,20 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         assert all(row["metadata"]["has_system_message"] for row in result_dicts)
         assert all(row["metadata"]["processing_status"] == "success" for row in result_dicts)
 
+    async def test_metadata_reports_input_length(self):
+        test_df = DataFrame({"text": ["Hi", "Hello there"]})
+
+        component = BatchRunComponent(
+            model=_MockLLM(),
+            df=test_df,
+            column_name="text",
+            enable_metadata=True,
+        )
+
+        result = await component.run_batch()
+
+        assert [row["metadata"]["input_length"] for row in result.to_dict("records")] == [2, 11]
+
     async def test_batch_run_without_metadata(self):
         test_df = DataFrame({"text": ["Hello", "World"]})
 
@@ -187,7 +201,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
             batch_index=1,
         )
 
-        component._add_metadata(row, success=True, system_msg="Instructions here")
+        component._add_metadata(row, success=True, system_msg="Instructions here", input_text="test_input")
 
         assert "metadata" in row
         assert row["metadata"]["has_system_message"] is True
