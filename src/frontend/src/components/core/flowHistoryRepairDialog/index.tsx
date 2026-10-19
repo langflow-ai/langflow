@@ -1,8 +1,15 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import useFlowHistoryRepairStore from "@/stores/flowHistoryRepairStore";
 
 /**
@@ -31,35 +38,37 @@ export default function FlowHistoryRepairDialog() {
       setIsRepairing(false);
     }
   };
+  // Escape and the close button do what Cancel does, and like Cancel they
+  // wait while a repair runs.
+  const handleCancel = () => {
+    if (!isRepairing) setProblem(null);
+  };
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div
-        role="alertdialog"
-        aria-labelledby="flow-history-repair-title"
-        className="mx-4 flex w-full max-w-md flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg"
+  return (
+    <Dialog open onOpenChange={(open) => !open && handleCancel()}>
+      <DialogContent
+        className="max-w-md"
+        // A click beside the dialog is not a choice.
+        onInteractOutside={(event) => event.preventDefault()}
       >
-        <div className="flex items-center gap-2">
-          <ForwardedIconComponent
-            name="TriangleAlert"
-            className="h-5 w-5 text-accent-amber-foreground"
-          />
-          <span
-            id="flow-history-repair-title"
-            className="text-lg font-semibold"
-          >
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 pr-6 leading-normal">
+            <ForwardedIconComponent
+              name="TriangleAlert"
+              className="h-5 w-5 text-accent-amber-foreground"
+            />
             {isMismatch
               ? t("flowHistory.repair.mismatchTitle")
               : t("flowHistory.repair.invalidTitle")}
-          </span>
-        </div>
-        <p className="text-sm text-muted-foreground">
+          </DialogTitle>
+        </DialogHeader>
+        <DialogDescription>
           {isMismatch
             ? t("flowHistory.repair.mismatchBody")
             : problem.graph === "stored"
               ? t("flowHistory.repair.invalidStoredBody")
               : t("flowHistory.repair.invalidSubmittedBody")}
-        </p>
+        </DialogDescription>
         {!isMismatch && problem.violations && problem.violations.length > 0 && (
           <ul className="list-disc pl-5 text-xs text-muted-foreground">
             {problem.violations.map((code) => (
@@ -67,11 +76,11 @@ export default function FlowHistoryRepairDialog() {
             ))}
           </ul>
         )}
-        <div className="flex justify-end gap-2">
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setProblem(null)}
+            onClick={handleCancel}
             disabled={isRepairing}
           >
             {t("flowHistory.repair.cancel")}
@@ -79,9 +88,8 @@ export default function FlowHistoryRepairDialog() {
           <Button size="sm" onClick={handleRepair} loading={isRepairing}>
             {t("flowHistory.repair.confirm")}
           </Button>
-        </div>
-      </div>
-    </div>,
-    document.body,
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
