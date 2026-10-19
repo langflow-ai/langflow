@@ -15,7 +15,7 @@ The other files (`apply_cases.json`, `diff_cases.json`, `merge_cases.json`, `pro
 
 A path names a list item with `{"key": ...}` on every keyed list: a table row's key is its `__id__`. The reference engines still name table rows with `{"id": ...}`, so the list item keys in `apply_cases.json`, `diff_cases.json`, `inverse_cases.json`, `merge_cases.json` and `property_cases.json` follow the docs instead, and the case that refused `{"key": ...}` on a table row is gone. Do not regenerate these files from the reference engines.
 
-A table row carries `__id__` and `__pos__`. The reference engines still name the row keys `_id` and `_pos`. The files that `generate.py` and `property_cases.py` write were regenerated from the Python engine after the rename. The files that the reference engines cannot regenerate (`apply_cases.json`, `diff_cases.json`, `merge_cases.json`, `inverse_cases.json` and `editor_cases.json`) had the two keys renamed in place, and nothing else changed. The table cases of `editor_cases.json` still match the editor's engine.
+A table row carries `__id__` and `__pos__`, and no table column may take either name (`TABLE_COLUMN_RESERVED`). The reference engines still name the row keys `_id` and `_pos`. The files that `generate.py` and `property_cases.py` write were regenerated from the Python engine after the rename. The files that the reference engines cannot regenerate (`apply_cases.json`, `diff_cases.json`, `merge_cases.json`, `inverse_cases.json` and `editor_cases.json`) had the two keys renamed in place, and nothing else changed. The table cases of `editor_cases.json` still match the editor's engine.
 
 The reference for both engines is `ad19da0df4` on `oplog-history-ui`.
 

@@ -1005,6 +1005,43 @@
       ]
     },
     {
+      "name": "a reserved column is left to the client",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
+                    "table_schema": [{"name": "key", "display_name": "Header"}, {"name": "value", "display_name": "Value"}, {"name": "__pos__"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "error": {
+        "error": "FlowDataValidationError",
+        "code": "FLOW_GRAPH_INVALID",
+        "violations": [
+          {
+            "code": "TABLE_COLUMN_RESERVED",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "table_schema", 2, "name"],
+            "message": "table column must not be named __pos__",
+            "resolution": "manual"
+          }
+        ]
+      }
+    },
+    {
       "name": "rows between out-of-order neighbours follow the one before",
       "flow": {
         "nodes": [
