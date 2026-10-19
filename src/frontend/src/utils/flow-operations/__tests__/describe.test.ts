@@ -111,26 +111,26 @@ describe("describeOperation", () => {
             {
               id: "a",
               op: "set_field",
-              path: [...rows, { id: "r1" }, "v"],
+              path: [...rows, { key: "r1" }, "v"],
               value: "x",
             },
             {
               id: "a",
               op: "set_field",
-              path: [...rows, { id: "r2" }],
+              path: [...rows, { key: "r2" }],
               value: { _id: "r2" },
             },
             {
               id: "a",
               op: "set_field",
-              path: [...rows, { id: "r3" }],
+              path: [...rows, { key: "r3" }],
               value: { _id: "r3" },
             },
-            { id: "a", op: "delete_field", path: [...rows, { id: "r4" }] },
+            { id: "a", op: "delete_field", path: [...rows, { key: "r4" }] },
             {
               id: "a",
               op: "set_field",
-              path: [...rows, { id: "r5" }, "_pos"],
+              path: [...rows, { key: "r5" }, "_pos"],
               value: "a3",
             },
             {

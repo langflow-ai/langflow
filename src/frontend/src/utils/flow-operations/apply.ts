@@ -20,7 +20,7 @@ import { jsonType, valuesEqual } from "./canonical";
 import { checkEdge, inputKey, nodeOutputs, OUTPUTS_PATH } from "./edge-rules";
 import { failedExpectation, invalidOperation } from "./errors";
 import { ListIndex } from "./keyed-lists";
-import { type KeyedList, keyedListAt, keyOf, selectorName } from "./schema";
+import { type KeyedList, keyedListAt, keyOf } from "./schema";
 import {
   type ApplyOptions,
   type FlowGraph,
@@ -38,8 +38,8 @@ export type { ApplyOptions, FlowGraph } from "./state";
 
 type JsonObject = Record<string, unknown>;
 
-/** Selects a table row by its `_id`, or a natural-key list item by its key. */
-export type Selector = { id: string } | { key: string };
+/** Selects an item of a keyed list by its key: a table row by its `_id`, an output by its name. */
+export type Selector = { key: string };
 export type PathSegment = string | Selector;
 
 /** What a path must hold before a write: a value, or nothing at all. */
@@ -96,7 +96,7 @@ function isSelector(segment: PathSegment): segment is Selector {
 }
 
 function selectorKey(selector: Selector): string {
-  return "id" in selector ? selector.id : selector.key;
+  return selector.key;
 }
 
 function clone<T>(value: T): T {
@@ -140,12 +140,8 @@ function parseSegment(segment: unknown, context: string): PathSegment {
     );
   if (isObject(segment)) {
     const keys = Object.keys(segment);
-    if (
-      keys.length === 1 &&
-      (keys[0] === "id" || keys[0] === "key") &&
-      isNonEmptyString(segment[keys[0]])
-    )
-      return { [keys[0]]: segment[keys[0]] } as Selector;
+    if (keys.length === 1 && keys[0] === "key" && isNonEmptyString(segment.key))
+      return { key: segment.key };
   }
   throw invalidOperation(`${context}: invalid path segment`);
 }
@@ -351,7 +347,7 @@ function readLast(
     : { exists: true, value: items.items[slot] };
 }
 
-/** The index of the keyed list `path[index]` selects from, checking the selector fits it. */
+/** The index of the keyed list `path[index]` selects from. */
 function keyedList(
   state: GraphState,
   node: JsonObject,
@@ -364,11 +360,6 @@ function keyedList(
   if (!list)
     throw invalidOperation(
       `${context}.path[${index}]: selector on a list the node schema does not declare keyed`,
-    );
-  const name = selectorName(list);
-  if (!(name in (path[index] as Selector)))
-    throw invalidOperation(
-      `${context}.path[${index}]: items of this list are selected with {"${name}": ...}`,
     );
   if (!Array.isArray(value))
     throw invalidOperation(
@@ -503,9 +494,7 @@ function applyFieldUpdate(
   for (const step of [...steps].reverse()) {
     const item = step.items.items[step.items.slots.get(step.key)!];
     if (keyOf(step.items.list, item) !== step.key)
-      throw invalidOperation(
-        `${context}: cannot change a list item's ${selectorName(step.items.list)}`,
-      );
+      throw invalidOperation(`${context}: cannot change a list item's key`);
     if (step.items.list.kind === "table")
       step.items.requirePosition(item, context, invalidOperation);
   }
