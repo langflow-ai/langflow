@@ -17,7 +17,7 @@ class AddNodesOp(BaseModel):
 
 
 class KeySelector(BaseModel):
-    """Selects an item of a keyed list by its key: a table row by its ``_id``, an output by its name."""
+    """Selects an item of a keyed list by its key: a table row by its ``__id__``, an output by its name."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 

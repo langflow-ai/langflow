@@ -57,7 +57,7 @@ def _ignoring_id_order(operations: list[dict]) -> list[dict]:
 
 
 def _ignoring_row_order(flow_data: dict) -> dict:
-    """Compare table rows as a collection keyed by ``_id``: a table's order is its rows' positions, not the array."""
+    """Compare table rows as a collection keyed by ``__id__``: a table's order is its rows' positions, not the array."""
     flow_data = copy.deepcopy(flow_data)
     schema = load_node_schema()
     for node in flow_data.get("nodes", []):
@@ -66,5 +66,5 @@ def _ignoring_row_order(flow_data: dict) -> dict:
             path = ("data", "node", "template", name, "value")
             rows = field.get("value") if isinstance(field, dict) else None
             if isinstance(rows, list) and schema.keyed_list_at(node, path) is schema.table:
-                field["value"] = sorted(rows, key=lambda row: row["_id"])
+                field["value"] = sorted(rows, key=lambda row: row["__id__"])
     return flow_data
