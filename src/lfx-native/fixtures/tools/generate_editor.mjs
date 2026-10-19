@@ -3,8 +3,8 @@
 // Inverses, the editor's table helpers (which renumber a table when a gap has
 // no room left) and the edge fixes a restore sends exist only in the editor's
 // TypeScript engine, so their expected outputs come from it, never from the
-// Rust engine. Bundle the TypeScript engine at the reference commit
-// (ad19da0df4, oplog-history-ui) into one CommonJS file that exports
+// Rust engine. Bundle the TypeScript engine of the stack's top branch
+// (oplog-history-ui) into one CommonJS file that exports
 // applyFlowOperations, graphsEqual, edgeFixes, fixesForEdges,
 // withTableRowIds, withNodesTableRowIds and appendTableRows, then run:
 //
@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 
 const engine = createRequire(import.meta.url)(resolve(process.argv[2]));
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), "..");
-const REFERENCE = "the editor's engine at ad19da0df4 (oplog-history-ui)";
+const REFERENCE = "the editor's engine";
 const GENERATED_ROW_ID = "<generated row id>";
 const LINE_WIDTH = 160;
 
@@ -142,25 +142,17 @@ const INVERSE_CASES = [
     [node("a", [del([...OUTPUTS, { key: "out" }]), del([...OUTPUTS, { key: "mid" }])])],
   ],
   ["replacing the outputs puts back the list and its edges", [node("a", [set(OUTPUTS, [{ name: "out" }])])]],
-  ["adding a table row is undone by deleting it", [node("b", [set([...TEMPLATE, "rows", "value", { id: "r4" }], { __id__: "r4", __pos__: 4, k: "four" })])]],
-  ["deleting a table row puts it back", [node("b", [del([...TEMPLATE, "rows", "value", { id: "r1" }])])]],
-  ["moving a table row puts its position back", [node("b", [set([...TEMPLATE, "rows", "value", { id: "r3" }, "__pos__"], 0.5)])]],
+  ["adding a table row is undone by deleting it", [node("b", [set([...TEMPLATE, "rows", "value", { key: "r4" }], { __id__: "r4", __pos__: 4, k: "four" })])]],
+  ["deleting a table row puts it back", [node("b", [del([...TEMPLATE, "rows", "value", { key: "r1" }])])]],
+  ["moving a table row puts its position back", [node("b", [set([...TEMPLATE, "rows", "value", { key: "r3" }, "__pos__"], 0.5)])]],
   [
     "two writes of one path in one batch undo in order",
     [node("b", [set([...TEMPLATE, "f", "value"], "y")]), node("b", [set([...TEMPLATE, "f", "value"], "z")])],
   ],
   ["metadata sets and deletes are undone", [{ type: "update_metadata", fields: { name: "renamed", added: 1 }, delete_keys: ["name", "absent"] }]],
   [
-    "rewiring an edge's handles puts them back",
-    [
-      {
-        type: "update_edges",
-        updates: [
-          { id: "e1", op: "set_field", path: ["targetHandle"], value: handle({ fieldName: "many" }) },
-          { id: "e1", op: "set_field", path: ["data", "targetHandle"], value: { fieldName: "many" } },
-        ],
-      },
-    ],
+    "re-adding an edge with other handles puts it back",
+    [{ type: "delete_edges", ids: ["e1"] }, { type: "add_edges", edges: [edge("e1", "a", "b", "out", { fieldName: "many" })] }],
   ],
   ["a batch of several operations", [{ type: "delete_edges", ids: ["e2"] }, node("a", [del([...OUTPUTS, { key: "mid" }])]), { type: "delete_nodes", ids: ["b"] }]],
 ];
@@ -289,14 +281,8 @@ const FIXES_FOR_EDGES = [
   {
     name: "only the fixes of the flagged edges are kept",
     fixes: [
-      { type: "delete_edges", ids: ["e1", "e2"] },
-      {
-        type: "update_edges",
-        updates: [
-          { id: "e2", op: "set_field", path: ["targetHandle"], value: "x" },
-          { id: "e3", op: "set_field", path: ["targetHandle"], value: "y" },
-        ],
-      },
+      { type: "delete_edges", ids: ["e1", "e2", "e3"] },
+      { type: "add_edges", edges: [edge("e2", "a", "b", "out", { fieldName: "x" }), edge("e3", "a", "b", "out", { fieldName: "y" })] },
     ],
     edge_ids: ["e2"],
   },

@@ -1,5 +1,5 @@
 {
-  "description": "Restore fixes: apply_restore_fixes(revision, stored, fixes). Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui) (langflow.services.flow_history.restore_fixes). A case gives the rebuilt revision, the stored flow it replaces and the client's fixes, and the fixed revision or the error.",
+  "description": "Restore fixes: apply_restore_fixes(revision, stored, fixes). Expected outputs come from the Python engine (langflow.services.flow_history.restore_fixes). A case gives the rebuilt revision, the stored flow it replaces and the client's fixes, and the fixed revision or the error.",
   "cases": [
     {
       "name": "deleting an edge whose handle names nothing",

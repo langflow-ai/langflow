@@ -1,5 +1,5 @@
 {
-  "description": "Canonical form (RFC 8785), value equality and graph equality. Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui). `numbers` and `values` give JSON text and its canonical text, or the error. Any two `equality_samples` are equal exactly when their canonical texts are equal. `graphs` give two graphs, whether they are equal, and each one's graph_hash. `handles` give a handle value and the object it parses to, or null.",
+  "description": "Canonical form (RFC 8785), value equality and graph equality. Expected outputs come from the Python engine. `numbers` and `values` give JSON text and its canonical text, or the error. Any two `equality_samples` are equal exactly when their canonical texts are equal. `graphs` give two graphs, whether they are equal, and each one's graph_hash. `handles` give a handle value and the object it parses to, or null.",
   "numbers": [
     {"name": "zero", "json": "0", "canonical": "0"},
     {"name": "negative zero integer", "json": "-0", "canonical": "0"},

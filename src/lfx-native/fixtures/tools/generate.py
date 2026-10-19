@@ -2,16 +2,17 @@
 
 The expected outputs of these files come from the Python engine
 (``lfx.services.flow_operations`` and the pure parts of
-``langflow.services.flow_history``), never from the Rust engine. Run this
-against the Python engine at the reference commit (``ad19da0df4``,
-``oplog-history-ui``), with ``lfx`` and ``langflow`` importable:
+``langflow.services.flow_history``) of the operation log stack, never from
+the Rust engine. Run it from the repository root of a checkout of the stack's
+top branch (``oplog-history-ui``), with ``lfx`` and ``langflow`` importable:
 
-    python src/lfx-native/fixtures/tools/generate.py
+    uv run python src/lfx-native/fixtures/tools/generate.py
 
 It rewrites ``canonical_cases.json``, ``validation_cases.json``,
 ``repair_cases.json``, ``table_cases.json``, ``envelope_cases.json``,
-``replay_cases.json``, ``restore_cases.json`` and ``write_cases.json`` next to
-the other fixtures.
+``replay_cases.json``, ``restore_cases.json``, ``write_cases.json`` and
+``limit_cases.json`` next to the other fixtures. A run that changes no rule
+leaves every file as it is.
 
 Two conventions keep the files runnable in every runtime:
 
@@ -46,7 +47,6 @@ from lfx.services.flow_operations import (
     DeleteNodesOp,
     FlowDataValidationError,
     FlowOperationError,
-    UpdateEdgesOp,
     UpdateMetadataOp,
     UpdateNodesOp,
     canonical_json,
@@ -75,7 +75,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from fixture_json import dumps
 
 FIXTURES = Path(__file__).resolve().parent.parent
-REFERENCE = "the Python engine at ad19da0df4 (oplog-history-ui)"
+REFERENCE = "the Python engine"
 GENERATED_EDGE_ID = "<generated edge id>"
 GENERATED_ROW_ID = "<generated row id>"
 ACTOR = "11111111-1111-4111-8111-111111111111"
@@ -1240,7 +1240,6 @@ def _recorder_namespace(ops_limit: int, bytes_limit: int) -> dict[str, Any]:
         "AddNodesOp": AddNodesOp,
         "DeleteEdgesOp": DeleteEdgesOp,
         "DeleteNodesOp": DeleteNodesOp,
-        "UpdateEdgesOp": UpdateEdgesOp,
         "UpdateMetadataOp": UpdateMetadataOp,
         "UpdateNodesOp": UpdateNodesOp,
         "FlowOperation": object,
@@ -1572,11 +1571,20 @@ def _restore_inputs() -> list[dict[str, Any]]:
     occupied_stored = _connectable(_edge_to("f", "e1"))
     no_data = _edge_to("missing", "bad")
     del no_data["data"]
-    no_data_graph = _connectable(no_data)
-    handles = {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+    null_data = _edge_to("missing", "bad")
+    null_data["data"] = None
+    fixed = _edge_to("f", "bad")
+    with_extra_key = _edge_to("f", "bad")
+    with_extra_key["data"]["x"] = 1
+    one_form = _edge_to("f", "bad")
+    del one_form["targetHandle"]
+    labelled = {**_edge_to("missing", "bad"), "label": "x"}
+    unparsable = _edge_to("f", "bad")
+    unparsable["targetHandle"] = 5
 
-    def rewrite(edge_id: str, path: list, value: Any) -> dict:
-        return {"type": "update_edges", "updates": [{"id": edge_id, "op": "set_field", "path": path, "value": value}]}
+    def readd(edge: dict) -> list[dict]:
+        """Rewrite an edge: delete it and add it back, the only way an edge changes."""
+        return [{"type": "delete_edges", "ids": [edge["id"]]}, {"type": "add_edges", "edges": [edge]}]
 
     return [
         {
@@ -1589,31 +1597,25 @@ def _restore_inputs() -> list[dict[str, Any]]:
             "name": "rewriting the handles of an edge whose handle names nothing",
             "revision": broken,
             "stored": stored,
-            "fixes": [
-                rewrite("bad", ["targetHandle"], escape_handle({"fieldName": "f"})),
-                rewrite("bad", ["data", "targetHandle"], {"fieldName": "f"}),
-            ],
+            "fixes": readd(fixed),
         },
         {
-            "name": "setting data on an edge that has none",
-            "revision": no_data_graph,
+            "name": "giving data to an edge without it is not a fix: repair derives the missing form",
+            "revision": _connectable(no_data),
             "stored": stored,
-            "fixes": [
-                rewrite("bad", ["data"], handles),
-                rewrite("bad", ["targetHandle"], escape_handle({"fieldName": "f"})),
-            ],
+            "fixes": readd(fixed),
         },
         {
-            "name": "setting data with another key is an edit",
-            "revision": no_data_graph,
-            "stored": stored,
-            "fixes": [rewrite("bad", ["data"], {**handles, "x": 1})],
-        },
-        {
-            "name": "setting data on an edge that has it is an edit",
+            "name": "re-adding an edge with another key in its data is an edit",
             "revision": broken,
             "stored": stored,
-            "fixes": [rewrite("bad", ["data"], handles)],
+            "fixes": readd(with_extra_key),
+        },
+        {
+            "name": "an edge whose data is null may get data that holds only its handles",
+            "revision": _connectable(null_data),
+            "stored": stored,
+            "fixes": readd(fixed),
         },
         {
             "name": "deleting either edge into an occupied input",
@@ -1628,10 +1630,10 @@ def _restore_inputs() -> list[dict[str, Any]]:
             "fixes": [{"type": "delete_edges", "ids": ["e2"]}],
         },
         {
-            "name": "rewriting an edge into an occupied input is not a fix",
+            "name": "re-adding an edge into an occupied input with other handles is not a fix",
             "revision": occupied,
             "stored": occupied_stored,
-            "fixes": [rewrite("e2", ["targetHandle"], escape_handle({"fieldName": "many"}))],
+            "fixes": readd(_edge_to("many", "e2")),
         },
         {
             "name": "deleting an edge that breaks no rule is not a fix",
@@ -1646,26 +1648,30 @@ def _restore_inputs() -> list[dict[str, Any]]:
             "fixes": [{"type": "delete_edges", "ids": ["bad", "other"]}],
         },
         {
-            "name": "a delete_field is not a handle rewrite",
+            "name": "re-adding an edge without one handle form fails the edge rules",
             "revision": broken,
             "stored": stored,
-            "fixes": [
-                {"type": "update_edges", "updates": [{"id": "bad", "op": "delete_field", "path": ["targetHandle"]}]}
-            ],
+            "fixes": readd(one_form),
         },
         {
-            "name": "a rewrite of another key is not a handle rewrite",
+            "name": "a change to another key is not a handle rewrite",
             "revision": broken,
             "stored": stored,
-            "fixes": [rewrite("bad", ["label"], "x")],
+            "fixes": readd(labelled),
         },
         {
             "name": "a fix the engine cannot apply keeps the engine's code",
             "revision": broken,
             "stored": stored,
-            "fixes": [rewrite("bad", ["targetHandle"], 5)],
+            "fixes": readd(unparsable),
         },
         {"name": "no fixes", "revision": broken, "stored": stored, "fixes": []},
+        {
+            "name": "adding an edge back without deleting it first is not a fix",
+            "revision": broken,
+            "stored": stored,
+            "fixes": [{"type": "add_edges", "edges": [fixed]}],
+        },
     ]
 
 

@@ -1,5 +1,5 @@
 {
-  "description": "The stored operation envelope. Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui) (langflow.services.flow_history.envelope and the recorder's packing). `decode` gives a stored row and its operations, or the damage (`kind` and `revision`). `encode` gives recorded operations and their envelope, actors and requests. `pack` numbers operations from `latest_revision`, splits what does not fit, and packs them into rows within `limits` (sizes are compact JSON bytes).",
+  "description": "The stored operation envelope. Expected outputs come from the Python engine (langflow.services.flow_history.envelope and the recorder's packing). `decode` gives a stored row and its operations, or the damage (`kind` and `revision`). `encode` gives recorded operations and their envelope, actors and requests. `pack` numbers operations from `latest_revision`, splits what does not fit, and packs them into rows within `limits` (sizes are compact JSON bytes).",
   "decode": [
     {
       "name": "one batch",

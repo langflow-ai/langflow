@@ -7,17 +7,11 @@ The fixture files are the specification of the engine. Their expected outputs co
 | `generate.py` | the Python engine (`lfx.services.flow_operations` and the pure parts of `langflow.services.flow_history`) | `canonical_cases.json`, `validation_cases.json`, `repair_cases.json`, `table_cases.json`, `envelope_cases.json`, `replay_cases.json`, `restore_cases.json`, `write_cases.json`, and `limit_cases.json` |
 | `generate_editor.mjs` | the editor's TypeScript engine (`src/frontend/src/utils/flow-operations/`), for what only it has: inverses, the editor's table rules and the edge fixes | `inverse_cases.json`, `editor_cases.json` |
 
-`limit_cases.json` is the exception: the docs decide its expectations, not the Python engine. The Python engine accepts lone surrogates and any depth. The Rust engine refuses both, as the docs decide: a Rust string cannot hold a lone surrogate, and one depth limit holds in every runtime.
+`limit_cases.json` is the exception: the docs decide its expectations, not the Python engine. The Python engine accepts lone surrogates and any depth. The Rust engine refuses both, as the docs decide: a Rust string cannot hold a lone surrogate, and one depth limit holds in every runtime. `generate.py` writes the file from cases that state those expectations.
 
-The other files (`apply_cases.json`, `diff_cases.json`, `merge_cases.json`, `property_cases.json`) were moved from the lfx tests unchanged.
+The other files are not generated. `apply_cases.json`, `diff_cases.json` and `merge_cases.json` are written by hand, and the docs decide their expectations. `property_cases.json` comes from `property_cases.py` in the lfx tests.
 
-`update_edges` is not an operation. An edge changes by being deleted and added again, so no batch can make two edges swap inputs through an occupied state. The cases about changing an edge, in `apply_cases.json`, `inverse_cases.json`, `merge_cases.json`, `diff_cases.json`, `editor_cases.json` and `restore_cases.json`, follow that rule, and the docs decide their expectations, as they do for `limit_cases.json`. The reference engines still have `update_edges`, so do not regenerate these files from them. `property_cases.json` comes from `property_cases.py` in the lfx tests on `oplog-history-ui`, which changes edges the same way.
-
-A path names a list item with `{"key": ...}` on every keyed list: a table row's key is its `__id__`. The reference engines still name table rows with `{"id": ...}`, so the list item keys in `apply_cases.json`, `diff_cases.json`, `inverse_cases.json`, `merge_cases.json` and `property_cases.json` follow the docs instead, and the case that refused `{"key": ...}` on a table row is gone. Do not regenerate these files from the reference engines.
-
-A table row carries `__id__` and `__pos__`, and no table column may take either name (`TABLE_COLUMN_RESERVED`). The reference engines still name the row keys `_id` and `_pos`. The files that `generate.py` and `property_cases.py` write were regenerated from the Python engine after the rename. The files that the reference engines cannot regenerate (`apply_cases.json`, `diff_cases.json`, `merge_cases.json`, `inverse_cases.json` and `editor_cases.json`) had the two keys renamed in place, and nothing else changed. The table cases of `editor_cases.json` still match the editor's engine.
-
-The reference for both engines is `ad19da0df4` on `oplog-history-ui`.
+Both scripts run the Python and editor engines of the operation log stack, so run them from a checkout of its top branch, `oplog-history-ui`. A run that changes no rule leaves every file as it is, so after a rule change, the diff of a run shows exactly what the change does.
 
 ## Conventions
 
@@ -26,13 +20,13 @@ The reference for both engines is `ad19da0df4` on `oplog-history-ui`.
 
 ## Run them
 
-`generate.py` needs `lfx` and `langflow` importable at the reference commit, for example from a checkout of `oplog-history-ui` with its uv environment:
+`generate.py` needs `lfx` and `langflow` importable. From the repository root, with its uv environment:
 
 ```bash
-uv run python ../lfx-native/fixtures/tools/generate.py
+uv run python src/lfx-native/fixtures/tools/generate.py
 ```
 
-`generate_editor.mjs` needs the TypeScript engine bundled into one CommonJS file that exports `applyFlowOperations`, `graphsEqual`, `edgeFixes`, `fixesForEdges`, `withTableRowIds`, `withNodesTableRowIds` and `appendTableRows`. In `src/frontend` of the same checkout, with an entry file that exports them:
+`generate_editor.mjs` needs the TypeScript engine bundled into one CommonJS file that exports `applyFlowOperations`, `graphsEqual`, `edgeFixes`, `fixesForEdges`, `withTableRowIds`, `withNodesTableRowIds` and `appendTableRows`. In `src/frontend`, with an entry file that exports them:
 
 ```bash
 npx esbuild entry.ts --bundle --platform=node --format=cjs --outfile=ts_engine.cjs

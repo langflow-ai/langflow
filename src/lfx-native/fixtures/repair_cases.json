@@ -1,5 +1,5 @@
 {
-  "description": "Repair: repair_flow_data(flow, base). Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui). A case gives `flow` (or `flow_json`) and an optional `base`, and either the repaired graph with the fixes in the order repair made them, or the error with the violations only the client can fix. Generated node ids are derived from content, so they are exact; edge and row ids are random, so they appear as `<generated edge id>` and `<generated row id>`.",
+  "description": "Repair: repair_flow_data(flow, base). Expected outputs come from the Python engine. A case gives `flow` (or `flow_json`) and an optional `base`, and either the repaired graph with the fixes in the order repair made them, or the error with the violations only the client can fix. Generated node ids are derived from content, so they are exact; edge and row ids are random, so they appear as `<generated edge id>` and `<generated row id>`.",
   "cases": [
     {
       "name": "a valid graph is returned unchanged with no fixes",

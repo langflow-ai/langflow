@@ -1,5 +1,5 @@
 {
-  "description": "Graph rules: find_graph_violations(flow, check_values, base). Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui). A case gives `flow` (or `flow_json`, JSON text whose numbers matter), an optional `base` (the stored graph a write replaces) and `check_values` (default true), and the violations in order, each with its code, path, message, resolution and edge_id.",
+  "description": "Graph rules: find_graph_violations(flow, check_values, base). Expected outputs come from the Python engine. A case gives `flow` (or `flow_json`, JSON text whose numbers matter), an optional `base` (the stored graph a write replaces) and `check_values` (default true), and the violations in order, each with its code, path, message, resolution and edge_id.",
   "cases": [
     {
       "name": "a valid graph has no violations",

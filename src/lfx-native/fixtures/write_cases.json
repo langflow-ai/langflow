@@ -1,5 +1,5 @@
 {
-  "description": "The engine's part of a save: check, repair on request, derive, number and pack. Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui), composed from the recorder's write path (write_flow_graph) without its database steps. A case gives the stored graph, the submitted graph and the options, and either what the save stores or the graph whose violations refuse it. Random ids appear as `<generated edge id>` and `<generated row id>`.",
+  "description": "The engine's part of a save: check, repair on request, derive, number and pack. Expected outputs come from the Python engine, composed from the recorder's write path (write_flow_graph) without its database steps. A case gives the stored graph, the submitted graph and the options, and either what the save stores or the graph whose violations refuse it. Random ids appear as `<generated edge id>` and `<generated row id>`.",
   "cases": [
     {
       "name": "an edit records its operations in rows",
