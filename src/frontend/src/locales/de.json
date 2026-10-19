@@ -3159,6 +3159,7 @@
   "flowHistory.violation.TABLE_ROW_ID_MISSING": "Eine Tabellenzeile hat keine ID",
   "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "Zwei Zeilen einer Tabelle haben dieselbe ID",
   "flowHistory.violation.TABLE_ROW_POS_INVALID": "Eine Tabellenzeile hat eine ungültige Position",
+  "flowHistory.violation.TABLE_COLUMN_RESERVED": "Eine Tabellenspalte verwendet einen Namen, der für Zeilen-IDs oder Positionen reserviert ist",
   "flowHistory.violation.EDGE_HANDLE_FORM_MISSING": "Einer Verbindung fehlen Teile ihrer Angaben",
   "flowHistory.violation.EDGE_HANDLE_INVALID": "Ausgang oder Eingang einer Verbindung ist nicht lesbar",
   "flowHistory.violation.EDGE_HANDLE_NOT_FOUND": "Eine Verbindung zeigt auf einen Eingang oder Ausgang, der nicht existiert",

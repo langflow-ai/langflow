@@ -3158,6 +3158,7 @@
   "flowHistory.violation.TABLE_ROW_ID_MISSING": "A table row has no ID",
   "flowHistory.violation.TABLE_ROW_ID_DUPLICATE": "Two rows of a table share an ID",
   "flowHistory.violation.TABLE_ROW_POS_INVALID": "A table row has an invalid position",
+  "flowHistory.violation.TABLE_COLUMN_RESERVED": "A table column uses a name reserved for row IDs or positions",
   "flowHistory.violation.EDGE_HANDLE_FORM_MISSING": "A connection is missing part of its details",
   "flowHistory.violation.EDGE_HANDLE_INVALID": "A connection's output or input can't be read",
   "flowHistory.violation.EDGE_HANDLE_NOT_FOUND": "A connection points to an input or output that doesn't exist",
