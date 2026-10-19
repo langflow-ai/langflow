@@ -5,9 +5,13 @@ Revises: e3a7b9c1d5f2
 Create Date: 2026-09-28
 
 Phase: EXPAND
-Safe to rollback: YES (one nullable column; downgrade moves each version's author
-back into ``user_id`` and drops it).
-Services compatible: All versions. Older services never read the column.
+Safe to rollback: YES (one nullable column; downgrade moves each version's
+    author back into ``user_id`` and drops it).
+Services compatible: Older backends never read the column, but upgrade every
+    Langflow backend that uses this database together: a version an older
+    backend saves for a collaborator keeps the collaborator in user_id and no
+    saved_by_user_id, and newer backends list a flow's versions by its owner,
+    so they do not list that version.
 
 ``flow_version.user_id`` is the owner of the parent flow and scopes version
 queries. Who saved a version is a separate fact: on a shared flow it need not
