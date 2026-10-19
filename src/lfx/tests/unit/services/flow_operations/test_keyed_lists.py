@@ -59,14 +59,14 @@ def test_replacing_a_row_keeps_its_slot():
 @pytest.mark.parametrize(
     ("rows", "message"),
     [
-        ([{"_pos": 1}], "non-empty string id"),
-        ([{"_id": "", "_pos": 1}], "non-empty string id"),
+        ([{"_pos": 1}], "non-empty string key"),
+        ([{"_id": "", "_pos": 1}], "non-empty string key"),
         ([{"_id": "a", "_pos": 1}, {"_id": "a", "_pos": 2}], "two items have the key 'a'"),
         ([{"_id": "a"}], "must be a finite number"),
         ([{"_id": "a", "_pos": "a0"}], "must be a finite number"),
         ([{"_id": "a", "_pos": True}], "must be a finite number"),
         ([{"_id": "a", "_pos": float("nan")}], "must be a finite number"),
-        (["not a row"], "non-empty string id"),
+        (["not a row"], "non-empty string key"),
     ],
 )
 def test_a_table_that_breaks_its_rules_cannot_be_indexed(rows, message):

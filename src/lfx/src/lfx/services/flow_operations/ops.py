@@ -16,24 +16,16 @@ class AddNodesOp(BaseModel):
     nodes: list[dict[str, Any]]
 
 
-class IdSelector(BaseModel):
-    """Selects a table row by its ``_id``."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    id: str = Field(min_length=1)
-
-
 class KeySelector(BaseModel):
-    """Selects an item of a natural-key list (an output by name, a tool action by tag)."""
+    """Selects an item of a keyed list by its key: a table row by its ``_id``, an output by its name."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     key: str = Field(min_length=1)
 
 
-ListSelector = IdSelector | KeySelector
-NodeFieldPathSegment = str | IdSelector | KeySelector
+ListSelector = KeySelector
+NodeFieldPathSegment = str | KeySelector
 NodeFieldPath = tuple[NodeFieldPathSegment, ...]
 
 
