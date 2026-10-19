@@ -49,16 +49,20 @@ const mockVersions = [
     created_at: "2026-01-01T00:00:00Z",
   },
 ];
+// One object while it is unchanged, as the query returns it.
+let mockVersionList = { entries: mockVersions, max_entries: 50 };
 
 // No recorded history unless a test sets one.
 // biome-ignore lint/suspicious/noExplicitAny: test double
 let mockRevisionPages: any;
+const mockRefetchRevisions = jest.fn();
 jest.mock("@/controllers/API/queries/flow-revisions", () => ({
   useGetFlowRevisions: () => ({
     data: mockRevisionPages,
     fetchNextPage: jest.fn(),
     hasNextPage: false,
     isFetchingNextPage: false,
+    refetch: mockRefetchRevisions,
   }),
   useGetFlowHistoryTimeline: () => ({ data: undefined }),
   useGetFlowRevision: () => ({
@@ -70,7 +74,7 @@ jest.mock("@/controllers/API/queries/flow-revisions", () => ({
 
 jest.mock("@/controllers/API/queries/flow-version", () => ({
   useGetFlowVersions: () => ({
-    data: { entries: mockVersions, max_entries: 50 },
+    data: mockVersionList,
     isLoading: false,
     isError: false,
   }),
@@ -346,6 +350,7 @@ describe("FlowVersionSidebarContent saved version on a timeline entry", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockVersionList = { entries: mockVersions, max_entries: 50 };
     mockRevisionPages = {
       pages: [
         {
@@ -420,5 +425,18 @@ describe("FlowVersionSidebarContent saved version on a timeline entry", () => {
         "This will permanently delete v2. This can't be undone.",
       ),
     ).toBeInTheDocument();
+  });
+
+  // Saving or deleting a version records no revision, so the poll of the
+  // history alone would not show the label change.
+  it("loads the timeline again when the saved versions change", () => {
+    const { rerender } = render(<FlowVersionSidebarContent flowId="flow-1" />);
+    rerender(<FlowVersionSidebarContent flowId="flow-1" />);
+    expect(mockRefetchRevisions).not.toHaveBeenCalled();
+
+    mockVersionList = { entries: [], max_entries: 50 };
+    rerender(<FlowVersionSidebarContent flowId="flow-1" />);
+
+    expect(mockRefetchRevisions).toHaveBeenCalledTimes(1);
   });
 });
