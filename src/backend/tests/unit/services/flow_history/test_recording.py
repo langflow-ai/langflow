@@ -711,3 +711,29 @@ async def test_a_repaired_save_that_needs_the_clients_fix_writes_nothing(client:
         ("EDGE_HANDLE_NOT_FOUND", "manual")
     ]
     assert await _rows(flow["id"]) == rows_before
+
+
+async def test_a_save_that_removes_a_connected_field_must_remove_its_edge(client: AsyncClient, logged_in_headers):
+    connected = _graph(_node("a"), _node("b"), edges=[_edge("e", "a", "b")])
+    flow = await _create_flow(client, logged_in_headers, connected)
+    stored = await _patch(client, logged_in_headers, flow["id"], data=connected)
+    assert stored.status_code == status.HTTP_200_OK, stored.text
+    rows_before = await _rows(flow["id"])
+    without_field = copy.deepcopy(connected)
+    del without_field["nodes"][1]["data"]["node"]["template"]["text"]
+
+    # Removing the field deletes its edges, so a graph that keeps the edge cannot be recorded.
+    response = await _patch(client, logged_in_headers, flow["id"], data=without_field)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    violations = response.json()["detail"]["violations"]
+    assert [(v["code"], v["resolution"], v["edge_id"]) for v in violations] == [
+        ("EDGE_HANDLE_NOT_FOUND", "manual", "e")
+    ]
+    assert await _rows(flow["id"]) == rows_before
+
+    without_field["edges"] = []
+    response = await _patch(client, logged_in_headers, flow["id"], data=without_field)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert graphs_equal(await _reconstruct(flow["id"], (await _flow(flow["id"])).latest_revision), without_field)
