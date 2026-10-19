@@ -1,5 +1,5 @@
 {
-  "description": "Table rows: the helpers that order, strip and assign row ids and positions. Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui). `strip` is strip_row_keys(rows); `fill_positions` is fill_missing_positions(rows), which never renumbers, with the indexes it filled; `assign` is assign_row_ids(rows, previous); `assign_node` is assign_table_row_ids(node); `assign_changed` is assign_changed_table_row_ids(base, target), the resulting target; `strip_flow` is strip_flow_table_row_keys(flow). Random row ids appear as `<generated row id>`. Positions are compared as numbers, so 2 and 2.0 are one position.",
+  "description": "Table rows: the helpers that order, strip and assign row ids and positions. Expected outputs come from the Python engine. `strip` is strip_row_keys(rows); `fill_positions` is fill_missing_positions(rows), which never renumbers, with the indexes it filled; `assign` is assign_row_ids(rows, previous); `assign_node` is assign_table_row_ids(node); `assign_changed` is assign_changed_table_row_ids(base, target), the resulting target; `strip_flow` is strip_flow_table_row_keys(flow). Random row ids appear as `<generated row id>`. Positions are compared as numbers, so 2 and 2.0 are one position.",
   "strip": [
     {
       "name": "rows are stripped and put in order",

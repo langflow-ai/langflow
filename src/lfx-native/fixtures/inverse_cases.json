@@ -1,5 +1,5 @@
 {
-  "description": "Inverses: what undoes each operation of a batch. Expected outputs come from the editor's engine at ad19da0df4 (oplog-history-ui). Applying `operations` to `base` with inverses on gives `inverse`, one list per operation. Applying those lists last first, each in a call of its own with `restoring` set, gives back `base`. Ids a delete names and the entries an add lists compare as sets keyed by id; numbers compare by value.",
+  "description": "Inverses: what undoes each operation of a batch. Expected outputs come from the editor's engine. Applying `operations` to `base` with inverses on gives `inverse`, one list per operation. Applying those lists last first, each in a call of its own with `restoring` set, gives back `base`. Ids a delete names and the entries an add lists compare as sets keyed by id; numbers compare by value.",
   "cases": [
     {
       "name": "apply case: empty operation list leaves the flow unchanged",

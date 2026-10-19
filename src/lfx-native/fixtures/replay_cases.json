@@ -1,5 +1,5 @@
 {
-  "description": "Replay onto a checkpoint. Expected outputs come from the Python engine at ad19da0df4 (oplog-history-ui) (langflow.services.flow_history.replay). A case applies the operations of `rows` after `checkpoint_revision` up to `revision` to `checkpoint`, and gives the graph or the damage (`kind` and `revision`). `verify` checks a checkpoint's graph against its stored hash.",
+  "description": "Replay onto a checkpoint. Expected outputs come from the Python engine (langflow.services.flow_history.replay). A case applies the operations of `rows` after `checkpoint_revision` up to `revision` to `checkpoint`, and gives the graph or the damage (`kind` and `revision`). `verify` checks a checkpoint's graph against its stored hash.",
   "cases": [
     {
       "name": "replay to the end",
