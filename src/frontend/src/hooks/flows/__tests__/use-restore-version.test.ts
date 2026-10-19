@@ -59,6 +59,15 @@ jest.mock("@/stores/versionPreviewStore", () => {
   };
 });
 
+const registerConflictMock = jest.fn();
+jest.mock("@/hooks/flows/use-register-conflict", () => ({
+  __esModule: true,
+  default: () => registerConflictMock,
+  reviewedVersionHeaders: (flowId: string) => ({
+    "If-Match": `token-of-${flowId}`,
+  }),
+}));
+
 // ---------------------------------------------------------------------------
 // Import hook AFTER all mocks are set up
 // ---------------------------------------------------------------------------
@@ -91,7 +100,10 @@ describe("useRestoreVersion", () => {
     expect(apiPostMock).toHaveBeenCalledWith(
       "/api/v1/flows/flow-1/versions/entry-1/activate",
       null,
-      { params: { save_draft: true } },
+      {
+        params: { save_draft: true },
+        headers: { "If-Match": "token-of-flow-1" },
+      },
     );
 
     // Should invalidate version queries
@@ -177,8 +189,8 @@ describe("useRestoreVersion", () => {
     }
   });
 
+  // A 409 version conflict opens the conflict dialog instead (see below).
   it.each([
-    [409, "flow_version_conflict", "Flow changed since review"],
     [428, "flow_version_required", "Reload the flow before restoring it"],
   ])(
     "shows structured %s conflicts and leaves the canvas unchanged",
@@ -232,7 +244,7 @@ describe("useRestoreVersion", () => {
   );
 
   it.each([undefined, null])(
-    "should preserve legacy activation when the token is %s",
+    "should send the token the editor built on when the token is %s",
     async (token) => {
       apiPostMock.mockResolvedValueOnce({
         data: { id: "flow-1", data: { nodes: [], edges: [] } },
@@ -243,7 +255,9 @@ describe("useRestoreVersion", () => {
         await result.current.restore("historical-entry");
       });
 
-      expect(apiPostMock.mock.calls[0][2]).not.toHaveProperty("headers");
+      expect(apiPostMock.mock.calls[0][2].headers).toEqual({
+        "If-Match": "token-of-flow-1",
+      });
     },
   );
 
@@ -282,7 +296,10 @@ describe("useRestoreVersion", () => {
     expect(apiPostMock.mock.calls[1]).toEqual([
       "/api/v1/flows/flow-1/versions/entry-1/activate",
       { fixes: [{ type: "delete_edges", ids: ["e"] }] },
-      { params: { save_draft: true } },
+      {
+        params: { save_draft: true },
+        headers: { "If-Match": "token-of-flow-1" },
+      },
     ]);
     expect(applyFlowToCanvasMock).toHaveBeenCalledWith(flowData);
     expect(setSuccessDataMock).toHaveBeenCalledWith({
@@ -290,6 +307,27 @@ describe("useRestoreVersion", () => {
         "Version restored without the connections its components no longer have",
       list: ["edge 'e': sourceHandle must be an escaped JSON object"],
     });
+  });
+
+  it("handles a restore over newer work as a conflict, not an error", async () => {
+    const detail = {
+      code: "flow_version_conflict",
+      modified_by: { id: "u2", username: "bob" },
+    };
+    apiPostMock.mockRejectedValueOnce({
+      response: { status: 409, data: { detail } },
+    });
+
+    const { result } = renderHook(() => useRestoreVersion("flow-1"));
+    await act(async () => {
+      await result.current.restore("entry-1");
+    });
+
+    expect(apiPostMock).toHaveBeenCalledTimes(1);
+    expect(clearPreviewMock).toHaveBeenCalled();
+    expect(registerConflictMock).toHaveBeenCalledWith("flow-1", detail);
+    expect(setErrorDataMock).not.toHaveBeenCalled();
+    expect(applyFlowToCanvasMock).not.toHaveBeenCalled();
   });
 
   it("calls onSuccess callback after successful restore", async () => {

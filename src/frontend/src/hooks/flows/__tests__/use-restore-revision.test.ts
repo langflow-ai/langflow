@@ -45,6 +45,15 @@ jest.mock("@/stores/versionPreviewStore", () => {
   };
 });
 
+const registerConflictMock = jest.fn();
+jest.mock("@/hooks/flows/use-register-conflict", () => ({
+  __esModule: true,
+  default: () => registerConflictMock,
+  reviewedVersionHeaders: (flowId: string) => ({
+    "If-Match": `token-of-${flowId}`,
+  }),
+}));
+
 import useRestoreRevision from "../use-restore-revision";
 
 const URL = "/api/v1/flows/flow-1/revisions/7/restore";
@@ -123,6 +132,34 @@ describe("useRestoreRevision", () => {
         "Version restored without the connections its components no longer have",
       list: ["edge e: no output gone"],
     });
+  });
+
+  it("sends the token the editor built on as If-Match", async () => {
+    apiPostMock.mockResolvedValueOnce({ data: { id: "flow-1" } });
+
+    await restore();
+
+    expect(apiPostMock.mock.calls[0][2]).toEqual({
+      headers: { "If-Match": "token-of-flow-1" },
+    });
+  });
+
+  it("handles a restore over newer work as a conflict, not an error", async () => {
+    const detail = {
+      code: "flow_version_conflict",
+      modified_by: { id: "u2", username: "bob" },
+    };
+    apiPostMock.mockRejectedValueOnce({
+      response: { status: 409, data: { detail } },
+    });
+
+    await restore();
+
+    expect(apiPostMock).toHaveBeenCalledTimes(1);
+    expect(clearPreviewMock).toHaveBeenCalled();
+    expect(registerConflictMock).toHaveBeenCalledWith("flow-1", detail);
+    expect(setErrorDataMock).not.toHaveBeenCalled();
+    expect(applyFlowToCanvasMock).not.toHaveBeenCalled();
   });
 
   it("does not resend when a violation is not the client's to fix", async () => {
