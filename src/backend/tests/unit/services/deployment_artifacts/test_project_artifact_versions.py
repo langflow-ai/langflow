@@ -42,6 +42,9 @@ async def _project(session):
     version = FlowVersion(flow_id=picked.id, user_id=owner_id, version_number=1, data=_graph("SAVED_KEY"))
     session.add_all([project, picked, other, version])
     await session.commit()
+    # Reload so updated_at matches what the packager's revision query returns.
+    await session.refresh(picked)
+    await session.refresh(other)
     return SimpleNamespace(id=owner_id, is_superuser=False), project, picked, other, version
 
 
@@ -137,6 +140,7 @@ async def test_a_picked_flows_live_graph_is_neither_validated_nor_bounded(async_
     picked.data = {"nodes": [{"note": "x" * 4096}]}
     async_session.add(picked)
     await async_session.commit()
+    await async_session.refresh(picked)
 
     artifact = await _build(
         async_session,
@@ -162,6 +166,8 @@ async def test_picks_resolve_on_every_page(async_session) -> None:
     ]
     async_session.add_all([*flows, *versions])
     await async_session.commit()
+    for flow in flows:
+        await async_session.refresh(flow)
 
     artifact = await _build(
         async_session,
@@ -205,6 +211,7 @@ async def test_an_invalid_live_graph_is_a_packaging_error(async_session) -> None
     picked.data = {"foo": 1}
     async_session.add(picked)
     await async_session.commit()
+    await async_session.refresh(picked)
 
     with pytest.raises(ProjectArtifactError, match=rf"flow {picked.id} is not a valid flow: .*Flow must have nodes"):
         await _build(async_session, user, project)
