@@ -18,6 +18,11 @@ from langflow.services.rate_limit import check_rate_limit
 router = APIRouter(tags=["Login"])
 
 
+def _cookie_path(request: Request) -> str:
+    """Match the frontend base configured at startup, independent of forwarded headers."""
+    return f"{request.app.root_path.strip().rstrip('/')}/"
+
+
 def get_limiter_from_app(request: Request):
     """Get the rate limiter from app state (initialized after settings load)."""
     return request.app.state.limiter
@@ -63,6 +68,7 @@ async def login_to_get_access_token(
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
+            path=_cookie_path(request),
             httponly=auth_settings.REFRESH_HTTPONLY,
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
@@ -72,6 +78,7 @@ async def login_to_get_access_token(
         response.set_cookie(
             "access_token_lf",
             tokens["access_token"],
+            path=_cookie_path(request),
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
@@ -81,6 +88,7 @@ async def login_to_get_access_token(
         response.set_cookie(
             "apikey_tkn_lflw",
             str(user.store_api_key),
+            path=_cookie_path(request),
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
@@ -106,7 +114,7 @@ async def login_to_get_access_token(
 
 
 @router.get("/auto_login", include_in_schema=False)
-async def auto_login(response: Response, db: DbSession):
+async def auto_login(request: Request, response: Response, db: DbSession):
     auth_settings = get_settings_service().auth_settings
 
     if auth_settings.AUTO_LOGIN:
@@ -119,6 +127,7 @@ async def auto_login(response: Response, db: DbSession):
             response.set_cookie(
                 "refresh_token_lf",
                 tokens["refresh_token"],
+                path=_cookie_path(request),
                 httponly=auth_settings.REFRESH_HTTPONLY,
                 samesite=auth_settings.REFRESH_SAME_SITE,
                 secure=auth_settings.REFRESH_SECURE,
@@ -128,6 +137,7 @@ async def auto_login(response: Response, db: DbSession):
         response.set_cookie(
             "access_token_lf",
             tokens["access_token"],
+            path=_cookie_path(request),
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
@@ -144,6 +154,7 @@ async def auto_login(response: Response, db: DbSession):
             response.set_cookie(
                 "apikey_tkn_lflw",
                 str(user.store_api_key),  # Ensure it's a string
+                path=_cookie_path(request),
                 httponly=auth_settings.ACCESS_HTTPONLY,
                 samesite=auth_settings.ACCESS_SAME_SITE,
                 secure=auth_settings.ACCESS_SECURE,
@@ -183,6 +194,7 @@ async def refresh_token(
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
+            path=_cookie_path(request),
             httponly=auth_settings.REFRESH_HTTPONLY,
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
@@ -192,6 +204,7 @@ async def refresh_token(
         response.set_cookie(
             "access_token_lf",
             tokens["access_token"],
+            path=_cookie_path(request),
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
@@ -246,11 +259,12 @@ async def get_session(
 
 
 @router.post("/logout", include_in_schema=False)
-async def logout(response: Response):
+async def logout(request: Request, response: Response):
     auth_settings = get_settings_service().auth_settings
 
     response.delete_cookie(
         "refresh_token_lf",
+        path=_cookie_path(request),
         httponly=auth_settings.REFRESH_HTTPONLY,
         samesite=auth_settings.REFRESH_SAME_SITE,
         secure=auth_settings.REFRESH_SECURE,
@@ -258,6 +272,7 @@ async def logout(response: Response):
     )
     response.delete_cookie(
         "access_token_lf",
+        path=_cookie_path(request),
         httponly=auth_settings.ACCESS_HTTPONLY,
         samesite=auth_settings.ACCESS_SAME_SITE,
         secure=auth_settings.ACCESS_SECURE,
@@ -265,6 +280,7 @@ async def logout(response: Response):
     )
     response.delete_cookie(
         "apikey_tkn_lflw",
+        path=_cookie_path(request),
         httponly=auth_settings.ACCESS_HTTPONLY,
         samesite=auth_settings.ACCESS_SAME_SITE,
         secure=auth_settings.ACCESS_SECURE,
