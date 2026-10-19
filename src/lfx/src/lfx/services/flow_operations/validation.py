@@ -27,10 +27,10 @@ from typing import Any
 
 from lfx.services.flow_operations.canonical import is_finite_number, is_row_position, values_equal
 from lfx.services.flow_operations.codes import GraphViolationCode, resolution_of
-from lfx.services.flow_operations.edge_rules import check_edge, edge_changed
+from lfx.services.flow_operations.edge_rules import check_edge, edge_changed, outputs_by_name, read_handles
 from lfx.services.flow_operations.exceptions import FlowDataValidationError, FlowOperationValidationError
 from lfx.services.flow_operations.schema import load_node_schema
-from lfx.services.flow_operations.state import NODE_OBJECT_PATHS, index_graph
+from lfx.services.flow_operations.state import NODE_OBJECT_PATHS, index_graph, require_node_objects
 
 GraphPath = tuple[str | int, ...]
 
@@ -78,6 +78,11 @@ def find_graph_violations(
     table value ``flow_data`` adds or changes relative to it is checked too,
     and so is every edge it adds or rewires, once the graph's structure is
     sound; pass an empty graph for a flow that has no stored graph yet.
+
+    ``base`` itself is not validated, but the edge rules read the template and
+    outputs of every node of ``base`` that ``flow_data`` keeps: when such a node
+    lacks ``data``, ``data.node`` or ``data.node.template`` as an object, this
+    raises ``FlowOperationValidationError``.
     """
     if not isinstance(flow_data, dict):
         return [GraphViolation(GraphViolationCode.FLOW_DATA_NOT_OBJECT, (), "flow data must be an object")]
@@ -208,22 +213,106 @@ def _non_finite_violations(flow_data: dict[str, Any]) -> list[GraphViolation]:
 
 
 def changed_edges(base: Any, target: dict[str, Any]) -> list[int]:
-    """Return the indexes of the edges ``target`` adds relative to ``base``.
+    """Return the indexes of the edges ``target`` adds relative to ``base``, and of the edges it cuts.
 
-    That is new edges, and edges that changed (``edge_changed``), which a write
-    deletes and adds again.
+    Added edges are new edges, and edges that changed (``edge_changed``),
+    which a write deletes and adds again. A cut edge is one ``target`` keeps
+    unchanged while it removes the template field or output at one of its
+    ends. Applying that removal deletes the edge, so a target that keeps it
+    can never be replayed. ``target`` must be structurally sound, and each
+    node of ``base`` it keeps must carry its node objects
+    (``FlowOperationValidationError`` otherwise).
     """
     stored = {edge["id"]: edge for edge in _list(base, "edges") if isinstance(edge, dict) and "id" in edge}
+    removed = _removed_ends(base, target)
     changed: list[int] = []
     for index, edge in enumerate(target["edges"]):
         before = stored.get(edge["id"])
-        if before is None or edge_changed(before, edge):
+        if before is None or edge_changed(before, edge) or _is_cut(edge, removed):
             changed.append(index)
     return changed
 
 
+def remove_cut_edges(base: Any, target: dict[str, Any]) -> list[str]:
+    """Remove from ``target``, in place, the edges it keeps but cuts, and return their ids.
+
+    This is what a writer that is not the editor (the assistant, the MCP
+    server) does before saving, as the editor's ``cleanEdges`` does: a write
+    that removes a field or an output also removes the edges at it, so the
+    save passes the edge rules. ``base`` is the stored graph, which is sound.
+    A ``target`` that is not structurally sound is left as it is: the save
+    refuses it with its violations.
+    """
+    if find_graph_violations(target, check_values=False):
+        return []
+    removed = _removed_ends(base, target)
+    if not removed:
+        return []
+    kept: list[dict[str, Any]] = []
+    cut: list[str] = []
+    stored = {edge["id"] for edge in _list(base, "edges") if isinstance(edge, dict) and "id" in edge}
+    for edge in target["edges"]:
+        if edge["id"] in stored and _is_cut(edge, removed):
+            cut.append(edge["id"])
+        else:
+            kept.append(edge)
+    target["edges"] = kept
+    return cut
+
+
+@dataclass
+class _RemovedEnds:
+    """The template fields and outputs a write removes from one node."""
+
+    fields: set[str]
+    outputs: set[str]
+
+
+def _removed_ends(base: Any, target: dict[str, Any]) -> dict[str, _RemovedEnds]:
+    """Return, by node id, the template fields and outputs ``target`` removes from nodes it keeps."""
+    base_nodes = {node["id"]: node for node in _list(base, "nodes") if isinstance(node, dict) and "id" in node}
+    removed: dict[str, _RemovedEnds] = {}
+    for node in target["nodes"]:
+        stored = base_nodes.get(node["id"])
+        if stored is None:
+            continue
+        require_node_objects(stored, context=f"stored node {node['id']!r}")
+        before, after = stored["data"]["node"], node["data"]["node"]
+        fields = before["template"].keys() - after["template"].keys()
+        outputs: set[str] = set()
+        if "outputs" in before and not values_equal(before["outputs"], after.get("outputs")):
+            outputs = set(outputs_by_name(before["outputs"], node_id=node["id"]))
+            if "outputs" in after:
+                outputs -= set(outputs_by_name(after["outputs"], node_id=node["id"]))
+        if fields or outputs:
+            removed[node["id"]] = _RemovedEnds(fields=set(fields), outputs=outputs)
+    return removed
+
+
+def _is_cut(edge: dict[str, Any], removed: dict[str, _RemovedEnds]) -> bool:
+    """Return whether a kept edge leaves from or enters a field or output the write removes.
+
+    Applying the removal reads the handles of every edge at that node
+    strictly, so an edge there whose handles cannot be read counts too, and
+    the edge rules report it.
+    """
+    source, target = removed.get(edge["source"]), removed.get(edge["target"])
+    if source is None and target is None:
+        return False
+    try:
+        handles = read_handles(edge)
+    except FlowOperationValidationError:
+        return True
+    if source is not None and handles.output in source.outputs:
+        return True
+    if target is None:
+        return False
+    kind, name = handles.input
+    return name in (target.fields if kind == "field" else target.outputs)
+
+
 def find_edge_violations(base: Any, target: dict[str, Any]) -> list[GraphViolation]:
-    """Return the edge rules broken by the edges ``target`` adds or rewires relative to ``base``.
+    """Return the edge rules broken by the edges ``target`` adds, rewires or cuts relative to ``base``.
 
     ``target`` must be structurally sound: unique ids, and edges whose
     endpoints exist.

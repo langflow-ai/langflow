@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import copy
 import math
 
 import pytest
 from lfx.services.flow_operations import (
     FlowDataValidationError,
+    FlowOperationValidationError,
     GraphViolationCode,
     find_graph_violations,
+    remove_cut_edges,
     validate_flow_data,
 )
 from lfx.services.flow_operations.edge_rules import escape_handle
@@ -247,3 +250,79 @@ def test_edge_rules_wait_for_a_sound_structure():
     assert [v.code for v in find_graph_violations(graph, base={"nodes": [], "edges": []})] == [
         GraphViolationCode.NODE_ID_DUPLICATE
     ]
+
+
+@pytest.mark.parametrize(
+    ("data", "message"),
+    [
+        (None, "stored node 'b': node data must be an object"),
+        ({"node": []}, "stored node 'b': node data.node must be an object"),
+        ({"node": {"template": "x"}}, "stored node 'b': node data.node.template must be an object"),
+    ],
+)
+def test_a_stored_node_the_write_keeps_must_carry_its_node_objects(data, message):
+    graph = _connectable()
+    graph["edges"].append(_edge_to("f"))
+    base = copy.deepcopy(graph)
+    base["nodes"][1]["data"] = data
+
+    with pytest.raises(FlowOperationValidationError) as raised:
+        find_graph_violations(graph, base=base)
+    assert raised.value.code == "FLOW_OPERATION_INVALID"
+    assert str(raised.value) == message
+
+
+def test_a_stored_node_without_data_is_an_engine_error():
+    graph = _connectable()
+    base = copy.deepcopy(graph)
+    del base["nodes"][1]["data"]
+
+    with pytest.raises(FlowOperationValidationError, match="stored node 'b': node data must be an object"):
+        find_graph_violations(graph, base=base)
+
+
+def _cut_graphs() -> tuple[dict, dict]:
+    """A stored graph with edge ``e`` into field ``f`` of ``b``, and a write that removes ``f`` and keeps ``e``."""
+    handles = {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+    edge = {
+        "id": "e",
+        "source": "a",
+        "target": "b",
+        **{key: escape_handle(value) for key, value in handles.items()},
+        "data": handles,
+    }
+    base = {
+        "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "g": {"type": "str"}}}}},
+        ],
+        "edges": [edge],
+    }
+    target = copy.deepcopy(base)
+    del target["nodes"][1]["data"]["node"]["template"]["f"]
+    return base, target
+
+
+def test_remove_cut_edges_removes_the_edges_a_write_cuts():
+    base, target = _cut_graphs()
+
+    assert remove_cut_edges(base, target) == ["e"]
+    assert target["edges"] == []
+    assert find_graph_violations(target, base=base) == []
+
+
+def test_remove_cut_edges_keeps_edges_whose_ends_stay():
+    base, target = _cut_graphs()
+    target = copy.deepcopy(base)
+    del target["nodes"][1]["data"]["node"]["template"]["g"]
+
+    assert remove_cut_edges(base, target) == []
+    assert [edge["id"] for edge in target["edges"]] == ["e"]
+
+
+def test_remove_cut_edges_leaves_an_unsound_target_to_the_save():
+    base, target = _cut_graphs()
+    target["nodes"].append({"id": "a"})
+
+    assert remove_cut_edges(base, target) == []
+    assert [edge["id"] for edge in target["edges"]] == ["e"]
