@@ -1,8 +1,14 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import type { RevisionEntry } from "@/types/flow/revision";
+import type { RevisionEntry, RevisionVersion } from "@/types/flow/revision";
 import type { DescribeOptions } from "@/utils/flow-operations/describe";
 import { cn } from "@/utils/utils";
 import { revisionSelectionId } from "../constants";
@@ -16,6 +22,72 @@ interface TimelineEntryItemProps {
   onSelect: (id: string) => void;
   /** Field labels and names for the entry's changes. */
   describe?: DescribeOptions;
+  onExportVersion: (version: RevisionVersion) => void;
+  onDeleteVersion: (version: RevisionVersion) => void;
+}
+
+/** A saved version pinned on its entry, with the same actions as an older one. */
+function SavedVersionLabel({
+  version,
+  onExport,
+  onDeleteClick,
+}: {
+  version: RevisionVersion;
+  onExport: (version: RevisionVersion) => void;
+  onDeleteClick: (version: RevisionVersion) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="group/version flex w-fit max-w-full items-center gap-1 rounded-full border border-border bg-background py-0.5 pl-2 pr-0.5 text-[11px] text-foreground">
+      <ForwardedIconComponent
+        name="Bookmark"
+        className="h-3 w-3 shrink-0 text-[#6366F1]"
+      />
+      <span className="font-medium">{version.version_tag}</span>
+      {version.description && (
+        <span className="truncate text-muted-foreground">
+          {version.description}
+        </span>
+      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+            title={t("flow.moreOptions")}
+            aria-label={t("flow.moreOptions")}
+          >
+            <ForwardedIconComponent
+              name="EllipsisVertical"
+              className="h-3 w-3 text-muted-foreground group-hover/version:text-primary"
+            />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="right" align="start" className="w-40">
+          <DropdownMenuItem
+            onClick={() => onExport(version)}
+            className="cursor-pointer"
+          >
+            <ForwardedIconComponent
+              name="Download"
+              className="mr-2 h-3.5 w-3.5"
+            />
+            {t("flow.menu.export")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => onDeleteClick(version)}
+            className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+          >
+            <ForwardedIconComponent
+              name="Trash2"
+              className="mr-2 h-3.5 w-3.5"
+            />
+            {t("flow.menu.delete")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 }
 
 /**
@@ -28,6 +100,8 @@ export default function TimelineEntryItem({
   isSelected,
   onSelect,
   describe,
+  onExportVersion,
+  onDeleteVersion,
 }: TimelineEntryItemProps) {
   const { t } = useTranslation();
   const authors = entry.actors
@@ -71,25 +145,22 @@ export default function TimelineEntryItem({
                   count: entry.end_revision - entry.start_revision + 1,
                 })}
           </p>
-          {entry.versions.map((version) => (
-            <span
-              key={version.id}
-              className="flex w-fit max-w-full items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[11px] text-foreground"
-            >
-              <ForwardedIconComponent
-                name="Bookmark"
-                className="h-3 w-3 shrink-0 text-[#6366F1]"
-              />
-              <span className="font-medium">{version.version_tag}</span>
-              {version.description && (
-                <span className="truncate text-muted-foreground">
-                  {version.description}
-                </span>
-              )}
-            </span>
-          ))}
         </div>
       </SidebarMenuButton>
+      {entry.versions.length > 0 && (
+        // Outside the entry's button, so each saved version can have its own
+        // menu without nesting buttons.
+        <div className="relative flex flex-col gap-1 pb-2 pl-[46px] pr-3">
+          {entry.versions.map((version) => (
+            <SavedVersionLabel
+              key={version.id}
+              version={version}
+              onExport={onExportVersion}
+              onDeleteClick={onDeleteVersion}
+            />
+          ))}
+        </div>
+      )}
       {folded && entry.operations && (
         <div className="relative pb-2 pl-[46px] pr-3 text-xs">
           <button

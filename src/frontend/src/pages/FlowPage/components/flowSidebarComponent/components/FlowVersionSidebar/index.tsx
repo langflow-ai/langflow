@@ -58,6 +58,7 @@ export default function FlowVersionSidebarContent({
     handleSelectEntry,
     handleExport,
     handleDelete,
+    savedVersionEntry,
   } = useFlowVersionSidebar(flowId, requestedVersionId, onVersionLinkConsumed);
 
   return (
@@ -148,6 +149,12 @@ export default function FlowVersionSidebarContent({
                       isSelected={entry.id === selectedTimelineEntryId}
                       onSelect={handleSelectEntry}
                       describe={describeOptions}
+                      onExportVersion={(version) =>
+                        handleExport(savedVersionEntry(version))
+                      }
+                      onDeleteVersion={(version) =>
+                        setDeleteDialogEntry(savedVersionEntry(version))
+                      }
                     />
                   ))}
                 </div>

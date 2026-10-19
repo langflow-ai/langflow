@@ -26,6 +26,7 @@ import useFlowStore from "@/stores/flowStore";
 import useRevisionPlaybackStore from "@/stores/revisionPlaybackStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import type { FlowType } from "@/types/flow";
+import type { RevisionVersion } from "@/types/flow/revision";
 import type { FlowVersionEntry } from "@/types/flow/version";
 import type { FlowOperation } from "@/utils/flow-operations/apply";
 import {
@@ -51,7 +52,7 @@ import {
   revisionSelectionId,
 } from "./constants";
 import { summarizeEntry } from "./fold";
-import { formatTimestamp } from "./utils";
+import { formatTimestamp, versionEntryOf } from "./utils";
 
 export function useFlowVersionSidebar(
   flowId: string,
@@ -67,6 +68,8 @@ export function useFlowVersionSidebar(
   const storePreviewId = useVersionPreviewStore((s) => s.previewId);
 
   const [selectedId, setSelectedId] = useState<string>(CURRENT_DRAFT_ID);
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
 
   useEffect(() => {
     setSelectedId(storePreviewId ?? CURRENT_DRAFT_ID);
@@ -527,6 +530,9 @@ export function useFlowVersionSidebar(
         {
           onSuccess: () => {
             setSuccessData({ title: t("success.versionDeleted") });
+            // A version deleted from its timeline entry was not the one in
+            // preview: the selection stays.
+            if (selectedIdRef.current !== entry.id) return;
             // Select the next entry (triggers fetch + preview via existing
             // effects) instead of setting empty arrays into the store which
             // would cause a blank canvas flash.
@@ -549,6 +555,14 @@ export function useFlowVersionSidebar(
       );
     },
     [flowId, versions, deleteEntry, setSuccessData, setErrorData, clearPreview],
+  );
+
+  // A saved version pinned on a timeline entry, as the version list has it.
+  const savedVersionEntry = useCallback(
+    (version: RevisionVersion): FlowVersionEntry =>
+      versions?.find((entry) => entry.id === version.id) ??
+      versionEntryOf(version, flowId),
+    [versions, flowId],
   );
 
   const isViewingDraft = selectedId === CURRENT_DRAFT_ID;
@@ -576,5 +590,6 @@ export function useFlowVersionSidebar(
     handleSelectEntry,
     handleExport,
     handleDelete,
+    savedVersionEntry,
   };
 }
