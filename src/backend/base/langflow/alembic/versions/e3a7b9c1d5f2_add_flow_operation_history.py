@@ -7,9 +7,13 @@ Create Date: 2026-09-28
 Phase: EXPAND
 Safe to rollback: YES. Downgrade drops recorded history and the system
     checkpoints that anchor it; saved flow versions and flow data are kept.
-Services compatible: All versions. Older services never read the new columns
-    or table; flow.latest_revision and flow.current_revision default to 0, which
-    newer services read as "no history yet" and start history from.
+Services compatible: Upgrade every Langflow backend that uses this database
+    together. Older backends never read the new columns or table;
+    flow.latest_revision and flow.current_revision default to 0, which newer
+    backends read as "no history yet" and start history from. But an older
+    backend writes flow.data without recording it, so the next save of that
+    flow is refused with 409 FLOW_REVISION_MISMATCH, and lists the system
+    checkpoints, whose version_number is NULL.
 
 Adds the operation history of flow graphs:
 
