@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // ---------------------------------------------------------------------------
@@ -56,6 +56,7 @@ let mockVersionList = { entries: mockVersions, max_entries: 50 };
 // biome-ignore lint/suspicious/noExplicitAny: test double
 let mockRevisionPages: any;
 const mockRefetchRevisions = jest.fn();
+let mockRevisionError: unknown = null;
 jest.mock("@/controllers/API/queries/flow-revisions", () => ({
   useGetFlowRevisions: () => ({
     data: mockRevisionPages,
@@ -65,11 +66,19 @@ jest.mock("@/controllers/API/queries/flow-revisions", () => ({
     refetch: mockRefetchRevisions,
   }),
   useGetFlowHistoryTimeline: () => ({ data: undefined }),
-  useGetFlowRevision: () => ({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-  }),
+  // The server's answer for a selected revision; idle until one is selected.
+  useGetFlowRevision: ({ revision }: { revision: number | null }) =>
+    revision !== null && mockRevisionError
+      ? {
+          data: undefined,
+          isLoading: false,
+          isError: true,
+          error: mockRevisionError,
+        }
+      : { data: undefined, isLoading: false, isError: false, error: null },
+  isRevisionNotRetained: jest.requireActual(
+    "@/controllers/API/queries/flow-revisions/use-get-flow-revision",
+  ).isRevisionNotRetained,
 }));
 
 jest.mock("@/controllers/API/queries/flow-version", () => ({
@@ -121,6 +130,7 @@ jest.mock("@/stores/flowStore", () => {
 });
 
 const setErrorDataMock = jest.fn();
+const setNoticeDataMock = jest.fn();
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
   // biome-ignore lint/suspicious/noExplicitAny: legacy
@@ -128,6 +138,7 @@ jest.mock("@/stores/alertStore", () => ({
     selector({
       setSuccessData: jest.fn(),
       setErrorData: setErrorDataMock,
+      setNoticeData: setNoticeDataMock,
     }),
 }));
 
@@ -438,5 +449,41 @@ describe("FlowVersionSidebarContent saved version on a timeline entry", () => {
     rerender(<FlowVersionSidebarContent flowId="flow-1" />);
 
     expect(mockRefetchRevisions).toHaveBeenCalledTimes(1);
+  });
+
+  // The defect: an entry compaction removed after the list loaded answered
+  // 410, and the sidebar showed a generic load error and stayed on it.
+  it("reloads the timeline and leaves the preview when the entry is gone", () => {
+    mockRevisionError = {
+      response: {
+        status: 410,
+        data: { detail: { code: "FLOW_REVISION_NOT_RETAINED" } },
+      },
+    };
+    try {
+      render(<FlowVersionSidebarContent flowId="flow-1" />);
+      expect(mockRefetchRevisions).not.toHaveBeenCalled();
+
+      act(() => {
+        screen
+          .getByText("Alice")
+          .closest<HTMLElement>("[role=button]")!
+          .click();
+      });
+
+      expect(mockRefetchRevisions).toHaveBeenCalledTimes(1);
+      expect(setNoticeDataMock).toHaveBeenCalledWith({
+        title:
+          "This change is no longer in the history. The history list was refreshed.",
+      });
+      expect(
+        screen.queryByText("Failed to load version data"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText("Current").closest("[role=button]")!.className,
+      ).toContain("active");
+    } finally {
+      mockRevisionError = null;
+    }
   });
 });

@@ -3100,6 +3100,7 @@
   "flowHistory.yesterday": "昨天",
   "flowHistory.loadOlder": "加载更早的更改",
   "flowHistory.olderHistory": "更早的历史",
+  "flowHistory.notRetained": "此更改已不在历史记录中。历史记录列表已刷新。",
   "flowHistory.playback.title": "历史记录",
   "flowHistory.playback.step": "第 {{step}} 项，共 {{total}} 项",
   "flowHistory.playback.back": "上一项更改",

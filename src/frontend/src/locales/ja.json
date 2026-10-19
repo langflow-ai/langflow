@@ -3101,6 +3101,7 @@
   "flowHistory.yesterday": "昨日",
   "flowHistory.loadOlder": "以前の変更を読み込む",
   "flowHistory.olderHistory": "以前の履歴",
+  "flowHistory.notRetained": "この変更は履歴に残っていません。履歴リストを更新しました。",
   "flowHistory.playback.title": "履歴",
   "flowHistory.playback.step": "変更 {{step}} / {{total}}",
   "flowHistory.playback.back": "前の変更",

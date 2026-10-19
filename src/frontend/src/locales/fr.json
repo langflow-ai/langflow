@@ -3101,6 +3101,7 @@
   "flowHistory.yesterday": "Hier",
   "flowHistory.loadOlder": "Charger les modifications plus anciennes",
   "flowHistory.olderHistory": "Historique plus ancien",
+  "flowHistory.notRetained": "Cette modification ne figure plus dans l'historique. La liste de l'historique a été actualisée.",
   "flowHistory.playback.title": "Historique",
   "flowHistory.playback.step": "Modification {{step}} sur {{total}}",
   "flowHistory.playback.back": "Modification précédente",

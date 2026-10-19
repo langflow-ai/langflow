@@ -3100,6 +3100,7 @@
   "flowHistory.yesterday": "Yesterday",
   "flowHistory.loadOlder": "Load older changes",
   "flowHistory.olderHistory": "Older history",
+  "flowHistory.notRetained": "This change is no longer in the history. The history list was refreshed.",
   "flowHistory.playback.title": "History",
   "flowHistory.playback.step": "Change {{step}} of {{total}}",
   "flowHistory.playback.back": "Previous change",

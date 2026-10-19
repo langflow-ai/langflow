@@ -3100,6 +3100,7 @@
   "flowHistory.yesterday": "어제",
   "flowHistory.loadOlder": "이전 변경 사항 불러오기",
   "flowHistory.olderHistory": "이전 기록",
+  "flowHistory.notRetained": "이 변경 사항은 더 이상 기록에 없습니다. 기록 목록을 새로 고쳤습니다.",
   "flowHistory.playback.title": "기록",
   "flowHistory.playback.step": "변경 {{step}}/{{total}}",
   "flowHistory.playback.back": "이전 변경",

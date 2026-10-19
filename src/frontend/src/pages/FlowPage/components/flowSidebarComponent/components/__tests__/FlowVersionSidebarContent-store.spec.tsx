@@ -53,6 +53,7 @@ jest.mock("@/controllers/API/queries/flow-revisions", () => ({
     isLoading: false,
     isError: false,
   }),
+  isRevisionNotRetained: () => false,
 }));
 
 jest.mock("@/controllers/API/queries/flow-version", () => ({
