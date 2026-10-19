@@ -184,7 +184,7 @@ BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
         _clear_reference(PolicyBundleRevision, PolicyBundleRevision.created_by, pk=PolicyBundleRevision.revision),
     ),
     ("flow_editor", _clear_reference(Flow, Flow.last_modified_by)),
-    ("flow_version_author", _clear_reference(FlowVersion, FlowVersion.user_id)),
+    ("flow_version_author", _clear_reference(FlowVersion, FlowVersion.saved_by_user_id)),
     ("sso_config_creator", _clear_reference(SSOConfig, SSOConfig.created_by)),
     ("sso_config_editor", _clear_reference(SSOConfig, SSOConfig.updated_by)),
     ("audit_redaction", redact_audit_rows),
