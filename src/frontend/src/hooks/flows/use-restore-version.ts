@@ -9,6 +9,10 @@ import {
   previewFixesFor,
 } from "@/hooks/flows/refused-restore";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
+import useRegisterConflict, {
+  reviewedVersionHeaders,
+} from "@/hooks/flows/use-register-conflict";
+import { versionConflictDetail } from "@/hooks/flows/version-conflict";
 import useAlertStore from "@/stores/alertStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import type { FlowOperation } from "@/utils/flow-operations/apply";
@@ -23,6 +27,7 @@ export default function useRestoreVersion(flowId: string) {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const clearPreview = useVersionPreviewStore((s) => s.clearPreview);
   const applyFlowToCanvas = useApplyFlowToCanvas();
+  const registerConflict = useRegisterConflict();
   const [isRestoring, setIsRestoring] = useState(false);
 
   const restore = useCallback(
@@ -40,7 +45,10 @@ export default function useRestoreVersion(flowId: string) {
           api.post(
             `${getURL("FLOWS")}/${flowId}/versions/${versionId}/activate`,
             fixes ? { fixes } : null,
-            { params: { save_draft: saveDraft } },
+            {
+              params: { save_draft: saveDraft },
+              headers: reviewedVersionHeaders(flowId),
+            },
           );
         // A restore that lands at the same moment as an autosave finds the row
         // locked. Nothing is wrong with either write, so the second attempt is
@@ -78,6 +86,15 @@ export default function useRestoreVersion(flowId: string) {
         applyFlowToCanvas(updatedFlow);
         // biome-ignore lint/suspicious/noExplicitAny: legacy
       } catch (err: any) {
+        const conflict = versionConflictDetail(err);
+        if (conflict) {
+          // Someone saved after this editor loaded the flow: the restore would
+          // replace their work unseen, so it is handled as any refused write.
+          clearPreview();
+          registerConflict(flowId, conflict);
+          setIsRestoring(false);
+          return;
+        }
         const apiDetail = err?.response?.data?.detail;
         const message =
           apiDetail?.message ?? apiDetail ?? err?.message ?? "Unknown error";
@@ -115,8 +132,10 @@ export default function useRestoreVersion(flowId: string) {
       queryClient,
       applyFlowToCanvas,
       clearPreview,
+      registerConflict,
       setSuccessData,
       setErrorData,
+      t,
     ],
   );
 

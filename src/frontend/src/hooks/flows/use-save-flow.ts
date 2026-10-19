@@ -3,10 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
-import useAuthStore from "@/stores/authStore";
-import useFlowConflictStore, {
-  type ConflictDetail,
-} from "@/stores/flowConflictStore";
+import useFlowConflictStore from "@/stores/flowConflictStore";
 import useFlowHistoryRepairStore, {
   repairableProblem,
 } from "@/stores/flowHistoryRepairStore";
@@ -16,13 +13,9 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
-import {
-  attachTheirFlow,
-  fetchAndAdoptServerVersion,
-  registerConflictState,
-} from "./conflict-actions";
 import { FlowSaveBlockedError } from "./save-blocked-error";
 import { buildFlowUpdatePayload, type FlowUpdatePayload } from "./save-payload";
+import useRegisterConflict from "./use-register-conflict";
 
 /**
  * The response to a save that sent no graph, reduced to what that save wrote.
@@ -85,7 +78,6 @@ const useSaveFlow = () => {
   const { t } = useTranslation();
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
 
@@ -96,42 +88,7 @@ const useSaveFlow = () => {
   // as a conflict. The promise from `mutateAsync` settles regardless.
   const { mutateAsync } = usePatchUpdateFlow();
 
-  const registerConflict = (flowId: string, detail: ConflictDetail) => {
-    const currentUserId = useAuthStore.getState().userData?.id ?? null;
-    const authorId = detail.modified_by?.id ?? null;
-    const authorName = detail.modified_by?.username ?? null;
-
-    // Nothing of mine is on the canvas, so there is nothing to resolve. Raising a
-    // banner here produced a dialog with no changes on either side and no honest
-    // exit; taking their version is the whole answer. It is said out loud, because
-    // the refused request still carried something the person typed -- a rename, a
-    // lock, an endpoint -- and adopting their version drops it. That used to
-    // disappear with no message at all.
-    if (!useFlowStore.getState().userEditedSinceLoad) {
-      setNoticeData({
-        title: authorName
-          ? t("multiEdit.notice.changeNotApplied", { name: authorName })
-          : t("multiEdit.notice.changeNotAppliedUnknown"),
-      });
-      void fetchAndAdoptServerVersion(flowId);
-      return;
-    }
-    // Registering also persists the draft, so refused work survives a reload no
-    // matter which path noticed the conflict.
-    registerConflictState({
-      flowId,
-      authorId,
-      authorName,
-      modifiedAt: detail.modified_at ?? null,
-      expectedToken: detail.expected_version_token ?? null,
-      currentToken: detail.current_version_token ?? null,
-      currentUserId,
-    });
-
-    // Fetched now, not when the dialog opens: a third save in between would make
-    // the diff describe a version this conflict was never about.
-    void attachTheirFlow(flowId);
-  };
+  const registerConflict = useRegisterConflict();
 
   const saveFlow = async (
     flow?: FlowType,
