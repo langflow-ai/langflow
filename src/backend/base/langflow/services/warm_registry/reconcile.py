@@ -15,6 +15,7 @@ Rules:
 from __future__ import annotations
 
 import asyncio
+import random
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -41,6 +42,10 @@ if TYPE_CHECKING:
 
 _WARM_ALL_LOCK_PATH = Path(tempfile.gettempdir()) / "langflow_warm_registry.lock"
 _WARM_ALL_LOCK_POLL_SECONDS = 0.5
+# +/-20% jitter on the reconcile interval so replicas that start near-simultaneously
+# (the common case on a rolling deploy) desynchronize their manifest queries over
+# a few passes instead of polling the database in lockstep forever.
+_RECONCILE_JITTER_FRACTION = 0.2
 
 
 async def _fetch_flow(session: AsyncSession, flow_id: str, *, user_id: object | None = None) -> Flow | None:
@@ -335,7 +340,12 @@ async def reconcile_loop(interval: float | None = None) -> None:
     logger.info("warm_registry: reconcile loop started (interval=%ss)", interval)
     while True:
         # Sleep before the first pass: warm_all() already filled the registry at startup.
-        await asyncio.sleep(interval)
+        # Jitter is re-rolled every iteration so replicas drift apart rather than
+        # settling into a new shared phase.
+        jittered = interval * random.uniform(  # noqa: S311 - jitter, not crypto
+            1 - _RECONCILE_JITTER_FRACTION, 1 + _RECONCILE_JITTER_FRACTION
+        )
+        await asyncio.sleep(jittered)
         try:
             await reconcile_once()
         except asyncio.CancelledError:

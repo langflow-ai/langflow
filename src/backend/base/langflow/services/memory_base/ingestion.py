@@ -38,6 +38,7 @@ from langflow.services.memory_base.provider_scope import (
 from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
 
 if TYPE_CHECKING:
+    from lfx.base.knowledge_bases.backends.base import BaseVectorStoreBackend
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -557,14 +558,21 @@ async def _delete_chunks_for_session(
     try:
         await backend.ensure_ready()
         await backend.delete_by({"session_id": session_id})
-        # Refresh the knowledge_base row's cached counts so the UI reflects the
-        # post-purge state. Row-driven (not the sidecar), so it's replica-safe.
-        try:
-            await _sync_metrics_after_purge(user_id=user_id, kb_name=kb_name, backend=backend)
-        except Exception as exc:  # noqa: BLE001 -- successful privacy deletion is independent of cached metrics
-            await logger.awarning("Memory metrics refresh after purge lagged: %s", exc)
+        await refresh_metrics_after_purge(user_id=user_id, kb_name=kb_name, backend=backend)
     finally:
         await backend.teardown()
+
+
+async def refresh_metrics_after_purge(*, user_id: uuid.UUID, kb_name: str, backend: BaseVectorStoreBackend) -> None:
+    """Refresh the knowledge_base row's cached counts after a privacy deletion, best-effort.
+
+    Row-driven (not the sidecar), so it's replica-safe. The deletion has already
+    succeeded by the time this runs, so a failed refresh only logs a warning.
+    """
+    try:
+        await _sync_metrics_after_purge(user_id=user_id, kb_name=kb_name, backend=backend)
+    except Exception as exc:  # noqa: BLE001 -- successful privacy deletion is independent of cached metrics
+        await logger.awarning("Memory metrics refresh after purge lagged: %s", exc)
 
 
 async def _sync_metrics_after_purge(*, user_id: uuid.UUID, kb_name: str, backend) -> None:

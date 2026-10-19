@@ -326,7 +326,7 @@ def test_deploy_requirements_follow_static_model_overrides(
             project_id=uuid4(), project_name="Overrides", snapshots=(snapshot,), limits=ProjectArtifactLimits()
         )
     )
-    _, _, _, requirements = _build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())
+    *_, requirements, _mcp = _build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())
 
     assert requirements.providers == (provider,)
     assert requirements.models == (ProjectArtifactRequiredModel(provider=provider, name=name, model_type=model_type),)
@@ -450,7 +450,7 @@ def test_identity_free_components_do_not_declare_standalone_providers(policy_mod
             project_id=uuid4(), project_name="Local embeddings", snapshots=(snapshot,), limits=ProjectArtifactLimits()
         )
     )
-    _, _, _, requirements = _build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())
+    *_, requirements, _mcp = _build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())
 
     assert requirements.providers == ()
     assert requirements.models == ()
@@ -640,7 +640,7 @@ def test_deployment_snapshot_reports_the_same_providers_as_the_manifest() -> Non
         ),
     )
 
-    _, _, _, snapshot_models = _build_deployment_snapshot_flows(snapshots, limits=ProjectArtifactLimits())
+    *_, snapshot_models, _mcp = _build_deployment_snapshot_flows(snapshots, limits=ProjectArtifactLimits())
     manifest = _manifest_of(
         _build_archive(
             project_id=uuid4(),

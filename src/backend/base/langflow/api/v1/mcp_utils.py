@@ -30,6 +30,7 @@ from sqlmodel import select
 from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.utils.execution_principal import FAMILY_LEGACY_MCP, FAMILY_MCP_PROJECTS
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
+from langflow.api.utils.migration_pause import REFUSAL, writing
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.run_validation import HITL_UNSUPPORTED_DETAIL, flow_requires_hitl
 from langflow.api.v1.schemas import SimplifiedAPIRequest
@@ -560,12 +561,18 @@ async def handle_call_tool(
                 )
             raise
 
-    try:
-        return await with_db_session(execute_tool)
-    except Exception as e:
-        msg = f"Error executing tool {name}: {e!s}"
-        await logger.aexception(msg)
-        raise
+    # Over the SSE transport the POST that carries a call answers before the call runs, in the task
+    # of the stream. So the call holds a place of its own among the changes a migration pause waits
+    # for, and is refused when the pause came first.
+    with writing("task", name="mcp_tool_call") as let_in:
+        if not let_in:
+            raise RuntimeError(REFUSAL)
+        try:
+            return await with_db_session(execute_tool)
+        except Exception as e:
+            msg = f"Error executing tool {name}: {e!s}"
+            await logger.aexception(msg)
+            raise
 
 
 async def _collect_tools(

@@ -22,15 +22,25 @@ test(
       { times: 1 },
     );
     await page.goto("/settings/migration");
-    await expect(
-      page.getByTestId("sidebar-nav-Global Variables"),
-    ).toBeVisible();
+    // The reload boots the whole app again before Settings renders, so it gets the bootstrap's wait.
+    await expect(page.getByTestId("sidebar-nav-Global Variables")).toBeVisible({
+      timeout: 30000,
+    });
     expect(new URL(page.url()).pathname).toBe("/settings/migration");
     sendConfig();
 
     // A check that already passed on this instance, on a retry or a second local run, shows collapsed.
     const step = page.getByTestId("migration-step-check_source");
     await expect(step).toBeVisible();
+
+    // The page scrolls inside its own area. Bringing the last step into view leaves the document,
+    // and the top bar with it, where it is.
+    await page
+      .getByTestId("migration-step-check_target")
+      .evaluate((row) => row.scrollIntoView());
+    expect(
+      await page.evaluate(() => document.scrollingElement?.scrollTop),
+    ).toBe(0);
     const reopen = step.getByRole("button", { name: "Check this instance" });
     if (await reopen.isVisible()) await reopen.click();
 

@@ -40,6 +40,31 @@ const SLACK_MEMBERS_CONDITIONAL: ConditionalScopeRequirement[] = [
 ];
 
 describe("normalizeScope (mirrors ScopeSet._normalize)", () => {
+  it.each(["google", "google_workspace"])(
+    "recognizes Google identity aliases for %s",
+    (provider) => {
+      for (const scope of ["email", "profile"]) {
+        expect(
+          normalizeScope(
+            provider,
+            `https://www.googleapis.com/auth/userinfo.${scope}`,
+          ),
+        ).toBe(scope);
+        expect(normalizeScope(provider, `userinfo.${scope}`)).toBe(scope);
+        expect(normalizeScope(provider, scope)).toBe(scope);
+      }
+      expect(normalizeScope(provider, "userinfo.other")).toBe("userinfo.other");
+    },
+  );
+
+  it("does not apply Google identity aliases to other providers", () => {
+    expect(normalizeScope("microsoft", "userinfo.email")).toBe(
+      "userinfo.email",
+    );
+    expect(normalizeScope("slack", "userinfo.profile")).toBe(
+      "userinfo.profile",
+    );
+  });
   it("drops the Microsoft Graph prefix and ignores case", () => {
     expect(normalizeScope("microsoft", MAIL_SEND)).toBe("mail.send");
     expect(normalizeScope("microsoft", " mail.SEND ")).toBe("mail.send");

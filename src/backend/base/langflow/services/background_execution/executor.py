@@ -20,7 +20,7 @@ from collections.abc import Awaitable, Callable
 
 from lfx.log.logger import logger
 
-from langflow.api.utils.migration_pause import is_paused
+from langflow.api.utils.migration_pause import is_paused, writing_on
 
 CoroFactory = Callable[[], Awaitable[None]]
 
@@ -113,6 +113,9 @@ class InProcessExecutor:
                 self._queue.task_done()
                 return
             task = asyncio.create_task(coro_factory())
+            # A migration pause waits for the task and not only for the job's status: a run that is
+            # told to stop is marked as cancelled at once, and still writes until its task ends.
+            writing_on(task, name="background_run")
             self._in_flight[key] = task
             try:
                 await self._await_task(task)
