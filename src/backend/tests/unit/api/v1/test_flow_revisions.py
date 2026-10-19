@@ -193,6 +193,32 @@ async def test_restoring_a_revision_keeps_its_secrets_and_records_new_revisions(
     assert {operation["cause"] for operation in entries[1]["operations"]} == {None}
 
 
+async def test_a_restore_over_newer_work_is_a_conflict(client: AsyncClient, logged_in_headers):
+    flow = await _flow_with_history(client, logged_in_headers, _graph(_node("a")), _graph(_node("a", "mine")))
+    seen = (await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)).json()["version_token"]
+    newer = await client.patch(
+        f"api/v1/flows/{flow['id']}", json={"data": _graph(_node("a", "theirs"))}, headers=logged_in_headers
+    )
+    assert newer.status_code == status.HTTP_200_OK, newer.text
+
+    refused = await client.post(
+        f"api/v1/flows/{flow['id']}/revisions/0/restore", headers={**logged_in_headers, "If-Match": seen}
+    )
+
+    assert refused.status_code == status.HTTP_409_CONFLICT, refused.text
+    assert refused.json()["detail"]["code"] == "flow_version_conflict"
+    async with session_scope() as session:
+        stored = await session.get(Flow, UUID(flow["id"]))
+        assert graphs_equal(stored.data, _graph(_node("a", "theirs")))
+
+    current = newer.json()["version_token"]
+    restored = await client.post(
+        f"api/v1/flows/{flow['id']}/revisions/0/restore", headers={**logged_in_headers, "If-Match": current}
+    )
+
+    assert restored.status_code == status.HTTP_200_OK, restored.text
+
+
 async def test_another_users_flow_history_is_not_found(client: AsyncClient, logged_in_headers):
     flow = await _flow_with_history(client, logged_in_headers, _graph(_node("a")), _graph(_node("a", "x")))
     username = f"other-{uuid4().hex[:8]}"
@@ -274,6 +300,21 @@ async def test_a_restore_with_the_clients_fixes_keeps_the_revisions_secrets(clie
     assert restored["edges"] == []
     versions = await _versions(client, logged_in_headers, flow)
     assert any("before the client fixed it" in (version.get("description") or "") for version in versions)
+
+
+async def test_a_retried_restore_with_fixes_keeps_one_unfixed_copy(client: AsyncClient, logged_in_headers):
+    flow, url = await _refused_legacy_flow(client, logged_in_headers)
+    body = {"fixes": [{"type": "delete_edges", "ids": ["legacy-edge"]}]}
+    first = await client.post(f"{url}/restore", json=body, headers=logged_in_headers)
+    assert first.status_code == status.HTTP_200_OK, first.text
+
+    # The retry of a restore whose response was lost changes nothing.
+    retry = await client.post(f"{url}/restore", json=body, headers=logged_in_headers)
+
+    assert retry.status_code == status.HTTP_200_OK, retry.text
+    assert retry.json()["history"] is None
+    versions = await _versions(client, logged_in_headers, flow)
+    assert sum("before the client fixed it" in (version.get("description") or "") for version in versions) == 1
 
 
 async def test_a_fix_can_reconnect_an_edge(client: AsyncClient, logged_in_headers):
