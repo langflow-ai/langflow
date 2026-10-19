@@ -29,6 +29,8 @@ class GraphViolationCode(str, Enum):
     TABLE_ROW_ID_MISSING = "TABLE_ROW_ID_MISSING"
     TABLE_ROW_ID_DUPLICATE = "TABLE_ROW_ID_DUPLICATE"
     TABLE_ROW_POS_INVALID = "TABLE_ROW_POS_INVALID"
+    # A table's column definition names a column after a row key the engine owns.
+    TABLE_COLUMN_RESERVED = "TABLE_COLUMN_RESERVED"
     # A handle has one of its two forms, and the other is valid.
     EDGE_HANDLE_FORM_MISSING = "EDGE_HANDLE_FORM_MISSING"
     # A handle is missing, is not an object, does not parse, or its forms disagree.
@@ -53,6 +55,7 @@ MANUAL_CODES = frozenset(
         GraphViolationCode.EDGE_HANDLE_INVALID,
         GraphViolationCode.EDGE_HANDLE_NOT_FOUND,
         GraphViolationCode.EDGE_TARGET_OCCUPIED,
+        GraphViolationCode.TABLE_COLUMN_RESERVED,
     }
 )
 
