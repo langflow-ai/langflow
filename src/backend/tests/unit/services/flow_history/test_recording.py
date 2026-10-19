@@ -147,9 +147,9 @@ async def test_first_graph_edit_starts_history_and_records_attributed_operations
     operations = decode_row(row)
     assert [operation.operation.type for operation in operations] == ["add_nodes", "update_nodes", "add_edges"]
     assert {operation.actor_user_id for operation in operations} == {active_user.id}
-    assert {str(operation.request_id) for operation in operations} == {history["request_id"]}
+    assert len({operation.request_id for operation in operations}) == 1
     assert row.actor_user_ids == [str(active_user.id)]
-    assert row.request_ids == [history["request_id"]]
+    assert row.request_ids == [str(operations[0].request_id)]
 
 
 async def test_a_changed_edge_records_a_delete_and_an_add(client: AsyncClient, logged_in_headers):
@@ -253,30 +253,31 @@ async def test_a_starter_project_saved_back_records_nothing_and_an_edit_records_
     assert {update.id for update in recorded.operation.updates} == {chat_input["id"]}
 
 
-async def test_a_retry_with_the_same_request_id_records_once(client: AsyncClient, logged_in_headers):
+async def test_a_retried_save_records_once_without_a_request_id(client: AsyncClient, logged_in_headers):
+    """The retry of a save whose response was lost carries the graph already stored."""
     flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
-    request_id = str(uuid4())
-    body = {"data": _graph(_node("a", "hello")), "request_id": request_id}
+    body = {"data": _graph(_node("a", "hello"))}
+    headers = {**logged_in_headers, "If-Match": flow["version_token"]}
 
-    first = await _patch(client, logged_in_headers, flow["id"], **body)
-    retry = await _patch(client, logged_in_headers, flow["id"], **body)
+    first = await client.patch(f"api/v1/flows/{flow['id']}", json=body, headers=headers)
+    retry = await client.patch(f"api/v1/flows/{flow['id']}", json=body, headers=headers)
 
-    assert first.json()["history"]["deduplicated"] is False
-    assert retry.json()["history"]["deduplicated"] is True
-    assert retry.json()["history"]["start_revision"] == first.json()["history"]["start_revision"]
-    assert retry.json()["history"]["end_revision"] == first.json()["history"]["end_revision"]
+    assert first.status_code == status.HTTP_200_OK, first.text
+    assert retry.status_code == status.HTTP_200_OK, retry.text
+    assert retry.json()["history"] is None
+    assert retry.json()["version_token"] == first.json()["version_token"]
     assert len(await _rows(flow["id"])) == 1
 
 
-async def test_a_write_without_request_id_gets_one(client: AsyncClient, logged_in_headers):
+async def test_each_write_names_its_own_batch(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
 
-    response = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")))
+    await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")))
+    await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "y")))
 
-    request_id = response.json()["history"]["request_id"]
-    assert UUID(request_id)
-    (row,) = await _rows(flow["id"])
-    assert row.request_ids == [request_id]
+    first, second = await _rows(flow["id"])
+    assert len(first.request_ids) == len(second.request_ids) == 1
+    assert UUID(first.request_ids[0]) != UUID(second.request_ids[0])
 
 
 async def test_a_write_cause_is_recorded_on_every_operation_of_that_write(client: AsyncClient, logged_in_headers):
@@ -365,13 +366,13 @@ async def test_rows_respect_the_operation_count_limit(client: AsyncClient, logge
     target = _graph(_node("a", "changed"), _node("b"), edges=[_edge("e", "a", "b")])
     target["description"] = "now described"
 
-    response = await _patch(client, logged_in_headers, flow["id"], data=target)
+    await _patch(client, logged_in_headers, flow["id"], data=target)
 
     rows = await _rows(flow["id"])
     assert [(row.start_revision, row.end_revision) for row in rows] == [(1, 2), (3, 4), (5, 5)]
     _assert_contiguous(rows)
-    request_id = response.json()["history"]["request_id"]
-    assert all(row.request_ids == [request_id] for row in rows)
+    assert all(row.request_ids == rows[0].request_ids for row in rows)
+    assert len(rows[0].request_ids) == 1
     assert graphs_equal(await _reconstruct(flow["id"], 5), target)
 
 
@@ -605,24 +606,6 @@ async def test_an_overwrite_records_the_merge_without_copying_the_replaced_graph
     assert graphs_equal(await _reconstruct(flow["id"], replaced_revision), _graph(_node("a", "theirs")))
     versions = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
     assert versions.json()["entries"] == []
-
-
-async def test_a_retry_returns_its_original_result_although_its_token_is_now_stale(
-    client: AsyncClient, logged_in_headers
-):
-    """The retry check comes before If-Match: the first attempt is what made the token stale."""
-    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
-    body = {"data": _graph(_node("a", "x")), "request_id": str(uuid4())}
-    headers = {**logged_in_headers, "If-Match": flow["version_token"]}
-    first = await client.patch(f"api/v1/flows/{flow['id']}", json=body, headers=headers)
-    assert first.status_code == status.HTTP_200_OK, first.text
-
-    retry = await client.patch(f"api/v1/flows/{flow['id']}", json=body, headers=headers)
-
-    assert retry.status_code == status.HTTP_200_OK, retry.text
-    assert retry.json()["history"]["deduplicated"] is True
-    assert retry.json()["history"]["start_revision"] == first.json()["history"]["start_revision"]
-    assert len(await _rows(flow["id"])) == 1
 
 
 async def test_a_stale_token_whose_graph_equals_the_stored_one_loses_nothing(client: AsyncClient, logged_in_headers):

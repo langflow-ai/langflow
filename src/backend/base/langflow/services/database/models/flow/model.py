@@ -326,13 +326,6 @@ class FlowGraphWriteOptions(SQLModel):
     part of the stored flow.
     """
 
-    request_id: UUID | None = Field(
-        default=None,
-        description=(
-            "Identifies this write across retries. A retry with the same id returns the "
-            "original result instead of recording the change twice."
-        ),
-    )
     repair_revision_mismatch: bool = Field(
         default=False,
         description=(
@@ -385,12 +378,10 @@ class FlowRead(FlowBase):
 class FlowHistoryWrite(BaseModel):
     """What a graph write recorded in the flow's history."""
 
-    request_id: UUID = Field(description="The write's request id; resend it to retry without recording twice")
     start_revision: int | None = Field(None, description="First revision this write recorded; None when unchanged")
     end_revision: int | None = Field(None, description="Last revision this write recorded; None when unchanged")
     latest_revision: int = Field(description="The flow's latest recorded revision after the write")
     current_revision: int = Field(description="The revision the flow's stored data holds after the write")
-    deduplicated: bool = Field(default=False, description="True when this was a retry of a write already recorded")
     flow_repaired: bool = Field(
         default=False, description="True when the stored flow was reset to its latest recorded revision first"
     )

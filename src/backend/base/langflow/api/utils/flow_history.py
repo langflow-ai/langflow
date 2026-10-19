@@ -94,17 +94,13 @@ def history_write_summary(result: GraphWriteResult | None) -> FlowHistoryWrite |
     as it would have before history existed, so identical saves keep getting
     identical responses.
     """
-    if result is None or not (
-        result.start_revision is not None or result.deduplicated or result.flow_repaired or result.graph_repairs
-    ):
+    if result is None or not (result.start_revision is not None or result.flow_repaired or result.graph_repairs):
         return None
     return FlowHistoryWrite(
-        request_id=result.request_id,
         start_revision=result.start_revision,
         end_revision=result.end_revision,
         latest_revision=result.latest_revision,
         current_revision=result.current_revision,
-        deduplicated=result.deduplicated,
         flow_repaired=result.flow_repaired,
         graph_repairs=result.graph_repairs,
     )

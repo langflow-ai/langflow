@@ -279,7 +279,6 @@ async def activate_version(
     *,
     save_draft: Annotated[bool, Query()] = True,
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
-    request_id: Annotated[UUID | None, Query(description="Identifies this restore across retries.")] = None,
     repair_revision_mismatch: Annotated[bool, Query()] = False,
     repair_invalid_graph: Annotated[bool, Query()] = False,
 ) -> FlowWriteRead:
@@ -339,7 +338,6 @@ async def activate_version(
         )
 
         options = FlowGraphWriteOptions(
-            request_id=request_id,
             repair_revision_mismatch=repair_revision_mismatch,
             repair_invalid_graph=repair_invalid_graph,
         )

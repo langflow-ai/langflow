@@ -66,7 +66,6 @@ from langflow.services.deps import get_flow_operation_service, get_settings_serv
 from langflow.services.flow_history.envelope import (
     RecordedOperation,
     batch_header,
-    decode_row,
     distinct_actor_ids,
     encode_envelope,
     request_ids_in_order,
@@ -79,7 +78,7 @@ from langflow.services.flow_history.errors import (
     FlowVersionConflictError,
 )
 from langflow.services.flow_history.replay import reconstruct_graph, replay_from
-from langflow.services.flow_history.store import has_anchor, latest_anchor_at_or_before, rows_with_request
+from langflow.services.flow_history.store import has_anchor, latest_anchor_at_or_before
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -93,12 +92,10 @@ REPAIRED_ORIGINAL_DESCRIPTION = "Original before automatic repair"
 class GraphWriteResult:
     """What a graph write recorded, for the response."""
 
-    request_id: UUID
     latest_revision: int
     current_revision: int
     start_revision: int | None = None
     end_revision: int | None = None
-    deduplicated: bool = False
     flow_repaired: bool = False
     graph_repairs: list[dict[str, Any]] = field(default_factory=list)
 
@@ -135,11 +132,12 @@ async def write_flow_graph(
 
     ``expected_version_token`` is the request's ``If-Match``; None writes unconditionally.
     """
-    request_id = (options.request_id if options else None) or uuid4()
+    # Names this write's batch in the stored envelope. A whole-flow save needs
+    # no retry check: a retry carries the graph already stored, so it records nothing.
+    request_id = uuid4()
     repair_mismatch = bool(options and options.repair_revision_mismatch)
     repair_invalid = bool(options and options.repair_invalid_graph)
     result = GraphWriteResult(
-        request_id=request_id,
         latest_revision=flow.latest_revision,
         current_revision=flow.current_revision,
     )
@@ -149,13 +147,6 @@ async def write_flow_graph(
     if flow.user_id is None:
         flow.data = normalize_absent_graph(target)
         return result
-
-    if options is not None and options.request_id is not None:
-        original = await _recorded_request(session, flow, options.request_id)
-        if original is not None:
-            original.latest_revision = flow.latest_revision
-            original.current_revision = flow.current_revision
-            return original
 
     if (
         expected_version_token is not None
@@ -323,25 +314,6 @@ async def _keep_repaired_original(session: AsyncSession, flow: Flow) -> None:
 
 def _fix_entry(graph: str, fix: GraphFix) -> dict[str, Any]:
     return {"graph": graph, **fix.to_dict()}
-
-
-async def _recorded_request(session: AsyncSession, flow: Flow, request_id: UUID) -> GraphWriteResult | None:
-    revisions = [
-        recorded.revision
-        for row in await rows_with_request(session, flow.id, request_id)
-        for recorded in decode_row(row)
-        if recorded.request_id == request_id
-    ]
-    if not revisions:
-        return None
-    return GraphWriteResult(
-        request_id=request_id,
-        latest_revision=flow.latest_revision,
-        current_revision=flow.current_revision,
-        start_revision=min(revisions),
-        end_revision=max(revisions),
-        deduplicated=True,
-    )
 
 
 # --- Numbering and storing operations -------------------------------------------------
