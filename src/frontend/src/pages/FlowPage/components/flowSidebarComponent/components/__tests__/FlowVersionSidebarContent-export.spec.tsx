@@ -50,10 +50,12 @@ const mockVersions = [
   },
 ];
 
-// No recorded history: these specs cover the saved-version list.
+// No recorded history unless a test sets one.
+// biome-ignore lint/suspicious/noExplicitAny: test double
+let mockRevisionPages: any;
 jest.mock("@/controllers/API/queries/flow-revisions", () => ({
   useGetFlowRevisions: () => ({
-    data: undefined,
+    data: mockRevisionPages,
     fetchNextPage: jest.fn(),
     hasNextPage: false,
     isFetchingNextPage: false,
@@ -228,6 +230,7 @@ import FlowVersionSidebarContent from "../FlowVersionSidebarContent";
 describe("FlowVersionSidebarContent export", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRevisionPages = undefined;
   });
 
   it("exports a version entry using removeApiKeys + downloadFlow", async () => {
@@ -327,5 +330,95 @@ describe("FlowVersionSidebarContent export", () => {
 
     // downloadFlow should NOT have been called
     expect(downloadFlowMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("FlowVersionSidebarContent saved version on a timeline entry", () => {
+  const pinnedVersion = {
+    id: "entry-2",
+    version_number: 2,
+    version_tag: "v2",
+    description: "pinned version",
+    created_at: "2026-01-02T00:00:00Z",
+    operation_revision: 3,
+    saved_by: { id: "user-1", username: "Alice" },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockRevisionPages = {
+      pages: [
+        {
+          flow_id: "flow-1",
+          latest_revision: 3,
+          current_revision: 3,
+          earliest_revision: 1,
+          next_before: null,
+          entries: [
+            {
+              id: "e1",
+              start_revision: 1,
+              end_revision: 3,
+              created_at: "2026-01-02T00:00:00Z",
+              actors: [{ id: "user-1", username: "Alice" }],
+              request_ids: ["r1"],
+              versions: [pinnedVersion],
+              operations: null,
+            },
+          ],
+        },
+      ],
+    };
+  });
+
+  afterAll(() => {
+    mockRevisionPages = undefined;
+  });
+
+  // The defect: a version pinned on its timeline entry showed its tag only,
+  // with no way to export or delete it.
+  it("exports the pinned version", async () => {
+    const user = userEvent.setup();
+    const versionData = { nodes: [{ id: "v2-node" }], edges: [] };
+    apiGetMock.mockResolvedValueOnce({
+      data: { ...pinnedVersion, data: versionData },
+    });
+
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
+
+    expect(screen.getByText("pinned version")).toBeInTheDocument();
+    // The timeline comes first, then the older version list.
+    const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
+    expect(exportItems).toHaveLength(2);
+    await user.click(exportItems[0]);
+
+    await waitFor(() => {
+      expect(apiGetMock).toHaveBeenCalledWith(
+        "/api/v1/flows/flow-1/versions/entry-2",
+      );
+    });
+    await waitFor(() => {
+      expect(downloadFlowMock).toHaveBeenCalledWith(
+        expect.objectContaining({ data: versionData }),
+        "Test Flow_v2",
+        "A test flow",
+      );
+    });
+  });
+
+  it("asks to confirm deleting the pinned version", async () => {
+    const user = userEvent.setup();
+
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
+
+    const deleteItems = screen.getAllByRole("menuitem", { name: /Delete/i });
+    expect(deleteItems).toHaveLength(2);
+    await user.click(deleteItems[0]);
+
+    expect(
+      screen.getByText(
+        "This will permanently delete v2. This can't be undone.",
+      ),
+    ).toBeInTheDocument();
   });
 });

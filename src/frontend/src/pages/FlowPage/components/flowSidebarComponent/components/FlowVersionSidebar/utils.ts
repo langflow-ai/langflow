@@ -1,4 +1,24 @@
+import type { RevisionVersion } from "@/types/flow/revision";
+import type { FlowVersionEntry } from "@/types/flow/version";
 import { uiLocale } from "@/utils/format-date";
+
+/** A saved version pinned on the timeline, in the shape the version list uses. */
+export function versionEntryOf(
+  version: RevisionVersion,
+  flowId: string,
+): FlowVersionEntry {
+  return {
+    id: version.id,
+    flow_id: flowId,
+    user_id: version.saved_by?.id ?? "",
+    version_number: version.version_number,
+    version_tag: version.version_tag,
+    description: version.description,
+    created_at: version.created_at,
+    username: version.saved_by?.username ?? null,
+    operation_revision: version.operation_revision,
+  };
+}
 
 export function formatTimestamp(dateStr: string): string {
   const date = new Date(dateStr);
