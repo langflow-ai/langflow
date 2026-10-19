@@ -1,9 +1,11 @@
 import { expect, test } from "../fixtures";
+import { skipIfMissing } from "../utils/env/skip-if-missing";
 
 test(
   "serves assets, API docs, and health under the prefix",
   { tag: ["@release", "@api"] },
   async ({ request, baseURL }) => {
+    skipIfMissing.basePathTestUrl();
     const root = `${baseURL!.replace(/\/+$/, "")}/`;
     const prefix = new URL(root).pathname;
     const response = await request.get(root);
@@ -34,6 +36,7 @@ test(
   "preserves a protected deep link through login and reload",
   { tag: ["@release", "@workspace"] },
   async ({ page, baseURL }) => {
+    skipIfMissing.basePathTestUrl();
     const username = process.env.LANGFLOW_BASE_PATH_TEST_USERNAME;
     const password = process.env.LANGFLOW_BASE_PATH_TEST_PASSWORD;
     expect(username, "Set LANGFLOW_BASE_PATH_TEST_USERNAME").toBeTruthy();

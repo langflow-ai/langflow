@@ -21,6 +21,19 @@ describe("frontend URL prefix", () => {
       expect(getURL("LOGIN")).toBe(`${prefix}/api/v1/login`);
       expect(config.BASE_URL_API_V2).toBe(`${prefix}/api/v2/`);
       expect(config.HEALTH_CHECK_URL).toBe(`${prefix}/health_check`);
+      const { applyBasePath } = require("../utils/urls");
+      expect(applyBasePath("/api/v1/build/flow-1/node-1/stream")).toBe(
+        `${prefix}/api/v1/build/flow-1/node-1/stream`,
+      );
+      expect(applyBasePath(`${prefix}/api/v1/build/flow-1/node-1/stream`)).toBe(
+        `${prefix}/api/v1/build/flow-1/node-1/stream`,
+      );
+      expect(applyBasePath("https://example.com/api/v1/run")).toBe(
+        "https://example.com/api/v1/run",
+      );
+      expect(applyBasePath("//example.com/api/v1/run")).toBe(
+        "//example.com/api/v1/run",
+      );
       expect(getBaseUrl()).toBe(`${window.location.origin}${prefix}`);
       const { customA2aPublishOrigin } = require("../utils/custom-a2a-address");
       const {
