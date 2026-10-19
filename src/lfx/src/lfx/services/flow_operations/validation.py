@@ -241,11 +241,11 @@ def remove_cut_edges(base: Any, target: dict[str, Any]) -> list[str]:
     This is what a writer that is not the editor (the assistant, the MCP
     server) does before saving, as the editor's ``cleanEdges`` does: a write
     that removes a field or an output also removes the edges at it, so the
-    save passes the edge rules. ``base`` is the stored graph, which is sound.
-    A ``target`` that is not structurally sound is left as it is: the save
-    refuses it with its violations.
+    save passes the edge rules. When either graph is not structurally sound,
+    ``target`` is left as it is: the save refuses it, or the stored graph,
+    with their violations.
     """
-    if find_graph_violations(target, check_values=False):
+    if find_graph_violations(base, check_values=False) or find_graph_violations(target, check_values=False):
         return []
     removed = _removed_ends(base, target)
     if not removed:
