@@ -802,8 +802,10 @@ class TestExportFlow:
         stored = headers(await mcp_server_module._get_flow(created["id"]))
         exported = headers(await mcp_server_module.export_flow(created["id"]))
         assert stored
-        assert all(row.get("_id") and row.get("_pos") for row in stored)
-        assert exported == [{key: value for key, value in row.items() if key not in {"_id", "_pos"}} for row in stored]
+        assert all(row.get("__id__") and row.get("__pos__") for row in stored)
+        assert exported == [
+            {key: value for key, value in row.items() if key not in {"__id__", "__pos__"}} for row in stored
+        ]
 
     async def test_export_flow_redacts_secrets(self):
         """API keys in exported flow data should be redacted."""

@@ -345,8 +345,8 @@ async def test_a_table_the_write_adds_needs_row_ids_or_a_repair(client: AsyncCli
     assert repaired.status_code == status.HTTP_200_OK, repaired.text
     (row,) = (await _flow(flow["id"])).data["nodes"][1]["data"]["node"]["template"]["headers"]["value"]
     assert row["key"] == "Accept"
-    assert row["_id"]
-    assert row["_pos"]
+    assert row["__id__"]
+    assert row["__pos__"]
 
 
 async def test_an_unchanged_legacy_table_is_accepted(client: AsyncClient, logged_in_headers):

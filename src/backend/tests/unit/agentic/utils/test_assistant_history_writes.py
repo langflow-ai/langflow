@@ -116,8 +116,8 @@ async def test_components_the_assistant_adds_get_row_ids_and_the_assistant_cause
     data, operations = await _stored(flow_id)
     (row,) = _rows_of(data, "APIRequest-1")
     assert row["key"] == "User-Agent"
-    assert row["_id"]
-    assert row["_pos"]
+    assert row["__id__"]
+    assert row["__pos__"]
     assert operations
     assert {operation.cause for operation in operations} == {"assistant"}
 
@@ -125,7 +125,7 @@ async def test_components_the_assistant_adds_get_row_ids_and_the_assistant_cause
 async def test_a_table_the_assistant_writes_keeps_the_ids_of_rows_it_still_holds(
     client: AsyncClient, logged_in_headers, active_user
 ):
-    stored_rows = [{"_id": "r1", "_pos": 1, "key": "User-Agent", "value": "Langflow/1.0"}]
+    stored_rows = [{"__id__": "r1", "__pos__": 1, "key": "User-Agent", "value": "Langflow/1.0"}]
     flow_id = await _create_flow(
         client, logged_in_headers, {"nodes": [_api_request_node("APIRequest-1", stored_rows)], "edges": []}
     )
@@ -143,8 +143,8 @@ async def test_a_table_the_assistant_writes_keeps_the_ids_of_rows_it_still_holds
     rows = _rows_of(data, "APIRequest-1")
     assert rows[0] == stored_rows[0]
     assert rows[1]["key"] == "Accept"
-    assert rows[1]["_id"]
-    assert rows[1]["_pos"] > 1
+    assert rows[1]["__id__"]
+    assert rows[1]["__pos__"] > 1
     assert operations
     assert {operation.cause for operation in operations} == {"assistant"}
 
