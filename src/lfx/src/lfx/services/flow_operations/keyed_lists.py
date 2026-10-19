@@ -46,7 +46,7 @@ class ListIndex:
     def require_key(self, item: Any, *, context: str) -> str:
         key = self.keyed.key_of(item)
         if not key:
-            msg = f"{context}: every item of this list needs a non-empty string {self.keyed.selector_name}"
+            msg = f"{context}: every item of this list needs a non-empty string key"
             raise FlowOperationValidationError(msg)
         return key
 

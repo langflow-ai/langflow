@@ -21,8 +21,6 @@ from lfx.services.flow_operations.ops import (
     DeleteNodesOp,
     ExpectAbsent,
     FlowOperation,
-    IdSelector,
-    KeySelector,
     NodeFieldPath,
     UpdateMetadataOp,
     UpdateNodeEntry,
@@ -279,14 +277,14 @@ def _apply_field_update(
         if isinstance(part, str):
             msg = f"{context}.path[{missing_at}]: object path part must be an existing string key: {part!r}"
         else:
-            msg = f"{context}.path[{missing_at}]: list item does not exist: {_selector_key(part)!r}"
+            msg = f"{context}.path[{missing_at}]: list item does not exist: {part.key!r}"
         raise FlowOperationValidationError(msg)
 
     before = _write_last(state, node, parent, update, context=context)
     # A write inside a keyed list item must leave its key alone, and a table row its position.
     for step in reversed(steps):
         if step.items.keyed.key_of(step.item) != step.key:
-            msg = f"{context}: cannot change a list item's {step.items.keyed.selector_name}"
+            msg = f"{context}: cannot change a list item's key"
             raise FlowOperationValidationError(msg)
         if step.items.slots is not None:
             step.items.require_position(step.item, context=context)
@@ -325,7 +323,7 @@ def _walk(
             value = child
             continue
         items = _keyed_list(state, node, path, index, value, context=context)
-        key = _selector_key(part)
+        key = part.key
         item = items.by_key.get(key)
         if item is None:
             return None, steps, index
@@ -352,7 +350,7 @@ def _read_last(
             msg = f"{context}.path[{len(path) - 1}]: {last!r} reads a key of a value that is not an object"
             raise FlowOperationValidationError(msg)
         return last in parent, parent.get(last)
-    item = _keyed_list(state, node, path, len(path) - 1, parent, context=context).by_key.get(_selector_key(last))
+    item = _keyed_list(state, node, path, len(path) - 1, parent, context=context).by_key.get(last.key)
     return item is not None, item
 
 
@@ -380,7 +378,7 @@ def _write_last(
         return before
 
     items = _keyed_list(state, node, path, len(path) - 1, parent, context=context)
-    key = _selector_key(last)
+    key = last.key
     if isinstance(update, DeleteNodeFieldUpdate):
         return items.remove(key) if key in items.by_key else _ABSENT
     value = copy_mutable_graph_value(update.value)
@@ -402,22 +400,15 @@ def _keyed_list(
     *,
     context: str,
 ) -> ListIndex:
-    """Return the index of the keyed list ``path[index]`` selects from, checking the selector fits it."""
+    """Return the index of the keyed list ``path[index]`` selects from."""
     keyed = load_node_schema().keyed_list_at(node, path[:index]) if node is not None else None
     if keyed is None:
         msg = f"{context}.path[{index}]: selector on a list the node schema does not declare keyed"
-        raise FlowOperationValidationError(msg)
-    if not isinstance(path[index], IdSelector if keyed.kind == "table" else KeySelector):
-        msg = f"{context}.path[{index}]: items of this list are selected with {{{keyed.selector_name!r}: ...}}"
         raise FlowOperationValidationError(msg)
     if not isinstance(value, list):
         msg = f"{context}.path[{index}]: selector on a value that is not a list"
         raise FlowOperationValidationError(msg)
     return state.list_index(keyed, value, context=f"{context}.path[{index}]")
-
-
-def _selector_key(selector: IdSelector | KeySelector) -> str:
-    return selector.id if isinstance(selector, IdSelector) else selector.key
 
 
 def _check_expectation(update: UpdateNodeEntry, *, exists: bool, current: Any, context: str) -> None:

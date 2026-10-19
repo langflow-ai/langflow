@@ -34,10 +34,6 @@ class KeyedList:
     key: KeyPath
     position: str | None = None
 
-    @property
-    def selector_name(self) -> str:
-        return "id" if self.kind == "table" else "key"
-
     def key_of(self, item: Any) -> str | None:
         """Return an item's key, or None when the item has none."""
         value: Any = item
