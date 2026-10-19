@@ -31,8 +31,8 @@ components are optional and do nothing until a key is supplied, so they change
 nothing for anyone who does not use them.
 
 - **Desearch Web Search**: query, plus an optional result offset for paging.
-- **Desearch AI Search**: prompt, plus optional sources (web, twitter, reddit,
-  hackernews, arxiv, wikipedia; default web and twitter) and date range.
+- **Desearch AI Search**: prompt, plus optional sources (web and twitter, both
+  on by default) and a date range that applies to X results.
 - **Desearch X Search**: query, plus optional number of posts (1-100), sort
   (Top or Latest), user, language and start and end dates.
 

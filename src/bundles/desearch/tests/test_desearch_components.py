@@ -251,6 +251,24 @@ def test_ai_error_is_not_cached(ai):
     assert message.text.startswith("Langflow is a visual builder.")
 
 
+def test_ai_changed_or_cleared_key_skips_cache(ai):
+    mock = _mock(AI_PAYLOAD)
+    with patch(REQUEST_PATCH_TARGET, mock):
+        ai.desearch_ai_search()
+        ai.desearch_api_key = "other-key"  # pragma: allowlist secret
+        ai.desearch_ai_search()
+        ai.desearch_api_key = ""
+        message = ai.desearch_ai_search()
+    assert mock.call_count == 2
+    assert "Desearch API key is required" in message.text
+
+
+def test_ai_sources_are_supported_tools_only():
+    from lfx_desearch.components.desearch.desearch_ai_search import SOURCES
+
+    assert SOURCES == ["web", "twitter"]
+
+
 def test_ai_missing_key(ai):
     ai.desearch_api_key = ""
     mock = _mock(AI_PAYLOAD)

@@ -1,3 +1,5 @@
+import hashlib
+
 import httpx
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, MultiselectInput, SecretStrInput
@@ -5,9 +7,9 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
-from lfx_desearch.components.desearch._client import desearch_request, http_error_message
+from lfx_desearch.components.desearch._client import KEY_REQUIRED, desearch_request, http_error_message
 
-SOURCES = ["web", "twitter", "reddit", "hackernews", "arxiv", "wikipedia"]
+SOURCES = ["web", "twitter"]
 DEFAULT_SOURCES = ["web", "twitter"]
 DATE_FILTERS = [
     "ANY_TIME",
@@ -55,7 +57,7 @@ class DesearchAISearchComponent(Component):
     """AI search with a sourced answer through the Desearch API."""
 
     display_name = "Desearch AI Search"
-    description = "Get an AI answer with links to its sources from web, X, Reddit, Hacker News, arXiv and Wikipedia."
+    description = "Get an AI answer with links to its sources from web and X."
     documentation = "https://www.desearch.ai/docs"
     icon = "search"
 
@@ -90,7 +92,7 @@ class DesearchAISearchComponent(Component):
             value="ANY_TIME",
             required=False,
             advanced=True,
-            info="Only use sources from this period.",
+            info="Only use X results from this period. Web results are not date filtered.",
         ),
     ]
 
@@ -109,8 +111,12 @@ class DesearchAISearchComponent(Component):
 
     def _run(self) -> tuple[dict | None, str | None]:
         """Call the API once per request body, so both outputs share one successful search."""
+        if not self.desearch_api_key:
+            return None, KEY_REQUIRED
         body = self._body()
-        cache_key = repr(sorted(body.items()))
+        # Key the cache on the API key too, so a changed or cleared key never reuses an old result.
+        key_id = hashlib.sha256(str(self.desearch_api_key).encode()).hexdigest()
+        cache_key = repr((key_id, sorted(body.items())))
         cached = getattr(self, "_desearch_cache", None)
         if cached and cached[0] == cache_key:
             return cached[1], cached[2]
