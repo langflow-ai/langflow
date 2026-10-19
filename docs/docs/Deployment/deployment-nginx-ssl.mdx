@@ -181,6 +181,89 @@ Replace **DOMAIN_NAME** with your actual domain name, such as `langflow.example.
     sudo systemctl restart nginx
     ```
 
+## Host Langflow under a URL prefix
+
+To serve the UI and API at `https://example.com/langflow/`, build the frontend with that prefix and configure the backend and proxy to match.
+This requires a custom frontend build from a checkout that includes this feature.
+Setting `LANGFLOW_ROOT_PATH` on a stock image alone does not change frontend redirects or asset URLs.
+
+| Setting | When it is read | Purpose |
+| --- | --- | --- |
+| `VITE_LANGFLOW_BASE_PATH=/langflow` | Frontend build or Vite dev server startup | Sets the router prefix, asset URLs, API requests, health checks, and copied URLs. |
+| `LANGFLOW_ROOT_PATH=/langflow` | Backend startup | Tells the backend which public prefix the proxy removes before forwarding requests. |
+
+Both settings default to serving at `/`.
+Use the same prefix for both, including any nested segments such as `/tools/langflow`.
+Use a URL path, without a hostname, query string, or fragment.
+Changing the frontend prefix requires a rebuild.
+
+### Build and start from source
+
+From the repository root, run the following commands after installing the [development dependencies](/contributing-how-to-contribute).
+
+```bash
+npm --prefix src/frontend ci
+VITE_LANGFLOW_BASE_PATH=/langflow npm --prefix src/frontend run build
+LANGFLOW_ROOT_PATH=/langflow uv run langflow run \
+  --host 127.0.0.1 \
+  --port 7860 \
+  --frontend-path src/frontend/build
+```
+
+For local frontend development, use `VITE_LANGFLOW_BASE_PATH=/langflow npm --prefix src/frontend start` and open `http://localhost:3000/langflow/`.
+The Vite development proxy removes the prefix before forwarding API and health requests to the backend.
+
+Alternatively, build a custom image from the repository root.
+
+```bash
+docker build -f docker/build_and_push.Dockerfile \
+  --build-arg VITE_LANGFLOW_BASE_PATH=/langflow \
+  -t langflow-prefixed:local .
+```
+
+Set `LANGFLOW_ROOT_PATH=/langflow` in that container's runtime environment and retain your usual database, storage, and authentication configuration.
+The build argument is compiled into the frontend. Setting it only when starting the container has no effect.
+
+### Configure Nginx
+
+In the Nginx server block, replace the `location /` example with these locations.
+The trailing slash on `proxy_pass` removes `/langflow/` from requests sent to Langflow.
+For example, `/langflow/api/v1/config` reaches the backend as `/api/v1/config`.
+
+```nginx
+location = /langflow {
+    return 308 /langflow/;
+}
+
+location /langflow/ {
+    proxy_pass http://127.0.0.1:7860/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Prefix /langflow;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_read_timeout 300s;
+    proxy_buffering off;
+    proxy_request_buffering off;
+}
+```
+
+For a Kubernetes ingress, apply the equivalent prefix rewrite and forward requests to the Langflow service.
+The public prefix, frontend build setting, and backend root path must agree.
+
+### Verify the deployment
+
+Open `/langflow/` and confirm that scripts, styles, and API requests stay under `/langflow/` in the browser network panel.
+With authentication enabled, open a protected deep link such as `/langflow/flow/FLOW_ID`, sign in, and confirm that the redirect returns to that flow with exactly one prefix.
+Reload the deep link to check the proxy and frontend fallback together.
+Check `/langflow/health_check` and `/langflow/docs`, then run a flow and verify any WebSocket or event-stream features you use.
+
+If you configure a separate public MCP address with `LANGFLOW_MCP_BASE_URL`, include its public path prefix in that URL.
+An explicit MCP address takes precedence over the address derived from the frontend.
+
 ## Install Certbot and obtain SSL certificates
 
 While Nginx handles SSL termination in encrypting and decrypting traffic, Certbot automatically obtains SSL certificates from Let's Encrypt and configures Nginx to use them.
