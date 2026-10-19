@@ -214,7 +214,7 @@ class Generator:
             return [{"type": "update_nodes", "updates": [entry]}]
         action = self.rng.choice(["cell", "add", "delete", "move"])
         row = self.rng.choice(rows)
-        selector = {"id": row["_id"]}
+        selector = {"key": row["_id"]}
         if action == "cell":
             column = self.rng.choice(sorted(key for key in row if key not in {"_id", "_pos"}) or ["name"])
             entry = self.set_entry(
@@ -226,7 +226,7 @@ class Generator:
             position = (row["_pos"] + min(later)) / 2 if later else row["_pos"] + 1
             new_id = self.next_id("row")
             new_row = {"_id": new_id, "_pos": position, "name": self.text()}
-            entry = {"id": node["id"], "op": "set_field", "path": [*path, {"id": new_id}], "value": new_row}
+            entry = {"id": node["id"], "op": "set_field", "path": [*path, {"key": new_id}], "value": new_row}
         elif action == "delete":
             entry = {"id": node["id"], "op": "delete_field", "path": [*path, selector]}
         else:
