@@ -2955,3 +2955,32 @@ async def test_get_current_user_mcp_auto_login_skip_missing_superuser_rejects(
         )
 
     assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_webhook_without_auth_refuses_a_deactivated_flow_owner(auth_service: AuthService):
+    owner = _dummy_user(uuid4(), active=False)
+
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_flow_id_or_endpoint_name",
+            new=AsyncMock(return_value=owner),
+        ),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await auth_service.get_webhook_user(str(uuid4()), SimpleNamespace(headers={}, query_params={}))
+
+    assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.anyio
+async def test_webhook_without_auth_runs_as_an_active_flow_owner(auth_service: AuthService):
+    owner = _dummy_user(uuid4())
+
+    with patch(
+        "langflow.services.auth.service.get_user_by_flow_id_or_endpoint_name",
+        new=AsyncMock(return_value=owner),
+    ):
+        result = await auth_service.get_webhook_user(str(uuid4()), SimpleNamespace(headers={}, query_params={}))
+
+    assert result is owner

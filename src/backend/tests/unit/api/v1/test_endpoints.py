@@ -58,6 +58,40 @@ async def test_get_config_mirrors_assistant_message_length(client: AsyncClient, 
 
 
 @pytest.mark.parametrize(
+    ("pgvector", "opensearch", "expected"),
+    [
+        ("postgresql://u:pw@db/lf", None, "postgres"),  # pragma: allowlist secret
+        (None, "https://opensearch.internal:9200", "opensearch"),
+        ("postgresql://u:pw@db/lf", "https://opensearch.internal:9200", "postgres"),  # pragma: allowlist secret
+        (None, None, "sqlite"),
+    ],
+)
+async def test_get_config_reports_server_resolved_default_vector_store(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch, pgvector, opensearch, expected
+):
+    """The UI defaults its provider picker to this instead of assuming pgVector.
+
+    An OpenSearch-only deployment must report ``opensearch``, matching what a create request with
+    no ``backend_type`` resolves to server-side.
+    """
+    for name, value in (("PGVECTOR_CONNECTION_STRING", pgvector), ("OPENSEARCH_URL", opensearch)):
+        if value is None:
+            monkeypatch.delenv(name, raising=False)
+        else:
+            monkeypatch.setenv(name, value)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["default_vector_store_backend"] == expected
+    assert response.json()["configured_vector_store_backends"] == [
+        backend for backend, value in (("postgres", pgvector), ("opensearch", opensearch)) if value
+    ]
+    assert not pgvector or pgvector not in response.text
+    assert not opensearch or opensearch not in response.text
+
+
+@pytest.mark.parametrize(
     ("project_id", "workspace_id"),
     [(uuid4(), uuid4()), (None, None)],
 )
@@ -1021,6 +1055,7 @@ async def test_get_config_unauthenticated_does_not_expose_sensitive_fields(clien
 
     # Verify sensitive fields are NOT present
     sensitive_fields = [
+        "configured_vector_store_backends",
         "database_url",
         "secret_key",
         "auto_saving",

@@ -72,6 +72,7 @@ from __future__ import annotations
 import asyncio
 import queue as sync_queue
 import threading
+from contextlib import contextmanager
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
@@ -89,7 +90,7 @@ from lfx.log.logger import logger
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Iterator
     from uuid import UUID
 
     from langchain_core.documents import Document
@@ -125,6 +126,61 @@ def _is_missing_index(exc: Exception) -> bool:
 DEFAULT_URL_VARIABLE = "OPENSEARCH_URL"
 DEFAULT_USERNAME_VARIABLE = "OPENSEARCH_USERNAME"
 DEFAULT_PASSWORD_VARIABLE = "OPENSEARCH_PASSWORD"  # noqa: S105 — variable name, not a secret  # pragma: allowlist secret
+
+
+def read_opensearch_url_from_env() -> str | None:
+    """Read the deployment-level OpenSearch URL from the server environment.
+
+    The name is the backend's default URL variable. An unset or blank value
+    means OpenSearch is not provisioned for the deployment.
+    """
+    import os
+
+    return os.getenv(DEFAULT_URL_VARIABLE, "").strip() or None
+
+
+def opensearch_env_configured() -> bool:
+    """Return True when OpenSearch is provisioned via env (an auto-default trigger)."""
+    return bool(read_opensearch_url_from_env())
+
+
+async def validate_opensearch_url(url: str, url_variable: str, url_source: str) -> None:
+    """Check a resolved cluster URL against both destination gates before it is dialed.
+
+    The URL comes from a tenant-controlled Langflow variable (``backend_config``
+    only names the variable), and the client built from it makes server-side
+    connections whose outcome is echoed back by the test-connection route.
+    Without validation a tenant can probe cloud-metadata (169.254.169.254),
+    RFC1918, or loopback targets from the server's network position. Apply the
+    same connector SSRF policy every other tenant-URL sink uses (vector-store
+    components, MCP, model providers); operators reach legitimate internal
+    clusters via ``LANGFLOW_SSRF_ALLOWED_HOSTS``. ``resolve_hostname`` blocks,
+    so the check runs off the event loop.
+
+    This is the *only* place the cluster URL is validated. ``_resolve_secrets``
+    briefly called the validator itself as well, which resolved DNS twice per
+    KB and left the re-raise below unreachable. The production preflight calls
+    it too, so a boot never reports a cluster healthy that the runtime refuses.
+
+    Re-raised as ``SSRFProtectionError`` (which subclasses ``ValueError``, so every
+    existing ``except ValueError`` config path still catches it) rather than flattened
+    to a bare ``ValueError``: ``test_connection`` reports ``type(exc).__name__`` back to
+    the caller, and a blocked destination should not read as a typo in the index name.
+
+    The second gate is ``enforce_kb_destination``: opensearch-py re-resolves DNS when it
+    connects and offers no seam to pin the validated address (langchain's wrapper hands one
+    kwargs dict to both the urllib3 and aiohttp clients), so a tenant-written hostname is
+    additionally required to be one the operator approved. It runs first, and without a DNS
+    lookup, so a refused destination is never resolved on the tenant's behalf.
+    """
+    enforce_kb_destination(url, source=url_source, description=f"Langflow variable {url_variable!r}")
+    try:
+        await asyncio.to_thread(validate_connector_url_for_ssrf, url)
+    except SSRFProtectionError as exc:
+        msg = f"OpenSearch URL from variable {url_variable!r} is not allowed: {exc}"
+        raise SSRFProtectionError(msg) from exc
+
+
 # LangChain's ``OpenSearchVectorSearch`` resolves ``vector_field`` from
 # per-call kwargs (default ``"vector_field"``) and ignores the value passed to
 # its constructor. This backend never passes a per-call override, so ingestion
@@ -196,6 +252,33 @@ def _coerce_bool(value: Any, *, default: bool) -> bool:
     if isinstance(value, (int, float)):
         return bool(value)
     return default
+
+
+@contextmanager
+def _refused_documents_left_out() -> Iterator[None]:
+    """Report a bulk write OpenSearch refused without the documents it refused.
+
+    opensearch-py's ``BulkIndexError`` carries each refused document next to the
+    reason, and its message prints all of it: chunk text, metadata and vector. What
+    is raised instead says how many were refused and the distinct error types.
+    OpenSearch's reason and caused_by can also quote stored values, so omit them.
+    """
+    from opensearchpy.helpers import BulkIndexError
+
+    try:
+        yield
+    except BulkIndexError as exc:
+        error_types: dict[str, None] = {}
+        for refused in exc.errors:
+            error = next(iter(refused.values())).get("error")
+            if not isinstance(error, dict):
+                continue
+            if kind := error.get("type"):
+                error_types.setdefault(str(kind), None)
+        detail = f" Error type(s): {', '.join(error_types)}." if error_types else ""
+        message = f"{len(exc.errors)} document(s) failed to index.{detail}"
+        # ``from None``: the original would print the documents again in a traceback.
+        raise RuntimeError(message) from None
 
 
 class OpenSearchBackend(BaseVectorStoreBackend):
@@ -315,37 +398,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
     async def _validate_url(url: str, url_variable: str, url_source: str) -> None:
         """Check the resolved cluster URL against both destination gates before use.
 
-        The URL comes from a tenant-controlled Langflow variable (``backend_config``
-        only names the variable), and the client built from it makes server-side
-        connections whose outcome is echoed back by the test-connection route.
-        Without validation a tenant can probe cloud-metadata (169.254.169.254),
-        RFC1918, or loopback targets from the server's network position. Apply the
-        same connector SSRF policy every other tenant-URL sink uses (vector-store
-        components, MCP, model providers); operators reach legitimate internal
-        clusters via ``LANGFLOW_SSRF_ALLOWED_HOSTS``. ``resolve_hostname`` blocks,
-        so the check runs off the event loop.
-
-        This is the *only* place the cluster URL is validated. ``_resolve_secrets``
-        briefly called the validator itself as well, which resolved DNS twice per
-        KB and left the re-raise below unreachable.
-
-        Re-raised as ``SSRFProtectionError`` (which subclasses ``ValueError``, so every
-        existing ``except ValueError`` config path still catches it) rather than flattened
-        to a bare ``ValueError``: ``test_connection`` reports ``type(exc).__name__`` back to
-        the caller, and a blocked destination should not read as a typo in the index name.
-
-        The second gate is ``enforce_kb_destination``: opensearch-py re-resolves DNS when it
-        connects and offers no seam to pin the validated address (langchain's wrapper hands one
-        kwargs dict to both the urllib3 and aiohttp clients), so a tenant-written hostname is
-        additionally required to be one the operator approved. It runs first, and without a DNS
-        lookup, so a refused destination is never resolved on the tenant's behalf.
+        See :func:`validate_opensearch_url`; this is the only call site on the
+        runtime path, so ``test_connection``, ingestion and retrieval all share it.
         """
-        enforce_kb_destination(url, source=url_source, description=f"Langflow variable {url_variable!r}")
-        try:
-            await asyncio.to_thread(validate_connector_url_for_ssrf, url)
-        except SSRFProtectionError as exc:
-            msg = f"OpenSearch URL from variable {url_variable!r} is not allowed: {exc}"
-            raise SSRFProtectionError(msg) from exc
+        await validate_opensearch_url(url, url_variable, url_source)
 
     def _build_vector_store(self) -> VectorStore:
         # Validate config before touching optional deps so missing
@@ -435,7 +491,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             return
         await self.ensure_ready()
         store = self.vector_store
-        await store.aadd_documents(docs, space_type=self._os_space_type)
+        with _refused_documents_left_out():
+            await store.aadd_documents(docs, space_type=self._os_space_type)
 
     async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
         # Like ingestion, no per-call field override: LangChain writes vectors to
@@ -449,13 +506,14 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         bulk_size = self.vector_store.bulk_size  # type: ignore[attr-defined]
         for start in range(0, len(docs), bulk_size):
             chunk = docs[start : start + bulk_size]
-            await _drained_worker(
-                self.vector_store.add_embeddings,  # type: ignore[attr-defined]
-                [(doc.content, doc.embedding) for doc in chunk],
-                metadatas=[doc.metadata for doc in chunk],
-                ids=ids[start : start + bulk_size],
-                space_type=self._os_space_type,
-            )
+            with _refused_documents_left_out():
+                await _drained_worker(
+                    self.vector_store.add_embeddings,  # type: ignore[attr-defined]
+                    [(doc.content, doc.embedding) for doc in chunk],
+                    metadatas=[doc.metadata for doc in chunk],
+                    ids=ids[start : start + bulk_size],
+                    space_type=self._os_space_type,
+                )
 
     async def similarity_search(
         self,

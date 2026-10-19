@@ -28,7 +28,7 @@ export default function PageLayout({
 
   return (
     <div className="flex w-full flex-1 flex-col justify-between overflow-auto overflow-x-hidden bg-background">
-      <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col">
+      <div className="mx-auto flex min-h-0 w-full max-w-[1440px] flex-1 flex-col">
         <div
           role="region"
           aria-labelledby={headingId}
@@ -70,7 +70,7 @@ export default function PageLayout({
         <div className="flex shrink-0 px-6">
           <Separator className="flex" />
         </div>
-        <div className="flex flex-1 p-6 pt-7">{children}</div>
+        <div className="flex min-h-0 flex-1 p-6 pt-7">{children}</div>
       </div>
     </div>
   );

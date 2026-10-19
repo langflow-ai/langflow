@@ -12,12 +12,14 @@ from __future__ import annotations
 import ast
 import textwrap
 from pathlib import Path
+from secrets import token_urlsafe
 from typing import TYPE_CHECKING
 
 import pytest
 from langflow.api.v1 import connections as connections_module
 from langflow.api.v1 import integrations as integrations_module
-from langflow.services.deps import get_settings_service
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_auth_service, get_settings_service, session_scope
 from langflow.services.rate_limit import service as rate_limit_service
 
 if TYPE_CHECKING:
@@ -31,8 +33,6 @@ _CALLBACK_URL = "api/v1/connections/oauth/google/callback"
 _POLLS_PER_MINUTE = 30
 # More writes than the 5/minute login budget the write routes used to inherit.
 _WRITE_BURST = 12
-# The conftest `user_two` fixture hashes this password.
-_USER_TWO_PASSWORD = "hashed_password"  # noqa: S105  # pragma: allowlist secret
 # Test-only header the patched limiter key function reads as the client IP.
 _CLIENT_IP_HEADER = "x-test-client-ip"
 
@@ -83,7 +83,13 @@ def _key_client_ip_by_header(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 async def user_two_headers(client: AsyncClient, user_two) -> dict[str, str]:
     """Bearer headers for a second user, who reaches the app from the same client IP as the first."""
-    login = await client.post("api/v1/login", data={"username": user_two.username, "password": _USER_TWO_PASSWORD})
+    password = token_urlsafe(32)
+    async with session_scope() as session:
+        user = await session.get(User, user_two.id)
+        assert user is not None
+        user.password = get_auth_service().get_password_hash(password)
+        session.add(user)
+    login = await client.post("api/v1/login", data={"username": user_two.username, "password": password})
     assert login.status_code == 200, login.text
     client.cookies.clear()  # the login set this user's session cookie on the shared client
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
@@ -94,6 +100,20 @@ def _assert_limited(response) -> None:
     assert response.status_code == 429, response.text
     assert response.headers["Retry-After"] == "60"
     assert response.json()["detail"] == "Too many requests. Please try again later."
+
+
+def _assert_oauth_limited(response) -> None:
+    """A throttled consent window explains how to retry without exposing callback values."""
+    assert response.status_code == 429, response.text
+    assert response.headers["Retry-After"] == "60"
+    assert response.headers["content-type"].startswith("text/html")
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert response.headers["content-security-policy"] == "default-src 'none'; frame-ancestors 'none'"
+    assert "60 seconds" in response.text
+    assert "Settings" in response.text
+    assert "Connections" in response.text
+    assert "start again" in response.text
 
 
 def _create_payload(name: str = "work") -> dict:
@@ -109,7 +129,7 @@ def _create_payload(name: str = "work") -> dict:
             "account": {"id": "account-123", "display": "Work", "tenant_id": "tenant-123"},
         },
         "credentials": {
-            "access_token": "access-token-do-not-return",
+            "access_token": token_urlsafe(32),
             "token_type": "Bearer",
         },
     }
@@ -411,14 +431,21 @@ async def test_oauth_start_is_rate_limited(
     _assert_limited(await client.post(url, json=body, headers=logged_in_headers))
 
 
-async def test_oauth_callback_is_rate_limited(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("endpoint", ["callback", "browser"])
+async def test_oauth_callback_is_rate_limited(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch, endpoint: str
+) -> None:
     """The callback is unauthenticated: state replaces login, so the IP budget is the throttle."""
     _enable_rate_limit(monkeypatch)
-    params = {"state": "a" * 43, "code": "provider-code"}
+    url = f"api/v1/connections/oauth/google/{endpoint}"
+    params = {"state": token_urlsafe(32), "code": token_urlsafe(32)}
     for _ in range(_LIMIT):
-        response = await client.get(_CALLBACK_URL, params=params)
+        response = await client.get(url, params=params)
         assert response.status_code == 400, response.text
-    _assert_limited(await client.get(_CALLBACK_URL, params=params))
+    limited = await client.get(url, params=params)
+    _assert_oauth_limited(limited)
+    for value in params.values():
+        assert value not in limited.text
 
 
 @pytest.mark.usefixtures("active_user")
@@ -433,7 +460,7 @@ async def test_oauth_callback_budget_does_not_consume_oauth_start(
 
     callback = await client.get(_CALLBACK_URL, params={"state": "b" * 43})
     assert callback.status_code == 400, callback.text
-    _assert_limited(await client.get(_CALLBACK_URL, params={"state": "b" * 43}))
+    _assert_oauth_limited(await client.get(_CALLBACK_URL, params={"state": "b" * 43}))
 
     started = await client.post(
         f"api/v1/connections/{connection_id}/oauth/start",
@@ -473,7 +500,7 @@ async def test_oauth_callback_stays_keyed_by_client_ip(
     )
     assert first.status_code == 400, first.text
     # Another user's bearer token from the same address shares the spent bucket...
-    _assert_limited(
+    _assert_oauth_limited(
         await client.get(_CALLBACK_URL, params=params, headers={**user_two_headers, _CLIENT_IP_HEADER: "198.51.100.1"})
     )
     # ...while another address has its own.

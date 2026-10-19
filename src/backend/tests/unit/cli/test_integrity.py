@@ -19,11 +19,12 @@ import anyio
 import pytest
 import sqlalchemy as sa
 from cryptography.fernet import Fernet
-from langflow.cli.integrity import check_instance
+from langflow.cli.integrity import _FERNET_PREFIX, check_instance, open_instance
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.auth.authz import AuthzRole, AuthzRoleAssignment, CasbinRule
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.memory_base.model import MemoryBase, MessageIngestionRecord
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.variable.model import Variable
@@ -53,6 +54,25 @@ def kb_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root.mkdir()
     monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(root))
     return root
+
+
+@pytest.fixture
+async def instance_on(client, monkeypatch):  # noqa: ARG001
+    """Start the services from nothing on a database the test names, as the command starts them."""
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    manager = get_service_manager()
+    with monkeypatch.context() as patch:
+        patch.setattr(manager, "services", {})
+
+        def start(database_url: str) -> None:
+            patch.setenv("LANGFLOW_DATABASE_URL", database_url)
+            open_instance()
+
+        yield start
+        if database := manager.services.get(ServiceType.DATABASE_SERVICE):
+            await database.engine.dispose()
 
 
 def _check(report, name):
@@ -99,6 +119,7 @@ class TestCleanInstance:
             "schema",
             "credentials",
             "files",
+            "knowledge base storage",
             "knowledge bases",
             "vector counts",
             "memory bases",
@@ -119,6 +140,65 @@ class TestCleanInstance:
         await check_instance()
 
         assert await snapshot() == before
+
+
+class TestSchema:
+    """A database that cannot be reached is not one on another schema."""
+
+    async def test_a_malformed_revision_table_is_reported_as_a_schema_read_failure(self, instance_on, tmp_path):
+        database = tmp_path / "malformed.db"
+        with sqlite3.connect(database) as connection:
+            connection.execute("CREATE TABLE alembic_version (unexpected_column TEXT)")
+        instance_on(f"sqlite:///{database}")
+
+        report = await check_instance()
+
+        assert [(c.name, c.status) for c in report.checks] == [("schema", "fail")]
+        assert "schema could not be read" in report.checks[0].summary
+        assert "version_num" in report.checks[0].summary
+        assert "could not be reached" not in report.checks[0].summary
+
+    async def test_revision_read_permissions_are_reported_without_a_traceback(self, deny_revision_read):  # noqa: ARG002
+        report = await check_instance()
+
+        assert [(c.name, c.status) for c in report.checks] == [("schema", "fail")]
+        assert "schema could not be read" in report.checks[0].summary
+        assert "permission denied for table alembic_version" in report.checks[0].summary
+
+    async def test_a_database_file_that_cannot_be_opened_is_reported_as_unreachable(self, instance_on, tmp_path):
+        # A path under a regular file can be neither opened nor created, with any driver.
+        (tmp_path / "not-a-directory").write_text("")
+        instance_on(f"sqlite:///{tmp_path}/not-a-directory/langflow.db")
+
+        report = await check_instance()
+
+        assert [(c.name, c.status) for c in report.checks] == [("schema", "fail")]
+        summary = report.checks[0].summary
+        assert "could not be reached" in summary
+        assert "no recorded revision" not in summary
+
+    async def test_a_database_that_cannot_be_reached_is_reported_as_unreachable(self, instance_on):
+        pytest.importorskip("psycopg", reason="needs the postgresql extra to attempt the connection")
+        # Nothing listens on port 1, so the connection is refused.
+        instance_on("postgresql://user:not-to-be-shown@127.0.0.1:1/x")  # pragma: allowlist secret
+
+        report = await check_instance()
+
+        assert [(c.name, c.status) for c in report.checks] == [("schema", "fail")]
+        summary = report.checks[0].summary
+        assert "could not be reached" in summary
+        assert "127.0.0.1" in summary
+        assert "no recorded revision" not in summary
+        assert "not-to-be-shown" not in summary
+        assert "postgresql" not in summary
+
+    async def test_a_database_with_no_alembic_version_table_has_no_recorded_revision(self, instance_on, tmp_path):
+        instance_on(f"sqlite:///{tmp_path}/empty.db")
+
+        report = await check_instance()
+
+        assert [(c.name, c.status) for c in report.checks] == [("schema", "fail")]
+        assert "no recorded revision" in report.checks[0].summary
 
 
 class TestCredentials:
@@ -181,7 +261,8 @@ class TestCredentials:
         with pytest.raises(ConnectionSecretError):
             _decrypt_credential_payload(damaged)
         assert check.status == "fail"
-        assert f"connection_secret.encrypted_payload row {connection.id}" in check.problems
+        owner = active_user.username
+        assert f"connection_secret.encrypted_payload row {connection.id} (gh, owner {owner})" in check.problems
 
     async def test_a_legacy_plaintext_api_key_is_not_counted(self, active_user, storage_dir, kb_root):  # noqa: ARG002
         # Keys from 1.6.x are stored as issued, and the app still matches them as they are.
@@ -193,6 +274,36 @@ class TestCredentials:
 
         assert check.status == "ok"
         assert check.summary == before.summary
+
+    async def test_a_problem_names_the_row_and_its_owner_and_never_the_value(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        from langflow.services.database.models.folder.model import Folder
+        from langflow.services.database.models.mcp_server.model import MCPServer
+
+        other = Fernet(Fernet.generate_key())
+
+        def foreign() -> str:
+            return other.encrypt(b"sk-from-another-instance").decode()
+
+        owner = active_user.id
+        variable = Variable(name="OPENAI_API_KEY", value=foreign(), type=CREDENTIAL_TYPE, user_id=owner)
+        named_key = ApiKey(name="ci", api_key=foreign(), user_id=owner)
+        unnamed_key = ApiKey(api_key=foreign(), user_id=owner)
+        project = Folder(name="Support", user_id=owner, auth_settings={"auth_type": "apikey", "api_key": foreign()})
+        server = MCPServer(name="github", user_id=owner, config={"command": "npx", "env": {"TOKEN": foreign()}})
+        await _add(variable, named_key, unnamed_key, project, server)
+
+        check = _check(await check_instance(), "credentials")
+
+        assert sorted(check.problems) == sorted(
+            [
+                f"variable.value row {variable.id} (OPENAI_API_KEY, owner {active_user.username})",
+                f"apikey.api_key row {named_key.id} (ci, owner {active_user.username})",
+                f"apikey.api_key row {unnamed_key.id} (owner {active_user.username})",
+                f"folder.auth_settings row {project.id} (Support, owner {active_user.username})",
+                f"mcp_server.config.env row {server.id} (github, owner {active_user.username})",
+            ]
+        )
+        assert _FERNET_PREFIX not in " ".join(check.problems)
 
     async def test_a_trigger_signing_secret_under_another_key_is_counted(self, active_user, storage_dir, kb_root):  # noqa: ARG002
         # Webhook ingress decrypts this with the instance key and rejects every delivery when it does not open.
@@ -305,6 +416,143 @@ class TestKnowledgeBases:
         assert _check(report, "knowledge bases").status == "ok"
         assert _check(report, "vector counts").status == "ok"
         assert not SQLiteStorageContext(kb_root, active_user.id, record.id).database_path.parent.exists()
+
+
+class TestKnowledgeBaseStorage:
+    @pytest.mark.parametrize("backend_type", ["sqlite", "chroma"])
+    async def test_intentionally_detached_stores_are_excluded(
+        self,
+        active_user,
+        storage_dir,  # noqa: ARG002
+        kb_root,
+        backend_type,
+    ):
+        await _add(
+            KnowledgeBaseRecord(
+                name="kb-detached",
+                user_id=active_user.id,
+                backend_type=backend_type,
+                storage_state="detached",
+                chunks=3,
+            )
+        )
+        before = _contents(kb_root)
+
+        report = await check_instance()
+
+        storage = _check(report, "knowledge base storage")
+        assert storage.status == "ok"
+        assert "1 detached" in storage.summary
+        for name in ("knowledge bases", "vector counts"):
+            check = _check(report, name)
+            assert check.status == "ok"
+            assert check.summary.startswith("0 ")
+        assert _contents(kb_root) == before
+
+    @pytest.mark.parametrize("storage_state", ["deleting", "deleted"])
+    @pytest.mark.parametrize("backend_type", ["sqlite", "chroma"])
+    async def test_pending_deletions_have_cleanup_guidance(
+        self,
+        active_user,
+        storage_dir,  # noqa: ARG002
+        kb_root,
+        storage_state,
+        backend_type,
+    ):
+        await _add(
+            KnowledgeBaseRecord(
+                name="kb-cleanup",
+                user_id=active_user.id,
+                backend_type=backend_type,
+                storage_state=storage_state,
+                chunks=3,
+            )
+        )
+        before = _contents(kb_root)
+
+        report = await check_instance()
+
+        storage = _check(report, "knowledge base storage")
+        assert storage.status == "fail"
+        assert "pending-cleanup" in storage.summary
+        assert "storage upgrade" not in storage.summary
+        assert "require_storage_ready" not in storage.summary
+        assert storage.problems == [
+            f"{active_user.username}/kb-cleanup ({backend_type}): storage state {storage_state}"
+        ]
+        for name in ("knowledge bases", "vector counts"):
+            check = _check(report, name)
+            assert check.status == "ok"
+            assert check.summary.startswith("0 ")
+        assert _contents(kb_root) == before
+
+    async def test_upgrades_and_pending_deletions_keep_their_own_guidance(
+        self,
+        active_user,
+        storage_dir,  # noqa: ARG002
+        kb_root,  # noqa: ARG002
+    ):
+        await _add(
+            KnowledgeBaseRecord(name="kb-upgrade", user_id=active_user.id, backend_type="chroma"),
+            KnowledgeBaseRecord(name="kb-cleanup", user_id=active_user.id, storage_state="deleted"),
+            KnowledgeBaseRecord(name="kb-detached", user_id=active_user.id, storage_state="detached"),
+        )
+
+        storage = _check(await check_instance(), "knowledge base storage")
+
+        assert storage.status == "fail"
+        assert "1 of 2 knowledge bases have not finished" in storage.summary
+        assert "require_storage_ready=true" in storage.summary
+        assert "1 of 2 knowledge bases have pending deletion cleanup" in storage.summary
+        assert "pending-cleanup" in storage.summary
+        assert len(storage.problems) == 2
+        assert not any("kb-detached" in problem for problem in storage.problems)
+
+    async def test_rows_whose_upgrade_has_not_finished_are_listed_and_left_out_of_the_other_checks(
+        self,
+        active_user,
+        storage_dir,  # noqa: ARG002
+        kb_root,  # noqa: ARG002
+    ):
+        # A local Chroma row the startup upgrade has not reached, a SQLite row left mid-upgrade,
+        # and a Chroma Cloud row the upgrade cannot move, with the error it recorded.
+        cloud = KnowledgeBaseRecord(
+            name="kb-cloud",
+            user_id=active_user.id,
+            backend_type="chroma",
+            backend_config={"mode": "cloud"},
+            storage_state="needs_attention",
+            chunks=3,
+        )
+        run = KnowledgeBaseStorageMigration(
+            kb_id=cloud.id, source_generation=1, target_generation=2, error_code="remote_source_requires_migration"
+        )
+        cloud.active_migration_id = run.id
+        await _add(
+            KnowledgeBaseRecord(name="kb-local", user_id=active_user.id, backend_type="chroma", chunks=3),
+            KnowledgeBaseRecord(
+                name="kb-moving", user_id=active_user.id, backend_type="sqlite", storage_state="migrating", chunks=3
+            ),
+            cloud,
+            run,
+        )
+
+        report = await check_instance()
+
+        storage = _check(report, "knowledge base storage")
+        assert storage.status == "fail"
+        assert storage.summary.startswith("3 of 3 knowledge bases"), storage.summary
+        assert "require_storage_ready=true" in storage.summary
+        user = active_user.username
+        assert sorted(storage.problems) == [
+            f"{user}/kb-cloud (chroma): storage state needs_attention, upgrade error remote_source_requires_migration",
+            f"{user}/kb-local (chroma): storage state ready",
+            f"{user}/kb-moving (sqlite): storage state migrating",
+        ]
+        for name in ("knowledge bases", "vector counts"):
+            check = _check(report, name)
+            assert check.status == "ok", (name, check.problems)
+            assert check.summary.startswith("0 "), (name, check.summary)
 
 
 class TestMemoryBases:
@@ -509,8 +757,11 @@ class TestReadOnly:
 
         report = await check_instance()
 
-        assert _check(report, "knowledge bases").status == "fail"
-        assert "requires migration" in " ".join(_check(report, "knowledge bases").problems)
+        # The row waits on the storage upgrade, so it is listed there, not as an unreachable backend.
+        storage = _check(report, "knowledge base storage")
+        assert storage.status == "fail"
+        assert storage.problems == [f"{active_user.username}/kb-retired (chroma): storage state ready"]
+        assert _check(report, "knowledge bases").status == "ok"
         assert _contents(kb_path) == before
 
     async def test_a_store_that_cannot_be_read_is_reported_and_not_counted_as_empty(
@@ -603,3 +854,52 @@ class TestSecretKeyFile:
         await _check_integrity()
 
         assert not (config_dir / "secret_key").exists()
+
+
+class TestOutput:
+    """An admin UI runs the command as a child process and reads each result as it arrives."""
+
+    async def test_each_check_is_handed_over_as_it_finishes(self, active_user, storage_dir, kb_root):  # noqa: ARG002
+        seen = []
+
+        report = await check_instance(on_check=seen.append)
+
+        assert seen == report.checks
+
+    async def test_json_is_one_line_per_check_then_the_report(self, active_user, storage_dir, kb_root, capsys):  # noqa: ARG002
+        from langflow.__main__ import _check_integrity
+
+        ok = await _check_integrity(as_json=True)
+
+        *checks, report = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+        assert {line["event"] for line in checks} == {"check"}
+        assert checks[-1]["check"]["name"] == "authorization"
+        assert report == {"event": "report", "ok": ok, "checks": [line["check"] for line in checks]}
+
+    def test_json_output_keeps_the_logs_out(self, tmp_path):
+        import os
+        import subprocess
+        import sys
+
+        env = {
+            **os.environ,
+            "LANGFLOW_CONFIG_DIR": str(tmp_path),
+            "LANGFLOW_DATABASE_URL": f"sqlite:///{tmp_path / 'empty.db'}",
+            "LANGFLOW_LOG_LEVEL": "debug",
+        }
+        result = subprocess.run(  # noqa: S603 - the command as an admin UI would start it
+            [sys.executable, "-m", "langflow", "check-integrity", "--json"],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
+        )
+
+        lines = [json.loads(line) for line in result.stdout.splitlines()]
+        assert result.returncode == 1
+        assert [(line["event"], line.get("check", {}).get("name")) for line in lines] == [
+            ("check", "schema"),
+            ("report", None),
+        ]
+        assert "Logger set up" in result.stderr

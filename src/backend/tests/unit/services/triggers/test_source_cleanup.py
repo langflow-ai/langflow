@@ -21,6 +21,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from tests.unit.erase_helpers import wait_for_erase
+
 pytestmark = pytest.mark.no_blockbuster
 
 _ACCESS_TOKEN = "cleanup-test-access"  # noqa: S105  # pragma: allowlist secret - synthetic test token
@@ -107,7 +109,8 @@ async def test_user_delete_preserves_new_and_previous_revocations(
 
     monkeypatch.setattr(source_cleanup, "get_connection_resolver_service", no_resolver)
     response = await client.delete(f"/api/v1/users/{trigger_owner}", headers=logged_in_headers_super_user)
-    assert response.status_code == 200, response.text
+    assert response.status_code == 202, response.text
+    await wait_for_erase(response.json()["request_id"])
     async with session_scope() as session:
         assert await session.get(User, trigger_owner) is None
         assert await session.get(Connection, connection_id) is None
@@ -423,7 +426,8 @@ async def test_deleted_gmail_owner_preserves_a_sibling_mailbox_watch(
         )
 
     response = await client.delete(f"/api/v1/users/{trigger_owner}", headers=logged_in_headers_super_user)
-    assert response.status_code == 200, response.text
+    assert response.status_code == 202, response.text
+    await wait_for_erase(response.json()["request_id"])
     requests = []
 
     def reply(request):

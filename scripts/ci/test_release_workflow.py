@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 WORKFLOWS_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
 WORKFLOW_PATH = WORKFLOWS_DIR / "release.yml"
 RELEASE_INVENTORY_WORKFLOW_PATH = WORKFLOWS_DIR / "release-inventory-gate.yml"
 BUNDLE_WORKFLOW_PATH = WORKFLOWS_DIR / "release_bundles.yml"
 NIGHTLY_WORKFLOW_PATH = WORKFLOWS_DIR / "release_nightly.yml"
+LFX_WORKFLOW_PATH = WORKFLOWS_DIR / "release-lfx.yml"
 CROSS_PLATFORM_WORKFLOW_PATH = WORKFLOWS_DIR / "cross-platform-test.yml"
 DB_MIGRATION_WORKFLOW_PATH = WORKFLOWS_DIR / "db-migration-validation.yml"
 PYTHON_TEST_WORKFLOW_PATH = WORKFLOWS_DIR / "python_test.yml"
@@ -117,6 +120,16 @@ def test_nightly_publish_order_uses_the_same_dependency_chain() -> None:
     assert "make sdk_publish" in sdk
 
 
+def test_lfx_docker_build_injects_production_segment_key() -> None:
+    docker_job = _job_block(LFX_WORKFLOW_PATH, "build-docker", "create-release")
+
+    injection = "python3 scripts/ci/inject_segment_write_key.py"
+    build = "uses: docker/build-push-action@v7"
+    assert "LANGFLOW_SEGMENT_WRITE_KEY: ${{ secrets.LANGFLOW_SEGMENT_WRITE_KEY }}" in docker_job
+    assert injection in docker_job
+    assert docker_job.index(injection) < docker_job.index(build)
+
+
 def test_cross_platform_run_has_a_base_runtime_gate() -> None:
     workflow = CROSS_PLATFORM_WORKFLOW_PATH.read_text(encoding="utf-8")
     summary = workflow[workflow.index("\n  test-summary:") :]
@@ -172,6 +185,21 @@ def test_release_docker_builds_consume_built_wheels() -> None:
     assert "release_artifacts: ${{ needs.build-base.result == 'success' }}" in base_docker_job
     assert "pattern: dist-*" in docker_workflow
     assert "path: .release-artifacts" in docker_workflow
+
+
+def test_release_docker_jobs_are_not_skipped_by_skipped_ancestors() -> None:
+    # Without a status function GitHub adds an implicit success(). It is false when any transitive
+    # ancestor was skipped, and build-sdk is skipped whenever the SDK version is unchanged.
+    jobs = yaml.safe_load(WORKFLOW_PATH.read_text(encoding="utf-8"))["jobs"]
+    docker_jobs = {name: job for name, job in jobs.items() if name.startswith("call_docker_build_")}
+
+    assert {"call_docker_build_main_backend", "call_docker_build_main_frontend"} <= docker_jobs.keys()
+    for name, job in docker_jobs.items():
+        condition = " ".join(str(job.get("if", "")).strip().removeprefix("${{").removesuffix("}}").split())
+        assert condition.startswith("always() && !cancelled() &&"), name
+        assert "needs.reserve-final-release.result == 'success'" in condition, name
+        if "call_docker_build_main" in job["needs"]:
+            assert "needs.call_docker_build_main.result == 'success'" in condition, name
 
 
 def test_base_wheel_gate_checks_the_public_langflow_entry_point() -> None:
@@ -232,3 +260,21 @@ def test_main_wheel_gate_derives_bundle_requirements_from_project_metadata() -> 
     assert 'root_metadata["project"]["optional-dependencies"]["bundles"]' in main_gate
     assert "opt_in_standalone" not in main_gate
     assert "bundle_requirement_names == expected_bundle_names" in main_gate
+
+
+def test_publication_requires_application_evidence_without_a_separate_migration_helper() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    reservation = _job_block(WORKFLOW_PATH, "reserve-final-release", "publish-base")
+    assert "migration_helper_release" not in workflow
+    assert "validate-migration-helper" not in workflow
+    needs = next(line for line in reservation.splitlines() if line.strip().startswith("needs:"))
+    jobs = {item.strip() for item in needs.split("[", 1)[1].rstrip("]").split(",")}
+    assert {"release-inventory", "test-cross-platform", "ci"} <= jobs
+
+
+def test_sqlite_runtime_workflow_references_existing_tests() -> None:
+    import re
+
+    workflow = (WORKFLOWS_DIR / "sqlite-runtime.yml").read_text(encoding="utf-8")
+    for path in re.findall(r"(?:src|scripts)/[\w/]+test_[\w]+\.py", workflow):
+        assert (WORKFLOWS_DIR.parents[1] / path).is_file(), path
