@@ -95,7 +95,6 @@ class RevisionGraph(BaseModel):
 
 
 class RevisionRestore(BaseModel):
-    request_id: UUID | None = Field(None, description="Identifies this restore across retries")
     repair_revision_mismatch: bool = False
     fixes: list[RestoreFix] | None = Field(None, description=RESTORE_FIXES_DESCRIPTION)
 
@@ -223,7 +222,6 @@ async def restore_revision(
         db_flow=flow,
         flow=FlowUpdate(
             data=graph,
-            request_id=options.request_id,
             repair_revision_mismatch=options.repair_revision_mismatch,
             cause=RESTORE_CAUSE,
         ),
