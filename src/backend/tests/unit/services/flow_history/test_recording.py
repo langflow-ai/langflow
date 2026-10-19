@@ -349,6 +349,23 @@ async def test_a_table_the_write_adds_needs_row_ids_or_a_repair(client: AsyncCli
     assert row["__pos__"]
 
 
+async def test_a_table_column_named_after_a_row_key_is_refused_even_with_a_repair(
+    client: AsyncClient, logged_in_headers
+):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    table = _table_node("t", [{"__id__": "r1", "__pos__": 1, "key": "Accept"}])
+    table["data"]["node"]["template"]["headers"]["table_schema"] = [{"name": "key"}, {"name": "__id__"}]
+
+    for repair in (False, True):
+        refused = await _patch(client, logged_in_headers, flow["id"], data=_graph(table), repair_invalid_graph=repair)
+
+        assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        (violation,) = refused.json()["detail"]["violations"]
+        assert violation["code"] == "TABLE_COLUMN_RESERVED"
+        assert violation["resolution"] == "manual"
+    assert await _rows(flow["id"]) == []
+
+
 async def test_an_unchanged_legacy_table_is_accepted(client: AsyncClient, logged_in_headers):
     legacy = _table_node("t", [{"key": "Accept", "value": "json"}])
     flow = await _create_flow(client, logged_in_headers, _graph(legacy))
