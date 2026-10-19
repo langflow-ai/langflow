@@ -41,7 +41,7 @@ import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { useSearchContext } from "./context/SearchContext";
 import { applyFeatureFlagFilters } from "./helpers/apply-feature-flag-filters";
 import { computeSectionVisibility } from "./helpers/compute-section-visibility";
-import { isComponentsGroupCategory } from "./helpers/is-components-group-category";
+import { getSidebarContentFlags } from "./helpers/get-sidebar-content-flags";
 import sensitiveSort from "./helpers/sensitive-sort";
 import { useDebouncedSearch } from "./hooks/useDebouncedSearch";
 import { useSegmentedSidebarPanel } from "./hooks/useSegmentedSidebarPanel";
@@ -55,7 +55,6 @@ import {
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
-const BUNDLE_NAMES = SIDEBAR_BUNDLES.map((bundle) => bundle.name);
 
 // SearchContext / FlowSearchProvider / useSearchContext moved to
 // ./context/SearchContext (LE-1736 W32); re-exported here so existing consumers
@@ -250,17 +249,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     showLegacy,
   });
 
-  const hasResults = useMemo(() => {
-    return Object.entries(dataFilter).some(
-      ([category, items]) =>
-        (Object.keys(items).length > 0 &&
-          (CATEGORIES.find((c) => c.name === category) ||
-            BUNDLES.find((b) => b.name === category))) ||
-        isComponentsGroupCategory(category, items, BUNDLE_NAMES) ||
-        (dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0),
-    );
-  }, [dataFilter]);
-
   const isCatalogPolicyEmpty = useMemo(
     () =>
       catalogGovernanceEnabled &&
@@ -358,28 +346,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     [],
   );
 
-  // Must match what `CategoryGroup` renders, which also includes categories
-  // outside the curated list (e.g. custom component folders).
-  const hasCoreComponents = useMemo(
-    () =>
-      Object.entries(dataFilter).some(([category, items]) =>
-        isComponentsGroupCategory(category, items, BUNDLE_NAMES),
-      ),
-    [dataFilter],
-  );
-
-  const hasBundleItems = useMemo(() => {
-    const bundlesWithItems = BUNDLES.filter(
-      (item) =>
-        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
-    );
-    const result = bundlesWithItems.length > 0;
-    return result;
-  }, [dataFilter]);
-
-  const hasMcpComponents = useMemo(() => {
-    return dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0;
-  }, [dataFilter]);
+  const { hasResults, hasCoreComponents, hasBundleItems, hasMcpComponents } =
+    useMemo(() => getSidebarContentFlags(dataFilter), [dataFilter]);
 
   const hasMcpServers = Boolean(mcpServers && mcpServers.length > 0);
 
