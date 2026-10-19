@@ -12,7 +12,7 @@ from langflow.services.deps import get_settings_service
 def _instance(monkeypatch: pytest.MonkeyPatch, prefix: str) -> FastAPI:
     with monkeypatch.context() as settings_patch:
         settings_patch.setattr(get_settings_service().settings, "root_path", prefix)
-        return setup_app()
+        return setup_app(backend_only=True)
 
 
 def _assert_cookie_paths(response, path: str, names: set[str]) -> None:
