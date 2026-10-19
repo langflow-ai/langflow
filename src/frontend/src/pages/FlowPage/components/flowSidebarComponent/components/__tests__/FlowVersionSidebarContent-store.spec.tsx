@@ -45,6 +45,7 @@ jest.mock("@/controllers/API/queries/flow-revisions", () => ({
     fetchNextPage: jest.fn(),
     hasNextPage: false,
     isFetchingNextPage: false,
+    refetch: jest.fn(),
   }),
   useGetFlowHistoryTimeline: () => ({ data: undefined }),
   useGetFlowRevision: () => ({

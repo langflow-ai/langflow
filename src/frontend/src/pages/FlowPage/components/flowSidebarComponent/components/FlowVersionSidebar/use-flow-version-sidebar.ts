@@ -132,7 +132,18 @@ export function useFlowVersionSidebar(flowId: string) {
     fetchNextPage: loadOlderEntries,
     hasNextPage: hasOlderEntries,
     isFetchingNextPage: isLoadingOlderEntries,
-  } = useGetFlowRevisions(flowId, { refetchInterval: 10000 });
+    refetch: refetchRevisions,
+  } = useGetFlowRevisions(flowId, { pollInterval: 10000 });
+  // Saving or deleting a version changes the labels on the timeline without
+  // a new revision, so the timeline is loaded again when the versions change.
+  const shownVersionsRef = useRef(versionResponse);
+  useEffect(() => {
+    const previous = shownVersionsRef.current;
+    shownVersionsRef.current = versionResponse;
+    if (previous && versionResponse && previous !== versionResponse) {
+      refetchRevisions();
+    }
+  }, [versionResponse, refetchRevisions]);
   const timelineEntries = useMemo(
     () => revisionPages?.pages.flatMap((page) => page.entries) ?? [],
     [revisionPages],

@@ -1,3 +1,5 @@
+import type { UseQueryResult } from "@tanstack/react-query";
+import { useEffect } from "react";
 import type { RevisionPage } from "@/types/flow/revision";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -13,13 +15,14 @@ export const getFlowRevisions = async (
   flowId: string,
   before: number = NEWEST,
   limit: number = PAGE_SIZE,
+  withOperations = true,
 ): Promise<RevisionPage> => {
   const response = await api.get<RevisionPage>(
     `${getURL("FLOWS")}/${flowId}/revisions`,
     {
       params: {
         limit,
-        include: "operations",
+        ...(withOperations ? { include: "operations" } : {}),
         ...(before > NEWEST ? { before } : {}),
       },
     },
@@ -27,19 +30,63 @@ export const getFlowRevisions = async (
   return response.data;
 };
 
-/** The flow's timeline, newest first, loaded a page at a time. */
+/** Whether the history changed since `loaded`: new revisions, or compaction. */
+export const historyChanged = (
+  loaded: RevisionPage,
+  newest: RevisionPage,
+): boolean =>
+  newest.latest_revision !== loaded.latest_revision ||
+  newest.current_revision !== loaded.current_revision ||
+  newest.earliest_revision !== loaded.earliest_revision;
+
+/**
+ * The flow's timeline, newest first, loaded a page at a time.
+ *
+ * With `pollInterval`, only the newest entry is asked for at that interval,
+ * without its operations. The loaded pages are reloaded only when that
+ * shows the history changed.
+ */
 export const useGetFlowRevisions = (
   flowId: string,
-  options?: { enabled?: boolean; refetchInterval?: number },
+  options?: { enabled?: boolean; pollInterval?: number },
 ) => {
-  const { infiniteQuery } = UseRequestProcessor();
+  const { infiniteQuery, query } = UseRequestProcessor();
+  const enabled = !!flowId && (options?.enabled ?? true);
 
-  return infiniteQuery<RevisionPage>({
+  const revisions = infiniteQuery<RevisionPage>({
     queryKey: ["useGetFlowRevisions", { flowId }],
     queryFn: ({ pageParam }) => getFlowRevisions(flowId, pageParam),
     initialPageParam: NEWEST,
     getNextPageParam: (lastPage) => lastPage.next_before ?? undefined,
-    enabled: !!flowId && (options?.enabled ?? true),
-    refetchInterval: options?.refetchInterval,
+    enabled,
   });
+
+  const { data: newest, dataUpdatedAt: newestUpdatedAt } = query(
+    ["useGetFlowRevisionsNewest", { flowId }],
+    () => getFlowRevisions(flowId, NEWEST, 1, false),
+    {
+      enabled: enabled && !!options?.pollInterval,
+      refetchInterval: options?.pollInterval,
+    },
+  ) as UseQueryResult<RevisionPage>;
+
+  const loaded = revisions.data?.pages[0];
+  const { dataUpdatedAt, errorUpdatedAt, isFetching, refetch } = revisions;
+  useEffect(() => {
+    if (!newest || !loaded || isFetching) return;
+    // Only a poll newer than the last load, or the last failed one, can say
+    // the pages are out of date.
+    if (newestUpdatedAt <= Math.max(dataUpdatedAt, errorUpdatedAt)) return;
+    if (historyChanged(loaded, newest)) refetch();
+  }, [
+    newest,
+    newestUpdatedAt,
+    loaded,
+    dataUpdatedAt,
+    errorUpdatedAt,
+    isFetching,
+    refetch,
+  ]);
+
+  return revisions;
 };
