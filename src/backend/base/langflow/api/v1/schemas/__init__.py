@@ -3,7 +3,8 @@ from enum import Enum
 from typing import Any, Literal
 from uuid import UUID
 
-from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
+from lfx.base.knowledge_bases.backends.opensearch import opensearch_env_configured
+from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured, resolve_default_kb_backend
 from lfx.graph.schema import RunOutputs
 from lfx.services.settings.base import Settings
 from lfx.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
@@ -505,6 +506,8 @@ class ConfigResponse(BaseConfigResponse):
     # defaults its provider picker to this instead of assuming pgVector, so an
     # OpenSearch-only deployment never offers a backend that is not configured.
     default_vector_store_backend: str = "sqlite"
+    # Only provider IDs are exposed. Connection values stay on the server.
+    configured_vector_store_backends: list[str] = Field(default_factory=list)
     # The component types an administrator blocked, for authenticated callers
     # only. ``catalog_governance_enabled`` says a policy exists somewhere; it
     # cannot say which component in front of you it applies to, and a missing
@@ -572,6 +575,14 @@ class ConfigResponse(BaseConfigResponse):
             assistant_max_message_length=settings.assistant_max_message_length,
             local_vector_store_available=settings.deployment_profile != "prod",
             default_vector_store_backend=resolve_default_kb_backend(),
+            configured_vector_store_backends=[
+                backend
+                for backend, configured in (
+                    ("postgres", postgres_env_configured()),
+                    ("opensearch", opensearch_env_configured()),
+                )
+                if configured
+            ],
         )
 
 

@@ -1,3 +1,4 @@
+import ast
 import errno
 import os
 import re
@@ -5,7 +6,9 @@ import shutil
 import subprocess
 import tempfile
 import warnings
+from io import BytesIO
 from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 from alembic import command
@@ -121,34 +124,12 @@ def db_url(request):
         _drop_pg_test_database(base_url, db_name)
 
 
-def _parse_revision_values(line: str) -> list[str]:
-    """Extract revision ID(s) from a line like ``revision: str = "abc123"``.
-
-    Handles single strings, tuples of strings, and None.  Returns a list of
-    zero or more revision ID strings.
-    """
-    if "=" not in line:
-        return []
-    raw = line.split("=", 1)[1]
-    # Strip inline comments (e.g. "# pragma: allowlist secret")
-    if "#" in raw:
-        raw = raw[: raw.index("#")]
-    raw = raw.strip()
-    if raw == "None":
-        return []
-    # Extract all quoted strings from the value (handles both single values
-    # and tuples like ("abc", "def"))
-    return re.findall(r"""["']([a-f0-9]+)["']""", raw)
-
-
 def _head_revision_at(ref: str) -> str | None:
     """Get the alembic head revision of the migration files at ``ref``.
 
-    Uses ``git grep`` to read the ``revision`` and ``down_revision`` variables
-    directly from the migration files at that ref, then walks the chain to find
-    the head revision.  This avoids relying on filename conventions (which may
-    not match the actual revision IDs inside the files) and works regardless of
-    whether the branch adds, modifies, or deletes migration files.
+    Parse complete sources from a Git archive without importing migrations or
+    extracting files. Python's AST handles multiline merge parents, optional
+    type annotations, and non-hex revision IDs without guessing their syntax.
 
     Returns None if git operations fail (e.g. shallow clone without origin/main).
     """
@@ -156,52 +137,45 @@ def _head_revision_at(ref: str) -> str | None:
     if git is None:
         return None
 
-    def _git_grep(pattern: str) -> str | None:
-        try:
-            result = subprocess.run(  # noqa: S603
-                [
-                    git,
-                    "grep",
-                    "-h",
-                    pattern,
-                    ref,
-                    "--",
-                    "src/backend/base/langflow/alembic/versions/",
-                ],
-                capture_output=True,
-                text=True,
-                check=True,
-                cwd=_WORKSPACE_ROOT,
-            )
-        except subprocess.CalledProcessError:
-            return None
-        except OSError as exc:
-            if exc.errno == errno.ENOENT:
-                return None
-            raise
-        return result.stdout
-
-    # Extract all revision IDs from the ref's migration files
-    rev_output = _git_grep("^revision:")
-    if not rev_output:
+    try:
+        result = subprocess.run(  # noqa: S603
+            [git, "archive", "--format=zip", ref, "src/backend/base/langflow/alembic/versions/"],
+            capture_output=True,
+            check=True,
+            cwd=_WORKSPACE_ROOT,
+        )
+    except subprocess.CalledProcessError:
         return None
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            return None
+        raise
 
-    rev_ids: set[str] = set()
-    for line in rev_output.strip().splitlines():
-        rev_ids.update(_parse_revision_values(line))
+    revision_values: dict[str, set[str]] = {"revision": set(), "down_revision": set()}
+    with ZipFile(BytesIO(result.stdout)) as archive:
+        for name in archive.namelist():
+            if not name.endswith(".py"):
+                continue
+            for node in ast.parse(archive.read(name), filename=name).body:
+                if isinstance(node, ast.Assign):
+                    targets = node.targets
+                elif isinstance(node, ast.AnnAssign):
+                    targets = [node.target]
+                else:
+                    continue
+                for target in targets:
+                    if not isinstance(target, ast.Name) or target.id not in revision_values:
+                        continue
+                    value = ast.literal_eval(node.value)
+                    if value is not None:
+                        revision_values[target.id].update([value] if isinstance(value, str) else value)
 
+    rev_ids = revision_values["revision"]
     if not rev_ids:
         return None
 
-    # Extract all down_revision IDs to determine the chain
-    down_output = _git_grep("^down_revision:")
-    referenced: set[str] = set()
-    if down_output:
-        for line in down_output.strip().splitlines():
-            referenced.update(_parse_revision_values(line))
-
     # Head = revisions not referenced as down_revision by any other revision
-    heads = rev_ids - referenced
+    heads = rev_ids - revision_values["down_revision"]
 
     if len(heads) == 1:
         return heads.pop()

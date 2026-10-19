@@ -696,9 +696,11 @@ def _restamped_lfx_requirement(requirement: str, expected: str) -> str:
     return f"{match['name']}{extras}{match['spacing']}{expected}{marker}"
 
 
-def _replace_lfx_floor(content: str, lfx_version: str, *, exact: bool = False) -> str:
+def _replace_lfx_floor(content: str, lfx_version: str, *, exact: bool = False, pin: bool = False) -> str:
     major = parse_version(lfx_version)[0]
     expected = f">={lfx_version},<{major + 1}.0.0" if exact else _lfx_floor_spec(lfx_version)
+    if pin:
+        expected = f"=={lfx_version}"
     data = tomllib.loads(content)
     project = data.get("project", {})
     dependencies = project.get("dependencies", [])
@@ -713,7 +715,7 @@ def _replace_lfx_floor(content: str, lfx_version: str, *, exact: bool = False) -
     observed_specifier = _requirement_parts(observed)[1]
     replacement = (
         observed
-        if not exact and _lfx_range_is_compatible(observed_specifier, lfx_version)
+        if not exact and not pin and _lfx_range_is_compatible(observed_specifier, lfx_version)
         else _restamped_lfx_requirement(observed, expected)
     )
 
@@ -811,6 +813,59 @@ def update_changed_bundles(
         for path, content in originals.items():
             path.write_text(content, encoding="utf-8")
         raise
+
+
+def restamp_nightly_bundles(lfx_version: str, *, base_dir: Path = BASE_DIR) -> tuple[VersionTarget, ...]:
+    """Restamp bundles whose final LFX floor excludes this same-source nightly.
+
+    Keep compatible bundles unchanged. A bundle requiring this nightly's final
+    release gets its own .devN version and exact LFX pin, so publishing a
+    nightly never weakens or consumes the stable bundle's version. Other release
+    floors are refused. The caller refreshes uv.lock after the version chain.
+    """
+    major, minor, patch, phase, counter = parse_version(lfx_version)
+    if phase != -4:
+        raise PlanError("Nightly bundle restamping requires an LFX development version")
+    final_version = f"{major}.{minor}.{patch}"
+    root_path = base_dir / "pyproject.toml"
+    root_content = root_path.read_text(encoding="utf-8")
+    updates: dict[Path, str] = {}
+    targets: list[VersionTarget] = []
+    for bundle in _discover_bundles(base_dir).values():
+        _, specifier = _requirement_parts(bundle.lfx_requirement)
+        if specifier == f"=={lfx_version}" or _lfx_range_is_compatible(specifier, lfx_version):
+            continue
+        minimum, _ = _minimum_and_upper(specifier)
+        if minimum != final_version or not _lfx_range_is_compatible(specifier, final_version):
+            raise PlanError(f"{bundle.name}: cannot restamp {bundle.lfx_requirement!r} for LFX {lfx_version}")
+        target_version = restamp_version(bundle.version, f".dev{counter}")
+        content = _replace_project_version(bundle.pyproject.read_text(encoding="utf-8"), target_version)
+        # An older RC sorts after every devN. A >= nightly floor would still
+        # admit that incompatible RC, so require the runtime built from this tag.
+        updates[bundle.pyproject] = _replace_lfx_floor(content, lfx_version, pin=True)
+        for path in bundle.manifest_paths:
+            updates[path] = _replace_manifest_version(path.read_text(encoding="utf-8"), target_version)
+        root_content = _replace_bundle_floor(root_content, bundle.name, target_version)
+        targets.append(
+            VersionTarget(
+                package=bundle.name,
+                source_version=bundle.version,
+                build_version=target_version,
+                action="publish-prerelease",
+                lfx_range=f"=={lfx_version}",
+            )
+        )
+    if updates:
+        updates[root_path] = root_content
+        originals = {path: path.read_text(encoding="utf-8") for path in updates}
+        try:
+            for path, content in updates.items():
+                path.write_text(content, encoding="utf-8")
+        except Exception:
+            for path, content in originals.items():
+                path.write_text(content, encoding="utf-8")
+            raise
+    return tuple(targets)
 
 
 def restamp_unpublished_bundles(

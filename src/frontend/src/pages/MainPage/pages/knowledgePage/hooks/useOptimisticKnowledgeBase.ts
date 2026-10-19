@@ -24,7 +24,8 @@ export const useOptimisticKnowledgeBase = () => {
     if (!submitted) return false;
 
     const hasFiles = submitted.files && submitted.files.length > 0;
-    const dirName = submitted.sourceName.trim().replace(/\s+/g, "_");
+    const dirName =
+      submitted.dirName ?? submitted.sourceName.trim().replace(/\s+/g, "_");
     const newStatus = hasFiles ? "ingesting" : "empty";
 
     queryClient.setQueryData<KnowledgeBaseInfo[]>(

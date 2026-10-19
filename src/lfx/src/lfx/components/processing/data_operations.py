@@ -277,6 +277,23 @@ class DataOperationsComponent(Component):
             msg = f"{operation} operation is not supported for multiple data objects."
             raise ValueError(msg)
 
+    def validate_data_edges(self, operation: str) -> None:
+        """Fail when several JSON edges feed an operation that takes one input.
+
+        A node keeps its edges when its operation changes, and for every operation but Combine the
+        ``data`` field takes one edge, so the graph would pass only the last edge's data. Count the
+        edges instead of trusting the value.
+        """
+        vertex = getattr(self, "_vertex", None)
+        if vertex is None:
+            return
+        if sum(1 for edge in vertex.incoming_edges if edge.target_param == "data") > 1:
+            msg = (
+                f"{operation} operation is not supported for multiple data objects. "
+                "Connect one JSON input, or use Combine."
+            )
+            raise ValueError(msg)
+
     def operation_exception(self, operations: list[str]) -> None:
         """Raise exception for incompatible operations."""
         msg = f"{operations} operations are not supported in combination with each other."
@@ -398,7 +415,17 @@ class DataOperationsComponent(Component):
         for key, value in self.append_update_data.items():
             data_filtered[key] = value
 
-        return Data(**data_filtered)
+        return Data(data=data_filtered)
+
+    @staticmethod
+    def _set_data_list_flag(template: dict, action: str) -> None:
+        """Let the JSON input take several edges only for operations that consume a list (Combine).
+
+        The serialized template stores ``Input.is_list`` under ``list``; the canvas and the graph read
+        that key to decide whether ``data`` takes many edges. Drop any ``is_list`` an earlier save left.
+        """
+        template["data"]["list"] = ACTION_CONFIG[action]["is_list"]
+        template["data"].pop("is_list", None)
 
     # Configuration and execution methods
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
@@ -417,7 +444,7 @@ class DataOperationsComponent(Component):
             if len(selected_actions) == 1 and selected_actions[0] in ACTION_CONFIG:
                 action = selected_actions[0]
                 config = ACTION_CONFIG[action]
-                build_config["data"]["is_list"] = config["is_list"]
+                self._set_data_list_flag(build_config, action)
                 logger.info(config["log_msg"])
                 return set_current_fields(
                     build_config=build_config,
@@ -439,6 +466,45 @@ class DataOperationsComponent(Component):
                 build_config["selected_key"]["show"] = False
 
         return build_config
+
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:
+        """Keep the saved operation's fields visible when the node is updated.
+
+        The rebuilt template carries class-default ``show`` flags, which the generic merge does not
+        restore, so visibility is re-derived here from the saved operation without touching saved values.
+        """
+        await super().update_frontend_node(new_frontend_node, current_frontend_node)
+
+        template = new_frontend_node.get("template", {})
+        operations_value = template.get("operations", {}).get("value") or []
+        selected_actions = [
+            action["name"]
+            for action in (operations_value if isinstance(operations_value, list) else [])
+            if isinstance(action, dict) and "name" in action
+        ]
+        action = selected_actions[0] if len(selected_actions) == 1 else None
+        if action not in ACTION_CONFIG:
+            action = None
+
+        # Re-apply visibility. Unlike update_build_config, keep saved values.
+        visible_fields = self.actions_data.get(action, []) if action else []
+        for field in self.ALL_OPERATION_FIELDS:
+            if field in template:
+                template[field]["show"] = field in visible_fields
+        if action and "data" in template:
+            self._set_data_list_flag(template, action)
+
+        # The merge restores only values, so rebuild Path Selection's dropdown from the saved JSON.
+        if action == "Path Selection" and "selected_key" in template:
+            mapped_json = template.get("mapped_json_display", {}).get("value")
+            if mapped_json:
+                try:
+                    template["selected_key"]["options"] = self.extract_all_paths(json.loads(mapped_json))
+                except (json.JSONDecodeError, TypeError, ValueError, RecursionError) as e:
+                    logger.warning(f"Error parsing saved mapped JSON: {e}")
+                    template["selected_key"]["show"] = False
+
+        return new_frontend_node
 
     def json_path(self) -> Data:
         try:
@@ -492,6 +558,8 @@ class DataOperationsComponent(Component):
                 "Update this flow to use the Operations component."
             )
             raise ValueError(msg)
+        if action_name != "Combine":
+            self.validate_data_edges(action_name)
         try:
             return handler()
         except Exception as e:
