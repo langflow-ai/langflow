@@ -25,6 +25,7 @@ import { useFlowNames } from "@/hooks/use-history-changes";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useRevisionPlaybackStore from "@/stores/revisionPlaybackStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import type { FlowType } from "@/types/flow";
 import type { RevisionVersion } from "@/types/flow/revision";
@@ -129,13 +130,21 @@ export function useFlowVersionSidebar(flowId: string) {
   const versions = versionResponse?.entries;
   const maxEntries = versionResponse?.max_entries;
 
+  const flowHistoryEnabled = useUtilityStore(
+    (state) => state.flowHistoryEnabled,
+  );
   const {
     data: revisionPages,
     fetchNextPage: loadOlderEntries,
     hasNextPage: hasOlderEntries,
     isFetchingNextPage: isLoadingOlderEntries,
     refetch: refetchRevisions,
-  } = useGetFlowRevisions(flowId, { pollInterval: 10000 });
+  } = useGetFlowRevisions(flowId, {
+    // With flow history off nothing is recorded, and the sidebar lists the
+    // saved versions alone.
+    enabled: flowHistoryEnabled,
+    pollInterval: 10000,
+  });
   // Saving or deleting a version changes the labels on the timeline without
   // a new revision, so the timeline is loaded again when the versions change.
   const shownVersionsRef = useRef(versionResponse);

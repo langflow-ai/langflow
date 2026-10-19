@@ -39,14 +39,18 @@ let entryQueryLoading = false;
 let entryQueryError = false;
 
 // No recorded history: these specs cover the saved-version list.
+const useGetFlowRevisionsMock = jest.fn();
 jest.mock("@/controllers/API/queries/flow-revisions", () => ({
-  useGetFlowRevisions: () => ({
-    data: undefined,
-    fetchNextPage: jest.fn(),
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    refetch: jest.fn(),
-  }),
+  useGetFlowRevisions: (...args: unknown[]) => {
+    useGetFlowRevisionsMock(...args);
+    return {
+      data: undefined,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      refetch: jest.fn(),
+    };
+  },
   useGetFlowHistoryTimeline: () => ({ data: undefined }),
   useGetFlowRevision: () => ({
     data: undefined,
@@ -243,6 +247,7 @@ jest.mock("lodash", () => ({
 // Import the component AFTER all mocks are set up
 // ---------------------------------------------------------------------------
 
+import { useUtilityStore } from "@/stores/utilityStore";
 import FlowVersionSidebarContent from "../FlowVersionSidebarContent";
 
 // ---------------------------------------------------------------------------
@@ -269,6 +274,25 @@ describe("FlowVersionSidebarContent store behavior", () => {
     entryQueryLoading = false;
     entryQueryError = false;
     resetStoreState();
+  });
+
+  it("loads the history timeline only when flow history is on", () => {
+    useUtilityStore.setState({ flowHistoryEnabled: false });
+    const off = render(<FlowVersionSidebarContent flowId="flow-1" />);
+    expect(useGetFlowRevisionsMock).toHaveBeenLastCalledWith(
+      "flow-1",
+      expect.objectContaining({ enabled: false }),
+    );
+    off.unmount();
+
+    useUtilityStore.setState({ flowHistoryEnabled: true });
+    const on = render(<FlowVersionSidebarContent flowId="flow-1" />);
+    expect(useGetFlowRevisionsMock).toHaveBeenLastCalledWith(
+      "flow-1",
+      expect.objectContaining({ enabled: true }),
+    );
+    on.unmount();
+    useUtilityStore.setState({ flowHistoryEnabled: false });
   });
 
   it("disables auto-save on mount and restores on unmount", () => {

@@ -82,6 +82,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   agenticExperienceEnabled: true,
   setAgenticExperienceEnabled: (agenticExperienceEnabled: boolean) =>
     set({ agenticExperienceEnabled }),
+  flowHistoryEnabled: false,
+  setFlowHistoryEnabled: (flowHistoryEnabled: boolean) =>
+    set({ flowHistoryEnabled }),
   assistantMaxMessageLength: DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
   setAssistantMaxMessageLength: (assistantMaxMessageLength: number) =>
     set({ assistantMaxMessageLength }),
