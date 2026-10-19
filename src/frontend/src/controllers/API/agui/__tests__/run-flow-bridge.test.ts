@@ -35,6 +35,22 @@ function makeRecordingContext() {
 }
 
 describe("handleAGUIEvent terminal contract", () => {
+  it("preserves the integration code and solution from RUN_ERROR", () => {
+    const { ctx, calls } = makeRecordingContext();
+    const message =
+      "Authentication expired.\n\nReconnect the integration and try again.";
+    expect(
+      handleAGUIEvent(
+        {
+          type: EventType.RUN_ERROR,
+          message,
+          code: "auth-expired",
+        } as unknown as BaseEvent,
+        ctx,
+      ),
+    ).toBe(true);
+    expect(calls).toEqual([`error:[auth-expired] ${message}`]);
+  });
   it("returns true for RUN_FINISHED and invokes onFinished", () => {
     const { ctx, calls } = makeRecordingContext();
 

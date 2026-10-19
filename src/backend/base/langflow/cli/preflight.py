@@ -42,8 +42,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import click
-from lfx.base.knowledge_bases.backends.opensearch import read_opensearch_url_from_env
+from lfx.base.knowledge_bases.backends.opensearch import read_opensearch_url_from_env, validate_opensearch_url
 from lfx.log.logger import logger
+from lfx.utils.ssrf_protection import SSRFProtectionError
 
 from langflow.cli.progress import ProgressIndicator
 
@@ -65,6 +66,10 @@ Severity = Literal["required", "degraded"]
 # external backend (e.g. redis) whose reachability is then required.
 _IN_MEMORY_CACHE_TYPES = frozenset({"async", "memory"})
 _IN_PROCESS_QUEUE_TYPES = frozenset({"asyncio"})
+
+# Env var that provisions OpenSearch for the whole deployment (the backend's
+# default URL variable name; see ``read_opensearch_url_from_env``).
+_OPENSEARCH_ENV_VAR = "OPENSEARCH_URL"
 
 # Probe timeouts (seconds). ``_PROBE_CONNECT_TIMEOUT`` is handed to the database
 # driver (libpq ``connect_timeout``) so a black-holed host fails fast at the
@@ -422,8 +427,22 @@ async def probe_opensearch() -> CheckResult | None:
             with contextlib.suppress(Exception):
                 client.close()
 
+    async def _validate_and_probe() -> None:
+        # Same destination gates the runtime backend runs before every KB/MB
+        # operation (SSRF policy + KB allow-list). Without this the boot would
+        # report a cluster healthy that every create request then refuses.
+        await validate_opensearch_url(url, _OPENSEARCH_ENV_VAR, "environment")
+        await asyncio.to_thread(_probe)
+
     try:
-        await asyncio.wait_for(asyncio.to_thread(_probe), timeout=_PROBE_TIMEOUT)
+        await asyncio.wait_for(_validate_and_probe(), timeout=_PROBE_TIMEOUT)
+    except SSRFProtectionError as exc:
+        return CheckResult(
+            "fail",
+            f"OpenSearch destination is blocked by the SSRF policy ({_short_exc(exc)})",
+            "Add the OpenSearch host to LANGFLOW_SSRF_ALLOWED_HOSTS (the runtime applies the same policy to "
+            "every knowledge base and memory base operation), or point OPENSEARCH_URL at an allowed host.",
+        )
     except _OptionalDependencyMissingError as exc:
         return CheckResult(
             "fail",
@@ -458,10 +477,13 @@ async def probe_vector_backend(settings_service: SettingsService) -> CheckResult
 
     - **No backend configured** → ``fail``: a prod boot with no vector backend is
       a misconfiguration (and would leave new KBs on host-local SQLite).
-    - **At least one configured backend reachable** → ``ok``, or ``warn`` when
-      another configured backend failed its probe (the boot proceeds on the
-      working one, but the operator still sees the broken sibling).
     - **All configured backends unreachable** → ``fail``.
+    - **The default backend unreachable** → ``fail`` even when a sibling is
+      healthy: the default is picked from env presence alone (pgVector when
+      ``PGVECTOR_CONNECTION_STRING`` is set, else OpenSearch), so every KB/MB
+      created without an explicit backend would target the broken one.
+    - **Default reachable** → ``ok``, or ``warn`` when a non-default configured
+      backend failed its probe (the operator still sees the broken sibling).
 
     Detection is env-only: the probe runs before the database — and therefore the
     variable service — exists, so DB-stored credentials and per-KB
@@ -469,7 +491,8 @@ async def probe_vector_backend(settings_service: SettingsService) -> CheckResult
     provisioned only through the UI variable store must still keep its default
     env var set (or keep another backend configured) to be verified at boot.
     """
-    from lfx.base.knowledge_bases.backends.postgres import read_connection_string_from_env
+    from lfx.base.knowledge_bases.backends.base import BackendType
+    from lfx.base.knowledge_bases.backends.postgres import read_connection_string_from_env, resolve_default_kb_backend
 
     # (display name, CheckResult) for each backend that is configured via env.
     results: list[tuple[str, CheckResult]] = []
@@ -494,6 +517,20 @@ async def probe_vector_backend(settings_service: SettingsService) -> CheckResult
     if not healthy:
         detail = "; ".join(f"{name} ({result.detail})" for name, result in unhealthy)
         return CheckResult("fail", f"all configured vector backends are unreachable: {detail}", remediation)
+
+    # New KBs/MBs with no explicit backend resolve to the *default* backend from
+    # env presence alone. If that one is down, every default create fails even
+    # though a sibling is healthy, so the boot must not report success.
+    default_name = "pgVector" if resolve_default_kb_backend() == BackendType.POSTGRES.value else "OpenSearch"
+    default_result = dict(results)[default_name]
+    if default_result.status != "ok":
+        return CheckResult(
+            "fail",
+            f"default vector backend {default_name} is unreachable ({default_result.detail}); "
+            f"{', '.join(healthy)} is reachable but new knowledge bases and memory bases default to {default_name}",
+            f"{default_result.remediation} Or unset PGVECTOR_CONNECTION_STRING so {', '.join(healthy)} becomes "
+            "the default.",
+        )
 
     if unhealthy:
         broken = "; ".join(f"{name} unhealthy ({result.detail})" for name, result in unhealthy)
@@ -714,6 +751,13 @@ def summarize(outcomes: list[CheckOutcome]) -> bool:
     return not any(o.result.status == "fail" for o in outcomes)
 
 
+def _echo_warning_remediations(outcomes: list[CheckOutcome]) -> None:
+    """Print what to do about each warning, so a degraded boot is actionable."""
+    for outcome in outcomes:
+        if outcome.result.status == "warn" and outcome.result.remediation:
+            click.echo(click.style(f"  • {outcome.check.label}: {outcome.result.remediation}", fg="yellow"))
+
+
 def _render_summary(outcomes: list[CheckOutcome]) -> bool:
     """Print the final verdict and remediation list. Returns True if boot may continue."""
     fails = [o for o in outcomes if o.result.status == "fail"]
@@ -724,6 +768,7 @@ def _render_summary(outcomes: list[CheckOutcome]) -> bool:
     if not fails:
         icon = click.style(_OK_ICON, fg="green", bold=True)
         click.echo(f"{icon} Preflight passed — {passed} OK, {warnings} warning(s). Continuing boot.")
+        _echo_warning_remediations(outcomes)
         return True
 
     icon = click.style(_FAIL_ICON, fg="red", bold=True)
@@ -739,6 +784,7 @@ def _render_summary(outcomes: list[CheckOutcome]) -> bool:
     for outcome in fails:
         remediation = outcome.result.remediation or "See logs for details."
         click.echo(click.style(f"  • {outcome.check.label}: {remediation}", fg="red"))
+    _echo_warning_remediations(outcomes)
     return False
 
 

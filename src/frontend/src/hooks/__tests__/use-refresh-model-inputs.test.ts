@@ -386,6 +386,9 @@ describe("refreshAllModelInputs", () => {
 
   it("should refresh model nodes and show success message", async () => {
     const modelNode = createMockModelNode("node-1");
+    Object.assign(modelNode.data.node!, {
+      metadata: { component_class_name: "Second" },
+    });
     mockNodes = [modelNode];
 
     (api.post as jest.Mock).mockResolvedValue({
@@ -407,7 +410,12 @@ describe("refreshAllModelInputs", () => {
     // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
-    expect(api.post).toHaveBeenCalled();
+    expect(api.post).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        frontend_node: { metadata: { component_class_name: "Second" } },
+      }),
+    );
     expect(mockSetNode).toHaveBeenCalled();
     expect(mockSetSuccessData).toHaveBeenCalledWith({
       title: "Refreshed 1 model component",

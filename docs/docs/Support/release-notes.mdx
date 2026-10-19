@@ -62,6 +62,24 @@ Highlights of this release include the following changes. For all changes, see t
 
     For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
 
+- Chroma components are removed
+
+    Langflow 1.13 stores local Knowledge and Memory in SQLite, instead of a local Chroma database.
+    The [**Chroma**](/bundles-chroma) and [**Local DB**](/components-bundle-components#vector-stores-bundle) bundle components are removed.
+
+    Replace **Chroma** and **Local DB** with a [knowledge base](/knowledge#knowledge-bases), or with a supported remote vector store.
+    At startup, Langflow copies supported local Chroma stores into SQLite.
+
+    Back up the application database and the knowledge-base directory before you upgrade.
+
+    For more information, see [Upgrade Knowledge and Memory storage](./knowledge-storage-upgrade).
+
+- The ALTK component is removed
+
+    The [**ALTK**](/bundles-altk) component is removed.
+
+    Replace **ALTK** with the [**Agent**](/components-agents) component.
+
 ### New features
 
 - Connections
