@@ -3,13 +3,13 @@
  * the engine's `lfx.services.flow_operations.keyed_lists`.
  *
  * Outputs, tool actions and table rows are lists whose items carry a key: an
- * output's `name`, a tool action's first tag, a row's `_id`. A write finds its
+ * output's `name`, a tool action's first tag, a row's `__id__`. A write finds its
  * item through an index instead of scanning the list, and building the index
  * checks the list once: every item has a key, no key repeats, and every table
- * row carries a numeric `_pos`.
+ * row carries a numeric `__pos__`.
  *
  * Natural lists keep the order writes leave them in. A table's order is its
- * rows' `(_pos, _id)`, not their places in the array, so the engine never
+ * rows' `(__pos__, __id__)`, not their places in the array, so the engine never
  * sorts a table: a new row is appended, and a deleted row's slot is taken by
  * the last row.
  *

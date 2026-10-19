@@ -38,7 +38,7 @@ export type { ApplyOptions, FlowGraph } from "./state";
 
 type JsonObject = Record<string, unknown>;
 
-/** Selects an item of a keyed list by its key: a table row by its `_id`, an output by its name. */
+/** Selects an item of a keyed list by its key: a table row by its `__id__`, an output by its name. */
 export type Selector = { key: string };
 export type PathSegment = string | Selector;
 

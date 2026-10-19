@@ -12,8 +12,8 @@ import {
 
 type Row = Record<string, unknown>;
 
-const ids = (rows: Row[]) => rows.map((row) => row._id);
-const positions = (rows: Row[]) => rows.map((row) => row._pos);
+const ids = (rows: Row[]) => rows.map((row) => row.__id__);
+const positions = (rows: Row[]) => rows.map((row) => row.__pos__);
 
 const tableField = (value: unknown) => ({
   type: "table",
@@ -56,8 +56,8 @@ describe("withTableRowIds", () => {
 
   it("returns a table that already has ids unchanged", () => {
     const rows = [
-      { _id: "r1", _pos: 1, key: "a" },
-      { _id: "r2", _pos: 2, key: "b" },
+      { __id__: "r1", __pos__: 1, key: "a" },
+      { __id__: "r2", __pos__: 2, key: "b" },
     ];
 
     expect(withTableRowIds(rows)).toBe(rows);
@@ -66,10 +66,10 @@ describe("withTableRowIds", () => {
   it("places new rows between the rows around them", () => {
     const rows = [
       { key: "first" },
-      { _id: "r1", _pos: 1, key: "a" },
+      { __id__: "r1", __pos__: 1, key: "a" },
       { key: "new" },
       { key: "newer" },
-      { _id: "r2", _pos: 4, key: "b" },
+      { __id__: "r2", __pos__: 4, key: "b" },
       { key: "last" },
     ];
 
@@ -88,9 +88,9 @@ describe("withTableRowIds", () => {
 
   it("places new rows after the row before them when its neighbours are out of order", () => {
     const rows = [
-      { _id: "r2", _pos: 5, key: "b" },
+      { __id__: "r2", __pos__: 5, key: "b" },
       { key: "new" },
-      { _id: "r1", _pos: 1, key: "a" },
+      { __id__: "r1", __pos__: 1, key: "a" },
     ];
 
     const result = withTableRowIds(rows);
@@ -100,23 +100,23 @@ describe("withTableRowIds", () => {
 
   it("gives a duplicated id a new one", () => {
     const rows = [
-      { _id: "r1", _pos: 1, key: "a" },
-      { _id: "r1", _pos: 1, key: "a" },
+      { __id__: "r1", __pos__: 1, key: "a" },
+      { __id__: "r1", __pos__: 1, key: "a" },
     ];
 
     const result = withTableRowIds(rows);
 
-    expect(result[0]._id).toBe("r1");
-    expect(result[1]._id).not.toBe("r1");
+    expect(result[0].__id__).toBe("r1");
+    expect(result[1].__id__).not.toBe("r1");
     expect(hasTableRowIds(result)).toBe(true);
   });
 
   it("renumbers the table when no position fits between two rows", () => {
     const rows = [
-      { _id: "r0", _pos: 0.5, key: "z" },
-      { _id: "r1", _pos: 1, key: "a" },
+      { __id__: "r0", __pos__: 0.5, key: "z" },
+      { __id__: "r1", __pos__: 1, key: "a" },
       { key: "new" },
-      { _id: "r2", _pos: 1 + Number.EPSILON, key: "b" },
+      { __id__: "r2", __pos__: 1 + Number.EPSILON, key: "b" },
     ];
 
     const result = withTableRowIds(rows);
@@ -128,23 +128,23 @@ describe("withTableRowIds", () => {
 
   it("keeps the positions of rows stored out of order", () => {
     const rows = [
-      { _id: "r2", _pos: 5, key: "b" },
-      { _id: "r1", _pos: 1, key: "a" },
+      { __id__: "r2", __pos__: 5, key: "b" },
+      { __id__: "r1", __pos__: 1, key: "a" },
     ];
 
     expect(withTableRowIds(rows)).toBe(rows);
   });
 
   it("gives an invalid position a valid one", () => {
-    const result = withTableRowIds([{ _id: "r1", _pos: 1, key: "a" }]);
+    const result = withTableRowIds([{ __id__: "r1", __pos__: 1, key: "a" }]);
 
-    expect(result[0]).toEqual({ _id: "r1", _pos: 1, key: "a" });
+    expect(result[0]).toEqual({ __id__: "r1", __pos__: 1, key: "a" });
   });
 
   it("keeps the ids of rows a refresh returned without them", () => {
     const previous = [
-      { _id: "r1", _pos: 1, key: "a", value: "1" },
-      { _id: "r2", _pos: 2, key: "b", value: "2" },
+      { __id__: "r1", __pos__: 1, key: "a", value: "1" },
+      { __id__: "r2", __pos__: 2, key: "b", value: "2" },
     ];
     const refreshed: Row[] = [
       { key: "a", value: "1" },
@@ -153,10 +153,15 @@ describe("withTableRowIds", () => {
 
     const result = withTableRowIds(refreshed, previous);
 
-    expect(result[0]).toEqual({ _id: "r1", _pos: 1, key: "a", value: "1" });
-    expect(result[1]._id).not.toBe("r2");
+    expect(result[0]).toEqual({
+      __id__: "r1",
+      __pos__: 1,
+      key: "a",
+      value: "1",
+    });
+    expect(result[1].__id__).not.toBe("r2");
     expect(result[1].value).toBe("changed");
-    expect(result[1]._pos).toBe(2);
+    expect(result[1].__pos__).toBe(2);
   });
 
   it("leaves rows that are not objects alone", () => {
@@ -169,12 +174,12 @@ describe("withTableRowIds", () => {
 describe("appendTableRows", () => {
   it("appends rows with new ids after the last position", () => {
     const rows = [
-      { _id: "r2", _pos: 2.5, key: "b" },
-      { _id: "r1", _pos: 1, key: "a" },
+      { __id__: "r2", __pos__: 2.5, key: "b" },
+      { __id__: "r1", __pos__: 1, key: "a" },
     ];
 
     const result = appendTableRows(rows, [
-      { _id: "r1", _pos: 1, key: "copy" },
+      { __id__: "r1", __pos__: 1, key: "copy" },
       { key: "new" },
     ]);
 
@@ -260,29 +265,29 @@ describe("withNodesTableRowIds", () => {
 describe("stripping", () => {
   it("removes row keys from rows", () => {
     expect(
-      stripTableRowIds([{ _id: "r1", _pos: 1, key: "a" }, { key: "b" }]),
+      stripTableRowIds([{ __id__: "r1", __pos__: 1, key: "a" }, { key: "b" }]),
     ).toEqual([{ key: "a" }, { key: "b" }]);
   });
 
   it("hands rows out in order", () => {
     expect(
       stripTableRowIds([
-        { _id: "r2", _pos: 2, key: "b" },
-        { _id: "r3", _pos: 1, key: "c" },
-        { _id: "r1", _pos: 1, key: "a" },
+        { __id__: "r2", __pos__: 2, key: "b" },
+        { __id__: "r3", __pos__: 1, key: "c" },
+        { __id__: "r1", __pos__: 1, key: "a" },
       ]),
     ).toEqual([{ key: "a" }, { key: "c" }, { key: "b" }]);
   });
 
   it("removes row keys from every table of a graph, group graphs included", () => {
     const inner = node("inner", {
-      rows: tableField([{ _id: "r9", _pos: 1, key: "x" }]),
+      rows: tableField([{ __id__: "r9", __pos__: 1, key: "x" }]),
     });
     const graph = {
       nodes: [
         node("A", {
-          headers: tableField([{ _id: "r1", _pos: 1, key: "a" }]),
-          other: { type: "dict", value: { _id: "kept" } },
+          headers: tableField([{ __id__: "r1", __pos__: 1, key: "a" }]),
+          other: { type: "dict", value: { __id__: "kept" } },
         }),
         {
           id: "group",
@@ -301,7 +306,7 @@ describe("stripping", () => {
     });
     expect(first.data.node.template.other).toEqual({
       type: "dict",
-      value: { _id: "kept" },
+      value: { __id__: "kept" },
     });
     expect(inner.data.node.template.rows).toMatchObject({
       value: [{ key: "x" }],

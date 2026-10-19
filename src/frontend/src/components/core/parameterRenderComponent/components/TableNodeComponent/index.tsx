@@ -84,7 +84,7 @@ export default function TableNodeComponent({
   }, []);
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
-  // The rows being edited, in order, each with an `_id` and `_pos` (see
+  // The rows being edited, in order, each with an `__id__` and `__pos__` (see
   // table-row-ids). A legacy table gets them here, and keeps them only if it
   // is saved.
   // biome-ignore lint/suspicious/noExplicitAny: legacy

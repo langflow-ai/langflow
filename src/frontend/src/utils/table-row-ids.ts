@@ -1,10 +1,11 @@
 import { isEqual } from "lodash";
 import ShortUniqueId from "short-unique-id";
 import { isRowPosition, orderedRows } from "./flow-operations/canonical";
+import { NODE_SCHEMA } from "./flow-operations/schema";
 
 /**
- * Table rows carry their own identity and order: `_id` names a row and `_pos`
- * is its numeric position. The table's order is the rows' `(_pos, _id)`, not
+ * Table rows carry their own identity and order: `__id__` names a row and `__pos__`
+ * is its numeric position. The table's order is the rows' `(__pos__, __id__)`, not
  * their places in the stored array, which nothing keeps sorted: whatever
  * hands rows out (the grid, an export, the backend before a component runs)
  * puts them in order. A flow's history then records an edit to one cell, an
@@ -16,8 +17,9 @@ import { isRowPosition, orderedRows } from "./flow-operations/canonical";
  * them before running a component), the grid never shows them, and exported
  * flows leave them out.
  */
-export const TABLE_ROW_ID_KEY = "_id";
-export const TABLE_ROW_POS_KEY = "_pos";
+// The names come from node_schema.json, like the engine's.
+export const TABLE_ROW_ID_KEY = NODE_SCHEMA.table.key[0] as string;
+export const TABLE_ROW_POS_KEY = NODE_SCHEMA.table.position as string;
 const TABLE_ROW_KEYS = [TABLE_ROW_ID_KEY, TABLE_ROW_POS_KEY];
 
 const uid = new ShortUniqueId({ length: 10 });
@@ -29,7 +31,7 @@ export function newTableRowId(): string {
   return uid.randomUUID();
 }
 
-/** Whether a row key is one of the editor's own (`_id`, `_pos`), not a column. */
+/** Whether a row key is one of the editor's own (`__id__`, `__pos__`), not a column. */
 export function isTableRowKey(key: string): boolean {
   return TABLE_ROW_KEYS.includes(key);
 }
@@ -72,7 +74,7 @@ export function stripTableRowIds(rows: unknown[]): unknown[] {
   return orderedRows(rows).map(stripRowKeys);
 }
 
-/** Whether every row has a unique `_id` and a numeric `_pos`: the shape the backend accepts. */
+/** Whether every row has a unique `__id__` and a numeric `__pos__`: the shape the backend accepts. */
 export function hasTableRowIds(rows: unknown): boolean {
   if (!Array.isArray(rows)) return false;
   const seen = new Set<string>();
@@ -86,7 +88,7 @@ export function hasTableRowIds(rows: unknown): boolean {
 }
 
 /**
- * The same rows, in the same order, each with a unique `_id` and a `_pos`
+ * The same rows, in the same order, each with a unique `__id__` and a `__pos__`
  * that keeps that order. Rows that already have them keep them; the others
  * get new ones. A row without an id that matches a not yet matched row of
  * `previousRows` (equal apart from the editor's keys) takes that row's id, so
@@ -203,7 +205,7 @@ function fitsBetween(
 }
 
 /**
- * Rows appended after `rows`, each with a new `_id` and a `_pos` one past the
+ * Rows appended after `rows`, each with a new `__id__` and a `__pos__` one past the
  * last position. Keys the new rows carried (a duplicated row's) are replaced.
  */
 export function appendTableRows<T>(rows: T[], newRows: unknown[]): T[] {

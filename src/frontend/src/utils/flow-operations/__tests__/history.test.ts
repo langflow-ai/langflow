@@ -381,10 +381,10 @@ describe("inverse operations", () => {
             template: {
               rows: {
                 type: "table",
-                // Not in (_pos, _id) order, as a stored table may be.
+                // Not in (__pos__, __id__) order, as a stored table may be.
                 value: [
-                  { _id: "r2", _pos: 2, v: "y" },
-                  { _id: "r1", _pos: 1, v: "x" },
+                  { __id__: "r2", __pos__: 2, v: "y" },
+                  { __id__: "r1", __pos__: 1, v: "x" },
                 ],
               },
             },
@@ -427,7 +427,7 @@ describe("inverse operations", () => {
         id: "k",
         op: "set_field",
         path: ["data", "node", "template", "rows", "value", { key: "r3" }],
-        value: { _id: "r3", _pos: 3, v: "z" },
+        value: { __id__: "r3", __pos__: 3, v: "z" },
       },
     ]);
 
@@ -436,7 +436,9 @@ describe("inverse operations", () => {
     ).toMatchObject({
       node: {
         template: {
-          rows: { value: [{ _id: "r2" }, { _id: "r1" }, { _id: "r3" }] },
+          rows: {
+            value: [{ __id__: "r2" }, { __id__: "r1" }, { __id__: "r3" }],
+          },
         },
       },
     });
